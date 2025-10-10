@@ -24,8 +24,19 @@ Fixes #(issue number)
 - [ ] All existing tests pass
 - [ ] The build completes successfully
 
+## Deployment Verification
+- [ ] Vercel preview deployment succeeded
+- [ ] Preview URL is accessible and functional
+- [ ] No console errors in browser
+- [ ] Environment variables configured correctly
+- [ ] API endpoints working as expected
+
 ## Screenshots (if applicable)
 Add screenshots or GIFs to help explain your changes.
+
+## Vercel Deployment
+<!-- Vercel will automatically comment with preview URL -->
+Preview URL will appear below once deployment completes.
 
 ## Checklist
 - [ ] My code follows the project's style guidelines
