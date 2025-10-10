@@ -26,10 +26,31 @@
 - ✅ **Process Improvement**: Updated SESSION_CHECKLIST.md with feature development best practices
 - ✅ **Documentation**: Added deployment learnings to COMMON_MISTAKES.md
 
+### What We Just Completed (Current Session - Calendar & Upload Fixes)
+
+**Goal**: Add calendar view and fix photo upload functionality
+
+**Completed**:
+- ✅ **Calendar View**: Interactive monthly calendar showing photo history
+  - Month navigation with today button
+  - Visual indicators for dates with photos
+  - Photo preview on date selection with metadata
+  - Statistics showing total and monthly photo counts
+- ✅ **Photo Upload Fix**: Separate camera vs gallery functionality
+  - Fixed "Choose from Gallery" to actually open file picker
+  - Fixed "Take Photo" to open camera
+  - Separate input handling for each option
+- ✅ **Deployment Documentation**: Added critical deployment notes
+  - Created `projects/wizard-of-oz/DEPLOYMENT.md`
+  - Documented requirement to commit to main branch for Vercel deployment
+  - Included workflow, configuration, and rollback procedures
+
 **Key Learnings**:
 - **Test Builds Locally First**: Always run `npm run build` before pushing to catch errors early
 - **Comprehensive Task Breakdown**: Need granular todos for complex features (updated SESSION_CHECKLIST.md)
 - **Mobile Development**: Testing locally prevents inefficient mobile debugging loops
+- **Vercel Deployment**: ALL changes must be committed to main branch for deployment
+- **File Input Gotchas**: `capture="environment"` forces camera - separate inputs needed
 
 ---
 
@@ -76,6 +97,7 @@
 **For wizard-of-oz enhancements**:
 - `projects/wizard-of-oz/plan.md` - Current status and future features
 - `projects/wizard-of-oz/README.md` - Technical documentation
+- `projects/wizard-of-oz/DEPLOYMENT.md` - 🔥 **CRITICAL: Vercel deployment requirements**
 - `projects/wizard-of-oz/src/` - Source code
 
 **For process improvements**:
