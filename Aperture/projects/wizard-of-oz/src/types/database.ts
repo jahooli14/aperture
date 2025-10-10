@@ -1,0 +1,78 @@
+export interface Database {
+  public: {
+    Tables: {
+      photos: {
+        Row: {
+          id: string;
+          user_id: string;
+          upload_date: string;
+          original_url: string;
+          aligned_url: string | null;
+          eye_coordinates: {
+            leftEye: { x: number; y: number };
+            rightEye: { x: number; y: number };
+            confidence: number;
+            imageWidth: number;
+            imageHeight: number;
+          } | null;
+          alignment_transform: {
+            translateX: number;
+            translateY: number;
+            rotation: number;
+            scale: number;
+          } | null;
+          metadata: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          upload_date: string;
+          original_url: string;
+          aligned_url?: string | null;
+          eye_coordinates?: Database['public']['Tables']['photos']['Row']['eye_coordinates'];
+          alignment_transform?: Database['public']['Tables']['photos']['Row']['alignment_transform'];
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          upload_date?: string;
+          original_url?: string;
+          aligned_url?: string | null;
+          eye_coordinates?: Database['public']['Tables']['photos']['Row']['eye_coordinates'];
+          alignment_transform?: Database['public']['Tables']['photos']['Row']['alignment_transform'];
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+      };
+      user_settings: {
+        Row: {
+          user_id: string;
+          target_eye_position: { x: number; y: number };
+          reminder_time: string | null;
+          timezone: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          target_eye_position?: { x: number; y: number };
+          reminder_time?: string | null;
+          timezone?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          target_eye_position?: { x: number; y: number };
+          reminder_time?: string | null;
+          timezone?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+  };
+}
