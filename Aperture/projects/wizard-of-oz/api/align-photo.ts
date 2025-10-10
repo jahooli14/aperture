@@ -70,34 +70,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
     const rotationDegrees = -(eyeAngle * 180) / Math.PI;
 
-    // Target eye position (50% width, 40% height - eyes slightly above center)
-    const targetPosition = {
-      x: landmarks.imageWidth * 0.5,
-      y: landmarks.imageHeight * 0.4,
-    };
-
-    // Calculate translation
-    const translation = {
-      x: targetPosition.x - eyeMidpoint.x,
-      y: targetPosition.y - eyeMidpoint.y,
-    };
-
-    // Calculate scale to normalize inter-eye distance
-    const interEyeDistance = Math.sqrt(
-      Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
-        Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
-    );
-    const targetInterEyeDistance = landmarks.imageWidth * 0.25; // 25% of image width
-    const scale = targetInterEyeDistance / interEyeDistance;
-
-    // Create alignment transform record
-    const transform: AlignmentTransform = {
-      translateX: translation.x,
-      translateY: translation.y,
-      rotation: rotationDegrees,
-      scale,
-    };
-
     // Process image with Sharp
     // Simplified approach: Just crop and rotate, no complex transformations
 
@@ -117,6 +89,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
         Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
     );
+
+    // Calculate scale for transform record
+    const targetInterEyeDistance = landmarks.imageWidth * 0.25;
+    const scale = targetInterEyeDistance / interEyeDistance;
+
+    // Calculate translation for transform record
+    const targetPosition = {
+      x: landmarks.imageWidth * 0.5,
+      y: landmarks.imageHeight * 0.4,
+    };
+    const translation = {
+      x: targetPosition.x - eyeMidpoint.x,
+      y: targetPosition.y - eyeMidpoint.y,
+    };
+
+    // Create alignment transform record
+    const transform: AlignmentTransform = {
+      translateX: translation.x,
+      translateY: translation.y,
+      rotation: rotationDegrees,
+      scale,
+    };
 
     console.log('Inter-eye distance:', interEyeDistance);
 
