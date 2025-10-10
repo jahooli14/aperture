@@ -1,12 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './stores/useAuthStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
+import { CalendarView } from './components/CalendarView';
+
+type ViewType = 'gallery' | 'calendar';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
+  const [view, setView] = useState<ViewType>('gallery');
 
   useEffect(() => {
     initialize();
@@ -54,19 +58,52 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* View Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setView('gallery')}
+              className={`
+                px-6 py-2 rounded-md text-sm font-medium transition-colors
+                ${view === 'gallery'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+                }
+              `}
+            >
+              📸 Gallery
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('calendar')}
+              className={`
+                px-6 py-2 rounded-md text-sm font-medium transition-colors
+                ${view === 'calendar'
+                  ? 'bg-primary-600 text-white'
+                  : 'text-gray-600 hover:text-gray-900'
+                }
+              `}
+            >
+              📅 Calendar
+            </button>
+          </div>
+        </div>
+
         <AnimatePresence mode="wait">
           <motion.div
-            key="content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            key={view}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
             className="space-y-8"
           >
-            {/* Upload Section */}
+            {/* Upload Section - always visible */}
             <UploadPhoto />
 
-            {/* Gallery Section */}
-            <PhotoGallery />
+            {/* View-specific content */}
+            {view === 'gallery' ? <PhotoGallery /> : <CalendarView />}
           </motion.div>
         </AnimatePresence>
       </main>

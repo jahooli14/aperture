@@ -6,6 +6,7 @@ export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -34,7 +35,7 @@ export function UploadPhoto() {
   };
 
   const handleUpload = async () => {
-    const file = fileInputRef.current?.files?.[0];
+    const file = fileInputRef.current?.files?.[0] || cameraInputRef.current?.files?.[0];
     if (!file) return;
 
     try {
@@ -44,12 +45,19 @@ export function UploadPhoto() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photo');
     }
   };
 
   const handleCameraCapture = () => {
+    cameraInputRef.current?.click();
+  };
+
+  const handleGallerySelect = () => {
     fileInputRef.current?.click();
   };
 
@@ -77,10 +85,18 @@ export function UploadPhoto() {
       {!preview ? (
         <div>
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
             onChange={handleFileSelect}
             className="hidden"
           />
@@ -95,7 +111,7 @@ export function UploadPhoto() {
 
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleGallerySelect}
             className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors"
           >
             📁 Choose from Gallery
@@ -114,6 +130,9 @@ export function UploadPhoto() {
                 setPreview(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
+                }
+                if (cameraInputRef.current) {
+                  cameraInputRef.current.value = '';
                 }
               }}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
