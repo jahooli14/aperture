@@ -178,7 +178,7 @@ VALIDATION REQUIREMENTS:
       // Retry align-photo call with exponential backoff (up to 3 attempts)
       await retryWithBackoff(
         async () => {
-          const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
+          const alignResponse = await fetch(`${baseUrl}/api/align-photo-v2`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ photoId, landmarks }),
