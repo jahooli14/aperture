@@ -83,12 +83,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rotationDegrees
     });
 
+    // CRITICAL: Check if coordinates are normalized (0-1) instead of pixels
+    // If leftEye.x is less than 10, it's probably normalized
+    let actualLeftEye = landmarks.leftEye;
+    let actualRightEye = landmarks.rightEye;
+    let actualEyeMidpoint = eyeMidpoint;
+
+    if (landmarks.leftEye.x < 10 && landmarks.rightEye.x < 10) {
+      console.warn('⚠️ Detected normalized coordinates! Converting to pixels...');
+      actualLeftEye = {
+        x: landmarks.leftEye.x * landmarks.imageWidth,
+        y: landmarks.leftEye.y * landmarks.imageHeight,
+      };
+      actualRightEye = {
+        x: landmarks.rightEye.x * landmarks.imageWidth,
+        y: landmarks.rightEye.y * landmarks.imageHeight,
+      };
+      actualEyeMidpoint = {
+        x: (actualLeftEye.x + actualRightEye.x) / 2,
+        y: (actualLeftEye.y + actualRightEye.y) / 2,
+      };
+      console.log('Converted to pixels:', { actualLeftEye, actualRightEye, actualEyeMidpoint });
+    }
+
     // Calculate how much space we need around the eyes
-    // For a face photo, typically the face is about 4-6x the inter-eye distance
     const interEyeDistance = Math.sqrt(
-      Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
-        Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
+      Math.pow(actualRightEye.x - actualLeftEye.x, 2) +
+        Math.pow(actualRightEye.y - actualLeftEye.y, 2)
     );
+
+    console.log('Inter-eye distance:', interEyeDistance, 'pixels');
+    console.log('Inter-eye distance as % of image width:', (interEyeDistance / landmarks.imageWidth * 100).toFixed(1) + '%');
 
     // Calculate scale for transform record
     const targetInterEyeDistance = landmarks.imageWidth * 0.25;
@@ -100,8 +125,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       y: landmarks.imageHeight * 0.4,
     };
     const translation = {
-      x: targetPosition.x - eyeMidpoint.x,
-      y: targetPosition.y - eyeMidpoint.y,
+      x: targetPosition.x - actualEyeMidpoint.x,
+      y: targetPosition.y - actualEyeMidpoint.y,
     };
 
     // Create alignment transform record
@@ -112,16 +137,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scale,
     };
 
-    console.log('Inter-eye distance:', interEyeDistance);
-
     // Simple approach: Extract a square region centered on the eyes
-    // Make it 6x the inter-eye distance to ensure we get the full face
-    const cropSize = Math.max(outputSize, Math.round(interEyeDistance * 6));
+    // Make it large enough to capture full face - use 3x the image width
+    // This is more reliable than using inter-eye distance
+    const cropSize = Math.round(landmarks.imageWidth * 1.5); // 1.5x image width
     const halfCrop = cropSize / 2;
 
+    console.log('Crop size:', cropSize, 'pixels (1.5x image width)');
+
     // Calculate crop bounds - centered on eye midpoint
-    const cropLeft = Math.max(0, Math.round(eyeMidpoint.x - halfCrop));
-    const cropTop = Math.max(0, Math.round(eyeMidpoint.y - halfCrop));
+    const cropLeft = Math.max(0, Math.round(actualEyeMidpoint.x - halfCrop));
+    const cropTop = Math.max(0, Math.round(actualEyeMidpoint.y - halfCrop));
 
     // Ensure we don't go past image boundaries
     const cropWidth = Math.min(cropSize, landmarks.imageWidth - cropLeft);
