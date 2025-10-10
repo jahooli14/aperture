@@ -65,3 +65,24 @@ CREATE POLICY "Users can insert their own settings"
 CREATE POLICY "Users can update their own settings"
   ON user_settings FOR UPDATE
   USING (auth.uid() = user_id);
+
+-- Storage Bucket Policies
+-- NOTE: You also need to create storage buckets and policies in Supabase Dashboard
+-- Go to Storage > Create bucket "originals"
+-- Then create these policies in Storage > Policies:
+
+-- Policy for uploading files (name: "Allow authenticated users to upload")
+-- ON bucket_id = 'originals' FOR INSERT
+-- WITH CHECK (auth.role() = 'authenticated')
+
+-- Policy for viewing files (name: "Allow authenticated users to view")
+-- ON bucket_id = 'originals' FOR SELECT
+-- USING (auth.role() = 'authenticated')
+
+-- Policy for updating files (name: "Allow users to update their own files")
+-- ON bucket_id = 'originals' FOR UPDATE
+-- USING (auth.uid()::text = (storage.foldername(name))[1])
+
+-- Policy for deleting files (name: "Allow users to delete their own files")
+-- ON bucket_id = 'originals' FOR DELETE
+-- USING (auth.uid()::text = (storage.foldername(name))[1])

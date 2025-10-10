@@ -38,11 +38,17 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     set({ uploading: true });
 
     try {
+      console.log('Starting upload process...', { fileName: file.name, fileSize: file.size });
+
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('User authentication check:', { userId: user?.id, isAuthenticated: !!user });
+
       if (!user) throw new Error('Not authenticated');
 
       // Check if already uploaded today
       const today = new Date().toISOString().split('T')[0];
+      console.log('Checking for existing upload today:', { today, userId: user.id });
+
       const { data: existing } = await supabase
         .from('photos')
         .select('id')
@@ -50,27 +56,40 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .eq('upload_date', today)
         .single();
 
+      console.log('Existing upload check result:', { existing });
+
       if (existing) {
         throw new Error('You have already uploaded a photo today');
       }
 
       // Upload to Supabase Storage
-      const fileName = `${user.id}/${Date.now()}.jpg`;
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExtension}`;
+      console.log('Uploading to storage:', { fileName, bucket: 'originals', contentType: file.type });
+
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('originals')
         .upload(fileName, file, {
-          contentType: 'image/jpeg',
+          contentType: file.type,
           upsert: false,
         });
 
-      if (uploadError) throw uploadError;
+      console.log('Storage upload result:', { uploadData, uploadError });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('originals')
         .getPublicUrl(uploadData.path);
 
+      console.log('Generated public URL:', { publicUrl });
+
       // Insert photo record
+      console.log('Inserting photo record...');
       const { data: photoData, error: insertError } = await (supabase
         .from('photos') as any)
         .insert({
@@ -81,14 +100,22 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .select()
         .single();
 
-      if (insertError || !photoData) throw insertError || new Error('Failed to create photo record');
+      console.log('Database insert result:', { photoData, insertError });
+
+      if (insertError || !photoData) {
+        console.error('Database insert error:', insertError);
+        throw insertError || new Error('Failed to create photo record');
+      }
 
       // Refresh photos
+      console.log('Refreshing photos list...');
       await get().fetchPhotos();
 
+      console.log('Upload completed successfully!');
       set({ uploading: false });
       return (photoData as Photo).id;
     } catch (error) {
+      console.error('Upload failed:', error);
       set({ uploading: false });
       throw error;
     }
