@@ -57,8 +57,15 @@ export function UploadPhoto() {
       }
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      const errorDetails = JSON.stringify({
+        message: err?.message,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        statusCode: err?.statusCode
+      }, null, 2);
       console.error('Upload error:', err);
-      setError(errorMessage);
+      setError(`${errorMessage}\n\nDetails:\n${errorDetails}`);
     }
   };
 
@@ -163,8 +170,8 @@ export function UploadPhoto() {
       )}
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          {error}
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+          <pre className="whitespace-pre-wrap font-mono">{error}</pre>
         </div>
       )}
     </motion.div>
