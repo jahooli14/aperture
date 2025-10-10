@@ -73,8 +73,8 @@ Return JSON with this exact structure (coordinates with 1 decimal place for sub-
 
 VALIDATION REQUIREMENTS:
 - leftEye is the baby's left eye (appears on the RIGHT side of the image when baby faces camera)
-- rightEye is the baby's right eye (ares on the LEFT side of the image when baby faces camera)
-- Inter-eye distance MUST be 10-25% of image width (validate this before returning)
+- rightEye is the baby's right eye (appears on the LEFT side of the image when baby faces camera)
+- Inter-eye distance MUST be 10-35% of image width (allows close-ups and wide shots)
 - Use pixel coordinates (NOT normalized), with 1 decimal place precision
 - confidence: 0.75+ for open eyes, 0.65+ acceptable for closed eyes
 - eyesOpen: true if both eyes clearly open, false if one or both eyes closed
@@ -101,14 +101,15 @@ VALIDATION REQUIREMENTS:
       });
     }
 
-    // Validate inter-eye distance (should be 10-25% of image width)
+    // Validate inter-eye distance (should be 10-35% of image width)
+    // Allows for both wide shots and close-up photos
     const interEyeDistance = Math.sqrt(
       Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
         Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
     );
     const interEyePercent = (interEyeDistance / landmarks.imageWidth) * 100;
 
-    if (interEyePercent < 10 || interEyePercent > 25) {
+    if (interEyePercent < 10 || interEyePercent > 35) {
       console.error('Invalid inter-eye distance:', {
         distance: interEyeDistance,
         percent: interEyePercent,
@@ -116,7 +117,7 @@ VALIDATION REQUIREMENTS:
       });
       return res.status(422).json({
         error: 'Invalid eye detection',
-        message: `Eyes detected too ${interEyePercent < 10 ? 'close' : 'far'} apart (${interEyePercent.toFixed(1)}% of image width). Expected 10-25%. Please ensure the photo shows the full face clearly.`,
+        message: `Eyes detected too ${interEyePercent < 10 ? 'close' : 'far'} apart (${interEyePercent.toFixed(1)}% of image width). Expected 10-35%. Please ensure the photo shows the baby's face clearly.`,
         interEyePercent,
       });
     }
