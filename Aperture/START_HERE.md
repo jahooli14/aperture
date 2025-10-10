@@ -2,7 +2,7 @@
 
 > **For Users**: Copy-paste the message below to start any new Claude session
 >
-> **For Claude**: This is your entry point. Read this first, then follow the instructions.
+> **For Claude**: This is your entry point. **YOU MUST FOLLOW THIS EXACT SEQUENCE.**
 
 ---
 
@@ -16,44 +16,115 @@ That's it! Everything else is documented.
 
 ---
 
-## 🤖 Instructions for Claude (New Session)
+## 🤖 MANDATORY STARTUP SEQUENCE FOR CLAUDE
 
-### Step 1: Understand the Context (2 minutes)
+> **⚠️ CRITICAL**: Follow these steps **IN EXACT ORDER**. Do not skip any step.
 
-> **🚨 IMPORTANT**: This directory is used for BOTH work and personal projects!
->
-> **FIRST**, determine which project you're working on:
-> - 🏢 **NUDJ (work)**: Read `CLAUDE-NUDJ.md`
-> - 🏠 **Aperture (personal)**: Read `CLAUDE-APERTURE.md`
->
-> If unclear, read `CLAUDE.md` for guidance on which to choose.
+### STEP 1: Determine Which Project (30 seconds)
 
-You are working on **Aperture** - a multi-project development framework with continuous improvement processes.
+**YOU MUST READ THIS FILE FIRST**: `CLAUDE.md`
 
-**Read these files IN ORDER**:
+This file is a router that tells you whether you're working on:
+- 🏢 **NUDJ (work)** - Monorepo with PNPM, Turbo, MongoDB
+- 🏠 **Aperture (personal)** - Individual projects with Vercel
 
-1. **`CLAUDE-APERTURE.md`** (IF working on Aperture personal projects)
-   - Aperture-specific architecture
-   - Project structure and conventions
-   - Development patterns
+**ACTION REQUIRED**: After reading `CLAUDE.md`, you must explicitly state:
+```
+I am working on [NUDJ/Aperture] based on [reason from CLAUDE.md].
+I will now read [CLAUDE-NUDJ.md/CLAUDE-APERTURE.md].
+```
 
-2. **`NEXT_SESSION.md`** (MOST IMPORTANT - read this NEXT)
-   - Current status
-   - Immediate next steps
-   - What to work on today
-   - Key context and decisions
+**⛔ DO NOT PROCEED** until you've read `CLAUDE.md` and identified the project.
 
-3. **`SESSION_CHECKLIST.md`** (if starting a major task)
-   - Session workflow
-   - How to capture mistakes
-   - When to update docs
+---
 
-4. **Relevant project docs** (if working on a specific project)
-   - Location: `projects/[project-name]/DEPLOYMENT.md`, etc.
-   - Current project state
-   - What's completed vs pending
+### STEP 2: Read Project-Specific Documentation (2 minutes)
 
-### Step 2: Quick Orientation (30 seconds)
+**IF APERTURE** (personal projects):
+1. Read `CLAUDE-APERTURE.md` in full
+2. Note the current projects (wizard-of-oz)
+3. Understand Vercel deployment requirements
+
+**IF NUDJ** (work projects):
+1. Read `CLAUDE-NUDJ.md` in full
+2. Note the monorepo structure
+3. Understand PNPM workspace patterns
+
+**ACTION REQUIRED**: After reading, you must state:
+```
+I have read [CLAUDE-APERTURE/NUDJ].md.
+Key facts: [list 3 key things about this project type]
+I will now read NEXT_SESSION.md.
+```
+
+**⛔ DO NOT PROCEED** until you've read and acknowledged the project docs.
+
+---
+
+### STEP 3: Understand Current Status (1 minute)
+
+**YOU MUST READ**: `NEXT_SESSION.md`
+
+This file contains:
+- What was completed in the last session
+- What you should work on today
+- Critical context and decisions
+
+**ACTION REQUIRED**: After reading, you must state:
+```
+Current status: [brief summary]
+Today's task: [what you'll work on]
+Any blockers: [yes/no, if yes explain]
+```
+
+**⛔ DO NOT START WORK** until you've confirmed you understand the current status.
+
+---
+
+### STEP 4: Validation Checklist
+
+Before you start working, **YOU MUST CONFIRM**:
+
+```
+✅ I read CLAUDE.md and identified the project type
+✅ I read [CLAUDE-APERTURE/NUDJ].md for project-specific patterns
+✅ I read NEXT_SESSION.md and understand current status
+✅ I know what task to work on today
+✅ I understand any deployment requirements (Vercel/other)
+```
+
+**IF ANY CHECKBOX IS UNCHECKED**: Go back and read the missing file.
+
+---
+
+### STEP 5: Start Working
+
+Only after completing Steps 1-4, you may:
+- Confirm the task with the user
+- Ask clarifying questions
+- Begin work using appropriate patterns
+
+---
+
+## 📚 Complete Reading Order (Summary)
+
+**MANDATORY SEQUENCE**:
+1. **CLAUDE.md** → Identify project type
+2. **CLAUDE-APERTURE.md** OR **CLAUDE-NUDJ.md** → Learn patterns
+3. **NEXT_SESSION.md** → Understand current status
+4. **Validation checklist** → Confirm readiness
+5. **Begin work** → Only after all above complete
+
+**OPTIONAL (as needed)**:
+- `SESSION_CHECKLIST.md` - For major tasks
+- `projects/[name]/DEPLOYMENT.md` - For deployment tasks
+- `.process/COMMON_MISTAKES.md` - To avoid known errors
+
+---
+
+## 📖 Additional Context (Read as Needed)
+
+### Repository Structure (Aperture)
 
 **Repository Structure**:
 ```
@@ -79,7 +150,7 @@ aperture/
         └── ...
 ```
 
-### Step 3: Find Information Fast
+### Quick Reference Table
 
 **Where to look for...**
 
@@ -94,7 +165,7 @@ aperture/
 | **Session workflow** | `SESSION_CHECKLIST.md` |
 | **How to start new project** | `CONTRIBUTING.md` |
 
-### Step 4: Core Philosophies (Remember These)
+### Core Philosophies (Aperture Projects)
 
 1. **Start Minimal**: Cost/benefit analysis before adding complexity
    - Example: Testing agent anti-pattern (see `COMMON_MISTAKES.md`)
@@ -113,14 +184,6 @@ aperture/
    - Start new session at 100K+ tokens
    - Don't try to preserve context - trust the docs
    - 5-minute handoff via `NEXT_SESSION.md`
-
-### Step 5: Start Working
-
-Based on `NEXT_SESSION.md`:
-- Confirm what you'll work on
-- Ask clarifying questions if needed (Socratic method)
-- Use Plan Mode for non-trivial tasks
-- Update relevant files as you go
 
 ---
 
@@ -173,21 +236,35 @@ Point to specific files:
 
 ---
 
-## 📝 File Hierarchy (Quick Reference)
+## ⚠️ Common Startup Mistakes to Avoid
 
-**Always start with**:
-1. `START_HERE.md` (you are here)
-2. `NEXT_SESSION.md` (what's happening now)
+**❌ DON'T**:
+- Skip reading CLAUDE.md (you won't know which project you're on)
+- Read only NEXT_SESSION.md without project context
+- Start coding before completing the validation checklist
+- Assume you know the project type without checking
+- Mix Nudj and Aperture patterns
 
-**Then consult as needed**:
-- `.process/` - How we work
-- `projects/[name]/` - Specific project state
-- `SESSION_CHECKLIST.md` - Session workflow
+**✅ DO**:
+- Follow the 5-step sequence exactly as written
+- Explicitly confirm each step before proceeding
+- State your understanding before starting work
+- Ask if unclear which project you're on
+- Use the validation checklist every time
 
-**Don't read everything** - be targeted based on current task.
+---
+
+## 📖 Need an Example?
+
+**See `STARTUP_EXAMPLE.md`** for a complete example of a correct session startup.
+
+This shows:
+- ✅ What Claude should say at each step
+- ❌ Common mistakes and anti-patterns
+- 🎯 How users can validate Claude followed the process
 
 ---
 
 **Last Updated**: 2025-10-10
-**Purpose**: Foolproof session handoffs
+**Purpose**: Foolproof session handoffs with mandatory startup sequence
 **Next Review**: After next session (validate if this works)
