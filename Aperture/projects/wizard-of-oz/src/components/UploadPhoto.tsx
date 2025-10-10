@@ -6,14 +6,9 @@ export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
-
-  const addDebug = (msg: string) => {
-    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,28 +39,14 @@ export function UploadPhoto() {
   };
 
   const handleUpload = async () => {
-    addDebug('🔵 Upload button clicked');
-
     if (!selectedFile) {
-      addDebug('🔴 No file found in state');
+      setError('No file selected');
       return;
     }
 
-    addDebug(`🔵 File found: ${selectedFile.name} (${selectedFile.size} bytes)`);
-
     try {
       setError('');
-      addDebug('🔵 Calling uploadPhoto...');
-      console.log('Starting upload from UI component...');
-
-      const uploadPromise = uploadPhoto(selectedFile);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
-      );
-
-      await Promise.race([uploadPromise, timeoutPromise]);
-
-      addDebug('✅ Upload successful!');
+      await uploadPhoto(selectedFile);
       setPreview(null);
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -74,20 +55,10 @@ export function UploadPhoto() {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
       }
-      console.log('Upload completed successfully from UI!');
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
-      const errorDetails = {
-        message: errorMessage,
-        name: err?.name,
-        code: err?.code,
-        details: err?.details,
-        hint: err?.hint,
-        statusCode: err?.statusCode
-      };
-      addDebug(`🔴 Upload failed: ${errorMessage}`);
-      console.error('Upload error in UI component:', err);
-      setError(`Upload failed: ${errorMessage}\n\nError details:\n${JSON.stringify(errorDetails, null, 2)}`);
+      console.error('Upload error:', err);
+      setError(errorMessage);
     }
   };
 
@@ -142,7 +113,7 @@ export function UploadPhoto() {
           <button
             type="button"
             onClick={handleCameraCapture}
-            className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-4 px-6 rounded-lg transition-colors mb-3"
+            className="w-full bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-4 px-6 rounded-lg transition-colors mb-3 min-h-[48px] touch-manipulation"
           >
             📸 Take Photo
           </button>
@@ -150,7 +121,7 @@ export function UploadPhoto() {
           <button
             type="button"
             onClick={handleGallerySelect}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors"
+            className="w-full bg-gray-100 active:bg-gray-200 md:hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors min-h-[48px] touch-manipulation"
           >
             📁 Choose from Gallery
           </button>
@@ -174,7 +145,7 @@ export function UploadPhoto() {
                   cameraInputRef.current.value = '';
                 }
               }}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors"
+              className="flex-1 bg-gray-100 active:bg-gray-200 md:hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors min-h-[48px] touch-manipulation"
               disabled={uploading}
             >
               Cancel
@@ -183,7 +154,7 @@ export function UploadPhoto() {
               type="button"
               onClick={handleUpload}
               disabled={uploading}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation"
             >
               {uploading ? 'Uploading...' : 'Upload'}
             </button>
@@ -192,17 +163,8 @@ export function UploadPhoto() {
       )}
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
-          <pre className="whitespace-pre-wrap font-mono">{error}</pre>
-        </div>
-      )}
-
-      {debugInfo.length > 0 && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 text-xs">
-          <div className="font-bold mb-2">Debug Log:</div>
-          {debugInfo.map((info, i) => (
-            <div key={i} className="font-mono">{info}</div>
-          ))}
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+          {error}
         </div>
       )}
     </motion.div>
