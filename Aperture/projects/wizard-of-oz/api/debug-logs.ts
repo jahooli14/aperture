@@ -142,8 +142,26 @@ Eyes open: ${photo.eyeCoordinates.eyesOpen !== undefined ? (photo.eyeCoordinates
       ` : '<p style="color: #ce9178">No alignment data yet</p>'}
 
       ${photo.aligned_url ? `
-        <h3>Aligned Image</h3>
-        <img src="${photo.aligned_url}" style="max-width: 400px; border: 2px solid #007acc; border-radius: 5px;" />
+        <h3>Aligned Image (with target markers)</h3>
+        <div style="position: relative; display: inline-block;">
+          <img src="${photo.aligned_url}" style="max-width: 540px; border: 2px solid #007acc; border-radius: 5px;" />
+          <!-- Target positions scaled to 50% (540px display from 1080px image) -->
+          <!-- Right eye target at x=360 (scaled to 180px at 50%) -->
+          <div style="position: absolute; left: 180px; top: 216px; width: 20px; height: 20px; border: 2px solid red; border-radius: 50%; transform: translate(-50%, -50%);"></div>
+          <div style="position: absolute; left: 180px; top: 205px; color: red; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.7); padding: 2px 4px;">R</div>
+
+          <!-- Left eye target at x=720 (scaled to 360px at 50%) -->
+          <div style="position: absolute; left: 360px; top: 216px; width: 20px; height: 20px; border: 2px solid lime; border-radius: 50%; transform: translate(-50%, -50%);"></div>
+          <div style="position: absolute; left: 360px; top: 205px; color: lime; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.7); padding: 2px 4px;">L</div>
+
+          <!-- Center line at x=540 (scaled to 270px) -->
+          <div style="position: absolute; left: 270px; top: 0; width: 2px; height: 100%; background: yellow; opacity: 0.5;"></div>
+        </div>
+        <p style="color: #9cdcfe; font-size: 12px;">
+          🔴 Red circle (R) = Right eye target (x=360 / 33%)<br>
+          🟢 Green circle (L) = Left eye target (x=720 / 67%)<br>
+          🟡 Yellow line = Center (x=540 / 50%)
+        </p>
       ` : ''}
     </div>
   `).join('') || '<p>No photos found</p>'}
