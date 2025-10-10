@@ -5,9 +5,14 @@ import { usePhotoStore } from '../stores/usePhotoStore';
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
+
+  const addDebug = (msg: string) => {
+    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -35,13 +40,22 @@ export function UploadPhoto() {
   };
 
   const handleUpload = async () => {
+    addDebug('🔵 Upload button clicked');
     const file = fileInputRef.current?.files?.[0] || cameraInputRef.current?.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      addDebug('🔴 No file found in refs');
+      return;
+    }
+
+    addDebug(`🔵 File found: ${file.name} (${file.size} bytes)`);
 
     try {
       setError('');
+      addDebug('🔵 Calling uploadPhoto...');
       console.log('Starting upload from UI component...');
       await uploadPhoto(file);
+      addDebug('✅ Upload successful!');
       setPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -52,6 +66,7 @@ export function UploadPhoto() {
       console.log('Upload completed successfully from UI!');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      addDebug(`🔴 Upload failed: ${errorMessage}`);
       console.error('Upload error in UI component:', err);
       setError(`Upload failed: ${errorMessage}\n\nDetailed error: ${JSON.stringify(err, null, 2)}`);
     }
@@ -159,6 +174,15 @@ export function UploadPhoto() {
       {error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
           <pre className="whitespace-pre-wrap font-mono">{error}</pre>
+        </div>
+      )}
+
+      {debugInfo.length > 0 && (
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 text-xs">
+          <div className="font-bold mb-2">Debug Log:</div>
+          {debugInfo.map((info, i) => (
+            <div key={i} className="font-mono">{info}</div>
+          ))}
         </div>
       )}
     </motion.div>
