@@ -113,6 +113,77 @@ When something doesn't work:
 
 ---
 
+## 2025-10-10 | Debugging | Production API URLs Must Include Protocol and Handle Vercel Environment
+
+### What Happened
+After implementing eye detection/alignment pipeline, uploads worked but photos stayed "Processing" forever. The pipeline had multiple silent failures:
+
+1. **Relative API URLs don't work in production** - Frontend was calling `/api/detect-eyes` which worked locally but failed in Vercel
+2. **VERCEL_URL missing protocol** - `detect-eyes` calling `align-photo` used `VERCEL_URL` which is just the domain without `https://`
+3. **Fire-and-forget API calls hide errors** - No response checking meant failures were completely silent
+4. **Empty Vercel logs despite 200 responses** - Functions returned 200 but had no logs because they exited early
+5. **Database constraints override code checks** - Disabled daily upload limit in code but DB unique constraint still enforced it
+
+### The Fixes
+1. **Frontend API calls**: Changed `/api/detect-eyes` to `window.location.origin + '/api/detect-eyes'`
+2. **Server-to-server calls**: Added `https://` prefix to `process.env.VERCEL_URL`
+3. **Error handling**: Changed from `.catch()` to `.then()` chain with response checking
+4. **Comprehensive logging**: Added console.log at every step to track execution
+5. **Database constraints**: Temporarily removed unique constraint with `ALTER TABLE`
+
+### Prevention Strategy
+
+**Vercel Serverless Function Checklist**:
+1. ✅ **Frontend → API**: Use `window.location.origin + '/api/endpoint'`
+2. ✅ **Server → Server**: Use `https://${process.env.VERCEL_URL}/api/endpoint`
+3. ✅ **Always check responses**: Don't fire-and-forget - log status and errors
+4. ✅ **Add logging first**: Console.log at entry, key steps, and exit points
+5. ✅ **Check Vercel logs**: Empty logs = early exit, look for missing env vars or errors
+6. ✅ **Database constraints**: Remember they enforce even if code doesn't check
+
+**API Call Pattern**:
+```typescript
+// ❌ DON'T: Fire and forget
+fetch('/api/endpoint', { ... });
+
+// ✅ DO: Check response and log
+const response = await fetch(absoluteUrl, { ... });
+console.log('Response:', response.status);
+if (!response.ok) {
+  const error = await response.text();
+  console.error('API failed:', error);
+}
+```
+
+### Debugging Silent Failures Checklist
+When an async operation "works" but doesn't do anything:
+1. **Add logging at every step** - Entry, progress, completion, errors
+2. **Check Vercel logs** - Empty logs mean early exit or crash
+3. **Verify URLs are absolute** - Print the full URL being called
+4. **Check response status** - Don't assume success
+5. **Verify environment variables** - Missing vars cause silent failures
+6. **Check database directly** - Bypass code to see what's actually stored
+
+### Cost of Mistake
+- **Time Lost**: ~2 hours debugging silent failures across multiple layers
+- **Deployments**: 8+ deployments adding logging and fixes
+- **User Impact**: Feature appeared broken despite successful uploads
+- **Complexity**: Multiple simultaneous issues compounded debugging
+
+### Key Learning
+**Silent failures are the hardest to debug.** In serverless environments:
+- Functions returning 200 doesn't mean they succeeded
+- Empty logs mean the function exited before logging
+- Always use absolute URLs for API calls in production
+- Check responses, don't fire-and-forget
+- Add comprehensive logging FIRST, not after things break
+
+### Documented in
+- This entry - Vercel API patterns and debugging checklist
+- Multiple commits with enhanced error handling and logging
+
+---
+
 ## Template for Future Entries
 
 ### [Date] | [Category] | [Brief Title]
