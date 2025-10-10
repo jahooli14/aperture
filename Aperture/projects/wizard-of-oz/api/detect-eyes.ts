@@ -101,11 +101,24 @@ IMPORTANT:
       ? `https://${process.env.VERCEL_URL}`
       : (req.headers.origin as string);
 
-    await fetch(`${baseUrl}/api/align-photo`, {
+    console.log('Calling align-photo API:', { baseUrl, photoId });
+
+    const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ photoId, landmarks }),
     });
+
+    console.log('Align-photo response:', {
+      status: alignResponse.status,
+      ok: alignResponse.ok
+    });
+
+    if (!alignResponse.ok) {
+      const errorText = await alignResponse.text();
+      console.error('Align-photo failed:', errorText);
+      // Don't throw - we still want to return success for eye detection
+    }
 
     return res.status(200).json({ success: true, landmarks });
   } catch (error) {
