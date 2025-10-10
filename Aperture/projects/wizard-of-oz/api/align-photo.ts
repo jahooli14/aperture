@@ -184,20 +184,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rightEye: { x: scaledRightX.toFixed(2), y: scaledRightY.toFixed(2) },
     });
 
-    // STEP 4: Calculate translation to place eyes at target positions
-    // We want scaledLeftX to become TARGET_LEFT_EYE.x and scaledLeftY to become TARGET_LEFT_EYE.y
-    const translateX = TARGET_LEFT_EYE.x - scaledLeftX;
-    const translateY = TARGET_LEFT_EYE.y - scaledLeftY;
+    // STEP 4: Calculate extraction region to place eyes at target positions
+    // If left eye is at scaledLeftX in the scaled image,
+    // and we want it at TARGET_LEFT_EYE.x in the final output,
+    // we need to extract starting from (scaledLeftX - TARGET_LEFT_EYE.x)
+    const extractLeft = Math.round(scaledLeftX - TARGET_LEFT_EYE.x);
+    const extractTop = Math.round(scaledLeftY - TARGET_LEFT_EYE.y);
 
-    console.log('Step 4: Translation required:', {
-      translateX: translateX.toFixed(2),
-      translateY: translateY.toFixed(2),
+    console.log('Step 4: Extraction calculation:', {
+      scaledLeftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
+      targetLeftEye: TARGET_LEFT_EYE,
+      extractionOffset: { left: extractLeft, top: extractTop },
     });
-
-    // Calculate extraction region: we need to extract OUTPUT_SIZE×OUTPUT_SIZE
-    // centered such that eyes are at target positions
-    const extractLeft = Math.round(-translateX);
-    const extractTop = Math.round(-translateY);
 
     console.log('Step 5: Extracting final', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region...');
     console.log('Extract region:', {
@@ -269,8 +267,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Create alignment transform record
     const transform: AlignmentTransform = {
-      translateX,
-      translateY,
+      translateX: -extractLeft,  // How much we shifted the image
+      translateY: -extractTop,
       rotation: rotationDegrees,
       scale: scaleFactor,
     };
