@@ -97,7 +97,11 @@ IMPORTANT:
     }
 
     // Trigger alignment processing
-    await fetch(`${process.env.VERCEL_URL || req.headers.origin}/api/align-photo`, {
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : (req.headers.origin as string);
+
+    await fetch(`${baseUrl}/api/align-photo`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ photoId, landmarks }),
