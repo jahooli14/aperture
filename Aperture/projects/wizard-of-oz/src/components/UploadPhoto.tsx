@@ -57,7 +57,14 @@ export function UploadPhoto() {
       setError('');
       addDebug('🔵 Calling uploadPhoto...');
       console.log('Starting upload from UI component...');
-      await uploadPhoto(selectedFile);
+
+      const uploadPromise = uploadPhoto(selectedFile);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000)
+      );
+
+      await Promise.race([uploadPromise, timeoutPromise]);
+
       addDebug('✅ Upload successful!');
       setPreview(null);
       setSelectedFile(null);
@@ -68,11 +75,19 @@ export function UploadPhoto() {
         cameraInputRef.current.value = '';
       }
       console.log('Upload completed successfully from UI!');
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      const errorDetails = {
+        message: errorMessage,
+        name: err?.name,
+        code: err?.code,
+        details: err?.details,
+        hint: err?.hint,
+        statusCode: err?.statusCode
+      };
       addDebug(`🔴 Upload failed: ${errorMessage}`);
       console.error('Upload error in UI component:', err);
-      setError(`Upload failed: ${errorMessage}\n\nDetailed error: ${JSON.stringify(err, null, 2)}`);
+      setError(`Upload failed: ${errorMessage}\n\nError details:\n${JSON.stringify(errorDetails, null, 2)}`);
     }
   };
 
