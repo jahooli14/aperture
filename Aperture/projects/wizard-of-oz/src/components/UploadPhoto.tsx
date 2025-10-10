@@ -4,6 +4,7 @@ import { usePhotoStore } from '../stores/usePhotoStore';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +31,9 @@ export function UploadPhoto() {
       return;
     }
 
+    // Store the file in state
+    setSelectedFile(file);
+
     // Show preview
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -41,22 +45,22 @@ export function UploadPhoto() {
 
   const handleUpload = async () => {
     addDebug('🔵 Upload button clicked');
-    const file = fileInputRef.current?.files?.[0] || cameraInputRef.current?.files?.[0];
 
-    if (!file) {
-      addDebug('🔴 No file found in refs');
+    if (!selectedFile) {
+      addDebug('🔴 No file found in state');
       return;
     }
 
-    addDebug(`🔵 File found: ${file.name} (${file.size} bytes)`);
+    addDebug(`🔵 File found: ${selectedFile.name} (${selectedFile.size} bytes)`);
 
     try {
       setError('');
       addDebug('🔵 Calling uploadPhoto...');
       console.log('Starting upload from UI component...');
-      await uploadPhoto(file);
+      await uploadPhoto(selectedFile);
       addDebug('✅ Upload successful!');
       setPreview(null);
+      setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -147,6 +151,7 @@ export function UploadPhoto() {
               type="button"
               onClick={() => {
                 setPreview(null);
+                setSelectedFile(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
