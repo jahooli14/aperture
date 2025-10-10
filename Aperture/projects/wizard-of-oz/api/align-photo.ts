@@ -2,6 +2,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 
+// Optimize Sharp for Vercel serverless (critical for performance & memory)
+sharp.cache(false);      // Disable caching (serverless is stateless)
+sharp.concurrency(1);    // Limit concurrent operations (prevent memory spikes)
+
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import { retryWithBackoff } from './lib/retry.js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const supabase = createClient(
@@ -109,7 +110,7 @@ VALIDATION REQUIREMENTS:
     );
     const interEyePercent = (interEyeDistance / landmarks.imageWidth) * 100;
 
-    if (interEyePercent < 10 || interEyePercent > 35) {
+    if (interEyePercent < 10 || interEyePercent > 50) {
       console.error('Invalid inter-eye distance:', {
         distance: interEyeDistance,
         percent: interEyePercent,
@@ -117,7 +118,7 @@ VALIDATION REQUIREMENTS:
       });
       return res.status(422).json({
         error: 'Invalid eye detection',
-        message: `Eyes detected too ${interEyePercent < 10 ? 'close' : 'far'} apart (${interEyePercent.toFixed(1)}% of image width). Expected 10-35%. Please ensure the photo shows the baby's face clearly.`,
+        message: `Eyes detected too ${interEyePercent < 10 ? 'close' : 'far'} apart (${interEyePercent.toFixed(1)}% of image width). Expected 10-50%. Please ensure the photo shows the baby's face clearly.`,
         interEyePercent,
       });
     }
@@ -174,40 +175,66 @@ VALIDATION REQUIREMENTS:
     const timeout = setTimeout(() => controller.abort(), 55000);
 
     try {
-      const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ photoId, landmarks }),
-        signal: controller.signal,
-      });
+      // Retry align-photo call with exponential backoff (up to 3 attempts)
+      await retryWithBackoff(
+        async () => {
+          const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ photoId, landmarks }),
+            signal: controller.signal,
+          });
 
-      const responseText = await alignResponse.text();
+          const responseText = await alignResponse.text();
 
-      console.log('Align-photo response:', {
-        status: alignResponse.status,
-        ok: alignResponse.ok,
-        bodyLength: responseText.length,
-        bodyPreview: responseText.substring(0, 200),
-      });
+          console.log('Align-photo response:', {
+            status: alignResponse.status,
+            ok: alignResponse.ok,
+            bodyLength: responseText.length,
+            bodyPreview: responseText.substring(0, 200),
+          });
 
-      if (!alignResponse.ok) {
-        // Detect specific error types
-        if (alignResponse.status === 401 || alignResponse.status === 403) {
-          console.error('❌ Authentication failed - Deployment Protection may be blocking. Add VERCEL_AUTOMATION_BYPASS_SECRET environment variable.');
-        } else if (alignResponse.status === 404) {
-          console.error('❌ Align-photo endpoint not found - check deployment');
-        } else if (alignResponse.status === 500) {
-          console.error('❌ Align-photo internal error:', responseText.substring(0, 500));
+          if (!alignResponse.ok) {
+            // Detect specific error types
+            if (alignResponse.status === 401 || alignResponse.status === 403) {
+              console.error('❌ Authentication failed - Deployment Protection may be blocking. Add VERCEL_AUTOMATION_BYPASS_SECRET environment variable.');
+              // Don't retry auth errors
+              throw new Error(`Authentication failed (${alignResponse.status}) - no retry`);
+            } else if (alignResponse.status === 404) {
+              console.error('❌ Align-photo endpoint not found - check deployment');
+              // Don't retry 404s
+              throw new Error('Endpoint not found (404) - no retry');
+            } else if (alignResponse.status === 500) {
+              console.error('❌ Align-photo internal error:', responseText.substring(0, 500));
+              // Retry 500 errors
+              throw new Error(`Server error (500) - will retry`);
+            }
+          } else {
+            console.log('✅ Alignment triggered successfully');
+          }
+
+          return alignResponse;
+        },
+        {
+          retries: 3,
+          baseDelay: 2000,     // Start with 2s delay
+          maxDelay: 10000,     // Max 10s delay
+          factor: 2,           // Double each time
+          jitter: true,        // Add randomization
+          shouldRetry: (error) => {
+            // Only retry if message contains "will retry"
+            return error.message.includes('will retry');
+          },
+          onRetry: (error, attempt, delay) => {
+            console.log(`🔄 Retrying align-photo (attempt ${attempt}/3) after ${delay}ms due to: ${error.message}`);
+          },
         }
-        // Don't throw - we still want to return success for eye detection
-      } else {
-        console.log('✅ Alignment triggered successfully');
-      }
+      );
     } catch (error) {
       if (error.name === 'AbortError') {
         console.error('❌ Align-photo request timed out after 55s');
       } else {
-        console.error('❌ Align-photo request failed:', error);
+        console.error('❌ Align-photo request failed after retries:', error);
       }
       // Don't throw - eye detection still succeeded
     } finally {
