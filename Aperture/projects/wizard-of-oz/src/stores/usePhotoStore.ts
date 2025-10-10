@@ -81,7 +81,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .from('photos')
         .insert(insertData)
         .select()
-        .single();
+        .single<Photo>();
 
       if (insertError || !photoData) throw insertError || new Error('Failed to create photo record');
 
