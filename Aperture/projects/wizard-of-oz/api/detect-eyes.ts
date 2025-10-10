@@ -63,11 +63,13 @@ Return JSON with this exact structure:
 }
 
 IMPORTANT:
-- The x,y coordinates should be the center of each eye's iris/pupil
+- The x,y coordinates should be the center of each eye position (where the iris/pupil would be)
+- Even if the eyes are closed, still detect the center position of each eye
+- If eyes are closed, estimate the center of where the eye is located beneath the eyelid
 - Use pixel coordinates (not normalized)
 - leftEye is the baby's left eye (appears on the right side of the image when facing camera)
 - rightEye is the baby's right eye (appears on the left side of the image when facing camera)
-- confidence should reflect detection certainty (0.8+ is good)
+- confidence should reflect detection certainty (0.8+ is good for open eyes, 0.6+ is acceptable for closed eyes)
 - Return actual image dimensions in pixels`;
 
     const result = await model.generateContent([
@@ -78,7 +80,7 @@ IMPORTANT:
     const landmarks: EyeLandmarks = JSON.parse(result.response.text());
 
     // Validate confidence
-    if (landmarks.confidence < 0.7) {
+    if (landmarks.confidence < 0.6) {
       return res.status(422).json({
         error: 'Low confidence eye detection',
         message: 'Please retake the photo with better lighting and ensure the face is clearly visible',
