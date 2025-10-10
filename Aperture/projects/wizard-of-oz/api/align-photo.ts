@@ -28,14 +28,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    console.log('align-photo called with:', { photoId: req.body?.photoId });
+
     const { photoId, landmarks } = req.body as {
       photoId: string;
       landmarks: EyeLandmarks;
     };
 
     if (!photoId || !landmarks) {
+      console.error('Missing required fields:', { photoId, landmarks });
       return res.status(400).json({ error: 'Missing photoId or landmarks' });
     }
+
+    console.log('Processing alignment for photo:', photoId);
 
     // Fetch photo from database
     const { data: photo, error: fetchError } = await supabase
@@ -134,6 +139,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: userData } = await supabase.auth.admin.getUserById(photo.user_id);
     const alignedFileName = `${photo.user_id}/${photoId}-aligned.jpg`;
 
+    console.log('Uploading aligned image to bucket:', { fileName: alignedFileName, size: alignedImage.length });
+
     const { error: uploadError } = await supabase.storage
       .from('aligned')
       .upload(alignedFileName, alignedImage, {
@@ -142,8 +149,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
     if (uploadError) {
+      console.error('Storage upload error:', uploadError);
       throw uploadError;
     }
+
+    console.log('Upload successful, getting public URL');
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
@@ -151,6 +161,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .getPublicUrl(alignedFileName);
 
     // Update photo record with aligned URL and transform
+    console.log('Updating database with aligned URL:', { photoId, publicUrl });
+
     const { error: updateError } = await supabase
       .from('photos')
       .update({
@@ -160,8 +172,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', photoId);
 
     if (updateError) {
+      console.error('Database update error:', updateError);
       throw updateError;
     }
+
+    console.log('✅ Alignment complete for photo:', photoId);
 
     return res.status(200).json({
       success: true,
@@ -169,7 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       transform,
     });
   } catch (error) {
-    console.error('Error aligning photo:', error);
+    console.error('❌ Error aligning photo:', error);
     return res.status(500).json({
       error: 'Failed to align photo',
       message: error instanceof Error ? error.message : 'Unknown error',
