@@ -30,6 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       hasAligned: !!photo.aligned_url,
       eyeCoordinates: photo.eye_coordinates,
       alignmentTransform: photo.alignment_transform,
+      aligned_url: photo.aligned_url,
     }));
 
     // Return HTML page

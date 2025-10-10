@@ -135,15 +135,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scaleFactor: scaleFactor.toFixed(3),
     });
 
-    // SIMPLEST POSSIBLE ALIGNMENT - NO ROTATION, NO COMPLEX MATH
-    // Just scale and center the image with eyes at target positions
-    console.log('🔧 SIMPLE ALIGNMENT - Testing basic flow...');
+    // SIMPLEST FIX: Center eyes at midpoint between target positions
+    // This way both eyes will be equidistant from center
+    console.log('🔧 SIMPLE ALIGNMENT: Scale and center on eye midpoint');
 
     // Step 1: Scale image so inter-eye distance = 360px
     const scaledWidth = Math.round(landmarks.imageWidth * scaleFactor);
     const scaledHeight = Math.round(landmarks.imageHeight * scaleFactor);
 
-    console.log('Scaling image by', scaleFactor.toFixed(3));
+    console.log('Step 1: Scaling image by', scaleFactor.toFixed(3));
     console.log('  From:', landmarks.imageWidth, 'x', landmarks.imageHeight);
     console.log('  To:', scaledWidth, 'x', scaledHeight);
 
@@ -154,34 +154,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
       .toBuffer();
 
-    // Step 2: Scale eye positions
+    // Step 2: Calculate midpoint between eyes (current and target)
     const scaledLeftEye = {
       x: detectedLeftEye.x * scaleFactor,
       y: detectedLeftEye.y * scaleFactor,
     };
-
-    console.log('Scaled left eye position:', scaledLeftEye);
-    console.log('Target left eye position:', TARGET_LEFT_EYE);
-
-    // Step 3: Extract 1080x1080 region with left eye at target position
-    const extractLeft = Math.round(scaledLeftEye.x - TARGET_LEFT_EYE.x);
-    const extractTop = Math.round(scaledLeftEye.y - TARGET_LEFT_EYE.y);
-
-    // DEBUG: Where will the eyes end up in the final image?
-    const finalLeftEyeX = scaledLeftEye.x - extractLeft;
-    const finalLeftEyeY = scaledLeftEye.y - extractTop;
-
     const scaledRightEye = {
       x: detectedRightEye.x * scaleFactor,
       y: detectedRightEye.y * scaleFactor,
     };
 
+    const currentMidpoint = {
+      x: (scaledLeftEye.x + scaledRightEye.x) / 2,
+      y: (scaledLeftEye.y + scaledRightEye.y) / 2,
+    };
+
+    const targetMidpoint = {
+      x: (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2,  // 540
+      y: (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2,  // 432
+    };
+
+    console.log('Current eye midpoint:', currentMidpoint);
+    console.log('Target eye midpoint:', targetMidpoint);
+
+    // Step 3: Extract based on midpoint (this centers both eyes)
+    const extractLeft = Math.round(currentMidpoint.x - targetMidpoint.x);
+    const extractTop = Math.round(currentMidpoint.y - targetMidpoint.y);
+
+    // DEBUG: Where will the eyes end up?
+    const finalLeftEyeX = scaledLeftEye.x - extractLeft;
+    const finalLeftEyeY = scaledLeftEye.y - extractTop;
     const finalRightEyeX = scaledRightEye.x - extractLeft;
     const finalRightEyeY = scaledRightEye.y - extractTop;
 
-    console.log('🎯 Final eye positions in output (should be left=360, right=720):', {
+    console.log('🎯 Final eye positions in output:', {
       leftEye: { x: finalLeftEyeX.toFixed(1), y: finalLeftEyeY.toFixed(1) },
       rightEye: { x: finalRightEyeX.toFixed(1), y: finalRightEyeY.toFixed(1) },
+      note: 'Eyes centered at midpoint (540, 432). Will be symmetric but may be tilted.',
     });
 
     console.log('Extract offset:', extractLeft, extractTop);
