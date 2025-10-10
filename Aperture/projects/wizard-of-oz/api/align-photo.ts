@@ -99,102 +99,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // Process image with Sharp
-    // New approach: First extract a generous region around the face, THEN rotate
-    // This avoids the rotation coordinate transformation problem
+    // Simplified approach: Just crop and rotate, no complex transformations
 
     const outputSize = 1080; // Square output
 
-    // Calculate extraction region: centered on eye midpoint, large enough to contain face after rotation
-    // Use 1.5x the inter-eye distance as a buffer for rotation
+    console.log('Starting alignment with landmarks:', {
+      leftEye: landmarks.leftEye,
+      rightEye: landmarks.rightEye,
+      eyeMidpoint,
+      imageSize: { width: landmarks.imageWidth, height: landmarks.imageHeight },
+      rotationDegrees
+    });
+
+    // Calculate how much space we need around the eyes
+    // For a face photo, typically the face is about 4-6x the inter-eye distance
     const interEyeDistance = Math.sqrt(
       Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
         Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
     );
 
-    // Extract region size: make it generous to account for rotation
-    // Use 4x inter-eye distance to ensure full face is captured
-    const extractSize = Math.max(outputSize, Math.round(interEyeDistance * 4));
-    const halfExtractSize = Math.round(extractSize / 2);
+    console.log('Inter-eye distance:', interEyeDistance);
 
-    // Calculate extraction bounds (before rotation)
-    const extractLeft = Math.max(0, Math.round(eyeMidpoint.x - halfExtractSize));
-    const extractTop = Math.max(0, Math.round(eyeMidpoint.y - halfExtractSize));
-    const extractWidth = Math.min(
-      extractSize,
-      landmarks.imageWidth - extractLeft
-    );
-    const extractHeight = Math.min(
-      extractSize,
-      landmarks.imageHeight - extractTop
-    );
+    // Simple approach: Extract a square region centered on the eyes
+    // Make it 6x the inter-eye distance to ensure we get the full face
+    const cropSize = Math.max(outputSize, Math.round(interEyeDistance * 6));
+    const halfCrop = cropSize / 2;
 
-    console.log('Extraction region:', { extractLeft, extractTop, extractWidth, extractHeight, eyeMidpoint });
+    // Calculate crop bounds - centered on eye midpoint
+    const cropLeft = Math.max(0, Math.round(eyeMidpoint.x - halfCrop));
+    const cropTop = Math.max(0, Math.round(eyeMidpoint.y - halfCrop));
 
-    // Step 1: Extract the region containing the face
-    const extractedImage = await sharp(imageBuffer)
+    // Ensure we don't go past image boundaries
+    const cropWidth = Math.min(cropSize, landmarks.imageWidth - cropLeft);
+    const cropHeight = Math.min(cropSize, landmarks.imageHeight - cropTop);
+
+    console.log('Crop region:', { cropLeft, cropTop, cropWidth, cropHeight });
+
+    // Step 1: Crop to region around face
+    let processedImage = await sharp(imageBuffer)
       .extract({
-        left: extractLeft,
-        top: extractTop,
-        width: extractWidth,
-        height: extractHeight,
+        left: cropLeft,
+        top: cropTop,
+        width: cropWidth,
+        height: cropHeight,
       })
       .toBuffer();
 
-    // Step 2: Calculate the eye position within the extracted region
-    const eyeInExtract = {
-      x: eyeMidpoint.x - extractLeft,
-      y: eyeMidpoint.y - extractTop,
-    };
+    console.log('After crop, image size:', (await sharp(processedImage).metadata()).width, 'x', (await sharp(processedImage).metadata()).height);
 
-    console.log('Eye position in extracted region:', eyeInExtract);
+    // Step 2: Rotate if needed (Sharp rotates around center by default)
+    if (Math.abs(rotationDegrees) > 0.5) {
+      console.log('Rotating by', rotationDegrees, 'degrees');
+      processedImage = await sharp(processedImage)
+        .rotate(rotationDegrees, { background: '#ffffff' })
+        .toBuffer();
 
-    // Step 3: Rotate the extracted image
-    const rotatedImage = await sharp(extractedImage)
-      .rotate(rotationDegrees, { background: '#ffffff' })
-      .toBuffer();
+      console.log('After rotation, image size:', (await sharp(processedImage).metadata()).width, 'x', (await sharp(processedImage).metadata()).height);
+    }
 
-    // Step 4: Get rotated image dimensions
-    const rotatedMetadata = await sharp(rotatedImage).metadata();
-    const rotatedWidth = rotatedMetadata.width || extractWidth;
-    const rotatedHeight = rotatedMetadata.height || extractHeight;
-
-    // Step 5: Calculate where the eye midpoint is after rotation
-    // Apply rotation matrix to transform coordinates
-    const angleRadians = (rotationDegrees * Math.PI) / 180;
-    const centerX = extractWidth / 2;
-    const centerY = extractHeight / 2;
-
-    // Translate to origin, rotate, translate back
-    const relativeX = eyeInExtract.x - centerX;
-    const relativeY = eyeInExtract.y - centerY;
-
-    const rotatedEyeX = relativeX * Math.cos(angleRadians) - relativeY * Math.sin(angleRadians) + rotatedWidth / 2;
-    const rotatedEyeY = relativeX * Math.sin(angleRadians) + relativeY * Math.cos(angleRadians) + rotatedHeight / 2;
-
-    console.log('Rotated eye position:', { rotatedEyeX, rotatedEyeY, rotatedWidth, rotatedHeight });
-
-    // Step 6: Crop around the rotated eye position to create final square image
-    const finalHalfSize = outputSize / 2;
-    const finalLeft = Math.max(0, Math.round(rotatedEyeX - finalHalfSize));
-    const finalTop = Math.max(0, Math.round(rotatedEyeY - finalHalfSize * 1.1)); // Eyes slightly above center
-    const finalWidth = Math.min(outputSize, rotatedWidth - finalLeft);
-    const finalHeight = Math.min(outputSize, rotatedHeight - finalTop);
-
-    console.log('Final crop region:', { finalLeft, finalTop, finalWidth, finalHeight });
-
-    const alignedImage = await sharp(rotatedImage)
-      .extract({
-        left: finalLeft,
-        top: finalTop,
-        width: finalWidth,
-        height: finalHeight,
-      })
+    // Step 3: Resize to final output size
+    // Since we cropped centered on the eyes, they should already be in the right position
+    const alignedImage = await sharp(processedImage)
       .resize(outputSize, outputSize, {
         fit: 'cover',
         position: 'center',
       })
       .jpeg({ quality: 95 })
       .toBuffer();
+
+    console.log('Final image size:', outputSize, 'x', outputSize);
 
     // Upload aligned image to Supabase Storage
     const { data: userData } = await supabase.auth.admin.getUserById(photo.user_id);
