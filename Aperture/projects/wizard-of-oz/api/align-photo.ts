@@ -143,20 +143,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cropSize = Math.round(landmarks.imageWidth * 1.5); // 1.5x image width
     const halfCrop = cropSize / 2;
 
-    console.log('Crop size:', cropSize, 'pixels (1.5x image width)');
+    // NEW APPROACH: Rotate first, THEN crop
+    // This way we don't lose the face when rotating by large angles
 
-    // Calculate crop bounds - centered on eye midpoint
-    const cropLeft = Math.max(0, Math.round(actualEyeMidpoint.x - halfCrop));
-    const cropTop = Math.max(0, Math.round(actualEyeMidpoint.y - halfCrop));
+    let processedImage = imageBuffer;
+    let currentWidth = landmarks.imageWidth;
+    let currentHeight = landmarks.imageHeight;
+    let rotatedEyeMidpoint = actualEyeMidpoint;
 
-    // Ensure we don't go past image boundaries
-    const cropWidth = Math.min(cropSize, landmarks.imageWidth - cropLeft);
-    const cropHeight = Math.min(cropSize, landmarks.imageHeight - cropTop);
+    // Step 1: Rotate the full image if needed
+    if (Math.abs(rotationDegrees) > 0.5) {
+      console.log('Step 1: Rotating full image by', rotationDegrees, 'degrees');
+      processedImage = await sharp(imageBuffer)
+        .rotate(rotationDegrees, { background: '#ffffff' })
+        .toBuffer();
+
+      const rotatedMeta = await sharp(processedImage).metadata();
+      currentWidth = rotatedMeta.width || currentWidth;
+      currentHeight = rotatedMeta.height || currentHeight;
+
+      console.log('After rotation, image size:', currentWidth, 'x', currentHeight);
+
+      // Calculate where the eye midpoint is after rotation
+      // Rotation happens around the center of the image
+      const angleRadians = (rotationDegrees * Math.PI) / 180;
+      const originalCenterX = landmarks.imageWidth / 2;
+      const originalCenterY = landmarks.imageHeight / 2;
+
+      // Vector from center to eye midpoint
+      const relX = actualEyeMidpoint.x - originalCenterX;
+      const relY = actualEyeMidpoint.y - originalCenterY;
+
+      // Apply rotation matrix
+      const rotatedRelX = relX * Math.cos(angleRadians) - relY * Math.sin(angleRadians);
+      const rotatedRelY = relX * Math.sin(angleRadians) + relY * Math.cos(angleRadians);
+
+      // New eye position in rotated image
+      rotatedEyeMidpoint = {
+        x: rotatedRelX + currentWidth / 2,
+        y: rotatedRelY + currentHeight / 2,
+      };
+
+      console.log('Eye midpoint after rotation:', rotatedEyeMidpoint);
+    }
+
+    // Step 2: Crop around the rotated eye position
+    console.log('Step 2: Cropping around eye midpoint');
+    console.log('Crop size:', cropSize, 'pixels (1.5x original image width)');
+
+    const cropLeft = Math.max(0, Math.round(rotatedEyeMidpoint.x - halfCrop));
+    const cropTop = Math.max(0, Math.round(rotatedEyeMidpoint.y - halfCrop));
+    const cropWidth = Math.min(cropSize, currentWidth - cropLeft);
+    const cropHeight = Math.min(cropSize, currentHeight - cropTop);
 
     console.log('Crop region:', { cropLeft, cropTop, cropWidth, cropHeight });
 
-    // Step 1: Crop to region around face
-    let processedImage = await sharp(imageBuffer)
+    const croppedImage = await sharp(processedImage)
       .extract({
         left: cropLeft,
         top: cropTop,
@@ -165,21 +207,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
       .toBuffer();
 
-    console.log('After crop, image size:', (await sharp(processedImage).metadata()).width, 'x', (await sharp(processedImage).metadata()).height);
-
-    // Step 2: Rotate if needed (Sharp rotates around center by default)
-    if (Math.abs(rotationDegrees) > 0.5) {
-      console.log('Rotating by', rotationDegrees, 'degrees');
-      processedImage = await sharp(processedImage)
-        .rotate(rotationDegrees, { background: '#ffffff' })
-        .toBuffer();
-
-      console.log('After rotation, image size:', (await sharp(processedImage).metadata()).width, 'x', (await sharp(processedImage).metadata()).height);
-    }
+    console.log('After crop, image size:', (await sharp(croppedImage).metadata()).width, 'x', (await sharp(croppedImage).metadata()).height);
 
     // Step 3: Resize to final output size
-    // Since we cropped centered on the eyes, they should already be in the right position
-    const alignedImage = await sharp(processedImage)
+    const alignedImage = await sharp(croppedImage)
       .resize(outputSize, outputSize, {
         fit: 'cover',
         position: 'center',
