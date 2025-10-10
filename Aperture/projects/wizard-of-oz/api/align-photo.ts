@@ -161,17 +161,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rotatedRightX = rightRelX * cosAngle - rightRelY * sinAngle;
       const rotatedRightY = rightRelX * sinAngle + rightRelY * cosAngle;
 
-      // Account for padding Sharp added
+      // After rotation, Sharp adds padding to fit the rotated image
+      // The rotated coordinates are relative to the original image center
+      // We need to translate them to the new padded image coordinate system
       const paddingX = (currentWidth - landmarks.imageWidth) / 2;
       const paddingY = (currentHeight - landmarks.imageHeight) / 2;
 
+      // Place rotated coordinates in padded image space
+      // Original center is now at (origCenterX + paddingX, origCenterY + paddingY)
       currentLeftEye = {
-        x: rotatedLeftX + currentWidth / 2,
-        y: rotatedLeftY + currentHeight / 2,
+        x: rotatedLeftX + origCenterX + paddingX,
+        y: rotatedLeftY + origCenterY + paddingY,
       };
       currentRightEye = {
-        x: rotatedRightX + currentWidth / 2,
-        y: rotatedRightY + currentHeight / 2,
+        x: rotatedRightX + origCenterX + paddingX,
+        y: rotatedRightY + origCenterY + paddingY,
       };
 
       console.log('  Eyes after rotation:', {
@@ -219,27 +223,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rightEye: currentRightEye,
     });
 
-    // STEP 3: CENTER and EXTRACT to place eyes at exact target positions
-    console.log('Step 3: Extracting to place eyes at target positions...');
+    // STEP 3: EXTRACT to place left eye at exact target position
+    console.log('Step 3: Extracting to place left eye at target position...');
 
-    // Calculate midpoint between current eyes
-    const currentEyeMidX = (currentLeftEye.x + currentRightEye.x) / 2;
-    const currentEyeMidY = (currentLeftEye.y + currentRightEye.y) / 2;
+    console.log('  Current left eye:', currentLeftEye);
+    console.log('  Target left eye:', TARGET_LEFT_EYE);
 
-    // Calculate target midpoint
-    const targetEyeMidX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
-    const targetEyeMidY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
-
-    console.log('  Eye midpoints:', {
-      current: { x: currentEyeMidX, y: currentEyeMidY },
-      target: { x: targetEyeMidX, y: targetEyeMidY },
-    });
-
-    // Calculate extraction offset to center eyes
-    const extractLeft = Math.round(currentEyeMidX - targetEyeMidX);
-    const extractTop = Math.round(currentEyeMidY - targetEyeMidY);
+    // Extract so that current left eye lands at TARGET_LEFT_EYE position
+    // If left eye is at (500, 600) and we want it at (360, 432):
+    // Extract from (500-360, 600-432) = (140, 168)
+    const extractLeft = Math.round(currentLeftEye.x - TARGET_LEFT_EYE.x);
+    const extractTop = Math.round(currentLeftEye.y - TARGET_LEFT_EYE.y);
 
     console.log('  Extraction offset:', { extractLeft, extractTop });
+    console.log('  This will extract region from:', extractLeft, ',', extractTop, 'to', extractLeft + OUTPUT_SIZE, ',', extractTop + OUTPUT_SIZE);
 
     // Handle out-of-bounds by extending canvas
     let alignedImage: Buffer;
@@ -302,8 +299,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Create alignment transform record
     const transform: AlignmentTransform = {
-      translateX: currentEyeMidX - targetEyeMidX,
-      translateY: currentEyeMidY - targetEyeMidY,
+      translateX: currentLeftEye.x - TARGET_LEFT_EYE.x,
+      translateY: currentLeftEye.y - TARGET_LEFT_EYE.y,
       rotation: rotationDegrees,
       scale: scaleFactor,
     };
