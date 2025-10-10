@@ -1,11 +1,13 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, RotateCcw } from 'lucide-react';
+import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [rotation, setRotation] = useState(0);
   const [error, setError] = useState('');
   const [customDate, setCustomDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -23,6 +25,72 @@ export function UploadPhoto() {
 
   const displayDate = customDate || today;
 
+  // Function to rotate image canvas and convert back to file
+  const rotateImage = async (file: File, degrees: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+
+      img.onload = () => {
+        // Set canvas dimensions based on rotation
+        if (degrees === 90 || degrees === 270) {
+          canvas.width = img.height;
+          canvas.height = img.width;
+        } else {
+          canvas.width = img.width;
+          canvas.height = img.height;
+        }
+
+        // Clear canvas and apply rotation
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.save();
+
+        // Move to center of canvas
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+
+        // Rotate
+        ctx.rotate((degrees * Math.PI) / 180);
+
+        // Draw image centered
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+
+        // Convert canvas to blob then to file
+        canvas.toBlob((blob) => {
+          const rotatedFile = new File([blob!], file.name, { type: file.type });
+          resolve(rotatedFile);
+        }, file.type, 0.95);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleRotate = async (direction: 'left' | 'right') => {
+    if (!originalFile) return;
+
+    const newRotation = direction === 'right'
+      ? (rotation + 90) % 360
+      : (rotation - 90 + 360) % 360;
+
+    try {
+      const rotatedFile = await rotateImage(originalFile, newRotation);
+      setSelectedFile(rotatedFile);
+      setRotation(newRotation);
+
+      // Update preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result as string);
+      };
+      reader.readAsDataURL(rotatedFile);
+    } catch (err) {
+      console.error('Error rotating image:', err);
+      setError('Failed to rotate image');
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -39,8 +107,10 @@ export function UploadPhoto() {
       return;
     }
 
-    // Store the file in state
+    // Store both original and current file in state
+    setOriginalFile(file);
     setSelectedFile(file);
+    setRotation(0); // Reset rotation for new file
 
     // Show preview
     const reader = new FileReader();
@@ -62,6 +132,8 @@ export function UploadPhoto() {
       await uploadPhoto(selectedFile, displayDate);
       setPreview(null);
       setSelectedFile(null);
+      setOriginalFile(null);
+      setRotation(0);
       setCustomDate('');
       setShowDatePicker(false);
       if (fileInputRef.current) {
@@ -221,8 +293,39 @@ export function UploadPhoto() {
         </div>
       ) : (
         <div>
-          <div className="mb-4 rounded-lg overflow-hidden">
+          <div className="mb-4 rounded-lg overflow-hidden relative">
             <img src={preview} alt="Preview" className="w-full h-auto" />
+
+            {/* Rotation controls overlay */}
+            <div className="absolute top-2 right-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleRotate('left')}
+                className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
+                title="Rotate left"
+                disabled={uploading}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRotate('right')}
+                className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
+                title="Rotate right"
+                disabled={uploading}
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Rotation indicator */}
+            {rotation !== 0 && (
+              <div className="absolute bottom-2 left-2">
+                <span className="text-xs bg-black/60 text-white px-2 py-1 rounded-full backdrop-blur-sm">
+                  Rotated {rotation}°
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -231,6 +334,8 @@ export function UploadPhoto() {
               onClick={() => {
                 setPreview(null);
                 setSelectedFile(null);
+                setOriginalFile(null);
+                setRotation(0);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
