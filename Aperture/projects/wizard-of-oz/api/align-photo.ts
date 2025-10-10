@@ -64,11 +64,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // Calculate rotation angle to level eyes
+    // Note: leftEye is baby's left (appears on right in photo)
+    //       rightEye is baby's right (appears on left in photo)
     const eyeAngle = Math.atan2(
       landmarks.rightEye.y - landmarks.leftEye.y,
       landmarks.rightEye.x - landmarks.leftEye.x
     );
-    const rotationDegrees = -(eyeAngle * 180) / Math.PI;
+    let rotationDegrees = -(eyeAngle * 180) / Math.PI;
+
+    // Sanity check: If rotation is > 90°, the photo might be upside down
+    // or the eye labels are swapped. Normalize to ±45° range.
+    if (rotationDegrees > 90) {
+      rotationDegrees = rotationDegrees - 180;
+    } else if (rotationDegrees < -90) {
+      rotationDegrees = rotationDegrees + 180;
+    }
+
+    console.log('Calculated rotation:', rotationDegrees, 'degrees (original angle:', (eyeAngle * 180 / Math.PI).toFixed(2), ')');
 
     // Process image with Sharp
     // Simplified approach: Just crop and rotate, no complex transformations
