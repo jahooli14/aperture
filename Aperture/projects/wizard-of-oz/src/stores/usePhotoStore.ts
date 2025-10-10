@@ -108,6 +108,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         throw insertError || new Error('Failed to create photo record');
       }
 
+      console.log('Photo record created successfully, triggering eye detection...');
+
+      // Trigger eye detection and alignment via API (async, don't wait)
+      fetch('/api/detect-eyes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId: (photoData as Photo).id }),
+      }).catch(err => console.error('Eye detection request failed:', err));
+
       // Refresh photos
       console.log('Refreshing photos list...');
       await get().fetchPhotos();

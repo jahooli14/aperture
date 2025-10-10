@@ -50,6 +50,18 @@ If you prefer fine-grained control instead of making it public:
 (bucket_id = 'originals'::text) AND ((storage.foldername(name))[1] = (auth.uid())::text)
 ```
 
+## Create the 'aligned' Bucket (for processed photos)
+
+Repeat the same process for the `aligned` bucket:
+
+1. Go to Supabase Dashboard → **Storage**
+2. Click **New bucket**
+3. Name: `aligned`
+4. **Make it PUBLIC** (check the "Public bucket" checkbox)
+5. Click **Create bucket**
+
+This bucket stores the eye-aligned versions of uploaded photos after AI processing.
+
 ## Verify Setup
 
-After creating the bucket, test the upload again. The app should now work.
+After creating both buckets ('originals' and 'aligned'), the app should work and automatically process photos through the alignment pipeline.
