@@ -40,6 +40,7 @@ export function UploadPhoto() {
 
     try {
       setError('');
+      console.log('Starting upload from UI component...');
       await uploadPhoto(file);
       setPreview(null);
       if (fileInputRef.current) {
@@ -48,8 +49,11 @@ export function UploadPhoto() {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
       }
+      console.log('Upload completed successfully from UI!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload photo');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      console.error('Upload error in UI component:', err);
+      setError(`Upload failed: ${errorMessage}\n\nDetailed error: ${JSON.stringify(err, null, 2)}`);
     }
   };
 
@@ -153,8 +157,8 @@ export function UploadPhoto() {
       )}
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-          {error}
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+          <pre className="whitespace-pre-wrap font-mono">{error}</pre>
         </div>
       )}
     </motion.div>
