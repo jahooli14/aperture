@@ -99,34 +99,95 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // Process image with Sharp
-    // Step 1: Rotate to level eyes
-    const rotatedImage = await sharp(imageBuffer)
-      .rotate(rotationDegrees, { background: '#ffffff' })
-      .toBuffer();
+    // New approach: First extract a generous region around the face, THEN rotate
+    // This avoids the rotation coordinate transformation problem
 
-    // Step 2: Get rotated image metadata
-    const rotatedMetadata = await sharp(rotatedImage).metadata();
-
-    // Step 3: Calculate new eye positions after rotation (simplified - just translate)
-    // For more accurate rotation compensation, you'd apply the rotation matrix
-    const newEyeMidpoint = {
-      x: eyeMidpoint.x + translation.x,
-      y: eyeMidpoint.y + translation.y,
-    };
-
-    // Step 4: Extract region centered on eyes and resize
     const outputSize = 1080; // Square output
-    const halfSize = outputSize / 2;
 
-    const extractLeft = Math.max(0, Math.round(newEyeMidpoint.x - halfSize));
-    const extractTop = Math.max(0, Math.round(newEyeMidpoint.y - halfSize));
+    // Calculate extraction region: centered on eye midpoint, large enough to contain face after rotation
+    // Use 1.5x the inter-eye distance as a buffer for rotation
+    const interEyeDistance = Math.sqrt(
+      Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
+        Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
+    );
 
-    const alignedImage = await sharp(rotatedImage)
+    // Extract region size: make it generous to account for rotation
+    // Use 4x inter-eye distance to ensure full face is captured
+    const extractSize = Math.max(outputSize, Math.round(interEyeDistance * 4));
+    const halfExtractSize = Math.round(extractSize / 2);
+
+    // Calculate extraction bounds (before rotation)
+    const extractLeft = Math.max(0, Math.round(eyeMidpoint.x - halfExtractSize));
+    const extractTop = Math.max(0, Math.round(eyeMidpoint.y - halfExtractSize));
+    const extractWidth = Math.min(
+      extractSize,
+      landmarks.imageWidth - extractLeft
+    );
+    const extractHeight = Math.min(
+      extractSize,
+      landmarks.imageHeight - extractTop
+    );
+
+    console.log('Extraction region:', { extractLeft, extractTop, extractWidth, extractHeight, eyeMidpoint });
+
+    // Step 1: Extract the region containing the face
+    const extractedImage = await sharp(imageBuffer)
       .extract({
         left: extractLeft,
         top: extractTop,
-        width: Math.min(outputSize, (rotatedMetadata.width || landmarks.imageWidth) - extractLeft),
-        height: Math.min(outputSize, (rotatedMetadata.height || landmarks.imageHeight) - extractTop),
+        width: extractWidth,
+        height: extractHeight,
+      })
+      .toBuffer();
+
+    // Step 2: Calculate the eye position within the extracted region
+    const eyeInExtract = {
+      x: eyeMidpoint.x - extractLeft,
+      y: eyeMidpoint.y - extractTop,
+    };
+
+    console.log('Eye position in extracted region:', eyeInExtract);
+
+    // Step 3: Rotate the extracted image
+    const rotatedImage = await sharp(extractedImage)
+      .rotate(rotationDegrees, { background: '#ffffff' })
+      .toBuffer();
+
+    // Step 4: Get rotated image dimensions
+    const rotatedMetadata = await sharp(rotatedImage).metadata();
+    const rotatedWidth = rotatedMetadata.width || extractWidth;
+    const rotatedHeight = rotatedMetadata.height || extractHeight;
+
+    // Step 5: Calculate where the eye midpoint is after rotation
+    // Apply rotation matrix to transform coordinates
+    const angleRadians = (rotationDegrees * Math.PI) / 180;
+    const centerX = extractWidth / 2;
+    const centerY = extractHeight / 2;
+
+    // Translate to origin, rotate, translate back
+    const relativeX = eyeInExtract.x - centerX;
+    const relativeY = eyeInExtract.y - centerY;
+
+    const rotatedEyeX = relativeX * Math.cos(angleRadians) - relativeY * Math.sin(angleRadians) + rotatedWidth / 2;
+    const rotatedEyeY = relativeX * Math.sin(angleRadians) + relativeY * Math.cos(angleRadians) + rotatedHeight / 2;
+
+    console.log('Rotated eye position:', { rotatedEyeX, rotatedEyeY, rotatedWidth, rotatedHeight });
+
+    // Step 6: Crop around the rotated eye position to create final square image
+    const finalHalfSize = outputSize / 2;
+    const finalLeft = Math.max(0, Math.round(rotatedEyeX - finalHalfSize));
+    const finalTop = Math.max(0, Math.round(rotatedEyeY - finalHalfSize * 1.1)); // Eyes slightly above center
+    const finalWidth = Math.min(outputSize, rotatedWidth - finalLeft);
+    const finalHeight = Math.min(outputSize, rotatedHeight - finalTop);
+
+    console.log('Final crop region:', { finalLeft, finalTop, finalWidth, finalHeight });
+
+    const alignedImage = await sharp(rotatedImage)
+      .extract({
+        left: finalLeft,
+        top: finalTop,
+        width: finalWidth,
+        height: finalHeight,
       })
       .resize(outputSize, outputSize, {
         fit: 'cover',
