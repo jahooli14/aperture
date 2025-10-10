@@ -49,18 +49,19 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       const today = new Date().toISOString().split('T')[0];
       console.log('Checking for existing upload today:', { today, userId: user.id });
 
-      const { data: existing } = await supabase
-        .from('photos')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('upload_date', today)
-        .single();
+      // TEMPORARILY DISABLED FOR TESTING - Allow multiple uploads per day
+      // const { data: existing } = await supabase
+      //   .from('photos')
+      //   .select('id')
+      //   .eq('user_id', user.id)
+      //   .eq('upload_date', today)
+      //   .single();
 
-      console.log('Existing upload check result:', { existing });
+      // console.log('Existing upload check result:', { existing });
 
-      if (existing) {
-        throw new Error('You have already uploaded a photo today');
-      }
+      // if (existing) {
+      //   throw new Error('You have already uploaded a photo today');
+      // }
 
       // Upload to Supabase Storage
       const fileExtension = file.name.split('.').pop() || 'jpg';
@@ -122,7 +123,10 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   },
 
   hasUploadedToday: () => {
-    const today = new Date().toISOString().split('T')[0];
-    return get().photos.some(photo => photo.upload_date === today);
+    // TEMPORARILY DISABLED FOR TESTING - Allow multiple uploads per day
+    return false;
+
+    // const today = new Date().toISOString().split('T')[0];
+    // return get().photos.some(photo => photo.upload_date === today);
   },
 }));
