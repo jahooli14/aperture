@@ -1,6 +1,59 @@
 # Development Workflow
 
-> **Version**: 1.0 - Based on Gemini deep research on agentic SDLC
+> **Version**: 2.0 - Optimized for CI philosophy (Start Minimal, Cost/Benefit)
+
+## 🚨 CRITICAL: Context Window Management
+
+**Most important rule**: AI performance degrades as context grows. Fresh context > struggling with degraded performance.
+
+### When to Start a New Session
+
+**Mandatory fresh start when**:
+- ✅ Context window > 100K tokens used
+- ✅ Starting completely new feature or project
+- ✅ Switching to different part of codebase
+- ✅ Noticing degraded response quality (slow, confused, errors)
+- ✅ Planning major architectural changes
+
+**Optional fresh start when**:
+- ⚠️ Current task completed (natural break point)
+- ⚠️ Stuck on problem (fresh perspective helps)
+- ⚠️ Multiple tangential discussions (context pollution)
+
+**Continue current session when**:
+- ❌ In middle of implementing a plan
+- ❌ Debugging with accumulated context
+- ❌ Making small related changes
+- ❌ Context < 50K tokens and performance good
+
+### Token Budget Health Check
+
+| Token Usage | Status | Action |
+|-------------|--------|--------|
+| < 50K | ✅ Healthy | Continue normally |
+| 50-100K | ⚠️ Warning | Can I finish current task in < 50K more? If no → fresh session |
+| > 100K | 🛑 Critical | MANDATORY fresh session |
+
+**Check token usage at**:
+- Start of session (in SESSION_CHECKLIST.md)
+- Before starting new work
+- When noticing degraded quality
+
+### Session Handoff Protocol
+
+**Before closing a session**:
+1. Update `NEXT_SESSION.md` (current state, next steps, blockers)
+2. Update project `plan.md` (check off completed items)
+3. Commit all changes (clean state for next session)
+
+**Starting a new session** (< 5 minutes):
+1. Read `NEXT_SESSION.md` (always start here)
+2. Read relevant `plan.md` (project-specific state)
+3. Quick git check: `git log --oneline -10`
+
+**DON'T**: Try to re-read entire conversation or reload full context.
+
+---
 
 ## Core Principle: Plan First, Execute Second
 
@@ -55,25 +108,18 @@ Claude: [implements refined plan]
 
 ---
 
-## The Reasoning Dial: Think Hard Hierarchy
+## Reasoning Modes (Simplified)
 
-Match AI thinking budget to task complexity. Higher levels = more thorough analysis but also higher cost and latency.
+**Two modes - don't overthink it**:
 
-| Level | Keyword | Use Case | Example |
-|-------|---------|----------|---------|
-| **Default** | (none) | Routine tasks | "Add a loading spinner to the button" |
-| **Level 1** | `think` | Straightforward features, simple bugs | "think about how to add pagination to the user list" |
-| **Level 2** | `think hard` | Complex business logic, multi-component work | "think hard about implementing the checkout flow with state management" |
-| **Level 3** | `think harder` | Performance optimization, security-critical code | "think harder about optimizing this database query for scale and security" |
-| **Level 4** | `ultrathink` | Legacy system integration, "impossible" bugs, foundational architecture | "ultrathink about our migration plan from monolith to microservices" |
+| Mode | When to Use | Example |
+|------|-------------|---------|
+| **Default** | 90% of work - routine tasks, features, bugs | "Add pagination to user list" |
+| **think hard** | 10% of work - critical architecture, security, "impossible" bugs | "think hard about authentication system architecture" |
 
-### Strategic Usage
-- **Most work**: Default or `think` (fast, cost-effective)
-- **Feature development**: `think hard` (workhorse mode)
-- **Critical decisions**: `think harder` or `ultrathink` (high stakes only)
+**Rule**: If unsure, use default. Claude adjusts reasoning automatically. Don't waste time deciding which thinking level to use.
 
-### Red Flag
-If you find yourself using `ultrathink` frequently, you may have an architecture problem. Consider refactoring to reduce complexity.
+**Red Flag**: If you're using `think hard` frequently, you may have an architecture problem - simplify the system.
 
 ---
 
@@ -307,77 +353,7 @@ New Task
 
 ---
 
-**Last Updated**: 2025-10-10
-**Based On**: Gemini deep research - "The Agentic SDLC"
+**Last Updated**: 2025-10-10 (v2.0 - CI Philosophy Optimized)
+**Based On**: Gemini deep research + CI philosophy (Start Minimal)
 **Next Review**: After completing wizard-of-oz project
-
-## Context Window Management
-
-### The Performance Problem
-
-**Critical Issue**: AI performance degrades as context windows grow longer. Long conversations lead to:
-- Slower response times
-- Lower quality outputs  
-- Higher token costs
-- Degraded reasoning capability
-
-### Start Fresh Philosophy
-
-**Core Principle**: Fresh context > struggling with degraded performance.
-
-#### When to Start a New Session
-
-**Mandatory fresh start when**:
-- ✅ Starting a completely new feature or project
-- ✅ Switching to a different part of the codebase
-- ✅ Context window > 100K tokens used
-- ✅ Noticing degraded response quality
-- ✅ Planning major architectural changes
-
-**Optional fresh start when**:
-- ⚠️ Current task completed (natural break point)
-- ⚠️ Stuck on a problem (fresh perspective helps)
-- ⚠️ Multiple tangential discussions (context pollution)
-
-**Continue current session when**:
-- ❌ In middle of implementing a plan
-- ❌ Debugging with accumulated context
-- ❌ Making small related changes
-- ❌ Context < 50K tokens and performance good
-
-### Session Handoff Protocol
-
-**Before closing a session**:
-
-1. **Update `NEXT_SESSION.md`**: Current state, next steps, decisions, blockers
-2. **Update project `plan.md`**: Check off completed items, update current state
-3. **Commit all changes**: Clean state for next session
-4. **Quick session log**: What done, what's next, any blockers
-
-### Starting a New Session
-
-**Efficient onboarding (< 5 minutes)**:
-1. Read `NEXT_SESSION.md` (always start here)
-2. Read relevant `plan.md` (project-specific state)
-3. Skim recent changes: `git log --oneline -10`
-4. Quick context check: 1-2 key files if needed
-
-**Don't**: Re-read entire conversation or try to load full context.
-
-### Token Efficiency
-
-- Bullet points over paragraphs
-- Pointers to files over duplicating content
-- Examples over lengthy explanations
-- CLAUDE.md files: < 500 lines, use `<file_map>` pointers
-
-### Context Health Metrics
-
-| Metric | Healthy | Degrading | Start Fresh |
-|--------|---------|-----------|-------------|
-| Token usage | < 50K | 50-100K | > 100K |
-| Response quality | Clear, accurate | Occasional confusion | Frequent errors |
-| Response time | Fast (< 10s) | Slower (10-30s) | Very slow (> 30s) |
-
-**Anti-Pattern**: Don't spend 15min summarizing. Spend 5min updating NEXT_SESSION.md and plan.md.
 

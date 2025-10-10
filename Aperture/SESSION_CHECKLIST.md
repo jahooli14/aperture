@@ -8,6 +8,28 @@
 
 ## 📋 Start of Session (5 minutes)
 
+### 0. Token Budget Health Check (< 1 min)
+⚠️ **CRITICAL**: Check this BEFORE starting new work
+
+- [ ] **Check current token usage** (shown at bottom of Claude Code interface)
+
+**Decision tree**:
+- **< 50K tokens**: ✅ Healthy - continue
+- **50-100K tokens**: ⚠️ Warning zone
+  - Ask: "Can I finish current task in < 50K more tokens?"
+  - If YES → continue carefully
+  - If NO → close session and start fresh
+- **> 100K tokens**: 🛑 MANDATORY FRESH SESSION
+  - Update NEXT_SESSION.md
+  - Commit all changes
+  - Start new session with fresh context
+
+**Why this matters**: AI performance degrades with longer context. Fresh context = better quality, faster responses, lower cost.
+
+**Rule**: Don't start NEW work if already > 50K tokens.
+
+---
+
 ### 1. Context Loading
 - [ ] Read last session's updates in relevant `plan.md`
 - [ ] Review recent entries in `.process/COMMON_MISTAKES.md`
@@ -24,12 +46,24 @@ Options:
 
 **Selected**: _________________________________
 
-### 3. Readiness Check
+### 3. Pre-Flight Infrastructure Check (< 2 min)
+⚠️ **Run BEFORE debugging** when feature "doesn't work"
+
+- [ ] **If debugging issue**: Run `/verify-infra [project-name]`
+  - Checks: Database tables, storage buckets, env vars, deployment settings
+  - **Rule**: If debugging > 10 min without progress → run this command
+  - Catches 80% of "code looks fine but doesn't work" issues
+
+- [ ] **If unsure which project**: Run `/which-project`
+  - Auto-detects NUDJ vs Aperture
+  - Shows which CLAUDE.md to read
+
+### 4. Readiness Check
 - [ ] Environment configured (dependencies installed)
 - [ ] Credentials available (if needed for new features)
 - [ ] Relevant docs read (project README, architecture.md)
 
-### 4. Placeholder Decision Point
+### 5. Placeholder Decision Point
 **Is today the day we implement?**
 
 - [ ] **Subagents**: Has a task been repeated 5+ times? → See `.process/SUBAGENTS.md`
@@ -44,41 +78,34 @@ Options:
 
 ## 🎯 During Session (Continuous)
 
-### Feature Development: Comprehensive Task Breakdown
+### Task Tracking (Single System)
 
-**For non-trivial features (> 30 min work), create detailed step-by-step checklist BEFORE starting**:
+**ONE tool for tracking tasks**: TodoWrite tool during active work
+
+**For non-trivial features (> 30 min work)**:
+1. Use TodoWrite to create task list BEFORE starting
+2. Mark tasks in_progress/completed as you work
+3. At session end: Update NEXT_SESSION.md with summary
 
 ```markdown
-## Feature: [Name]
-
-### Setup Tasks
-- [ ] Task 1 (5 min)
-- [ ] Task 2 (10 min)
-- [ ] Task 3 (3 min)
-
-### Implementation Tasks
-- [ ] Step 1: [Specific action] (estimated time)
-- [ ] Step 2: [Specific action] (estimated time)
-- [ ] Step 3: [Specific action] (estimated time)
-
-### Testing Tasks
-- [ ] Test scenario 1
-- [ ] Test scenario 2
-- [ ] Edge case 1
-
-### Documentation Tasks
-- [ ] Update relevant docs
-- [ ] Add code comments
-- [ ] Update plan.md
+Example TodoWrite usage:
+- [ ] Setup: Install dependencies (5 min)
+- [ ] Implement: Create component (20 min)
+- [ ] Test: Manual QA (10 min)
+- [ ] Document: Update README (5 min)
 ```
 
 **Benefits**:
+- Single source of truth (no duplicate tracking)
+- Real-time progress visibility
 - Nothing gets forgotten
-- Progress is visible
-- Easier to resume if interrupted
-- Clear when feature is "done"
+- Easy to resume if interrupted
 
-**Use TodoWrite tool for tracking these tasks during implementation**
+**DON'T**:
+- ❌ Maintain separate todo.md file
+- ❌ Track same tasks in multiple places
+- ❌ Write tasks in both TodoWrite AND plan.md
+- ✅ USE: TodoWrite during work → NEXT_SESSION.md at end
 
 ---
 

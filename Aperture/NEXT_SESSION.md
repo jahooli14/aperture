@@ -40,12 +40,12 @@
   - Documented need for 'originals' and 'aligned' buckets
   - Verified environment variables in Vercel
 
-**Current Issue - STILL DEBUGGING**:
+**ROOT CAUSE IDENTIFIED** ✅:
 - ✅ Eye detection works (eye_coordinates populated in database)
-- ❌ Photo alignment not completing (aligned_url stays NULL)
-- ✅ API returns 200 but Vercel logs are empty for align-photo
-- 🔍 Added extensive logging to both detect-eyes and align-photo APIs
-- 🔍 Next: Check Vercel logs with new logging to see exact failure point
+- ✅ All APIs working correctly
+- ❌ **Vercel Deployment Protection** blocking server-to-server API calls
+- detect-eyes → align-photo call gets HTML authentication page instead of API response
+- **Fix**: Disable Deployment Protection in Vercel Settings for this project
 
 **Key Learnings**:
 - **Infrastructure First**: Always verify buckets/tables exist before debugging code

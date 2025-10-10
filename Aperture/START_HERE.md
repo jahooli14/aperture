@@ -16,93 +16,115 @@ That's it! Everything else is documented.
 
 ---
 
-## 🤖 MANDATORY STARTUP SEQUENCE FOR CLAUDE
+## 🤖 STARTUP SEQUENCE FOR CLAUDE
 
-> **⚠️ CRITICAL**: Follow these steps **IN EXACT ORDER**. Do not skip any step.
+> **Choose the right path based on your task**
 
-### STEP 1: Determine Which Project (30 seconds)
+---
 
-**YOU MUST READ THIS FILE FIRST**: `CLAUDE.md`
+## 🚀 Quick Decision: Which Startup Path?
 
-This file is a router that tells you whether you're working on:
-- 🏢 **NUDJ (work)** - Monorepo with PNPM, Turbo, MongoDB
-- 🏠 **Aperture (personal)** - Individual projects with Vercel
+| Your Task | Files to Read | Time | When to Use |
+|-----------|---------------|------|-------------|
+| **Continue current work** | NEXT_SESSION.md only | 1 min | You know the project, picking up where you left off |
+| **Simple bug fix** | NEXT_SESSION.md | 1 min | Quick fix, familiar codebase |
+| **New feature (familiar)** | NEXT_SESSION.md + plan.md | 2 min | Know the project, adding to existing code |
+| **Unfamiliar/Complex** | Full sequence below | 5 min | First time on project, major architectural work |
 
-**ACTION REQUIRED**: After reading `CLAUDE.md`, you must explicitly state:
+**Rule**: Use the simplest path that gives you enough context. Don't over-prepare.
+
+---
+
+## 🏃 Quick Start (1-2 minutes)
+
+**For continuing work or simple fixes**:
+
+1. **Determine project** (10 seconds):
+   ```bash
+   # Option A: Use automation
+   /which-project
+
+   # Option B: Check manually
+   # NUDJ if you see: apps/api, apps/admin, pnpm-workspace.yaml
+   # APERTURE if you see: projects/wizard-of-oz, .process/
+   ```
+
+2. **Read NEXT_SESSION.md** (1 minute):
+   - Current status
+   - Next steps
+   - Any blockers
+
+3. **Start work**:
+   - Confirm understanding with user
+   - Begin implementing
+
+---
+
+## 🎯 Full Startup (5 minutes)
+
+**For unfamiliar projects or complex work**:
+
+### STEP 1: Determine Which Project (30 seconds - AUTOMATED)
+
+**Option A (Recommended)**: Run `/which-project` command
+- Auto-detects NUDJ vs Aperture
+- Shows which files to read
+
+**Option B (Manual)**: Check git remote
+```bash
+git remote -v
+# nudj-digital → NUDJ (work)
+# aperture/jahooli14 → APERTURE (personal)
 ```
-I am working on [NUDJ/Aperture] based on [reason from CLAUDE.md].
-I will now read [CLAUDE-NUDJ.md/CLAUDE-APERTURE.md].
-```
 
-**⛔ DO NOT PROCEED** until you've read `CLAUDE.md` and identified the project.
+**Confirm project type**:
+```
+I am working on [NUDJ/Aperture] based on [git remote/directory structure].
+I will read [CLAUDE-NUDJ.md/CLAUDE-APERTURE.md].
+```
 
 ---
 
 ### STEP 2: Read Project-Specific Documentation (2 minutes)
 
-**IF APERTURE** (personal projects):
-1. Read `CLAUDE-APERTURE.md` in full
-2. Note the current projects (wizard-of-oz)
-3. Understand Vercel deployment requirements
+**IF APERTURE** (personal):
+- Read `CLAUDE-APERTURE.md`
+- Note: Vercel deployment, individual projects
 
-**IF NUDJ** (work projects):
-1. Read `CLAUDE-NUDJ.md` in full
-2. Note the monorepo structure
-3. Understand PNPM workspace patterns
+**IF NUDJ** (work):
+- Read `CLAUDE-NUDJ.md`
+- Note: PNPM monorepo, Turbo
 
-**ACTION REQUIRED**: After reading, you must state:
+**Confirm understanding**:
 ```
 I have read [CLAUDE-APERTURE/NUDJ].md.
-Key facts: [list 3 key things about this project type]
+Key facts: [list 2-3 key things]
 I will now read NEXT_SESSION.md.
 ```
-
-**⛔ DO NOT PROCEED** until you've read and acknowledged the project docs.
 
 ---
 
 ### STEP 3: Understand Current Status (1 minute)
 
-**YOU MUST READ**: `NEXT_SESSION.md`
+**Read**: `NEXT_SESSION.md`
 
-This file contains:
-- What was completed in the last session
-- What you should work on today
-- Critical context and decisions
-
-**ACTION REQUIRED**: After reading, you must state:
+**Confirm understanding**:
 ```
 Current status: [brief summary]
-Today's task: [what you'll work on]
-Any blockers: [yes/no, if yes explain]
+Today's task: [what to work on]
+Any blockers: [yes/no]
 ```
-
-**⛔ DO NOT START WORK** until you've confirmed you understand the current status.
 
 ---
 
-### STEP 4: Validation Checklist
+### STEP 4: Start Working (validate readiness)
 
-Before you start working, **YOU MUST CONFIRM**:
+**Quick check before starting**:
+- ✅ Know which project (NUDJ/Aperture)
+- ✅ Know current status
+- ✅ Know today's task
 
-```
-✅ I read CLAUDE.md and identified the project type
-✅ I read [CLAUDE-APERTURE/NUDJ].md for project-specific patterns
-✅ I read NEXT_SESSION.md and understand current status
-✅ I know what task to work on today
-✅ I understand any deployment requirements (Vercel/other)
-```
-
-**IF ANY CHECKBOX IS UNCHECKED**: Go back and read the missing file.
-
----
-
-### STEP 5: Start Working
-
-Only after completing Steps 1-4, you may:
-- Confirm the task with the user
-- Ask clarifying questions
-- Begin work using appropriate patterns
+**If any unclear**: Ask user before proceeding
 
 ---
 
