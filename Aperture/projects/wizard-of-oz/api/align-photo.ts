@@ -13,6 +13,7 @@ interface EyeLandmarks {
   confidence: number;
   imageWidth: number;
   imageHeight: number;
+  eyesOpen?: boolean;
 }
 
 interface AlignmentTransform {
@@ -57,180 +58,222 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const imageResponse = await fetch(photo.original_url);
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
-    // Calculate eye midpoint
-    const eyeMidpoint = {
-      x: (landmarks.leftEye.x + landmarks.rightEye.x) / 2,
-      y: (landmarks.leftEye.y + landmarks.rightEye.y) / 2,
-    };
+    // FIXED TARGET EYE POSITIONS in 1080×1080 output (for perfect stacking)
+    // These coordinates NEVER change - every photo will have eyes at these exact positions
+    const TARGET_LEFT_EYE = { x: 360, y: 432 };   // 33.3% horizontal, 40% vertical
+    const TARGET_RIGHT_EYE = { x: 720, y: 432 };  // 66.7% horizontal, 40% vertical
+    const TARGET_INTER_EYE_DISTANCE = 360;         // pixels between eyes
+    const OUTPUT_SIZE = 1080;                      // square output
 
-    // Calculate rotation angle to level eyes
+    console.log('🎯 Target eye positions (fixed):', {
+      leftEye: TARGET_LEFT_EYE,
+      rightEye: TARGET_RIGHT_EYE,
+      interEyeDistance: TARGET_INTER_EYE_DISTANCE,
+      eyesWereOpen: landmarks.eyesOpen,
+    });
+
+    // Calculate detected eye positions
+    const detectedLeftEye = landmarks.leftEye;
+    const detectedRightEye = landmarks.rightEye;
+
+    console.log('👁️ Detected eye positions:', {
+      leftEye: detectedLeftEye,
+      rightEye: detectedRightEye,
+    });
+
+    // Calculate rotation angle to level eyes horizontally
     // Note: leftEye is baby's left (appears on right in photo)
     //       rightEye is baby's right (appears on left in photo)
     const eyeAngle = Math.atan2(
-      landmarks.rightEye.y - landmarks.leftEye.y,
-      landmarks.rightEye.x - landmarks.leftEye.x
+      detectedRightEye.y - detectedLeftEye.y,
+      detectedRightEye.x - detectedLeftEye.x
     );
     let rotationDegrees = -(eyeAngle * 180) / Math.PI;
 
-    // Sanity check: If rotation is > 90°, the photo might be upside down
-    // or the eye labels are swapped. Normalize to ±45° range.
+    // Normalize rotation to ±90° range (prevent upside-down)
     if (rotationDegrees > 90) {
       rotationDegrees = rotationDegrees - 180;
     } else if (rotationDegrees < -90) {
       rotationDegrees = rotationDegrees + 180;
     }
 
-    console.log('Calculated rotation:', rotationDegrees, 'degrees (original angle:', (eyeAngle * 180 / Math.PI).toFixed(2), ')');
+    console.log('🔄 Rotation required:', rotationDegrees.toFixed(2), 'degrees');
 
-    // Process image with Sharp
-    // Simplified approach: Just crop and rotate, no complex transformations
-
-    const outputSize = 1080; // Square output
-
-    console.log('Starting alignment with landmarks:', {
-      leftEye: landmarks.leftEye,
-      rightEye: landmarks.rightEye,
-      eyeMidpoint,
-      imageSize: { width: landmarks.imageWidth, height: landmarks.imageHeight },
-      rotationDegrees
-    });
-
-    // CRITICAL: Check if coordinates are normalized (0-1) instead of pixels
-    // If leftEye.x is less than 10, it's probably normalized
-    let actualLeftEye = landmarks.leftEye;
-    let actualRightEye = landmarks.rightEye;
-    let actualEyeMidpoint = eyeMidpoint;
-
-    if (landmarks.leftEye.x < 10 && landmarks.rightEye.x < 10) {
-      console.warn('⚠️ Detected normalized coordinates! Converting to pixels...');
-      actualLeftEye = {
-        x: landmarks.leftEye.x * landmarks.imageWidth,
-        y: landmarks.leftEye.y * landmarks.imageHeight,
-      };
-      actualRightEye = {
-        x: landmarks.rightEye.x * landmarks.imageWidth,
-        y: landmarks.rightEye.y * landmarks.imageHeight,
-      };
-      actualEyeMidpoint = {
-        x: (actualLeftEye.x + actualRightEye.x) / 2,
-        y: (actualLeftEye.y + actualRightEye.y) / 2,
-      };
-      console.log('Converted to pixels:', { actualLeftEye, actualRightEye, actualEyeMidpoint });
-    }
-
-    // Calculate how much space we need around the eyes
-    const interEyeDistance = Math.sqrt(
-      Math.pow(actualRightEye.x - actualLeftEye.x, 2) +
-        Math.pow(actualRightEye.y - actualLeftEye.y, 2)
+    // Calculate current inter-eye distance
+    const detectedInterEyeDistance = Math.sqrt(
+      Math.pow(detectedRightEye.x - detectedLeftEye.x, 2) +
+        Math.pow(detectedRightEye.y - detectedLeftEye.y, 2)
     );
 
-    console.log('Inter-eye distance:', interEyeDistance, 'pixels');
-    console.log('Inter-eye distance as % of image width:', (interEyeDistance / landmarks.imageWidth * 100).toFixed(1) + '%');
+    // Calculate scale factor to normalize inter-eye distance to target (360px)
+    const scaleFactor = TARGET_INTER_EYE_DISTANCE / detectedInterEyeDistance;
 
-    // Calculate scale for transform record
-    const targetInterEyeDistance = landmarks.imageWidth * 0.25;
-    const scale = targetInterEyeDistance / interEyeDistance;
+    console.log('📏 Scale calculation:', {
+      detectedInterEyeDistance: detectedInterEyeDistance.toFixed(2),
+      targetInterEyeDistance: TARGET_INTER_EYE_DISTANCE,
+      scaleFactor: scaleFactor.toFixed(3),
+    });
 
-    // Calculate translation for transform record
-    const targetPosition = {
-      x: landmarks.imageWidth * 0.5,
-      y: landmarks.imageHeight * 0.4,
-    };
-    const translation = {
-      x: targetPosition.x - actualEyeMidpoint.x,
-      y: targetPosition.y - actualEyeMidpoint.y,
+    // Calculate eye midpoint for rotation center
+    const eyeMidpoint = {
+      x: (detectedLeftEye.x + detectedRightEye.x) / 2,
+      y: (detectedLeftEye.y + detectedRightEye.y) / 2,
     };
 
-    // Create alignment transform record
-    const transform: AlignmentTransform = {
-      translateX: translation.x,
-      translateY: translation.y,
-      rotation: rotationDegrees,
-      scale,
-    };
-
-    // Simple approach: Extract a square region centered on the eyes
-    // Make it large enough to capture full face - use 3x the image width
-    // This is more reliable than using inter-eye distance
-    const cropSize = Math.round(landmarks.imageWidth * 1.5); // 1.5x image width
-    const halfCrop = cropSize / 2;
-
-    // NEW APPROACH: Rotate first, THEN crop
-    // This way we don't lose the face when rotating by large angles
-
+    // STEP 1: Rotate image to level eyes
     let processedImage = imageBuffer;
     let currentWidth = landmarks.imageWidth;
     let currentHeight = landmarks.imageHeight;
-    let rotatedEyeMidpoint = actualEyeMidpoint;
 
-    // Step 1: Rotate the full image if needed
     if (Math.abs(rotationDegrees) > 0.5) {
-      console.log('Step 1: Rotating full image by', rotationDegrees, 'degrees');
+      console.log('Step 1: Rotating image to level eyes...');
       processedImage = await sharp(imageBuffer)
         .rotate(rotationDegrees, { background: '#ffffff' })
         .toBuffer();
 
-      const rotatedMeta = await sharp(processedImage).metadata();
-      currentWidth = rotatedMeta.width || currentWidth;
-      currentHeight = rotatedMeta.height || currentHeight;
-
-      console.log('After rotation, image size:', currentWidth, 'x', currentHeight);
-
-      // Calculate where the eye midpoint is after rotation
-      // Rotation happens around the center of the image
-      const angleRadians = (rotationDegrees * Math.PI) / 180;
-      const originalCenterX = landmarks.imageWidth / 2;
-      const originalCenterY = landmarks.imageHeight / 2;
-
-      // Vector from center to eye midpoint
-      const relX = actualEyeMidpoint.x - originalCenterX;
-      const relY = actualEyeMidpoint.y - originalCenterY;
-
-      // Apply rotation matrix
-      const rotatedRelX = relX * Math.cos(angleRadians) - relY * Math.sin(angleRadians);
-      const rotatedRelY = relX * Math.sin(angleRadians) + relY * Math.cos(angleRadians);
-
-      // New eye position in rotated image
-      rotatedEyeMidpoint = {
-        x: rotatedRelX + currentWidth / 2,
-        y: rotatedRelY + currentHeight / 2,
-      };
-
-      console.log('Eye midpoint after rotation:', rotatedEyeMidpoint);
+      const meta = await sharp(processedImage).metadata();
+      currentWidth = meta.width!;
+      currentHeight = meta.height!;
+      console.log('✓ Rotated. New size:', currentWidth, 'x', currentHeight);
     }
 
-    // Step 2: Crop around the rotated eye position
-    console.log('Step 2: Cropping around eye midpoint');
-    console.log('Crop size:', cropSize, 'pixels (1.5x original image width)');
+    // STEP 2: Calculate where eyes are after rotation
+    const angleRadians = (rotationDegrees * Math.PI) / 180;
+    const originalCenterX = landmarks.imageWidth / 2;
+    const originalCenterY = landmarks.imageHeight / 2;
 
-    const cropLeft = Math.max(0, Math.round(rotatedEyeMidpoint.x - halfCrop));
-    const cropTop = Math.max(0, Math.round(rotatedEyeMidpoint.y - halfCrop));
-    const cropWidth = Math.min(cropSize, currentWidth - cropLeft);
-    const cropHeight = Math.min(cropSize, currentHeight - cropTop);
+    // Transform left eye position
+    const leftRelX = detectedLeftEye.x - originalCenterX;
+    const leftRelY = detectedLeftEye.y - originalCenterY;
+    const rotatedLeftX = leftRelX * Math.cos(angleRadians) - leftRelY * Math.sin(angleRadians) + currentWidth / 2;
+    const rotatedLeftY = leftRelX * Math.sin(angleRadians) + leftRelY * Math.cos(angleRadians) + currentHeight / 2;
 
-    console.log('Crop region:', { cropLeft, cropTop, cropWidth, cropHeight });
+    // Transform right eye position
+    const rightRelX = detectedRightEye.x - originalCenterX;
+    const rightRelY = detectedRightEye.y - originalCenterY;
+    const rotatedRightX = rightRelX * Math.cos(angleRadians) - rightRelY * Math.sin(angleRadians) + currentWidth / 2;
+    const rotatedRightY = rightRelX * Math.sin(angleRadians) + rightRelY * Math.cos(angleRadians) + currentHeight / 2;
 
-    const croppedImage = await sharp(processedImage)
-      .extract({
-        left: cropLeft,
-        top: cropTop,
-        width: cropWidth,
-        height: cropHeight,
+    console.log('Step 2: Eyes after rotation:', {
+      leftEye: { x: rotatedLeftX.toFixed(2), y: rotatedLeftY.toFixed(2) },
+      rightEye: { x: rotatedRightX.toFixed(2), y: rotatedRightY.toFixed(2) },
+    });
+
+    // STEP 3: Scale image to normalize inter-eye distance
+    console.log('Step 3: Scaling to normalize inter-eye distance...');
+    const scaledWidth = Math.round(currentWidth * scaleFactor);
+    const scaledHeight = Math.round(currentHeight * scaleFactor);
+
+    processedImage = await sharp(processedImage)
+      .resize(scaledWidth, scaledHeight, {
+        kernel: 'lanczos3', // High-quality scaling
+        fit: 'fill',
       })
       .toBuffer();
 
-    console.log('After crop, image size:', (await sharp(croppedImage).metadata()).width, 'x', (await sharp(croppedImage).metadata()).height);
+    console.log('✓ Scaled. New size:', scaledWidth, 'x', scaledHeight);
 
-    // Step 3: Resize to final output size
-    const alignedImage = await sharp(croppedImage)
-      .resize(outputSize, outputSize, {
-        fit: 'cover',
-        position: 'center',
-      })
-      .jpeg({ quality: 95 })
-      .toBuffer();
+    // Scale eye positions accordingly
+    const scaledLeftX = rotatedLeftX * scaleFactor;
+    const scaledLeftY = rotatedLeftY * scaleFactor;
+    const scaledRightX = rotatedRightX * scaleFactor;
+    const scaledRightY = rotatedRightY * scaleFactor;
 
-    console.log('Final image size:', outputSize, 'x', outputSize);
+    console.log('Eyes after scaling:', {
+      leftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
+      rightEye: { x: scaledRightX.toFixed(2), y: scaledRightY.toFixed(2) },
+    });
+
+    // STEP 4: Calculate translation to place eyes at target positions
+    // We want scaledLeftX to become TARGET_LEFT_EYE.x and scaledLeftY to become TARGET_LEFT_EYE.y
+    const translateX = TARGET_LEFT_EYE.x - scaledLeftX;
+    const translateY = TARGET_LEFT_EYE.y - scaledLeftY;
+
+    console.log('Step 4: Translation required:', {
+      translateX: translateX.toFixed(2),
+      translateY: translateY.toFixed(2),
+    });
+
+    // Calculate extraction region: we need to extract OUTPUT_SIZE×OUTPUT_SIZE
+    // centered such that eyes are at target positions
+    const extractLeft = Math.round(-translateX);
+    const extractTop = Math.round(-translateY);
+
+    console.log('Step 5: Extracting final', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region...');
+    console.log('Extract region:', {
+      left: extractLeft,
+      top: extractTop,
+      width: OUTPUT_SIZE,
+      height: OUTPUT_SIZE,
+    });
+
+    // STEP 5: Extract final OUTPUT_SIZE×OUTPUT_SIZE region
+    // Handle out-of-bounds extraction by extending canvas if needed
+    let alignedImage: Buffer;
+
+    const needsExtension = extractLeft < 0 || extractTop < 0 ||
+                          (extractLeft + OUTPUT_SIZE) > scaledWidth ||
+                          (extractTop + OUTPUT_SIZE) > scaledHeight;
+
+    if (needsExtension) {
+      console.log('⚠️ Extraction would go out of bounds. Extending canvas...');
+
+      const extendLeft = Math.max(0, -extractLeft);
+      const extendTop = Math.max(0, -extractTop);
+      const extendRight = Math.max(0, (extractLeft + OUTPUT_SIZE) - scaledWidth);
+      const extendBottom = Math.max(0, (extractTop + OUTPUT_SIZE) - scaledHeight);
+
+      processedImage = await sharp(processedImage)
+        .extend({
+          top: extendTop,
+          bottom: extendBottom,
+          left: extendLeft,
+          right: extendRight,
+          background: { r: 255, g: 255, b: 255 },
+        })
+        .toBuffer();
+
+      console.log('✓ Canvas extended:', { extendTop, extendBottom, extendLeft, extendRight });
+
+      // Adjust extraction coordinates for extended canvas
+      const finalExtractLeft = extractLeft + extendLeft;
+      const finalExtractTop = extractTop + extendTop;
+
+      alignedImage = await sharp(processedImage)
+        .extract({
+          left: finalExtractLeft,
+          top: finalExtractTop,
+          width: OUTPUT_SIZE,
+          height: OUTPUT_SIZE,
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer();
+    } else {
+      alignedImage = await sharp(processedImage)
+        .extract({
+          left: extractLeft,
+          top: extractTop,
+          width: OUTPUT_SIZE,
+          height: OUTPUT_SIZE,
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer();
+    }
+
+    console.log('✅ Alignment complete!');
+    console.log('🎯 Eyes are now at fixed positions:', {
+      leftEye: TARGET_LEFT_EYE,
+      rightEye: TARGET_RIGHT_EYE,
+      interEyeDistance: TARGET_INTER_EYE_DISTANCE,
+    });
+
+    // Create alignment transform record
+    const transform: AlignmentTransform = {
+      translateX,
+      translateY,
+      rotation: rotationDegrees,
+      scale: scaleFactor,
+    };
 
     // Upload aligned image to Supabase Storage
     const { data: userData } = await supabase.auth.admin.getUserById(photo.user_id);

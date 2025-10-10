@@ -14,6 +14,7 @@ interface EyeLandmarks {
   confidence: number;
   imageWidth: number;
   imageHeight: number;
+  eyesOpen?: boolean;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -51,25 +52,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       generationConfig: { responseMimeType: 'application/json' },
     });
 
-    const prompt = `Analyze this baby photo and detect facial landmarks with high precision.
+    const prompt = `Analyze this baby photo and detect the CENTER of each eye socket with sub-pixel precision.
 
-Return JSON with this exact structure:
+CRITICAL: Eyes may be OPEN or CLOSED - detect the eye center in BOTH cases:
+- If eyes are OPEN: Detect the exact center of the iris/pupil
+- If eyes are CLOSED: Detect the center of the eye socket beneath the eyelid
+  • Look for eyelid curvature and bulge where the eyeball is
+  • Use the midpoint between inner and outer eye corners (canthus)
+  • The eye center is typically at the maximum bulge point of the closed eyelid
+
+Return JSON with this exact structure (coordinates with 1 decimal place for sub-pixel precision):
 {
-  "leftEye": {"x": pixel_x, "y": pixel_y},
-  "rightEye": {"x": pixel_x, "y": pixel_y},
-  "confidence": 0.0-1.0,
-  "imageWidth": original_image_width,
-  "imageHeight": original_image_height
+  "leftEye": {"x": 453.2, "y": 320.7},
+  "rightEye": {"x": 244.8, "y": 340.3},
+  "confidence": 0.85,
+  "imageWidth": 768,
+  "imageHeight": 1024,
+  "eyesOpen": true
 }
 
-IMPORTANT:
-- The x,y coordinates should be the center of each eye position (where the iris/pupil would be)
-- Even if the eyes are closed, still detect the center position of each eye
-- If eyes are closed, estimate the center of where the eye is located beneath the eyelid
-- Use pixel coordinates (not normalized)
-- leftEye is the baby's left eye (appears on the right side of the image when facing camera)
-- rightEye is the baby's right eye (appears on the left side of the image when facing camera)
-- confidence should reflect detection certainty (0.8+ is good for open eyes, 0.6+ is acceptable for closed eyes)
+VALIDATION REQUIREMENTS:
+- leftEye is the baby's left eye (appears on the RIGHT side of the image when baby faces camera)
+- rightEye is the baby's right eye (ares on the LEFT side of the image when baby faces camera)
+- Inter-eye distance MUST be 10-25% of image width (validate this before returning)
+- Use pixel coordinates (NOT normalized), with 1 decimal place precision
+- confidence: 0.75+ for open eyes, 0.65+ acceptable for closed eyes
+- eyesOpen: true if both eyes clearly open, false if one or both eyes closed
 - Return actual image dimensions in pixels`;
 
     const result = await model.generateContent([
@@ -79,14 +87,46 @@ IMPORTANT:
 
     const landmarks: EyeLandmarks = JSON.parse(result.response.text());
 
-    // Validate confidence
-    if (landmarks.confidence < 0.6) {
+    // Adaptive confidence threshold based on eye state
+    const minConfidence = landmarks.eyesOpen === false ? 0.65 : 0.75;
+
+    if (landmarks.confidence < minConfidence) {
       return res.status(422).json({
         error: 'Low confidence eye detection',
-        message: 'Please retake the photo with better lighting and ensure the face is clearly visible',
+        message: landmarks.eyesOpen === false
+          ? `Eyes appear closed - confidence too low (${landmarks.confidence.toFixed(2)}). Try better lighting or wait for eyes to open.`
+          : `Eyes detected but confidence too low (${landmarks.confidence.toFixed(2)}). Ensure good lighting and face is clearly visible.`,
         confidence: landmarks.confidence,
+        eyesOpen: landmarks.eyesOpen,
       });
     }
+
+    // Validate inter-eye distance (should be 10-25% of image width)
+    const interEyeDistance = Math.sqrt(
+      Math.pow(landmarks.rightEye.x - landmarks.leftEye.x, 2) +
+        Math.pow(landmarks.rightEye.y - landmarks.leftEye.y, 2)
+    );
+    const interEyePercent = (interEyeDistance / landmarks.imageWidth) * 100;
+
+    if (interEyePercent < 10 || interEyePercent > 25) {
+      console.error('Invalid inter-eye distance:', {
+        distance: interEyeDistance,
+        percent: interEyePercent,
+        imageWidth: landmarks.imageWidth,
+      });
+      return res.status(422).json({
+        error: 'Invalid eye detection',
+        message: `Eyes detected too ${interEyePercent < 10 ? 'close' : 'far'} apart (${interEyePercent.toFixed(1)}% of image width). Expected 10-25%. Please ensure the photo shows the full face clearly.`,
+        interEyePercent,
+      });
+    }
+
+    console.log('Eye detection successful:', {
+      confidence: landmarks.confidence,
+      eyesOpen: landmarks.eyesOpen,
+      interEyeDistance: interEyeDistance.toFixed(1),
+      interEyePercent: interEyePercent.toFixed(1) + '%',
+    });
 
     // Update photo with eye coordinates
     const { error: updateError } = await supabase

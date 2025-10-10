@@ -14,6 +14,7 @@ export interface Database {
             confidence: number;
             imageWidth: number;
             imageHeight: number;
+            eyesOpen?: boolean;
           } | null;
           alignment_transform: {
             translateX: number;
