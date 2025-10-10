@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { PhotoOverlay } from './PhotoOverlay';
 
 export function PhotoGallery() {
   const { photos, loading, fetchPhotos } = usePhotoStore();
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
 
   useEffect(() => {
     fetchPhotos();
@@ -30,12 +32,23 @@ export function PhotoGallery() {
     );
   }
 
+  // Check if we have any aligned photos for the overlay
+  const hasAlignedPhotos = photos.some(p => p.aligned_url);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
         <p className="text-gray-600">{photos.length} {photos.length === 1 ? 'day' : 'days'}</p>
       </div>
+
+      {hasAlignedPhotos && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey with aligned eyes!
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {photos.map((photo, index) => (
@@ -44,6 +57,7 @@ export function PhotoGallery() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.05 }}
+            onClick={() => hasAlignedPhotos && setIsOverlayOpen(true)}
             className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group"
           >
             <img
@@ -73,6 +87,13 @@ export function PhotoGallery() {
           </motion.div>
         ))}
       </div>
+
+      {/* Photo Overlay */}
+      <PhotoOverlay
+        photos={photos}
+        isOpen={isOverlayOpen}
+        onClose={() => setIsOverlayOpen(false)}
+      />
     </div>
   );
 }
