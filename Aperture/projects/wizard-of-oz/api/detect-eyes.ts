@@ -140,27 +140,78 @@ VALIDATION REQUIREMENTS:
     }
 
     // Trigger alignment processing
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : (req.headers.origin as string);
+    // Construct base URL with proper fallbacks
+    let baseUrl: string;
+    if (process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    } else if (process.env.VERCEL_BRANCH_URL) {
+      baseUrl = `https://${process.env.VERCEL_BRANCH_URL}`;
+    } else {
+      // Local development fallback
+      baseUrl = 'http://localhost:5175';
+    }
 
-    console.log('Calling align-photo API:', { baseUrl, photoId });
+    // Prepare headers with Deployment Protection bypass
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'DetectEyesFunction/1.0',
+    };
 
-    const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photoId, landmarks }),
+    // Add Vercel Deployment Protection bypass if available
+    if (process.env.VERCEL_AUTOMATION_BYPASS_SECRET) {
+      headers['x-vercel-protection-bypass'] = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+      headers['x-vercel-set-bypass-cookie'] = 'samesitenone';
+    }
+
+    console.log('Calling align-photo API:', {
+      baseUrl,
+      photoId,
+      hasProtectionBypass: !!process.env.VERCEL_AUTOMATION_BYPASS_SECRET
     });
 
-    console.log('Align-photo response:', {
-      status: alignResponse.status,
-      ok: alignResponse.ok
-    });
+    // Set timeout to avoid hanging requests (55s to allow for Sharp processing)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 55000);
 
-    if (!alignResponse.ok) {
-      const errorText = await alignResponse.text();
-      console.error('Align-photo failed:', errorText);
-      // Don't throw - we still want to return success for eye detection
+    try {
+      const alignResponse = await fetch(`${baseUrl}/api/align-photo`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ photoId, landmarks }),
+        signal: controller.signal,
+      });
+
+      const responseText = await alignResponse.text();
+
+      console.log('Align-photo response:', {
+        status: alignResponse.status,
+        ok: alignResponse.ok,
+        bodyLength: responseText.length,
+        bodyPreview: responseText.substring(0, 200),
+      });
+
+      if (!alignResponse.ok) {
+        // Detect specific error types
+        if (alignResponse.status === 401 || alignResponse.status === 403) {
+          console.error('❌ Authentication failed - Deployment Protection may be blocking. Add VERCEL_AUTOMATION_BYPASS_SECRET environment variable.');
+        } else if (alignResponse.status === 404) {
+          console.error('❌ Align-photo endpoint not found - check deployment');
+        } else if (alignResponse.status === 500) {
+          console.error('❌ Align-photo internal error:', responseText.substring(0, 500));
+        }
+        // Don't throw - we still want to return success for eye detection
+      } else {
+        console.log('✅ Alignment triggered successfully');
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.error('❌ Align-photo request timed out after 55s');
+      } else {
+        console.error('❌ Align-photo request failed:', error);
+      }
+      // Don't throw - eye detection still succeeded
+    } finally {
+      clearTimeout(timeout);
     }
 
     return res.status(200).json({ success: true, landmarks });

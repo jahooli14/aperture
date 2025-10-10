@@ -1,7 +1,9 @@
 {
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     }
-  }
+  },
+  "buildCommand": "npm install --arch=x64 --platform=linux sharp && npm run build"
 }
