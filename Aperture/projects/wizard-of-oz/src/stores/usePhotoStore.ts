@@ -71,17 +71,19 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .getPublicUrl(uploadData.path);
 
       // Insert photo record
+      const insertData: Database['public']['Tables']['photos']['Insert'] = {
+        user_id: user.id,
+        upload_date: today,
+        original_url: publicUrl,
+      };
+
       const { data: photoData, error: insertError } = await supabase
         .from('photos')
-        .insert({
-          user_id: user.id,
-          upload_date: today,
-          original_url: publicUrl,
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError || !photoData) throw insertError || new Error('Failed to create photo record');
 
       // Trigger eye detection and alignment via API
       await fetch('/api/detect-eyes', {
