@@ -61,6 +61,58 @@ Testing locally catches issues BEFORE they hit CI/CD, especially important when 
 
 ---
 
+## 2025-10-10 | Debugging | Skipped Infrastructure Verification Before Code Debugging
+
+### What Happened
+User reported "upload button doesn't work". I immediately jumped into debugging the code - removed API calls, added extensive logging, improved file type handling, deployed 3 times with debugging improvements. After all this, the root cause was simply: **the Supabase storage bucket didn't exist**. No amount of code fixes would solve an infrastructure problem.
+
+### Why I Didn't Catch It
+1. **Assumed infrastructure was set up** - I saw SUPABASE_SETUP.sql existed and assumed it was run
+2. **Didn't verify external dependencies** - Never checked if storage buckets actually existed in Supabase
+3. **Focused on code first** - Went straight to debugging application logic instead of checking infrastructure
+4. **No infrastructure checklist** - Had no systematic way to verify external services were configured
+
+### The Fix
+- **Immediate**: Created STORAGE_BUCKET_SETUP.md with step-by-step instructions
+- **Infrastructure**: User needs to create 'originals' bucket in Supabase Dashboard
+- **Process**: Added infrastructure verification checklist below
+
+### Prevention Strategy
+**New Rule**: When debugging "feature doesn't work", ALWAYS verify infrastructure FIRST:
+
+**Infrastructure Verification Checklist** (check BEFORE debugging code):
+1. ✅ Database tables exist? (`SELECT * FROM [table]` in Supabase SQL Editor)
+2. ✅ Storage buckets exist? (Check Supabase Storage dashboard)
+3. ✅ Storage policies configured? (Check bucket policies)
+4. ✅ API keys valid? (Check .env and Vercel environment variables)
+5. ✅ External services reachable? (Test API endpoints manually)
+6. ✅ RLS policies enabled? (Check database policies)
+
+**Then** start debugging code.
+
+### Debugging Priority Order
+When something doesn't work:
+1. **Infrastructure** - Does the platform/service exist and is it configured?
+2. **Authentication** - Is the user properly authenticated?
+3. **Permissions** - Does the user/service have the right permissions?
+4. **Network** - Can the services reach each other?
+5. **Code Logic** - Only then debug application code
+
+### Cost of Mistake
+- **Time Lost**: ~45 minutes debugging code that was never the problem
+- **Deployments**: 3 unnecessary deployments with debugging code
+- **User Impact**: User waiting while I debug the wrong layer
+- **Code Pollution**: Added extensive console.log debugging that should be removed
+
+### Key Learning
+**Infrastructure problems look like code problems.** Always verify the foundation exists before debugging the building. A storage upload will fail identically whether the bucket doesn't exist OR the code is broken - but only infrastructure verification can tell you which it is.
+
+### Documented in
+- `projects/wizard-of-oz/STORAGE_BUCKET_SETUP.md` - Created bucket setup guide
+- This entry - Infrastructure verification checklist
+
+---
+
 ## Template for Future Entries
 
 ### [Date] | [Category] | [Brief Title]
