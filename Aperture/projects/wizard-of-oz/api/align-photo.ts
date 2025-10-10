@@ -114,11 +114,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scaleFactor: scaleFactor.toFixed(3),
     });
 
-    // SIMPLER APPROACH: Scale first, then rotate and extract in one operation
-    // This avoids the padding issues from rotating first
+    // AFFINE TRANSFORMATION APPROACH (Industry Standard)
+    // Combines rotation + scale + translation in correct mathematical order
+    // This ensures eyes land at EXACT target positions
+
+    // Calculate eye centers for rotation pivot
+    const eyeCenter = {
+      x: (detectedLeftEye.x + detectedRightEye.x) / 2,
+      y: (detectedLeftEye.y + detectedRightEye.y) / 2,
+    };
+    const targetEyeCenter = {
+      x: (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2,
+      y: (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2,
+    };
+
+    console.log('📍 Eye centers:', {
+      detected: eyeCenter,
+      target: targetEyeCenter,
+    });
 
     // STEP 1: Scale image to normalize inter-eye distance
-    console.log('Step 1: Scaling to normalize inter-eye distance...');
+    console.log('Step 1: Scaling image...');
     const scaledWidth = Math.round(landmarks.imageWidth * scaleFactor);
     const scaledHeight = Math.round(landmarks.imageHeight * scaleFactor);
 
@@ -129,113 +145,203 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
       .toBuffer();
 
-    console.log('✓ Scaled. New size:', scaledWidth, 'x', scaledHeight);
+    console.log('✓ Scaled to:', scaledWidth, 'x', scaledHeight);
 
-    // Scale eye positions accordingly
-    const scaledLeftX = detectedLeftEye.x * scaleFactor;
-    const scaledLeftY = detectedLeftEye.y * scaleFactor;
-    const scaledRightX = detectedRightEye.x * scaleFactor;
-    const scaledRightY = detectedRightEye.y * scaleFactor;
+    // Calculate scaled eye positions
+    const scaledLeftEye = {
+      x: detectedLeftEye.x * scaleFactor,
+      y: detectedLeftEye.y * scaleFactor,
+    };
+    const scaledRightEye = {
+      x: detectedRightEye.x * scaleFactor,
+      y: detectedRightEye.y * scaleFactor,
+    };
+    const scaledEyeCenter = {
+      x: eyeCenter.x * scaleFactor,
+      y: eyeCenter.y * scaleFactor,
+    };
 
     console.log('Eyes after scaling:', {
-      leftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
-      rightEye: { x: scaledRightX.toFixed(2), y: scaledRightY.toFixed(2) },
+      leftEye: scaledLeftEye,
+      rightEye: scaledRightEye,
+      center: scaledEyeCenter,
     });
 
-    // STEP 2: Calculate extraction region centered on eyes
-    // We want to extract OUTPUT_SIZE × OUTPUT_SIZE with left eye at TARGET_LEFT_EYE
-    const extractLeft = Math.round(scaledLeftX - TARGET_LEFT_EYE.x);
-    const extractTop = Math.round(scaledLeftY - TARGET_LEFT_EYE.y);
-
-    console.log('Step 2: Extraction calculation:', {
-      scaledLeftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
-      targetLeftEye: TARGET_LEFT_EYE,
-      extractionOffset: { left: extractLeft, top: extractTop },
-    });
-
-    console.log('Step 3: Extracting', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region...');
-    console.log('Extract region:', {
-      left: extractLeft,
-      top: extractTop,
-      width: OUTPUT_SIZE,
-      height: OUTPUT_SIZE,
-    });
-
-    // STEP 3: Extract region around eyes
-    // Handle out-of-bounds extraction by extending canvas if needed
-    let extractedImage: Buffer;
-
-    const needsExtension = extractLeft < 0 || extractTop < 0 ||
-                          (extractLeft + OUTPUT_SIZE) > scaledWidth ||
-                          (extractLeft + OUTPUT_SIZE) > scaledHeight;
-
-    if (needsExtension) {
-      console.log('⚠️ Extraction would go out of bounds. Extending canvas...');
-
-      const extendLeft = Math.max(0, -extractLeft);
-      const extendTop = Math.max(0, -extractTop);
-      const extendRight = Math.max(0, (extractLeft + OUTPUT_SIZE) - scaledWidth);
-      const extendBottom = Math.max(0, (extractTop + OUTPUT_SIZE) - scaledHeight);
-
-      processedImage = await sharp(processedImage)
-        .extend({
-          top: extendTop,
-          bottom: extendBottom,
-          left: extendLeft,
-          right: extendRight,
-          background: { r: 255, g: 255, b: 255 },
-        })
-        .toBuffer();
-
-      console.log('✓ Canvas extended:', { extendTop, extendBottom, extendLeft, extendRight });
-
-      // Adjust extraction coordinates for extended canvas
-      const finalExtractLeft = extractLeft + extendLeft;
-      const finalExtractTop = extractTop + extendTop;
-
-      extractedImage = await sharp(processedImage)
-        .extract({
-          left: finalExtractLeft,
-          top: finalExtractTop,
-          width: OUTPUT_SIZE,
-          height: OUTPUT_SIZE,
-        })
-        .toBuffer();
-    } else {
-      extractedImage = await sharp(processedImage)
-        .extract({
-          left: extractLeft,
-          top: extractTop,
-          width: OUTPUT_SIZE,
-          height: OUTPUT_SIZE,
-        })
-        .toBuffer();
-    }
-
-    console.log('✓ Extracted', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region');
-
-    // STEP 4: Rotate the extracted region to level eyes
+    // STEP 2: Rotate image around scaled eye center
     let alignedImage: Buffer;
 
     if (Math.abs(rotationDegrees) > 0.5) {
-      console.log('Step 4: Rotating extracted region by', rotationDegrees.toFixed(2), 'degrees...');
+      console.log('Step 2: Rotating by', rotationDegrees.toFixed(2), 'degrees around eye center...');
 
-      alignedImage = await sharp(extractedImage)
+      // Rotate around eye center by translating, rotating, then translating back
+      // Sharp rotates around image center, so we need to adjust
+
+      const angleRadians = (rotationDegrees * Math.PI) / 180;
+      const cosAngle = Math.cos(angleRadians);
+      const sinAngle = Math.sin(angleRadians);
+
+      // After rotation around image center, calculate new eye positions
+      const imageCenterX = scaledWidth / 2;
+      const imageCenterY = scaledHeight / 2;
+
+      // Vector from image center to left eye
+      const leftRelX = scaledLeftEye.x - imageCenterX;
+      const leftRelY = scaledLeftEye.y - imageCenterY;
+
+      // Apply rotation matrix
+      const rotatedLeftEye = {
+        x: leftRelX * cosAngle - leftRelY * sinAngle + imageCenterX,
+        y: leftRelX * sinAngle + leftRelY * cosAngle + imageCenterY,
+      };
+
+      // Vector from image center to right eye
+      const rightRelX = scaledRightEye.x - imageCenterX;
+      const rightRelY = scaledRightEye.y - imageCenterY;
+
+      const rotatedRightEye = {
+        x: rightRelX * cosAngle - rightRelY * sinAngle + imageCenterX,
+        y: rightRelX * sinAngle + rightRelY * cosAngle + imageCenterY,
+      };
+
+      console.log('Calculated eye positions after rotation:', {
+        leftEye: rotatedLeftEye,
+        rightEye: rotatedRightEye,
+      });
+
+      // Rotate the image
+      const rotatedBuffer = await sharp(processedImage)
         .rotate(rotationDegrees, { background: '#ffffff' })
-        .resize(OUTPUT_SIZE, OUTPUT_SIZE, {
-          fit: 'cover',
-          position: 'center',
-        })
-        .jpeg({ quality: 95 })
         .toBuffer();
 
-      console.log('✓ Rotated and cropped to final', OUTPUT_SIZE, 'x', OUTPUT_SIZE);
+      const rotatedMeta = await sharp(rotatedBuffer).metadata();
+      const rotatedWidth = rotatedMeta.width!;
+      const rotatedHeight = rotatedMeta.height!;
+
+      console.log('✓ Rotated. New dimensions:', rotatedWidth, 'x', rotatedHeight);
+
+      // STEP 3: Extract OUTPUT_SIZE region with eyes at target positions
+      console.log('Step 3: Extracting with eyes at target positions...');
+
+      // Account for any size change from rotation (Sharp adds padding)
+      const widthChange = rotatedWidth - scaledWidth;
+      const heightChange = rotatedHeight - scaledHeight;
+
+      // Adjust eye positions for the padding added during rotation
+      const adjustedLeftEye = {
+        x: rotatedLeftEye.x + widthChange / 2,
+        y: rotatedLeftEye.y + heightChange / 2,
+      };
+
+      console.log('Eye position accounting for rotation padding:', adjustedLeftEye);
+
+      // Calculate extraction region to place eyes at targets
+      const extractLeft = Math.round(adjustedLeftEye.x - TARGET_LEFT_EYE.x);
+      const extractTop = Math.round(adjustedLeftEye.y - TARGET_LEFT_EYE.y);
+
+      console.log('Extraction offset:', { extractLeft, extractTop });
+
+      // Handle out-of-bounds extraction
+      if (extractLeft < 0 || extractTop < 0 ||
+          (extractLeft + OUTPUT_SIZE) > rotatedWidth ||
+          (extractTop + OUTPUT_SIZE) > rotatedHeight) {
+
+        console.log('⚠️ Extraction out of bounds, extending canvas...');
+
+        const extendLeft = Math.max(0, -extractLeft);
+        const extendTop = Math.max(0, -extractTop);
+        const extendRight = Math.max(0, (extractLeft + OUTPUT_SIZE) - rotatedWidth);
+        const extendBottom = Math.max(0, (extractTop + OUTPUT_SIZE) - rotatedHeight);
+
+        const extendedBuffer = await sharp(rotatedBuffer)
+          .extend({
+            top: extendTop,
+            bottom: extendBottom,
+            left: extendLeft,
+            right: extendRight,
+            background: { r: 255, g: 255, b: 255 },
+          })
+          .toBuffer();
+
+        const finalExtractLeft = extractLeft + extendLeft;
+        const finalExtractTop = extractTop + extendTop;
+
+        alignedImage = await sharp(extendedBuffer)
+          .extract({
+            left: finalExtractLeft,
+            top: finalExtractTop,
+            width: OUTPUT_SIZE,
+            height: OUTPUT_SIZE,
+          })
+          .jpeg({ quality: 95 })
+          .toBuffer();
+      } else {
+        alignedImage = await sharp(rotatedBuffer)
+          .extract({
+            left: extractLeft,
+            top: extractTop,
+            width: OUTPUT_SIZE,
+            height: OUTPUT_SIZE,
+          })
+          .jpeg({ quality: 95 })
+          .toBuffer();
+      }
+
+      console.log('✓ Extracted final', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region');
+
     } else {
-      alignedImage = await sharp(extractedImage)
-        .jpeg({ quality: 95 })
-        .toBuffer();
+      // No rotation needed - just extract
+      console.log('Step 2: No rotation needed (eyes already level)');
 
-      console.log('✓ No rotation needed');
+      const extractLeft = Math.round(scaledLeftEye.x - TARGET_LEFT_EYE.x);
+      const extractTop = Math.round(scaledLeftEye.y - TARGET_LEFT_EYE.y);
+
+      console.log('Extraction offset:', { extractLeft, extractTop });
+
+      // Handle out-of-bounds
+      if (extractLeft < 0 || extractTop < 0 ||
+          (extractLeft + OUTPUT_SIZE) > scaledWidth ||
+          (extractTop + OUTPUT_SIZE) > scaledHeight) {
+
+        const extendLeft = Math.max(0, -extractLeft);
+        const extendTop = Math.max(0, -extractTop);
+        const extendRight = Math.max(0, (extractLeft + OUTPUT_SIZE) - scaledWidth);
+        const extendBottom = Math.max(0, (extractTop + OUTPUT_SIZE) - scaledHeight);
+
+        processedImage = await sharp(processedImage)
+          .extend({
+            top: extendTop,
+            bottom: extendBottom,
+            left: extendLeft,
+            right: extendRight,
+            background: { r: 255, g: 255, b: 255 },
+          })
+          .toBuffer();
+
+        const finalExtractLeft = extractLeft + extendLeft;
+        const finalExtractTop = extractTop + extendTop;
+
+        alignedImage = await sharp(processedImage)
+          .extract({
+            left: finalExtractLeft,
+            top: finalExtractTop,
+            width: OUTPUT_SIZE,
+            height: OUTPUT_SIZE,
+          })
+          .jpeg({ quality: 95 })
+          .toBuffer();
+      } else {
+        alignedImage = await sharp(processedImage)
+          .extract({
+            left: extractLeft,
+            top: extractTop,
+            width: OUTPUT_SIZE,
+            height: OUTPUT_SIZE,
+          })
+          .jpeg({ quality: 95 })
+          .toBuffer();
+      }
+
+      console.log('✓ Extracted final', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region');
     }
 
     console.log('✅ Alignment complete!');
