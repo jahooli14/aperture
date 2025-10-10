@@ -180,8 +180,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Target eye midpoint:', targetMidpoint);
 
     // Step 3: Extract based on midpoint (this centers both eyes)
-    const extractLeft = Math.round(currentMidpoint.x - targetMidpoint.x);
-    const extractTop = Math.round(currentMidpoint.y - targetMidpoint.y);
+    // TESTING: Try opposite direction - eyes were 480px too far left
+    const extractLeft = Math.round(targetMidpoint.x - currentMidpoint.x);
+    const extractTop = Math.round(targetMidpoint.y - currentMidpoint.y);
 
     // DEBUG: Where will the eyes end up?
     const finalLeftEyeX = scaledLeftEye.x - extractLeft;
