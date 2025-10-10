@@ -114,59 +114,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       scaleFactor: scaleFactor.toFixed(3),
     });
 
-    // Calculate eye midpoint for rotation center
-    const eyeMidpoint = {
-      x: (detectedLeftEye.x + detectedRightEye.x) / 2,
-      y: (detectedLeftEye.y + detectedRightEye.y) / 2,
-    };
+    // SIMPLER APPROACH: Scale first, then rotate and extract in one operation
+    // This avoids the padding issues from rotating first
 
-    // STEP 1: Rotate image to level eyes
-    let processedImage = imageBuffer;
-    let currentWidth = landmarks.imageWidth;
-    let currentHeight = landmarks.imageHeight;
+    // STEP 1: Scale image to normalize inter-eye distance
+    console.log('Step 1: Scaling to normalize inter-eye distance...');
+    const scaledWidth = Math.round(landmarks.imageWidth * scaleFactor);
+    const scaledHeight = Math.round(landmarks.imageHeight * scaleFactor);
 
-    if (Math.abs(rotationDegrees) > 0.5) {
-      console.log('Step 1: Rotating image to level eyes...');
-      processedImage = await sharp(imageBuffer)
-        .rotate(rotationDegrees, { background: '#ffffff' })
-        .toBuffer();
-
-      const meta = await sharp(processedImage).metadata();
-      currentWidth = meta.width!;
-      currentHeight = meta.height!;
-      console.log('✓ Rotated. New size:', currentWidth, 'x', currentHeight);
-    }
-
-    // STEP 2: Calculate where eyes are after rotation
-    const angleRadians = (rotationDegrees * Math.PI) / 180;
-    const originalCenterX = landmarks.imageWidth / 2;
-    const originalCenterY = landmarks.imageHeight / 2;
-
-    // Transform left eye position
-    const leftRelX = detectedLeftEye.x - originalCenterX;
-    const leftRelY = detectedLeftEye.y - originalCenterY;
-    const rotatedLeftX = leftRelX * Math.cos(angleRadians) - leftRelY * Math.sin(angleRadians) + currentWidth / 2;
-    const rotatedLeftY = leftRelX * Math.sin(angleRadians) + leftRelY * Math.cos(angleRadians) + currentHeight / 2;
-
-    // Transform right eye position
-    const rightRelX = detectedRightEye.x - originalCenterX;
-    const rightRelY = detectedRightEye.y - originalCenterY;
-    const rotatedRightX = rightRelX * Math.cos(angleRadians) - rightRelY * Math.sin(angleRadians) + currentWidth / 2;
-    const rotatedRightY = rightRelX * Math.sin(angleRadians) + rightRelY * Math.cos(angleRadians) + currentHeight / 2;
-
-    console.log('Step 2: Eyes after rotation:', {
-      leftEye: { x: rotatedLeftX.toFixed(2), y: rotatedLeftY.toFixed(2) },
-      rightEye: { x: rotatedRightX.toFixed(2), y: rotatedRightY.toFixed(2) },
-    });
-
-    // STEP 3: Scale image to normalize inter-eye distance
-    console.log('Step 3: Scaling to normalize inter-eye distance...');
-    const scaledWidth = Math.round(currentWidth * scaleFactor);
-    const scaledHeight = Math.round(currentHeight * scaleFactor);
-
-    processedImage = await sharp(processedImage)
+    let processedImage = await sharp(imageBuffer)
       .resize(scaledWidth, scaledHeight, {
-        kernel: 'lanczos3', // High-quality scaling
+        kernel: 'lanczos3',
         fit: 'fill',
       })
       .toBuffer();
@@ -174,30 +132,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('✓ Scaled. New size:', scaledWidth, 'x', scaledHeight);
 
     // Scale eye positions accordingly
-    const scaledLeftX = rotatedLeftX * scaleFactor;
-    const scaledLeftY = rotatedLeftY * scaleFactor;
-    const scaledRightX = rotatedRightX * scaleFactor;
-    const scaledRightY = rotatedRightY * scaleFactor;
+    const scaledLeftX = detectedLeftEye.x * scaleFactor;
+    const scaledLeftY = detectedLeftEye.y * scaleFactor;
+    const scaledRightX = detectedRightEye.x * scaleFactor;
+    const scaledRightY = detectedRightEye.y * scaleFactor;
 
     console.log('Eyes after scaling:', {
       leftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
       rightEye: { x: scaledRightX.toFixed(2), y: scaledRightY.toFixed(2) },
     });
 
-    // STEP 4: Calculate extraction region to place eyes at target positions
-    // If left eye is at scaledLeftX in the scaled image,
-    // and we want it at TARGET_LEFT_EYE.x in the final output,
-    // we need to extract starting from (scaledLeftX - TARGET_LEFT_EYE.x)
+    // STEP 2: Calculate extraction region centered on eyes
+    // We want to extract OUTPUT_SIZE × OUTPUT_SIZE with left eye at TARGET_LEFT_EYE
     const extractLeft = Math.round(scaledLeftX - TARGET_LEFT_EYE.x);
     const extractTop = Math.round(scaledLeftY - TARGET_LEFT_EYE.y);
 
-    console.log('Step 4: Extraction calculation:', {
+    console.log('Step 2: Extraction calculation:', {
       scaledLeftEye: { x: scaledLeftX.toFixed(2), y: scaledLeftY.toFixed(2) },
       targetLeftEye: TARGET_LEFT_EYE,
       extractionOffset: { left: extractLeft, top: extractTop },
     });
 
-    console.log('Step 5: Extracting final', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region...');
+    console.log('Step 3: Extracting', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region...');
     console.log('Extract region:', {
       left: extractLeft,
       top: extractTop,
@@ -205,13 +161,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       height: OUTPUT_SIZE,
     });
 
-    // STEP 5: Extract final OUTPUT_SIZE×OUTPUT_SIZE region
+    // STEP 3: Extract region around eyes
     // Handle out-of-bounds extraction by extending canvas if needed
-    let alignedImage: Buffer;
+    let extractedImage: Buffer;
 
     const needsExtension = extractLeft < 0 || extractTop < 0 ||
                           (extractLeft + OUTPUT_SIZE) > scaledWidth ||
-                          (extractTop + OUTPUT_SIZE) > scaledHeight;
+                          (extractLeft + OUTPUT_SIZE) > scaledHeight;
 
     if (needsExtension) {
       console.log('⚠️ Extraction would go out of bounds. Extending canvas...');
@@ -237,25 +193,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const finalExtractLeft = extractLeft + extendLeft;
       const finalExtractTop = extractTop + extendTop;
 
-      alignedImage = await sharp(processedImage)
+      extractedImage = await sharp(processedImage)
         .extract({
           left: finalExtractLeft,
           top: finalExtractTop,
           width: OUTPUT_SIZE,
           height: OUTPUT_SIZE,
         })
-        .jpeg({ quality: 95 })
         .toBuffer();
     } else {
-      alignedImage = await sharp(processedImage)
+      extractedImage = await sharp(processedImage)
         .extract({
           left: extractLeft,
           top: extractTop,
           width: OUTPUT_SIZE,
           height: OUTPUT_SIZE,
         })
+        .toBuffer();
+    }
+
+    console.log('✓ Extracted', OUTPUT_SIZE, 'x', OUTPUT_SIZE, 'region');
+
+    // STEP 4: Rotate the extracted region to level eyes
+    let alignedImage: Buffer;
+
+    if (Math.abs(rotationDegrees) > 0.5) {
+      console.log('Step 4: Rotating extracted region by', rotationDegrees.toFixed(2), 'degrees...');
+
+      alignedImage = await sharp(extractedImage)
+        .rotate(rotationDegrees, { background: '#ffffff' })
+        .resize(OUTPUT_SIZE, OUTPUT_SIZE, {
+          fit: 'cover',
+          position: 'center',
+        })
         .jpeg({ quality: 95 })
         .toBuffer();
+
+      console.log('✓ Rotated and cropped to final', OUTPUT_SIZE, 'x', OUTPUT_SIZE);
+    } else {
+      alignedImage = await sharp(extractedImage)
+        .jpeg({ quality: 95 })
+        .toBuffer();
+
+      console.log('✓ No rotation needed');
     }
 
     console.log('✅ Alignment complete!');
