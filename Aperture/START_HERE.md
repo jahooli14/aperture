@@ -20,23 +20,36 @@ That's it! Everything else is documented.
 
 ### Step 1: Understand the Context (2 minutes)
 
+> **🚨 IMPORTANT**: This directory is used for BOTH work and personal projects!
+>
+> **FIRST**, determine which project you're working on:
+> - 🏢 **NUDJ (work)**: Read `CLAUDE-NUDJ.md`
+> - 🏠 **Aperture (personal)**: Read `CLAUDE-APERTURE.md`
+>
+> If unclear, read `CLAUDE.md` for guidance on which to choose.
+
 You are working on **Aperture** - a multi-project development framework with continuous improvement processes.
 
 **Read these files IN ORDER**:
 
-1. **`NEXT_SESSION.md`** (MOST IMPORTANT - read this FIRST)
+1. **`CLAUDE-APERTURE.md`** (IF working on Aperture personal projects)
+   - Aperture-specific architecture
+   - Project structure and conventions
+   - Development patterns
+
+2. **`NEXT_SESSION.md`** (MOST IMPORTANT - read this NEXT)
    - Current status
    - Immediate next steps
    - What to work on today
    - Key context and decisions
 
-2. **`SESSION_CHECKLIST.md`** (if starting a major task)
+3. **`SESSION_CHECKLIST.md`** (if starting a major task)
    - Session workflow
    - How to capture mistakes
    - When to update docs
 
-3. **Relevant project `plan.md`** (if working on a specific project)
-   - Location: `projects/[project-name]/plan.md`
+4. **Relevant project docs** (if working on a specific project)
+   - Location: `projects/[project-name]/DEPLOYMENT.md`, etc.
    - Current project state
    - What's completed vs pending
 
@@ -72,14 +85,12 @@ aperture/
 
 | Need | File |
 |------|------|
+| **Which project am I on?** | `CLAUDE.md` (router) |
+| **Aperture documentation** | `CLAUDE-APERTURE.md` |
+| **NUDJ documentation** | `CLAUDE-NUDJ.md` |
 | **What to do today** | `NEXT_SESSION.md` |
-| **Project status** | `projects/[name]/plan.md` |
-| **Why we made a decision** | `.process/DECISION_LOG.md` or `projects/[name]/decisions.md` |
+| **Deployment requirements** | `projects/wizard-of-oz/DEPLOYMENT.md` |
 | **Mistakes we've made** | `.process/COMMON_MISTAKES.md` |
-| **How to work (workflow)** | `.process/DEVELOPMENT.md` |
-| **Architecture principles** | `.process/ARCHITECTURE.md` |
-| **Testing patterns** | `.process/TESTING_GUIDE.md` |
-| **Deployment process** | `.process/DEPLOYMENT.md` |
 | **Session workflow** | `SESSION_CHECKLIST.md` |
 | **How to start new project** | `CONTRIBUTING.md` |
 
