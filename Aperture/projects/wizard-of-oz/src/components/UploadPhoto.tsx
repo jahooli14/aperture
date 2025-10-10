@@ -1,14 +1,27 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { Calendar, RotateCcw } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState('');
+  const [customDate, setCustomDate] = useState<string>('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
+
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0];
+
+  // Calculate minimum date (5 years ago)
+  const fiveYearsAgo = new Date();
+  fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+  const minDate = fiveYearsAgo.toISOString().split('T')[0];
+
+  const displayDate = customDate || today;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,9 +59,11 @@ export function UploadPhoto() {
 
     try {
       setError('');
-      await uploadPhoto(selectedFile);
+      await uploadPhoto(selectedFile, displayDate);
       setPreview(null);
       setSelectedFile(null);
+      setCustomDate('');
+      setShowDatePicker(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -96,7 +111,78 @@ export function UploadPhoto() {
       animate={{ opacity: 1, y: 0 }}
       className="bg-white rounded-lg shadow-lg p-6"
     >
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">Today's Photo</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        {customDate ? 'Upload Photo' : "Today's Photo"}
+      </h2>
+
+      {/* Date Selection */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <Calendar className="w-4 h-4 text-gray-600" />
+            <span className="text-sm font-medium text-gray-700">
+              Date: {new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}
+            </span>
+            {customDate && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                Custom
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            {customDate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomDate('');
+                  setShowDatePicker(false);
+                }}
+                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                title="Reset to today"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            >
+              {showDatePicker ? 'Done' : 'Change'}
+            </button>
+          </div>
+        </div>
+
+        {showDatePicker && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 p-3 bg-white border border-gray-200 rounded-lg"
+          >
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select date for this photo:
+            </label>
+            <input
+              type="date"
+              value={customDate || today}
+              onChange={(e) => setCustomDate(e.target.value)}
+              min={minDate}
+              max={today}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              You can backdate photos up to 5 years, but future dates are not allowed.
+            </p>
+          </motion.div>
+        )}
+      </div>
 
       {!preview ? (
         <div>

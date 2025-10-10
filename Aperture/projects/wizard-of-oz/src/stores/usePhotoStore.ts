@@ -10,7 +10,7 @@ interface PhotoState {
   uploading: boolean;
   deleting: boolean;
   fetchPhotos: () => Promise<void>;
-  uploadPhoto: (file: File) => Promise<string>;
+  uploadPhoto: (file: File, uploadDate?: string) => Promise<string>;
   deletePhoto: (photoId: string) => Promise<void>;
   hasUploadedToday: () => boolean;
 }
@@ -37,20 +37,34 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     set({ photos: data || [], loading: false });
   },
 
-  uploadPhoto: async (file: File) => {
+  uploadPhoto: async (file: File, uploadDate?: string) => {
     set({ uploading: true });
 
     try {
-      console.log('Starting upload process...', { fileName: file.name, fileSize: file.size });
+      console.log('Starting upload process...', { fileName: file.name, fileSize: file.size, uploadDate });
 
       const { data: { user } } = await supabase.auth.getUser();
       console.log('User authentication check:', { userId: user?.id, isAuthenticated: !!user });
 
       if (!user) throw new Error('Not authenticated');
 
-      // Check if already uploaded today
+      // Use provided date or default to today
+      const targetDate = uploadDate || new Date().toISOString().split('T')[0];
+      console.log('Using upload date:', { targetDate, isCustom: !!uploadDate, userId: user.id });
+
+      // Validate date is not in the future
       const today = new Date().toISOString().split('T')[0];
-      console.log('Checking for existing upload today:', { today, userId: user.id });
+      if (targetDate > today) {
+        throw new Error('Cannot upload photos for future dates');
+      }
+
+      // Validate date is not too far in the past (reasonable limit: 5 years)
+      const fiveYearsAgo = new Date();
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+      const minDate = fiveYearsAgo.toISOString().split('T')[0];
+      if (targetDate < minDate) {
+        throw new Error('Cannot upload photos older than 5 years');
+      }
 
       // TEMPORARILY DISABLED FOR TESTING - Allow multiple uploads per day
       // const { data: existing } = await supabase
@@ -98,7 +112,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .from('photos') as any)
         .insert({
           user_id: user.id,
-          upload_date: today,
+          upload_date: targetDate,
           original_url: publicUrl,
         })
         .select()
