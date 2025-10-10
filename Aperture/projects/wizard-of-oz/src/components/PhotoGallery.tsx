@@ -1,15 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { PhotoOverlay } from './PhotoOverlay';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
+import type { Database } from '../types/database';
+
+type Photo = Database['public']['Tables']['photos']['Row'];
 
 export function PhotoGallery() {
-  const { photos, loading, fetchPhotos } = usePhotoStore();
+  const { photos, loading, fetchPhotos, deletePhoto, deleting } = usePhotoStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchPhotos();
   }, [fetchPhotos]);
+
+  const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    longPressTimer.current = setTimeout(() => {
+      setPhotoToDelete(photo);
+      // Haptic feedback on mobile
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+    }, 800); // 800ms long press
+  };
+
+  const handlePressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handlePhotoClick = (_photo: Photo, _e: React.MouseEvent) => {
+    // Only open overlay if not in a long press state
+    if (hasAlignedPhotos && !longPressTimer.current) {
+      setIsOverlayOpen(true);
+    }
+  };
 
   if (loading) {
     return (
@@ -47,6 +78,9 @@ export function PhotoGallery() {
           <p className="text-sm text-blue-800">
             <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey with aligned eyes!
           </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Long press to delete a photo
+          </p>
         </div>
       )}
 
@@ -57,8 +91,14 @@ export function PhotoGallery() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.05 }}
-            onClick={() => hasAlignedPhotos && setIsOverlayOpen(true)}
-            className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group"
+            onClick={(e) => handlePhotoClick(photo, e)}
+            onMouseDown={(e) => handlePressStart(photo, e)}
+            onMouseUp={handlePressEnd}
+            onMouseLeave={handlePressEnd}
+            onTouchStart={(e) => handlePressStart(photo, e)}
+            onTouchEnd={handlePressEnd}
+            onTouchCancel={handlePressEnd}
+            className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group select-none"
           >
             <img
               src={photo.aligned_url || photo.original_url}
@@ -93,6 +133,25 @@ export function PhotoGallery() {
         photos={photos}
         isOpen={isOverlayOpen}
         onClose={() => setIsOverlayOpen(false)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        photo={photoToDelete}
+        isOpen={!!photoToDelete}
+        onClose={() => setPhotoToDelete(null)}
+        onConfirm={async () => {
+          if (photoToDelete) {
+            try {
+              await deletePhoto(photoToDelete.id);
+              setPhotoToDelete(null);
+            } catch (error) {
+              console.error('Failed to delete photo:', error);
+              // Keep modal open on error so user can try again
+            }
+          }
+        }}
+        deleting={deleting}
       />
     </div>
   );

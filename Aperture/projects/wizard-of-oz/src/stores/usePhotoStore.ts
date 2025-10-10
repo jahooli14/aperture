@@ -8,8 +8,10 @@ interface PhotoState {
   photos: Photo[];
   loading: boolean;
   uploading: boolean;
+  deleting: boolean;
   fetchPhotos: () => Promise<void>;
   uploadPhoto: (file: File) => Promise<string>;
+  deletePhoto: (photoId: string) => Promise<void>;
   hasUploadedToday: () => boolean;
 }
 
@@ -17,6 +19,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   photos: [],
   loading: false,
   uploading: false,
+  deleting: false,
 
   fetchPhotos: async () => {
     set({ loading: true });
@@ -136,6 +139,41 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     } catch (error) {
       console.error('Upload failed:', error);
       set({ uploading: false });
+      throw error;
+    }
+  },
+
+  deletePhoto: async (photoId: string) => {
+    set({ deleting: true });
+
+    try {
+      console.log('Deleting photo:', photoId);
+
+      const apiUrl = window.location.origin + '/api/delete-photo';
+      console.log('Calling delete API:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId }),
+      });
+
+      const result = await response.json();
+      console.log('Delete API response:', { status: response.status, result });
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete photo');
+      }
+
+      // Remove photo from local state
+      const currentPhotos = get().photos;
+      const updatedPhotos = currentPhotos.filter(photo => photo.id !== photoId);
+      set({ photos: updatedPhotos, deleting: false });
+
+      console.log('✅ Photo deleted successfully from state');
+    } catch (error) {
+      console.error('❌ Delete photo failed:', error);
+      set({ deleting: false });
       throw error;
     }
   },
