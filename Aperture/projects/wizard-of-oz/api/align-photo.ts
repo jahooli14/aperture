@@ -81,6 +81,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       rightEye: detectedRightEye,
     });
 
+    // DEBUG: Calculate where eyes are as percentages
+    const leftEyePercent = {
+      x: ((detectedLeftEye.x / landmarks.imageWidth) * 100).toFixed(1) + '%',
+      y: ((detectedLeftEye.y / landmarks.imageHeight) * 100).toFixed(1) + '%',
+    };
+    const rightEyePercent = {
+      x: ((detectedRightEye.x / landmarks.imageWidth) * 100).toFixed(1) + '%',
+      y: ((detectedRightEye.y / landmarks.imageHeight) * 100).toFixed(1) + '%',
+    };
+
+    console.log('👁️ Detected eye positions as percentages:', {
+      leftEye: leftEyePercent,
+      rightEye: rightEyePercent,
+    });
+
+    console.log('📊 Eye position check:', {
+      leftEyeIsOnRightSide: detectedLeftEye.x > landmarks.imageWidth / 2,
+      rightEyeIsOnLeftSide: detectedRightEye.x < landmarks.imageWidth / 2,
+      interpretation: detectedLeftEye.x > detectedRightEye.x ? 'Baby facing camera' : 'LABELS MIGHT BE SWAPPED',
+    });
+
     // Calculate rotation angle to level eyes horizontally
     // Note: leftEye is baby's left (appears on right in photo)
     //       rightEye is baby's right (appears on left in photo)
@@ -145,6 +166,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Step 3: Extract 1080x1080 region with left eye at target position
     const extractLeft = Math.round(scaledLeftEye.x - TARGET_LEFT_EYE.x);
     const extractTop = Math.round(scaledLeftEye.y - TARGET_LEFT_EYE.y);
+
+    // DEBUG: Where will the eyes end up in the final image?
+    const finalLeftEyeX = scaledLeftEye.x - extractLeft;
+    const finalLeftEyeY = scaledLeftEye.y - extractTop;
+
+    const scaledRightEye = {
+      x: detectedRightEye.x * scaleFactor,
+      y: detectedRightEye.y * scaleFactor,
+    };
+
+    const finalRightEyeX = scaledRightEye.x - extractLeft;
+    const finalRightEyeY = scaledRightEye.y - extractTop;
+
+    console.log('🎯 Final eye positions in output (should be left=360, right=720):', {
+      leftEye: { x: finalLeftEyeX.toFixed(1), y: finalLeftEyeY.toFixed(1) },
+      rightEye: { x: finalRightEyeX.toFixed(1), y: finalRightEyeY.toFixed(1) },
+    });
 
     console.log('Extract offset:', extractLeft, extractTop);
     console.log('Extract region: (' + extractLeft + ',' + extractTop + ') to (' + (extractLeft + OUTPUT_SIZE) + ',' + (extractTop + OUTPUT_SIZE) + ')');
