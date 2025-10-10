@@ -60,8 +60,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // FIXED TARGET EYE POSITIONS in 1080×1080 output (for perfect stacking)
     // These coordinates NEVER change - every photo will have eyes at these exact positions
-    const TARGET_LEFT_EYE = { x: 360, y: 432 };   // 33.3% horizontal, 40% vertical
-    const TARGET_RIGHT_EYE = { x: 720, y: 432 };  // 66.7% horizontal, 40% vertical
+    // NOTE: leftEye is baby's left (appears on RIGHT side when baby faces camera)
+    //       rightEye is baby's right (appears on LEFT side when baby faces camera)
+    const TARGET_LEFT_EYE = { x: 720, y: 432 };   // Baby's left eye - right side of image
+    const TARGET_RIGHT_EYE = { x: 360, y: 432 };  // Baby's right eye - left side of image
     const TARGET_INTER_EYE_DISTANCE = 360;         // pixels between eyes
     const OUTPUT_SIZE = 1080;                      // square output
 
