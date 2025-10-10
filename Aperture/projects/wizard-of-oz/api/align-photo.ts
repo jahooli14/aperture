@@ -295,18 +295,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('Upload successful, getting public URL');
 
-    // Get public URL
+    // Get public URL with cache-busting timestamp
     const { data: { publicUrl } } = supabase.storage
       .from('aligned')
       .getPublicUrl(alignedFileName);
 
+    // Add cache-busting parameter to force browser/CDN to fetch latest version
+    const cacheBustedUrl = `${publicUrl}?v=${Date.now()}`;
+
     // Update photo record with aligned URL and transform
-    console.log('Updating database with aligned URL:', { photoId, publicUrl });
+    console.log('Updating database with aligned URL:', { photoId, cacheBustedUrl });
 
     const { error: updateError } = await supabase
       .from('photos')
       .update({
-        aligned_url: publicUrl,
+        aligned_url: cacheBustedUrl,
         alignment_transform: transform,
       })
       .eq('id', photoId);
@@ -320,7 +323,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
-      alignedUrl: publicUrl,
+      alignedUrl: cacheBustedUrl,
       transform,
     });
   } catch (error) {
