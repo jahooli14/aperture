@@ -149,27 +149,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('Extract offset:', extractLeft, extractTop);
     console.log('Extract region: (' + extractLeft + ',' + extractTop + ') to (' + (extractLeft + OUTPUT_SIZE) + ',' + (extractTop + OUTPUT_SIZE) + ')');
 
-    // Verify extraction is in bounds
+    // Handle out-of-bounds by extending canvas with white background
+    let alignedImage: Buffer;
+
     if (extractLeft < 0 || extractTop < 0 ||
         (extractLeft + OUTPUT_SIZE) > scaledWidth ||
         (extractTop + OUTPUT_SIZE) > scaledHeight) {
-      console.log('⚠️ EXTRACTION OUT OF BOUNDS');
+      console.log('⚠️ Extraction out of bounds - extending canvas');
       console.log('  Scaled image size:', scaledWidth, 'x', scaledHeight);
-      console.log('  Extract needs:', extractLeft, extractTop, 'to', extractLeft + OUTPUT_SIZE, extractTop + OUTPUT_SIZE);
+      console.log('  Extract needs: from (' + extractLeft + ',' + extractTop + ') size ' + OUTPUT_SIZE + 'x' + OUTPUT_SIZE);
 
-      // For now, just fail - we'll handle this later
-      throw new Error('Extraction out of bounds - need to extend canvas');
+      // Calculate how much padding we need on each side
+      const extendLeft = Math.max(0, -extractLeft);
+      const extendTop = Math.max(0, -extractTop);
+      const extendRight = Math.max(0, (extractLeft + OUTPUT_SIZE) - scaledWidth);
+      const extendBottom = Math.max(0, (extractTop + OUTPUT_SIZE) - scaledHeight);
+
+      console.log('  Adding padding:', { left: extendLeft, top: extendTop, right: extendRight, bottom: extendBottom });
+
+      // Extend the canvas
+      const extendedImage = await sharp(scaledImage)
+        .extend({
+          top: extendTop,
+          bottom: extendBottom,
+          left: extendLeft,
+          right: extendRight,
+          background: { r: 255, g: 255, b: 255 },
+        })
+        .toBuffer();
+
+      // Adjust extraction coordinates for the extended canvas
+      const newExtractLeft = extractLeft + extendLeft;
+      const newExtractTop = extractTop + extendTop;
+
+      console.log('  New extract position:', newExtractLeft, newExtractTop);
+
+      alignedImage = await sharp(extendedImage)
+        .extract({
+          left: newExtractLeft,
+          top: newExtractTop,
+          width: OUTPUT_SIZE,
+          height: OUTPUT_SIZE,
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer();
+    } else {
+      alignedImage = await sharp(scaledImage)
+        .extract({
+          left: extractLeft,
+          top: extractTop,
+          width: OUTPUT_SIZE,
+          height: OUTPUT_SIZE,
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer();
     }
-
-    const alignedImage = await sharp(scaledImage)
-      .extract({
-        left: extractLeft,
-        top: extractTop,
-        width: OUTPUT_SIZE,
-        height: OUTPUT_SIZE,
-      })
-      .jpeg({ quality: 95 })
-      .toBuffer();
 
     console.log('✅ Basic alignment complete - no rotation applied');
 
