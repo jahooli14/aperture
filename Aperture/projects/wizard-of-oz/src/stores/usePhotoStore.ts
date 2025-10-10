@@ -71,15 +71,13 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .getPublicUrl(uploadData.path);
 
       // Insert photo record
-      const insertData: Database['public']['Tables']['photos']['Insert'] = {
-        user_id: user.id,
-        upload_date: today,
-        original_url: publicUrl,
-      };
-
       const { data: photoData, error: insertError } = await supabase
         .from('photos')
-        .insert(insertData)
+        .insert({
+          user_id: user.id,
+          upload_date: today,
+          original_url: publicUrl,
+        } as Database['public']['Tables']['photos']['Insert'])
         .select()
         .single<Photo>();
 
