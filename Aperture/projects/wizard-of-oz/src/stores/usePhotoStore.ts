@@ -112,11 +112,19 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       // Trigger eye detection and alignment via API (async, don't wait)
       const apiUrl = window.location.origin + '/api/detect-eyes';
+      console.log('Calling API:', apiUrl, 'with photoId:', (photoData as Photo).id);
+
       fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ photoId: (photoData as Photo).id }),
-      }).catch(err => console.error('Eye detection request failed:', err));
+      })
+        .then(res => {
+          console.log('API response status:', res.status);
+          return res.json();
+        })
+        .then(data => console.log('API response:', data))
+        .catch(err => console.error('Eye detection request failed:', err));
 
       // Refresh photos
       console.log('Refreshing photos list...');
