@@ -9,14 +9,29 @@
 ## 📋 Copy-Paste This to Start New Session
 
 ```
-Read START_HERE.md and continue with the plan.
+Read startup.md
 ```
 
-That's it! Everything else is documented.
+That's it! Automatic checks will run.
 
 ---
 
-## 🤖 STARTUP SEQUENCE FOR CLAUDE
+## 🤖 AUTOMATIC STARTUP (Claude)
+
+**Primary file**: `.claude/startup.md` (read this FIRST every session)
+
+That file automatically:
+- ✅ Checks token budget health (< 50K / 50-100K / > 100K)
+- ✅ Detects project (NUDJ vs Aperture)
+- ✅ Requires reading NEXT_SESSION.md
+- ✅ Suggests /verify-infra before debugging
+- ✅ Enforces continuous improvement (fix root causes)
+
+**Below is reference** (startup.md is authoritative):
+
+---
+
+## 🤖 MANUAL STARTUP REFERENCE (Claude)
 
 > **Choose the right path based on your task**
 
