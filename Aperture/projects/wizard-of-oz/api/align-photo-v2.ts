@@ -93,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Rotate the image to level the eyes
-    let rotatedBuffer = imageBuffer;
+    let rotatedBuffer: Buffer = imageBuffer;
     let rotatedWidth = landmarks.imageWidth;
     let rotatedHeight = landmarks.imageHeight;
     let rotatedLeftEye = { ...landmarks.leftEye };
@@ -102,9 +102,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (Math.abs(rotationDegrees) > 0.5) {
       console.log('Rotating image by', rotationDegrees.toFixed(2), 'degrees');
 
-      rotatedBuffer = await sharp(imageBuffer)
+      rotatedBuffer = Buffer.from(await sharp(imageBuffer)
         .rotate(rotationDegrees, { background: { r: 255, g: 255, b: 255 } })
-        .toBuffer();
+        .toBuffer());
 
       const rotatedMeta = await sharp(rotatedBuffer).metadata();
       rotatedWidth = rotatedMeta.width!;
