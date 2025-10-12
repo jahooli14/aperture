@@ -1,0 +1,15 @@
+{
+  "leftEye": {
+    "x": 628.6,
+    "y": 237.5
+  },
+  "rightEye": {
+    "x": 318.7,
+    "y": 234.2
+  },
+  "confidence": 0.98,
+  "eyesOpen": false,
+  "imageWidth": 960,
+  "imageHeight": 1280,
+  "notes": "Both eyes are closed. Detected center of eyelid creases as eye socket centers."
+}

@@ -4,425 +4,284 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Updated**: 2025-10-10 (Session 3 - Alignment Pipeline Debugging)
+> **Updated**: 2025-10-12 (Clean Slate)
 
 ---
 
 ## 🎯 Current Status
 
-### What We Just Completed (Session 5 - Complete Observability Implementation)
+### Project State
 
-**Goal**: Implement BOTH paths of self-sufficient debugging - Claude never asks users to check logs
-
-**Completed**: ✅ **FULL OBSERVABILITY SYSTEM OPERATIONAL**
-
-#### Part 1: Process & Guidelines (Path B)
-- ✅ Added comprehensive "Observability Requirements" section to DEVELOPMENT.md
-- ✅ Updated SESSION_CHECKLIST.md with mandatory observability checks for new features
-- ✅ Updated CONTRIBUTING.md with logging standards and lifecycle
-- ✅ Created OBSERVABILITY.md comprehensive guide (350+ lines)
-
-#### Part 2: Programmatic Log Access (Path A) - ✅ IMPLEMENTED
-- ✅ Created `.scripts/vercel-logs.sh` - Bash script for Vercel API calls
-- ✅ Created `.claude/commands/vercel-logs.md` - `/vercel-logs` slash command
-- ✅ Configured authentication (Vercel token + project ID)
-- ✅ Tested successfully - fetches and formats logs with color coding
-- ✅ Updated OBSERVABILITY.md to mark Path A as implemented
-- ✅ Updated SESSION_CHECKLIST.md with `/vercel-logs` usage
-
-**Key Features of Path A**:
-- **Usage**: `/vercel-logs [function-name] [limit]`
-- **Examples**:
-  - `/vercel-logs align-photo-v2 200` - Last 200 logs for alignment
-  - `/vercel-logs detect-eyes` - All logs for eye detection
-  - `/vercel-logs` - All recent logs
-- **Output**: Color-coded (errors=red, success=green, warnings=yellow)
-- **Authentication**: Fully configured with project credentials
-- **Retention**: 1 hour (Hobby plan) - sufficient for active debugging
-
-**Complete Two-Path Strategy Now Operational**:
-- **Path A (Programmatic Access)**: `/vercel-logs` command fetches logs via API ✅
-- **Path B (Comprehensive Logging)**: All features include detailed logging ✅
-- **Combined**: Claude can debug completely autonomously ✅
-
-**Files Created**:
-- `.process/OBSERVABILITY.md` - Complete observability guide
-- `.scripts/vercel-logs.sh` - Vercel API log fetching script
-- `.claude/commands/vercel-logs.md` - Slash command documentation
-
-**Files Modified**:
-- `.process/DEVELOPMENT.md` - Added Observability Requirements section
-- `.process/OBSERVABILITY.md` - Updated Path A status to "IMPLEMENTED"
-- `SESSION_CHECKLIST.md` - Added both observability checks and `/vercel-logs` usage
-- `CONTRIBUTING.md` - Added logging standards
-
-**Impact**:
-- ✅ Claude can fetch Vercel logs programmatically (no user copy/paste)
-- ✅ Self-sufficient debugging for all issues within 1-hour window
-- ✅ Faster debugging cycles (no context switching)
-- ✅ Clear UAT gating process
-- ✅ **TRUE self-sufficiency achieved**
-
----
-
-### Previous Session (Session 4 - CI Philosophy Audit & Process Improvements)
-
-**Goal**: Apply "Start Minimal" CI philosophy to documentation itself
-
-**Completed**: ✅ **ALL 9 RECOMMENDATIONS IMPLEMENTED**
-- ✅ Pre-flight automation commands (verify-infra, which-project)
-- ✅ Token budget health check (SESSION_CHECKLIST step 0 + dashboard)
-- ✅ Simplified START_HERE.md decision tree (5min → 1-2min)
-- ✅ Single task tracking system (TodoWrite → NEXT_SESSION.md)
-- ✅ Simplified CONTRIBUTING.md (196 → 24 lines, 88% reduction)
-- ✅ Restructured DEVELOPMENT.md (context first, 2-level reasoning)
-- ✅ Git hooks for conventional commits
-- ✅ Automated deployment protection check
-- ✅ Token usage dashboard command
-
-**Key Improvements**:
-- **Session Startup**: 5min → 1-2min for routine work
-- **Infrastructure Debugging**: 2 hours → 2 min pre-flight check (when issues occur)
-- **Documentation Load**: ~50% reduction in token overhead
-- **Quality**: Proactive token management, enforced standards, single source of truth
-
-**Created Files**:
-- `.claude/commands/verify-infra.md` - Infrastructure checklist (DB, storage, env vars, Vercel)
-- `.claude/commands/which-project.md` - Auto-detect NUDJ vs Aperture
-- `.claude/commands/token-health.md` - Visual context window dashboard
-- `.scripts/commit-msg` - Git hook enforcing Conventional Commits
-- `.scripts/install-hooks.sh` - Easy hook installation
-- `CI_PHILOSOPHY_IMPROVEMENTS.md` - Complete implementation summary
-
-**Modified Files**:
-- `START_HERE.md` - Task-appropriate startup paths, no more mandatory 5-step
-- `SESSION_CHECKLIST.md` - Token check step 0, pre-flight checks, single tracking
-- `CONTRIBUTING.md` - Minimal 24-line version for personal project
-- `.process/DEVELOPMENT.md` - Context management first, simplified reasoning dial
-- `.process/COMMON_MISTAKES.md` - Added documentation philosophy entry
-
-**Impact Estimate**: 10-20 hours saved over next 10 sessions
-
----
-
-### Previous Session (Session 3 - Mobile Optimization & Alignment Debugging)
-
-**Goal**: Enable alignment pipeline and optimize mobile UX
-
-**Completed**:
-- ✅ **Upload Functionality Fixed**
-  - Removed non-existent `/api/detect-eyes` call that was blocking uploads
-  - Fixed file reference persistence issue (stored in state)
-  - Added timeout handling (30s) for upload debugging
-  - Removed daily upload limit for testing (both code & database constraint)
-
-- ✅ **Mobile-First UI Optimization**
-  - Touch-optimized buttons (min 44-48px height)
-  - Photo info overlay always visible on mobile (no hover needed)
-  - Removed debug log UI for cleaner production interface
-  - Sticky header, responsive text sizing
-  - Active states for mobile, hover for desktop
-  - Image lazy loading for performance
-
-- ✅ **Alignment Pipeline Re-enabled**
-  - Re-connected detect-eyes API call after upload
-  - Fixed absolute URL issues for production (window.location.origin)
-  - Fixed VERCEL_URL missing `https://` protocol
-  - Added comprehensive logging throughout pipeline
-
-- ✅ **Infrastructure Setup**
-  - Created STORAGE_BUCKET_SETUP.md with detailed instructions
-  - Documented need for 'originals' and 'aligned' buckets
-  - Verified environment variables in Vercel
-
-**ROOT CAUSE IDENTIFIED** ✅:
-- ✅ Eye detection works (eye_coordinates populated in database)
-- ✅ All APIs working correctly
-- ❌ **Vercel Deployment Protection** blocking server-to-server API calls
-- detect-eyes → align-photo call gets HTML authentication page instead of API response
-- **Fix**: Disable Deployment Protection in Vercel Settings for this project
-
-**Key Learnings**:
-- **Infrastructure First**: Always verify buckets/tables exist before debugging code
-- **Absolute URLs in Production**: Relative paths don't work in Vercel serverless functions
-- **VERCEL_URL Gotcha**: Environment variable doesn't include `https://` protocol
-- **Silent Failures**: Fire-and-forget API calls hide all errors - always check responses
-- **Database Constraints**: They enforce even when code doesn't check
-- **Empty Vercel Logs**: Mean function exited early, not that it succeeded silently
-
----
-
-## ⏭️ Immediate Next Steps
-
-### Priority 1: INVESTIGATE EYE ALIGNMENT STACKING ISSUE (30-60 min)
-
-**Problem Statement**: Eyes are not properly aligned when stacking multiple photos. User reports misalignment.
-
-**Current State**:
-- ✅ Upload working
-- ✅ Eye detection working (Gemini AI)
-- ✅ Alignment algorithm V2 deployed (align-photo-v2.ts)
-- ❌ Eyes not at consistent positions across photos when stacked
-
-**Algorithm Overview** (align-photo-v2.ts):
-1. Rotate image to level eyes horizontally
-2. Scale image so inter-eye distance = 360px
-3. Extract 1080×1080 region to place eyes at fixed targets:
-   - Baby's LEFT eye: (720, 432)
-   - Baby's RIGHT eye: (360, 432)
-
-**Investigation Approach** (following new Observability Requirements):
-
-**Step 1: Verify existing logs are sufficient**
-- [ ] Check if align-photo-v2.ts has comprehensive logging (it does!)
-- [ ] User should upload 2-3 test photos
-- [ ] Check Vercel logs for predicted vs. expected eye positions
-- [ ] Look at ERROR values (should be ~0 if algorithm works)
-
-**Step 2: Analyze log data**
-- [ ] Are predicted eye positions matching targets?
-- [ ] If YES but still misaligned → Gemini detection inconsistent
-- [ ] If NO → Algorithm math is broken
-- [ ] Check for left/right eye label swaps
-
-**Step 3: Download and inspect aligned photos**
-- [ ] Visual inspection of 3-4 aligned photos
-- [ ] Stack them manually (image editor)
-- [ ] Identify drift pattern: horizontal? vertical? rotational?
-
-**Step 4: Root cause hypotheses**
-1. **Gemini detection inconsistency**: Eye positions vary ±5-10px between similar photos
-2. **Left/Right label confusion**: Gemini swaps labels for some orientations
-3. **Rotation math error**: Eye coordinate transform during rotation incorrect
-4. **Canvas extension issues**: Out-of-bounds handling shifts coordinates
-
-**Step 5: Implement fix based on findings**
-- [ ] Add any missing logs if needed
-- [ ] Fix identified issue
-- [ ] Deploy
-- [ ] User UAT test
-- [ ] Clean up logs after UAT passes
-
-**Files to focus on**:
-- `projects/wizard-of-oz/api/align-photo-v2.ts` (current algorithm)
-- `projects/wizard-of-oz/api/detect-eyes.ts` (calls align-photo-v2)
-
----
-
-### Priority 2: SETUP NEW WORKFLOW TOOLS (5 min - DO THIS FIRST IF NOT ALREADY DONE)
-
-**Install git hooks**:
-```bash
-cd /Users/dancroome-horgan/Documents/GitHub/Aperture
-./.scripts/install-hooks.sh
-```
-
-**Test new commands**:
-```bash
-# Token health check (use at start of every session)
-/token-health
-
-# Infrastructure verification (use before debugging)
-/verify-infra wizard-of-oz
-
-# Project detection (if ever unsure)
-/which-project
-```
-
-**Read updated docs**:
-- `START_HERE.md` - New decision tree for startup
-- `SESSION_CHECKLIST.md` - Token check is now step 0
-- `CI_PHILOSOPHY_IMPROVEMENTS.md` - Full summary of changes
-
-### Priority 2: FINISH ALIGNMENT PIPELINE (5-15 min)
-
-**Current state**:
-- User uploaded photos with new logging
-- Need to check Vercel logs for align-photo to see where it's failing
-
-**Most likely issues**:
-1. **Sharp dependency missing** in production build
-2. **Storage bucket permission error** (aligned bucket exists but may lack policies)
-3. **Image processing timeout** (photos too large for serverless function)
-4. **Service role key issue** (can't write to storage or database)
-
-**Next steps**:
-1. Check Vercel logs for align-photo function - should now show detailed logging
-2. Look for specific error: storage upload, Sharp processing, or database update
-3. Fix the specific issue identified
-4. Test with one upload
-5. Verify aligned_url gets populated and gallery shows "✓ Aligned"
-
-**Files to check if needed**:
-- `projects/wizard-of-oz/api/align-photo.ts` - Has comprehensive logging now
-- `projects/wizard-of-oz/api/detect-eyes.ts` - Logs align-photo response status
-- Supabase Storage → aligned bucket → Policies tab
-
-### Priority 2: Clean Up Debug Code (10 min)
-
-Once alignment works:
-1. Remove excessive console.log statements from production
-2. Remove error details display from UploadPhoto.tsx
-3. Re-enable daily upload limit (code + database constraint)
-4. Remove visible error JSON from UI
-
-### Priority 3: Test Complete Flow (5 min)
-
-1. Upload baby photo
-2. Wait 15 seconds
-3. Refresh page
-4. Verify "✓ Aligned" appears
-5. Check aligned bucket has file
-6. Test with multiple photos
-
----
-
-## 🔑 Key Context for Next Session
-
-### Important Configuration
-
-**Wizard of Oz App**:
-- **Status**: 🟡 PARTIALLY WORKING
-  - ✅ Upload works
-  - ✅ Eye detection works
-  - ❌ Photo alignment incomplete
-- **Vercel URL**: (User has this)
+**Wizard of Oz (Baby Photo Alignment App)**:
+- **Status**: 🟢 READY FOR WORK
+- **Vercel URL**: (User has deployment URL)
 - **Repository Path**: `Aperture/projects/wizard-of-oz`
-- **Vercel Root Directory**: `Aperture/projects/wizard-of-oz`
 - **Supabase URL**: `https://zaruvcwdqkqmyscwvxci.supabase.co`
 
-**Environment Variables (Vercel)**:
+### Infrastructure Status
+
+**✅ Fully Operational**:
+- Upload system working
+- Eye detection working (Gemini AI)
+- Database tables exist
+- Storage buckets configured
+- Environment variables set
+- Observability system implemented (`/vercel-logs` available)
+
+### Recent Improvements
+
+**Observability System** (Session 5):
+- ✅ `/vercel-logs` command for programmatic log access
+- ✅ Comprehensive logging guidelines in `.process/OBSERVABILITY.md`
+- ✅ Self-sufficient debugging capability
+
+**Process Improvements** (Session 4):
+- ✅ Automated pre-flight checks (`/verify-infra`, `/which-project`)
+- ✅ Token budget monitoring (`/token-health`)
+- ✅ Git hooks for conventional commits
+- ✅ Streamlined documentation
+
+---
+
+## ⏭️ Next Steps
+
+### Priority 1: Complete Rebuild of Photo Alignment Process
+
+**Goal**: Rebuild alignment pipeline from scratch with empirical validation at each step
+
+**Philosophy**: Test with real-world evidence, not theoretical assumptions. Validate every step before proceeding to the next.
+
+---
+
+#### Phase 1: Evidence Gathering & Current State Analysis (30 min)
+
+**Step 1.1: Understand Current Implementation**
+- [ ] Read existing alignment code (`align-photo-v2.ts`, `align-photo-v3.ts` if exists)
+- [ ] Document current algorithm approach and target coordinates
+- [ ] Identify what's already been tried
+
+**Step 1.2: Collect Real-World Data**
+- [ ] Use `/vercel-logs` to fetch recent alignment attempts
+- [ ] Download 3-4 aligned photos from storage bucket
+- [ ] Download corresponding original photos
+- [ ] Extract actual eye coordinates from database for these photos
+
+**Step 1.3: Visual Analysis**
+- [ ] Manually stack aligned photos in image editor
+- [ ] Measure actual eye position drift (horizontal, vertical, rotation)
+- [ ] Document drift pattern with specific measurements
+- [ ] Compare with target coordinates from algorithm
+
+**Step 1.4: Root Cause Hypothesis**
+- [ ] Based on evidence, formulate specific hypothesis
+- [ ] Identify which component is failing (detection, rotation, scaling, cropping)
+- [ ] Create testable prediction for next phase
+
+---
+
+#### Phase 2: Build Test Harness (45 min)
+
+**Step 2.1: Create Validation Tools**
+- [ ] Build script to visualize eye positions on images
+- [ ] Create overlay tool to compare detected vs. target positions
+- [ ] Add debug output mode that saves intermediate images (rotated, scaled, cropped)
+
+**Step 2.2: Establish Ground Truth**
+- [ ] Select 3 test photos with clear, front-facing eyes
+- [ ] Manually verify Gemini detection accuracy on test set
+- [ ] Document "known good" coordinates for validation
+
+**Step 2.3: Create Measurement System**
+- [ ] Script to measure eye positions in final aligned images
+- [ ] Automated comparison: expected vs. actual positions
+- [ ] Define success criteria (e.g., ≤5px error acceptable)
+
+---
+
+#### Phase 3: Algorithm Rebuild - Incremental with Validation (2-3 hours)
+
+**Step 3.1: Eye Detection Validation**
+- [ ] Test: Run detect-eyes on test photos
+- [ ] Verify: Visual overlay of detected points on originals
+- [ ] Measure: Are detections consistent? (run 3x on same photo)
+- [ ] Decision: If inconsistent, need to add averaging or switch detection method
+- [ ] ✅ GATE: Don't proceed until detection is reliable
+
+**Step 3.2: Rotation Transform**
+- [ ] Implement: Rotate image to level eyes
+- [ ] Test: Save rotated intermediate image
+- [ ] Verify: Eyes are horizontal (measure angle)
+- [ ] Measure: Do eye coordinates transform correctly?
+- [ ] ✅ GATE: Eyes must be within 1° of horizontal
+
+**Step 3.3: Scaling Transform**
+- [ ] Implement: Scale to target inter-eye distance (360px)
+- [ ] Test: Measure distance between eyes in scaled image
+- [ ] Verify: Distance = 360px ±2px
+- [ ] Measure: Are eye coordinates still accurate after scaling?
+- [ ] ✅ GATE: Inter-eye distance must match target
+
+**Step 3.4: Crop/Position Transform**
+- [ ] Implement: Extract 1080×1080 region with eyes at targets
+- [ ] Test: Overlay target points on cropped image
+- [ ] Verify: Left eye at (720, 432), Right eye at (360, 432)
+- [ ] Measure: Actual position vs. target (should be ≤5px error)
+- [ ] ✅ GATE: Eye positions must be within tolerance
+
+**Step 3.5: Edge Case Handling**
+- [ ] Test: Photo where eyes are at image edge
+- [ ] Test: Photo requiring canvas extension
+- [ ] Test: Extreme rotation (baby tilted 30°+)
+- [ ] Verify: All cases produce valid 1080×1080 output
+- [ ] ✅ GATE: No crashes, all outputs have eyes in target positions
+
+---
+
+#### Phase 4: Integration & End-to-End Testing (1 hour)
+
+**Step 4.1: Deploy New Algorithm**
+- [ ] Deploy to Vercel
+- [ ] Verify deployment successful
+- [ ] Check logs for any initialization errors
+
+**Step 4.2: Real Upload Test**
+- [ ] Upload 5 diverse test photos (different angles, lighting, positions)
+- [ ] Wait for processing
+- [ ] Download all 5 aligned images
+
+**Step 4.3: Empirical Validation**
+- [ ] Stack all 5 aligned images in editor
+- [ ] Measure eye position variance across stack
+- [ ] Compare to success criteria (≤5px drift)
+- [ ] Visual inspection: Do they look properly aligned?
+
+**Step 4.4: Performance Testing**
+- [ ] Check processing times (should be <10 seconds per photo)
+- [ ] Verify storage usage is reasonable
+- [ ] Check for memory issues in logs
+
+---
+
+#### Phase 5: Cleanup & Documentation (30 min)
+
+**Step 5.1: Remove Old Code**
+- [ ] Delete deprecated alignment implementations
+- [ ] Remove excessive debug logging
+- [ ] Clean up test files/scripts
+
+**Step 5.2: Add Production Logging**
+- [ ] Keep key metrics: processing time, error measurements
+- [ ] Remove verbose coordinate dumps
+- [ ] Add success/failure indicators
+
+**Step 5.3: Document Algorithm**
+- [ ] Update code comments with algorithm explanation
+- [ ] Document coordinate system and transforms
+- [ ] Add troubleshooting guide for future issues
+
+---
+
+### Success Criteria
+
+**Must achieve before considering complete**:
+1. ✅ 5 diverse test photos stack with ≤5px eye position variance
+2. ✅ Visual inspection confirms proper alignment
+3. ✅ Processing completes in <10 seconds per photo
+4. ✅ No errors in production logs
+5. ✅ Algorithm documented with clear comments
+
+**Evidence required**:
+- Screenshots of stacked images showing alignment
+- Measurement data from test harness
+- Production logs showing successful processing
+- Database records with populated aligned_url
+
+---
+
+### Key Principles for This Rebuild
+
+1. **Evidence-Based**: Every decision backed by measurements, not theory
+2. **Incremental Validation**: Don't build step N+1 until step N is proven
+3. **Save Intermediate Outputs**: Inspect rotated, scaled, cropped images separately
+4. **Measure Everything**: Track actual coordinates at every transform
+5. **Gate at Each Phase**: Clear go/no-go criteria before proceeding
+6. **No Assumptions**: Test even "obvious" things with real data
+
+---
+
+## ⚠️ BEFORE DEBUGGING ANYTHING
+
+**🚨 MANDATORY: Read this FIRST before debugging any issue**
+
+If anything isn't working as expected:
+
+1. **STOP** - Don't debug the algorithm yet
+2. **READ** `META_DEBUGGING_PROTOCOL.md` (5 minutes)
+3. **VERIFY** inputs match your assumptions (2 minutes)
+4. **ONLY THEN** debug the logic
+
+**Why?** 80% of bugs are input issues, not algorithm issues. Verifying inputs first saves hours of wasted debugging time.
+
+**Quick rule**: If debugging takes >15 minutes, you're probably debugging the wrong thing. Go verify inputs again.
+
+---
+
+## 🔑 Key Resources
+
+### Quick Commands
+
+```bash
+# Navigate to project
+cd /Users/dancroome-horgan/Documents/GitHub/Aperture
+
+# Check git status
+git status
+
+# Token health check
+/token-health
+
+# Infrastructure verification
+/verify-infra wizard-of-oz
+
+# Fetch Vercel logs
+/vercel-logs [function-name] [limit]
+```
+
+### Important Files
+
+**Documentation**:
+- `START_HERE.md` - Session startup guide
+- `CLAUDE-APERTURE.md` - Project patterns & conventions
+- `.process/OBSERVABILITY.md` - Logging & debugging guide
+- `.process/DEVELOPMENT.md` - Development workflow
+
+**Wizard of Oz Project**:
+- `projects/wizard-of-oz/api/` - Serverless functions
+- `projects/wizard-of-oz/src/` - Frontend React app
+- `projects/wizard-of-oz/plan.md` - Project plan & architecture
+
+### Environment Variables (Vercel)
+
 - ✅ `VITE_SUPABASE_URL`
 - ✅ `SUPABASE_SERVICE_ROLE_KEY`
 - ✅ `GEMINI_API_KEY`
 
-**Database State**:
-- ✅ `photos` table exists with data
-- ✅ Unique constraint on (user_id, upload_date) REMOVED for testing
-- ✅ eye_coordinates column populated (Gemini AI working)
-- ❌ aligned_url column NULL (alignment failing)
+---
 
-**Storage Buckets**:
-- ✅ `originals` - exists, public, has uploaded photos
-- ✅ `aligned` - exists, public, EMPTY (alignment not completing)
+## 📊 Available Tools
 
-### Files That Matter Most
+**Slash Commands**:
+- `/vercel-logs` - Fetch production logs
+- `/verify-infra` - Check infrastructure health
+- `/which-project` - Auto-detect project type
+- `/token-health` - Context window usage
 
-**For debugging alignment**:
-- `projects/wizard-of-oz/api/detect-eyes.ts` - Entry point, calls align-photo
-- `projects/wizard-of-oz/api/align-photo.ts` - Sharp image processing
-- `projects/wizard-of-oz/STORAGE_BUCKET_SETUP.md` - Bucket setup guide
-- `.process/COMMON_MISTAKES.md` - Updated with Vercel debugging patterns
-
-**For reference**:
-- `projects/wizard-of-oz/src/stores/usePhotoStore.ts` - Frontend upload logic
-- `projects/wizard-of-oz/src/components/PhotoGallery.tsx` - Shows processing status
-
-### Known Issues / Tech Debt
-
-**Active Issues**:
-1. **Alignment pipeline incomplete** - align-photo returning 200 but not completing
-2. **Excessive debug logging** - Need to clean up before production use
-3. **Daily upload limit disabled** - Database constraint removed for testing
-
-**Code Cleanup Needed**:
-- Remove console.log statements from production code
-- Simplify error messages in UploadPhoto.tsx
-- Re-add unique constraint after testing complete
+**Git Hooks**:
+- Conventional Commits enforced
+- Commit message validation
 
 ---
 
-## 📊 Session Metrics
-
-**Session 4 Stats** (CI Philosophy Audit):
-- Token usage: ~91K (healthy - fresh session recommended for wizard-of-oz work)
-- Commits: 1 comprehensive commit
-- Files created: 6 (commands + scripts + summary)
-- Files modified: 7 (all major process docs)
-- Lines added: ~1400, Lines removed: ~366
-- Estimated impact: 10-20 hours saved over next 10 sessions
-
-**Session 3 Stats** (Alignment Debugging):
-- Token usage: ~124K (started fresh after this)
-- Commits: 15+ (multiple debugging iterations)
-- Deployments: 15+ (extensive trial and error)
-- Issues fixed: Upload working, mobile optimized, API URLs fixed
-- Issues remaining: Alignment not completing (1 blocker)
-
-**Next session recommendation**: **START FRESH** for wizard-of-oz debugging work
-
----
-
-## 🚀 Quick Commands for Next Session
-
-```bash
-# Check current state
-cd /Users/dancroome-horgan/Documents/GitHub/Aperture
-git status
-git log --oneline -10
-
-# Check Vercel logs
-# Go to Vercel Dashboard → Project → Logs tab
-# Look for align-photo function logs
-
-# Check database state
-# Supabase → Table Editor → photos
-# Look at eye_coordinates and aligned_url columns
-
-# Check storage state
-# Supabase → Storage → aligned bucket
-# Should be empty (problem) or have files (working)
-
-# If alignment fixed, clean up:
-# 1. Remove console.logs from api/*.ts files
-# 2. Simplify UploadPhoto.tsx error display
-# 3. Re-add database constraint:
-#    ALTER TABLE photos ADD CONSTRAINT photos_user_id_upload_date_key UNIQUE (user_id, upload_date);
-```
-
----
-
-## 💡 Tips for Next Session
-
-**Do**:
-- ✅ Check Vercel logs FIRST - should have detailed output now
-- ✅ Look for specific error in align-photo logs
-- ✅ Fix the ONE remaining issue
-- ✅ Clean up debug code once working
-- ✅ Start fresh context (we're at 124K tokens)
-
-**Don't**:
-- ❌ Add more logging (already comprehensive)
-- ❌ Redeploy without checking logs first
-- ❌ Debug code before checking infrastructure
-- ❌ Assume 200 response means success
-
----
-
-## 📝 Debugging Checklist (if alignment still broken)
-
-If align-photo still fails next session:
-
-1. **Check Vercel Logs** - Should show detailed execution path
-2. **Look for these specific errors**:
-   - "Sharp is not defined" → Missing dependency
-   - "Storage upload error" → Bucket permission issue
-   - "Database update error" → RLS policy issue
-   - "Timeout" → Image too large for serverless
-3. **Check align-photo entry point** - Should log "align-photo called with..."
-4. **Check if Sharp processing starts** - Should log "Processing alignment for photo..."
-5. **Check storage upload attempt** - Should log "Uploading aligned image to bucket..."
-6. **Check database update** - Should log "Updating database with aligned URL..."
-7. **Look for success** - Should log "✅ Alignment complete"
-
-If no logs appear at all:
-- align-photo isn't being reached
-- Check detect-eyes logs for "Calling align-photo API" and response status
-- Verify URL being called is correct
-
----
-
-**Last Updated**: 2025-10-10 (End of Session 3)
-**Next Session Goal**: Fix alignment pipeline (1 blocker), clean up debug code
-**Estimated Time**: 15-30 minutes in fresh context
-**Token Budget**: Start fresh (this session exhausted)
+**Last Updated**: 2025-10-12
+**Status**: Clean slate, ready for next task
+**Token Budget**: Healthy

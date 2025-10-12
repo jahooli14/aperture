@@ -37,11 +37,22 @@ That file automatically:
 
 ---
 
+## 🚨 CRITICAL: Before Any Debugging
+
+**If you're debugging why something isn't working:**
+
+1. **STOP** - Read `META_DEBUGGING_PROTOCOL.md` FIRST (5 min)
+2. **Verify inputs** before debugging algorithm logic
+3. **This is mandatory** - 80% of bugs are input issues
+
+---
+
 ## 🚀 Quick Decision: Which Startup Path?
 
 | Your Task | Files to Read | Time | When to Use |
 |-----------|---------------|------|-------------|
 | **Continue current work** | NEXT_SESSION.md only | 1 min | You know the project, picking up where you left off |
+| **Debugging issue** | META_DEBUGGING_PROTOCOL.md + NEXT_SESSION.md | 6 min | **ALWAYS read protocol first** |
 | **Simple bug fix** | NEXT_SESSION.md | 1 min | Quick fix, familiar codebase |
 | **New feature (familiar)** | NEXT_SESSION.md + plan.md | 2 min | Know the project, adding to existing code |
 | **Unfamiliar/Complex** | Full sequence below | 5 min | First time on project, major architectural work |
@@ -193,6 +204,7 @@ aperture/
 
 | Need | File |
 |------|------|
+| **🚨 Debugging anything** | `META_DEBUGGING_PROTOCOL.md` **(READ FIRST!)** |
 | **Which project am I on?** | `CLAUDE.md` (router) |
 | **Aperture documentation** | `CLAUDE-APERTURE.md` |
 | **NUDJ documentation** | `CLAUDE-NUDJ.md` |

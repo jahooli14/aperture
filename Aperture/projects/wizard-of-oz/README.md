@@ -2,6 +2,14 @@
 
 A baby growth photo alignment app that automatically aligns your newborn's eyes in daily photos, creating a seamless timelapse showing how they grow over time.
 
+## 🚨 DEBUGGING? READ THIS FIRST
+
+**Before debugging any issue in this project:**
+1. Read `DEBUGGING.md` in this directory (2 min)
+2. Read `/META_DEBUGGING_PROTOCOL.md` in repo root (5 min)
+
+**Why?** Following the protocol saves 90+ minutes of wasted debugging time.
+
 ## Features
 
 - 📸 **Daily Photo Capture** - Upload or take a photo each day

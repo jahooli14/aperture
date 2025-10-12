@@ -64,19 +64,39 @@ Any blockers: [yes/no]
 
 ---
 
-### Step 4: Infrastructure Pre-Flight (IF DEBUGGING)
+### Step 4: Debugging Protocol (IF DEBUGGING)
 
-**If user mentions**: "doesn't work", "broken", "failing", "error"
+**If user mentions**: "doesn't work", "broken", "failing", "error", "bug"
 
-**YOU MUST FIRST**: Suggest running infrastructure check
-```
-Before debugging code, let's check infrastructure:
-/verify-infra [project-name]
+**🚨 MANDATORY - Follow this exact sequence**:
 
-This catches 80% of "code looks fine but doesn't work" issues.
-```
+1. **FIRST**: Read `META_DEBUGGING_PROTOCOL.md` (5 min)
+   - Universal debugging principles
+   - Input verification checklist
+   - 80% of bugs are input issues
 
-**Common issues caught**:
+2. **SECOND**: Check infrastructure
+   ```
+   /verify-infra [project-name]
+   ```
+   - Catches environment/setup issues
+   - Database, storage, env vars
+
+3. **THIRD**: Verify inputs before debugging algorithm
+   - See META_DEBUGGING_PROTOCOL.md for checklist
+   - Log what you RECEIVE vs what you EXPECT
+   - If mismatch → fix input, not algorithm
+
+4. **ONLY THEN**: Debug the algorithm/logic
+
+**Why this order?**
+- Meta protocol: Prevents wasting 90+ minutes debugging wrong thing
+- Infrastructure check: Catches 80% of deployment issues
+- Input verification: Catches 80% of logic issues
+- **Together: Saves hours of debugging time**
+
+**Common issues caught by protocol**:
+- Input format mismatches (dimensions, units, scaling)
 - Database tables don't exist
 - Storage buckets missing
 - Environment variables not set

@@ -1,0 +1,19 @@
+{
+  "photoId": "ff9e506b-9ddc-482b-80d7-ce9c4924f186",
+  "detectedEyes": {
+    "leftEye": {
+      "x": 455.2,
+      "y": 343.5
+    },
+    "eyesOpen": false,
+    "rightEye": {
+      "x": 260.3,
+      "y": 366.5
+    },
+    "confidence": 0.95,
+    "imageWidth": 768,
+    "imageHeight": 1024
+  },
+  "originalUrl": "https://zaruvcwdqkqmyscwvxci.supabase.co/storage/v1/object/public/originals/85c3e65d-6486-4356-9274-d2db908e5a9f/1760306972019.jpg",
+  "createdAt": "2025-10-12T22:09:33.124773+00:00"
+}

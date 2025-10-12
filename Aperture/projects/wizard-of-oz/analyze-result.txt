@@ -1,0 +1,22 @@
+Analysis of Test Results:
+
+Target positions:
+- LEFT eye (baby's left, RIGHT side of image): x=720, y=432
+- RIGHT eye (baby's right, LEFT side of image): x=360, y=432
+
+Final verification detected:
+- "leftEye": x=452, y=265
+- "rightEye": x=672, y=245
+
+IF Gemini's labels are backwards (which is common):
+- Baby's ACTUAL left eye (right side): x=672, y=245
+- Baby's ACTUAL right eye (left side): x=452, y=265
+
+Error from targets (with swapped interpretation):
+- Left eye error: (672-720, 245-432) = (-48, -187) px
+- Right eye error: (452-360, 265-432) = (92, -167) px
+
+Conclusion: Eyes are roughly 170-190px TOO HIGH (y-axis),
+but X-axis is reasonable (~50-90px off, which is acceptable).
+
+The Y-axis error suggests the scaling or extraction calculation has a bug.
