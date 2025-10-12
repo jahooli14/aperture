@@ -10,7 +10,41 @@
 
 ## 🎯 Current Status
 
-### What We Just Completed (Session 4 - CI Philosophy Audit & Process Improvements)
+### What We Just Completed (Session 5 - Observability Process Implementation)
+
+**Goal**: Implement self-sufficient debugging - Claude never asks users to check logs
+
+**Completed**: ✅ **OBSERVABILITY REQUIREMENTS IMPLEMENTED**
+- ✅ Added comprehensive "Observability Requirements" section to DEVELOPMENT.md
+- ✅ Updated SESSION_CHECKLIST.md with mandatory observability checks for new features
+- ✅ Updated CONTRIBUTING.md with logging standards and lifecycle
+- ✅ Created OBSERVABILITY.md comprehensive guide with templates and best practices
+
+**Key Process Changes**:
+- **New Rule**: Claude must NEVER ask "Can you check the Vercel logs?"
+- **Two-Path Strategy**:
+  - Path A (future): Programmatic log access via Vercel API
+  - Path B (current): Comprehensive in-code logging until UAT passes
+- **Logging Lifecycle**: Development → Deploy → Debug → UAT → Cleanup → Production
+- **UAT Gating**: Logs remain until user approves feature, then cleaned up
+
+**Files Created**:
+- `.process/OBSERVABILITY.md` - Complete observability guide (350+ lines)
+
+**Files Modified**:
+- `.process/DEVELOPMENT.md` - Added 168-line Observability Requirements section
+- `SESSION_CHECKLIST.md` - Added mandatory observability checks
+- `CONTRIBUTING.md` - Added logging standards for contributors
+
+**Impact**:
+- Claude can now self-debug without user involvement
+- Faster debugging cycles (no context switching for users)
+- Clear UAT gating process
+- Production-ready code after cleanup
+
+---
+
+### Previous Session (Session 4 - CI Philosophy Audit & Process Improvements)
 
 **Goal**: Apply "Start Minimal" CI philosophy to documentation itself
 
@@ -99,7 +133,62 @@
 
 ## ⏭️ Immediate Next Steps
 
-### Priority 1: SETUP NEW WORKFLOW TOOLS (5 min - DO THIS FIRST)
+### Priority 1: INVESTIGATE EYE ALIGNMENT STACKING ISSUE (30-60 min)
+
+**Problem Statement**: Eyes are not properly aligned when stacking multiple photos. User reports misalignment.
+
+**Current State**:
+- ✅ Upload working
+- ✅ Eye detection working (Gemini AI)
+- ✅ Alignment algorithm V2 deployed (align-photo-v2.ts)
+- ❌ Eyes not at consistent positions across photos when stacked
+
+**Algorithm Overview** (align-photo-v2.ts):
+1. Rotate image to level eyes horizontally
+2. Scale image so inter-eye distance = 360px
+3. Extract 1080×1080 region to place eyes at fixed targets:
+   - Baby's LEFT eye: (720, 432)
+   - Baby's RIGHT eye: (360, 432)
+
+**Investigation Approach** (following new Observability Requirements):
+
+**Step 1: Verify existing logs are sufficient**
+- [ ] Check if align-photo-v2.ts has comprehensive logging (it does!)
+- [ ] User should upload 2-3 test photos
+- [ ] Check Vercel logs for predicted vs. expected eye positions
+- [ ] Look at ERROR values (should be ~0 if algorithm works)
+
+**Step 2: Analyze log data**
+- [ ] Are predicted eye positions matching targets?
+- [ ] If YES but still misaligned → Gemini detection inconsistent
+- [ ] If NO → Algorithm math is broken
+- [ ] Check for left/right eye label swaps
+
+**Step 3: Download and inspect aligned photos**
+- [ ] Visual inspection of 3-4 aligned photos
+- [ ] Stack them manually (image editor)
+- [ ] Identify drift pattern: horizontal? vertical? rotational?
+
+**Step 4: Root cause hypotheses**
+1. **Gemini detection inconsistency**: Eye positions vary ±5-10px between similar photos
+2. **Left/Right label confusion**: Gemini swaps labels for some orientations
+3. **Rotation math error**: Eye coordinate transform during rotation incorrect
+4. **Canvas extension issues**: Out-of-bounds handling shifts coordinates
+
+**Step 5: Implement fix based on findings**
+- [ ] Add any missing logs if needed
+- [ ] Fix identified issue
+- [ ] Deploy
+- [ ] User UAT test
+- [ ] Clean up logs after UAT passes
+
+**Files to focus on**:
+- `projects/wizard-of-oz/api/align-photo-v2.ts` (current algorithm)
+- `projects/wizard-of-oz/api/detect-eyes.ts` (calls align-photo-v2)
+
+---
+
+### Priority 2: SETUP NEW WORKFLOW TOOLS (5 min - DO THIS FIRST IF NOT ALREADY DONE)
 
 **Install git hooks**:
 ```bash

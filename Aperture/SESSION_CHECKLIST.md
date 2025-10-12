@@ -78,6 +78,37 @@ Options:
 
 ## 🎯 During Session (Continuous)
 
+### Observability Check (New Features)
+⚠️ **MANDATORY for all new features/APIs until UAT passes**
+
+When implementing new functionality:
+
+- [ ] **Add comprehensive logging** (see `.process/DEVELOPMENT.md` → Observability Requirements)
+  - Entry point: `console.log('=== FEATURE_NAME START ===')`
+  - Decision points: Log conditions and chosen paths
+  - External calls: Log request/response for all API calls
+  - Errors: Log with full context
+  - Success: `console.log('✅ FEATURE_NAME COMPLETE')`
+
+- [ ] **Deploy with logs intact**
+  - DO NOT clean up logs before UAT
+  - Logs are debugging tools, not technical debt
+
+- [ ] **Verify logs are accessible**
+  - Check Vercel dashboard after deploy
+  - Confirm logs appear for test actions
+  - **Claude must be able to debug without asking user to check logs**
+
+- [ ] **UAT completion criteria**
+  - [ ] Feature works as expected
+  - [ ] User approves functionality
+  - [ ] THEN clean up excessive debug logs (keep error logs)
+  - [ ] Redeploy with minimal production logging
+
+**Rule**: If Claude asks "Can you check the Vercel logs?", the observability requirements were not met. Add more logging and redeploy.
+
+---
+
 ### Task Tracking (Single System)
 
 **ONE tool for tracking tasks**: TodoWrite tool during active work
