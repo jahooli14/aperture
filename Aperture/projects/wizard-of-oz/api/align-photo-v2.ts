@@ -137,9 +137,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rightRelX = landmarks.rightEye.x - centerX;
       const rightRelY = landmarks.rightEye.y - centerY;
 
-      // Rotate (note: we use negative angle since we rotated image counter-clockwise)
-      const cos = Math.cos(rotationRadians);
-      const sin = Math.sin(rotationRadians);
+      // Rotate (use same angle as image rotation: negative of rotationRadians)
+      const cos = Math.cos(-rotationRadians);
+      const sin = Math.sin(-rotationRadians);
 
       const leftRotX = leftRelX * cos - leftRelY * sin;
       const leftRotY = leftRelX * sin + leftRelY * cos;
