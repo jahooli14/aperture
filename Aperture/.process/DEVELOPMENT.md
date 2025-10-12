@@ -41,8 +41,25 @@
 
 ### Session Handoff Protocol
 
+**🚨 NEW RULE: Update NEXT_SESSION.md During Session, Not Just At End**
+
+**When to update NEXT_SESSION.md**:
+1. ✅ **After completing a major phase** (don't wait until end)
+2. ✅ **After a breakthrough or pivot** (document immediately)
+3. ✅ **When changing approach** (update before proceeding)
+4. ✅ **Before closing session** (final update)
+
+**Why this matters**:
+- Prevents drift between documented plan and actual progress
+- Ensures continuity if session runs out of tokens mid-work
+- Fresh sessions can pick up exactly where you left off
+- Captures breakthroughs while context is fresh
+
 **Before closing a session**:
-1. Update `NEXT_SESSION.md` (current state, next steps, blockers)
+1. **Update `NEXT_SESSION.md`** (current state, next steps, blockers)
+   - Remove completed phases
+   - Add new next steps based on what you learned
+   - Document any breakthroughs or pivots
 2. Update project `plan.md` (check off completed items)
 3. Commit all changes (clean state for next session)
 

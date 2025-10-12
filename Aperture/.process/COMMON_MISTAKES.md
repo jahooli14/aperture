@@ -6,6 +6,39 @@
 
 ---
 
+## 2025-10-12 | Process | NEXT_SESSION.md Drift
+
+### What Happened
+Spent entire session (90+ minutes) debugging coordinate scaling bug, creating OpenCV solution, and building debugging protocols. At end of session, NEXT_SESSION.md still showed "Phase 1: Evidence Gathering" from BEFORE the breakthrough. Fresh sessions would have no idea the work was completed.
+
+### The Fix
+Updated `.process/DEVELOPMENT.md` with new rule: **Update NEXT_SESSION.md progressively during session, not just at end**.
+
+**Update NEXT_SESSION.md immediately after**:
+1. Completing a major phase
+2. Discovering a breakthrough or pivot
+3. Changing approach
+4. Before closing session (final update)
+
+### Prevention Strategy
+**Enforcement mechanisms**:
+- TodoWrite checklist - mark major phases complete, triggers NEXT_SESSION update
+- `.claude/startup.md` - validates NEXT_SESSION matches reality at session start
+- Code review question: "Was NEXT_SESSION.md updated after breakthroughs?"
+
+**Why this matters**:
+- Prevents drift between documented plan and actual progress
+- Ensures continuity if session runs out of tokens mid-work
+- Fresh sessions can pick up exactly where you left off
+- Captures breakthroughs while context is fresh
+
+### Cost of Mistake
+- **Time Lost**: 10 minutes of user confusion identifying the gap
+- **Time to Fix**: 5 minutes to update documentation
+- **Risk**: Fresh sessions could waste hours redoing completed work
+
+---
+
 ## 2025-10-10 | Architecture | Over-Engineered Testing Agent
 
 ### What Happened

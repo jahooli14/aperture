@@ -30,6 +30,21 @@
 
 ### Recent Improvements
 
+**Debugging Protocol & Photo Alignment** (Current Session):
+- ✅ **BREAKTHROUGH**: Fixed catastrophic coordinate scaling bug
+  - Root cause: Database stores coordinates for 768x1024 downscaled images
+  - Must scale coordinates by (actualWidth / detectionWidth) before processing
+  - Wasted 90 minutes debugging algorithm when input was wrong
+- ✅ Implemented Python OpenCV alignment solution (`align_photo_opencv.py`)
+  - Uses `cv2.estimateAffinePartial2D` for similarity transform
+  - Successfully tested with real baby photos
+  - Produces accurate alignment with target eye positions
+- ✅ Created comprehensive debugging protocols
+  - `META_DEBUGGING_PROTOCOL.md` - Universal input verification principles
+  - `DEBUGGING_CHECKLIST.md` - Coordinate scaling case study
+  - `projects/wizard-of-oz/DEBUGGING.md` - Project-specific guide
+  - Added signposting in START_HERE.md, startup.md, README.md
+
 **Observability System** (Session 5):
 - ✅ `/vercel-logs` command for programmatic log access
 - ✅ Comprehensive logging guidelines in `.process/OBSERVABILITY.md`
@@ -45,167 +60,87 @@
 
 ## ⏭️ Next Steps
 
-### Priority 1: Complete Rebuild of Photo Alignment Process
+### Priority 1: Production Integration of OpenCV Alignment
 
-**Goal**: Rebuild alignment pipeline from scratch with empirical validation at each step
+**Current State**:
+- ✅ Working Python OpenCV script (`align_photo_opencv.py`)
+- ✅ Coordinate scaling fix identified and tested
+- ✅ Successful local validation with real photos
+- ❌ Not yet integrated into production Vercel API
 
-**Philosophy**: Test with real-world evidence, not theoretical assumptions. Validate every step before proceeding to the next.
+**What's Needed**:
 
----
+#### Step 1: Create Production Node.js Wrapper (30 min)
 
-#### Phase 1: Evidence Gathering & Current State Analysis (30 min)
+- [ ] Create new API endpoint `/api/align-photo-v4.ts`
+- [ ] Implement coordinate scaling logic:
+  ```typescript
+  const scaleFactor = actualImageWidth / detectionImageWidth;
+  const scaledCoords = {
+    leftEye: {
+      x: dbCoords.leftEye.x * scaleFactor,
+      y: dbCoords.leftEye.y * scaleFactor
+    },
+    rightEye: {
+      x: dbCoords.rightEye.x * scaleFactor,
+      y: dbCoords.rightEye.y * scaleFactor
+    }
+  };
+  ```
+- [ ] Add input validation (verify dimensions match assumptions)
+- [ ] Spawn Python subprocess to call `align_photo_opencv.py`
+- [ ] Handle errors and edge cases
+- [ ] Add production logging (processing time, success/failure)
 
-**Step 1.1: Understand Current Implementation**
-- [ ] Read existing alignment code (`align-photo-v2.ts`, `align-photo-v3.ts` if exists)
-- [ ] Document current algorithm approach and target coordinates
-- [ ] Identify what's already been tried
+#### Step 2: Deploy and Test (30 min)
 
-**Step 1.2: Collect Real-World Data**
-- [ ] Use `/vercel-logs` to fetch recent alignment attempts
-- [ ] Download 3-4 aligned photos from storage bucket
-- [ ] Download corresponding original photos
-- [ ] Extract actual eye coordinates from database for these photos
-
-**Step 1.3: Visual Analysis**
-- [ ] Manually stack aligned photos in image editor
-- [ ] Measure actual eye position drift (horizontal, vertical, rotation)
-- [ ] Document drift pattern with specific measurements
-- [ ] Compare with target coordinates from algorithm
-
-**Step 1.4: Root Cause Hypothesis**
-- [ ] Based on evidence, formulate specific hypothesis
-- [ ] Identify which component is failing (detection, rotation, scaling, cropping)
-- [ ] Create testable prediction for next phase
-
----
-
-#### Phase 2: Build Test Harness (45 min)
-
-**Step 2.1: Create Validation Tools**
-- [ ] Build script to visualize eye positions on images
-- [ ] Create overlay tool to compare detected vs. target positions
-- [ ] Add debug output mode that saves intermediate images (rotated, scaled, cropped)
-
-**Step 2.2: Establish Ground Truth**
-- [ ] Select 3 test photos with clear, front-facing eyes
-- [ ] Manually verify Gemini detection accuracy on test set
-- [ ] Document "known good" coordinates for validation
-
-**Step 2.3: Create Measurement System**
-- [ ] Script to measure eye positions in final aligned images
-- [ ] Automated comparison: expected vs. actual positions
-- [ ] Define success criteria (e.g., ≤5px error acceptable)
-
----
-
-#### Phase 3: Algorithm Rebuild - Incremental with Validation (2-3 hours)
-
-**Step 3.1: Eye Detection Validation**
-- [ ] Test: Run detect-eyes on test photos
-- [ ] Verify: Visual overlay of detected points on originals
-- [ ] Measure: Are detections consistent? (run 3x on same photo)
-- [ ] Decision: If inconsistent, need to add averaging or switch detection method
-- [ ] ✅ GATE: Don't proceed until detection is reliable
-
-**Step 3.2: Rotation Transform**
-- [ ] Implement: Rotate image to level eyes
-- [ ] Test: Save rotated intermediate image
-- [ ] Verify: Eyes are horizontal (measure angle)
-- [ ] Measure: Do eye coordinates transform correctly?
-- [ ] ✅ GATE: Eyes must be within 1° of horizontal
-
-**Step 3.3: Scaling Transform**
-- [ ] Implement: Scale to target inter-eye distance (360px)
-- [ ] Test: Measure distance between eyes in scaled image
-- [ ] Verify: Distance = 360px ±2px
-- [ ] Measure: Are eye coordinates still accurate after scaling?
-- [ ] ✅ GATE: Inter-eye distance must match target
-
-**Step 3.4: Crop/Position Transform**
-- [ ] Implement: Extract 1080×1080 region with eyes at targets
-- [ ] Test: Overlay target points on cropped image
-- [ ] Verify: Left eye at (720, 432), Right eye at (360, 432)
-- [ ] Measure: Actual position vs. target (should be ≤5px error)
-- [ ] ✅ GATE: Eye positions must be within tolerance
-
-**Step 3.5: Edge Case Handling**
-- [ ] Test: Photo where eyes are at image edge
-- [ ] Test: Photo requiring canvas extension
-- [ ] Test: Extreme rotation (baby tilted 30°+)
-- [ ] Verify: All cases produce valid 1080×1080 output
-- [ ] ✅ GATE: No crashes, all outputs have eyes in target positions
-
----
-
-#### Phase 4: Integration & End-to-End Testing (1 hour)
-
-**Step 4.1: Deploy New Algorithm**
+- [ ] Install Python + opencv-python-headless in Vercel environment
 - [ ] Deploy to Vercel
-- [ ] Verify deployment successful
-- [ ] Check logs for any initialization errors
+- [ ] Upload 3-5 test photos via UI
+- [ ] Wait for processing and check logs
+- [ ] Download aligned results and verify eye positions
+- [ ] Measure accuracy: eyes within ±5px of targets?
 
-**Step 4.2: Real Upload Test**
-- [ ] Upload 5 diverse test photos (different angles, lighting, positions)
-- [ ] Wait for processing
-- [ ] Download all 5 aligned images
+#### Step 3: Cleanup (20 min)
 
-**Step 4.3: Empirical Validation**
-- [ ] Stack all 5 aligned images in editor
-- [ ] Measure eye position variance across stack
-- [ ] Compare to success criteria (≤5px drift)
-- [ ] Visual inspection: Do they look properly aligned?
+- [ ] Remove old alignment implementations (v2, v3)
+- [ ] Delete test scripts from `projects/wizard-of-oz/`:
+  - `test-opencv-alignment.cjs`
+  - `test-hybrid-alignment.cjs`
+  - `debug-coordinates.cjs`
+  - Other debugging scripts
+- [ ] Keep `align_photo_opencv.py` (production dependency)
+- [ ] Clean up `test-output/` directory
+- [ ] Update database: mark old failed photos for reprocessing if needed
 
-**Step 4.4: Performance Testing**
-- [ ] Check processing times (should be <10 seconds per photo)
-- [ ] Verify storage usage is reasonable
-- [ ] Check for memory issues in logs
+#### Step 4: Validation & Documentation (15 min)
 
----
-
-#### Phase 5: Cleanup & Documentation (30 min)
-
-**Step 5.1: Remove Old Code**
-- [ ] Delete deprecated alignment implementations
-- [ ] Remove excessive debug logging
-- [ ] Clean up test files/scripts
-
-**Step 5.2: Add Production Logging**
-- [ ] Keep key metrics: processing time, error measurements
-- [ ] Remove verbose coordinate dumps
-- [ ] Add success/failure indicators
-
-**Step 5.3: Document Algorithm**
-- [ ] Update code comments with algorithm explanation
-- [ ] Document coordinate system and transforms
-- [ ] Add troubleshooting guide for future issues
+- [ ] Verify success criteria:
+  - Processing time < 10 seconds per photo
+  - Eye positions within ±5px of targets
+  - No errors in production logs
+- [ ] Document the solution in code comments
+- [ ] Update NEXT_SESSION.md with final status
 
 ---
 
-### Success Criteria
+### Key Technical Details
 
-**Must achieve before considering complete**:
-1. ✅ 5 diverse test photos stack with ≤5px eye position variance
-2. ✅ Visual inspection confirms proper alignment
-3. ✅ Processing completes in <10 seconds per photo
-4. ✅ No errors in production logs
-5. ✅ Algorithm documented with clear comments
+**Python Dependencies** (for Vercel):
+```bash
+python3 -m pip install opencv-python-headless==4.12.0
+```
 
-**Evidence required**:
-- Screenshots of stacked images showing alignment
-- Measurement data from test harness
-- Production logs showing successful processing
-- Database records with populated aligned_url
+**Critical Implementation Notes**:
+1. **ALWAYS scale coordinates** before passing to OpenCV script
+2. **Verify input dimensions** match expected detection dimensions
+3. **Log both expected and actual** dimensions for debugging
+4. See `META_DEBUGGING_PROTOCOL.md` for input verification checklist
 
----
-
-### Key Principles for This Rebuild
-
-1. **Evidence-Based**: Every decision backed by measurements, not theory
-2. **Incremental Validation**: Don't build step N+1 until step N is proven
-3. **Save Intermediate Outputs**: Inspect rotated, scaled, cropped images separately
-4. **Measure Everything**: Track actual coordinates at every transform
-5. **Gate at Each Phase**: Clear go/no-go criteria before proceeding
-6. **No Assumptions**: Test even "obvious" things with real data
+**Files to Reference**:
+- `align_photo_opencv.py` - Working Python implementation
+- `DEBUGGING_CHECKLIST.md` - Case study of coordinate scaling bug
+- `META_DEBUGGING_PROTOCOL.md` - Universal debugging principles
 
 ---
 
@@ -282,6 +217,6 @@ git status
 
 ---
 
-**Last Updated**: 2025-10-12
-**Status**: Clean slate, ready for next task
-**Token Budget**: Healthy
+**Last Updated**: 2025-10-12 (Post-Alignment-Breakthrough)
+**Status**: OpenCV solution working locally, needs production integration
+**Token Budget**: Healthy (~48K tokens used)
