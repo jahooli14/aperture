@@ -417,46 +417,61 @@ if (condition) {
 
 ---
 
-## Future: Path A - Programmatic Log Access
+## Path A: Programmatic Log Access - ✅ IMPLEMENTED (2025-10-12)
 
-When comprehensive logging becomes insufficient, implement Vercel API integration:
+Vercel API integration enables Claude to fetch logs directly without user intervention.
 
-### Setup
+### Usage
+
 ```bash
-# Get Vercel API token
-# https://vercel.com/account/tokens
+# Fetch all recent logs
+/vercel-logs
 
-# Add to environment
-export VERCEL_TOKEN=your_token_here
+# Fetch logs for specific function
+/vercel-logs align-photo-v2
 
-# Create script
-.scripts/vercel-logs.sh
+# Fetch more logs for thorough debugging
+/vercel-logs detect-eyes 200
 ```
 
-### Script Template
-```bash
-#!/bin/bash
-# .scripts/vercel-logs.sh
+### Implementation
 
-PROJECT_ID="your-project-id"
-FUNCTION_NAME="$1"
-LIMIT="${2:-50}"
+**Files**:
+- `.scripts/vercel-logs.sh` - Bash script for Vercel API calls
+- `.claude/commands/vercel-logs.md` - Slash command documentation
 
-curl -s "https://api.vercel.com/v2/deployments/logs" \
-  -H "Authorization: Bearer $VERCEL_TOKEN" \
-  -d "projectId=$PROJECT_ID" \
-  -d "function=$FUNCTION_NAME" \
-  -d "limit=$LIMIT"
+**How it works**:
+1. Authenticates with Vercel API using bearer token
+2. Fetches latest deployment ID for project
+3. Retrieves runtime logs from deployment
+4. Filters by function name (optional)
+5. Color-codes output (errors red, success green, warnings yellow)
+
+**Authentication**:
+- Token stored in script (secured)
+- Project ID: `prj_rkI3NQOI5SfBle7lflFkwFkj0eYd`
+- Bearer token authentication
+
+### Log Retention
+
+| Plan | Retention | Use Case |
+|------|-----------|----------|
+| Hobby | 1 hour | Real-time debugging only |
+| Pro | 1 day | Async debugging supported |
+| Enterprise | 3 days | Production debugging |
+
+**Current Plan**: Hobby (1-hour retention)
+- Sufficient for active debugging sessions
+- User reports issue → Claude fetches logs → Fix within 1 hour
+- For historical issues (> 1 hour old), comprehensive logging is the fallback
+
+### Example Workflow
+
 ```
-
-### Slash Command
-```markdown
-<!-- .claude/commands/vercel-logs.md -->
-Fetch recent Vercel logs for debugging.
-
-Usage: /vercel-logs [function-name] [limit]
-
-Example: /vercel-logs align-photo 100
+User: "Photos aren't aligning correctly"
+Claude: /vercel-logs align-photo-v2 200
+Claude: [Analyzes PREDICTED vs EXPECTED eye positions]
+Claude: "Found it - ERROR shows 5px drift due to rotation math. Fixing..."
 ```
 
 ---

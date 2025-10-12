@@ -46,13 +46,20 @@ Options:
 
 **Selected**: _________________________________
 
-### 3. Pre-Flight Infrastructure Check (< 2 min)
+### 3. Pre-Flight Infrastructure & Debugging Check (< 3 min)
 ⚠️ **Run BEFORE debugging** when feature "doesn't work"
 
 - [ ] **If debugging issue**: Run `/verify-infra [project-name]`
   - Checks: Database tables, storage buckets, env vars, deployment settings
   - **Rule**: If debugging > 10 min without progress → run this command
   - Catches 80% of "code looks fine but doesn't work" issues
+
+- [ ] **If feature not working as expected**: Run `/vercel-logs [function-name]`
+  - Fetches runtime logs from Vercel API
+  - **Self-sufficient debugging** - no need to ask user for logs
+  - Examples: `/vercel-logs align-photo-v2 200`
+  - Check for errors, unexpected values, or missing logs
+  - **Note**: Logs expire after 1 hour (Hobby plan) - user may need to reproduce issue
 
 - [ ] **If unsure which project**: Run `/which-project`
   - Auto-detects NUDJ vs Aperture
