@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
+import { log } from './lib/logger.js';
 
 // Optimize Sharp for Vercel serverless
 sharp.cache(false);
@@ -49,6 +50,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('=== ALIGNMENT V2 START ===');
+    await log({
+      functionName: 'align-photo-v2',
+      level: 'info',
+      message: 'ALIGNMENT V2 START',
+      photoId,
+      data: {
+        inputDimensions: { width: landmarks.imageWidth, height: landmarks.imageHeight },
+        detectedEyes: { left: landmarks.leftEye, right: landmarks.rightEye },
+        eyesOpen: landmarks.eyesOpen,
+        confidence: landmarks.confidence,
+      },
+    });
+
     console.log('Photo ID:', photoId);
     console.log('Input dimensions:', landmarks.imageWidth, 'x', landmarks.imageHeight);
     console.log('Detected eyes:', {
@@ -222,11 +236,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('ERROR (should be ~0):', {
       left: {
         x: (finalLeftEye.x - TARGET_LEFT_EYE.x).toFixed(2),
-        y: (finalLeftEye.y - TARGET_LEFT_EYE.y).toFixed(2)
+        y: (finalLeftEye.x - TARGET_LEFT_EYE.y).toFixed(2)
       },
       right: {
         x: (finalRightEye.x - TARGET_RIGHT_EYE.x).toFixed(2),
         y: (finalRightEye.y - TARGET_RIGHT_EYE.y).toFixed(2)
+      },
+    });
+
+    // LOG CRITICAL ALIGNMENT DATA
+    await log({
+      functionName: 'align-photo-v2',
+      level: 'info',
+      message: 'Final eye position analysis',
+      photoId,
+      data: {
+        predicted: {
+          leftEye: { x: parseFloat(finalLeftEye.x.toFixed(2)), y: parseFloat(finalLeftEye.y.toFixed(2)) },
+          rightEye: { x: parseFloat(finalRightEye.x.toFixed(2)), y: parseFloat(finalRightEye.y.toFixed(2)) },
+        },
+        expected: {
+          leftEye: TARGET_LEFT_EYE,
+          rightEye: TARGET_RIGHT_EYE,
+        },
+        error: {
+          leftEye: {
+            x: parseFloat((finalLeftEye.x - TARGET_LEFT_EYE.x).toFixed(2)),
+            y: parseFloat((finalLeftEye.y - TARGET_LEFT_EYE.y).toFixed(2)),
+          },
+          rightEye: {
+            x: parseFloat((finalRightEye.x - TARGET_RIGHT_EYE.x).toFixed(2)),
+            y: parseFloat((finalRightEye.y - TARGET_RIGHT_EYE.y).toFixed(2)),
+          },
+        },
+        rotationDegrees: parseFloat(rotationDegrees.toFixed(2)),
+        scaleFactor: parseFloat(scale.toFixed(4)),
       },
     });
 
@@ -322,6 +366,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('=== ALIGNMENT V2 COMPLETE ===');
     console.log('Aligned URL:', cacheBustedUrl);
 
+    await log({
+      functionName: 'align-photo-v2',
+      level: 'info',
+      message: '✅ ALIGNMENT V2 COMPLETE',
+      photoId,
+      data: {
+        alignedUrl: cacheBustedUrl,
+        transform,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       alignedUrl: cacheBustedUrl,
@@ -344,6 +399,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('❌ Alignment V2 error:', error);
+
+    await log({
+      functionName: 'align-photo-v2',
+      level: 'error',
+      message: '❌ Alignment V2 failed',
+      photoId: req.body?.photoId,
+      data: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+
     return res.status(500).json({
       error: 'Failed to align photo',
       message: error instanceof Error ? error.message : 'Unknown error',
