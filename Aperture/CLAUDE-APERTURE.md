@@ -35,6 +35,61 @@ Read these files IN ORDER:
 
 ---
 
+## 🎯 Current Tasks & Status
+
+> **Last Updated**: 2025-10-12 (Post-Alignment-Breakthrough)
+>
+> **Purpose**: Single source of truth for active work. Update after completing major phases.
+>
+> **See NEXT_SESSION.md for detailed context and implementation notes.**
+
+### Active Work: Wizard of Oz Photo Alignment
+
+**Recent Completions**:
+- [x] Fix catastrophic coordinate scaling bug
+  - Root cause: Database stores coordinates for 768x1024 downscaled images
+  - Solution: Scale coordinates by `(actualWidth / detectionWidth)` before processing
+- [x] Implement Python OpenCV alignment solution
+  - File: `projects/wizard-of-oz/align_photo_opencv.py`
+  - Uses `cv2.estimateAffinePartial2D` for similarity transform
+  - Verified: Successfully tested with real baby photos
+- [x] Create comprehensive debugging protocols
+  - `META_DEBUGGING_PROTOCOL.md` - Universal input verification principles
+  - `DEBUGGING_CHECKLIST.md` - Coordinate scaling case study
+  - `projects/wizard-of-oz/DEBUGGING.md` - Project-specific guide
+
+**Current Sprint**:
+- [ ] Create production Node.js wrapper for OpenCV alignment
+  - Location: `projects/wizard-of-oz/api/align-photo-v4.ts`
+  - Must include: Coordinate scaling logic + input validation
+  - Verify: `npm run build` succeeds
+  - Verify: Local test with `node test-script.cjs` shows aligned output
+
+- [ ] Deploy to Vercel with Python dependencies
+  - Install: `opencv-python-headless==4.12.0` in Vercel environment
+  - Verify: `git push origin main` triggers deployment
+  - Verify: Deployment logs show no errors
+  - Verify: `/vercel-logs align-photo 10` shows successful processing
+
+- [ ] End-to-end testing in production
+  - Upload 3-5 test photos via UI
+  - Verify: Photos process within 10 seconds
+  - Verify: Download aligned results and check eye positions (±5px tolerance)
+  - Verify: No errors in `/vercel-logs`
+
+- [ ] Clean up test artifacts
+  - Remove: Old alignment implementations (v2, v3)
+  - Remove: Test scripts in `projects/wizard-of-oz/` (test-opencv-alignment.cjs, etc.)
+  - Keep: `align_photo_opencv.py` (production dependency)
+  - Remove: `test-output/` directory contents
+  - Verify: `git status` shows only production files
+
+**Blockers**: None
+
+**Next After This**: Database migration to mark old photos for reprocessing
+
+---
+
 ## Project Structure
 
 ```

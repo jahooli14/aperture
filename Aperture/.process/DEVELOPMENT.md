@@ -201,6 +201,229 @@ Claude: [picks up seamlessly from saved state]
 
 ---
 
+## Task List Standards
+
+### Task Format with Verification Commands
+
+**Every task in a checklist MUST include verification steps when applicable.**
+
+**Template**:
+```markdown
+- [ ] <Action to take>
+  - <Implementation detail 1>
+  - <Implementation detail 2>
+  - Verify: `<command to run>`
+  - Expected: <what you should see>
+  - If fail: <troubleshooting step>
+```
+
+**Examples**:
+
+✅ **GOOD** - Has verification:
+```markdown
+- [ ] Deploy new alignment function to Vercel
+  - Update `api/align-photo-v4.ts` with coordinate scaling
+  - Add Python subprocess call to OpenCV script
+  - Verify: `git push origin main` triggers deployment
+  - Verify: Deployment logs at vercel.com/deployments show success
+  - Verify: `/vercel-logs align-photo 10` shows no errors
+  - Expected: Logs show "Alignment completed in X seconds"
+  - If fail: Check Vercel environment variables are set
+```
+
+❌ **BAD** - No verification:
+```markdown
+- [ ] Deploy new alignment function
+```
+
+### Task Update Rules
+
+**When to update task lists**:
+1. ✅ After completing a task (mark with `[x]`)
+2. ✅ After discovering subtasks (add to list)
+3. ✅ When verification fails (add troubleshooting tasks)
+4. ✅ After major phases (update CLAUDE-APERTURE.md tasks section)
+
+**Where to maintain tasks**:
+- **CLAUDE-APERTURE.md** - High-level current sprint tasks (single source of truth)
+- **NEXT_SESSION.md** - Detailed implementation steps for current work
+- **TodoWrite tool** - Session-scoped ephemeral task tracking
+
+### Verification Command Categories
+
+**Build verification**:
+```markdown
+- Verify: `npm run build` succeeds
+- Expected: No TypeScript errors, build output in dist/
+```
+
+**Deployment verification**:
+```markdown
+- Verify: `git push origin main` triggers Vercel deployment
+- Verify: Deployment at vercel.com shows "Ready"
+- Verify: `/vercel-logs [function] 10` shows successful execution
+```
+
+**Functional verification**:
+```markdown
+- Verify: Upload test photo via UI
+- Expected: Photo processes in < 10 seconds
+- Verify: Download aligned result and check eye positions
+- Expected: Eyes at (360, 432) and (720, 432) ±5px
+```
+
+**Infrastructure verification**:
+```markdown
+- Verify: `/verify-infra wizard-of-oz` passes all checks
+- Expected: ✅ Database tables exist, ✅ Storage buckets configured
+```
+
+---
+
+## Decision Documentation & Source Citation
+
+### When to Cite Sources
+
+**Required for**:
+- ✅ Architectural decisions
+- ✅ Choosing between multiple approaches
+- ✅ Following documented patterns or protocols
+- ✅ Major refactoring decisions
+- ✅ Security or performance choices
+
+**Not required for**:
+- ❌ Simple bug fixes
+- ❌ Minor style changes
+- ❌ Boilerplate generation
+- ❌ Documentation updates
+
+### Citation Format
+
+**Pattern**: `Based on <file_path:line_number>, which states "<quote>", I will <action>.`
+
+**Examples**:
+
+✅ **Architectural Decision**:
+```
+Based on .process/ARCHITECTURE.md:45-52, which states "Start Minimal -
+always ask what's the minimum viable implementation", I will implement
+basic authentication with email/password only, deferring social login
+until we validate the feature is needed.
+```
+
+✅ **Following Debugging Protocol**:
+```
+Based on META_DEBUGGING_PROTOCOL.md:88-92, which states "verify inputs
+before debugging algorithm", I'm first checking that eye coordinates are
+scaled correctly before debugging the alignment transform logic.
+```
+
+✅ **Pattern Compliance**:
+```
+Based on CLAUDE-APERTURE.md:151-158, which shows the pattern for separate
+camera and gallery inputs, I will create two <input> elements with distinct
+refs instead of a single input with conditional capture.
+```
+
+### Decision Records
+
+**For major architectural choices, document in `.process/DECISION_LOG.md`**:
+
+```markdown
+## 2025-10-12 | Use Python OpenCV Instead of JavaScript Sharp
+
+**Context**: Photo alignment requires affine transformation with rotation,
+scale, and translation. JavaScript Sharp library doesn't support full affine
+transforms.
+
+**Decision**: Use Python OpenCV via subprocess, called from Node.js API.
+
+**Alternatives Considered**:
+1. Manual JavaScript coordinate math - REJECTED (error-prone, we tried this)
+2. Sharp with manual rotation - REJECTED (insufficient - no translation)
+3. Different JS library (jimp, canvas) - REJECTED (performance concerns)
+4. Python OpenCV - SELECTED
+
+**Rationale**:
+- OpenCV has cv2.estimateAffinePartial2D - exactly what we need
+- Well-tested, industry standard
+- Python subprocess adds ~100ms overhead (acceptable)
+- Eliminates error-prone manual coordinate tracking
+
+**Source**: Research documented in NEXT_SESSION.md:Phase 3
+
+**Consequences**:
+- Adds Python runtime dependency to Vercel deployment
+- Requires opencv-python-headless package
+- Adds subprocess communication complexity (mitigated by simple API)
+```
+
+---
+
+## Code Output Standards
+
+### When to Show Full Files vs Use Edit Tool
+
+**Show full file when**:
+- File is < 200 lines after modification
+- Creating a new file
+- Major refactoring (> 30% of file changed)
+- User explicitly requests full file
+
+**Use Edit tool when**:
+- File is > 200 lines and < 30% changed
+- Precise single-function updates
+- Small bug fixes (< 10 lines)
+- Multiple small changes across large file
+
+### Code Output Format
+
+**Always include**:
+1. File path with line numbers for references
+2. Brief context: What changed and why
+3. Verification step if applicable
+
+**Example**:
+
+```typescript
+// projects/wizard-of-oz/api/align-photo-v4.ts
+
+// CHANGE: Add coordinate scaling before passing to OpenCV
+// WHY: Database stores coordinates for 768x1024 downscaled images,
+//      must scale to actual image dimensions
+// SOURCE: DEBUGGING_CHECKLIST.md:45-52
+
+const scaleFactor = actualImageWidth / detectionImageWidth;
+const scaledCoords = {
+  leftEye: {
+    x: dbCoords.leftEye.x * scaleFactor,
+    y: dbCoords.leftEye.y * scaleFactor
+  },
+  rightEye: {
+    x: dbCoords.rightEye.x * scaleFactor,
+    y: dbCoords.rightEye.y * scaleFactor
+  }
+};
+
+// Verify: Log dimensions to confirm scaling is correct
+console.log(`Scaling coordinates: ${detectionImageWidth}px → ${actualImageWidth}px (${scaleFactor}x)`);
+```
+
+### Code Comments Standards
+
+**Required comments**:
+- **WHY** the code exists (not WHAT it does - that should be obvious)
+- Source citations for non-obvious patterns
+- Edge case handling explanations
+- Performance optimization rationale
+
+**Avoid comments for**:
+- Self-explanatory code
+- Redundant descriptions of obvious operations
+- Commented-out code (delete it)
+
+---
+
 ## Test-Driven Development (TDD) with AI
 
 TDD is ideal for AI-augmented development. The tight feedback loop constrains the AI and ensures correctness.

@@ -47,18 +47,27 @@ git remote -v
 
 ### Step 3: Read Current Status (MANDATORY)
 
-**YOU MUST READ**: `NEXT_SESSION.md`
+**YOU MUST READ**:
+1. `CLAUDE-APERTURE.md` or `CLAUDE-NUDJ.md` - Check "Current Tasks & Status" section
+2. `NEXT_SESSION.md` - Detailed implementation context
 
-**This file contains**:
-- What was completed last session
-- What to work on today
-- Critical context and blockers
+**CLAUDE-APERTURE.md contains**:
+- High-level current sprint tasks (single source of truth)
+- Recent completions with verification status
+- Active work with verification commands
+- Blockers
+
+**NEXT_SESSION.md contains**:
+- Detailed implementation notes
+- Technical context and decisions
 - Infrastructure status
+- Key resources and commands
 
-**Action Required**: After reading, state:
+**Action Required**: After reading BOTH files, state:
 ```
-Current status: [brief summary]
-Today's task: [what to work on]
+Current sprint (from CLAUDE-APERTURE.md): [high-level tasks]
+Today's focus (from NEXT_SESSION.md): [specific implementation]
+Verification ready: [can I verify my work?]
 Any blockers: [yes/no]
 ```
 
@@ -109,10 +118,14 @@ Any blockers: [yes/no]
 **Confirm you have**:
 - ✅ Token budget status (and it's acceptable to continue)
 - ✅ Project type identified (NUDJ or Aperture)
-- ✅ Current status from NEXT_SESSION.md
-- ✅ Today's task is clear
+- ✅ Current sprint tasks from CLAUDE-[PROJECT].md
+- ✅ Detailed context from NEXT_SESSION.md
+- ✅ Verification commands available for tasks
+- ✅ Today's focus is clear
 
 **If ANY is unclear**: Ask user before proceeding.
+
+**Before executing any task**: Confirm verification method is documented.
 
 ---
 
@@ -143,7 +156,12 @@ Any blockers: [yes/no]
    **Process Fix**: [How we prevent this permanently]
    ```
 
-4. **Propose automation**:
+4. **Update task status**:
+   - If task failed verification → Update CLAUDE-[PROJECT].md with blocker
+   - If task completed → Mark [x] in CLAUDE-[PROJECT].md AND NEXT_SESSION.md
+   - If discovered subtasks → Add to both files
+
+5. **Propose automation**:
    ```
    "This mistake happened because [manual step].
    We should automate this by [specific solution].
