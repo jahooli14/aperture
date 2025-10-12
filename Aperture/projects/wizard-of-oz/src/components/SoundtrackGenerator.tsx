@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Music, Sparkles, Download, Play, Pause, Volume2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Music, Sparkles, Download, Volume2 } from 'lucide-react';
 
 interface MusicMood {
   emotion: string;
