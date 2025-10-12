@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('id', photoId)
       .single();
 
-    if (fetchError) {
+    if (fetchError || !photo) {
       console.error('❌ Error fetching photo:', fetchError);
       return res.status(404).json({ error: 'Photo not found' });
     }
