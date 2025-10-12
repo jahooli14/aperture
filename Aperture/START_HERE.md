@@ -1,12 +1,24 @@
-# START HERE - New Session Guide
+# START HERE - Onboarding Guide
 
-> **For Users**: Copy-paste the message below to start any new Claude session
+> **🧭 You are here**: Onboarding & Reference Guide
 >
-> **For Claude**: This is your entry point. **YOU MUST FOLLOW THIS EXACT SEQUENCE.**
+> **Purpose**: Help new contributors understand the Aperture development process
+>
+> **Note**: If you're Claude starting a session, `.claude/startup.md` is auto-read and handles initialization. This file is for learning the process, not executing it.
 
 ---
 
-## 📋 Copy-Paste This to Start New Session
+## 🎯 Quick Links
+
+**Starting work?** → `.claude/startup.md` auto-reads and handles session initialization
+**Continuing work?** → `NEXT_SESSION.md` has current status and tasks
+**Debugging?** → `META_DEBUGGING_PROTOCOL.md` (read BEFORE debugging)
+
+---
+
+## 📋 For Users: Starting a New Session
+
+Copy-paste this to start any new Claude session:
 
 ```
 Read startup.md
@@ -16,22 +28,24 @@ That's it! Automatic checks will run.
 
 ---
 
-## 🤖 AUTOMATIC STARTUP (Claude)
+## 🤖 For Claude: Session Initialization
 
-**Primary file**: `.claude/startup.md` (read this FIRST every session)
+**Automatic file**: `.claude/startup.md` (auto-read FIRST every session)
 
-That file automatically:
-- ✅ Checks token budget health (< 50K / 50-100K / > 100K)
-- ✅ Detects project (NUDJ vs Aperture)
-- ✅ Requires reading NEXT_SESSION.md
-- ✅ Suggests /verify-infra before debugging
-- ✅ Enforces continuous improvement (fix root causes)
+That file handles:
+- ✅ Token budget health check
+- ✅ Project detection (NUDJ vs Aperture)
+- ✅ Reading NEXT_SESSION.md
+- ✅ Debugging protocol enforcement
+- ✅ Continuous improvement
 
-**Below is reference** (startup.md is authoritative):
+**Role of this file (START_HERE.md)**: Onboarding and reference only. Not part of automatic startup sequence.
 
 ---
 
-## 🤖 MANUAL STARTUP REFERENCE (Claude)
+## 📚 Reference: Understanding the Process
+
+**Below is reference material for learning the development process**
 
 > **Choose the right path based on your task**
 
@@ -39,11 +53,9 @@ That file automatically:
 
 ## 🚨 CRITICAL: Before Any Debugging
 
-**If you're debugging why something isn't working:**
+> **📍 Full protocol → `META_DEBUGGING_PROTOCOL.md` (5 min read)**
 
-1. **STOP** - Read `META_DEBUGGING_PROTOCOL.md` FIRST (5 min)
-2. **Verify inputs** before debugging algorithm logic
-3. **This is mandatory** - 80% of bugs are input issues
+**If debugging**: Read protocol FIRST, verify inputs before debugging logic. 80% of bugs are input issues.
 
 ---
 

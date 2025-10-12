@@ -146,18 +146,15 @@ python3 -m pip install opencv-python-headless==4.12.0
 
 ## ⚠️ BEFORE DEBUGGING ANYTHING
 
-**🚨 MANDATORY: Read this FIRST before debugging any issue**
+> **📍 Full protocol → `META_DEBUGGING_PROTOCOL.md` (5 min read)**
 
-If anything isn't working as expected:
+**Quick checklist**:
+1. STOP - Don't debug the algorithm yet
+2. READ `META_DEBUGGING_PROTOCOL.md`
+3. VERIFY inputs match assumptions
+4. ONLY THEN debug logic
 
-1. **STOP** - Don't debug the algorithm yet
-2. **READ** `META_DEBUGGING_PROTOCOL.md` (5 minutes)
-3. **VERIFY** inputs match your assumptions (2 minutes)
-4. **ONLY THEN** debug the logic
-
-**Why?** 80% of bugs are input issues, not algorithm issues. Verifying inputs first saves hours of wasted debugging time.
-
-**Quick rule**: If debugging takes >15 minutes, you're probably debugging the wrong thing. Go verify inputs again.
+**Why?** 80% of bugs are input issues. Verifying inputs first saves 90+ minutes.
 
 ---
 

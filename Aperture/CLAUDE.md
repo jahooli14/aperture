@@ -1,9 +1,10 @@
 # 🚦 CLAUDE.md - Project Router
 
-> **⚠️ CRITICAL: READ THIS FIRST**
+> **🧭 You are here**: Project Router
 >
-> This directory is used for BOTH work and personal projects.
-> You MUST choose the correct documentation file.
+> **Purpose**: Distinguish NUDJ (work) vs Aperture (personal) projects
+>
+> **Note**: `.claude/startup.md` is auto-read every session and handles session initialization. This file helps you choose the right project documentation.
 
 ---
 
@@ -84,15 +85,31 @@ Is the user asking about:
 
 ---
 
-## Files at a Glance
+## 🧭 Navigation
 
-| File | Purpose | Use When |
-|------|---------|----------|
-| `CLAUDE-NUDJ.md` | Work projects documentation | Working on Nudj monorepo |
-| `CLAUDE-APERTURE.md` | Personal projects documentation | Working on Aperture projects |
-| `START_HERE.md` | Session startup (Aperture-specific) | Starting new Aperture session |
-| `NEXT_SESSION.md` | Current status (Aperture-specific) | Continuing Aperture work |
+**After determining project type**:
+
+**If NUDJ (work)** → Read `CLAUDE-NUDJ.md`
+**If Aperture (personal)** → Read `CLAUDE-APERTURE.md`
+
+**Note**: `.claude/startup.md` handles automatic session startup sequence. This router just helps you pick the right project documentation.
 
 ---
 
-**🎯 Action Required**: Read the appropriate CLAUDE file based on the project context.
+## Files at a Glance
+
+| File | Purpose | Role |
+|------|---------|------|
+| `.claude/startup.md` | **Auto-read every session** | Session initialization & checks |
+| `CLAUDE.md` | **Project router** (you are here) | Choose NUDJ vs Aperture |
+| `CLAUDE-NUDJ.md` | Work projects documentation | NUDJ patterns & conventions |
+| `CLAUDE-APERTURE.md` | Personal projects documentation | Aperture patterns & conventions |
+| `NEXT_SESSION.md` | Current status & tasks | Continuing work (Aperture) |
+| `START_HERE.md` | Onboarding guide | First time setup (Aperture) |
+
+---
+
+**Entry Point Roles**:
+- `.claude/startup.md` - **Automatic** session initialization (auto-read)
+- `CLAUDE.md` - **Router** to choose project docs (you are here)
+- `START_HERE.md` - **Onboarding** for new users/contributors

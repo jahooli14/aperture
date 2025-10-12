@@ -9,22 +9,17 @@
 ## 📋 Start of Session (5 minutes)
 
 ### 0. Token Budget Health Check (< 1 min)
+
+> **📍 See `.claude/startup.md:10-25` for authoritative token budget policy**
+
 ⚠️ **CRITICAL**: Check this BEFORE starting new work
 
 - [ ] **Check current token usage** (shown at bottom of Claude Code interface)
 
-**Decision tree**:
+**Quick reference**:
 - **< 50K tokens**: ✅ Healthy - continue
-- **50-100K tokens**: ⚠️ Warning zone
-  - Ask: "Can I finish current task in < 50K more tokens?"
-  - If YES → continue carefully
-  - If NO → close session and start fresh
-- **> 100K tokens**: 🛑 MANDATORY FRESH SESSION
-  - Update NEXT_SESSION.md
-  - Commit all changes
-  - Start new session with fresh context
-
-**Why this matters**: AI performance degrades with longer context. Fresh context = better quality, faster responses, lower cost.
+- **50-100K tokens**: ⚠️ Warning - can you finish in <50K more?
+- **> 100K tokens**: 🛑 MANDATORY fresh session
 
 **Rule**: Don't start NEW work if already > 50K tokens.
 

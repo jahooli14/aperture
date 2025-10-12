@@ -4,29 +4,11 @@
 
 ## 🚨 CRITICAL: Context Window Management
 
+> **📍 See `.claude/startup.md:10-41` for authoritative token budget policy and enforcement**
+
 **Most important rule**: AI performance degrades as context grows. Fresh context > struggling with degraded performance.
 
-### When to Start a New Session
-
-**Mandatory fresh start when**:
-- ✅ Context window > 100K tokens used
-- ✅ Starting completely new feature or project
-- ✅ Switching to different part of codebase
-- ✅ Noticing degraded response quality (slow, confused, errors)
-- ✅ Planning major architectural changes
-
-**Optional fresh start when**:
-- ⚠️ Current task completed (natural break point)
-- ⚠️ Stuck on problem (fresh perspective helps)
-- ⚠️ Multiple tangential discussions (context pollution)
-
-**Continue current session when**:
-- ❌ In middle of implementing a plan
-- ❌ Debugging with accumulated context
-- ❌ Making small related changes
-- ❌ Context < 50K tokens and performance good
-
-### Token Budget Health Check
+### Quick Reference
 
 | Token Usage | Status | Action |
 |-------------|--------|--------|
@@ -34,10 +16,7 @@
 | 50-100K | ⚠️ Warning | Can I finish current task in < 50K more? If no → fresh session |
 | > 100K | 🛑 Critical | MANDATORY fresh session |
 
-**Check token usage at**:
-- Start of session (in SESSION_CHECKLIST.md)
-- Before starting new work
-- When noticing degraded quality
+**For full decision tree and session handoff protocol** → See `.claude/startup.md:10-41`
 
 ### Session Handoff Protocol
 
@@ -551,172 +530,17 @@ claude --dangerously-skip-permissions
 
 ---
 
-## Observability Requirements: Self-Sufficient Debugging
+## Observability & Logging
 
-**Core Principle**: Claude must NEVER ask users to check external logs. All debugging information must be accessible programmatically or through comprehensive in-code logging.
+> **📍 Full guide → `.process/OBSERVABILITY.md`**
 
-### The Problem
+**Core Principle**: Claude must NEVER ask users to check external logs. All debugging info must be accessible programmatically or through comprehensive in-code logging.
 
-When Claude asks "Can you check the Vercel logs?", it creates friction:
-- User must context-switch to Vercel dashboard
-- User must manually copy/paste logs back
-- Slows down debugging cycle
-- User becomes a bottleneck in the development loop
-
-### The Solution: Two-Path Strategy
-
-#### Path A: Programmatic Log Access (Preferred)
-- Use Vercel API to fetch logs directly via scripts/commands
-- Create `/vercel-logs [function]` slash command
-- Claude can debug autonomously without user involvement
-- **Setup**: Requires Vercel API token (one-time setup)
-
-#### Path B: Comprehensive In-Code Logging (Fallback)
-- All new features include extensive console logging by default
-- Logging remains until feature passes User Acceptance Testing (UAT)
-- After UAT approval, clean up logging as final step
-- **Use when**: Vercel API not configured or for quick iterations
-
-### Logging Requirements for New Features
-
-**Every new feature MUST include**:
-
-1. **Entry Point Logging**
-   ```typescript
-   console.log('=== FEATURE_NAME START ===');
-   console.log('Input:', { param1, param2 });
-   ```
-
-2. **Decision Point Logging**
-   ```typescript
-   console.log('Condition check:', { condition: value, result: true/false });
-   if (condition) {
-     console.log('Taking path A because:', reason);
-   }
-   ```
-
-3. **External Call Logging**
-   ```typescript
-   console.log('Calling external API:', { url, method, payload });
-   const response = await fetch(...);
-   console.log('External API response:', {
-     status: response.status,
-     ok: response.ok,
-     bodyPreview: body.substring(0, 200)
-   });
-   ```
-
-4. **Error Logging**
-   ```typescript
-   catch (error) {
-     console.error('❌ Feature failed at step X:', error);
-     console.error('Context:', { relevantState, relevantData });
-     throw error; // Re-throw to maintain error propagation
-   }
-   ```
-
-5. **Success Logging**
-   ```typescript
-   console.log('✅ FEATURE_NAME COMPLETE');
-   console.log('Result:', { outputSummary });
-   ```
-
-### Logging Lifecycle
-
-```
-Development → Deploy → Monitor → UAT → Clean Up Logs → Done
-                ↑                      ↓
-                └──── Bug Found ───────┘
-                      (keep logs)
-```
-
-**Stages**:
-1. **Development**: Add comprehensive logging to new feature
-2. **Deploy**: Push with logs intact
-3. **Monitor**: Claude checks logs to verify functionality
-4. **UAT**: User tests feature in production
-5. **Clean Up**: If UAT passes, remove excessive logs (keep critical error logs)
-6. **Done**: Feature is production-ready with minimal logging
-
-### When to Keep vs. Remove Logs
-
-**Keep Forever** (production logs):
-- ❌ Errors and exceptions
-- ❌ Security events (auth failures, permission denials)
-- ❌ Business-critical operations (payments, data deletion)
-- ❌ Performance metrics
-
-**Remove After UAT** (debug logs):
-- ✅ "Step 1, Step 2, Step 3" progress logs
-- ✅ Intermediate calculation values
-- ✅ "Entering function X" / "Exiting function Y"
-- ✅ Verbose object dumps for debugging
-
-### Structured Logging Format
-
-Use consistent format for easy parsing:
-
-```typescript
-// Good: Structured and parseable
-console.log('Action:', 'user_upload', {
-  userId: '123',
-  fileName: 'photo.jpg',
-  fileSize: 2048000,
-  timestamp: Date.now()
-});
-
-// Bad: Unstructured text blob
-console.log('User 123 uploaded photo.jpg which is 2048000 bytes');
-```
-
-### Logging Anti-Patterns
-
-**❌ Don't**:
-- Log sensitive data (passwords, tokens, PII)
-- Use `console.log()` for user-facing messages (use proper error handling)
-- Log inside tight loops (causes performance issues)
-- Mix logging with application logic (keep logs separate)
-- Assume logs will always be available (add graceful degradation)
-
-**✅ Do**:
-- Use semantic prefixes (`✅`, `❌`, `⚠️`, `🎯`) for visual scanning
-- Include context (what operation, what data, what state)
-- Log before and after external calls
-- Use consistent naming conventions
-- Add timestamps for performance debugging (Vercel adds these automatically)
-
-### Integration with Development Workflow
-
-**Updated Feature Development Cycle**:
-
-```markdown
-1. Plan feature (Plan Mode)
-2. Implement with comprehensive logging
-3. Deploy to Vercel
-4. Claude checks logs (self-debug)
-5. Fix issues if found
-6. User UAT
-7. If UAT passes: Clean up logs, redeploy
-8. If UAT fails: Keep logs, fix issues, repeat from step 3
-```
-
-**SESSION_CHECKLIST.md Integration**:
-- Add observability check before marking feature "done"
-- Verify logs are accessible (Claude can read them)
-- Confirm UAT passed before log cleanup
-
-### Future Enhancements
-
-**Phase 1** (current): Comprehensive console logging
-**Phase 2** (future): Vercel API integration for programmatic log access
-**Phase 3** (future): Structured logging service (Datadog, LogRocket, etc.)
-
-**Decision Point**: Move to Phase 2/3 when:
-- Console logging becomes insufficient (complex multi-function flows)
-- Need historical log analysis (beyond Vercel's retention period)
-- Multiple developers need log access
-
-Until then: **Start Minimal** - console logs are sufficient.
+**Quick reference**:
+- All new features need comprehensive logging
+- Keep logs until UAT passes
+- Use `/vercel-logs` for autonomous debugging
+- See `.process/OBSERVABILITY.md` for requirements and examples
 
 ---
 
