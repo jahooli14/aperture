@@ -321,6 +321,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Extraction complete, output size:', OUTPUT_SIZE, 'x', OUTPUT_SIZE);
 
+    // STEP 7.5: Verify actual eye positions in the final output
+    // This will tell us if our algorithm worked or if we messed up
+    try {
+      const alignedBase64 = alignedBuffer.toString('base64');
+      const verifyResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyCcKbX_v19ulrB8VqRt8CwKZnZG4KYdkm8', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Detect the eye positions in this baby photo. Return ONLY a JSON object with this exact format: {"leftEye": {"x": number, "y": number}, "rightEye": {"x": number, "y": number}}. The leftEye is the baby\'s left eye (on the right side of the image). Measure from top-left corner of image.' },
+              { inline_data: { mime_type: 'image/jpeg', data: alignedBase64 } }
+            ]
+          }],
+          generationConfig: { temperature: 0, response_mime_type: 'application/json' }
+        }),
+      });
+
+      const verifyResult = await verifyResponse.json();
+      const verifyText = verifyResult.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (verifyText) {
+        const actualEyes = JSON.parse(verifyText);
+
+        await log({
+          functionName: 'align-photo-v2',
+          level: 'warning',
+          message: '🔍 ACTUAL eye positions in final output (re-detected)',
+          photoId,
+          data: {
+            actualDetected: actualEyes,
+            expected: {
+              leftEye: TARGET_LEFT_EYE,
+              rightEye: TARGET_RIGHT_EYE,
+            },
+            actualError: {
+              leftEye: {
+                x: parseFloat((actualEyes.leftEye.x - TARGET_LEFT_EYE.x).toFixed(2)),
+                y: parseFloat((actualEyes.leftEye.y - TARGET_LEFT_EYE.y).toFixed(2)),
+              },
+              rightEye: {
+                x: parseFloat((actualEyes.rightEye.x - TARGET_RIGHT_EYE.x).toFixed(2)),
+                y: parseFloat((actualEyes.rightEye.y - TARGET_RIGHT_EYE.y).toFixed(2)),
+              },
+            },
+          },
+        });
+      }
+    } catch (verifyError) {
+      console.error('Failed to verify output eye positions:', verifyError);
+    }
+
     // STEP 8: Upload to Supabase with cache-busting URL
     const alignedFileName = `${photo.user_id}/${photoId}-aligned-v2.jpg`;
 
