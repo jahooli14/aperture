@@ -15,7 +15,28 @@ export function PhotoGallery() {
 
   useEffect(() => {
     fetchPhotos();
-  }, [fetchPhotos]);
+
+    // Poll for updates if there are photos still processing
+    const hasProcessingPhotos = () => {
+      return photos.some(p => p.original_url && !p.aligned_url);
+    };
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    if (hasProcessingPhotos()) {
+      // Poll every 5 seconds while photos are processing
+      pollInterval = setInterval(() => {
+        console.log('📊 Polling for photo updates (photos still processing)...');
+        fetchPhotos();
+      }, 5000);
+    }
+
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [fetchPhotos, photos]);
 
   const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();

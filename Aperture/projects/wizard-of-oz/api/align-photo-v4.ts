@@ -183,8 +183,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .from('photos')
       .update({
         aligned_url: alignedUrl,
-        processing_status: 'completed',
-        aligned_at: new Date().toISOString(),
       })
       .eq('id', photoId);
 
