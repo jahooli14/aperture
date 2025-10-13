@@ -8,7 +8,7 @@ import type { Database } from '../types/database';
 type Photo = Database['public']['Tables']['photos']['Row'];
 
 export function PhotoGallery() {
-  const { photos, loading, fetchPhotos, deletePhoto, deleting } = usePhotoStore();
+  const { photos, loading, fetchError, fetchPhotos, deletePhoto, deleting } = usePhotoStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
@@ -62,6 +62,28 @@ export function PhotoGallery() {
       setIsOverlayOpen(true);
     }
   };
+
+  if (fetchError) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-red-50 border border-red-200 rounded-lg p-6"
+      >
+        <h3 className="text-red-800 font-semibold text-lg mb-2">❌ Error Loading Photos</h3>
+        <pre className="text-xs text-red-700 whitespace-pre-wrap font-mono bg-white p-4 rounded border border-red-200 overflow-auto max-h-96">
+          {fetchError}
+        </pre>
+        <button
+          type="button"
+          onClick={() => fetchPhotos()}
+          className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
+        >
+          Retry
+        </button>
+      </motion.div>
+    );
+  }
 
   if (loading) {
     return (

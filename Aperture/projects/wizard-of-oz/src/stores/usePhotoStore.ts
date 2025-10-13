@@ -9,6 +9,7 @@ interface PhotoState {
   loading: boolean;
   uploading: boolean;
   deleting: boolean;
+  fetchError: string | null;
   fetchPhotos: () => Promise<void>;
   uploadPhoto: (file: File, uploadDate?: string) => Promise<string>;
   deletePhoto: (photoId: string) => Promise<void>;
@@ -20,10 +21,11 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   loading: false,
   uploading: false,
   deleting: false,
+  fetchError: null,
 
   fetchPhotos: async () => {
     console.log('📸 Fetching photos...');
-    set({ loading: true });
+    set({ loading: true, fetchError: null });
 
     try {
       const { data, error } = await supabase
@@ -38,15 +40,19 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       if (error) {
         console.error('❌ Error fetching photos:', error);
-        set({ loading: false });
+        const errorMsg = `Database error: ${error.message}\n\nDetails: ${JSON.stringify(error, null, 2)}`;
+        set({ loading: false, fetchError: errorMsg });
         return;
       }
 
-      set({ photos: data || [], loading: false });
+      set({ photos: data || [], loading: false, fetchError: null });
       console.log('✅ Photos loaded successfully:', data?.length || 0);
     } catch (err) {
       console.error('❌ Unexpected error fetching photos:', err);
-      set({ loading: false, photos: [] });
+      const errorMsg = err instanceof Error
+        ? `Error: ${err.message}\n\nStack: ${err.stack}`
+        : `Unknown error: ${JSON.stringify(err)}`;
+      set({ loading: false, photos: [], fetchError: errorMsg });
     }
   },
 
