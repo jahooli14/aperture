@@ -54,13 +54,19 @@ def align_face(image_bytes, left_eye, right_eye):
 
     # STEP 1: Rotate image so eyes are horizontal
     # Calculate angle to make eyes horizontal
-    delta_y = right_eye[1] - left_eye[1]
-    delta_x = right_eye[0] - left_eye[0]
-    angle_rad = np.arctan2(delta_y, delta_x)
-    angle_deg = np.degrees(angle_rad)
+    # The angle is how much the eye line is tilted from horizontal
+    delta_y = right_eye[1] - left_eye[1]  # Positive if right eye is lower
+    delta_x = right_eye[0] - left_eye[0]  # Negative if right eye is to the left (which it should be)
+
+    # We want the tilt angle: arctan(rise/run) = arctan(delta_y / abs(delta_x))
+    # Negative angle means rotate counter-clockwise to level
+    angle_rad = np.arctan2(delta_y, abs(delta_x))
+    angle_deg = -np.degrees(angle_rad)  # Negate because OpenCV rotates clockwise for positive angles
 
     print(f'🔄 Step 1 - Rotate:')
-    print(f'   Current tilt: {angle_deg:.2f}°')
+    print(f'   Delta Y (right - left): {delta_y:.1f}px')
+    print(f'   Delta X (right - left): {delta_x:.1f}px')
+    print(f'   Rotation needed: {angle_deg:.2f}° (negative = counter-clockwise)')
 
     # Calculate rotation center (midpoint between eyes)
     center = ((left_eye + right_eye) / 2).astype(np.float32)
