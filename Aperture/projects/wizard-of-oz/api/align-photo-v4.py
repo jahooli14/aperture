@@ -138,6 +138,11 @@ class handler(BaseHTTPRequestHandler):
             print(f'   Detection size: {landmarks["imageWidth"]}x{landmarks["imageHeight"]}')
             print(f'   Actual size: {actual_width}x{actual_height}')
 
+            print(f'\n🔍 ORIGINAL Gemini coordinates (BEFORE scaling):')
+            print(f'   Left: ({landmarks["leftEye"]["x"]:.1f}, {landmarks["leftEye"]["y"]:.1f})')
+            print(f'   Right: ({landmarks["rightEye"]["x"]:.1f}, {landmarks["rightEye"]["y"]:.1f})')
+            print(f'   In detection image ({landmarks["imageWidth"]}x{landmarks["imageHeight"]})')
+
             scaled_left_eye = (
                 landmarks['leftEye']['x'] * scale_factor,
                 landmarks['leftEye']['y'] * scale_factor
@@ -147,9 +152,10 @@ class handler(BaseHTTPRequestHandler):
                 landmarks['rightEye']['y'] * scale_factor
             )
 
-            print(f'👁️  Scaled eye positions:')
-            print(f'   Left: {scaled_left_eye}')
-            print(f'   Right: {scaled_right_eye}')
+            print(f'\n👁️  SCALED eye positions (AFTER scaling to actual image):')
+            print(f'   Left: ({scaled_left_eye[0]:.1f}, {scaled_left_eye[1]:.1f})')
+            print(f'   Right: ({scaled_right_eye[0]:.1f}, {scaled_right_eye[1]:.1f})')
+            print(f'   In actual image ({actual_width}x{actual_height})')
 
             # Align face
             aligned_bytes = align_face(image_bytes, scaled_left_eye, scaled_right_eye)
