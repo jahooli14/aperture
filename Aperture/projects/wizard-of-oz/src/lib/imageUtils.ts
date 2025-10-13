@@ -159,23 +159,24 @@ export async function alignPhoto(
         const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
         const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
 
+        // Fill with white background first
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
         // Apply transformation
         ctx.save();
 
-        // Move to target center
+        // Translate to target position
         ctx.translate(targetCenterX, targetCenterY);
 
-        // Rotate to align eyes horizontally
+        // Rotate around center
         ctx.rotate(-angle);
 
-        // Scale to match target eye distance
+        // Scale
         ctx.scale(scale, scale);
 
-        // Move source center to origin
-        ctx.translate(-sourceCenterX, -sourceCenterY);
-
-        // Draw the image
-        ctx.drawImage(img, 0, 0);
+        // Draw image with center at origin
+        ctx.drawImage(img, -sourceCenterX, -sourceCenterY);
 
         ctx.restore();
 
