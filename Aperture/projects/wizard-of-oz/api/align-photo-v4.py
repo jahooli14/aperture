@@ -25,9 +25,10 @@ OUTPUT_SIZE = (1080, 1080)
 
 def align_face(image_bytes, left_eye, right_eye):
     """
-    Align face using OpenCV's proven similarity transformation approach.
-    This uses estimateAffinePartial2D to calculate the transformation matrix
-    that maps source eye positions to target positions in one operation.
+    Align face using EyeLign's proven step-by-step approach:
+    1. Rotate around left eye to straighten eyes horizontally
+    2. Scale image to normalize eye distance
+    3. Crop to final output size centered on eye midpoint
 
     Args:
         image_bytes: Image data as bytes
@@ -45,49 +46,116 @@ def align_face(image_bytes, left_eye, right_eye):
         return None
 
     height, width = img.shape[:2]
+    lx, ly = left_eye
+    rx, ry = right_eye
 
     print(f'📍 Input eye positions:')
-    print(f'   Left: ({left_eye[0]:.1f}, {left_eye[1]:.1f})')
-    print(f'   Right: ({right_eye[0]:.1f}, {right_eye[1]:.1f})')
+    print(f'   Left: ({lx:.1f}, {ly:.1f})')
+    print(f'   Right: ({rx:.1f}, {ry:.1f})')
     print(f'   Image size: {width}x{height}')
 
-    # Source points (detected eye positions)
-    src_points = np.array([
-        left_eye,
-        right_eye
-    ], dtype=np.float32).reshape(-1, 1, 2)
+    print(f'\n🎯 Target configuration:')
+    print(f'   Left eye: ({TARGET_LEFT_EYE[0]}, {TARGET_LEFT_EYE[1]})')
+    print(f'   Right eye: ({TARGET_RIGHT_EYE[0]}, {TARGET_RIGHT_EYE[1]})')
+    print(f'   Target inter-eye distance: {TARGET_INTER_EYE_DISTANCE}px')
 
-    # Destination points (target eye positions in output)
-    dst_points = np.array([
-        TARGET_LEFT_EYE,
-        TARGET_RIGHT_EYE
-    ], dtype=np.float32).reshape(-1, 1, 2)
+    # STEP 1: Rotate around left eye to straighten eyes
+    # Calculate rotation angle
+    delta_x = lx - rx
+    delta_y = ly - ry
+    angle_rad = np.arctan2(delta_x, delta_y)
+    angle_deg = abs(np.degrees(angle_rad)) - 90
 
-    print(f'\n🎯 Target eye positions:')
-    print(f'   Left: ({TARGET_LEFT_EYE[0]}, {TARGET_LEFT_EYE[1]})')
-    print(f'   Right: ({TARGET_RIGHT_EYE[0]}, {TARGET_RIGHT_EYE[1]})')
+    print(f'\n🔄 STEP 1: Rotate around left eye')
+    print(f'   Rotation angle: {angle_deg:.2f}°')
 
-    # Calculate similarity transformation matrix (rotation + scale + translation)
-    # This is the correct approach - it preserves angles and aspect ratio
-    M, _ = cv2.estimateAffinePartial2D(src_points, dst_points)
-
-    print(f'\n🔢 Transformation matrix:')
-    print(f'   [{M[0,0]:.4f}  {M[0,1]:.4f}  {M[0,2]:.2f}]')
-    print(f'   [{M[1,0]:.4f}  {M[1,1]:.4f}  {M[1,2]:.2f}]')
-
-    # Apply transformation
-    # This combines rotation + scale + translation in ONE operation
-    # Directly outputs to 1080x1080 with eyes at target positions
-    aligned = cv2.warpAffine(
-        img,
-        M,
-        OUTPUT_SIZE,
-        flags=cv2.INTER_CUBIC,
-        borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(255, 255, 255)  # White background
+    # Add safety border to prevent data loss during rotation
+    max_dist = int(np.hypot(width, height))
+    bordered = cv2.copyMakeBorder(
+        img, max_dist, max_dist, max_dist, max_dist,
+        cv2.BORDER_CONSTANT, value=(255, 255, 255)
     )
 
-    print(f'✅ Transformation applied')
+    # Update eye positions after adding border
+    lx += max_dist
+    ly += max_dist
+    rx += max_dist
+    ry += max_dist
+
+    # Rotate around left eye
+    rotation_matrix = cv2.getRotationMatrix2D((lx, ly), angle_deg, 1.0)
+    rotated = cv2.warpAffine(
+        bordered, rotation_matrix,
+        (bordered.shape[1], bordered.shape[0]),
+        flags=cv2.INTER_CUBIC,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(255, 255, 255)
+    )
+
+    # Calculate new right eye position after rotation
+    # Using rotation matrix to transform coordinates
+    rx_new = rotation_matrix[0, 0] * rx + rotation_matrix[0, 1] * ry + rotation_matrix[0, 2]
+    ry_new = rotation_matrix[1, 0] * rx + rotation_matrix[1, 1] * ry + rotation_matrix[1, 2]
+
+    print(f'   After rotation:')
+    print(f'      Left: ({lx:.1f}, {ly:.1f}) [rotation center - unchanged]')
+    print(f'      Right: ({rx_new:.1f}, {ry_new:.1f})')
+
+    # STEP 2: Scale to normalize eye distance
+    current_eye_distance = abs(rx_new - lx)
+    scale_factor = TARGET_INTER_EYE_DISTANCE / current_eye_distance
+
+    print(f'\n📏 STEP 2: Scale to normalize eye distance')
+    print(f'   Current eye distance: {current_eye_distance:.1f}px')
+    print(f'   Scale factor: {scale_factor:.4f}')
+
+    new_width = int(rotated.shape[1] * scale_factor)
+    new_height = int(rotated.shape[0] * scale_factor)
+    scaled = cv2.resize(rotated, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
+
+    # Update eye positions after scaling
+    lx_scaled = lx * scale_factor
+    ly_scaled = ly * scale_factor
+    rx_scaled = rx_new * scale_factor
+    ry_scaled = ry_new * scale_factor
+
+    print(f'   Scaled image size: {new_width}x{new_height}')
+    print(f'   Scaled eyes:')
+    print(f'      Left: ({lx_scaled:.1f}, {ly_scaled:.1f})')
+    print(f'      Right: ({rx_scaled:.1f}, {ry_scaled:.1f})')
+    print(f'      Inter-eye distance: {abs(rx_scaled - lx_scaled):.1f}px')
+
+    # STEP 3: Crop to final size centered on eye midpoint
+    eye_center_x = (lx_scaled + rx_scaled) / 2
+    eye_center_y = (ly_scaled + ry_scaled) / 2
+
+    # We want eyes at Y=432, so eye_center should be at Y=432
+    # And horizontally centered at OUTPUT_SIZE[0]/2 = 540
+    crop_left = int(eye_center_x - OUTPUT_SIZE[0] / 2)
+    crop_top = int(eye_center_y - TARGET_LEFT_EYE[1])  # Eyes should be at Y=432
+    crop_right = crop_left + OUTPUT_SIZE[0]
+    crop_bottom = crop_top + OUTPUT_SIZE[1]
+
+    print(f'\n✂️  STEP 3: Crop to final size')
+    print(f'   Eye center: ({eye_center_x:.1f}, {eye_center_y:.1f})')
+    print(f'   Crop region: ({crop_left}, {crop_top}) to ({crop_right}, {crop_bottom})')
+
+    # Handle boundaries - create output canvas and copy valid region
+    aligned = np.full((OUTPUT_SIZE[1], OUTPUT_SIZE[0], 3), 255, dtype=np.uint8)
+
+    src_x1 = max(0, crop_left)
+    src_y1 = max(0, crop_top)
+    src_x2 = min(scaled.shape[1], crop_right)
+    src_y2 = min(scaled.shape[0], crop_bottom)
+
+    dst_x1 = src_x1 - crop_left
+    dst_y1 = src_y1 - crop_top
+    dst_x2 = dst_x1 + (src_x2 - src_x1)
+    dst_y2 = dst_y1 + (src_y2 - src_y1)
+
+    aligned[dst_y1:dst_y2, dst_x1:dst_x2] = scaled[src_y1:src_y2, src_x1:src_x2]
+
+    print(f'✅ Alignment complete')
     print(f'   Output size: {OUTPUT_SIZE[0]}x{OUTPUT_SIZE[1]}')
 
     # VERIFY: Re-detect eyes in the output image to confirm actual positions
