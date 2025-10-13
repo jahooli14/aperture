@@ -1,17 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { writeFile, unlink } from 'fs/promises';
-import path from 'path';
-import os from 'os';
 import {
+  calculateSimilarityTransform,
   TARGET_EYE_POSITIONS,
   OUTPUT_SIZE,
 } from './lib/alignment.js';
-
-const execAsync = promisify(exec);
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -135,106 +129,133 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Use Python OpenCV for alignment (proven working solution)
-    // This is the correct approach - OpenCV's warpAffine handles affine
-    // transformation + output sizing correctly
-    const tmpDir = os.tmpdir();
-    const inputPath = path.join(tmpDir, `input-${photoId}.jpg`);
-    const outputPath = path.join(tmpDir, `output-${photoId}.jpg`);
+    // Calculate similarity transformation matrix
+    const matrix = calculateSimilarityTransform(
+      [scaledLeftEye, scaledRightEye],
+      [TARGET_EYE_POSITIONS.leftEye, TARGET_EYE_POSITIONS.rightEye]
+    );
 
+    console.log('🔢 Transformation matrix:', matrix);
+
+    // Apply affine transformation
+    // Sharp's affine will expand canvas - we'll get a larger image than input
+    const transformedImage = sharp(imageBuffer)
+      .affine(
+        [matrix.a, matrix.b, matrix.d, matrix.e],
+        {
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+          interpolator: sharp.interpolators.bicubic,
+          idx: matrix.c,
+          idy: matrix.f,
+        }
+      );
+
+    const transformedBuffer = await transformedImage.toBuffer({ resolveWithObject: true });
+
+    console.log('📐 Transformed image size:', {
+      width: transformedBuffer.info.width,
+      height: transformedBuffer.info.height,
+    });
+
+    // Now we need to extract 1080x1080 from the transformed image
+    // The target eye positions (360, 432) and (720, 432) tell us where to extract from
+    // Since the transformation is already applied, the eyes should already be at these positions
+    // We just need to extract the OUTPUT_SIZE region centered on these coordinates
+
+    const centerX = (TARGET_EYE_POSITIONS.leftEye.x + TARGET_EYE_POSITIONS.rightEye.x) / 2;
+    const centerY = TARGET_EYE_POSITIONS.leftEye.y;
+
+    // Calculate top-left corner for extraction
+    const extractLeft = Math.max(0, Math.round(centerX - OUTPUT_SIZE.width / 2));
+    const extractTop = Math.max(0, Math.round(centerY - OUTPUT_SIZE.height / 2));
+
+    console.log('📍 Extraction parameters:', {
+      centerX: centerX.toFixed(1),
+      centerY: centerY.toFixed(1),
+      extractLeft,
+      extractTop,
+      extractWidth: OUTPUT_SIZE.width,
+      extractHeight: OUTPUT_SIZE.height,
+    });
+
+    // Extract the final 1080x1080 region
+    let aligned: Buffer;
     try {
-      // Write input image to temp file
-      await writeFile(inputPath, imageBuffer);
-
-      // Call Python OpenCV script
-      const scriptPath = path.join(process.cwd(), 'tools', 'align_photo_opencv.py');
-      const command = `python3 ${scriptPath} ${inputPath} ${outputPath} ${scaledLeftEye.x} ${scaledLeftEye.y} ${scaledRightEye.x} ${scaledRightEye.y}`;
-
-      console.log('🐍 Calling Python OpenCV script:', {
-        script: scriptPath,
-        leftEye: scaledLeftEye,
-        rightEye: scaledRightEye,
-      });
-
-      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
-
-      if (stderr) {
-        console.warn('Python stderr:', stderr);
-      }
-
-      // Parse Python output
-      const result = JSON.parse(stdout);
-      console.log('✅ Python OpenCV result:', result);
-
-      if (!result.success) {
-        throw new Error(`Python alignment failed: ${result.error}`);
-      }
-
-      // Read aligned image
-      const aligned = await sharp(outputPath).toBuffer();
-
-      // Clean up temp files
-      await unlink(inputPath).catch(() => {});
-      await unlink(outputPath).catch(() => {});
-
-      console.log('✅ Alignment complete, uploading to storage...');
-
-      // Upload to Supabase Storage (same bucket as originals)
-      const alignedFileName = `aligned/${photoId}-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from('originals')
-        .upload(alignedFileName, aligned, {
-          contentType: 'image/jpeg',
-          cacheControl: '3600',
-        });
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('originals')
-        .getPublicUrl(alignedFileName);
-
-      const alignedUrl = urlData.publicUrl;
-
-      // Update database
-      const { error: updateError } = await supabase
-        .from('photos')
-        .update({
-          aligned_url: alignedUrl,
+      aligned = await sharp(transformedBuffer.data)
+        .extract({
+          left: extractLeft,
+          top: extractTop,
+          width: OUTPUT_SIZE.width,
+          height: OUTPUT_SIZE.height,
         })
-        .eq('id', photoId);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      const processingTime = Date.now() - startTime;
-
-      console.log('✅ Alignment complete:', {
-        photoId,
-        processingTime: `${processingTime}ms`,
-        alignedUrl,
-      });
-
-      return res.status(200).json({
-        success: true,
-        alignedUrl,
-        processingTime,
-        debug: {
-          scaleFactor,
-          sourceEyes: { left: scaledLeftEye, right: scaledRightEye },
-          targetEyes: TARGET_EYE_POSITIONS,
-        },
-      });
-    } catch (pythonError) {
-      // Clean up temp files on error
-      await unlink(inputPath).catch(() => {});
-      await unlink(outputPath).catch(() => {});
-      throw pythonError;
+        .jpeg({ quality: 95 })
+        .toBuffer();
+    } catch (extractError) {
+      console.error('❌ Extract failed - transformed image may be too small:', extractError);
+      // If extract fails, resize the whole transformed image as fallback
+      console.log('⚠️ Falling back to resize');
+      aligned = await sharp(transformedBuffer.data)
+        .resize(OUTPUT_SIZE.width, OUTPUT_SIZE.height, {
+          fit: 'cover',
+          position: 'centre',
+        })
+        .jpeg({ quality: 95 })
+        .toBuffer();
     }
+
+    console.log('✅ Alignment complete, uploading to storage...');
+
+    // Upload to Supabase Storage (same bucket as originals)
+    const alignedFileName = `aligned/${photoId}-${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('originals')
+      .upload(alignedFileName, aligned, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('originals')
+      .getPublicUrl(alignedFileName);
+
+    const alignedUrl = urlData.publicUrl;
+
+    // Update database
+    const { error: updateError } = await supabase
+      .from('photos')
+      .update({
+        aligned_url: alignedUrl,
+      })
+      .eq('id', photoId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    console.log('✅ Alignment complete:', {
+      photoId,
+      processingTime: `${processingTime}ms`,
+      alignedUrl,
+    });
+
+    return res.status(200).json({
+      success: true,
+      alignedUrl,
+      processingTime,
+      debug: {
+        scaleFactor,
+        matrix,
+        sourceEyes: { left: scaledLeftEye, right: scaledRightEye },
+        targetEyes: TARGET_EYE_POSITIONS,
+      },
+    });
   } catch (error) {
     console.error('❌ Alignment failed:', error);
     return res.status(500).json({
