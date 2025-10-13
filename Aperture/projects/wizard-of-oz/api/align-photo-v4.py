@@ -72,85 +72,63 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Delta X (left - right): {delta_x:.1f}px')
     print(f'   Rotation angle: {angle_deg:.2f}°')
 
-    # Calculate rotation center (midpoint between eyes)
-    center = ((left_eye + right_eye) / 2).astype(np.float32)
+    # For small angles, skip rotation - it's causing coordinate tracking issues
+    # Just work with the original image and original eye positions
+    print(f'   ⚠️  Skipping rotation for now - using original image')
 
-    # Get rotation matrix - rotate around eye midpoint
-    rotation_matrix = cv2.getRotationMatrix2D(tuple(center), angle_deg, 1.0)
-
-    # Keep original image dimensions (don't expand canvas)
-    # This is simpler and keeps coordinates consistent
     height, width = img.shape[:2]
 
-    # Rotate the image (keeping same dimensions)
-    rotated_img = cv2.warpAffine(
-        img,
-        rotation_matrix,
-        (width, height),
-        flags=cv2.INTER_CUBIC,
-        borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(255, 255, 255)
-    )
+    # STEP 2: Translate to center eyes
+    # Calculate midpoint between eyes
+    eye_midpoint_x = (left_eye[0] + right_eye[0]) / 2
+    eye_midpoint_y = (left_eye[1] + right_eye[1]) / 2
 
-    # Rotate the eye positions using the same matrix
-    left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
-    right_homogeneous = np.array([right_eye[0], right_eye[1], 1])
+    # Target: center of 1080x1080 image
+    target_center_x = OUTPUT_SIZE[0] / 2  # 540
+    target_center_y = OUTPUT_SIZE[1] / 2  # 540
 
-    rotated_left = rotation_matrix @ left_homogeneous
-    rotated_right = rotation_matrix @ right_homogeneous
+    print(f'📐 Step 2 - Translate (center eyes):')
+    print(f'   Eye midpoint in original: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
+    print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
 
-    print(f'   Rotation matrix:')
-    print(f'      [{rotation_matrix[0, 0]:.4f}, {rotation_matrix[0, 1]:.4f}, {rotation_matrix[0, 2]:.4f}]')
-    print(f'      [{rotation_matrix[1, 0]:.4f}, {rotation_matrix[1, 1]:.4f}, {rotation_matrix[1, 2]:.4f}]')
-    print(f'   Before rotation: left=({left_eye[0]:.1f}, {left_eye[1]:.1f}), right=({right_eye[0]:.1f}, {right_eye[1]:.1f})')
-    print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
-    print(f'   Y values should be equal now: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
-    print(f'   Image size: {width}x{height}')
+    # Calculate how much to shift
+    shift_x = int(eye_midpoint_x - target_center_x)
+    shift_y = int(eye_midpoint_y - target_center_y)
 
-    # STEP 2: Just crop to center - NO TRANSLATION FOR NOW
-    # Let's see where the eyes actually are after rotation
-    # Crop a 1080x1080 window from the center of the rotated image
+    print(f'   Need to shift by: ({shift_x}, {shift_y})')
 
-    center_x = width // 2
-    center_y = height // 2
+    # Crop region from original image
+    crop_x1 = shift_x
+    crop_y1 = shift_y
+    crop_x2 = shift_x + 1080
+    crop_y2 = shift_y + 1080
 
-    crop_x1 = center_x - 540
-    crop_y1 = center_y - 540
-    crop_x2 = center_x + 540
-    crop_y2 = center_y + 540
+    print(f'   Crop from original: ({crop_x1}, {crop_y1}) to ({crop_x2}, {crop_y2})')
+    print(f'   Original image size: {width}x{height}')
 
-    print(f'📐 Step 2 - Crop center 1080x1080:')
-    print(f'   Image center: ({center_x}, {center_y})')
-    print(f'   Crop region: ({crop_x1}, {crop_y1}) to ({crop_x2}, {crop_y2})')
+    # Create output image
+    final_img = np.full((1080, 1080, 3), 255, dtype=np.uint8)
 
-    # Crop the rotated image
-    if crop_x1 >= 0 and crop_y1 >= 0 and crop_x2 <= width and crop_y2 <= height:
-        final_img = rotated_img[crop_y1:crop_y2, crop_x1:crop_x2]
+    # Calculate valid crop region (handle edges)
+    src_x1 = max(0, crop_x1)
+    src_y1 = max(0, crop_y1)
+    src_x2 = min(width, crop_x2)
+    src_y2 = min(height, crop_y2)
 
-        # Adjust eye coordinates for the crop
-        final_left = rotated_left - np.array([crop_x1, crop_y1])
-        final_right = rotated_right - np.array([crop_x1, crop_y1])
-        final_midpoint = np.array([540, 540])
+    dst_x1 = src_x1 - crop_x1
+    dst_y1 = src_y1 - crop_y1
+    dst_x2 = dst_x1 + (src_x2 - src_x1)
+    dst_y2 = dst_y1 + (src_y2 - src_y1)
 
-        print(f'   Eyes in cropped image: left=({final_left[0]:.1f}, {final_left[1]:.1f}), right=({final_right[0]:.1f}, {final_right[1]:.1f})')
-    else:
-        print(f'   ⚠️  Crop would be out of bounds, using warpAffine instead')
-        # Use identity matrix (no translation)
-        translation_matrix = np.float32([
-            [1, 0, -(width//2 - 540)],
-            [0, 1, -(height//2 - 540)]
-        ])
-        final_img = cv2.warpAffine(
-            rotated_img,
-            translation_matrix,
-            OUTPUT_SIZE,
-            flags=cv2.INTER_CUBIC,
-            borderMode=cv2.BORDER_CONSTANT,
-            borderValue=(255, 255, 255)
-        )
-        final_left = rotated_left + np.array([-(width//2 - 540), -(height//2 - 540)])
-        final_right = rotated_right + np.array([-(width//2 - 540), -(height//2 - 540)])
-        final_midpoint = np.array([540, 540])
+    print(f'   Copying [{src_y1}:{src_y2}, {src_x1}:{src_x2}] -> [{dst_y1}:{dst_y2}, {dst_x1}:{dst_x2}]')
+
+    # Copy the region
+    final_img[dst_y1:dst_y2, dst_x1:dst_x2] = img[src_y1:src_y2, src_x1:src_x2]
+
+    # Calculate final eye positions
+    final_left = left_eye - np.array([shift_x, shift_y])
+    final_right = right_eye - np.array([shift_x, shift_y])
+    final_midpoint = np.array([target_center_x, target_center_y])
 
     print(f'✅ Final eye positions (PREDICTED):')
     print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
