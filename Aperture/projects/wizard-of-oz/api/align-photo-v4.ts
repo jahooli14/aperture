@@ -158,10 +158,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Alignment complete, uploading to storage...');
 
-    // Upload to Supabase Storage
-    const alignedFileName = `aligned-${photoId}-${Date.now()}.jpg`;
+    // Upload to Supabase Storage (same bucket as originals)
+    const alignedFileName = `aligned/${photoId}-${Date.now()}.jpg`;
     const { error: uploadError } = await supabase.storage
-      .from('photos')
+      .from('originals')
       .upload(alignedFileName, aligned, {
         contentType: 'image/jpeg',
         cacheControl: '3600',
@@ -173,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('photos')
+      .from('originals')
       .getPublicUrl(alignedFileName);
 
     const alignedUrl = urlData.publicUrl;
