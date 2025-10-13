@@ -4,9 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-13 23:30 (Session 9 - Photo Alignment Debugging)
+> **Last Updated**: 2025-10-13 (Session 9 - Eye Detection Debugging)
 >
-> **Current Work**: Fixing photo alignment algorithm - rotation works, translation broken
+> **Current Work**: Debugging Gemini eye detection - Y coordinates too high
 
 ---
 
@@ -67,6 +67,17 @@
   - Added enforcement to update during sessions, not just at end
   - Documented in COMMON_MISTAKES.md as case study
 
+**Eye Detection Debugging** (Session 9 - 2025-10-13):
+- ✅ **META_DEBUGGING_PROTOCOL applied**: Verified inputs before debugging transformation
+  - Stripped ALL transformation logic to create visual debug mode
+  - Draws green dots on original image at Gemini's detected positions
+  - Discovered Y coordinates are systematically too high
+- ❌ **Root cause found but not fixed yet**: Gemini detecting eyes too high in image
+  - Green dots appear above baby's head, not on eyes
+  - X coordinates appear roughly correct
+  - Y coordinates need investigation (logs required)
+- 🔄 **Next**: Get Vercel logs to analyze actual coordinates and scale factors
+
 **Debugging Protocol & Photo Alignment** (Session 6):
 - ✅ **BREAKTHROUGH**: Fixed catastrophic coordinate scaling bug
   - Root cause: Database stores coordinates for 768x1024 downscaled images
@@ -97,80 +108,83 @@
 
 ## ⏭️ Next Steps
 
-### Priority 1: 🔄 IN PROGRESS - Fix Photo Alignment Algorithm (Session 9 - Continuation)
+### Priority 1: 🔴 BLOCKED - Fix Gemini Eye Detection (Session 9 - Continuation)
 
-**Current Status**: 🟡 Alignment algorithm being rebuilt step-by-step
+**Current Status**: 🔴 Gemini AI detecting eyes with incorrect Y coordinates
 
-**What Happened**:
-- Session 8 TypeScript/Sharp implementation did NOT work in production
-- Reverted to Python approach: `/api/align-photo-v4.py` (NOT `.ts`)
-- Discovered rotation works but translation is completely broken
-- Eyes end up far from predicted positions (forehead centered instead of eyes)
+**What Happened** (Session 9 - 2025-10-13):
+- Stripped out ALL transformation logic to debug input data (following META_DEBUGGING_PROTOCOL)
+- Created visual debug mode: draws green dots on original image at detected positions
+- **DISCOVERY**: Green dots appear WAY ABOVE baby's head, not on eyes at all
+- Y coordinates are too high by significant margin (dots in background/blanket area)
+- X coordinates appear roughly correct (horizontal positioning seems OK)
 
-**Root Causes Identified**:
-1. ❌ Coordinate tracking through transformations is unreliable with warpAffine
-2. ❌ Every attempted translation causes massive position errors
-3. ❌ Tried scipy.ndimage.rotate → exceeded 250MB Vercel limit
-4. ✅ Using cv2.warpAffine for rotation (working)
-5. ❌ Translation via array cropping not working yet
+**Root Cause Identified**:
+- ❌ **Gemini's Y coordinates are wrong** - detecting positions too high in image
+- ✅ X coordinates appear reasonable
+- ❌ Attempted fix: Swapped left/right eye labels (thinking mirror image) - didn't help
+- Real problem: Y axis coordinates are systematically too high
 
-**Session 9 Progress** (2025-10-13):
+**Session 9 Debug Progress**:
 
-**Research Completed**:
-- ✅ Investigated AgeLapse (Flutter app) - uses Scale → Rotate → Translate order
-- ✅ Investigated EyeLign (Python CLI) - uses face_recognition library
-- ✅ Decision: Continue with current approach (simpler than theirs)
-- ✅ Documented Vercel build log access in `.process/OBSERVABILITY.md`
-  - How to fetch deployment events API
-  - Critical: text is in `payload.text` not top-level `text`
-  - Common build errors documented
-
-**Technical Fixes Applied**:
-- ✅ Removed scipy dependency (caused 250MB limit error)
-- ✅ Switched rotation from scipy to cv2.warpAffine with rotation matrix
-- ✅ Implemented array-based cropping for translation (not yet verified)
-- ✅ Added comprehensive debug logging with visual markers
+**What We Tried**:
+1. ✅ Stripped transformation logic completely
+2. ✅ Added visual debug mode (green dots on original image)
+3. ✅ Added detailed coordinate logging (before/after scaling)
+4. ❌ Swapped left/right eye labels (didn't fix Y coordinate problem)
 
 **Current Implementation** (`align-photo-v4.py`):
-1. ✅ **Rotation**: Using cv2.warpAffine around image center - WORKING
-2. 🔄 **Translation**: Array slicing to crop centered on eye midpoint - NEEDS TESTING
-3. ❌ **Scaling**: Not implemented yet (will add after translation works)
+- **Mode**: DEBUG ONLY - no transformation applied
+- **Output**: Original image with green dots at Gemini's detected positions
+- **Purpose**: Verify Gemini's detection accuracy before implementing transformation
+- **Status**: Green dots NOT on eyes - too high in image
 
 **What's Deployed**:
 - File: `projects/wizard-of-oz/api/align-photo-v4.py`
 - Endpoint: `/api/align-photo-v4` (Python serverless function)
-- Dependencies: opencv-python-headless, numpy (no scipy)
-- Status: 🟢 Builds successfully, 🟡 Translation needs verification
+- Mode: Debug visualization only
+- Status: 🟢 Builds successfully, 🔴 Detection coordinates wrong
 
-**Next Action Required**: User needs to test current translation fix
+**Next Action Required**: Fix Gemini's Y coordinate detection
 
-### Priority 2: Verify Translation Works
+### Priority 2: Debug Gemini Detection - Get Logs
 
-**Testing Plan**:
-- [ ] Upload 3-5 test photos via Wizard of Oz UI
-- [ ] Monitor Vercel logs during processing:
-  ```bash
-  /vercel-logs align-photo-v4 20
-  ```
-- [ ] Verify success criteria:
-  - Processing time < 10 seconds per photo
-  - Eye positions within ±5px of targets (720, 432) and (360, 432)
-  - No errors in production logs
-  - Aligned photos look visually correct
-- [ ] Download aligned results and verify eye positions manually
-- [ ] If any issues: Check logs, adjust algorithm, redeploy
+**Immediate Next Steps**:
+1. [ ] User uploads test photo
+2. [ ] Check Vercel runtime logs for actual coordinates:
+   ```bash
+   # Check Vercel dashboard OR
+   /vercel-logs align-photo-v4 10
+   ```
+3. [ ] Analyze logs to understand:
+   - What coordinates is Gemini actually returning?
+   - What are the detection image dimensions vs actual dimensions?
+   - What is the scale factor being applied?
+   - Are scaled coordinates correct?
 
-**Expected Results**:
-- Coordinate scaling bug fixed (90-minute debugging waste prevented)
-- Accurate eye alignment using similarity transform
-- Fast processing (Sharp is optimized for serverless)
+**Possible Root Causes to Investigate**:
+1. **Gemini prompt issue**: Maybe prompt isn't clear about coordinate system
+2. **Coordinate scaling bug**: Maybe we're scaling Y incorrectly
+3. **Image orientation**: Maybe EXIF rotation is affecting coordinates
+4. **Gemini sends normalized coords**: Maybe Gemini returns 0-1 normalized, not pixels
+5. **Origin mismatch**: Maybe Gemini uses bottom-left origin, we assume top-left
 
-### Priority 3: Post-Validation Tasks (if testing succeeds)
+### Priority 3: Fix Gemini Detection (after analyzing logs)
 
-- [ ] Mark old failed photos for reprocessing (if needed)
-- [ ] Monitor production usage for first week
-- [ ] Document any edge cases discovered
-- [ ] Consider adding alignment accuracy metrics to database
+**Options to Try** (based on log analysis):
+1. Update Gemini prompt to clarify coordinate system
+2. Fix coordinate scaling if calculation is wrong
+3. Handle EXIF orientation before detection
+4. Convert coordinate system if Gemini uses different origin
+5. Add offset/calibration factor if systematic error
+6. Switch to different detection method (OpenCV Haar Cascade, face_recognition library)
+
+### Priority 4: Re-implement Transformation (after detection works)
+
+- [ ] Once green dots appear ON eyes, re-implement EyeLign transformation
+- [ ] Test with 3-5 photos
+- [ ] Verify eyes at target positions (720, 432) and (360, 432)
+- [ ] Monitor production for first week
 
 ---
 
