@@ -17,6 +17,7 @@ export function UploadPhoto() {
   const [detectingEyes, setDetectingEyes] = useState(false);
   const [aligning, setAligning] = useState(false);
   const [alignedFile, setAlignedFile] = useState<File | null>(null);
+  const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
@@ -44,6 +45,7 @@ export function UploadPhoto() {
       setRotation(newRotation);
       setEyeCoords(null); // Clear old eye coordinates
       setAlignedFile(null); // Clear old alignment
+      hasAlignedRef.current = false; // Reset alignment flag
       setDetectingEyes(true); // Re-run detection on rotated image
 
       // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
@@ -77,6 +79,7 @@ export function UploadPhoto() {
     setRotation(0); // Reset rotation for new file
     setEyeCoords(null); // Reset eye coordinates
     setAlignedFile(null); // Reset alignment
+    hasAlignedRef.current = false; // Reset alignment flag
     setDetectingEyes(true); // Start detection
 
     // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
@@ -102,11 +105,13 @@ export function UploadPhoto() {
     if (!coords) {
       setError('Could not detect eyes in photo. You can still upload without alignment.');
       setAlignedFile(null);
+      hasAlignedRef.current = false;
       return;
     }
 
-    // Automatically align photo after eye detection
-    if (selectedFile) {
+    // Automatically align photo after eye detection (only if not already done)
+    if (selectedFile && !hasAlignedRef.current) {
+      hasAlignedRef.current = true; // Mark as processing
       try {
         setAligning(true);
         setError('');
@@ -118,6 +123,7 @@ export function UploadPhoto() {
         setAligning(false);
         setError('Failed to align photo. You can still upload the original.');
         setAlignedFile(null);
+        hasAlignedRef.current = false; // Reset on error
       }
     }
   };
@@ -149,6 +155,7 @@ export function UploadPhoto() {
       setDetectingEyes(false);
       setAligning(false);
       setAlignedFile(null);
+      hasAlignedRef.current = false;
       setCustomDate('');
       setShowDatePicker(false);
       if (fileInputRef.current) {
@@ -382,6 +389,7 @@ export function UploadPhoto() {
                 setDetectingEyes(false);
                 setAligning(false);
                 setAlignedFile(null);
+                hasAlignedRef.current = false;
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
