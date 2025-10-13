@@ -4,9 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-13 (Session 11 - Build Errors Fixed)
+> **Last Updated**: 2025-10-13 (Session 12 - Upload Issues Fixed)
 >
-> **Current Work**: MediaPipe eye detection working, photos no longer stuck, alignment disabled
+> **Current Work**: ✅ Upload working end-to-end, ready to implement client-side alignment
 
 ---
 
@@ -15,14 +15,16 @@
 ### Project State
 
 **Wizard of Oz (Baby Photo Alignment App)**:
-- **Status**: 🟢 WORKING - MediaPipe eye detection functional, photos upload successfully
+- **Status**: 🟢 FULLY WORKING - End-to-end upload with eye detection
 - **Vercel URL**: (User has deployment URL)
 - **Repository Path**: `Aperture/projects/wizard-of-oz`
 - **Supabase URL**: `https://zaruvcwdqkqmyscwvxci.supabase.co`
 - **Latest Changes**:
-  - Replaced Gemini AI with MediaPipe Face Landmarker (e3d5ff2)
-  - Fixed build errors (57a9ff9, 241b645)
-  - Disabled obsolete detect-eyes API (7f9878a)
+  - Fixed Supabase API key issue (truncated key causing all operations to fail)
+  - Fixed photos stuck in "processing" state (aligned_url now set on upload)
+  - Fixed detectingEyes state management (rotation now properly resets state)
+  - Enhanced logging throughout upload flow for debugging
+  - Migration fixed 1 photo stuck in database
 
 ### Infrastructure Status
 
@@ -35,6 +37,27 @@
 - Observability system implemented (`/vercel-logs` available)
 
 ### Recent Improvements
+
+**Upload Flow Fixes** (Session 12 - 2025-10-13):
+- ✅ **Fixed Invalid Supabase API Key** - Local .env had truncated VITE_SUPABASE_ANON_KEY
+  - Key was cut off mid-signature (ended with `...Cg-`)
+  - Retrieved full key from Vercel environment variables
+  - All Supabase operations now work (auth, database, storage)
+- ✅ **Fixed Photos Stuck in "Processing"** - Root cause: alignment disabled but UI expects aligned_url
+  - PhotoGallery polls every 5 seconds waiting for aligned_url to be set
+  - Since alignment API disabled, aligned_url never got set
+  - Solution: Set aligned_url = original_url on upload (usePhotoStore.ts:164)
+  - Created migration script to fix existing stuck photos
+- ✅ **Fixed detectingEyes State Management** - Button getting stuck on "Detecting..."
+  - Rotation created new file but didn't reset eye detection state
+  - Added state reset + 15-second timeout on rotation (UploadPhoto.tsx:84-90)
+  - Added same timeout on initial file selection (UploadPhoto.tsx:123-125)
+  - Ensures upload button always becomes enabled
+- ✅ **Enhanced Logging** - Added detailed logs throughout upload flow
+  - Component: handleUpload logs (UploadPhoto.tsx:157-163)
+  - Store: uploadPhoto logs with [uploadPhoto] prefix
+  - Store: fetchPhotos logs with [fetchPhotos] prefix
+  - Makes debugging upload issues much easier
 
 **Build Errors & Log Access** (Session 11 - 2025-10-13):
 - ✅ **Fixed Vercel build error** - Removed Python function config from vercel.json
@@ -149,28 +172,34 @@
 
 ### Priority 1: ✅ COMPLETE - System Working End-to-End
 
-**Current Functionality** (as of Session 11):
+**Current Functionality** (as of Session 12):
 - ✅ MediaPipe eye detection works in browser
 - ✅ Eye coordinates save to database
-- ✅ Photos upload successfully
+- ✅ Photos upload successfully (no more stuck in "processing")
+- ✅ Upload button properly manages state (no more stuck on "Detecting...")
 - ✅ No build errors
 - ✅ No runtime errors (404s fixed)
 - ✅ Log access working for debugging
+- ✅ Supabase connection fully operational (API key fixed)
 
-**What's NOT Working (By Design)**:
-- ❌ Photo alignment - Removed when switching to MediaPipe
+**What's NOT Working (Intentionally Disabled)**:
+- ❌ Photo alignment - Set to original (no transformation applied)
 - ❌ Timelapse generation - Feature planned but not implemented
 
-**Trade-off Made**:
-- Prioritized reliable eye detection over photo alignment
-- Can re-implement alignment later with saved coordinates
-- Current: Photos show with green dots on detected eyes (if implemented in UI)
+**Current Behavior**:
+- Photos display immediately after upload (aligned_url = original_url)
+- Eye coordinates are saved but not used for transformation yet
+- Ready to implement client-side alignment as next step
 
-### Priority 2: 🎨 OPTIONAL - Implement Photo Alignment
+### Priority 2: 🎯 NEXT - Implement Client-Side Photo Alignment
 
-**Why Optional**: System works without alignment - photos upload, eyes detected, stored in database
+**Status**: Ready to implement (Session 13+)
 
-**If User Wants Alignment**:
+**Decision Made**: Option A - Client-Side Alignment
+- Faster user experience (no server round-trip)
+- Consistent with client-side eye detection (privacy-first)
+- Can build on existing `rotateImage()` function
+- Simpler architecture (no async processing state)
 
 **Option A: Client-Side Alignment (Recommended)**
 - Use browser Canvas API to rotate/crop photos

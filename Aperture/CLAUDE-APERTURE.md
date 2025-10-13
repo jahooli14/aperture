@@ -37,13 +37,21 @@ Read these files IN ORDER:
 
 ## 🎯 Current Tasks & Status
 
-> **Last Updated**: 2025-10-13
+> **Last Updated**: 2025-10-13 (Session 12)
 >
 > **📍 For detailed tasks, implementation notes, and verification steps → See `NEXT_SESSION.md`**
 
-**Active Project**: Wizard of Oz (Photo Alignment)
-**Status**: 🟢 OpenCV solution working locally, needs production integration
+**Active Project**: Wizard of Oz (Baby Photo App)
+**Status**: 🟢 Upload working end-to-end, ready for client-side alignment implementation
 **Blockers**: None
+
+**Session 12 Accomplishments**:
+- ✅ Fixed invalid Supabase API key (was truncated)
+- ✅ Fixed photos stuck in "processing" state
+- ✅ Fixed upload button stuck on "Detecting..."
+- ✅ Enhanced logging throughout upload flow
+
+**Next**: Implement client-side photo alignment using Canvas API
 
 ---
 
