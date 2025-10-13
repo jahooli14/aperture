@@ -54,19 +54,23 @@ def align_face(image_bytes, left_eye, right_eye):
 
     # STEP 1: Rotate image so eyes are horizontal
     # Calculate angle to make eyes horizontal
-    # The angle is how much the eye line is tilted from horizontal
-    delta_y = right_eye[1] - left_eye[1]  # Positive if right eye is lower
-    delta_x = right_eye[0] - left_eye[0]  # Negative if right eye is to the left (which it should be)
+    # We measure the angle of the line connecting the eyes
+    # Baby's left eye to baby's right eye
+    delta_y = left_eye[1] - right_eye[1]  # How much higher is left eye vs right?
+    delta_x = left_eye[0] - right_eye[0]  # How much more to the right is left eye?
 
-    # We want the tilt angle: arctan(rise/run) = arctan(delta_y / abs(delta_x))
-    # Negative angle means rotate counter-clockwise to level
-    angle_rad = np.arctan2(delta_y, abs(delta_x))
-    angle_deg = -np.degrees(angle_rad)  # Negate because OpenCV rotates clockwise for positive angles
+    # Calculate rotation angle
+    # If delta_y > 0: left eye is higher, need to rotate CCW (negative angle)
+    # The angle is simply arctan(opposite/adjacent)
+    angle_rad = np.arctan2(delta_y, delta_x)
+    angle_deg = -np.degrees(angle_rad)  # Negate for OpenCV
 
     print(f'🔄 Step 1 - Rotate:')
-    print(f'   Delta Y (right - left): {delta_y:.1f}px')
-    print(f'   Delta X (right - left): {delta_x:.1f}px')
-    print(f'   Rotation needed: {angle_deg:.2f}° (negative = counter-clockwise)')
+    print(f'   Left eye: ({left_eye[0]:.1f}, {left_eye[1]:.1f})')
+    print(f'   Right eye: ({right_eye[0]:.1f}, {right_eye[1]:.1f})')
+    print(f'   Delta Y (left - right): {delta_y:.1f}px (positive = left higher)')
+    print(f'   Delta X (left - right): {delta_x:.1f}px')
+    print(f'   Rotation angle: {angle_deg:.2f}°')
 
     # Calculate rotation center (midpoint between eyes)
     center = ((left_eye + right_eye) / 2).astype(np.float32)
