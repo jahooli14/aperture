@@ -80,67 +80,56 @@
 
 ## ⏭️ Next Steps
 
-### Priority 1: Production Integration of OpenCV Alignment
+### Priority 1: ✅ COMPLETE - Production Integration of Alignment (Session 8)
 
-**Current State**:
-- ✅ Working Python OpenCV script (`align_photo_opencv.py`)
-- ✅ Coordinate scaling fix identified and tested
-- ✅ Successful local validation with real photos
-- ❌ Not yet integrated into production Vercel API
+**Implementation Summary**:
+- ✅ Created `/api/align-photo-v4.ts` with pure TypeScript/Sharp implementation
+- ✅ Implemented coordinate scaling logic with input validation
+- ✅ Converted from Python/OpenCV to TypeScript similarity transform
+  - Created `api/lib/alignment.ts` with `calculateSimilarityTransform()`
+  - Same mathematical correctness as OpenCV's `estimateAffinePartial2D`
+  - Uses Sharp's `affine()` method for image transformation
+- ✅ Successfully deployed to Vercel (no Python dependencies needed)
+- ✅ Updated `detect-eyes.ts` to call v4 endpoint
+- ✅ Cleaned up test scripts and artifacts
+  - Deleted 9 test/debug scripts
+  - Removed test-output/ directory (33 test images, ~1.5MB)
+  - Organized utilities into `tools/` directory with README
 
-**What's Needed**:
+**What's Ready**:
+- Production API endpoint: `/api/align-photo-v4`
+- Deployment URL: `https://aperture-ehswit11y-daniels-projects-ca7c7923.vercel.app`
+- Status: READY - Deployed and waiting for testing
 
-#### Step 1: Create Production Node.js Wrapper (30 min)
+**Next Action Required**: End-to-end testing with real photos
 
-- [ ] Create new API endpoint `/api/align-photo-v4.ts`
-- [ ] Implement coordinate scaling logic:
-  ```typescript
-  const scaleFactor = actualImageWidth / detectionImageWidth;
-  const scaledCoords = {
-    leftEye: {
-      x: dbCoords.leftEye.x * scaleFactor,
-      y: dbCoords.leftEye.y * scaleFactor
-    },
-    rightEye: {
-      x: dbCoords.rightEye.x * scaleFactor,
-      y: dbCoords.rightEye.y * scaleFactor
-    }
-  };
+### Priority 2: Validation & Testing (30-45 min)
+
+**Testing Plan**:
+- [ ] Upload 3-5 test photos via Wizard of Oz UI
+- [ ] Monitor Vercel logs during processing:
+  ```bash
+  /vercel-logs align-photo-v4 20
   ```
-- [ ] Add input validation (verify dimensions match assumptions)
-- [ ] Spawn Python subprocess to call `align_photo_opencv.py`
-- [ ] Handle errors and edge cases
-- [ ] Add production logging (processing time, success/failure)
-
-#### Step 2: Deploy and Test (30 min)
-
-- [ ] Install Python + opencv-python-headless in Vercel environment
-- [ ] Deploy to Vercel
-- [ ] Upload 3-5 test photos via UI
-- [ ] Wait for processing and check logs
-- [ ] Download aligned results and verify eye positions
-- [ ] Measure accuracy: eyes within ±5px of targets?
-
-#### Step 3: Cleanup (20 min)
-
-- [ ] Remove old alignment implementations (v2, v3)
-- [ ] Delete test scripts from `projects/wizard-of-oz/`:
-  - `test-opencv-alignment.cjs`
-  - `test-hybrid-alignment.cjs`
-  - `debug-coordinates.cjs`
-  - Other debugging scripts
-- [ ] Keep `align_photo_opencv.py` (production dependency)
-- [ ] Clean up `test-output/` directory
-- [ ] Update database: mark old failed photos for reprocessing if needed
-
-#### Step 4: Validation & Documentation (15 min)
-
 - [ ] Verify success criteria:
   - Processing time < 10 seconds per photo
-  - Eye positions within ±5px of targets
+  - Eye positions within ±5px of targets (720, 432) and (360, 432)
   - No errors in production logs
-- [ ] Document the solution in code comments
-- [ ] Update NEXT_SESSION.md with final status
+  - Aligned photos look visually correct
+- [ ] Download aligned results and verify eye positions manually
+- [ ] If any issues: Check logs, adjust algorithm, redeploy
+
+**Expected Results**:
+- Coordinate scaling bug fixed (90-minute debugging waste prevented)
+- Accurate eye alignment using similarity transform
+- Fast processing (Sharp is optimized for serverless)
+
+### Priority 3: Post-Validation Tasks (if testing succeeds)
+
+- [ ] Mark old failed photos for reprocessing (if needed)
+- [ ] Monitor production usage for first week
+- [ ] Document any edge cases discovered
+- [ ] Consider adding alignment accuracy metrics to database
 
 ---
 
