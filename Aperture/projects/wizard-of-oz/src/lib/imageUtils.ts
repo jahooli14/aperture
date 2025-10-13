@@ -1,6 +1,24 @@
 /**
- * Image manipulation utilities for photo uploads
+ * Image manipulation utilities for photo uploads and alignment
  */
+
+export interface EyeCoordinates {
+  leftEye: { x: number; y: number };
+  rightEye: { x: number; y: number };
+  confidence: number;
+  imageWidth: number;
+  imageHeight: number;
+}
+
+export interface AlignmentResult {
+  alignedImage: File;
+  transform: {
+    rotation: number;
+    scale: number;
+    translateX: number;
+    translateY: number;
+  };
+}
 
 /**
  * Rotates an image file by the specified degrees
@@ -82,4 +100,121 @@ export function validateImageFile(file: File): { isValid: boolean; error?: strin
   }
 
   return { isValid: true };
+}
+
+/**
+ * Target eye positions for aligned photos
+ * Eyes should be horizontally aligned at 40% from top
+ * Left eye at 33%, right eye at 67% horizontally
+ */
+const TARGET_WIDTH = 1080;
+const TARGET_HEIGHT = 1350;
+const TARGET_LEFT_EYE = { x: TARGET_WIDTH * 0.33, y: TARGET_HEIGHT * 0.40 };
+const TARGET_RIGHT_EYE = { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * 0.40 };
+
+/**
+ * Aligns a photo based on detected eye coordinates
+ * Uses affine transformation to rotate, scale, and translate the image
+ * so that eyes match target positions
+ *
+ * @param file - The image file to align
+ * @param eyeCoords - Detected eye coordinates
+ * @returns Promise resolving to aligned image file and transformation details
+ */
+export async function alignPhoto(
+  file: File,
+  eyeCoords: EyeCoordinates
+): Promise<AlignmentResult> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+
+        // Set output dimensions
+        canvas.width = TARGET_WIDTH;
+        canvas.height = TARGET_HEIGHT;
+
+        // Calculate transformation parameters
+        const { leftEye, rightEye } = eyeCoords;
+
+        // Calculate angle between eyes
+        const dx = rightEye.x - leftEye.x;
+        const dy = rightEye.y - leftEye.y;
+        const angle = Math.atan2(dy, dx);
+
+        // Calculate scale to match target eye distance
+        const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
+        const targetEyeDistance = TARGET_RIGHT_EYE.x - TARGET_LEFT_EYE.x;
+        const scale = targetEyeDistance / currentEyeDistance;
+
+        // Calculate center point between eyes (source)
+        const sourceCenterX = (leftEye.x + rightEye.x) / 2;
+        const sourceCenterY = (leftEye.y + rightEye.y) / 2;
+
+        // Calculate center point between eyes (target)
+        const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
+        const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
+
+        // Apply transformation
+        ctx.save();
+
+        // Move to target center
+        ctx.translate(targetCenterX, targetCenterY);
+
+        // Rotate to align eyes horizontally
+        ctx.rotate(-angle);
+
+        // Scale to match target eye distance
+        ctx.scale(scale, scale);
+
+        // Move source center to origin
+        ctx.translate(-sourceCenterX, -sourceCenterY);
+
+        // Draw the image
+        ctx.drawImage(img, 0, 0);
+
+        ctx.restore();
+
+        // Convert canvas to blob then to file
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Failed to create aligned image'));
+            return;
+          }
+
+          const alignedFile = new File(
+            [blob],
+            file.name.replace(/\.(jpg|jpeg|png)$/i, '-aligned.$1'),
+            { type: file.type }
+          );
+
+          resolve({
+            alignedImage: alignedFile,
+            transform: {
+              rotation: -angle * (180 / Math.PI), // Convert to degrees
+              scale,
+              translateX: targetCenterX - sourceCenterX * scale,
+              translateY: targetCenterY - sourceCenterY * scale,
+            },
+          });
+
+          URL.revokeObjectURL(url);
+        }, file.type, 0.95);
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        reject(error);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image for alignment'));
+    };
+
+    img.src = url;
+  });
 }

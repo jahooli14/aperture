@@ -117,15 +117,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .getPublicUrl(uploadData.path);
 
       // Prepare photo record with eye coordinates if available
-      // Since alignment is currently disabled, set aligned_url to original_url immediately
-      // to prevent photos from being stuck in "processing" state
+      // Note: If eyes were detected, the uploaded file is already aligned client-side
+      // Both original_url and aligned_url point to the same aligned image
       type PhotoInsert = Database['public']['Tables']['photos']['Insert'];
 
       const photoRecord: PhotoInsert = {
         user_id: user.id,
         upload_date: targetDate,
         original_url: publicUrl,
-        aligned_url: publicUrl, // Use original as aligned since alignment disabled
+        aligned_url: publicUrl, // Points to aligned image (if eyes were detected)
         eye_coordinates: eyeCoords ? {
           leftEye: eyeCoords.leftEye,
           rightEye: eyeCoords.rightEye,

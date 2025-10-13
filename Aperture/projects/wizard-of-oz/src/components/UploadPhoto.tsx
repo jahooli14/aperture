@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
-import { rotateImage, fileToDataURL, validateImageFile } from '../lib/imageUtils';
+import { rotateImage, fileToDataURL, validateImageFile, alignPhoto } from '../lib/imageUtils';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
@@ -15,6 +15,8 @@ export function UploadPhoto() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [eyeCoords, setEyeCoords] = useState<EyeCoordinates | null>(null);
   const [detectingEyes, setDetectingEyes] = useState(false);
+  const [aligning, setAligning] = useState(false);
+  const [alignedFile, setAlignedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
@@ -41,6 +43,7 @@ export function UploadPhoto() {
       setSelectedFile(rotatedFile);
       setRotation(newRotation);
       setEyeCoords(null); // Clear old eye coordinates
+      setAlignedFile(null); // Clear old alignment
       setDetectingEyes(true); // Re-run detection on rotated image
 
       // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
@@ -73,6 +76,7 @@ export function UploadPhoto() {
     setSelectedFile(file);
     setRotation(0); // Reset rotation for new file
     setEyeCoords(null); // Reset eye coordinates
+    setAlignedFile(null); // Reset alignment
     setDetectingEyes(true); // Start detection
 
     // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
@@ -91,11 +95,30 @@ export function UploadPhoto() {
     }
   };
 
-  const handleEyeDetection = (coords: EyeCoordinates | null) => {
+  const handleEyeDetection = async (coords: EyeCoordinates | null) => {
     setEyeCoords(coords);
     setDetectingEyes(false);
+
     if (!coords) {
-      setError('Could not detect eyes in photo. You can still upload, but alignment may not work.');
+      setError('Could not detect eyes in photo. You can still upload without alignment.');
+      setAlignedFile(null);
+      return;
+    }
+
+    // Automatically align photo after eye detection
+    if (selectedFile) {
+      try {
+        setAligning(true);
+        setError('');
+        const result = await alignPhoto(selectedFile, coords);
+        setAlignedFile(result.alignedImage);
+        setAligning(false);
+      } catch (err) {
+        console.error('Alignment error:', err);
+        setAligning(false);
+        setError('Failed to align photo. You can still upload the original.');
+        setAlignedFile(null);
+      }
     }
   };
 
@@ -113,7 +136,9 @@ export function UploadPhoto() {
 
     try {
       setError('');
-      await uploadPhoto(selectedFile, eyeCoords, displayDate);
+      // Upload aligned photo if available, otherwise upload original
+      const fileToUpload = alignedFile || selectedFile;
+      await uploadPhoto(fileToUpload, eyeCoords, displayDate);
 
       // Clear component state
       setPreview(null);
@@ -122,6 +147,8 @@ export function UploadPhoto() {
       setRotation(0);
       setEyeCoords(null);
       setDetectingEyes(false);
+      setAligning(false);
+      setAlignedFile(null);
       setCustomDate('');
       setShowDatePicker(false);
       if (fileInputRef.current) {
@@ -318,16 +345,28 @@ export function UploadPhoto() {
             )}
           </div>
 
-          {/* Detection status indicator */}
+          {/* Detection and alignment status indicators */}
           {detectingEyes && (
             <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm text-center">
               🔍 Detecting eyes...
             </div>
           )}
 
-          {eyeCoords && (
+          {aligning && (
+            <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 text-sm text-center">
+              ✨ Aligning photo...
+            </div>
+          )}
+
+          {eyeCoords && !aligning && alignedFile && (
             <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center">
-              ✓ Eyes detected successfully
+              ✓ Eyes detected and photo aligned!
+            </div>
+          )}
+
+          {eyeCoords && !aligning && !alignedFile && (
+            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm text-center">
+              ⚠️ Eyes detected but alignment failed. Original will be uploaded.
             </div>
           )}
 
@@ -341,6 +380,8 @@ export function UploadPhoto() {
                 setRotation(0);
                 setEyeCoords(null);
                 setDetectingEyes(false);
+                setAligning(false);
+                setAlignedFile(null);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
@@ -356,10 +397,10 @@ export function UploadPhoto() {
             <button
               type="button"
               onClick={handleUpload}
-              disabled={uploading || detectingEyes}
+              disabled={uploading || detectingEyes || aligning}
               className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation"
             >
-              {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : 'Upload'}
+              {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : aligning ? 'Aligning...' : 'Upload'}
             </button>
           </div>
         </div>
