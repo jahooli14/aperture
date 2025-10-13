@@ -3,6 +3,11 @@
     "api/**/*.ts": {
       "maxDuration": 60,
       "memory": 2048
+    },
+    "api/**/*.py": {
+      "runtime": "python3.12",
+      "maxDuration": 60,
+      "memory": 2048
     }
   },
   "buildCommand": "npm install --arch=x64 --platform=linux sharp && npm run build"
