@@ -22,19 +22,32 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   deleting: false,
 
   fetchPhotos: async () => {
+    console.log('📸 Fetching photos...');
     set({ loading: true });
-    const { data, error } = await supabase
-      .from('photos')
-      .select('*')
-      .order('upload_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching photos:', error);
-      set({ loading: false });
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .order('upload_date', { ascending: false });
+
+      console.log('📸 Fetch result:', {
+        photoCount: data?.length || 0,
+        error: error?.message || 'none'
+      });
+
+      if (error) {
+        console.error('❌ Error fetching photos:', error);
+        set({ loading: false });
+        return;
+      }
+
+      set({ photos: data || [], loading: false });
+      console.log('✅ Photos loaded successfully:', data?.length || 0);
+    } catch (err) {
+      console.error('❌ Unexpected error fetching photos:', err);
+      set({ loading: false, photos: [] });
     }
-
-    set({ photos: data || [], loading: false });
   },
 
   uploadPhoto: async (file: File, uploadDate?: string) => {
