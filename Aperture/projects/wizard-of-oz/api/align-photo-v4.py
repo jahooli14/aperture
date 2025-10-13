@@ -90,8 +90,69 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'✅ Transformation applied')
     print(f'   Output size: {OUTPUT_SIZE[0]}x{OUTPUT_SIZE[1]}')
 
+    # VERIFY: Re-detect eyes in the output image to confirm actual positions
+    # Convert to grayscale for eye detection
+    gray = cv2.cvtColor(aligned, cv2.COLOR_BGR2GRAY)
+
+    # Use Haar Cascade for eye detection (built into OpenCV)
+    eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
+    detected_eyes = eye_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+
+    print(f'\n🔍 VERIFICATION: Re-detecting eyes in output image')
+    print(f'   Detected {len(detected_eyes)} eye regions')
+
+    actual_eye_positions = []
+    if len(detected_eyes) >= 2:
+        # Sort by x-coordinate (left to right in image = right to left eyes for baby facing camera)
+        sorted_eyes = sorted(detected_eyes, key=lambda e: e[0])
+
+        # Right eye (left side of image), Left eye (right side of image)
+        for i, (x, y, w, h) in enumerate(sorted_eyes[:2]):
+            # Eye center is middle of detected rectangle
+            center_x = x + w // 2
+            center_y = y + h // 2
+            actual_eye_positions.append((center_x, center_y))
+            eye_label = "RIGHT" if i == 0 else "LEFT"
+            print(f'   {eye_label} eye detected at: ({center_x}, {center_y})')
+
+    # Calculate errors
+    if len(actual_eye_positions) == 2:
+        actual_right_eye, actual_left_eye = actual_eye_positions
+
+        left_error_x = actual_left_eye[0] - TARGET_LEFT_EYE[0]
+        left_error_y = actual_left_eye[1] - TARGET_LEFT_EYE[1]
+        right_error_x = actual_right_eye[0] - TARGET_RIGHT_EYE[0]
+        right_error_y = actual_right_eye[1] - TARGET_RIGHT_EYE[1]
+
+        max_error = max(abs(left_error_x), abs(left_error_y), abs(right_error_x), abs(right_error_y))
+
+        print(f'\n📏 ACCURACY:')
+        print(f'   LEFT eye:')
+        print(f'      Expected: ({TARGET_LEFT_EYE[0]}, {TARGET_LEFT_EYE[1]})')
+        print(f'      Actual:   ({actual_left_eye[0]}, {actual_left_eye[1]})')
+        print(f'      Error:    ({left_error_x:+d}px, {left_error_y:+d}px)')
+        print(f'   RIGHT eye:')
+        print(f'      Expected: ({TARGET_RIGHT_EYE[0]}, {TARGET_RIGHT_EYE[1]})')
+        print(f'      Actual:   ({actual_right_eye[0]}, {actual_right_eye[1]})')
+        print(f'      Error:    ({right_error_x:+d}px, {right_error_y:+d}px)')
+        print(f'   Max error: {max_error}px')
+
+        if max_error <= 10:
+            print(f'   ✅ PASS - Eyes within ±10px tolerance')
+        elif max_error <= 30:
+            print(f'   ⚠️  ACCEPTABLE - Eyes within ±30px (minor adjustment needed)')
+        else:
+            print(f'   ❌ FAIL - Eyes more than 30px off target')
+    else:
+        print(f'   ⚠️  Could not verify - detected {len(actual_eye_positions)} eyes instead of 2')
+
     # Add debug visualization
     debug_img = aligned.copy()
+
+    # Draw detected eyes as GREEN circles if verification worked
+    if len(actual_eye_positions) == 2:
+        cv2.circle(debug_img, actual_eye_positions[1], 6, (0, 255, 0), -1)  # Left eye (green)
+        cv2.circle(debug_img, actual_eye_positions[0], 6, (0, 255, 0), -1)  # Right eye (green)
 
     # Blue dots at TARGET eye positions (where eyes should be)
     cv2.circle(debug_img, TARGET_LEFT_EYE, 8, (255, 0, 0), -1)
@@ -105,10 +166,11 @@ def align_face(image_bytes, left_eye, right_eye):
     cv2.line(debug_img, (TARGET_RIGHT_EYE[0], 0), (TARGET_RIGHT_EYE[0], OUTPUT_SIZE[1]), (0, 255, 255), 1)
 
     print(f'\n📊 Visual debugging:')
+    print(f'   GREEN dots = actual detected eye positions (if found)')
     print(f'   Blue dots = target eye positions')
     print(f'   Yellow horizontal line = Y=432 (eye level)')
     print(f'   Yellow vertical lines = X=360 and X=720 (eye X positions)')
-    print(f'   Eyes should be centered on blue dots')
+    print(f'   GREEN should overlap BLUE dots for perfect alignment')
 
     # Encode as JPEG
     _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
