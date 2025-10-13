@@ -143,13 +143,19 @@ class handler(BaseHTTPRequestHandler):
             print(f'   Right: ({landmarks["rightEye"]["x"]:.1f}, {landmarks["rightEye"]["y"]:.1f})')
             print(f'   In detection image ({landmarks["imageWidth"]}x{landmarks["imageHeight"]})')
 
+            # SWAP the eye labels - Gemini labels from viewer perspective, not anatomical
+            # Baby's anatomical LEFT eye appears on RIGHT side of image when facing camera
+            print(f'\n🔄 SWAPPING eye labels (Gemini uses viewer perspective, not anatomical)')
+            swapped_left_eye = landmarks['rightEye']  # Gemini's "right" is baby's left
+            swapped_right_eye = landmarks['leftEye']  # Gemini's "left" is baby's right
+
             scaled_left_eye = (
-                landmarks['leftEye']['x'] * scale_factor,
-                landmarks['leftEye']['y'] * scale_factor
+                swapped_left_eye['x'] * scale_factor,
+                swapped_left_eye['y'] * scale_factor
             )
             scaled_right_eye = (
-                landmarks['rightEye']['x'] * scale_factor,
-                landmarks['rightEye']['y'] * scale_factor
+                swapped_right_eye['x'] * scale_factor,
+                swapped_right_eye['y'] * scale_factor
             )
 
             print(f'\n👁️  SCALED eye positions (AFTER scaling to actual image):')
