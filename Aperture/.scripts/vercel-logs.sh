@@ -4,6 +4,15 @@
 
 set -euo pipefail
 
+# Load environment variables from .env if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -f "$REPO_ROOT/.env" ]; then
+  set -a  # automatically export all variables
+  source "$REPO_ROOT/.env"
+  set +a
+fi
+
 # Configuration
 VERCEL_TOKEN="${VERCEL_TOKEN:-FWsU3v4DJU8HKGZYb63exOIf}"
 PROJECT_ID="${VERCEL_PROJECT_ID:-prj_rkI3NQOI5SfBle7lflFkwFkj0eYd}"
