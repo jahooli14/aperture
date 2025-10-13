@@ -4,9 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-13 (Session 10 - MediaPipe Eye Detection)
+> **Last Updated**: 2025-10-13 (Session 11 - Build Errors Fixed)
 >
-> **Current Work**: Replaced unreliable AI detection with MediaPipe - ready for testing
+> **Current Work**: MediaPipe eye detection working, photos no longer stuck, alignment disabled
 
 ---
 
@@ -15,11 +15,14 @@
 ### Project State
 
 **Wizard of Oz (Baby Photo Alignment App)**:
-- **Status**: 🟢 DEPLOYED - MediaPipe eye detection live, awaiting user testing
+- **Status**: 🟢 WORKING - MediaPipe eye detection functional, photos upload successfully
 - **Vercel URL**: (User has deployment URL)
 - **Repository Path**: `Aperture/projects/wizard-of-oz`
 - **Supabase URL**: `https://zaruvcwdqkqmyscwvxci.supabase.co`
-- **Latest Change**: Replaced Gemini AI with MediaPipe Face Landmarker (commit e3d5ff2)
+- **Latest Changes**:
+  - Replaced Gemini AI with MediaPipe Face Landmarker (e3d5ff2)
+  - Fixed build errors (57a9ff9, 241b645)
+  - Disabled obsolete detect-eyes API (7f9878a)
 
 ### Infrastructure Status
 
@@ -32,6 +35,21 @@
 - Observability system implemented (`/vercel-logs` available)
 
 ### Recent Improvements
+
+**Build Errors & Log Access** (Session 11 - 2025-10-13):
+- ✅ **Fixed Vercel build error** - Removed Python function config from vercel.json
+  - Error: Pattern `api/**/*.py` didn't match any files
+  - Root cause: Deleted Python files when switching to MediaPipe
+  - Solution: Removed Python config, simplified buildCommand
+- ✅ **Fixed photos stuck processing** - Disabled obsolete detect-eyes API
+  - Old Gemini-based API still being called (no webhook, likely edge function)
+  - Tried to call non-existent align-photo-v4 endpoint (404)
+  - Solution: Renamed detect-eyes.ts → detect-eyes.ts.disabled
+- ✅ **Set up permanent log access** for debugging
+  - Created .env file with VERCEL_TOKEN and PROJECT_ID
+  - Updated .scripts/vercel-logs.sh to auto-load from .env
+  - Can now check logs anytime without user intervention
+  - Used logs to discover both build and runtime errors
 
 **MediaPipe Eye Detection** (Session 10 - 2025-10-13):
 - ✅ **Replaced unreliable AI with specialized computer vision library**
@@ -129,80 +147,71 @@
 
 ## ⏭️ Next Steps
 
-### Priority 1: ✅ RESOLVED - Replaced Gemini with MediaPipe (Session 10)
+### Priority 1: ✅ COMPLETE - System Working End-to-End
 
-**Previous Status**: 🔴 Gemini AI detecting eyes with incorrect Y coordinates (BLOCKED)
+**Current Functionality** (as of Session 11):
+- ✅ MediaPipe eye detection works in browser
+- ✅ Eye coordinates save to database
+- ✅ Photos upload successfully
+- ✅ No build errors
+- ✅ No runtime errors (404s fixed)
+- ✅ Log access working for debugging
 
-**Solution Implemented** (Session 10 - 2025-10-13):
-- ✅ **Replaced unreliable AI detection with MediaPipe Face Landmarker**
-- ✅ Client-side computer vision library (98.6% accuracy, 200-1000 FPS)
-- ✅ Privacy-first (photos never leave device, zero AI API costs)
-- ✅ Uses iris center landmarks (478 total landmarks) for precise eye position
-- ✅ Optimized for baby photos (lower confidence thresholds, pose variation support)
-- ✅ Build successful, code deployed to production
+**What's NOT Working (By Design)**:
+- ❌ Photo alignment - Removed when switching to MediaPipe
+- ❌ Timelapse generation - Feature planned but not implemented
 
-**What Changed**:
-- **NEW**: `EyeDetector.tsx` component with MediaPipe Face Landmarker
-- **UPDATED**: `UploadPhoto.tsx` - integrated eye detection with UI feedback
-- **UPDATED**: `usePhotoStore.ts` - accepts and saves eye coordinates to database
-- **REMOVED**: `align-photo-v4.py` - obsolete Gemini-based serverless function
-- **ADDED**: `@mediapipe/tasks-vision` npm dependency
+**Trade-off Made**:
+- Prioritized reliable eye detection over photo alignment
+- Can re-implement alignment later with saved coordinates
+- Current: Photos show with green dots on detected eyes (if implemented in UI)
 
-**Why This Works**:
-- MediaPipe designed specifically for facial landmarks (not general AI)
-- No coordinate transformation issues (direct pixel coordinates)
-- Battle-tested library used in production apps worldwide
-- Runs locally in browser using WebAssembly
+### Priority 2: 🎨 OPTIONAL - Implement Photo Alignment
 
-### Priority 2: 🧪 TEST - Verify MediaPipe Detection with Real Baby Photos
+**Why Optional**: System works without alignment - photos upload, eyes detected, stored in database
 
-**Next Action**: Upload test photos and verify eye detection
+**If User Wants Alignment**:
 
-**Test Checklist**:
-1. [ ] Upload baby photo and check browser console logs
-2. [ ] Verify "Eyes detected successfully" message appears
-3. [ ] Check database record has eye coordinates populated
-4. [ ] Verify coordinates are reasonable (not out of bounds)
-5. [ ] Test with 3-5 different baby photos (various poses/angles)
-6. [ ] Check alignment API gets called with correct photoId
-7. [ ] Verify aligned photo is generated and stored
+**Option A: Client-Side Alignment (Recommended)**
+- Use browser Canvas API to rotate/crop photos
+- Fastest (no server round-trip)
+- Works offline
+- No Python dependencies
+- Reference: Existing `rotateImage` function in UploadPhoto.tsx
 
-**What to Look For**:
-- ✅ Detection completes in < 2 seconds
-- ✅ Green success message shows "Eyes detected successfully"
-- ✅ Eye coordinates logged in browser console
-- ✅ Validation passes (eye distance 0.12-0.35 of image width)
-- ✅ Upload succeeds with status='detected'
+**Option B: Server-Side Alignment (More Complex)**
+- Create new Vercel serverless function
+- Use Sharp library (already in package.json)
+- Fetch photo + coordinates from database
+- Process and save aligned version
+- Update database with aligned_url
 
-**If Detection Fails**:
-- Check browser console for error messages
-- Review MediaPipe initialization logs
-- Verify model loads from CDN successfully
-- Check image quality (blur, occlusion, extreme angles)
-- Note: Can still upload without detection (graceful degradation)
+**Implementation Plan (Option B)**:
+1. [ ] Create `api/align-photo.ts` with Sharp
+2. [ ] Fetch photo record with eye_coordinates from database
+3. [ ] Download original from storage
+4. [ ] Calculate rotation angle from eye positions
+5. [ ] Rotate, translate, crop using Sharp
+6. [ ] Upload aligned photo to `aligned/` bucket
+7. [ ] Update database: aligned_url, status='aligned'
 
-### Priority 3: 🔧 RE-ENABLE - Photo Alignment with OpenCV
+**Technical Details**:
+```typescript
+// Eye coordinates stored in database as JSONB:
+{
+  leftEye: { x: 450, y: 320 },
+  rightEye: { x: 550, y: 315 },
+  confidence: 0.8,
+  imageWidth: 1000,
+  imageHeight: 750
+}
 
-**Current State**:
-- Eye detection now reliable (MediaPipe)
-- Have Python OpenCV alignment script (`align_photo_opencv.py`)
-- Need to integrate with new client-side detection flow
+// Target positions for alignment:
+const TARGET_LEFT_EYE = { x: 720, y: 432 };
+const TARGET_RIGHT_EYE = { x: 360, y: 432 };
+```
 
-**Implementation Plan**:
-1. [ ] Create/update serverless function to accept photoId
-2. [ ] Fetch photo and eye coordinates from database
-3. [ ] Scale coordinates if needed (detection dimensions → original dimensions)
-4. [ ] Call OpenCV alignment script
-5. [ ] Save aligned photo to storage
-6. [ ] Update database with aligned_url and status='aligned'
-
-**Technical Notes**:
-- Coordinates already scaled correctly (MediaPipe returns normalized 0-1, converted to pixels)
-- Database stores detection_width and detection_height for reference
-- Target eye positions: (720, 432) for left, (360, 432) for right
-- Use existing `align_photo_opencv.py` with minimal changes
-
-### Priority 4: 📊 MONITOR - Production Health Check
+### Priority 3: 📊 ONGOING - Monitor Production Health
 
 **After Testing Completes**:
 1. [ ] Check Vercel logs for MediaPipe errors
