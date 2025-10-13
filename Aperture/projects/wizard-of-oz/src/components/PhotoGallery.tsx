@@ -12,31 +12,40 @@ export function PhotoGallery() {
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Initial fetch only
   useEffect(() => {
     fetchPhotos();
+  }, []); // Empty deps - only run once on mount
 
-    // Poll for updates if there are photos still processing
-    const hasProcessingPhotos = () => {
-      return photos.some(p => p.original_url && !p.aligned_url);
-    };
+  // Polling effect - only runs when photos change
+  useEffect(() => {
+    const hasProcessingPhotos = photos.some(p => p.original_url && !p.aligned_url);
 
-    let pollInterval: NodeJS.Timeout | null = null;
+    // Clear existing interval
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
 
-    if (hasProcessingPhotos()) {
-      // Poll every 5 seconds while photos are processing
-      pollInterval = setInterval(() => {
-        console.log('📊 Polling for photo updates (photos still processing)...');
+    // Start polling if needed
+    if (hasProcessingPhotos) {
+      console.log('📊 Starting polling - photos still processing...');
+      pollIntervalRef.current = setInterval(() => {
+        console.log('📊 Polling for photo updates...');
         fetchPhotos();
       }, 5000);
     }
 
     return () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
+      if (pollIntervalRef.current) {
+        console.log('📊 Stopping polling');
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
       }
     };
-  }, [fetchPhotos, photos]);
+  }, [photos]); // Only depend on photos, not fetchPhotos
 
   const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
