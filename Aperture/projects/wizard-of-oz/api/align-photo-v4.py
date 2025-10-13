@@ -75,62 +75,77 @@ def align_face(image_bytes, left_eye, right_eye):
     # Calculate rotation center (midpoint between eyes)
     center = ((left_eye + right_eye) / 2).astype(np.float32)
 
-    # STEP 1 + STEP 2 COMBINED: Rotation matrix with scale built in
-    # Calculate scale factor first
-    current_distance = abs(left_eye[0] - right_eye[0])  # Approximate horizontal distance before rotation
-    scale = TARGET_INTER_EYE_DISTANCE / current_distance
+    # Get rotation matrix
+    rotation_matrix = cv2.getRotationMatrix2D(tuple(center), angle_deg, 1.0)
 
-    print(f'🔍 Step 1+2 - Rotate and Scale (combined):')
-    print(f'   Rotation angle: {angle_deg:.2f}°')
-    print(f'   Approx current inter-eye distance: {current_distance:.1f}px')
-    print(f'   Target distance: {TARGET_INTER_EYE_DISTANCE}px')
-    print(f'   Scale factor: {scale:.4f}')
-
-    # Get rotation matrix with SCALE built in
-    rotation_scale_matrix = cv2.getRotationMatrix2D(tuple(center), angle_deg, scale)
-
-    # Calculate new image size to fit rotated+scaled image
+    # Calculate new image size to fit rotated image
     height, width = img.shape[:2]
-    cos = np.abs(rotation_scale_matrix[0, 0])
-    sin = np.abs(rotation_scale_matrix[0, 1])
+    cos = np.abs(rotation_matrix[0, 0])
+    sin = np.abs(rotation_matrix[0, 1])
     new_w = int((height * sin) + (width * cos))
     new_h = int((height * cos) + (width * sin))
 
-    # Adjust matrix for new center
-    rotation_scale_matrix[0, 2] += (new_w / 2) - (center[0] * scale)
-    rotation_scale_matrix[1, 2] += (new_h / 2) - (center[1] * scale)
+    # Adjust rotation matrix for new center
+    rotation_matrix[0, 2] += (new_w / 2) - center[0]
+    rotation_matrix[1, 2] += (new_h / 2) - center[1]
 
-    # Apply rotation+scale in one step
-    rotated_scaled_img = cv2.warpAffine(
+    # Rotate the image
+    rotated_img = cv2.warpAffine(
         img,
-        rotation_scale_matrix,
+        rotation_matrix,
         (new_w, new_h),
         flags=cv2.INTER_CUBIC,
         borderMode=cv2.BORDER_CONSTANT,
         borderValue=(255, 255, 255)
     )
 
-    # Transform eye positions
+    # Rotate the eye positions
     left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
     right_homogeneous = np.array([right_eye[0], right_eye[1], 1])
 
-    transformed_left = rotation_scale_matrix @ left_homogeneous
-    transformed_right = rotation_scale_matrix @ right_homogeneous
+    rotated_left = rotation_matrix @ left_homogeneous
+    rotated_right = rotation_matrix @ right_homogeneous
 
-    print(f'   Transformed eyes: left=({transformed_left[0]:.1f}, {transformed_left[1]:.1f}), right=({transformed_right[0]:.1f}, {transformed_right[1]:.1f})')
-    print(f'   After rotation+scale, inter-eye distance: {abs(transformed_left[0] - transformed_right[0]):.1f}px')
+    print(f'   Rotated left eye: ({rotated_left[0]:.1f}, {rotated_left[1]:.1f})')
+    print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
+    print(f'   Y values should be equal now: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
 
-    # STEP 3: Translate to center eyes
-    eye_midpoint_x = (transformed_left[0] + transformed_right[0]) / 2
-    eye_midpoint_y = (transformed_left[1] + transformed_right[1]) / 2
+    # STEP 2: Scale so inter-eye distance = 360px
+    current_distance = abs(rotated_left[0] - rotated_right[0])
+    scale = TARGET_INTER_EYE_DISTANCE / current_distance
 
+    print(f'🔍 Step 2 - Scale:')
+    print(f'   Current inter-eye distance: {current_distance:.1f}px')
+    print(f'   Target distance: {TARGET_INTER_EYE_DISTANCE}px')
+    print(f'   Scale factor: {scale:.4f}')
+
+    # Scale the image
+    scaled_width = int(new_w * scale)
+    scaled_height = int(new_h * scale)
+    scaled_img = cv2.resize(rotated_img, (scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
+
+    # Scale the eye positions
+    scaled_left = rotated_left * scale
+    scaled_right = rotated_right * scale
+
+    print(f'   Scaled image: {scaled_width}x{scaled_height}')
+    print(f'   Scaled eyes: left=({scaled_left[0]:.1f}, {scaled_left[1]:.1f}), right=({scaled_right[0]:.1f}, {scaled_right[1]:.1f})')
+    print(f'   After scaling, inter-eye distance: {abs(scaled_left[0] - scaled_right[0]):.1f}px')
+
+    # STEP 3: Translate to center eyes (using SCALED eye positions)
+    # Calculate midpoint between SCALED eyes
+    eye_midpoint_x = (scaled_left[0] + scaled_right[0]) / 2
+    eye_midpoint_y = (scaled_left[1] + scaled_right[1]) / 2
+
+    # Target: center of 1080x1080 image
     target_center_x = OUTPUT_SIZE[0] / 2  # 540
     target_center_y = OUTPUT_SIZE[1] / 2  # 540
 
     print(f'📐 Step 3 - Translate (center eyes):')
-    print(f'   Eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
+    print(f'   Scaled eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
     print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
 
+    # Calculate translation to center the eyes
     translation_x = target_center_x - eye_midpoint_x
     translation_y = target_center_y - eye_midpoint_y
 
@@ -142,9 +157,9 @@ def align_face(image_bytes, left_eye, right_eye):
         [0, 1, translation_y]
     ])
 
-    # Apply translation and crop to output size
+    # Apply translation to SCALED image and crop to output size
     final_img = cv2.warpAffine(
-        rotated_scaled_img,
+        scaled_img,
         translation_matrix,
         OUTPUT_SIZE,
         flags=cv2.INTER_CUBIC,
@@ -152,9 +167,9 @@ def align_face(image_bytes, left_eye, right_eye):
         borderValue=(255, 255, 255)
     )
 
-    # Calculate final eye positions
-    final_left = transformed_left + np.array([translation_x, translation_y])
-    final_right = transformed_right + np.array([translation_x, translation_y])
+    # Calculate final eye positions for verification
+    final_left = scaled_left + np.array([translation_x, translation_y])
+    final_right = scaled_right + np.array([translation_x, translation_y])
     final_midpoint = np.array([target_center_x, target_center_y])
 
     print(f'✅ Final eye positions (PREDICTED):')
