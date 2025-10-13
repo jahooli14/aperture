@@ -474,6 +474,40 @@ Claude: [Analyzes PREDICTED vs EXPECTED eye positions]
 Claude: "Found it - ERROR shows 5px drift due to rotation math. Fixing..."
 ```
 
+### Accessing Build/Deployment Logs
+
+**For build errors** (not runtime errors), use the Vercel deployment events API directly:
+
+```bash
+# Get latest deployment ID
+DEPLOYMENT_ID=$(curl -s -H "Authorization: Bearer {TOKEN}" \
+  "https://api.vercel.com/v6/deployments?projectId={PROJECT_ID}&limit=1" | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['deployments'][0]['uid'])")
+
+# Fetch build logs
+curl -s -H "Authorization: Bearer {TOKEN}" \
+  "https://api.vercel.com/v2/deployments/${DEPLOYMENT_ID}/events" | \
+  python3 -c "
+import sys, json
+events = json.load(sys.stdin)
+for e in events:
+    text = e.get('payload', {}).get('text', '')  # ⚠️ Key insight: text is in payload.text
+    if 'error' in text.lower():
+        print(text)
+"
+```
+
+**Key Points:**
+- ⚠️ **Critical:** Log text is in `payload.text`, NOT top-level `text`
+- Build logs show package installation, TypeScript errors, size limit errors
+- Runtime logs (via `/vercel-logs`) show function execution errors
+- Use build logs when deployment state is `ERROR` or `FAILED`
+
+**Common Build Errors:**
+- Package size exceeds 250MB limit: `Error: A Serverless Function has exceeded the unzipped maximum size of 250 MB`
+- TypeScript compilation errors: `error TS2339: Property 'x' does not exist`
+- Missing dependencies in requirements.txt or package.json
+
 ---
 
 ## Metrics & Success Criteria
