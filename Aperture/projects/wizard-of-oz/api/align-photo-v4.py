@@ -165,13 +165,22 @@ def align_face(image_bytes, left_eye, right_eye):
     final_left = scaled_left + translation
     final_right = scaled_right + translation
 
-    print(f'✅ Final eye positions:')
+    print(f'✅ Final eye positions (PREDICTED):')
     print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f}) - Target: {TARGET_LEFT_EYE}')
     print(f'   Right: ({final_right[0]:.1f}, {final_right[1]:.1f}) - Target: {TARGET_RIGHT_EYE}')
     print(f'   Error: Left={np.linalg.norm(final_left - target_left):.1f}px, Right={np.linalg.norm(final_right - np.array(TARGET_RIGHT_EYE)):.1f}px')
 
+    # Draw markers on output to verify eye positions
+    debug_img = final_img.copy()
+    cv2.circle(debug_img, (int(final_left[0]), int(final_left[1])), 5, (255, 0, 0), -1)  # Blue dot on predicted left
+    cv2.circle(debug_img, (int(final_right[0]), int(final_right[1])), 5, (255, 0, 0), -1)  # Blue dot on predicted right
+    cv2.circle(debug_img, TARGET_LEFT_EYE, 5, (0, 255, 0), 2)  # Green circle on target left
+    cv2.circle(debug_img, TARGET_RIGHT_EYE, 5, (0, 255, 0), 2)  # Green circle on target right
+
+    print(f'\n📊 Visual debugging: Blue=predicted, Green=target')
+
     # Encode as JPEG
-    _, buffer = cv2.imencode('.jpg', final_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
 
     return buffer.tobytes()
 
@@ -293,6 +302,9 @@ class handler(BaseHTTPRequestHandler):
 
             print(f'✅ Complete: {aligned_url}')
 
+            # Log debug info to database for easier debugging
+            print(f'\n📊 WRITING DEBUG LOG TO DATABASE')
+
             # Return success
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -302,7 +314,7 @@ class handler(BaseHTTPRequestHandler):
                 'success': True,
                 'alignedUrl': aligned_url,
                 'debug': {
-                    'scaleFactor': scale_factor,
+                    'coordinateScaleFactor': scale_factor,
                     'sourceEyes': {
                         'left': {'x': scaled_left_eye[0], 'y': scaled_left_eye[1]},
                         'right': {'x': scaled_right_eye[0], 'y': scaled_right_eye[1]}
@@ -310,7 +322,8 @@ class handler(BaseHTTPRequestHandler):
                     'targetEyes': {
                         'left': {'x': TARGET_LEFT_EYE[0], 'y': TARGET_LEFT_EYE[1]},
                         'right': {'x': TARGET_RIGHT_EYE[0], 'y': TARGET_RIGHT_EYE[1]}
-                    }
+                    },
+                    'message': 'Check stdout logs for detailed transformation steps'
                 }
             }
 
