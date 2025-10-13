@@ -72,6 +72,11 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Delta X (left - right): {delta_x:.1f}px')
     print(f'   Rotation angle: {angle_deg:.2f}°')
 
+    # Get image dimensions first (needed for rotation center)
+    height, width = img.shape[:2]
+    center_x = width / 2
+    center_y = height / 2
+
     # Rotate using cv2.warpAffine (simpler, no scipy dependency)
     # Get rotation matrix for rotation around image center
     rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle_deg, 1.0)
@@ -87,9 +92,6 @@ def align_face(image_bytes, left_eye, right_eye):
     )
 
     print(f'   Rotated image using cv2.warpAffine')
-
-    # Calculate where eyes are after rotation using the rotation matrix
-    height, width = img.shape[:2]
 
     # Apply rotation matrix to eye coordinates
     left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
