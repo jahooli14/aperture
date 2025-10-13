@@ -112,16 +112,50 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Y values should be equal: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
 
-    # Just output the rotated image cropped to center 1080x1080
-    center_crop_x = int(center_x - 540)
-    center_crop_y = int(center_y - 540)
+    # STEP 2: Crop centered on eye midpoint
+    # Calculate eye midpoint in rotated image
+    eye_midpoint_x = (rotated_left[0] + rotated_right[0]) / 2
+    eye_midpoint_y = (rotated_left[1] + rotated_right[1]) / 2
 
-    final_img = rotated_img[center_crop_y:center_crop_y+1080, center_crop_x:center_crop_x+1080]
+    print(f'\n📐 Step 2 - Crop centered on eyes:')
+    print(f'   Eye midpoint in rotated image: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
+    print(f'   Target: center eyes at (540, 540) in 1080x1080 output')
 
-    # Adjust eye coordinates for crop
-    final_left = rotated_left - np.array([center_crop_x, center_crop_y])
-    final_right = rotated_right - np.array([center_crop_x, center_crop_y])
+    # Calculate crop region to center eyes at (540, 540)
+    half_size = OUTPUT_SIZE[0] // 2  # 540
+    crop_x = int(eye_midpoint_x - half_size)
+    crop_y = int(eye_midpoint_y - half_size)
+
+    print(f'   Crop region: from ({crop_x}, {crop_y}) to ({crop_x + OUTPUT_SIZE[0]}, {crop_y + OUTPUT_SIZE[1]})')
+    print(f'   Rotated image size: {width}x{height}')
+
+    # Create output image with white background
+    final_img = np.full((OUTPUT_SIZE[1], OUTPUT_SIZE[0], 3), 255, dtype=np.uint8)
+
+    # Calculate valid regions (handle boundaries)
+    src_x1 = max(0, crop_x)
+    src_y1 = max(0, crop_y)
+    src_x2 = min(width, crop_x + OUTPUT_SIZE[0])
+    src_y2 = min(height, crop_y + OUTPUT_SIZE[1])
+
+    dst_x1 = src_x1 - crop_x
+    dst_y1 = src_y1 - crop_y
+    dst_x2 = dst_x1 + (src_x2 - src_x1)
+    dst_y2 = dst_y1 + (src_y2 - src_y1)
+
+    print(f'   Source region: [{src_y1}:{src_y2}, {src_x1}:{src_x2}]')
+    print(f'   Dest region: [{dst_y1}:{dst_y2}, {dst_x1}:{dst_x2}]')
+
+    # Copy region from rotated image to output
+    final_img[dst_y1:dst_y2, dst_x1:dst_x2] = rotated_img[src_y1:src_y2, src_x1:src_x2]
+
+    # Calculate final eye positions in output image
+    final_left = rotated_left - np.array([crop_x, crop_y])
+    final_right = rotated_right - np.array([crop_x, crop_y])
     final_midpoint = (final_left + final_right) / 2
+
+    print(f'   Eyes in output: left=({final_left[0]:.1f}, {final_left[1]:.1f}), right=({final_right[0]:.1f}, {final_right[1]:.1f})')
+    print(f'   Eye midpoint in output: ({final_midpoint[0]:.1f}, {final_midpoint[1]:.1f}) - should be (540, 540)')
 
     print(f'✅ Final eye positions (PREDICTED):')
     print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
@@ -134,14 +168,12 @@ def align_face(image_bytes, left_eye, right_eye):
     # Blue dots = predicted eye positions
     cv2.circle(debug_img, (int(final_left[0]), int(final_left[1])), 5, (255, 0, 0), -1)
     cv2.circle(debug_img, (int(final_right[0]), int(final_right[1])), 5, (255, 0, 0), -1)
-    # Yellow dot = center of image (should match eye midpoint)
-    cv2.circle(debug_img, (int(target_center_x), int(target_center_y)), 5, (0, 255, 255), -1)
-    # Draw horizontal line through center
-    cv2.line(debug_img, (0, int(target_center_y)), (OUTPUT_SIZE[0], int(target_center_y)), (0, 255, 255), 1)
-    # Draw vertical line through center
-    cv2.line(debug_img, (int(target_center_x), 0), (int(target_center_x), OUTPUT_SIZE[1]), (0, 255, 255), 1)
+    # Yellow crosshairs at center (540, 540) - where eyes should be
+    cv2.circle(debug_img, (540, 540), 5, (0, 255, 255), -1)
+    cv2.line(debug_img, (0, 540), (OUTPUT_SIZE[0], 540), (0, 255, 255), 1)
+    cv2.line(debug_img, (540, 0), (540, OUTPUT_SIZE[1]), (0, 255, 255), 1)
 
-    print(f'\n📊 Visual debugging: Blue=eyes, Yellow=center (540,540)')
+    print(f'\n📊 Visual debugging: Blue dots=predicted eyes, Yellow crosshairs=center (540,540)')
 
     # Encode as JPEG
     _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
