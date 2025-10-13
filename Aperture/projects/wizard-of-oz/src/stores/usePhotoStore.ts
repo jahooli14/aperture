@@ -27,11 +27,18 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     console.log('📸 Fetching photos...');
     set({ loading: true, fetchError: null });
 
+    // Add timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Fetch timeout after 10 seconds')), 10000);
+    });
+
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('photos')
         .select('*')
         .order('upload_date', { ascending: false });
+
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       console.log('📸 Fetch result:', {
         photoCount: data?.length || 0,
