@@ -1,9 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import sharp from 'sharp';
+import {
+  calculateSimilarityTransform,
+  TARGET_EYE_POSITIONS,
+  OUTPUT_SIZE,
+} from './lib/alignment.js';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -33,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing photoId or landmarks' });
     }
 
-    console.log('🎯 Starting alignment v4 for photo:', photoId);
+    console.log('🎯 Starting alignment v4 (Pure TypeScript/Sharp) for photo:', photoId);
 
     // Fetch photo from database
     const { data: photo, error: fetchError } = await supabase
@@ -51,13 +53,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const imageResponse = await fetch(imageUrl);
     const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
 
-    // Create temporary files
-    const tmpDir = tmpdir();
-    const inputPath = join(tmpDir, `input-${photoId}.jpg`);
-    const outputPath = join(tmpDir, `output-${photoId}.jpg`);
-
-    await fs.writeFile(inputPath, imageBuffer);
-
     console.log('📐 Image dimensions:', {
       detectionWidth: landmarks.imageWidth,
       detectionHeight: landmarks.imageHeight,
@@ -66,8 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CRITICAL: Scale coordinates from detection dimensions to actual dimensions
     // The database stores coordinates for 768x1024 downscaled images
     // We need to scale them to the actual image dimensions
-    const actualImage = await import('sharp').then(s => s.default(imageBuffer));
-    const metadata = await actualImage.metadata();
+    const metadata = await sharp(imageBuffer).metadata();
     const actualWidth = metadata.width!;
     const actualHeight = metadata.height!;
 
@@ -111,7 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('✅ Input validation:', {
       interEyeDistance: interEyeDistance.toFixed(1),
       interEyePercent: interEyePercent.toFixed(1) + '%',
-      expectedRange: '10-35% of image width',
+      expectedRange: '10-50% of image width',
     });
 
     if (interEyePercent < 10 || interEyePercent > 50) {
@@ -135,61 +129,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call Python OpenCV script
-    const pythonScript = join(process.cwd(), 'align_photo_opencv.py');
+    // Calculate similarity transformation matrix
+    const matrix = calculateSimilarityTransform(
+      [scaledLeftEye, scaledRightEye],
+      [TARGET_EYE_POSITIONS.leftEye, TARGET_EYE_POSITIONS.rightEye]
+    );
 
-    const pythonResult = await new Promise<any>((resolve, reject) => {
-      const python = spawn('python3', [
-        pythonScript,
-        inputPath,
-        outputPath,
-        scaledLeftEye.x.toFixed(1),
-        scaledLeftEye.y.toFixed(1),
-        scaledRightEye.x.toFixed(1),
-        scaledRightEye.y.toFixed(1),
-      ]);
+    console.log('🔢 Transformation matrix:', matrix);
 
-      let stdout = '';
-      let stderr = '';
-
-      python.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      python.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      python.on('close', (code) => {
-        if (code !== 0) {
-          console.error('❌ Python script failed:', { code, stderr });
-          reject(new Error(`Python script failed with code ${code}: ${stderr}`));
-        } else {
-          try {
-            const result = JSON.parse(stdout);
-            resolve(result);
-          } catch (e) {
-            console.error('❌ Failed to parse Python output:', stdout);
-            reject(new Error('Failed to parse Python output'));
-          }
+    // Apply transformation using Sharp
+    // Sharp's affine() expects a 2x2 matrix and background for areas outside source
+    const aligned = await sharp(imageBuffer)
+      .affine(
+        [matrix.a, matrix.b, matrix.d, matrix.e],
+        {
+          background: { r: 255, g: 255, b: 255, alpha: 1 }, // White background
+          interpolator: sharp.interpolators.bicubic,
+          idx: matrix.c,  // Translation x
+          idy: matrix.f,  // Translation y
         }
-      });
-    });
+      )
+      .resize(OUTPUT_SIZE.width, OUTPUT_SIZE.height, {
+        fit: 'cover',
+        position: 'centre',
+      })
+      .jpeg({ quality: 95 })
+      .toBuffer();
 
-    if (!pythonResult.success) {
-      throw new Error(pythonResult.error || 'Python alignment failed');
-    }
-
-    console.log('✅ Python alignment successful:', pythonResult);
-
-    // Read aligned image
-    const alignedBuffer = await fs.readFile(outputPath);
+    console.log('✅ Alignment complete, uploading to storage...');
 
     // Upload to Supabase Storage
     const alignedFileName = `aligned-${photoId}-${Date.now()}.jpg`;
     const { error: uploadError } = await supabase.storage
       .from('photos')
-      .upload(alignedFileName, alignedBuffer, {
+      .upload(alignedFileName, aligned, {
         contentType: 'image/jpeg',
         cacheControl: '3600',
       });
@@ -219,12 +192,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw updateError;
     }
 
-    // Clean up temp files
-    await Promise.all([
-      fs.unlink(inputPath).catch(() => {}),
-      fs.unlink(outputPath).catch(() => {}),
-    ]);
-
     const processingTime = Date.now() - startTime;
 
     console.log('✅ Alignment complete:', {
@@ -237,7 +204,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success: true,
       alignedUrl,
       processingTime,
-      debug: pythonResult,
+      debug: {
+        scaleFactor,
+        matrix,
+        sourceEyes: { left: scaledLeftEye, right: scaledRightEye },
+        targetEyes: TARGET_EYE_POSITIONS,
+      },
     });
   } catch (error) {
     console.error('❌ Alignment failed:', error);

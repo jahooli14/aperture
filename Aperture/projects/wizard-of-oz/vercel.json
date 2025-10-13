@@ -5,5 +5,5 @@
       "memory": 2048
     }
   },
-  "buildCommand": "npm install --arch=x64 --platform=linux sharp && chmod +x install-python-deps.sh && ./install-python-deps.sh && npm run build"
+  "buildCommand": "npm install --arch=x64 --platform=linux sharp && npm run build"
 }
