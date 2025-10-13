@@ -99,49 +99,58 @@ def align_face(image_bytes, left_eye, right_eye):
     rotated_left = rotation_matrix @ left_homogeneous
     rotated_right = rotation_matrix @ right_homogeneous
 
-    print(f'   Rotated left eye: ({rotated_left[0]:.1f}, {rotated_left[1]:.1f})')
-    print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
+    print(f'   Rotation matrix:')
+    print(f'      [{rotation_matrix[0, 0]:.4f}, {rotation_matrix[0, 1]:.4f}, {rotation_matrix[0, 2]:.4f}]')
+    print(f'      [{rotation_matrix[1, 0]:.4f}, {rotation_matrix[1, 1]:.4f}, {rotation_matrix[1, 2]:.4f}]')
+    print(f'   Before rotation: left=({left_eye[0]:.1f}, {left_eye[1]:.1f}), right=({right_eye[0]:.1f}, {right_eye[1]:.1f})')
+    print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Y values should be equal now: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
+    print(f'   Image size: {width}x{height}')
 
-    # STEP 2: Translate to center eyes (NO SCALING YET)
-    # Calculate midpoint between rotated eyes
-    eye_midpoint_x = (rotated_left[0] + rotated_right[0]) / 2
-    eye_midpoint_y = (rotated_left[1] + rotated_right[1]) / 2
+    # STEP 2: Just crop to center - NO TRANSLATION FOR NOW
+    # Let's see where the eyes actually are after rotation
+    # Crop a 1080x1080 window from the center of the rotated image
 
-    # Target: center of 1080x1080 image
-    target_center_x = OUTPUT_SIZE[0] / 2  # 540
-    target_center_y = OUTPUT_SIZE[1] / 2  # 540
+    center_x = width // 2
+    center_y = height // 2
 
-    print(f'📐 Step 2 - Translate (center eyes):')
-    print(f'   Rotated eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
-    print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
+    crop_x1 = center_x - 540
+    crop_y1 = center_y - 540
+    crop_x2 = center_x + 540
+    crop_y2 = center_y + 540
 
-    # Calculate translation to center the eyes
-    translation_x = target_center_x - eye_midpoint_x
-    translation_y = target_center_y - eye_midpoint_y
+    print(f'📐 Step 2 - Crop center 1080x1080:')
+    print(f'   Image center: ({center_x}, {center_y})')
+    print(f'   Crop region: ({crop_x1}, {crop_y1}) to ({crop_x2}, {crop_y2})')
 
-    print(f'   Translation: ({translation_x:.1f}, {translation_y:.1f})')
+    # Crop the rotated image
+    if crop_x1 >= 0 and crop_y1 >= 0 and crop_x2 <= width and crop_y2 <= height:
+        final_img = rotated_img[crop_y1:crop_y2, crop_x1:crop_x2]
 
-    # Create translation matrix
-    translation_matrix = np.float32([
-        [1, 0, translation_x],
-        [0, 1, translation_y]
-    ])
+        # Adjust eye coordinates for the crop
+        final_left = rotated_left - np.array([crop_x1, crop_y1])
+        final_right = rotated_right - np.array([crop_x1, crop_y1])
+        final_midpoint = np.array([540, 540])
 
-    # Apply translation to rotated image and crop to output size
-    final_img = cv2.warpAffine(
-        rotated_img,
-        translation_matrix,
-        OUTPUT_SIZE,
-        flags=cv2.INTER_CUBIC,
-        borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(255, 255, 255)
-    )
-
-    # Calculate final eye positions for verification
-    final_left = rotated_left + np.array([translation_x, translation_y])
-    final_right = rotated_right + np.array([translation_x, translation_y])
-    final_midpoint = np.array([target_center_x, target_center_y])
+        print(f'   Eyes in cropped image: left=({final_left[0]:.1f}, {final_left[1]:.1f}), right=({final_right[0]:.1f}, {final_right[1]:.1f})')
+    else:
+        print(f'   ⚠️  Crop would be out of bounds, using warpAffine instead')
+        # Use identity matrix (no translation)
+        translation_matrix = np.float32([
+            [1, 0, -(width//2 - 540)],
+            [0, 1, -(height//2 - 540)]
+        ])
+        final_img = cv2.warpAffine(
+            rotated_img,
+            translation_matrix,
+            OUTPUT_SIZE,
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=(255, 255, 255)
+        )
+        final_left = rotated_left + np.array([-(width//2 - 540), -(height//2 - 540)])
+        final_right = rotated_right + np.array([-(width//2 - 540), -(height//2 - 540)])
+        final_midpoint = np.array([540, 540])
 
     print(f'✅ Final eye positions (PREDICTED):')
     print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
