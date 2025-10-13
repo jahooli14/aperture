@@ -116,9 +116,12 @@ def align_face(image_bytes, left_eye, right_eye):
     scale = TARGET_INTER_EYE_DISTANCE / current_distance
 
     print(f'🔍 Step 2 - Scale:')
+    print(f'   Rotated left eye: ({rotated_left[0]:.1f}, {rotated_left[1]:.1f})')
+    print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Current horizontal inter-eye distance: {current_distance:.1f}px')
     print(f'   Target inter-eye distance: {TARGET_INTER_EYE_DISTANCE}px')
-    print(f'   Scale factor: {scale:.4f}')
+    print(f'   Scale factor: {scale:.4f} ({"shrink" if scale < 1 else "enlarge"})')
+    print(f'   This will {"shrink" if scale < 1 else "enlarge"} {abs(scale - 1) * 100:.1f}%')
 
     # Scale the rotated image
     scaled_width = int(new_w * scale)
