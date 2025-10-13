@@ -98,12 +98,23 @@
 
 **What's Ready**:
 - Production API endpoint: `/api/align-photo-v4`
-- Deployment URL: `https://aperture-ehswit11y-daniels-projects-ca7c7923.vercel.app`
-- Status: READY - Deployed and waiting for testing
+- Deployment URL: `https://aperture-p5ei57lxj-daniels-projects-ca7c7923.vercel.app`
+- Status: ✅ **READY FOR TESTING** - All bugs fixed
+
+**Bug Fixes Applied (Session 8)**:
+- ✅ Fixed "photos stuck uploading" - Added auto-refresh polling (every 5s)
+- ✅ Fixed "Bucket not found" error - Changed from 'photos' to 'originals' bucket
+- ✅ Removed non-existent `processing_status` field from database updates
+
+**User Experience Now**:
+1. Upload photo → appears immediately with "⏳ Processing..." badge
+2. Gallery auto-refreshes every 5 seconds while processing
+3. When alignment completes → badge changes to "✓ Aligned"
+4. Photo updates to show aligned version
 
 **Next Action Required**: End-to-end testing with real photos
 
-### Priority 2: Validation & Testing (30-45 min)
+### Priority 2: Validation & Testing (Ready Now!)
 
 **Testing Plan**:
 - [ ] Upload 3-5 test photos via Wizard of Oz UI
