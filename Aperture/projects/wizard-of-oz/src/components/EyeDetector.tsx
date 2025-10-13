@@ -101,22 +101,34 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
           if (results.faceLandmarks && results.faceLandmarks.length > 0) {
             const landmarks = results.faceLandmarks[0];
 
-            // MediaPipe provides 478 landmarks when refineLandmarks is true
-            // Iris center landmarks are the most accurate for eye position:
-            // - Left iris center: landmark 473
-            // - Right iris center: landmark 468
-            const leftEyeIris = landmarks[473];
-            const rightEyeIris = landmarks[468];
+            console.log('📊 Detected', landmarks.length, 'landmarks');
+
+            let leftEye, rightEye;
+
+            // Try to use iris center landmarks if available (indices 468 and 473)
+            // These are the most accurate for eye position when refineLandmarks is enabled
+            if (landmarks.length > 473) {
+              console.log('Using iris center landmarks (468, 473)');
+              leftEye = landmarks[473]; // Left iris center
+              rightEye = landmarks[468]; // Right iris center
+            } else {
+              // Fallback: Use eye contour centers (always available in 468-landmark model)
+              // Left eye contour: landmarks 362-382 (approximate center)
+              // Right eye contour: landmarks 133-153 (approximate center)
+              console.log('Using eye contour fallback (133, 362)');
+              leftEye = landmarks[362]; // Left eye inner corner
+              rightEye = landmarks[133]; // Right eye inner corner
+            }
 
             // MediaPipe returns normalized coordinates (0-1), convert to pixels
             const coords: EyeCoordinates = {
               leftEye: {
-                x: leftEyeIris.x * img.width,
-                y: leftEyeIris.y * img.height
+                x: leftEye.x * img.width,
+                y: leftEye.y * img.height
               },
               rightEye: {
-                x: rightEyeIris.x * img.width,
-                y: rightEyeIris.y * img.height
+                x: rightEye.x * img.width,
+                y: rightEye.y * img.height
               },
               confidence: 0.8, // MediaPipe doesn't provide per-landmark confidence
               imageWidth: img.width,

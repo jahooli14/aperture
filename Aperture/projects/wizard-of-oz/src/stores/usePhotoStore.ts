@@ -153,19 +153,18 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         original_url: publicUrl,
       };
 
-      // Add eye coordinates if detected
+      // Add eye coordinates if detected (stored as JSONB in database)
       if (eyeCoords) {
-        photoRecord.left_eye_x = eyeCoords.leftEye.x;
-        photoRecord.left_eye_y = eyeCoords.leftEye.y;
-        photoRecord.right_eye_x = eyeCoords.rightEye.x;
-        photoRecord.right_eye_y = eyeCoords.rightEye.y;
-        photoRecord.detection_width = eyeCoords.imageWidth;
-        photoRecord.detection_height = eyeCoords.imageHeight;
-        photoRecord.status = 'detected'; // Mark as detected
-        console.log('Including eye coordinates in photo record');
+        photoRecord.eye_coordinates = {
+          leftEye: eyeCoords.leftEye,
+          rightEye: eyeCoords.rightEye,
+          confidence: eyeCoords.confidence,
+          imageWidth: eyeCoords.imageWidth,
+          imageHeight: eyeCoords.imageHeight
+        };
+        console.log('Including eye coordinates in photo record:', photoRecord.eye_coordinates);
       } else {
-        photoRecord.status = 'pending'; // No detection yet
-        console.log('No eye coordinates - marking as pending');
+        console.log('No eye coordinates detected - will be null in database');
       }
 
       // Insert photo record
@@ -183,24 +182,24 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         throw insertError || new Error('Failed to create photo record');
       }
 
-      console.log('Photo record created successfully with status:', photoRecord.status);
+      console.log('Photo record created successfully', eyeCoords ? 'with eye coordinates' : 'without eye coordinates');
 
+      // TODO: Re-enable photo alignment once API is implemented
       // If we have eye coordinates, trigger alignment
       if (eyeCoords) {
-        console.log('Triggering photo alignment...');
-        const apiUrl = window.location.origin + '/api/align-photo';
+        console.log('✅ Eye coordinates saved to database');
+        console.log('⏳ Photo alignment API not yet implemented - coming soon!');
 
-        fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photoId: (photoData as Photo).id }),
-        })
-          .then(res => {
-            console.log('Alignment API response status:', res.status);
-            return res.json();
-          })
-          .then(data => console.log('Alignment API response:', data))
-          .catch(err => console.error('Photo alignment request failed:', err));
+        // Uncomment when alignment API is ready:
+        // const apiUrl = window.location.origin + '/api/align-photo';
+        // fetch(apiUrl, {
+        //   method: 'POST',
+        //   headers: { 'Content-Type': 'application/json' },
+        //   body: JSON.stringify({ photoId: (photoData as Photo).id }),
+        // })
+        //   .then(res => res.json())
+        //   .then(data => console.log('Alignment API response:', data))
+        //   .catch(err => console.error('Photo alignment request failed:', err));
       }
 
       // Refresh photos
