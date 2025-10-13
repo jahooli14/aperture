@@ -5,5 +5,5 @@
       "memory": 2048
     }
   },
-  "buildCommand": "npm install --arch=x64 --platform=linux sharp && python3 -m pip install -r requirements.txt && npm run build"
+  "buildCommand": "npm install --arch=x64 --platform=linux sharp && npm run build"
 }
