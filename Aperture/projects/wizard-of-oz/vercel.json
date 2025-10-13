@@ -5,7 +5,6 @@
       "memory": 2048
     },
     "api/**/*.py": {
-      "runtime": "@vercel/python",
       "maxDuration": 60,
       "memory": 2048
     }
