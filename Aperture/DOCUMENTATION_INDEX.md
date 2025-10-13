@@ -36,6 +36,11 @@
 ### "I'm deploying"
 → `.process/DEPLOYMENT.md` - Deployment strategies
 → `.process/OBSERVABILITY.md` - Logging for monitoring
+→ `.process/PROACTIVE_LOG_MONITORING.md` - Check logs after deploy
+
+### "I want to check production health"
+→ `.process/PROACTIVE_LOG_MONITORING.md` - Log review process
+→ `.claude/startup.md` Step 4.5 - Quick health check commands
 
 ---
 
@@ -72,6 +77,7 @@
 | `DEBUGGING_CHECKLIST.md` | Case study (coordinate scaling) | Dimension/scaling bugs |
 | `projects/wizard-of-oz/DEBUGGING.md` | Project-specific debugging | Wizard of Oz issues |
 | `.process/OBSERVABILITY.md` | Logging & self-sufficient debugging | Adding features, monitoring |
+| `.process/PROACTIVE_LOG_MONITORING.md` | Production log review process | Session start, after deployment |
 | `.process/TESTING_GUIDE.md` | Testing strategy | Writing tests, test patterns |
 
 ---

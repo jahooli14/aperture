@@ -113,6 +113,53 @@ Any blockers: [yes/no]
 
 ---
 
+### Step 4.5: Production Health Check (AUTOMATIC for Aperture)
+
+> **📍 Full guide → `.process/PROACTIVE_LOG_MONITORING.md`**
+
+**For Aperture projects only** - Proactively check production logs for errors.
+
+**Quick check** (60 seconds):
+
+```bash
+# 1. Check last deployment status
+curl -s -H "Authorization: Bearer FWsU3v4DJU8HKGZYb63exOIf" \
+  "https://api.vercel.com/v6/deployments?projectId=prj_rkI3NQOI5SfBle7lflFkwFkj0eYd&limit=1" \
+  | python3 -c "import sys, json; d = json.load(sys.stdin)['deployments'][0]; print(f\"State: {d['state']}\nError: {d.get('errorMessage', 'None')}\")"
+
+# 2. Check alignment pipeline (critical)
+/vercel-logs align-photo-v4 10
+
+# 3. Check eye detection (critical)
+/vercel-logs detect-eyes 10
+```
+
+**Report format**:
+```
+Production Health: 🟢 Healthy / 🟡 Warning / 🔴 Critical
+
+Last deployment: [state]
+Alignment logs: [X successes, Y failures]
+Eye detection: [X successes, Y failures]
+
+Issues: [if any]
+Action needed: [yes/no]
+```
+
+**If 🔴 Critical issues found**:
+1. Stop new work
+2. Document in session notes
+3. Fix production issue first
+4. Update NEXT_SESSION.md
+
+**Why this matters**:
+- Catch issues before user reports them
+- Fix production bugs within 5 minutes of occurrence
+- Build trust through proactive monitoring
+- Learn from error patterns
+
+---
+
 ### Step 5: Validation Before Starting Work
 
 **Confirm you have**:
