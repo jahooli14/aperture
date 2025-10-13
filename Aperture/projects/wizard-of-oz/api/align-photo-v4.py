@@ -72,63 +72,56 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Delta X (left - right): {delta_x:.1f}px')
     print(f'   Rotation angle: {angle_deg:.2f}°')
 
-    # For small angles, skip rotation - it's causing coordinate tracking issues
-    # Just work with the original image and original eye positions
-    print(f'   ⚠️  Skipping rotation for now - using original image')
+    # Use scipy to rotate image
+    from scipy.ndimage import rotate as scipy_rotate
 
+    # Rotate image around its center
+    rotated_img = scipy_rotate(img, angle_deg, reshape=False, mode='constant', cval=255)
+
+    print(f'   Rotated image using scipy')
+
+    # Calculate where eyes are after rotation
+    # Rotate points around image center
     height, width = img.shape[:2]
+    center_x = width / 2
+    center_y = height / 2
 
-    # STEP 2: Translate to center eyes
-    # Calculate midpoint between eyes
-    eye_midpoint_x = (left_eye[0] + right_eye[0]) / 2
-    eye_midpoint_y = (left_eye[1] + right_eye[1]) / 2
+    # Translate to origin
+    left_centered = left_eye - np.array([center_x, center_y])
+    right_centered = right_eye - np.array([center_x, center_y])
 
-    # Target: center of 1080x1080 image
-    target_center_x = OUTPUT_SIZE[0] / 2  # 540
-    target_center_y = OUTPUT_SIZE[1] / 2  # 540
+    # Rotate (note: positive angle is CCW in math, but we want image rotation)
+    angle_rad_actual = np.radians(angle_deg)
+    cos_a = np.cos(angle_rad_actual)
+    sin_a = np.sin(angle_rad_actual)
 
-    print(f'📐 Step 2 - Translate (center eyes):')
-    print(f'   Eye midpoint in original: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
-    print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
+    rotated_left_centered = np.array([
+        left_centered[0] * cos_a - left_centered[1] * sin_a,
+        left_centered[0] * sin_a + left_centered[1] * cos_a
+    ])
 
-    # Calculate how much to shift
-    shift_x = int(eye_midpoint_x - target_center_x)
-    shift_y = int(eye_midpoint_y - target_center_y)
+    rotated_right_centered = np.array([
+        right_centered[0] * cos_a - right_centered[1] * sin_a,
+        right_centered[0] * sin_a + right_centered[1] * cos_a
+    ])
 
-    print(f'   Need to shift by: ({shift_x}, {shift_y})')
+    # Translate back
+    rotated_left = rotated_left_centered + np.array([center_x, center_y])
+    rotated_right = rotated_right_centered + np.array([center_x, center_y])
 
-    # Crop region from original image
-    crop_x1 = shift_x
-    crop_y1 = shift_y
-    crop_x2 = shift_x + 1080
-    crop_y2 = shift_y + 1080
+    print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
+    print(f'   Y values should be equal: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
 
-    print(f'   Crop from original: ({crop_x1}, {crop_y1}) to ({crop_x2}, {crop_y2})')
-    print(f'   Original image size: {width}x{height}')
+    # Just output the rotated image cropped to center 1080x1080
+    center_crop_x = int(center_x - 540)
+    center_crop_y = int(center_y - 540)
 
-    # Create output image
-    final_img = np.full((1080, 1080, 3), 255, dtype=np.uint8)
+    final_img = rotated_img[center_crop_y:center_crop_y+1080, center_crop_x:center_crop_x+1080]
 
-    # Calculate valid crop region (handle edges)
-    src_x1 = max(0, crop_x1)
-    src_y1 = max(0, crop_y1)
-    src_x2 = min(width, crop_x2)
-    src_y2 = min(height, crop_y2)
-
-    dst_x1 = src_x1 - crop_x1
-    dst_y1 = src_y1 - crop_y1
-    dst_x2 = dst_x1 + (src_x2 - src_x1)
-    dst_y2 = dst_y1 + (src_y2 - src_y1)
-
-    print(f'   Copying [{src_y1}:{src_y2}, {src_x1}:{src_x2}] -> [{dst_y1}:{dst_y2}, {dst_x1}:{dst_x2}]')
-
-    # Copy the region
-    final_img[dst_y1:dst_y2, dst_x1:dst_x2] = img[src_y1:src_y2, src_x1:src_x2]
-
-    # Calculate final eye positions
-    final_left = left_eye - np.array([shift_x, shift_y])
-    final_right = right_eye - np.array([shift_x, shift_y])
-    final_midpoint = np.array([target_center_x, target_center_y])
+    # Adjust eye coordinates for crop
+    final_left = rotated_left - np.array([center_crop_x, center_crop_y])
+    final_right = rotated_right - np.array([center_crop_x, center_crop_y])
+    final_midpoint = (final_left + final_right) / 2
 
     print(f'✅ Final eye positions (PREDICTED):')
     print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
