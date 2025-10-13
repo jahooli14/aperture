@@ -1,11 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { writeFile, unlink } from 'fs/promises';
+import path from 'path';
+import os from 'os';
 import {
-  calculateSimilarityTransform,
   TARGET_EYE_POSITIONS,
   OUTPUT_SIZE,
 } from './lib/alignment.js';
+
+const execAsync = promisify(exec);
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -129,86 +135,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Calculate similarity transformation matrix
-    const matrix = calculateSimilarityTransform(
-      [scaledLeftEye, scaledRightEye],
-      [TARGET_EYE_POSITIONS.leftEye, TARGET_EYE_POSITIONS.rightEye]
-    );
+    // Use Python OpenCV for alignment (proven working solution)
+    // This is the correct approach - OpenCV's warpAffine handles affine
+    // transformation + output sizing correctly
+    const tmpDir = os.tmpdir();
+    const inputPath = path.join(tmpDir, `input-${photoId}.jpg`);
+    const outputPath = path.join(tmpDir, `output-${photoId}.jpg`);
 
-    console.log('🔢 Transformation matrix:', matrix);
+    try {
+      // Write input image to temp file
+      await writeFile(inputPath, imageBuffer);
 
-    // Apply transformation using Sharp
-    // Sharp's affine() expects a 2x2 matrix and background for areas outside source
-    const aligned = await sharp(imageBuffer)
-      .affine(
-        [matrix.a, matrix.b, matrix.d, matrix.e],
-        {
-          background: { r: 255, g: 255, b: 255, alpha: 1 }, // White background
-          interpolator: sharp.interpolators.bicubic,
-          idx: matrix.c,  // Translation x
-          idy: matrix.f,  // Translation y
-        }
-      )
-      .resize(OUTPUT_SIZE.width, OUTPUT_SIZE.height, {
-        fit: 'cover',
-        position: 'centre',
-      })
-      .jpeg({ quality: 95 })
-      .toBuffer();
+      // Call Python OpenCV script
+      const scriptPath = path.join(process.cwd(), 'tools', 'align_photo_opencv.py');
+      const command = `python3 ${scriptPath} ${inputPath} ${outputPath} ${scaledLeftEye.x} ${scaledLeftEye.y} ${scaledRightEye.x} ${scaledRightEye.y}`;
 
-    console.log('✅ Alignment complete, uploading to storage...');
-
-    // Upload to Supabase Storage (same bucket as originals)
-    const alignedFileName = `aligned/${photoId}-${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from('originals')
-      .upload(alignedFileName, aligned, {
-        contentType: 'image/jpeg',
-        cacheControl: '3600',
+      console.log('🐍 Calling Python OpenCV script:', {
+        script: scriptPath,
+        leftEye: scaledLeftEye,
+        rightEye: scaledRightEye,
       });
 
-    if (uploadError) {
-      throw uploadError;
+      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+
+      if (stderr) {
+        console.warn('Python stderr:', stderr);
+      }
+
+      // Parse Python output
+      const result = JSON.parse(stdout);
+      console.log('✅ Python OpenCV result:', result);
+
+      if (!result.success) {
+        throw new Error(`Python alignment failed: ${result.error}`);
+      }
+
+      // Read aligned image
+      const aligned = await sharp(outputPath).toBuffer();
+
+      // Clean up temp files
+      await unlink(inputPath).catch(() => {});
+      await unlink(outputPath).catch(() => {});
+
+      console.log('✅ Alignment complete, uploading to storage...');
+
+      // Upload to Supabase Storage (same bucket as originals)
+      const alignedFileName = `aligned/${photoId}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('originals')
+        .upload(alignedFileName, aligned, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('originals')
+        .getPublicUrl(alignedFileName);
+
+      const alignedUrl = urlData.publicUrl;
+
+      // Update database
+      const { error: updateError } = await supabase
+        .from('photos')
+        .update({
+          aligned_url: alignedUrl,
+        })
+        .eq('id', photoId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const processingTime = Date.now() - startTime;
+
+      console.log('✅ Alignment complete:', {
+        photoId,
+        processingTime: `${processingTime}ms`,
+        alignedUrl,
+      });
+
+      return res.status(200).json({
+        success: true,
+        alignedUrl,
+        processingTime,
+        debug: {
+          scaleFactor,
+          sourceEyes: { left: scaledLeftEye, right: scaledRightEye },
+          targetEyes: TARGET_EYE_POSITIONS,
+        },
+      });
+    } catch (pythonError) {
+      // Clean up temp files on error
+      await unlink(inputPath).catch(() => {});
+      await unlink(outputPath).catch(() => {});
+      throw pythonError;
     }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('originals')
-      .getPublicUrl(alignedFileName);
-
-    const alignedUrl = urlData.publicUrl;
-
-    // Update database
-    const { error: updateError } = await supabase
-      .from('photos')
-      .update({
-        aligned_url: alignedUrl,
-      })
-      .eq('id', photoId);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    const processingTime = Date.now() - startTime;
-
-    console.log('✅ Alignment complete:', {
-      photoId,
-      processingTime: `${processingTime}ms`,
-      alignedUrl,
-    });
-
-    return res.status(200).json({
-      success: true,
-      alignedUrl,
-      processingTime,
-      debug: {
-        scaleFactor,
-        matrix,
-        sourceEyes: { left: scaledLeftEye, right: scaledRightEye },
-        targetEyes: TARGET_EYE_POSITIONS,
-      },
-    });
   } catch (error) {
     console.error('❌ Alignment failed:', error);
     return res.status(500).json({
