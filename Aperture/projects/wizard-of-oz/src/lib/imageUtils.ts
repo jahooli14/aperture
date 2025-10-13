@@ -166,16 +166,19 @@ export async function alignPhoto(
         // Apply transformation
         ctx.save();
 
-        // Translate to target position
+        // Move origin to target eye center
         ctx.translate(targetCenterX, targetCenterY);
 
-        // Rotate around center
+        // Rotate to align eyes
         ctx.rotate(-angle);
 
-        // Scale
+        // Scale to match target eye distance
         ctx.scale(scale, scale);
 
-        // Draw image with center at origin
+        // Rotate 180 degrees to flip image right-side up
+        ctx.rotate(Math.PI);
+
+        // Draw image centered at origin
         ctx.drawImage(img, -sourceCenterX, -sourceCenterY);
 
         ctx.restore();
