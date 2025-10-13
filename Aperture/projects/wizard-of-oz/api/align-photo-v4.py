@@ -75,31 +75,24 @@ def align_face(image_bytes, left_eye, right_eye):
     # Calculate rotation center (midpoint between eyes)
     center = ((left_eye + right_eye) / 2).astype(np.float32)
 
-    # Get rotation matrix
+    # Get rotation matrix - rotate around eye midpoint
     rotation_matrix = cv2.getRotationMatrix2D(tuple(center), angle_deg, 1.0)
 
-    # Calculate new image size to fit rotated image
+    # Keep original image dimensions (don't expand canvas)
+    # This is simpler and keeps coordinates consistent
     height, width = img.shape[:2]
-    cos = np.abs(rotation_matrix[0, 0])
-    sin = np.abs(rotation_matrix[0, 1])
-    new_w = int((height * sin) + (width * cos))
-    new_h = int((height * cos) + (width * sin))
 
-    # Adjust rotation matrix for new center
-    rotation_matrix[0, 2] += (new_w / 2) - center[0]
-    rotation_matrix[1, 2] += (new_h / 2) - center[1]
-
-    # Rotate the image
+    # Rotate the image (keeping same dimensions)
     rotated_img = cv2.warpAffine(
         img,
         rotation_matrix,
-        (new_w, new_h),
+        (width, height),
         flags=cv2.INTER_CUBIC,
         borderMode=cv2.BORDER_CONSTANT,
         borderValue=(255, 255, 255)
     )
 
-    # Rotate the eye positions
+    # Rotate the eye positions using the same matrix
     left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
     right_homogeneous = np.array([right_eye[0], right_eye[1], 1])
 
