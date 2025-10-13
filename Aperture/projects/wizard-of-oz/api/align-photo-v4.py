@@ -110,17 +110,38 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Y values should be equal now: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
 
-    # STEP 2: Translate (without scaling) to center eyes
-    # Calculate midpoint between eyes
-    eye_midpoint_x = (rotated_left[0] + rotated_right[0]) / 2
-    eye_midpoint_y = (rotated_left[1] + rotated_right[1]) / 2
+    # STEP 2: Scale so inter-eye distance = 360px
+    current_distance = abs(rotated_left[0] - rotated_right[0])
+    scale = TARGET_INTER_EYE_DISTANCE / current_distance
+
+    print(f'🔍 Step 2 - Scale:')
+    print(f'   Current inter-eye distance: {current_distance:.1f}px')
+    print(f'   Target distance: {TARGET_INTER_EYE_DISTANCE}px')
+    print(f'   Scale factor: {scale:.4f}')
+
+    # Scale the image
+    scaled_width = int(new_w * scale)
+    scaled_height = int(new_h * scale)
+    scaled_img = cv2.resize(rotated_img, (scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
+
+    # Scale the eye positions
+    scaled_left = rotated_left * scale
+    scaled_right = rotated_right * scale
+
+    print(f'   Scaled image: {scaled_width}x{scaled_height}')
+    print(f'   After scaling, inter-eye distance: {abs(scaled_left[0] - scaled_right[0]):.1f}px')
+
+    # STEP 3: Translate to center eyes (using scaled coordinates)
+    # Calculate midpoint between scaled eyes
+    eye_midpoint_x = (scaled_left[0] + scaled_right[0]) / 2
+    eye_midpoint_y = (scaled_left[1] + scaled_right[1]) / 2
 
     # Target: center of 1080x1080 image
     target_center_x = OUTPUT_SIZE[0] / 2  # 540
     target_center_y = OUTPUT_SIZE[1] / 2  # 540
 
-    print(f'📐 Step 2 - Translate (center eyes):')
-    print(f'   Current eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
+    print(f'📐 Step 3 - Translate (center eyes):')
+    print(f'   Scaled eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
     print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
 
     # Calculate translation to center the eyes
@@ -137,7 +158,7 @@ def align_face(image_bytes, left_eye, right_eye):
 
     # Apply translation and crop to output size
     final_img = cv2.warpAffine(
-        rotated_img,
+        scaled_img,
         translation_matrix,
         OUTPUT_SIZE,
         flags=cv2.INTER_CUBIC,
@@ -146,8 +167,8 @@ def align_face(image_bytes, left_eye, right_eye):
     )
 
     # Calculate final eye positions for verification
-    final_left = rotated_left + np.array([translation_x, translation_y])
-    final_right = rotated_right + np.array([translation_x, translation_y])
+    final_left = scaled_left + np.array([translation_x, translation_y])
+    final_right = scaled_right + np.array([translation_x, translation_y])
     final_midpoint = np.array([target_center_x, target_center_y])
 
     print(f'✅ Final eye positions (PREDICTED):')
