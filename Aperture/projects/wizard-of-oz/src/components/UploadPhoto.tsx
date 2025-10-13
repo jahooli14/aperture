@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
+import { rotateImage, fileToDataURL, validateImageFile } from '../lib/imageUtils';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
@@ -28,48 +29,6 @@ export function UploadPhoto() {
 
   const displayDate = customDate || today;
 
-  // Function to rotate image canvas and convert back to file
-  const rotateImage = async (file: File, degrees: number): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const img = new Image();
-
-      img.onload = () => {
-        // Set canvas dimensions based on rotation
-        if (degrees === 90 || degrees === 270) {
-          canvas.width = img.height;
-          canvas.height = img.width;
-        } else {
-          canvas.width = img.width;
-          canvas.height = img.height;
-        }
-
-        // Clear canvas and apply rotation
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-
-        // Move to center of canvas
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-
-        // Rotate
-        ctx.rotate((degrees * Math.PI) / 180);
-
-        // Draw image centered
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        ctx.restore();
-
-        // Convert canvas to blob then to file
-        canvas.toBlob((blob) => {
-          const rotatedFile = new File([blob!], file.name, { type: file.type });
-          resolve(rotatedFile);
-        }, file.type, 0.95);
-      };
-
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleRotate = async (direction: 'left' | 'right') => {
     if (!originalFile) return;
 
@@ -90,30 +49,22 @@ export function UploadPhoto() {
       }, 15000);
 
       // Update preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(rotatedFile);
+      const dataURL = await fileToDataURL(rotatedFile);
+      setPreview(dataURL);
     } catch (err) {
       console.error('Error rotating image:', err);
       setError('Failed to rotate image');
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be smaller than 10MB');
+    // Validate file
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      setError(validation.error!);
       return;
     }
 
@@ -130,16 +81,17 @@ export function UploadPhoto() {
     }, 15000);
 
     // Show preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-    setError('');
+    try {
+      const dataURL = await fileToDataURL(file);
+      setPreview(dataURL);
+      setError('');
+    } catch (err) {
+      console.error('Error loading image preview:', err);
+      setError('Failed to load image preview');
+    }
   };
 
   const handleEyeDetection = (coords: EyeCoordinates | null) => {
-    console.log('Eye detection result:', coords);
     setEyeCoords(coords);
     setDetectingEyes(false);
     if (!coords) {
@@ -154,14 +106,6 @@ export function UploadPhoto() {
   };
 
   const handleUpload = async () => {
-    console.log('🚀 handleUpload called', {
-      selectedFile: !!selectedFile,
-      eyeCoords: !!eyeCoords,
-      displayDate,
-      uploading,
-      detectingEyes
-    });
-
     if (!selectedFile) {
       setError('No file selected');
       return;
@@ -169,11 +113,9 @@ export function UploadPhoto() {
 
     try {
       setError('');
-      console.log('📤 Calling uploadPhoto from store...');
       await uploadPhoto(selectedFile, eyeCoords, displayDate);
-      console.log('✅ uploadPhoto completed successfully');
 
-      console.log('🧹 Clearing component state...');
+      // Clear component state
       setPreview(null);
       setSelectedFile(null);
       setOriginalFile(null);
@@ -188,19 +130,10 @@ export function UploadPhoto() {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
       }
-      console.log('✅ Component state cleared');
-    } catch (err: any) {
-      console.error('❌ handleUpload error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
-      const errorDetails = JSON.stringify({
-        message: err?.message,
-        code: err?.code,
-        details: err?.details,
-        hint: err?.hint,
-        statusCode: err?.statusCode
-      }, null, 2);
+    } catch (err: unknown) {
       console.error('Upload error:', err);
-      setError(`${errorMessage}\n\nDetails:\n${errorDetails}`);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      setError(errorMessage);
     }
   };
 

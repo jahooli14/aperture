@@ -12,40 +12,11 @@ export function PhotoGallery() {
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initial fetch only
+  // Fetch photos on mount
   useEffect(() => {
     fetchPhotos();
-  }, []); // Empty deps - only run once on mount
-
-  // Polling effect - only runs when photos change
-  useEffect(() => {
-    const hasProcessingPhotos = photos.some(p => p.original_url && !p.aligned_url);
-
-    // Clear existing interval
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = null;
-    }
-
-    // Start polling if needed
-    if (hasProcessingPhotos) {
-      console.log('📊 Starting polling - photos still processing...');
-      pollIntervalRef.current = setInterval(() => {
-        console.log('📊 Polling for photo updates...');
-        fetchPhotos();
-      }, 5000);
-    }
-
-    return () => {
-      if (pollIntervalRef.current) {
-        console.log('📊 Stopping polling');
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [photos]); // Only depend on photos, not fetchPhotos
+  }, [fetchPhotos]);
 
   const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -168,12 +139,6 @@ export function PhotoGallery() {
                     day: 'numeric',
                   })}
                 </p>
-                {photo.aligned_url && (
-                  <p className="text-white/80 text-xs mt-0.5">✓ Aligned</p>
-                )}
-                {!photo.aligned_url && photo.original_url && (
-                  <p className="text-yellow-300 text-xs mt-0.5">⏳ Processing...</p>
-                )}
               </div>
             </div>
           </motion.div>

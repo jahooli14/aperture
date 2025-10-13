@@ -26,8 +26,6 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
 
     async function initDetector() {
       try {
-        console.log('🔍 Initializing MediaPipe Face Landmarker...');
-
         const vision = await FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
         );
@@ -45,15 +43,14 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
           minTrackingConfidence: 0.4,
           outputFaceBlendshapes: false,
           outputFacialTransformationMatrixes: false
-        } as any); // TypeScript types may not include all options
+        });
 
         if (!mounted) return;
 
         setDetector(faceLandmarker);
         setLoading(false);
-        console.log('✅ MediaPipe Face Landmarker initialized successfully');
       } catch (error) {
-        console.error('❌ Failed to load MediaPipe detector:', error);
+        console.error('Failed to load MediaPipe detector:', error);
         if (mounted) {
           setLoading(false);
           onError?.(error instanceof Error ? error : new Error('Failed to initialize face detector'));
@@ -80,13 +77,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
 
       img.onload = async () => {
         try {
-          console.log('🔍 Running eye detection...', {
-            imageWidth: img.width,
-            imageHeight: img.height
-          });
-
           if (!detector) {
-            console.error('❌ Detector not initialized');
             onDetection(null);
             return;
           }
@@ -100,22 +91,14 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
 
           if (results.faceLandmarks && results.faceLandmarks.length > 0) {
             const landmarks = results.faceLandmarks[0];
-
-            console.log('📊 Detected', landmarks.length, 'landmarks');
-
             let leftEye, rightEye;
 
             // Try to use iris center landmarks if available (indices 468 and 473)
-            // These are the most accurate for eye position when refineLandmarks is enabled
             if (landmarks.length > 473) {
-              console.log('Using iris center landmarks (468, 473)');
               leftEye = landmarks[473]; // Left iris center
               rightEye = landmarks[468]; // Right iris center
             } else {
-              // Fallback: Use eye contour centers (always available in 468-landmark model)
-              // Left eye contour: landmarks 362-382 (approximate center)
-              // Right eye contour: landmarks 133-153 (approximate center)
-              console.log('Using eye contour fallback (133, 362)');
+              // Fallback: Use eye contour centers
               leftEye = landmarks[362]; // Left eye inner corner
               rightEye = landmarks[133]; // Right eye inner corner
             }
@@ -139,23 +122,15 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
             const isValid = validateEyeDetection(coords);
 
             if (isValid) {
-              console.log('✅ Eye detection successful:', {
-                leftEye: coords.leftEye,
-                rightEye: coords.rightEye,
-                eyeDistance: calculateDistance(coords.leftEye, coords.rightEye),
-                normalizedDistance: calculateDistance(coords.leftEye, coords.rightEye) / img.width
-              });
               onDetection(coords);
             } else {
-              console.warn('⚠️ Eye detection validation failed');
               onDetection(null);
             }
           } else {
-            console.warn('⚠️ No face detected in image');
             onDetection(null);
           }
         } catch (error) {
-          console.error('❌ Eye detection failed:', error);
+          console.error('Eye detection failed:', error);
           onError?.(error instanceof Error ? error : new Error('Eye detection failed'));
           onDetection(null);
         } finally {
@@ -164,7 +139,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
       };
 
       img.onerror = () => {
-        console.error('❌ Failed to load image');
+        console.error('Failed to load image for detection');
         URL.revokeObjectURL(url);
         onError?.(new Error('Failed to load image for detection'));
         onDetection(null);
@@ -203,7 +178,6 @@ function validateEyeDetection(detection: EyeCoordinates): boolean {
     rightEye.x < 0 || rightEye.x > imageWidth ||
     rightEye.y < 0 || rightEye.y > imageHeight
   ) {
-    console.warn('Validation failed: Coordinates out of bounds');
     return false;
   }
 
@@ -212,32 +186,21 @@ function validateEyeDetection(detection: EyeCoordinates): boolean {
   const normalizedDistance = eyeDistance / imageWidth;
 
   // Baby eye distance typically 0.12-0.35 of image width
-  // (more lenient than adult range of 0.2-0.3)
   if (normalizedDistance < 0.12 || normalizedDistance > 0.35) {
-    console.warn('Validation failed: Eye distance out of range', {
-      eyeDistance,
-      normalizedDistance,
-      expected: '0.12-0.35'
-    });
     return false;
   }
 
   // Check eyes are roughly horizontal (allowing for tilted head)
   const verticalDiff = Math.abs(leftEye.y - rightEye.y);
-  const verticalTolerance = 0.4; // More lenient for babies (40% vs 30% for adults)
+  const verticalTolerance = 0.4; // More lenient for babies
 
   if (verticalDiff > eyeDistance * verticalTolerance) {
-    console.warn('Validation failed: Eyes not horizontally aligned', {
-      verticalDiff,
-      maxAllowed: eyeDistance * verticalTolerance
-    });
     return false;
   }
 
   // Check eyes aren't too close to image edges (margin = 5% of width)
   const margin = 0.05 * imageWidth;
   if (leftEye.x < margin || rightEye.x > imageWidth - margin) {
-    console.warn('Validation failed: Eyes too close to image edge');
     return false;
   }
 
