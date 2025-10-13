@@ -25,10 +25,9 @@ OUTPUT_SIZE = (1080, 1080)
 
 def align_face(image_bytes, left_eye, right_eye):
     """
-    Align face using step-by-step approach (CORRECTED ORDER):
-    1. Rotate image so eyes are horizontally level (same y value)
-    2. Scale image so eyes are TARGET_INTER_EYE_DISTANCE apart (simple horizontal distance)
-    3. Translate to place eyes at exact target positions
+    Align face using OpenCV's proven similarity transformation approach.
+    This uses estimateAffinePartial2D to calculate the transformation matrix
+    that maps source eye positions to target positions in one operation.
 
     Args:
         image_bytes: Image data as bytes
@@ -45,126 +44,71 @@ def align_face(image_bytes, left_eye, right_eye):
     if img is None:
         return None
 
-    left_eye = np.array(left_eye, dtype=np.float32)
-    right_eye = np.array(right_eye, dtype=np.float32)
+    height, width = img.shape[:2]
 
     print(f'📍 Input eye positions:')
     print(f'   Left: ({left_eye[0]:.1f}, {left_eye[1]:.1f})')
     print(f'   Right: ({right_eye[0]:.1f}, {right_eye[1]:.1f})')
+    print(f'   Image size: {width}x{height}')
 
-    # STEP 1: Rotate image so eyes are horizontal
-    # Calculate angle to make eyes horizontal
-    # We measure the angle of the line connecting the eyes
-    # Baby's left eye to baby's right eye
-    delta_y = left_eye[1] - right_eye[1]  # How much higher is left eye vs right?
-    delta_x = left_eye[0] - right_eye[0]  # How much more to the right is left eye?
+    # Source points (detected eye positions)
+    src_points = np.array([
+        left_eye,
+        right_eye
+    ], dtype=np.float32).reshape(-1, 1, 2)
 
-    # Calculate rotation angle
-    # If delta_y > 0: left eye is higher, need to rotate CCW (negative angle)
-    # The angle is simply arctan(opposite/adjacent)
-    angle_rad = np.arctan2(delta_y, delta_x)
-    angle_deg = -np.degrees(angle_rad)  # Negate for OpenCV
+    # Destination points (target eye positions in output)
+    dst_points = np.array([
+        TARGET_LEFT_EYE,
+        TARGET_RIGHT_EYE
+    ], dtype=np.float32).reshape(-1, 1, 2)
 
-    print(f'🔄 Step 1 - Rotate:')
-    print(f'   Left eye: ({left_eye[0]:.1f}, {left_eye[1]:.1f})')
-    print(f'   Right eye: ({right_eye[0]:.1f}, {right_eye[1]:.1f})')
-    print(f'   Delta Y (left - right): {delta_y:.1f}px (positive = left higher)')
-    print(f'   Delta X (left - right): {delta_x:.1f}px')
-    print(f'   Rotation angle: {angle_deg:.2f}°')
+    print(f'\n🎯 Target eye positions:')
+    print(f'   Left: ({TARGET_LEFT_EYE[0]}, {TARGET_LEFT_EYE[1]})')
+    print(f'   Right: ({TARGET_RIGHT_EYE[0]}, {TARGET_RIGHT_EYE[1]})')
 
-    # Get image dimensions first (needed for rotation center)
-    height, width = img.shape[:2]
-    center_x = width / 2
-    center_y = height / 2
+    # Calculate similarity transformation matrix (rotation + scale + translation)
+    # This is the correct approach - it preserves angles and aspect ratio
+    M, _ = cv2.estimateAffinePartial2D(src_points, dst_points)
 
-    # Rotate using cv2.warpAffine (simpler, no scipy dependency)
-    # Get rotation matrix for rotation around image center
-    rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle_deg, 1.0)
+    print(f'\n🔢 Transformation matrix:')
+    print(f'   [{M[0,0]:.4f}  {M[0,1]:.4f}  {M[0,2]:.2f}]')
+    print(f'   [{M[1,0]:.4f}  {M[1,1]:.4f}  {M[1,2]:.2f}]')
 
-    # Rotate image keeping same dimensions
-    rotated_img = cv2.warpAffine(
+    # Apply transformation
+    # This combines rotation + scale + translation in ONE operation
+    # Directly outputs to 1080x1080 with eyes at target positions
+    aligned = cv2.warpAffine(
         img,
-        rotation_matrix,
-        (width, height),
-        flags=cv2.INTER_LINEAR,
+        M,
+        OUTPUT_SIZE,
+        flags=cv2.INTER_CUBIC,
         borderMode=cv2.BORDER_CONSTANT,
-        borderValue=(255, 255, 255)
+        borderValue=(255, 255, 255)  # White background
     )
 
-    print(f'   Rotated image using cv2.warpAffine')
+    print(f'✅ Transformation applied')
+    print(f'   Output size: {OUTPUT_SIZE[0]}x{OUTPUT_SIZE[1]}')
 
-    # Apply rotation matrix to eye coordinates
-    left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
-    right_homogeneous = np.array([right_eye[0], right_eye[1], 1])
+    # Add debug visualization
+    debug_img = aligned.copy()
 
-    rotated_left = rotation_matrix @ left_homogeneous
-    rotated_right = rotation_matrix @ right_homogeneous
+    # Blue dots at TARGET eye positions (where eyes should be)
+    cv2.circle(debug_img, TARGET_LEFT_EYE, 8, (255, 0, 0), -1)
+    cv2.circle(debug_img, TARGET_RIGHT_EYE, 8, (255, 0, 0), -1)
 
-    print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
-    print(f'   Y values should be equal: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
+    # Yellow crosshairs at eye Y-level (432) to show horizontal alignment
+    cv2.line(debug_img, (0, TARGET_LEFT_EYE[1]), (OUTPUT_SIZE[0], TARGET_LEFT_EYE[1]), (0, 255, 255), 2)
 
-    # STEP 2: Crop centered on eye midpoint
-    # Calculate eye midpoint in rotated image
-    eye_midpoint_x = (rotated_left[0] + rotated_right[0]) / 2
-    eye_midpoint_y = (rotated_left[1] + rotated_right[1]) / 2
+    # Yellow vertical lines at eye X positions
+    cv2.line(debug_img, (TARGET_LEFT_EYE[0], 0), (TARGET_LEFT_EYE[0], OUTPUT_SIZE[1]), (0, 255, 255), 1)
+    cv2.line(debug_img, (TARGET_RIGHT_EYE[0], 0), (TARGET_RIGHT_EYE[0], OUTPUT_SIZE[1]), (0, 255, 255), 1)
 
-    print(f'\n📐 Step 2 - Crop centered on eyes:')
-    print(f'   Eye midpoint in rotated image: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
-    print(f'   Target: center eyes at (540, 540) in 1080x1080 output')
-
-    # Calculate crop region to center eyes at (540, 540)
-    half_size = OUTPUT_SIZE[0] // 2  # 540
-    crop_x = int(eye_midpoint_x - half_size)
-    crop_y = int(eye_midpoint_y - half_size)
-
-    print(f'   Crop region: from ({crop_x}, {crop_y}) to ({crop_x + OUTPUT_SIZE[0]}, {crop_y + OUTPUT_SIZE[1]})')
-    print(f'   Rotated image size: {width}x{height}')
-
-    # Create output image with white background
-    final_img = np.full((OUTPUT_SIZE[1], OUTPUT_SIZE[0], 3), 255, dtype=np.uint8)
-
-    # Calculate valid regions (handle boundaries)
-    src_x1 = max(0, crop_x)
-    src_y1 = max(0, crop_y)
-    src_x2 = min(width, crop_x + OUTPUT_SIZE[0])
-    src_y2 = min(height, crop_y + OUTPUT_SIZE[1])
-
-    dst_x1 = src_x1 - crop_x
-    dst_y1 = src_y1 - crop_y
-    dst_x2 = dst_x1 + (src_x2 - src_x1)
-    dst_y2 = dst_y1 + (src_y2 - src_y1)
-
-    print(f'   Source region: [{src_y1}:{src_y2}, {src_x1}:{src_x2}]')
-    print(f'   Dest region: [{dst_y1}:{dst_y2}, {dst_x1}:{dst_x2}]')
-
-    # Copy region from rotated image to output
-    final_img[dst_y1:dst_y2, dst_x1:dst_x2] = rotated_img[src_y1:src_y2, src_x1:src_x2]
-
-    # Calculate final eye positions in output image
-    final_left = rotated_left - np.array([crop_x, crop_y])
-    final_right = rotated_right - np.array([crop_x, crop_y])
-    final_midpoint = (final_left + final_right) / 2
-
-    print(f'   Eyes in output: left=({final_left[0]:.1f}, {final_left[1]:.1f}), right=({final_right[0]:.1f}, {final_right[1]:.1f})')
-    print(f'   Eye midpoint in output: ({final_midpoint[0]:.1f}, {final_midpoint[1]:.1f}) - should be (540, 540)')
-
-    print(f'✅ Final eye positions (PREDICTED):')
-    print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
-    print(f'   Right: ({final_right[0]:.1f}, {final_right[1]:.1f})')
-    print(f'   Midpoint: ({final_midpoint[0]:.1f}, {final_midpoint[1]:.1f})')
-    print(f'   Current inter-eye distance: {abs(final_left[0] - final_right[0]):.1f}px')
-
-    # Draw markers on output to verify eye positions
-    debug_img = final_img.copy()
-    # Blue dots = predicted eye positions
-    cv2.circle(debug_img, (int(final_left[0]), int(final_left[1])), 5, (255, 0, 0), -1)
-    cv2.circle(debug_img, (int(final_right[0]), int(final_right[1])), 5, (255, 0, 0), -1)
-    # Yellow crosshairs at center (540, 540) - where eyes should be
-    cv2.circle(debug_img, (540, 540), 5, (0, 255, 255), -1)
-    cv2.line(debug_img, (0, 540), (OUTPUT_SIZE[0], 540), (0, 255, 255), 1)
-    cv2.line(debug_img, (540, 0), (540, OUTPUT_SIZE[1]), (0, 255, 255), 1)
-
-    print(f'\n📊 Visual debugging: Blue dots=predicted eyes, Yellow crosshairs=center (540,540)')
+    print(f'\n📊 Visual debugging:')
+    print(f'   Blue dots = target eye positions')
+    print(f'   Yellow horizontal line = Y=432 (eye level)')
+    print(f'   Yellow vertical lines = X=360 and X=720 (eye X positions)')
+    print(f'   Eyes should be centered on blue dots')
 
     # Encode as JPEG
     _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
