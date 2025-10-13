@@ -4,7 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Updated**: 2025-10-13 (Documentation Restructure Complete)
+> **Last Updated**: 2025-10-13 23:30 (Session 9 - Photo Alignment Debugging)
+>
+> **Current Work**: Fixing photo alignment algorithm - rotation works, translation broken
 
 ---
 
@@ -95,41 +97,54 @@
 
 ## ⏭️ Next Steps
 
-### Priority 1: ✅ COMPLETE - Production Integration of Alignment (Session 8)
+### Priority 1: 🔄 IN PROGRESS - Fix Photo Alignment Algorithm (Session 9 - Continuation)
 
-**Implementation Summary**:
-- ✅ Created `/api/align-photo-v4.ts` with pure TypeScript/Sharp implementation
-- ✅ Implemented coordinate scaling logic with input validation
-- ✅ Converted from Python/OpenCV to TypeScript similarity transform
-  - Created `api/lib/alignment.ts` with `calculateSimilarityTransform()`
-  - Same mathematical correctness as OpenCV's `estimateAffinePartial2D`
-  - Uses Sharp's `affine()` method for image transformation
-- ✅ Successfully deployed to Vercel (no Python dependencies needed)
-- ✅ Updated `detect-eyes.ts` to call v4 endpoint
-- ✅ Cleaned up test scripts and artifacts
-  - Deleted 9 test/debug scripts
-  - Removed test-output/ directory (33 test images, ~1.5MB)
-  - Organized utilities into `tools/` directory with README
+**Current Status**: 🟡 Alignment algorithm being rebuilt step-by-step
 
-**What's Ready**:
-- Production API endpoint: `/api/align-photo-v4`
-- Deployment URL: `https://aperture-p5ei57lxj-daniels-projects-ca7c7923.vercel.app`
-- Status: ✅ **READY FOR TESTING** - All bugs fixed
+**What Happened**:
+- Session 8 TypeScript/Sharp implementation did NOT work in production
+- Reverted to Python approach: `/api/align-photo-v4.py` (NOT `.ts`)
+- Discovered rotation works but translation is completely broken
+- Eyes end up far from predicted positions (forehead centered instead of eyes)
 
-**Bug Fixes Applied (Session 8)**:
-- ✅ Fixed "photos stuck uploading" - Added auto-refresh polling (every 5s)
-- ✅ Fixed "Bucket not found" error - Changed from 'photos' to 'originals' bucket
-- ✅ Removed non-existent `processing_status` field from database updates
+**Root Causes Identified**:
+1. ❌ Coordinate tracking through transformations is unreliable with warpAffine
+2. ❌ Every attempted translation causes massive position errors
+3. ❌ Tried scipy.ndimage.rotate → exceeded 250MB Vercel limit
+4. ✅ Using cv2.warpAffine for rotation (working)
+5. ❌ Translation via array cropping not working yet
 
-**User Experience Now**:
-1. Upload photo → appears immediately with "⏳ Processing..." badge
-2. Gallery auto-refreshes every 5 seconds while processing
-3. When alignment completes → badge changes to "✓ Aligned"
-4. Photo updates to show aligned version
+**Session 9 Progress** (2025-10-13):
 
-**Next Action Required**: End-to-end testing with real photos
+**Research Completed**:
+- ✅ Investigated AgeLapse (Flutter app) - uses Scale → Rotate → Translate order
+- ✅ Investigated EyeLign (Python CLI) - uses face_recognition library
+- ✅ Decision: Continue with current approach (simpler than theirs)
+- ✅ Documented Vercel build log access in `.process/OBSERVABILITY.md`
+  - How to fetch deployment events API
+  - Critical: text is in `payload.text` not top-level `text`
+  - Common build errors documented
 
-### Priority 2: Validation & Testing (Ready Now!)
+**Technical Fixes Applied**:
+- ✅ Removed scipy dependency (caused 250MB limit error)
+- ✅ Switched rotation from scipy to cv2.warpAffine with rotation matrix
+- ✅ Implemented array-based cropping for translation (not yet verified)
+- ✅ Added comprehensive debug logging with visual markers
+
+**Current Implementation** (`align-photo-v4.py`):
+1. ✅ **Rotation**: Using cv2.warpAffine around image center - WORKING
+2. 🔄 **Translation**: Array slicing to crop centered on eye midpoint - NEEDS TESTING
+3. ❌ **Scaling**: Not implemented yet (will add after translation works)
+
+**What's Deployed**:
+- File: `projects/wizard-of-oz/api/align-photo-v4.py`
+- Endpoint: `/api/align-photo-v4` (Python serverless function)
+- Dependencies: opencv-python-headless, numpy (no scipy)
+- Status: 🟢 Builds successfully, 🟡 Translation needs verification
+
+**Next Action Required**: User needs to test current translation fix
+
+### Priority 2: Verify Translation Works
 
 **Testing Plan**:
 - [ ] Upload 3-5 test photos via Wizard of Oz UI
