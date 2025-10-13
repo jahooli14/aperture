@@ -142,6 +142,64 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 - Co-locate related files
 - Keep components focused and small
 
+### Communication Patterns
+
+**Transparency in execution** - Always communicate what you're doing:
+
+#### 1. Announce Parallel Operations
+```
+Running these checks in parallel:
+- Git status
+- Build verification
+- Production log review
+
+[Single message with 3 Bash tool calls]
+```
+
+#### 2. Declare Subagent Launches
+```
+Launching deep-research agent to investigate X while I work on Y
+
+[Task tool + Continue with implementation]
+```
+
+#### 3. State Checkpoint Creation
+```
+Creating checkpoint before this change (rollback available if needed)
+
+Current state: [what's working]
+About to change: [what you'll modify]
+Risk: [Low/Medium/High]
+```
+
+#### 4. Report Background Processes
+```
+Build running in background (2 min) - continuing with tests
+
+[Bash with run_in_background + Continue with other work]
+[Later: BashOutput to check results]
+```
+
+#### 5. Explain Tool Selection
+```
+I'm going to:
+1. Read these 3 files in parallel (faster than sequential)
+2. Then search for X pattern across codebase
+3. Then analyze findings
+
+[Execute parallel Reads, then Grep, then analysis]
+```
+
+**Why this matters**:
+- 🤝 User understands what's happening
+- ⏸️ User can interrupt if needed
+- 📊 Demonstrates efficient workflow
+- 🎓 User learns better practices
+
+**Related docs**:
+- `.claude/startup.md` - Steps 5.5 & 5.6 (Parallel patterns)
+- `.process/BACKGROUND_PROCESSES.md` - Background process guide
+
 ---
 
 ## Development Workflow

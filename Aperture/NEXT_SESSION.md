@@ -10,6 +10,40 @@
 
 ---
 
+## 📸 Session Checkpoints
+
+> **Purpose**: Snapshot stable states before major changes for safe experimentation
+>
+> **When to create**: Before implementing significant features, refactors, or risky changes
+>
+> **How to use**: Document current working state, then proceed with changes knowing you can rollback
+
+### How to Create a Checkpoint
+
+**Before starting risky work**:
+1. Ensure current state is stable (tests pass, builds work, deployed successfully)
+2. Create checkpoint entry below with format:
+   ```markdown
+   ### Checkpoint [N] - [YYYY-MM-DD HH:MM] - [Brief Description]
+   **What's working**: [List stable features]
+   **About to change**: [What you'll modify]
+   **Risk level**: [Low/Medium/High]
+   **Rollback**: git log --oneline -10 # Find commit: [commit-hash]
+   ```
+3. Proceed with changes
+4. If successful, mark checkpoint as ✅
+5. If failed, use rollback command to restore
+
+### Active Checkpoints
+
+**None currently** - Create one before next major change
+
+### Checkpoint History
+
+_Recent checkpoints will be listed here as they're created_
+
+---
+
 ## 🎯 Current Status
 
 ### Project State

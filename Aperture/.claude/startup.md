@@ -176,6 +176,140 @@ Action needed: [yes/no]
 
 ---
 
+### Step 5.5: Parallel Execution Policy
+
+**When working on tasks, maximize efficiency by running independent operations in parallel.**
+
+**Parallel execution checklist**:
+- ✅ File reads that aren't dependent on each other
+- ✅ Multiple grep/glob searches
+- ✅ Git status + git diff + git log
+- ✅ Multiple bash commands that don't depend on each other
+- ✅ Infrastructure checks across different services
+
+**Communication pattern**:
+```
+I'm going to run these operations in parallel:
+1. [Operation 1]
+2. [Operation 2]
+3. [Operation 3]
+
+[Execute all in single message with multiple tool calls]
+```
+
+**Examples**:
+
+**GOOD - Parallel file reads**:
+```
+Single message with 3 Read tool calls:
+- Read: src/components/Upload.tsx
+- Read: src/components/Gallery.tsx
+- Read: src/lib/imageUtils.ts
+```
+
+**BAD - Sequential when could be parallel**:
+```
+Message 1: Read src/components/Upload.tsx
+[wait]
+Message 2: Read src/components/Gallery.tsx
+[wait]
+Message 3: Read src/lib/imageUtils.ts
+```
+
+**GOOD - Parallel git inspection**:
+```
+Single message with 3 Bash tool calls:
+- git status
+- git diff
+- git log --oneline -10
+```
+
+**Why this matters**:
+- ⚡ 3x faster execution
+- 🎯 Better token efficiency
+- 🔄 More work per session
+
+---
+
+### Step 5.6: Subagent Task Delegation
+
+**Use Task tool proactively for specialized work that can run in parallel.**
+
+**When to delegate to subagents**:
+- 🔍 **deep-research** - Understanding APIs, best practices, documentation
+- 🔎 **codebase-pattern-analyzer** - Tracing features, understanding architecture
+- ✅ **check-and-challenge** - After implementing significant features
+- 📝 **docs-writer/docs-reviewer** - Creating/updating user guides
+
+**Parallel subagent pattern**:
+```
+I'm going to launch 2 agents in parallel:
+1. deep-research: Investigate best practices for X
+2. codebase-pattern-analyzer: Find all files related to Y
+
+[Single message with 2 Task tool calls]
+```
+
+**Benefits**:
+- ⚡ Work continues while agents gather information
+- 🎯 Specialized expertise for specific tasks
+- 🔀 True parallel development (research + implementation simultaneously)
+
+**Example use cases**:
+- Launch research agent to find best practices while implementing feature
+- Start code review agent on completed feature while working on next feature
+- Run pattern analyzer to understand architecture while planning changes
+
+---
+
+### Step 5.7: Checkpoint Before Major Changes
+
+**Create checkpoints before risky or significant changes.**
+
+**When to checkpoint**:
+- 🔧 Major refactoring (changing architecture, moving files)
+- ✨ New feature implementation (significant additions)
+- 🔄 Database migrations or schema changes
+- 🚨 High-risk fixes (touching critical code paths)
+- 🎯 Any change where you think "I hope this works"
+
+**How to checkpoint**:
+1. Ensure current state is stable
+2. Add entry to NEXT_SESSION.md under "Session Checkpoints"
+3. Document what's working, what you'll change, risk level
+4. Note current git commit for potential rollback
+5. Proceed with changes
+
+**Format**:
+```markdown
+### Checkpoint 1 - 2025-10-13 14:30 - Refactor alignment algorithm
+
+**What's working**:
+- Upload system functional
+- Eye detection working
+- Basic alignment operational
+
+**About to change**:
+- Refactor alignPhoto() to use matrix transformations
+- May affect existing alignment logic
+
+**Risk level**: Medium
+
+**Rollback**: git checkout ba2603e -- src/lib/imageUtils.ts
+```
+
+**After change**:
+- ✅ Success: Mark checkpoint as complete
+- ❌ Failed: Use rollback command, document what went wrong
+
+**Why this matters**:
+- 🔒 Safe experimentation without fear
+- ⏮️ Quick recovery if things break
+- 📊 Learning from what went wrong
+- 🎯 Confidence to try bold improvements
+
+---
+
 ### Step 6: MANDATORY - Update Documentation During Work
 
 **🚨 CRITICAL**: NEXT_SESSION.md must be updated DURING the session, NOT just at the end.
