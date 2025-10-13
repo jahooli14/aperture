@@ -4,7 +4,7 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Updated**: 2025-10-12 (Clean Slate)
+> **Updated**: 2025-10-13 (Documentation Restructure Complete)
 
 ---
 
@@ -30,7 +30,27 @@
 
 ### Recent Improvements
 
-**Debugging Protocol & Photo Alignment** (Current Session):
+**Documentation Restructure** (Session 7 - 2025-10-13):
+- ✅ **Context Engineering Best Practices** implemented
+  - Added "Current Tasks & Status" to CLAUDE-APERTURE.md
+  - Task format now includes verification commands
+  - Source citation pattern established
+  - Code output standards documented
+- ✅ **Documentation Audit & Cleanup** completed
+  - **Phase 1**: Eliminated 360 lines of redundancy, resolved 4 conflicts
+    - CLAUDE-APERTURE.md: 302 → 258 lines (15% reduction)
+    - DEVELOPMENT.md: 769 → 592 lines (23% reduction)
+    - Single sources of truth established
+  - **Phase 2**: "Choose your own adventure" navigation
+    - Added navigation to 8 major documentation files
+    - Created DOCUMENTATION_INDEX.md (complete map)
+    - Archived 7 orphaned files to `.archive/`
+    - 21 active docs remaining (down from 31, 32% reduction)
+- ✅ **Process Gap Fixed**: NEXT_SESSION.md progressive updates
+  - Added enforcement to update during sessions, not just at end
+  - Documented in COMMON_MISTAKES.md as case study
+
+**Debugging Protocol & Photo Alignment** (Session 6):
 - ✅ **BREAKTHROUGH**: Fixed catastrophic coordinate scaling bug
   - Root cause: Database stores coordinates for 768x1024 downscaled images
   - Must scale coordinates by (actualWidth / detectionWidth) before processing
@@ -182,6 +202,7 @@ git status
 ### Important Files
 
 **Documentation**:
+- `DOCUMENTATION_INDEX.md` - Complete documentation map (START HERE)
 - `START_HERE.md` - Session startup guide
 - `CLAUDE-APERTURE.md` - Project patterns & conventions
 - `.process/OBSERVABILITY.md` - Logging & debugging guide
@@ -214,6 +235,6 @@ git status
 
 ---
 
-**Last Updated**: 2025-10-12 (Post-Alignment-Breakthrough)
-**Status**: OpenCV solution working locally, needs production integration
-**Token Budget**: Healthy (~48K tokens used)
+**Last Updated**: 2025-10-13 (Documentation restructure complete)
+**Status**: Ready to integrate OpenCV alignment into production
+**Token Budget**: Healthy (~30K tokens used in current session)
