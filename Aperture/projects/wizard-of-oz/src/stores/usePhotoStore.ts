@@ -32,42 +32,50 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   fetchError: null,
 
   fetchPhotos: async () => {
-    console.log('📸 Fetching photos...');
+    console.log('📸 [fetchPhotos] START - Fetching photos...');
     set({ loading: true, fetchError: null });
 
     // Add timeout to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Fetch timeout after 10 seconds')), 10000);
+      setTimeout(() => {
+        console.log('⏱️ [fetchPhotos] Timeout hit after 10 seconds');
+        reject(new Error('Fetch timeout after 10 seconds'));
+      }, 10000);
     });
 
     try {
+      console.log('📸 [fetchPhotos] Creating Supabase query...');
       const fetchPromise = supabase
         .from('photos')
         .select('*')
         .order('upload_date', { ascending: false });
 
+      console.log('📸 [fetchPhotos] Waiting for query result...');
       const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
-      console.log('📸 Fetch result:', {
+      console.log('📸 [fetchPhotos] Query completed:', {
         photoCount: data?.length || 0,
         error: error?.message || 'none'
       });
 
       if (error) {
-        console.error('❌ Error fetching photos:', error);
+        console.error('❌ [fetchPhotos] Error fetching photos:', error);
         const errorMsg = `Database error: ${error.message}\n\nDetails: ${JSON.stringify(error, null, 2)}`;
         set({ loading: false, fetchError: errorMsg });
+        console.log('📸 [fetchPhotos] END (with error)');
         return;
       }
 
       set({ photos: data || [], loading: false, fetchError: null });
-      console.log('✅ Photos loaded successfully:', data?.length || 0);
+      console.log('✅ [fetchPhotos] Photos loaded successfully:', data?.length || 0);
+      console.log('📸 [fetchPhotos] END (success)');
     } catch (err) {
-      console.error('❌ Unexpected error fetching photos:', err);
+      console.error('❌ [fetchPhotos] Unexpected error:', err);
       const errorMsg = err instanceof Error
         ? `Error: ${err.message}\n\nStack: ${err.stack}`
         : `Unknown error: ${JSON.stringify(err)}`;
       set({ loading: false, photos: [], fetchError: errorMsg });
+      console.log('📸 [fetchPhotos] END (caught exception)');
     }
   },
 
@@ -147,10 +155,13 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       console.log('Generated public URL:', { publicUrl });
 
       // Prepare photo record with eye coordinates if available
+      // Since alignment is currently disabled, set aligned_url to original_url immediately
+      // to prevent photos from being stuck in "processing" state
       const photoRecord: any = {
         user_id: user.id,
         upload_date: targetDate,
         original_url: publicUrl,
+        aligned_url: publicUrl, // Use original as aligned since alignment disabled
       };
 
       // Add eye coordinates if detected (stored as JSONB in database)
@@ -203,11 +214,13 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       }
 
       // Refresh photos
-      console.log('Refreshing photos list...');
+      console.log('🔄 [uploadPhoto] About to call fetchPhotos()...');
       await get().fetchPhotos();
+      console.log('🔄 [uploadPhoto] fetchPhotos() returned');
 
-      console.log('Upload completed successfully!');
+      console.log('✅ [uploadPhoto] Upload completed successfully!');
       set({ uploading: false });
+      console.log('✅ [uploadPhoto] uploading set to false');
       return (photoData as Photo).id;
     } catch (error) {
       console.error('Upload failed:', error);

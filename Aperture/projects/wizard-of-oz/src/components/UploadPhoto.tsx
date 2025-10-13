@@ -154,6 +154,14 @@ export function UploadPhoto() {
   };
 
   const handleUpload = async () => {
+    console.log('🚀 handleUpload called', {
+      selectedFile: !!selectedFile,
+      eyeCoords: !!eyeCoords,
+      displayDate,
+      uploading,
+      detectingEyes
+    });
+
     if (!selectedFile) {
       setError('No file selected');
       return;
@@ -161,7 +169,11 @@ export function UploadPhoto() {
 
     try {
       setError('');
+      console.log('📤 Calling uploadPhoto from store...');
       await uploadPhoto(selectedFile, eyeCoords, displayDate);
+      console.log('✅ uploadPhoto completed successfully');
+
+      console.log('🧹 Clearing component state...');
       setPreview(null);
       setSelectedFile(null);
       setOriginalFile(null);
@@ -176,7 +188,9 @@ export function UploadPhoto() {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
       }
+      console.log('✅ Component state cleared');
     } catch (err: any) {
+      console.error('❌ handleUpload error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
       const errorDetails = JSON.stringify({
         message: err?.message,
