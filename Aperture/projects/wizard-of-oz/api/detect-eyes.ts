@@ -175,12 +175,10 @@ VALIDATION REQUIREMENTS:
     const timeout = setTimeout(() => controller.abort(), 55000);
 
     try {
-      // TODO: Re-enable alignment once new implementation is ready
-      // Retry align-photo call with exponential backoff (up to 3 attempts)
-      /*
+      // Call new OpenCV-based alignment API (v4)
       await retryWithBackoff(
         async () => {
-          const alignResponse = await fetch(`${baseUrl}/api/align-photo-DISABLED`, {
+          const alignResponse = await fetch(`${baseUrl}/api/align-photo-v4`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ photoId, landmarks }),
@@ -232,8 +230,6 @@ VALIDATION REQUIREMENTS:
           },
         }
       );
-      */
-      console.log('⚠️  Alignment disabled - awaiting new implementation');
     } catch (error) {
       if (error.name === 'AbortError') {
         console.error('❌ Align-photo request timed out after 55s');
