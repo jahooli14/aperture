@@ -2,6 +2,35 @@
 
 > **Core Principle**: Fix root causes once, not symptoms many times.
 
+> **🧭 You are here**: Root cause analysis and mistake prevention framework
+>
+> **Purpose**: Turn repeated mistakes into automated solutions
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If mistake just happened → See "When Any Mistake Happens" section (capture immediately)
+- If same mistake happened 2+ times → See "Process Fix Decision Tree" (build automation)
+- If analyzing mistake at session end → Use "Root Cause Analysis Template" (Five Whys)
+- If planning next session → Check `.process/COMMON_MISTAKES.md` (learn from past)
+- If quarterly review time → See "Quarterly Process Audit" section
+
+**Related documentation**:
+- `.process/COMMON_MISTAKES.md` - Log of all mistakes (capture here first)
+- `.claude/startup.md` - Automated enforcement of learned lessons
+- `SESSION_CHECKLIST.md` - Manual workflow checks (non-automatic)
+- `.process/ARCHITECTURE.md` - "Start Minimal" philosophy context
+- `.process/LESSONS_LEARNED.md` - Big-picture project reflections
+
+**Referenced by**:
+- `.process/COMMON_MISTAKES.md` - Uses this framework for categorization
+- `.process/TESTING_GUIDE.md` - Apply improvement cycle to test failures
+- `.process/DEPLOYMENT.md` - Improve deployment reliability over time
+
 ---
 
 ## 🎯 The Problem

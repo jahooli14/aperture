@@ -2,6 +2,35 @@
 
 > **Philosophy**: Automate the boring stuff. Make deployments boring (in a good way).
 
+> **🧭 You are here**: Deployment strategies and automation for Aperture projects
+>
+> **Purpose**: Deploy to production safely with Vercel + Supabase
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If deploying new project for first time → See "Initial Setup" section below
+- If deployment failing → Jump to "Troubleshooting" section (build/runtime errors)
+- If production is broken → See "Rollback Strategy" (instant recovery)
+- If setting up CI/CD → See "Automated Workflows" section below
+- If deployment successful → Update `.process/LESSONS_LEARNED.md` with insights
+
+**Related documentation**:
+- `.process/TESTING_GUIDE.md` - Run tests before deploying (checklist step)
+- `.process/OBSERVABILITY.md` - Monitor deployed app (logs, errors, performance)
+- `.process/COMMON_MISTAKES.md` - Known deployment issues and fixes
+- `.process/DEVELOPMENT.md` - Local setup before first deploy
+
+**Referenced by**:
+- `.process/LESSONS_LEARNED.md:56` - Deployment as project milestone
+- `.process/CONTINUOUS_IMPROVEMENT.md` - Automate deployment pain points
+
+---
+
 ## Overview
 
 Our default deployment strategy: **Vercel** for frontend + serverless functions, **Supabase** for backend services.

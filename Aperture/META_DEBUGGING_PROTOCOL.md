@@ -1,5 +1,33 @@
 # Meta-Level Debugging Protocol
 
+> **🧭 You are here**: Universal Debugging Principles
+>
+> **Purpose**: Prevent wasting hours debugging algorithms when inputs are wrong
+>
+> **When to read**: BEFORE debugging any issue (mandatory)
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If debugging specific project → `projects/[name]/DEBUGGING.md` (project-specific tips)
+- If need logging guidance → `.process/OBSERVABILITY.md`
+- If debugging infrastructure → Run `/verify-infra [project]` first
+- If continuing work → `NEXT_SESSION.md`
+
+**Related documentation**:
+- `DEBUGGING_CHECKLIST.md` - Case study (coordinate scaling bug)
+- `.process/OBSERVABILITY.md` - Logging for self-sufficient debugging
+- `.process/COMMON_MISTAKES.md` - Learn from past errors
+
+**Referenced by**:
+- `START_HERE.md:42` - Read before debugging
+- `NEXT_SESSION.md:149` - Mandatory before debugging
+- `.claude/startup.md:82` - Step 4 if debugging
+
+---
+
 ## The Fundamental Principle
 
 > **"When output doesn't match expectations, verify your inputs match your assumptions BEFORE debugging the transformation logic."**

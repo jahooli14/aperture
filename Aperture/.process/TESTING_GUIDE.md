@@ -2,6 +2,35 @@
 
 > **Philosophy**: Start minimal. Test critical paths. Automate only when ROI is proven.
 
+> **🧭 You are here**: Testing strategy and patterns for Aperture projects
+>
+> **Purpose**: Define what, when, and how to test with Claude
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If writing tests now → Use patterns in sections below (Component/API/Utility testing)
+- If tests failing repeatedly → See `.process/COMMON_MISTAKES.md` (check for known issues)
+- If setting up new project → Use "Tech Stack" and "Test Structure" sections below
+- If tests are slowing development → Review "What to Skip Tests" section (avoid over-testing)
+- If ready to deploy → See `.process/DEPLOYMENT.md` (includes test checklist)
+
+**Related documentation**:
+- `.process/DEVELOPMENT.md` - Local development workflow (when to run tests)
+- `.process/CONTINUOUS_IMPROVEMENT.md` - How to learn from test failures
+- `knowledge-base/testing/` - Detailed patterns for Claude's `/test` command
+- `.process/COMMON_MISTAKES.md` - Known testing pitfalls and solutions
+
+**Referenced by**:
+- `.process/DEPLOYMENT.md:306` - Tests pass before deploying
+- `.process/CONTINUOUS_IMPROVEMENT.md` - Testing as process improvement tool
+
+---
+
 ## Core Principle: Avoid the Testing Agent Anti-Pattern
 
 **Remember**: We previously built a testing system so complex it slowed everything down.

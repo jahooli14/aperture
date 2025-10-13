@@ -1,6 +1,31 @@
 # Architecture Principles
 
-> **Version**: 1.0 - This document will evolve as we learn. Update it as patterns emerge.
+> **🧭 You are here**: Core Architectural Decisions & Philosophy
+>
+> **Purpose**: Guiding principles for technical decisions (Start Minimal philosophy)
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If making architectural decision → Use decision framework below
+- If documenting decision → `.process/DECISION_LOG.md`
+- If choosing tech stack → Review "Start Minimal" first
+- If adding complexity → Challenge with framework below
+
+**Related documentation**:
+- `.process/DECISION_LOG.md` - Record of architectural decisions (ADRs)
+- `.process/COMMON_MISTAKES.md` - Testing agent anti-pattern example
+- `.process/DEVELOPMENT.md` - How to implement these principles
+
+**Referenced by**:
+- `.process/COMMON_MISTAKES.md` - Testing agent case study
+- `.process/DECISION_LOG.md` - Applies Start Minimal to decisions
+
+---
 
 ## Core Philosophy: Start Minimal
 

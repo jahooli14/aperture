@@ -1,8 +1,31 @@
 # Architectural Decision Records (ADRs)
 
-> **Purpose**: Document significant architectural decisions and their rationale.
+> **🧭 You are here**: Record of Major Architectural Decisions
+>
+> **Purpose**: Document significant architectural decisions and their rationale
 >
 > **Format**: Date | Decision | Context | Rationale | Consequences
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If making new decision → Add entry using template below
+- If questioning old decision → Search this file for rationale
+- If need decision framework → `.process/ARCHITECTURE.md`
+- If implementing decision → Document in relevant code comments
+
+**Related documentation**:
+- `.process/ARCHITECTURE.md` - Start Minimal philosophy and decision framework
+- `.process/DEVELOPMENT.md` - Source citation pattern for decisions
+- `.process/COMMON_MISTAKES.md` - Learn from past decision mistakes
+
+**Referenced by**:
+- `.process/DEVELOPMENT.md:329` - Example ADR template
+- `.process/ARCHITECTURE.md` - Where to document decisions
 
 ---
 

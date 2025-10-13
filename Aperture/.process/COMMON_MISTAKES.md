@@ -1,8 +1,32 @@
 # Common Mistakes & How We Fixed Them
 
+> **🧭 You are here**: Lessons Learned Repository
+>
 > **Purpose**: Learn from every mistake. Capture immediately, detail at session end.
 >
 > **Format**: Date | Category | What Happened | Fix | Prevention
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If starting new work → Review recent entries here first
+- If made a mistake → Add entry immediately (don't wait)
+- If need process guidance → `.process/DEVELOPMENT.md`
+- If implementing fix → Update relevant process docs
+
+**Related documentation**:
+- `.process/CONTINUOUS_IMPROVEMENT.md` - How to capture and fix mistakes
+- `.process/DEVELOPMENT.md` - Process that should prevent mistakes
+- `SESSION_CHECKLIST.md` - Check before closing session
+
+**Referenced by**:
+- `.claude/startup.md:157` - Update immediately when mistakes happen
+- `SESSION_CHECKLIST.md:158` - Review and detail at session end
+- `START_HERE.md:203` - Avoid known pitfalls
 
 ---
 

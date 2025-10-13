@@ -4,6 +4,35 @@
 >
 > **Format**: Project-based entries with key insights
 
+> **🧭 You are here**: High-level project retrospectives and strategic insights
+>
+> **Purpose**: Capture big-picture learnings after completing projects/milestones
+>
+> **Last Updated**: 2025-10-13
+
+---
+
+## 🧭 Navigation
+
+**Where to go next**:
+- If just completed project/milestone → Use "Template for Next Project" section below
+- If starting new project → Review past entries (learn from previous successes/failures)
+- If deciding on tech stack → See "Cross-Project Patterns" (proven approaches)
+- If evaluating process changes → See "Evolution of Process" section
+- If mistake is recurring → This is strategic; tactical fixes go to `.process/COMMON_MISTAKES.md`
+
+**Related documentation**:
+- `.process/COMMON_MISTAKES.md` - Tactical fixes (individual mistakes vs strategic patterns)
+- `.process/CONTINUOUS_IMPROVEMENT.md` - How to act on lessons (process updates)
+- `.process/DECISION_LOG.md` - Technical decisions made during projects
+- `.process/ARCHITECTURE.md` - Architectural philosophy shaped by lessons
+- `.process/DEPLOYMENT.md` - Deployment learnings inform this file
+
+**Referenced by**:
+- `.process/CONTINUOUS_IMPROVEMENT.md:322` - Quarterly reviews reference this
+- `.process/DEPLOYMENT.md` - Deployment retrospectives added here
+- `SESSION_CHECKLIST.md` - End-of-project checklist includes updating this
+
 ---
 
 ## How to Use This File
