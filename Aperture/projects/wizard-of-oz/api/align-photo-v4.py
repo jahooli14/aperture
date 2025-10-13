@@ -72,42 +72,31 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Delta X (left - right): {delta_x:.1f}px')
     print(f'   Rotation angle: {angle_deg:.2f}°')
 
-    # Use scipy to rotate image
-    from scipy.ndimage import rotate as scipy_rotate
+    # Rotate using cv2.warpAffine (simpler, no scipy dependency)
+    # Get rotation matrix for rotation around image center
+    rotation_matrix = cv2.getRotationMatrix2D((center_x, center_y), angle_deg, 1.0)
 
-    # Rotate image around its center
-    rotated_img = scipy_rotate(img, angle_deg, reshape=False, mode='constant', cval=255)
+    # Rotate image keeping same dimensions
+    rotated_img = cv2.warpAffine(
+        img,
+        rotation_matrix,
+        (width, height),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(255, 255, 255)
+    )
 
-    print(f'   Rotated image using scipy')
+    print(f'   Rotated image using cv2.warpAffine')
 
-    # Calculate where eyes are after rotation
-    # Rotate points around image center
+    # Calculate where eyes are after rotation using the rotation matrix
     height, width = img.shape[:2]
-    center_x = width / 2
-    center_y = height / 2
 
-    # Translate to origin
-    left_centered = left_eye - np.array([center_x, center_y])
-    right_centered = right_eye - np.array([center_x, center_y])
+    # Apply rotation matrix to eye coordinates
+    left_homogeneous = np.array([left_eye[0], left_eye[1], 1])
+    right_homogeneous = np.array([right_eye[0], right_eye[1], 1])
 
-    # Rotate (note: positive angle is CCW in math, but we want image rotation)
-    angle_rad_actual = np.radians(angle_deg)
-    cos_a = np.cos(angle_rad_actual)
-    sin_a = np.sin(angle_rad_actual)
-
-    rotated_left_centered = np.array([
-        left_centered[0] * cos_a - left_centered[1] * sin_a,
-        left_centered[0] * sin_a + left_centered[1] * cos_a
-    ])
-
-    rotated_right_centered = np.array([
-        right_centered[0] * cos_a - right_centered[1] * sin_a,
-        right_centered[0] * sin_a + right_centered[1] * cos_a
-    ])
-
-    # Translate back
-    rotated_left = rotated_left_centered + np.array([center_x, center_y])
-    rotated_right = rotated_right_centered + np.array([center_x, center_y])
+    rotated_left = rotation_matrix @ left_homogeneous
+    rotated_right = rotation_matrix @ right_homogeneous
 
     print(f'   After rotation: left=({rotated_left[0]:.1f}, {rotated_left[1]:.1f}), right=({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Y values should be equal: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
