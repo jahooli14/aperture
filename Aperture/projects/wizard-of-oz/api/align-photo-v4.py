@@ -110,50 +110,34 @@ def align_face(image_bytes, left_eye, right_eye):
     print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
     print(f'   Y values should be equal now: left_y={rotated_left[1]:.1f}, right_y={rotated_right[1]:.1f}')
 
-    # STEP 2: Scale image so inter-eye distance = TARGET_INTER_EYE_DISTANCE
-    # Now that eyes are horizontal, distance is simply horizontal difference
-    current_distance = abs(rotated_left[0] - rotated_right[0])
-    scale = TARGET_INTER_EYE_DISTANCE / current_distance
+    # STEP 2: Translate (without scaling) to center eyes
+    # Calculate midpoint between eyes
+    eye_midpoint_x = (rotated_left[0] + rotated_right[0]) / 2
+    eye_midpoint_y = (rotated_left[1] + rotated_right[1]) / 2
 
-    print(f'🔍 Step 2 - Scale:')
-    print(f'   Rotated left eye: ({rotated_left[0]:.1f}, {rotated_left[1]:.1f})')
-    print(f'   Rotated right eye: ({rotated_right[0]:.1f}, {rotated_right[1]:.1f})')
-    print(f'   Current horizontal inter-eye distance: {current_distance:.1f}px')
-    print(f'   Target inter-eye distance: {TARGET_INTER_EYE_DISTANCE}px')
-    print(f'   Scale factor: {scale:.4f} ({"shrink" if scale < 1 else "enlarge"})')
-    print(f'   This will {"shrink" if scale < 1 else "enlarge"} {abs(scale - 1) * 100:.1f}%')
+    # Target: center of 1080x1080 image
+    target_center_x = OUTPUT_SIZE[0] / 2  # 540
+    target_center_y = OUTPUT_SIZE[1] / 2  # 540
 
-    # Scale the rotated image
-    scaled_width = int(new_w * scale)
-    scaled_height = int(new_h * scale)
-    scaled_img = cv2.resize(rotated_img, (scaled_width, scaled_height), interpolation=cv2.INTER_CUBIC)
+    print(f'📐 Step 2 - Translate (center eyes):')
+    print(f'   Current eye midpoint: ({eye_midpoint_x:.1f}, {eye_midpoint_y:.1f})')
+    print(f'   Target center: ({target_center_x:.1f}, {target_center_y:.1f})')
 
-    # Scale the eye positions
-    scaled_left = rotated_left * scale
-    scaled_right = rotated_right * scale
+    # Calculate translation to center the eyes
+    translation_x = target_center_x - eye_midpoint_x
+    translation_y = target_center_y - eye_midpoint_y
 
-    print(f'   Scaled image: {scaled_width}x{scaled_height}')
-    print(f'   Scaled left eye: ({scaled_left[0]:.1f}, {scaled_left[1]:.1f})')
-    print(f'   Scaled right eye: ({scaled_right[0]:.1f}, {scaled_right[1]:.1f})')
-    print(f'   Horizontal distance after scale: {abs(scaled_left[0] - scaled_right[0]):.1f}px (should be {TARGET_INTER_EYE_DISTANCE}px)')
-
-    # STEP 3: Translate to place eyes at target positions
-    # Use left eye as reference point
-    target_left = np.array(TARGET_LEFT_EYE, dtype=np.float32)
-    translation = target_left - scaled_left
-
-    print(f'📐 Step 3 - Translate:')
-    print(f'   Translation: ({translation[0]:.1f}, {translation[1]:.1f})')
+    print(f'   Translation: ({translation_x:.1f}, {translation_y:.1f})')
 
     # Create translation matrix
     translation_matrix = np.float32([
-        [1, 0, translation[0]],
-        [0, 1, translation[1]]
+        [1, 0, translation_x],
+        [0, 1, translation_y]
     ])
 
     # Apply translation and crop to output size
     final_img = cv2.warpAffine(
-        scaled_img,
+        rotated_img,
         translation_matrix,
         OUTPUT_SIZE,
         flags=cv2.INTER_CUBIC,
@@ -162,22 +146,29 @@ def align_face(image_bytes, left_eye, right_eye):
     )
 
     # Calculate final eye positions for verification
-    final_left = scaled_left + translation
-    final_right = scaled_right + translation
+    final_left = rotated_left + np.array([translation_x, translation_y])
+    final_right = rotated_right + np.array([translation_x, translation_y])
+    final_midpoint = np.array([target_center_x, target_center_y])
 
     print(f'✅ Final eye positions (PREDICTED):')
-    print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f}) - Target: {TARGET_LEFT_EYE}')
-    print(f'   Right: ({final_right[0]:.1f}, {final_right[1]:.1f}) - Target: {TARGET_RIGHT_EYE}')
-    print(f'   Error: Left={np.linalg.norm(final_left - target_left):.1f}px, Right={np.linalg.norm(final_right - np.array(TARGET_RIGHT_EYE)):.1f}px')
+    print(f'   Left: ({final_left[0]:.1f}, {final_left[1]:.1f})')
+    print(f'   Right: ({final_right[0]:.1f}, {final_right[1]:.1f})')
+    print(f'   Midpoint: ({final_midpoint[0]:.1f}, {final_midpoint[1]:.1f})')
+    print(f'   Current inter-eye distance: {abs(final_left[0] - final_right[0]):.1f}px')
 
     # Draw markers on output to verify eye positions
     debug_img = final_img.copy()
-    cv2.circle(debug_img, (int(final_left[0]), int(final_left[1])), 5, (255, 0, 0), -1)  # Blue dot on predicted left
-    cv2.circle(debug_img, (int(final_right[0]), int(final_right[1])), 5, (255, 0, 0), -1)  # Blue dot on predicted right
-    cv2.circle(debug_img, TARGET_LEFT_EYE, 5, (0, 255, 0), 2)  # Green circle on target left
-    cv2.circle(debug_img, TARGET_RIGHT_EYE, 5, (0, 255, 0), 2)  # Green circle on target right
+    # Blue dots = predicted eye positions
+    cv2.circle(debug_img, (int(final_left[0]), int(final_left[1])), 5, (255, 0, 0), -1)
+    cv2.circle(debug_img, (int(final_right[0]), int(final_right[1])), 5, (255, 0, 0), -1)
+    # Yellow dot = center of image (should match eye midpoint)
+    cv2.circle(debug_img, (int(target_center_x), int(target_center_y)), 5, (0, 255, 255), -1)
+    # Draw horizontal line through center
+    cv2.line(debug_img, (0, int(target_center_y)), (OUTPUT_SIZE[0], int(target_center_y)), (0, 255, 255), 1)
+    # Draw vertical line through center
+    cv2.line(debug_img, (int(target_center_x), 0), (int(target_center_x), OUTPUT_SIZE[1]), (0, 255, 255), 1)
 
-    print(f'\n📊 Visual debugging: Blue=predicted, Green=target')
+    print(f'\n📊 Visual debugging: Blue=eyes, Yellow=center (540,540)')
 
     # Encode as JPEG
     _, buffer = cv2.imencode('.jpg', debug_img, [cv2.IMWRITE_JPEG_QUALITY, 95])
