@@ -81,6 +81,13 @@ export function UploadPhoto() {
       const rotatedFile = await rotateImage(originalFile, newRotation);
       setSelectedFile(rotatedFile);
       setRotation(newRotation);
+      setEyeCoords(null); // Clear old eye coordinates
+      setDetectingEyes(true); // Re-run detection on rotated image
+
+      // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
+      setTimeout(() => {
+        setDetectingEyes(false);
+      }, 15000);
 
       // Update preview
       const reader = new FileReader();
@@ -116,6 +123,11 @@ export function UploadPhoto() {
     setRotation(0); // Reset rotation for new file
     setEyeCoords(null); // Reset eye coordinates
     setDetectingEyes(true); // Start detection
+
+    // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
+    setTimeout(() => {
+      setDetectingEyes(false);
+    }, 15000);
 
     // Show preview
     const reader = new FileReader();
