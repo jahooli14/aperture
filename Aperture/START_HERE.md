@@ -37,6 +37,7 @@ That file handles:
 - ✅ Project detection (NUDJ vs Aperture)
 - ✅ Reading NEXT_SESSION.md
 - ✅ Debugging protocol enforcement
+- ✅ Parallel execution policy (Steps 5.5-5.7)
 - ✅ Continuous improvement
 
 **Role of this file (START_HERE.md)**: Onboarding and reference only. Not part of automatic startup sequence.
@@ -221,6 +222,7 @@ aperture/
 | **Aperture documentation** | `CLAUDE-APERTURE.md` |
 | **NUDJ documentation** | `CLAUDE-NUDJ.md` |
 | **What to do today** | `NEXT_SESSION.md` |
+| **Work more efficiently** | `.claude/startup.md` Steps 5.5-5.7, `.process/BACKGROUND_PROCESSES.md` |
 | **Deployment requirements** | `projects/wizard-of-oz/DEPLOYMENT.md` |
 | **Mistakes we've made** | `.process/COMMON_MISTAKES.md` |
 | **Session workflow** | `SESSION_CHECKLIST.md` |

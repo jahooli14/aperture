@@ -42,6 +42,11 @@
 → `.process/PROACTIVE_LOG_MONITORING.md` - Log review process
 → `.claude/startup.md` Step 4.5 - Quick health check commands
 
+### "I want to work more efficiently"
+→ `.claude/startup.md` Steps 5.5-5.7 - Parallel execution, subagents, checkpoints
+→ `.process/BACKGROUND_PROCESSES.md` - Background process patterns
+→ `CLAUDE-APERTURE.md` Communication Patterns - Transparent execution
+
 ---
 
 ## 📚 Complete File Inventory
@@ -89,6 +94,7 @@
 | `.process/COMMON_MISTAKES.md` | Tactical mistake log | After making mistake (capture immediately) |
 | `.process/CONTINUOUS_IMPROVEMENT.md` | Root cause analysis framework | After 2+ occurrences of same mistake |
 | `.process/LESSONS_LEARNED.md` | Strategic project retrospectives | After completing project/milestone |
+| `.process/BACKGROUND_PROCESSES.md` | Background process management | Running long operations without blocking |
 
 ---
 
@@ -202,7 +208,7 @@ START: Mistake happened
 | **Process/Learning** | 3 | Continuous improvement |
 | **Architecture** | 3 | Decision support |
 | **Meta docs** | 4 | Process improvement reference |
-| **Total active docs** | 21 | Down from 31 (10 will be archived) |
+| **Total active docs** | 22 | Down from 31 (10 will be archived) |
 
 ---
 

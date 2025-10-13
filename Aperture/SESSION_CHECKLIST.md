@@ -29,6 +29,7 @@
 - [ ] Read last session's updates in relevant `plan.md`
 - [ ] Review recent entries in `.process/COMMON_MISTAKES.md`
 - [ ] Check if any placeholders are ready to implement (see checklist below)
+- [ ] Review autonomous work patterns (`.claude/startup.md` Steps 5.5-5.7) for efficiency
 
 ### 2. Today's Focus
 **What are we building today?**
