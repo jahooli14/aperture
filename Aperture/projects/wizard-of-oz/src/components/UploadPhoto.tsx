@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
-import { usePhotoStore } from '../stores/usePhotoStore';
+import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
+import { EyeDetector } from './EyeDetector';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
@@ -11,6 +12,8 @@ export function UploadPhoto() {
   const [error, setError] = useState('');
   const [customDate, setCustomDate] = useState<string>('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [eyeCoords, setEyeCoords] = useState<EyeCoordinates | null>(null);
+  const [detectingEyes, setDetectingEyes] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
@@ -111,6 +114,8 @@ export function UploadPhoto() {
     setOriginalFile(file);
     setSelectedFile(file);
     setRotation(0); // Reset rotation for new file
+    setEyeCoords(null); // Reset eye coordinates
+    setDetectingEyes(true); // Start detection
 
     // Show preview
     const reader = new FileReader();
@@ -121,6 +126,21 @@ export function UploadPhoto() {
     setError('');
   };
 
+  const handleEyeDetection = (coords: EyeCoordinates | null) => {
+    console.log('Eye detection result:', coords);
+    setEyeCoords(coords);
+    setDetectingEyes(false);
+    if (!coords) {
+      setError('Could not detect eyes in photo. You can still upload, but alignment may not work.');
+    }
+  };
+
+  const handleDetectionError = (err: Error) => {
+    console.error('Eye detection error:', err);
+    setDetectingEyes(false);
+    setError(`Eye detection failed: ${err.message}. You can still upload, but alignment may not work.`);
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       setError('No file selected');
@@ -129,11 +149,13 @@ export function UploadPhoto() {
 
     try {
       setError('');
-      await uploadPhoto(selectedFile, displayDate);
+      await uploadPhoto(selectedFile, eyeCoords, displayDate);
       setPreview(null);
       setSelectedFile(null);
       setOriginalFile(null);
       setRotation(0);
+      setEyeCoords(null);
+      setDetectingEyes(false);
       setCustomDate('');
       setShowDatePicker(false);
       if (fileInputRef.current) {
@@ -293,6 +315,15 @@ export function UploadPhoto() {
         </div>
       ) : (
         <div>
+          {/* Run eye detection on selected file */}
+          {selectedFile && (
+            <EyeDetector
+              imageFile={selectedFile}
+              onDetection={handleEyeDetection}
+              onError={handleDetectionError}
+            />
+          )}
+
           <div className="mb-4 rounded-lg overflow-hidden relative">
             <img src={preview} alt="Preview" className="w-full h-auto" />
 
@@ -328,6 +359,19 @@ export function UploadPhoto() {
             )}
           </div>
 
+          {/* Detection status indicator */}
+          {detectingEyes && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm text-center">
+              🔍 Detecting eyes...
+            </div>
+          )}
+
+          {eyeCoords && (
+            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center">
+              ✓ Eyes detected successfully
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -336,6 +380,8 @@ export function UploadPhoto() {
                 setSelectedFile(null);
                 setOriginalFile(null);
                 setRotation(0);
+                setEyeCoords(null);
+                setDetectingEyes(false);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }
@@ -351,10 +397,10 @@ export function UploadPhoto() {
             <button
               type="button"
               onClick={handleUpload}
-              disabled={uploading}
+              disabled={uploading || detectingEyes}
               className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation"
             >
-              {uploading ? 'Uploading...' : 'Upload'}
+              {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : 'Upload'}
             </button>
           </div>
         </div>

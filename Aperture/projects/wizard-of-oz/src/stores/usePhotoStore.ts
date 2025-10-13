@@ -4,6 +4,14 @@ import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
+export interface EyeCoordinates {
+  leftEye: { x: number; y: number };
+  rightEye: { x: number; y: number };
+  confidence: number;
+  imageWidth: number;
+  imageHeight: number;
+}
+
 interface PhotoState {
   photos: Photo[];
   loading: boolean;
@@ -11,7 +19,7 @@ interface PhotoState {
   deleting: boolean;
   fetchError: string | null;
   fetchPhotos: () => Promise<void>;
-  uploadPhoto: (file: File, uploadDate?: string) => Promise<string>;
+  uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string) => Promise<string>;
   deletePhoto: (photoId: string) => Promise<void>;
   hasUploadedToday: () => boolean;
 }
@@ -63,11 +71,17 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
   },
 
-  uploadPhoto: async (file: File, uploadDate?: string) => {
+  uploadPhoto: async (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string) => {
     set({ uploading: true });
 
     try {
-      console.log('Starting upload process...', { fileName: file.name, fileSize: file.size, uploadDate });
+      console.log('Starting upload process...', {
+        fileName: file.name,
+        fileSize: file.size,
+        uploadDate,
+        hasEyeCoords: !!eyeCoords,
+        eyeCoords
+      });
 
       const { data: { user } } = await supabase.auth.getUser();
       console.log('User authentication check:', { userId: user?.id, isAuthenticated: !!user });
@@ -132,15 +146,33 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       console.log('Generated public URL:', { publicUrl });
 
+      // Prepare photo record with eye coordinates if available
+      const photoRecord: any = {
+        user_id: user.id,
+        upload_date: targetDate,
+        original_url: publicUrl,
+      };
+
+      // Add eye coordinates if detected
+      if (eyeCoords) {
+        photoRecord.left_eye_x = eyeCoords.leftEye.x;
+        photoRecord.left_eye_y = eyeCoords.leftEye.y;
+        photoRecord.right_eye_x = eyeCoords.rightEye.x;
+        photoRecord.right_eye_y = eyeCoords.rightEye.y;
+        photoRecord.detection_width = eyeCoords.imageWidth;
+        photoRecord.detection_height = eyeCoords.imageHeight;
+        photoRecord.status = 'detected'; // Mark as detected
+        console.log('Including eye coordinates in photo record');
+      } else {
+        photoRecord.status = 'pending'; // No detection yet
+        console.log('No eye coordinates - marking as pending');
+      }
+
       // Insert photo record
       console.log('Inserting photo record...');
       const { data: photoData, error: insertError } = await (supabase
         .from('photos') as any)
-        .insert({
-          user_id: user.id,
-          upload_date: targetDate,
-          original_url: publicUrl,
-        })
+        .insert(photoRecord)
         .select()
         .single();
 
@@ -151,23 +183,25 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         throw insertError || new Error('Failed to create photo record');
       }
 
-      console.log('Photo record created successfully, triggering eye detection...');
+      console.log('Photo record created successfully with status:', photoRecord.status);
 
-      // Trigger eye detection and alignment via API (async, don't wait)
-      const apiUrl = window.location.origin + '/api/detect-eyes';
-      console.log('Calling API:', apiUrl, 'with photoId:', (photoData as Photo).id);
+      // If we have eye coordinates, trigger alignment
+      if (eyeCoords) {
+        console.log('Triggering photo alignment...');
+        const apiUrl = window.location.origin + '/api/align-photo';
 
-      fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoId: (photoData as Photo).id }),
-      })
-        .then(res => {
-          console.log('API response status:', res.status);
-          return res.json();
+        fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoId: (photoData as Photo).id }),
         })
-        .then(data => console.log('API response:', data))
-        .catch(err => console.error('Eye detection request failed:', err));
+          .then(res => {
+            console.log('Alignment API response status:', res.status);
+            return res.json();
+          })
+          .then(data => console.log('Alignment API response:', data))
+          .catch(err => console.error('Photo alignment request failed:', err));
+      }
 
       // Refresh photos
       console.log('Refreshing photos list...');

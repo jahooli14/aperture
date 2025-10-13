@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "@sentry/react": "^10.19.0",
     "@sentry/vite-plugin": "^4.4.0",
     "@supabase/supabase-js": "^2.75.0",
