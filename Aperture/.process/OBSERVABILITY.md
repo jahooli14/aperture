@@ -476,6 +476,42 @@ Claude: "Found it - ERROR shows 5px drift due to rotation math. Fixing..."
 
 ### Accessing Build/Deployment Logs
 
+There are **TWO types** of logs to check when debugging:
+
+#### 1. Vercel Function Logs (Runtime - stdout/stderr)
+
+**What**: Real-time execution logs (print/console.log statements from your code)
+**When**: Photos stuck processing, functions timing out, Python/Node errors
+**Where**: Vercel Dashboard → Your Project → Functions tab → Click function → Runtime Logs
+
+**How to access**:
+- **Option A (User)**: Navigate to Vercel Dashboard, select function, view real-time logs
+- **Option B (Claude)**: Request user to check if `/vercel-logs` shows incomplete data
+
+**Example logs**:
+```
+2025-10-13T09:32:44.701Z [info] 🎯 Starting alignment (Python OpenCV) for photo: abc123
+2025-10-13T09:32:44.701Z [info] ❌ Alignment failed: name 'center_x' is not defined
+```
+
+**Why these are critical**:
+- Shows **actual runtime errors** (NameError, TypeError, exceptions)
+- Includes your `print()` and `console.log()` statements
+- Essential for debugging logic errors, not just build errors
+- Available immediately after function executes
+
+**⚠️ IMPORTANT**:
+- `/vercel-logs` command queries **Supabase database logs** (application-level logs we write)
+- Vercel function logs show **stdout/stderr** (print statements, exceptions)
+- Both are needed for complete debugging picture
+- If stuck, always check Vercel function logs FIRST
+
+#### 2. Vercel Build Logs (Deployment - API)
+
+**What**: Build-time logs (package installation, compilation)
+**When**: Deployment fails, build errors, dependency issues
+**Where**: API query or Vercel Dashboard → Deployment → Build Logs
+
 **For build errors** (not runtime errors), use the Vercel deployment events API directly:
 
 ```bash
@@ -500,13 +536,27 @@ for e in events:
 **Key Points:**
 - ⚠️ **Critical:** Log text is in `payload.text`, NOT top-level `text`
 - Build logs show package installation, TypeScript errors, size limit errors
-- Runtime logs (via `/vercel-logs`) show function execution errors
+- Runtime logs show function execution errors
 - Use build logs when deployment state is `ERROR` or `FAILED`
 
 **Common Build Errors:**
 - Package size exceeds 250MB limit: `Error: A Serverless Function has exceeded the unzipped maximum size of 250 MB`
 - TypeScript compilation errors: `error TS2339: Property 'x' does not exist`
 - Missing dependencies in requirements.txt or package.json
+
+#### Debugging Flowchart
+
+```
+Photos stuck in processing?
+├─ Check Vercel Function Logs (runtime stdout/stderr)
+│  ├─ See Python/Node exceptions? → Fix code error
+│  ├─ See timeout? → Optimize function
+│  └─ No logs at all? → Function not being called (check routing)
+│
+└─ Check Supabase Logs (via /vercel-logs)
+   ├─ See application-level errors? → Fix business logic
+   └─ No structured logs? → Add more logging to code
+```
 
 ---
 
