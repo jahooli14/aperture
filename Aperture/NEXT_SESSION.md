@@ -4,9 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-13 (Session 12 - Upload Issues Fixed)
+> **Last Updated**: 2025-10-13 (Session 13 - Photo Alignment COMPLETE & WORKING)
 >
-> **Current Work**: ✅ Upload working end-to-end, ready to implement client-side alignment
+> **Current Work**: ✅ Photo alignment fully working! All bugs fixed, ready for production use
 
 ---
 
@@ -15,16 +15,18 @@
 ### Project State
 
 **Wizard of Oz (Baby Photo Alignment App)**:
-- **Status**: 🟢 FULLY WORKING - End-to-end upload with eye detection
+- **Status**: 🟢 FULLY WORKING - Auto-alignment with eye detection (PRODUCTION READY)
 - **Vercel URL**: (User has deployment URL)
 - **Repository Path**: `Aperture/projects/wizard-of-oz`
 - **Supabase URL**: `https://zaruvcwdqkqmyscwvxci.supabase.co`
 - **Latest Changes**:
-  - Fixed Supabase API key issue (truncated key causing all operations to fail)
-  - Fixed photos stuck in "processing" state (aligned_url now set on upload)
-  - Fixed detectingEyes state management (rotation now properly resets state)
-  - Enhanced logging throughout upload flow for debugging
-  - Migration fixed 1 photo stuck in database
+  - ✅ Photo alignment fully implemented and debugged (Session 13)
+  - ✅ Fixed infinite loop bug (hasAlignedRef tracking)
+  - ✅ Fixed upside-down images (180° rotation)
+  - Photos auto-align to standardized 1080x1350 format
+  - Eyes positioned at 40% from top, horizontally centered
+  - All processing client-side (privacy-first, zero server cost)
+  - Ready for timelapse generation with consistently aligned frames
 
 ### Infrastructure Status
 
@@ -37,6 +39,44 @@
 - Observability system implemented (`/vercel-logs` available)
 
 ### Recent Improvements
+
+**Client-Side Photo Alignment** (Session 13 - 2025-10-13):
+- ✅ **Implemented automatic photo alignment**
+  - Created `alignPhoto()` function using Canvas API affine transformation
+  - Calculates rotation, scale, and translation from eye coordinates
+  - Outputs standardized 1080x1350 images with eyes at target positions
+- ✅ **Integrated into upload workflow**
+  - Alignment triggers automatically after eye detection
+  - Visual progress: "Detecting..." → "Aligning..." → "Aligned!"
+  - Graceful fallback to original if alignment fails
+- ✅ **Debugged and fixed production issues**
+  - Fixed infinite loop with hasAlignedRef tracking (prevents re-triggering)
+  - Fixed upside-down images with 180° rotation after transformation
+  - Upload button now works correctly without getting stuck
+- ✅ **Technical implementation**
+  - Target dimensions: 1080x1350 (4:5 aspect ratio for social media)
+  - Target eye positions: Left (33%, 40%), Right (67%, 40%)
+  - Transformation: translate → rotate → scale → rotate(180°) → draw
+  - All processing client-side (privacy-first, zero cost)
+  - Final bundle: 346.15 KB (1.89 KB increase for alignment logic)
+
+**Ruthless Codebase Refactor** (Session 13 - 2025-10-13):
+- ✅ **Deleted 850+ lines of dead code**
+  - Removed MonitorDashboard.tsx (236 lines) - unused component
+  - Removed SoundtrackGenerator.tsx (342 lines) - placeholder feature
+  - Removed 5 unused API endpoints (analyze-music-mood, generate-timelapse-soundtrack, etc.)
+  - Removed api/lib/ folder with unused utilities
+  - Removed detect-eyes.ts.disabled (obsolete server-side detection)
+- ✅ **Improved type safety**
+  - Removed all `any` types from codebase
+  - Fixed Supabase type issues
+  - Replaced `any` with `unknown` in error handling
+- ✅ **Code quality improvements**
+  - Created lib/imageUtils.ts (extracted utilities from UploadPhoto)
+  - Reduced UploadPhoto from 443 to 376 lines
+  - Removed 48+ debug console.logs (kept only critical errors)
+  - Simplified PhotoGallery polling logic (removed obsolete processing state)
+- ✅ **Build verification** - All changes validated, build passes with no errors
 
 **Upload Flow Fixes** (Session 12 - 2025-10-13):
 - ✅ **Fixed Invalid Supabase API Key** - Local .env had truncated VITE_SUPABASE_ANON_KEY
@@ -191,56 +231,78 @@
 - Eye coordinates are saved but not used for transformation yet
 - Ready to implement client-side alignment as next step
 
-### Priority 2: 🎯 NEXT - Implement Client-Side Photo Alignment
+### Priority 2: ✅ COMPLETE - Client-Side Photo Alignment (PRODUCTION READY)
 
-**Status**: Ready to implement (Session 13+)
+**Status**: Deployed, tested, and fully working!
 
-**Decision Made**: Option A - Client-Side Alignment
-- Faster user experience (no server round-trip)
-- Consistent with client-side eye detection (privacy-first)
-- Can build on existing `rotateImage()` function
-- Simpler architecture (no async processing state)
+**Implementation**: Client-Side Alignment (Option A)
+- ✅ Created `alignPhoto()` function in `lib/imageUtils.ts`
+- ✅ Integrated into UploadPhoto component workflow
+- ✅ Photos automatically align after eye detection
+- ✅ All processing client-side using Canvas API
+- ✅ Target dimensions: 1080x1350 with eyes at (33%, 40%) and (67%, 40%)
+- ✅ Fixed infinite loop bug with hasAlignedRef tracking
+- ✅ Fixed upside-down images with 180° rotation correction
 
-**Option A: Client-Side Alignment (Recommended)**
-- Use browser Canvas API to rotate/crop photos
-- Fastest (no server round-trip)
-- Works offline
-- No Python dependencies
-- Reference: Existing `rotateImage` function in UploadPhoto.tsx
+**How It Works**:
+1. User selects photo → MediaPipe detects eyes
+2. `alignPhoto()` calculates transformation:
+   - Rotation angle from eye positions
+   - Scale factor to match target eye distance
+   - Translation to center eyes at target positions
+   - **180° rotation to correct orientation**
+3. Canvas API applies affine transformation
+4. Aligned photo (1080x1350) uploaded to Supabase
+5. Gallery displays consistently aligned photos
 
-**Option B: Server-Side Alignment (More Complex)**
-- Create new Vercel serverless function
-- Use Sharp library (already in package.json)
-- Fetch photo + coordinates from database
-- Process and save aligned version
-- Update database with aligned_url
-
-**Implementation Plan (Option B)**:
-1. [ ] Create `api/align-photo.ts` with Sharp
-2. [ ] Fetch photo record with eye_coordinates from database
-3. [ ] Download original from storage
-4. [ ] Calculate rotation angle from eye positions
-5. [ ] Rotate, translate, crop using Sharp
-6. [ ] Upload aligned photo to `aligned/` bucket
-7. [ ] Update database: aligned_url, status='aligned'
-
-**Technical Details**:
+**Transformation Sequence** (imageUtils.ts:167-183):
 ```typescript
-// Eye coordinates stored in database as JSONB:
-{
-  leftEye: { x: 450, y: 320 },
-  rightEye: { x: 550, y: 315 },
-  confidence: 0.8,
-  imageWidth: 1000,
-  imageHeight: 750
-}
-
-// Target positions for alignment:
-const TARGET_LEFT_EYE = { x: 720, y: 432 };
-const TARGET_RIGHT_EYE = { x: 360, y: 432 };
+ctx.translate(targetCenterX, targetCenterY); // Move to target
+ctx.rotate(-angle);                          // Align eyes horizontally
+ctx.scale(scale, scale);                     // Match eye distance
+ctx.rotate(Math.PI);                         // Flip right-side up
+ctx.drawImage(img, -sourceCenterX, -sourceCenterY); // Draw
 ```
 
-### Priority 3: 📊 ONGOING - Monitor Production Health
+**Files Modified** (3 commits):
+- `src/lib/imageUtils.ts` - Added `alignPhoto()` function + orientation fix
+- `src/components/UploadPhoto.tsx` - Added alignment workflow + loop prevention
+- `src/stores/usePhotoStore.ts` - Updated comments for clarity
+
+**Commits**:
+- `9343178` - Initial alignment implementation
+- `254c573` - Fixed infinite loop (hasAlignedRef)
+- `1da49b8` - Fixed orientation attempt 1
+- `0b7cfc0` - Fixed orientation with 180° rotation ✅
+
+### Priority 3: 🎬 NEXT - Timelapse Generation
+
+**Status**: Ready to implement (Session 14+)
+
+**Now that photos are aligned**, we can generate smooth timelapses!
+
+**Implementation Options**:
+
+**Option A: Client-Side Video Generation (Recommended)**
+- Use browser MediaRecorder API or FFmpeg.wasm
+- Create video directly in browser
+- Privacy-first (no server upload needed)
+- Can preview before saving
+
+**Option B: Server-Side with FFmpeg**
+- Vercel serverless function
+- Download all aligned photos
+- Use FFmpeg to create MP4
+- Return video URL
+
+**Features to Consider**:
+- [ ] Crossfade transitions between frames (2-3 seconds per photo)
+- [ ] Duration control (total video length)
+- [ ] Music/soundtrack overlay (from Session 7 planning)
+- [ ] Export formats (MP4, WebM)
+- [ ] Resolution options (1080p, 720p)
+
+### Priority 4: 📊 ONGOING - Monitor Production Health
 
 **After Testing Completes**:
 1. [ ] Check Vercel logs for MediaPipe errors
