@@ -35,8 +35,9 @@ export function CalendarView() {
 
     // Add days of month
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day);
-      const dateString = date.toISOString().split('T')[0];
+      // Create date string directly to avoid timezone issues
+      // Database stores YYYY-MM-DD format, so we should match that exactly
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       days.push({
         date: day,
         dateString,
@@ -187,7 +188,7 @@ export function CalendarView() {
             <div className="flex-1">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-semibold text-gray-900">
-                  {new Date(selectedPhoto.upload_date).toLocaleDateString('en-US', {
+                  {new Date(selectedPhoto.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
