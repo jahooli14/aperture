@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, RotateCcw, RotateCw, CheckCircle } from 'lucide-react';
+import { Calendar, RotateCcw, RotateCw, CheckCircle, Loader2 } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
@@ -351,15 +351,25 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
 
           {/* Detection and alignment status indicators */}
           {detectingEyes && (
-            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm text-center">
-              🔍 Detecting eyes...
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm text-center flex items-center justify-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Detecting eyes...</span>
+            </motion.div>
           )}
 
           {aligning && (
-            <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 text-sm text-center">
-              ✨ Aligning photo...
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 text-sm text-center flex items-center justify-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Aligning photo...</span>
+            </motion.div>
           )}
 
           {eyeCoords && !aligning && alignedFile && (
@@ -403,9 +413,12 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
               type="button"
               onClick={handleUpload}
               disabled={uploading || detectingEyes || aligning}
-              className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation"
+              className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
             >
-              {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : aligning ? 'Aligning...' : 'Upload'}
+              {(uploading || detectingEyes || aligning) && <Loader2 className="w-5 h-5 animate-spin" />}
+              <span>
+                {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : aligning ? 'Aligning...' : 'Upload'}
+              </span>
             </button>
           </div>
         </div>

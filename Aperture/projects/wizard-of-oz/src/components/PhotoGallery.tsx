@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { triggerHaptic } from '../lib/haptics';
+import { PhotoSkeleton } from './PhotoSkeleton';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -76,9 +77,14 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
-        <p className="mt-4 text-gray-600">Loading photos...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]" />
+          <div className="h-6 w-16 bg-gray-200 rounded animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          <PhotoSkeleton count={8} />
+        </div>
       </div>
     );
   }

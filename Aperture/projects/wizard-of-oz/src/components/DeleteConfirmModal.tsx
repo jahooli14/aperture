@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, X } from 'lucide-react';
+import { Trash2, X, Loader2 } from 'lucide-react';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -86,16 +86,10 @@ export function DeleteConfirmModal({ photo, isOpen, onClose, onConfirm, deleting
               <button
                 onClick={onConfirm}
                 disabled={deleting}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center"
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
               >
-                {deleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
+                {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>{deleting ? 'Deleting...' : 'Delete'}</span>
               </button>
             </div>
           </motion.div>
