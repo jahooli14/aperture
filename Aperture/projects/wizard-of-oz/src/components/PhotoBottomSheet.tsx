@@ -136,11 +136,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                         'No eyes detected'
                       )}
                     </p>
-                    {hasEyeDetection && photo.eye_coordinates && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Confidence: {Math.round((photo.eye_coordinates as { confidence?: number }).confidence || 0)}%
-                      </p>
-                    )}
+                    {/* Confidence metric removed - not meaningful to end users */}
                   </div>
                 </div>
               </div>

@@ -22,6 +22,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [rotation, setRotation] = useState(0);
   const [error, setError] = useState('');
   const [customDate, setCustomDate] = useState<string>('');
+  const [showBackdateUI, setShowBackdateUI] = useState(false); // Toggle for showing backdate selector
   const [eyeCoords, setEyeCoords] = useState<EyeCoordinates | null>(null);
   const [detectingEyes, setDetectingEyes] = useState(false);
   const [aligning, setAligning] = useState(false);
@@ -30,7 +31,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const { uploadPhoto, uploading, hasUploadedToday } = usePhotoStore();
+  const { uploadPhoto, uploading, hasUploadedToday, hasUploadedForDate } = usePhotoStore();
 
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
@@ -116,7 +117,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     setDetectingEyes(false);
 
     if (!coords) {
-      setError('Could not detect eyes in photo. You can still upload without alignment.');
+      // No error message - just silently proceed without alignment
+      // The photo will upload as-is, which is perfectly fine
       setAlignedFile(null);
       hasAlignedRef.current = false;
       return;
@@ -144,7 +146,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const handleDetectionError = (err: Error) => {
     logger.error('Eye detection error', { error: err.message }, 'UploadPhoto');
     setDetectingEyes(false);
-    setError(`Eye detection failed: ${err.message}. You can still upload, but alignment may not work.`);
+    // Silently handle detection errors - photo will just upload without alignment
   };
 
   const handleUpload = async () => {
@@ -217,24 +219,49 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         animate={{ opacity: 1, scale: 1 }}
         className="bg-white rounded-lg shadow-lg p-6"
       >
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center mb-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
           <div className="text-green-600 text-lg font-medium mb-2">✓ Today's photo uploaded!</div>
           <p className="text-green-700 text-sm">Come back tomorrow to capture another moment</p>
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Upload for a Previous Date</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Select a date below to upload a photo for a day you missed:
-          </p>
+        {!showBackdateUI ? (
+          <motion.button
+            type="button"
+            onClick={() => setShowBackdateUI(true)}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors"
+          >
+            📅 Upload for a Previous Date
+          </motion.button>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="border-t border-gray-200 mt-4 pt-4"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Upload for a Previous Date</h3>
+              <button
+                type="button"
+                onClick={() => setShowBackdateUI(false)}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="text-xs text-gray-600 mb-3">
+              Select a date below to upload a photo for a day you missed:
+            </p>
 
-          <DateSelector
-            customDate={customDate}
-            today={today}
-            minDate={minDate}
-            onDateChange={setCustomDate}
-          />
-        </div>
+            <DateSelector
+              customDate={customDate}
+              today={today}
+              minDate={minDate}
+              onDateChange={setCustomDate}
+            />
+          </motion.div>
+        )}
       </motion.div>
     );
   }
@@ -259,27 +286,47 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
 
       {!preview ? (
         <div>
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+          {/* Check if a photo already exists for the selected date */}
+          {hasUploadedForDate(displayDate) ? (
+            <div className="p-6 bg-amber-50 border border-amber-200 rounded-lg text-center">
+              <div className="text-amber-800 font-medium mb-2">
+                📸 Photo already uploaded for this date
+              </div>
+              <p className="text-amber-700 text-sm">
+                {displayDate === today
+                  ? "You've already uploaded a photo for today."
+                  : `A photo already exists for ${new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`
+                }
+              </p>
+              <p className="text-amber-600 text-xs mt-2">
+                Delete the existing photo from the gallery if you want to replace it.
+              </p>
+            </div>
+          ) : (
+            <>
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
 
-          <UploadButtons
-            onCameraClick={handleCameraCapture}
-            onGalleryClick={handleGallerySelect}
-          />
+              <UploadButtons
+                onCameraClick={handleCameraCapture}
+                onGalleryClick={handleGallerySelect}
+              />
+            </>
+          )}
         </div>
       ) : (
         <div>

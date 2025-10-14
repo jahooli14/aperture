@@ -24,6 +24,7 @@ interface PhotoState {
   deletePhoto: (photoId: string) => Promise<void>;
   restorePhoto: (photo: Photo) => void;
   hasUploadedToday: () => boolean;
+  hasUploadedForDate: (date: string) => boolean;
 }
 
 export const usePhotoStore = create<PhotoState>((set, get) => ({
@@ -214,5 +215,10 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     const today = new Date().toISOString().split('T')[0];
     const photos = get().photos;
     return photos.some(photo => photo.upload_date === today);
+  },
+
+  hasUploadedForDate: (date: string) => {
+    const photos = get().photos;
+    return photos.some(photo => photo.upload_date === date);
   },
 }));
