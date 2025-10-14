@@ -15,7 +15,7 @@ export class SourceFetcher {
     })
   }
 
-  async fetchSource(source: Source): Promise<Article[]> {
+  async fetchSource(source: Source, maxArticles: number = 50): Promise<Article[]> {
     if (!source.enabled) {
       return []
     }
@@ -24,7 +24,7 @@ export class SourceFetcher {
       console.log(`Fetching ${source.name}...`)
 
       const feed = await this.parser.parseURL(source.url)
-      const cutoff = subDays(new Date(), 1) // Last 24 hours
+      const cutoff = subDays(new Date(), 7) // Last 7 days
 
       const articles: Article[] = []
 
@@ -62,6 +62,12 @@ export class SourceFetcher {
         }
 
         articles.push(article)
+
+        // Enforce per-source limit
+        if (articles.length >= maxArticles) {
+          console.log(`  Reached limit of ${maxArticles} articles for ${source.name}`)
+          break
+        }
       }
 
       console.log(`  Found ${articles.length} relevant articles from ${source.name}`)
@@ -73,10 +79,10 @@ export class SourceFetcher {
     }
   }
 
-  async fetchAllSources(sources: Source[]): Promise<Article[]> {
-    console.log(`Fetching from ${sources.filter(s => s.enabled).length} sources...`)
+  async fetchAllSources(sources: Source[], maxPerSource: number = 50): Promise<Article[]> {
+    console.log(`Fetching from ${sources.filter(s => s.enabled).length} sources (max ${maxPerSource} per source)...`)
 
-    const promises = sources.map(source => this.fetchSource(source))
+    const promises = sources.map(source => this.fetchSource(source, maxPerSource))
     const results = await Promise.allSettled(promises)
 
     const allArticles: Article[] = []
@@ -122,16 +128,16 @@ export class SourceFetcher {
 
 // Reddit RSS feeds have specific formatting
 export class RedditSourceFetcher extends SourceFetcher {
-  async fetchSource(source: Source): Promise<Article[]> {
+  async fetchSource(source: Source, maxArticles: number = 50): Promise<Article[]> {
     if (!source.url.includes('reddit.com')) {
-      return super.fetchSource(source)
+      return super.fetchSource(source, maxArticles)
     }
 
     try {
       console.log(`Fetching Reddit: ${source.name}...`)
 
       const feed = await this.parser.parseURL(source.url)
-      const cutoff = subDays(new Date(), 1)
+      const cutoff = subDays(new Date(), 7)
 
       const articles: Article[] = []
 
@@ -174,6 +180,12 @@ export class RedditSourceFetcher extends SourceFetcher {
         }
 
         articles.push(article)
+
+        // Enforce per-source limit
+        if (articles.length >= maxArticles) {
+          console.log(`  Reached limit of ${maxArticles} articles for ${source.name}`)
+          break
+        }
       }
 
       console.log(`  Found ${articles.length} relevant Reddit posts from ${source.name}`)

@@ -148,5 +148,6 @@
   "relevanceThreshold": 0.7,
   "qualityThreshold": 0.75,
   "maxDailyChanges": 5,
-  "maxSectionGrowth": 1.2
+  "maxSectionGrowth": 1.2,
+  "maxArticlesPerSource": 3
 }

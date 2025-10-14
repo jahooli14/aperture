@@ -39,9 +39,9 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
             delegate: 'GPU'
           },
           numFaces: 1,
-          minFaceDetectionConfidence: 0.4, // Lower for baby photos
-          minFacePresenceConfidence: 0.4,
-          minTrackingConfidence: 0.4,
+          minFaceDetectionConfidence: 0.3, // Even lower for challenging baby photos
+          minFacePresenceConfidence: 0.3,
+          minTrackingConfidence: 0.3,
           outputFaceBlendshapes: false,
           outputFacialTransformationMatrixes: false
         });
@@ -92,42 +92,88 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
 
           if (results.faceLandmarks && results.faceLandmarks.length > 0) {
             const landmarks = results.faceLandmarks[0];
-            let leftEye, rightEye;
 
-            // Try to use iris center landmarks if available (indices 468 and 473)
-            if (landmarks.length > 473) {
-              leftEye = landmarks[473]; // Left iris center
-              rightEye = landmarks[468]; // Right iris center
-            } else {
-              // Fallback: Use eye contour centers
-              leftEye = landmarks[362]; // Left eye inner corner
-              rightEye = landmarks[133]; // Right eye inner corner
+            // Try multiple landmark combinations to find the best detection
+            const landmarkCombinations = [
+              // Best: Iris centers (most accurate)
+              landmarks.length > 473 ? {
+                leftEye: landmarks[473],
+                rightEye: landmarks[468],
+                name: 'iris centers'
+              } : null,
+              // Good: Eye outer corners (reliable for alignment)
+              {
+                leftEye: landmarks[263],  // Left eye outer corner
+                rightEye: landmarks[33],   // Right eye outer corner
+                name: 'outer corners'
+              },
+              // Fallback: Eye inner corners
+              {
+                leftEye: landmarks[362],  // Left eye inner corner
+                rightEye: landmarks[133],  // Right eye inner corner
+                name: 'inner corners'
+              },
+              // Last resort: Average of multiple eye landmarks
+              {
+                leftEye: {
+                  x: (landmarks[362].x + landmarks[263].x) / 2,
+                  y: (landmarks[362].y + landmarks[263].y) / 2,
+                  z: (landmarks[362].z + landmarks[263].z) / 2
+                },
+                rightEye: {
+                  x: (landmarks[133].x + landmarks[33].x) / 2,
+                  y: (landmarks[133].y + landmarks[33].y) / 2,
+                  z: (landmarks[133].z + landmarks[33].z) / 2
+                },
+                name: 'averaged landmarks'
+              }
+            ].filter(Boolean);
+
+            // Try each combination until one validates
+            for (const combination of landmarkCombinations) {
+              if (!combination) continue;
+
+              const { leftEye, rightEye, name } = combination;
+
+              // MediaPipe returns normalized coordinates (0-1), convert to pixels
+              const coords: EyeCoordinates = {
+                leftEye: {
+                  x: leftEye.x * img.width,
+                  y: leftEye.y * img.height
+                },
+                rightEye: {
+                  x: rightEye.x * img.width,
+                  y: rightEye.y * img.height
+                },
+                confidence: 0.8, // MediaPipe doesn't provide per-landmark confidence
+                imageWidth: img.width,
+                imageHeight: img.height
+              };
+
+              logger.info('Trying landmark combination', {
+                method: name,
+                leftEye: coords.leftEye,
+                rightEye: coords.rightEye,
+                imageSize: { width: img.width, height: img.height }
+              }, 'EyeDetector');
+
+              // Validate detection
+              const isValid = validateEyeDetection(coords);
+
+              if (isValid) {
+                logger.info('Eye detection validation passed', { method: name }, 'EyeDetector');
+                onDetection(coords);
+                return; // Success - exit function
+              } else {
+                logger.warn('Eye detection validation failed for method', { method: name }, 'EyeDetector');
+              }
             }
 
-            // MediaPipe returns normalized coordinates (0-1), convert to pixels
-            const coords: EyeCoordinates = {
-              leftEye: {
-                x: leftEye.x * img.width,
-                y: leftEye.y * img.height
-              },
-              rightEye: {
-                x: rightEye.x * img.width,
-                y: rightEye.y * img.height
-              },
-              confidence: 0.8, // MediaPipe doesn't provide per-landmark confidence
-              imageWidth: img.width,
-              imageHeight: img.height
-            };
-
-            // Validate detection
-            const isValid = validateEyeDetection(coords);
-
-            if (isValid) {
-              onDetection(coords);
-            } else {
-              onDetection(null);
-            }
+            // All combinations failed
+            logger.warn('All landmark combinations failed validation', {}, 'EyeDetector');
+            onDetection(null);
           } else {
+            logger.warn('No face landmarks detected', {}, 'EyeDetector');
             onDetection(null);
           }
         } catch (error) {
@@ -179,6 +225,12 @@ function validateEyeDetection(detection: EyeCoordinates): boolean {
     rightEye.x < 0 || rightEye.x > imageWidth ||
     rightEye.y < 0 || rightEye.y > imageHeight
   ) {
+    logger.error('Eye coordinates out of bounds', {
+      leftEye,
+      rightEye,
+      imageWidth,
+      imageHeight
+    }, 'EyeDetector.validateEyeDetection');
     return false;
   }
 
@@ -186,24 +238,47 @@ function validateEyeDetection(detection: EyeCoordinates): boolean {
   const eyeDistance = calculateDistance(leftEye, rightEye);
   const normalizedDistance = eyeDistance / imageWidth;
 
-  // Baby eye distance typically 0.12-0.35 of image width
-  if (normalizedDistance < 0.12 || normalizedDistance > 0.35) {
+  // Baby eye distance typically 0.10-0.40 of image width (relaxed range)
+  if (normalizedDistance < 0.10 || normalizedDistance > 0.40) {
+    logger.error('Eye distance out of range', {
+      eyeDistance,
+      normalizedDistance,
+      imageWidth,
+      range: '0.10-0.40'
+    }, 'EyeDetector.validateEyeDetection');
     return false;
   }
 
-  // Check eyes are roughly horizontal (allowing for tilted head)
+  // Check eyes are roughly horizontal (allowing for more head tilt)
   const verticalDiff = Math.abs(leftEye.y - rightEye.y);
-  const verticalTolerance = 0.4; // More lenient for babies
+  const verticalTolerance = 0.5; // Even more lenient for babies with head tilt
 
   if (verticalDiff > eyeDistance * verticalTolerance) {
+    logger.error('Eyes not horizontal enough', {
+      verticalDiff,
+      eyeDistance,
+      ratio: verticalDiff / eyeDistance,
+      tolerance: verticalTolerance
+    }, 'EyeDetector.validateEyeDetection');
     return false;
   }
 
-  // Check eyes aren't too close to image edges (margin = 5% of width)
-  const margin = 0.05 * imageWidth;
+  // Check eyes aren't too close to image edges (margin = 3% of width, more lenient)
+  const margin = 0.03 * imageWidth;
   if (leftEye.x < margin || rightEye.x > imageWidth - margin) {
+    logger.error('Eyes too close to edges', {
+      leftEyeX: leftEye.x,
+      rightEyeX: rightEye.x,
+      margin,
+      imageWidth
+    }, 'EyeDetector.validateEyeDetection');
     return false;
   }
+
+  logger.info('Eye detection validated successfully', {
+    normalizedDistance,
+    verticalRatio: verticalDiff / eyeDistance
+  }, 'EyeDetector.validateEyeDetection');
 
   return true;
 }

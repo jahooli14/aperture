@@ -47,7 +47,7 @@ class AutonomousDocumentationSystem {
     try {
       // Phase 1: Fetch articles
       console.log('\n📡 Phase 1: Fetching articles...')
-      const articles = await this.fetcher.fetchAllSources(this.config.sources)
+      const articles = await this.fetcher.fetchAllSources(this.config.sources, this.config.maxArticlesPerSource)
 
       if (articles.length === 0) {
         console.log('No new articles found. Exiting.')

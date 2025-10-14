@@ -14,6 +14,7 @@ export interface SourceConfig {
   qualityThreshold: number
   maxDailyChanges: number
   maxSectionGrowth: number
+  maxArticlesPerSource: number
 }
 
 export interface Article {
