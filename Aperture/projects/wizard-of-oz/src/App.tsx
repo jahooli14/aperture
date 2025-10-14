@@ -1,16 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './stores/useAuthStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
-import { CalendarView } from './components/CalendarView';
+import { Toast } from './components/Toast';
+import { useToast } from './hooks/useToast';
+
+// Lazy load heavy components
+const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
 
 type ViewType = 'gallery' | 'calendar';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const [view, setView] = useState<ViewType>('gallery');
+  const { toast, showToast, hideToast } = useToast();
+
+  // Check if online
+  useEffect(() => {
+    const handleOnline = () => showToast('Back online!', 'success');
+    const handleOffline = () => showToast('You are offline. Some features may not work.', 'error');
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [showToast]);
 
   useEffect(() => {
     initialize();
@@ -102,8 +121,15 @@ function App() {
             {/* Upload Section - always visible */}
             <UploadPhoto />
 
-            {/* View-specific content */}
-            {view === 'gallery' ? <PhotoGallery /> : <CalendarView />}
+            {/* View-specific content with loading fallback */}
+            <Suspense fallback={
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-600 border-t-transparent"></div>
+                <p className="mt-4 text-gray-600">Loading...</p>
+              </div>
+            }>
+              {view === 'gallery' ? <PhotoGallery /> : <CalendarView />}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -114,6 +140,14 @@ function App() {
           <p>Capturing precious moments, one day at a time ✨</p>
         </div>
       </footer>
+
+      {/* Toast Notifications */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </div>
   );
 }

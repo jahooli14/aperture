@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
-import { rotateImage, fileToDataURL, validateImageFile, alignPhoto } from '../lib/imageUtils';
+import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
 
 export function UploadPhoto() {
   const [preview, setPreview] = useState<string | null>(null);
@@ -12,7 +12,6 @@ export function UploadPhoto() {
   const [rotation, setRotation] = useState(0);
   const [error, setError] = useState('');
   const [customDate, setCustomDate] = useState<string>('');
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [eyeCoords, setEyeCoords] = useState<EyeCoordinates | null>(null);
   const [detectingEyes, setDetectingEyes] = useState(false);
   const [aligning, setAligning] = useState(false);
@@ -73,28 +72,31 @@ export function UploadPhoto() {
       return;
     }
 
-    // Store both original and current file in state
-    setOriginalFile(file);
-    setSelectedFile(file);
-    setRotation(0); // Reset rotation for new file
-    setEyeCoords(null); // Reset eye coordinates
-    setAlignedFile(null); // Reset alignment
-    hasAlignedRef.current = false; // Reset alignment flag
-    setDetectingEyes(true); // Start detection
-
-    // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
-    setTimeout(() => {
-      setDetectingEyes(false);
-    }, 15000);
-
-    // Show preview
     try {
-      const dataURL = await fileToDataURL(file);
+      // Compress image before processing (reduces upload time and storage costs)
+      const compressedFile = await compressImage(file, 1920, 0.85);
+
+      // Store both original and current file in state
+      setOriginalFile(compressedFile);
+      setSelectedFile(compressedFile);
+      setRotation(0); // Reset rotation for new file
+      setEyeCoords(null); // Reset eye coordinates
+      setAlignedFile(null); // Reset alignment
+      hasAlignedRef.current = false; // Reset alignment flag
+      setDetectingEyes(true); // Start detection
+
+      // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
+      setTimeout(() => {
+        setDetectingEyes(false);
+      }, 15000);
+
+      // Show preview
+      const dataURL = await fileToDataURL(compressedFile);
       setPreview(dataURL);
       setError('');
     } catch (err) {
-      console.error('Error loading image preview:', err);
-      setError('Failed to load image preview');
+      console.error('Error processing image:', err);
+      setError('Failed to process image');
     }
   };
 
@@ -157,7 +159,6 @@ export function UploadPhoto() {
       setAlignedFile(null);
       hasAlignedRef.current = false;
       setCustomDate('');
-      setShowDatePicker(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -202,73 +203,44 @@ export function UploadPhoto() {
         {customDate ? 'Upload Photo' : "Today's Photo"}
       </h2>
 
-      {/* Date Selection */}
+      {/* Date Selection - Always visible */}
       <div className="mb-6">
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">
-              Date: {new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </span>
-            {customDate && (
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                Custom
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center space-x-2">
+        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center space-x-2 mb-3">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <label className="text-sm font-semibold text-gray-900">
+              Photo Date
+            </label>
             {customDate && (
               <button
                 type="button"
-                onClick={() => {
-                  setCustomDate('');
-                  setShowDatePicker(false);
-                }}
-                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={() => setCustomDate('')}
+                className="ml-auto p-1 text-gray-500 hover:text-gray-700 transition-colors"
                 title="Reset to today"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-            >
-              {showDatePicker ? 'Done' : 'Change'}
-            </button>
+          </div>
+
+          <input
+            type="date"
+            value={customDate || today}
+            onChange={(e) => setCustomDate(e.target.value)}
+            min={minDate}
+            max={today}
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base"
+          />
+
+          <div className="mt-2 flex items-start space-x-1.5">
+            <p className="text-xs text-gray-600">
+              {customDate
+                ? `📆 Backdating to ${new Date(customDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
+                : '📸 Uploading for today'
+              }
+            </p>
           </div>
         </div>
-
-        {showDatePicker && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-white border border-gray-200 rounded-lg"
-          >
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select date for this photo:
-            </label>
-            <input
-              type="date"
-              value={customDate || today}
-              onChange={(e) => setCustomDate(e.target.value)}
-              min={minDate}
-              max={today}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              You can backdate photos up to 5 years, but future dates are not allowed.
-            </p>
-          </motion.div>
-        )}
       </div>
 
       {!preview ? (
@@ -342,12 +314,12 @@ export function UploadPhoto() {
               </button>
             </div>
 
-            {/* Rotation indicator */}
+            {/* Rotation indicator - more prominent */}
             {rotation !== 0 && (
-              <div className="absolute bottom-2 left-2">
-                <span className="text-xs bg-black/60 text-white px-2 py-1 rounded-full backdrop-blur-sm">
-                  Rotated {rotation}°
-                </span>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md shadow-lg border border-white/20">
+                  <p className="text-sm font-medium">Rotated {rotation}°</p>
+                </div>
               </div>
             )}
           </div>

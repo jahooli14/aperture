@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Oct 10 Alignment</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 1400px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .image-box {
+      border: 2px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    .image-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+    }
+    canvas, img {
+      max-width: 100%;
+      border: 1px solid #ccc;
+    }
+    .info {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+      font-size: 12px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Oct 10 Alignment Investigation</h1>
+
+  <div class="info">
+    <strong>Oct 10 Eye Coordinates:</strong><br>
+    Left Eye: (2022, 917) | Right Eye: (1424, 1006)<br>
+    Center: (1723, 961) = 23.6% from top of 4080px<br>
+    Angle: 171.53° | Scale: 0.608x
+  </div>
+
+  <button onclick="runTest()">Load & Test Alignment</button>
+
+  <div class="container">
+    <div class="image-box">
+      <h3>Original (from Supabase)</h3>
+      <img id="original" />
+    </div>
+    <div class="image-box">
+      <h3>Current Aligned (from Supabase)</h3>
+      <img id="current-aligned" />
+    </div>
+    <div class="image-box">
+      <h3>Test: WITH 180° Flip</h3>
+      <canvas id="with-flip"></canvas>
+      <div style="margin-top: 10px; font-size: 11px;" id="flip-info"></div>
+    </div>
+  </div>
+
+  <div class="info" id="debug"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://kzejnzxexgagoujdrmhd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZWpuenhleGdhZ291amRybWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxMDI2NDIsImV4cCI6MjA0OTY3ODY0Mn0.b-zVJlb1_Oqnko_CoCWmZD8I7SvksDiH9sOfRCnOPL4';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const TARGET_WIDTH = 1080;
+    const TARGET_HEIGHT = 1350;
+    const TARGET_LEFT_EYE = { x: TARGET_WIDTH * 0.33, y: TARGET_HEIGHT * 0.40 };
+    const TARGET_RIGHT_EYE = { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * 0.40 };
+
+    window.runTest = async function() {
+      try {
+        // Get Oct 10 photo
+        const { data: photos, error } = await supabase
+          .from('photos')
+          .select('*')
+          .gte('upload_date', '2025-10-10')
+          .lte('upload_date', '2025-10-10T23:59:59')
+          .limit(1);
+
+        if (error) throw error;
+        if (!photos || photos.length === 0) {
+          alert('Oct 10 photo not found');
+          return;
+        }
+
+        const photo = photos[0];
+        console.log('Photo:', photo);
+
+        // Load images
+        document.getElementById('original').src = photo.original_url;
+        document.getElementById('current-aligned').src = photo.aligned_url;
+
+        // Test alignment WITH flip
+        await testAlignment(photo, true);
+
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+      }
+    };
+
+    async function testAlignment(photo, doFlip) {
+      const canvas = document.getElementById('with-flip');
+      const ctx = canvas.getContext('2d');
+      canvas.width = TARGET_WIDTH;
+      canvas.height = TARGET_HEIGHT;
+
+      const eyeCoords = photo.eye_coordinates;
+      const { leftEye, rightEye } = eyeCoords;
+
+      // Load original image
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = photo.original_url;
+      });
+
+      // Calculate transformation
+      const dx = rightEye.x - leftEye.x;
+      const dy = rightEye.y - leftEye.y;
+      const angle = Math.atan2(dy, dx);
+      const angleDeg = angle * (180 / Math.PI);
+
+      const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
+      const targetEyeDistance = TARGET_RIGHT_EYE.x - TARGET_LEFT_EYE.x;
+      const scale = targetEyeDistance / currentEyeDistance;
+
+      const sourceCenterX = (leftEye.x + rightEye.x) / 2;
+      const sourceCenterY = (leftEye.y + rightEye.y) / 2;
+
+      const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
+      const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
+
+      // Apply transformation
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(targetCenterX, targetCenterY);
+      ctx.rotate(-angle);
+      ctx.scale(scale, scale);
+
+      if (doFlip) {
+        ctx.rotate(Math.PI);
+      }
+
+      // Draw with eye markers
+      ctx.drawImage(img, -sourceCenterX, -sourceCenterY);
+
+      // Draw target eye positions for reference
+      ctx.restore();
+
+      // Draw crosshairs at target positions
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+
+      // Left eye target
+      ctx.beginPath();
+      ctx.moveTo(TARGET_LEFT_EYE.x - 20, TARGET_LEFT_EYE.y);
+      ctx.lineTo(TARGET_LEFT_EYE.x + 20, TARGET_LEFT_EYE.y);
+      ctx.moveTo(TARGET_LEFT_EYE.x, TARGET_LEFT_EYE.y - 20);
+      ctx.lineTo(TARGET_LEFT_EYE.x, TARGET_LEFT_EYE.y + 20);
+      ctx.stroke();
+
+      // Right eye target
+      ctx.beginPath();
+      ctx.moveTo(TARGET_RIGHT_EYE.x - 20, TARGET_RIGHT_EYE.y);
+      ctx.lineTo(TARGET_RIGHT_EYE.x + 20, TARGET_RIGHT_EYE.y);
+      ctx.moveTo(TARGET_RIGHT_EYE.x, TARGET_RIGHT_EYE.y - 20);
+      ctx.lineTo(TARGET_RIGHT_EYE.x, TARGET_RIGHT_EYE.y + 20);
+      ctx.stroke();
+
+      document.getElementById('flip-info').innerHTML = `
+        Applied 180° flip: ${doFlip ? 'YES' : 'NO'}<br>
+        Green crosshairs = target eye positions<br>
+        Angle: ${angleDeg.toFixed(2)}° | Scale: ${scale.toFixed(3)}x
+      `;
+
+      document.getElementById('debug').innerHTML = `
+        <strong>Debug Info:</strong><br>
+        Source center: (${Math.round(sourceCenterX)}, ${Math.round(sourceCenterY)})<br>
+        Target center: (${Math.round(targetCenterX)}, ${Math.round(targetCenterY)})<br>
+        Transformation sequence:<br>
+        1. translate(${Math.round(targetCenterX)}, ${Math.round(targetCenterY)})<br>
+        2. rotate(${(-angleDeg).toFixed(2)}°)<br>
+        3. scale(${scale.toFixed(3)})<br>
+        4. ${doFlip ? 'rotate(180°)' : 'NO FLIP'}<br>
+        5. drawImage at (-${Math.round(sourceCenterX)}, -${Math.round(sourceCenterY)})
+      `;
+    }
+  </script>
+</body>
+</html>

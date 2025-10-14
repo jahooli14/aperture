@@ -14,9 +14,8 @@ interface PhotoOverlayProps {
 export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Filter only aligned photos, sort oldest to newest for progression
-  const alignedPhotos = photos
-    .filter(p => p.aligned_url)
+  // Sort all photos oldest to newest for progression, use aligned_url or fallback to original_url
+  const sortedPhotos = photos
     .sort((a, b) => new Date(a.upload_date).getTime() - new Date(b.upload_date).getTime());
 
   // Reset to first photo when overlay opens
@@ -33,18 +32,18 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft') setCurrentIndex(Math.max(0, currentIndex - 1));
-      if (e.key === 'ArrowRight') setCurrentIndex(Math.min(alignedPhotos.length - 1, currentIndex + 1));
+      if (e.key === 'ArrowRight') setCurrentIndex(Math.min(sortedPhotos.length - 1, currentIndex + 1));
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentIndex, alignedPhotos.length, onClose]);
+  }, [isOpen, currentIndex, sortedPhotos.length, onClose]);
 
-  if (alignedPhotos.length === 0) {
+  if (sortedPhotos.length === 0) {
     return null;
   }
 
-  const currentPhoto = alignedPhotos[currentIndex];
+  const currentPhoto = sortedPhotos[currentIndex];
 
   return (
     <AnimatePresence>
@@ -73,10 +72,10 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
             {/* Photo stack container */}
             <div className="relative w-full max-w-2xl aspect-square mb-6">
               {/* Stack all photos with opacity transition */}
-              {alignedPhotos.map((photo, index) => (
+              {sortedPhotos.map((photo, index) => (
                 <motion.img
                   key={photo.id}
-                  src={photo.aligned_url!}
+                  src={photo.aligned_url || photo.original_url}
                   alt={`Photo from ${photo.upload_date}`}
                   className="absolute inset-0 w-full h-full object-contain"
                   initial={{ opacity: 0 }}
@@ -99,7 +98,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                 })}
               </p>
               <p className="text-sm text-white/60 mt-1">
-                Day {currentIndex + 1} of {alignedPhotos.length}
+                Day {currentIndex + 1} of {sortedPhotos.length}
               </p>
             </div>
 
@@ -108,7 +107,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
               <input
                 type="range"
                 min="0"
-                max={alignedPhotos.length - 1}
+                max={sortedPhotos.length - 1}
                 value={currentIndex}
                 onChange={(e) => setCurrentIndex(Number(e.target.value))}
                 className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer

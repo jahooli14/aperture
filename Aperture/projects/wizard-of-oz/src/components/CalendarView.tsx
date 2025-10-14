@@ -206,20 +206,17 @@ export function CalendarView() {
               </div>
 
               <div className="space-y-1 text-sm text-gray-600">
-                {selectedPhoto.aligned_url && (
+                {selectedPhoto.eye_coordinates && (
                   <p className="flex items-center gap-1">
                     <span className="text-green-600">✓</span>
-                    Face aligned and processed
+                    Eyes detected and aligned
                   </p>
                 )}
-                {!selectedPhoto.aligned_url && selectedPhoto.original_url && (
+                {!selectedPhoto.eye_coordinates && (
                   <p className="flex items-center gap-1">
-                    <span className="text-yellow-600">⏳</span>
-                    Processing in progress
+                    <span className="text-blue-600">📷</span>
+                    Original photo (no alignment)
                   </p>
-                )}
-                {selectedPhoto.eye_coordinates && (
-                  <p className="text-xs text-gray-500">Eye detection complete</p>
                 )}
               </div>
             </div>

@@ -21,6 +21,57 @@ export interface AlignmentResult {
 }
 
 /**
+ * Compresses an image to reduce file size while maintaining quality
+ * @param file - The image file to compress
+ * @param maxWidth - Maximum width (default 1920)
+ * @param quality - JPEG quality 0-1 (default 0.85)
+ * @returns Promise resolving to compressed image file
+ */
+export async function compressImage(
+  file: File,
+  maxWidth = 1920,
+  quality = 0.85
+): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      // Calculate new dimensions maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      // Draw image
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to blob with compression
+      canvas.toBlob(
+        (blob) => {
+          const compressedFile = new File([blob!], file.name, { type: 'image/jpeg' });
+          URL.revokeObjectURL(url);
+          resolve(compressedFile);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.src = url;
+  });
+}
+
+/**
  * Rotates an image file by the specified degrees
  * @param file - The image file to rotate
  * @param degrees - Degrees to rotate (0, 90, 180, or 270)
@@ -60,7 +111,7 @@ export async function rotateImage(file: File, degrees: number): Promise<File> {
       canvas.toBlob((blob) => {
         const rotatedFile = new File([blob!], file.name, { type: file.type });
         resolve(rotatedFile);
-      }, file.type, 0.95);
+      }, file.type, 0.85);
     };
 
     img.src = URL.createObjectURL(file);
@@ -159,6 +210,11 @@ export async function alignPhoto(
         const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
         const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
 
+        // Determine if image needs 180° rotation based on eye left-right order
+        // If leftEye.x > rightEye.x, eyes are swapped (upside-down) and need flipping
+        const eyesSwapped = leftEye.x > rightEye.x;
+        const needsFlip = eyesSwapped;
+
         // Fill with white background first
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -175,8 +231,10 @@ export async function alignPhoto(
         // Scale to match target eye distance
         ctx.scale(scale, scale);
 
-        // Rotate 180 degrees to flip image right-side up
-        ctx.rotate(Math.PI);
+        // Rotate 180 degrees to flip image right-side up (only if needed)
+        if (needsFlip) {
+          ctx.rotate(Math.PI);
+        }
 
         // Draw image centered at origin
         ctx.drawImage(img, -sourceCenterX, -sourceCenterY);

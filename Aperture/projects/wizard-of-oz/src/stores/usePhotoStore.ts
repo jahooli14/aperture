@@ -135,13 +135,12 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         } : null,
       };
 
-      // Insert photo record
-      // Type assertion needed due to Supabase type generation issues
-      const { data: photoData, error: insertError } = await (supabase
+      // Insert photo record (type assertion required for Supabase generated types)
+      const { data: photoData, error: insertError } = await supabase
         .from('photos')
         .insert(photoRecord as never)
         .select()
-        .single());
+        .single();
 
       if (insertError || !photoData) {
         console.error('Database insert error:', insertError);
@@ -190,7 +189,8 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   },
 
   hasUploadedToday: () => {
-    // Allow multiple uploads per day for now
-    return false;
+    const today = new Date().toISOString().split('T')[0];
+    const photos = get().photos;
+    return photos.some(photo => photo.upload_date === today);
   },
 }));

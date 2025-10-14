@@ -1,9 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
-import { PhotoOverlay } from './PhotoOverlay';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import type { Database } from '../types/database';
+
+// Lazy load PhotoOverlay since it's only shown on user interaction
+const PhotoOverlay = lazy(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay })));
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -37,8 +39,8 @@ export function PhotoGallery() {
   };
 
   const handlePhotoClick = (_photo: Photo, _e: React.MouseEvent) => {
-    // Only open overlay if not in a long press state
-    if (hasAlignedPhotos && !longPressTimer.current) {
+    // Only open overlay if we have multiple photos and not in a long press state
+    if (photos.length > 1 && !longPressTimer.current) {
       setIsOverlayOpen(true);
     }
   };
@@ -79,15 +81,28 @@ export function PhotoGallery() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="text-center py-12"
+        className="text-center py-12 max-w-md mx-auto"
       >
-        <p className="text-gray-600 text-lg">No photos yet. Upload your first one!</p>
+        <div className="mb-6 text-6xl">📸</div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Start Your Journey</h3>
+        <p className="text-gray-600 mb-6">
+          Capture one photo each day and watch your baby grow over time
+        </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+          <p className="text-sm font-semibold text-blue-900 mb-2">✨ Tips:</p>
+          <ul className="text-sm text-blue-800 space-y-1">
+            <li>• Use good lighting for best results</li>
+            <li>• Keep your baby's face visible</li>
+            <li>• Photos align automatically with eye detection</li>
+            <li>• One photo per day creates a beautiful timelapse</li>
+          </ul>
+        </div>
       </motion.div>
     );
   }
 
-  // Check if we have any aligned photos for the overlay
-  const hasAlignedPhotos = photos.some(p => p.aligned_url);
+  // Check if we have any photos for the overlay
+  const hasPhotos = photos.length > 0;
 
   return (
     <div className="space-y-6">
@@ -96,10 +111,10 @@ export function PhotoGallery() {
         <p className="text-gray-600">{photos.length} {photos.length === 1 ? 'day' : 'days'}</p>
       </div>
 
-      {hasAlignedPhotos && (
+      {hasPhotos && photos.length > 1 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-800">
-            <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey with aligned eyes!
+            <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey timeline!
           </p>
           <p className="text-xs text-blue-600 mt-1">
             Long press to delete a photo
@@ -121,13 +136,18 @@ export function PhotoGallery() {
             onTouchStart={(e) => handlePressStart(photo, e)}
             onTouchEnd={handlePressEnd}
             onTouchCancel={handlePressEnd}
-            className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group select-none"
+            className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group select-none"
           >
+            {/* Skeleton loader background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse" />
+
             <img
               src={photo.aligned_url || photo.original_url}
               alt={`Photo from ${photo.upload_date}`}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transition-opacity duration-300"
               loading="lazy"
+              onLoad={(e) => e.currentTarget.classList.add('opacity-100')}
+              style={{ opacity: 0 }}
             />
 
             {/* Overlay with date - always visible on mobile, hover on desktop */}
@@ -145,12 +165,16 @@ export function PhotoGallery() {
         ))}
       </div>
 
-      {/* Photo Overlay */}
-      <PhotoOverlay
-        photos={photos}
-        isOpen={isOverlayOpen}
-        onClose={() => setIsOverlayOpen(false)}
-      />
+      {/* Photo Overlay - Lazy loaded */}
+      {isOverlayOpen && (
+        <Suspense fallback={null}>
+          <PhotoOverlay
+            photos={photos}
+            isOpen={isOverlayOpen}
+            onClose={() => setIsOverlayOpen(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
