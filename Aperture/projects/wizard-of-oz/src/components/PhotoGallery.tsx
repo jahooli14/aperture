@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
 import { PhotoSkeleton } from './PhotoSkeleton';
 import type { Database } from '../types/database';
@@ -20,6 +21,8 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,11 +34,10 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     longPressTimer.current = setTimeout(() => {
-      setPhotoToDelete(photo);
+      setSelectedPhoto(photo);
+      setIsBottomSheetOpen(true);
       // Haptic feedback on mobile
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      triggerHaptic('selection');
     }, 800); // 800ms long press
   };
 
@@ -148,7 +150,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
             <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey timeline!
           </p>
           <p className="text-xs text-blue-600 mt-1">
-            Long press to delete a photo
+            Long press to view details & actions
           </p>
         </div>
       )}
@@ -208,6 +210,21 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
           />
         </Suspense>
       )}
+
+      {/* Photo Bottom Sheet */}
+      <PhotoBottomSheet
+        photo={selectedPhoto}
+        isOpen={isBottomSheetOpen}
+        onClose={() => {
+          setIsBottomSheetOpen(false);
+          setSelectedPhoto(null);
+        }}
+        onDelete={() => {
+          if (selectedPhoto) {
+            setPhotoToDelete(selectedPhoto);
+          }
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
