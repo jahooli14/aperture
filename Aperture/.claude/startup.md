@@ -13,6 +13,8 @@
 > **Purpose**: Know what's available before starting work
 >
 > **Quick reference**: See `.process/CAPABILITIES.md` for full pattern catalog
+>
+> **Documentation map**: See `DOCUMENTATION_INDEX.md` for complete navigation and intent-based routing
 
 **Before starting work, these capabilities are available**:
 
@@ -636,43 +638,6 @@ I'm going to launch 2 agents in parallel:
 - ⏮️ Quick recovery if things break
 - 📊 Learning from what went wrong
 - 🎯 Confidence to try bold improvements
-
----
-
-### Step 6: MANDATORY - Update Documentation During Work
-
-**🚨 CRITICAL**: NEXT_SESSION.md must be updated DURING the session, NOT just at the end.
-
-**Update frequency**:
-- ✅ After completing ANY task
-- ✅ After discovering important information
-- ✅ After fixing a bug
-- ✅ After changing direction
-- ✅ Every 30 minutes of active work
-
-**What to update**:
-```markdown
-**Last Updated**: [timestamp] (Session [N] - [brief context])
-
-**Current Work**: [one sentence what you're doing right now]
-
-[In Priority sections]:
-- Status changed from X to Y
-- Added new findings
-- Updated what's deployed
-- Changed next action required
-```
-
-**Why this matters**:
-- Next Claude session reads NEXT_SESSION.md first
-- If it's out of date, they waste time on wrong context
-- Documentation debt compounds quickly
-- User frustration when docs don't match reality
-
-**Enforcement**:
-- System will remind you if 30+ minutes pass without update
-- If you close session without updating → you failed the session
-- This is NOT optional
 
 ---
 
