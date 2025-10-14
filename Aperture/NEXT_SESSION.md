@@ -1,12 +1,14 @@
 # Next Session - Quick Start Guide
 
-> **🚨 IMPORTANT**: If starting a NEW session, read `START_HERE.md` FIRST, then come back here.
+> **🚨 IMPORTANT**: `.claude/startup.md` is auto-read and guides you through initialization.
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-13 (Session 13 - Photo Alignment COMPLETE & WORKING)
+> **Last Updated**: 2025-10-14 (Session 14 - Documentation improvements complete)
 >
-> **Current Work**: ✅ Photo alignment fully working! All bugs fixed, ready for production use
+> **Current Work**: ✅ Added Anthropic & DSPy principles to documentation
+>
+> **For reference**: See `START_HERE.md` for onboarding guide (not part of startup sequence)
 
 ---
 

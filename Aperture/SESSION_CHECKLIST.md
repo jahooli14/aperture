@@ -81,6 +81,92 @@ Options:
 
 ## 🎯 During Session (Continuous)
 
+### Systematic Evaluation Framework
+
+> **Source**: Adapted from DSPy principles - "It's hard to consistently improve what you aren't able to define."
+>
+> **When to use**: Complex features (> 30 min), user-facing features, cross-session work
+
+#### Before Starting a Task
+
+Define these evaluation criteria:
+
+1. **Task Goal**: What are we achieving?
+2. **Success Metrics**: How do we measure success?
+3. **Validation Steps**: How do we verify it works?
+4. **Acceptance Criteria**: What does "done" look like?
+
+**Refer to**: Task Signature Pattern in `CLAUDE-APERTURE.md` for detailed template
+
+#### Three-Stage Development
+
+**Stage 1 - Programming** (Define & Explore):
+- [ ] Define task signature (inputs → outputs)
+- [ ] Identify constraints (must-have vs should-have)
+- [ ] Explore examples and edge cases
+- [ ] Design initial approach
+- [ ] Document success metrics
+
+**Stage 2 - Evaluation** (Test & Iterate):
+- [ ] Collect test cases (even 5-10 examples help)
+- [ ] Run validation against criteria
+- [ ] Measure against success metrics
+- [ ] Iterate systematically based on results
+- [ ] Document what works/doesn't work
+
+**Stage 3 - Optimization** (Refine & Polish):
+- [ ] Refine based on metric results
+- [ ] Address edge cases discovered
+- [ ] Improve performance/UX
+- [ ] Update documentation
+- [ ] Final verification against all criteria
+
+#### Evaluation Metrics Examples
+
+**Simple Tasks** (Classification, short-form QA):
+- Accuracy percentage
+- Exact match rate
+- Error rate
+
+**Complex Tasks** (Long-form generation, multi-step workflows):
+- Completeness: Did we cover all aspects?
+- Groundedness: Are claims supported by evidence?
+- Usability: Can user achieve goal in ≤ X clicks?
+- Performance: Completes in ≤ X seconds
+- Reliability: Success rate over multiple attempts
+
+**Quality Improvement** (Iterative development):
+```markdown
+Before: [baseline measurement]
+After: [improvement measurement]
+Goal: [target metric]
+Achieved: [yes/no + percentage]
+```
+
+**Example**:
+```markdown
+Task: Photo upload flow
+
+Stage 1 - Programming:
+✅ Defined signature: photo_file, metadata -> upload_status, photo_url
+✅ Must-have: Upload succeeds, photo viewable in gallery
+✅ Should-have: Progress indicator, error recovery
+
+Stage 2 - Evaluation:
+✅ Tested with 10 photos (various sizes/formats)
+✅ Success rate: 9/10 (1 failed on timeout)
+✅ Average upload time: 2.3s
+⚠️ Missing: Progress indicator
+
+Stage 3 - Optimization:
+✅ Added retry logic for timeouts → 10/10 success
+✅ Implemented progress bar
+✅ Reduced avg time to 1.8s via compression
+✅ Final verification: All criteria met
+```
+
+---
+
 ### Observability Check (New Features)
 ⚠️ **MANDATORY for all new features/APIs until UAT passes**
 

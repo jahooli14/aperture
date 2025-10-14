@@ -119,6 +119,74 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 
 ---
 
+## Tool Design Philosophy
+
+> **Source**: [Anthropic - Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
+
+### Quality Over Quantity
+- Create focused, high-impact tools/utilities for specific workflows
+- Consolidate similar functionality instead of creating many small tools
+- Avoid unnecessary wrapper functions around existing APIs
+- Each tool should solve a real, recurring problem
+
+### Targeted Operations Over Broad Listing
+- **Prefer**: `grep "pattern" --glob "*.tsx"` (targeted search)
+- **Avoid**: Reading all files then filtering in memory
+- **Prefer**: Specific queries with filters
+- **Avoid**: Fetching everything then processing client-side
+
+**Examples**:
+```bash
+# ❌ BAD: Broad then filter
+find . -name "*.ts" -exec cat {} \; | grep "useState"
+
+# ✅ GOOD: Targeted from start
+grep -r "useState" --include="*.ts"
+
+# ❌ BAD: Read entire file to find one function
+cat src/utils/imageUtils.ts | grep "alignPhoto"
+
+# ✅ GOOD: Grep with context
+grep -A 20 "alignPhoto" src/utils/imageUtils.ts
+```
+
+### High-Signal Output Design
+- Return meaningful, contextual information
+- Use natural language identifiers over cryptic codes
+- Set sensible limits (prefer 10-50 results, not 1000)
+- Truncate strategically with "... N more results"
+- Include actionable next steps in responses
+
+**Examples**:
+```typescript
+// ❌ BAD: Low-signal technical IDs
+{ photoId: "uuid-1234", status: 2, error: "ERR_003" }
+
+// ✅ GOOD: High-signal contextual info
+{
+  photo: "baby-smile-2025-01-15.jpg",
+  status: "processing",
+  issue: "Eye detection failed - photo may be too dark"
+}
+```
+
+### Error Context and Recovery
+- Explain what went wrong AND what to try next
+- Include specific file paths and line numbers
+- Provide recovery commands when possible
+- Reference related documentation
+
+**Format**:
+```
+❌ Error: [What failed]
+📍 Location: [file:line]
+🔍 Cause: [Why it failed]
+✅ Fix: [Specific command or action]
+📚 See: [Related doc]
+```
+
+---
+
 ## Code Style & Standards
 
 ### TypeScript
@@ -190,15 +258,196 @@ I'm going to:
 [Execute parallel Reads, then Grep, then analysis]
 ```
 
+#### 6. Token-Efficient Output Design
+
+**Principle**: Return high-signal information; truncate low-signal details.
+
+**Good response patterns**:
+```
+Found 3 upload handlers:
+1. src/components/Upload.tsx:45 - Main photo upload
+2. src/lib/uploadToSupabase.ts:12 - Storage upload
+3. src/hooks/usePhotoUpload.ts:67 - Upload hook
+
+... 2 more test files (not shown)
+```
+
+**Bad response patterns**:
+```
+Found 247 files containing "upload"...
+[dumps entire file list]
+[dumps file contents]
+[provides minimal actionable insight]
+```
+
+**Guidelines**:
+- Limit lists to 5-10 most relevant items
+- Summarize remaining items: "... N more"
+- Prioritize by relevance, recency, or importance
+- Use natural identifiers: "Upload button handler" not "fn_003"
+- Include location with results: `file:line`
+- Default to concise; expand when asked
+
 **Why this matters**:
-- 🤝 User understands what's happening
-- ⏸️ User can interrupt if needed
-- 📊 Demonstrates efficient workflow
-- 🎓 User learns better practices
+- ⚡ Faster responses (less token processing)
+- 🎯 User gets actionable info immediately
+- 💰 More work per session (token budget)
+- 🔍 Easy to scan and understand
 
 **Related docs**:
 - `.claude/startup.md` - Steps 5.5 & 5.6 (Parallel patterns)
 - `.process/BACKGROUND_PROCESSES.md` - Background process guide
+
+---
+
+## Development Philosophy
+
+> **Source**: Adapted from DSPy principles - Programming language model systems
+
+### Separation of Concerns
+
+**Core Principle**: Explicitly separate *what* from *how* from *done*.
+
+#### Task Definition (WHAT)
+Define the goal and desired outcome:
+- What problem are we solving?
+- What are the inputs and outputs?
+- What constraints must be met?
+- What does success look like?
+
+#### Implementation (HOW)
+Choose approach and execute:
+- Which tools and patterns to use?
+- What's the step-by-step approach?
+- How do we handle edge cases?
+- What trade-offs are we making?
+
+#### Verification (DONE)
+Prove the task is complete:
+- How do we test this works?
+- What metrics prove success?
+- What verification commands to run?
+- When can we confidently mark this complete?
+
+**Why this matters**:
+- 🎯 Prevents scope confusion
+- 🤝 Clearer handoffs between sessions
+- ✅ Objective completion criteria
+- 📊 Measurable progress
+
+**Anti-pattern**:
+```
+❌ "Implement photo gallery" - unclear what/how/done all mixed together
+```
+
+**Good pattern**:
+```
+✅ WHAT: Display photos in grid with pagination
+✅ HOW: Use CSS Grid, React state for current page
+✅ DONE: All photos accessible, navigation works, tests pass
+```
+
+---
+
+## Task Specification Pattern
+
+> **Source**: Adapted from DSPy's signature-based programming
+
+Before starting any significant task, define:
+
+### Task Signature
+
+**Format**: `[inputs] -> [outputs]`
+
+**Example**: `file_paths, search_pattern -> relevant_files, confidence_scores, next_actions`
+
+### Template
+
+```markdown
+### Task: [Task name]
+
+**Signature**: `input_1, input_2 -> output_1, output_2`
+
+**Inputs**:
+- input_1: [description, type, source]
+- input_2: [description, type, source]
+
+**Outputs**:
+- output_1: [description, type, format]
+- output_2: [description, type, format]
+
+**Validation Criteria**:
+
+Must Have (Assert - task fails if missing):
+- [ ] Critical requirement 1
+- [ ] Critical requirement 2
+
+Should Have (Suggest - improves quality):
+- [ ] Nice-to-have feature 1
+- [ ] Nice-to-have feature 2
+
+**Success Metrics**:
+- Metric 1: [quantifiable measure]
+- Metric 2: [quantifiable measure]
+- Verification: [specific command to test]
+
+**Constraints**:
+- Time budget: [X minutes]
+- Token budget: [X tokens]
+- Dependencies: [what must exist first]
+- Risk level: [Low/Medium/High]
+```
+
+### Example Task Specification
+
+```markdown
+### Task: Implement photo gallery pagination
+
+**Signature**: `photos[], page_size -> paginated_view, navigation_controls`
+
+**Inputs**:
+- photos[]: Array of photo objects from Supabase
+- page_size: Number of photos per page (default: 20)
+
+**Outputs**:
+- paginated_view: Component rendering current page
+- navigation_controls: Prev/Next buttons with proper state
+
+**Validation Criteria**:
+
+Must Have:
+- [x] All photos accessible via pagination
+- [x] Navigation disabled appropriately (no "prev" on page 1)
+- [x] No duplicate photos across pages
+
+Should Have:
+- [ ] Page indicator (e.g., "Page 3 of 12")
+- [ ] Keyboard shortcuts (arrow keys)
+- [ ] URL reflects current page
+
+**Success Metrics**:
+- User can access all photos in ≤ 3 clicks
+- Navigation state persists on refresh
+- Zero duplicate or missing photos
+- Verification: `npm run test -- gallery.test.ts`
+
+**Constraints**:
+- Time budget: 45 minutes
+- Token budget: 15K tokens
+- Dependencies: Photo fetching working, Zustand store setup
+- Risk level: Low (UI-only, no data migration)
+```
+
+**When to use**:
+- Complex features (> 30 min work)
+- Cross-session work (need clear handoff)
+- Multiple implementation approaches (need to choose)
+- User-facing features (need clear success criteria)
+
+**When to skip**:
+- Trivial tasks (< 10 min)
+- Obvious requirements
+- One-line fixes
 
 ---
 
@@ -208,22 +457,71 @@ I'm going to:
 1. Read `NEXT_SESSION.md` - understand current status
 2. Check `SESSION_CHECKLIST.md` - follow workflow
 3. Review `.process/COMMON_MISTAKES.md` - avoid known pitfalls
+4. **For complex tasks**: Define task signature (see above)
 
 ### During Development
 1. **Test builds locally**: `npm run build` before pushing
 2. **Lint before commit**: Check for errors (not just warnings)
 3. **Commit to main**: Required for Vercel deployment
 4. **Clear commit messages**: Describe what and why
+5. **Track against metrics**: Reference success criteria from task signature
 
 ### After Completing Work
-1. Update `NEXT_SESSION.md` with what you completed
-2. Document any learnings in `.process/COMMON_MISTAKES.md`
-3. Push to main for deployment
-4. Verify deployment succeeded
+1. **Verify against metrics**: Check all validation criteria met
+2. Update `NEXT_SESSION.md` with what you completed
+3. Document any learnings in `.process/COMMON_MISTAKES.md`
+4. Push to main for deployment
+5. Verify deployment succeeded
 
 ---
 
 ## Common Patterns
+
+### Targeted File Operations
+
+**Principle**: Use targeted searches instead of broad operations.
+
+#### Searching for Code Patterns
+```bash
+# ❌ BAD: Read all files then search
+cat src/components/*.tsx | grep "useState"
+
+# ✅ GOOD: Targeted grep
+grep -r "useState" src/components/ --include="*.tsx"
+
+# ❌ BAD: Find all files, read them, search
+find . -name "*.ts" -exec cat {} \; | grep "interface Photo"
+
+# ✅ GOOD: Grep with context
+grep -r "interface Photo" --include="*.ts" -A 5
+```
+
+#### Finding Specific Implementations
+```bash
+# ❌ BAD: List all files, manually check each
+ls -la src/components/
+cat src/components/Upload.tsx
+cat src/components/Gallery.tsx
+# ... check each one
+
+# ✅ GOOD: Grep for the function directly
+grep -r "handleUpload" src/ --include="*.tsx" -n
+```
+
+#### Understanding Component Usage
+```bash
+# ❌ BAD: Read entire codebase
+Read src/*
+
+# ✅ GOOD: Search for specific imports/usages
+grep -r "import.*PhotoGallery" src/ --include="*.tsx"
+```
+
+**Why this matters**:
+- ⚡ 10-100x faster execution
+- 💰 Saves thousands of tokens per search
+- 🎯 Immediate, relevant results
+- 🔍 Built-in context with `-A/-B/-C` flags
 
 ### HTML File Inputs
 ```tsx
