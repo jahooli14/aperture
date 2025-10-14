@@ -475,6 +475,289 @@ Should Have:
 
 ---
 
+## Loop Pattern with Safeguards
+
+> **Source**: Adapted from Google Cloud Loop Pattern for agentic systems
+>
+> **Purpose**: Iterative refinement with explicit exit conditions to prevent infinite loops and token waste
+
+### When to Use
+
+**Good use cases**:
+- Retry logic with error recovery
+- Iterative improvement based on validation
+- Progressive refinement until criteria met
+- Self-healing workflows
+
+**Anti-pattern**: Unbounded loops without clear termination
+
+### Pattern Structure
+
+```typescript
+// Example: Retry with exponential backoff and max attempts
+async function uploadWithRetry(
+  file: File,
+  maxAttempts: number = 3,
+  timeoutMs: number = 30000
+): Promise<UploadResult> {
+  let attempt = 0
+  let lastError: Error | null = null
+  const startTime = Date.now()
+
+  while (attempt < maxAttempts) {
+    // Safeguard 1: Maximum iteration limit
+    attempt++
+    console.log(`Upload attempt ${attempt}/${maxAttempts}`)
+
+    // Safeguard 2: Total timeout
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Upload timed out after ${timeoutMs}ms`)
+    }
+
+    try {
+      const result = await uploadPhoto(file)
+
+      // Safeguard 3: Validate success condition
+      if (!result.url) {
+        throw new Error('Upload succeeded but no URL returned')
+      }
+
+      console.log(`✅ Upload succeeded on attempt ${attempt}`)
+      return result
+
+    } catch (error) {
+      lastError = error
+
+      // Safeguard 4: Classify error (retryable vs fatal)
+      if (error.message.includes('Invalid file type')) {
+        // Fatal error - don't retry
+        throw error
+      }
+
+      if (attempt === maxAttempts) {
+        // Exhausted retries
+        throw new Error(
+          `Upload failed after ${maxAttempts} attempts: ${lastError.message}`
+        )
+      }
+
+      // Safeguard 5: Exponential backoff
+      const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
+      console.log(`Retry in ${backoffMs}ms...`)
+      await delay(backoffMs)
+
+      // Safeguard 6: Log iteration state for debugging
+      console.log(`Retry context: attempt=${attempt}, error=${error.message}`)
+    }
+  }
+
+  // Should never reach here, but safeguard anyway
+  throw new Error(`Upload loop exited unexpectedly`)
+}
+```
+
+### Required Safeguards
+
+**Every loop MUST have**:
+
+1. **Maximum Iteration Limit**
+   ```typescript
+   const MAX_ATTEMPTS = 5
+   if (attempt >= MAX_ATTEMPTS) {
+     throw new Error('Maximum attempts exceeded')
+   }
+   ```
+
+2. **Total Timeout**
+   ```typescript
+   const TIMEOUT_MS = 60000 // 1 minute
+   if (Date.now() - startTime > TIMEOUT_MS) {
+     throw new Error('Operation timed out')
+   }
+   ```
+
+3. **Explicit Success Condition**
+   ```typescript
+   if (isSuccessful(result)) {
+     return result // Exit loop on success
+   }
+   ```
+
+4. **Error Classification**
+   ```typescript
+   if (isFatalError(error)) {
+     throw error // Don't retry fatal errors
+   }
+   ```
+
+5. **Progress Tracking**
+   ```typescript
+   console.log(`Iteration ${i}: ${getProgressMetric()}`)
+   // Must show measurable progress, not spinning
+   ```
+
+6. **State Logging**
+   ```typescript
+   console.log({
+     attempt,
+     elapsed: Date.now() - startTime,
+     lastError: error?.message,
+     progress: getProgressMetric()
+   })
+   ```
+
+### Loop Pattern Anti-Patterns
+
+**❌ BAD: Unbounded loop**
+```typescript
+while (true) {
+  // No exit condition!
+  const result = await tryOperation()
+  if (result.success) break
+}
+```
+
+**❌ BAD: No progress validation**
+```typescript
+for (let i = 0; i < 100; i++) {
+  const result = await refine(input)
+  // How do we know it's getting better?
+  // Could be spinning without improvement
+}
+```
+
+**❌ BAD: No timeout**
+```typescript
+let attempts = 0
+while (attempts < 10) {
+  // Each attempt could take forever
+  await longRunningOperation()
+  attempts++
+}
+```
+
+**✅ GOOD: All safeguards present**
+```typescript
+async function refineUntilValid(
+  input: string,
+  maxAttempts: number = 5,
+  timeoutMs: number = 30000
+): Promise<string> {
+  let attempt = 0
+  const startTime = Date.now()
+  let currentInput = input
+  let previousQuality = 0
+
+  while (attempt < maxAttempts) {
+    attempt++
+
+    // Timeout safeguard
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Refinement timed out after ${timeoutMs}ms`)
+    }
+
+    const refined = await refine(currentInput)
+    const quality = await measureQuality(refined)
+
+    // Progress validation
+    if (quality <= previousQuality) {
+      console.warn(`No improvement: ${quality} <= ${previousQuality}`)
+      // Could exit or continue, but we KNOW we're not progressing
+    }
+
+    // Success condition
+    if (quality >= 0.9) {
+      console.log(`✅ Refinement succeeded: quality=${quality}`)
+      return refined
+    }
+
+    // State logging
+    console.log({
+      attempt,
+      quality,
+      improvement: quality - previousQuality,
+      elapsed: Date.now() - startTime
+    })
+
+    previousQuality = quality
+    currentInput = refined
+  }
+
+  throw new Error(`Failed to reach quality threshold after ${maxAttempts} attempts`)
+}
+```
+
+### Claude Code Loop Usage
+
+**When I (Claude) use loops**:
+
+**Appropriate**:
+```
+Retrying failed API calls (max 3 attempts, 30s timeout)
+Iterating through search results (max 10 items, early exit)
+Progressive file reading (offset pagination, known total)
+```
+
+**Inappropriate**:
+```
+Searching "until I find it" (no max attempts)
+Refining code "until perfect" (no quality metric)
+Reading files in loop (should use targeted operations instead)
+```
+
+**Token Budget Awareness**:
+- Each loop iteration costs tokens
+- Set conservative max attempts (3-5, not 100)
+- Exit early when possible
+- Log iteration count and token usage
+
+### Communication Pattern
+
+**Before starting loop**:
+```
+I'm going to retry [OPERATION] with safeguards:
+- Max attempts: 3
+- Timeout: 30s
+- Exit on: [success condition]
+- Won't retry: [fatal error types]
+
+This prevents infinite loops and token waste.
+```
+
+**During loop** (if multiple iterations):
+```
+Attempt 2/3: [what happened]
+Progress: [measurable improvement]
+Continuing...
+```
+
+**After loop**:
+```
+✅ Succeeded on attempt 2/3
+OR
+❌ Failed after 3/3 attempts: [final error]
+```
+
+### Why This Matters
+
+- 🛡️ Prevents infinite loops (token budget exhaustion)
+- 📊 Measurable progress (not spinning endlessly)
+- ⏱️ Time-bounded operations (predictable performance)
+- 🔍 Observable behavior (can debug what went wrong)
+- 💰 Token efficiency (early exit on success)
+
+**Real example from Aperture**:
+```typescript
+// Photo upload with retry (see wizard-of-oz/src/lib/uploadToSupabase.ts)
+// - Max 3 attempts
+// - 30s timeout per attempt
+// - Exponential backoff (1s, 2s, 4s)
+// - Exits early on success
+// - Classifies errors (network vs validation)
+```
+
+---
+
 ## Common Patterns
 
 ### Targeted File Operations

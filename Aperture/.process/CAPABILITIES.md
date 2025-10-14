@@ -6,6 +6,57 @@
 
 ---
 
+## Query Routing & Coordination
+
+### Query Classification & Smart Routing
+**When to Use**: Every session start - automatic routing based on user intent
+**Where Documented**: `.claude/startup.md:92-197` (Step 1.5)
+**Performance Gain**: Saves 20-30% tokens per session
+
+**What it does**:
+- Automatically classifies user queries (DEBUG, FEATURE_NEW, RESEARCH, QUICK_FIX, etc.)
+- Routes to appropriate patterns and documentation
+- Loads only minimal necessary context
+- Reduces cognitive load on pattern selection
+
+**Query Types**:
+- **DEBUG**: Routes to META_DEBUGGING_PROTOCOL.md
+- **FEATURE_NEW**: Routes to Task Signature Pattern
+- **RESEARCH**: Launches deep-research subagent
+- **QUICK_FIX**: Uses Targeted Operations, skips planning
+- **REFACTOR**: Creates Checkpoint first
+- **VERIFICATION**: Uses observability tools
+- **CONTINUATION**: Reads NEXT_SESSION.md
+
+**Example**: User says "upload doesn't work" → Classified as DEBUG → Loads debugging protocol, skips feature implementation patterns
+
+---
+
+### Loop Pattern with Safeguards
+**When to Use**: Retry logic, iterative refinement, progressive workflows
+**Where Documented**: `CLAUDE-APERTURE.md:478-758`
+**Time Investment**: Prevents infinite loops and token waste
+
+**What it does**:
+- Iterative operations with explicit exit conditions
+- Required safeguards: max attempts, timeout, success condition, error classification
+- Progress tracking and state logging
+- Token-aware iteration limits (3-5 max, not 100)
+
+**Required Safeguards**:
+1. Maximum iteration limit (e.g., 3 attempts)
+2. Total timeout (e.g., 30 seconds)
+3. Explicit success condition
+4. Error classification (fatal vs retryable)
+5. Progress tracking (measurable improvement)
+6. State logging (debugging context)
+
+**Example use case**: API retry with exponential backoff, photo upload retry, iterative code refinement
+
+**Anti-pattern**: Unbounded loops, no timeout, no progress validation
+
+---
+
 ## Development Patterns
 
 ### Task Signature Pattern
@@ -194,15 +245,17 @@
 
 ### By Task Type
 
-| Task Type | Recommended Patterns |
-|-----------|---------------------|
-| **New user-facing feature** | Task Signature + Three-Stage Development + Observability |
-| **API integration** | Task Signature + Validation-Driven + Observability |
-| **Bug fix (unknown cause)** | Meta Debugging Protocol → Targeted Operations |
-| **Major refactor** | Checkpoint + Task Signature (if complex) |
-| **Research/investigation** | Subagent Delegation (deep-research) |
-| **Code understanding** | Targeted Operations + Subagent (codebase-pattern-analyzer) |
-| **Quick fix (< 10 min)** | None - just do it |
+| Task Type | Query Classification | Recommended Patterns |
+|-----------|----------------------|---------------------|
+| **Bug/Error** | DEBUG | Meta Debugging Protocol → /verify-infra → Targeted Operations |
+| **New user-facing feature** | FEATURE_NEW | Task Signature + Three-Stage Development + Observability |
+| **API integration** | FEATURE_NEW | Task Signature + Validation-Driven + Loop Pattern (retry) + Observability |
+| **Research/investigation** | RESEARCH | Subagent Delegation (deep-research) |
+| **Code understanding** | RESEARCH | Targeted Operations + Subagent (codebase-pattern-analyzer) |
+| **Major refactor** | REFACTOR | Checkpoint FIRST + Task Signature (if complex) |
+| **Quick fix (< 10 min)** | QUICK_FIX | Targeted Operations only - skip planning |
+| **Continue work** | CONTINUATION | Read NEXT_SESSION.md → Resume from last task |
+| **Verification/Testing** | VERIFICATION | Observability tools (/vercel-logs) + verification commands |
 
 ---
 
@@ -231,17 +284,35 @@
 ## Quick Decision Flowchart
 
 ```
-Starting new task?
+New session starts
 │
-├─ Complexity assessment
+├─ Step 1.5: Classify user query
+│  ├─ "doesn't work" / "error" → DEBUG
+│  ├─ "implement" / "add" → FEATURE_NEW
+│  ├─ "understand" / "explain" → RESEARCH
+│  ├─ "fix typo" / "quick change" → QUICK_FIX
+│  ├─ "refactor" / "improve" → REFACTOR
+│  ├─ "verify" / "test" → VERIFICATION
+│  └─ "continue" / "next" → CONTINUATION
+│
+├─ Route to appropriate pattern
+│  ├─ DEBUG → META_DEBUGGING_PROTOCOL.md FIRST
+│  ├─ FEATURE_NEW → Check complexity below
+│  ├─ RESEARCH → Launch subagent (deep-research)
+│  ├─ QUICK_FIX → Targeted Operations, skip planning
+│  ├─ REFACTOR → Create Checkpoint FIRST
+│  ├─ VERIFICATION → Observability tools
+│  └─ CONTINUATION → Read NEXT_SESSION.md
+│
+├─ Complexity assessment (if FEATURE_NEW)
 │  ├─ < 10 min → Just do it
 │  ├─ 10-30 min → Use TodoWrite, proceed
 │  ├─ > 30 min → Define Task Signature first
 │  └─ Cross-session → Task Signature + Checkpoint
 │
 ├─ Reliability assessment
-│  ├─ Critical (auth, payments) → Validation-Driven Development
-│  ├─ High (uploads, APIs) → Validation-Driven Development
+│  ├─ Critical (auth, payments) → Validation-Driven + Loop Pattern
+│  ├─ High (uploads, APIs) → Validation-Driven + Loop Pattern (retry)
 │  └─ Medium/Low → Standard approach
 │
 ├─ User-facing feature?
@@ -253,8 +324,8 @@ Starting new task?
 ├─ Need research/understanding?
 │  └─ Yes → Launch Subagent (deep-research or codebase-pattern-analyzer)
 │
-├─ Debugging?
-│  └─ Yes → Meta Debugging Protocol FIRST
+├─ Iterative/retry logic needed?
+│  └─ Yes → Loop Pattern with safeguards (max 3-5 attempts, timeout)
 │
 └─ Multiple independent operations?
    └─ Yes → Use Parallel Execution
@@ -268,6 +339,8 @@ Track adoption of each pattern to measure improvement:
 
 | Capability | Current Status | Target | Notes |
 |------------|----------------|--------|-------|
+| **Query Classification** | 🟢 Adopted | Every session | Auto-routing enabled |
+| **Loop Pattern Safeguards** | 🟡 Learning | All retry/iteration logic | New pattern, need practice |
 | Task Signature | 🟡 Learning | Use for all complex features | High value when used |
 | Three-Stage Dev | 🟡 Learning | Standard for user-facing | Need more practice |
 | Validation-Driven | 🟡 Learning | All reliability-critical features | Underutilized |
@@ -281,6 +354,10 @@ Track adoption of each pattern to measure improvement:
 - 🔴 Rare: < 20% usage when applicable
 - 🟡 Learning: 20-60% usage
 - 🟢 Adopted: > 60% usage
+
+**New Patterns (Session 14)**:
+- ✅ Query Classification & Smart Routing (Google Cloud Coordinator Pattern)
+- ✅ Loop Pattern with Safeguards (Google Cloud Loop Pattern)
 
 ---
 

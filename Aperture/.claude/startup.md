@@ -89,6 +89,114 @@ Need research/analysis?
 
 ---
 
+### Step 1.5: Query Classification & Smart Routing
+
+> **Source**: Adapted from Google Cloud Coordinator Pattern
+>
+> **Purpose**: Route user queries to appropriate patterns/docs, saving 20-30% tokens per session
+>
+> **Principle**: Load only relevant context based on user intent
+
+**Automatically classify the user's request**:
+
+#### Query Type Detection
+
+```
+User query contains → Route to → Expected outcome
+
+"doesn't work", "broken", "failing", "error", "bug"
+  → DEBUG
+  → META_DEBUGGING_PROTOCOL.md FIRST
+  → Infrastructure check → Input verification → Logic debugging
+
+"implement", "add feature", "create", "build"
+  → FEATURE_NEW
+  → Task Signature Pattern (if > 30 min)
+  → Three-Stage Development (if user-facing)
+  → Validation-Driven (if reliability-critical)
+
+"understand", "how does", "explain", "what is", "why"
+  → RESEARCH
+  → Launch deep-research subagent
+  → Or use codebase-pattern-analyzer for code understanding
+
+"fix typo", "update text", "change color", "quick change"
+  → QUICK_FIX
+  → Skip planning, just do it (< 10 min)
+  → Use Targeted Operations for finding code
+
+"refactor", "improve", "optimize", "reorganize"
+  → REFACTOR
+  → Create Checkpoint FIRST
+  → Task Signature if complex
+  → Parallel execution for analysis phase
+
+"test", "verify", "check if", "validate"
+  → VERIFICATION
+  → Read relevant verification commands from NEXT_SESSION.md
+  → Use observability tools (/vercel-logs)
+
+"continue", "next", "keep going"
+  → CONTINUATION
+  → Read NEXT_SESSION.md
+  → Check last completed task
+  → Proceed with next priority
+```
+
+#### Smart Context Loading
+
+**Based on query type, load minimal necessary context**:
+
+```
+DEBUG:
+  ✅ Load: META_DEBUGGING_PROTOCOL.md, /verify-infra
+  ❌ Skip: Task Signature, Three-Stage Development
+  💾 Tokens saved: ~5K
+
+FEATURE_NEW (Complex):
+  ✅ Load: Task Signature Pattern, CAPABILITIES.md
+  ✅ Load: Three-Stage Development, Validation-Driven (if applicable)
+  ❌ Skip: META_DEBUGGING_PROTOCOL.md (unless needed later)
+  💾 Tokens saved: ~3K
+
+RESEARCH:
+  ✅ Load: Subagent delegation info
+  ✅ Launch: deep-research or codebase-pattern-analyzer
+  ❌ Skip: Most implementation patterns
+  💾 Tokens saved: ~6K
+
+QUICK_FIX:
+  ✅ Load: Targeted Operations, Parallel Execution
+  ❌ Skip: Task Signature, Three-Stage, Validation-Driven
+  💾 Tokens saved: ~8K
+```
+
+#### Communication Pattern
+
+**After classifying query**:
+```
+Query classified as: [DEBUG/FEATURE_NEW/RESEARCH/QUICK_FIX/REFACTOR/VERIFICATION/CONTINUATION]
+
+Routing to:
+- [Pattern/Protocol name]
+- [Relevant documentation]
+
+Loading minimal context for efficiency.
+```
+
+**Why this matters**:
+- 💰 Saves 20-30% tokens per session (load only what's needed)
+- ⚡ Faster first response (less reading upfront)
+- 🎯 Better pattern selection (automatic not manual)
+- 🧠 Reduces cognitive load (clear routing logic)
+
+**Enforcement**:
+- Always classify before proceeding
+- If unclear → Ask user to clarify intent
+- If multiple query types → Handle sequentially or in priority order
+
+---
+
 ### Step 2: Project Detection (AUTOMATIC)
 
 **Checking git remote and directory structure...**
