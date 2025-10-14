@@ -1,6 +1,7 @@
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby } from 'lucide-react';
 import type { Database } from '../types/database';
+import { calculateAge, formatAge } from '../lib/ageUtils';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -94,6 +95,29 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
               {/* Metadata Grid */}
               <div className="space-y-4 mb-6">
+                {/* Age Display */}
+                {(() => {
+                  // TODO: Get birthdate from user settings
+                  // For now, calculate from first photo as approximation
+                  const birthDate = '2024-10-08'; // Temporary - will be from user settings
+                  const age = calculateAge(birthDate, photo.upload_date);
+
+                  return (
+                    <div className="flex items-start gap-3 p-4 bg-purple-50 rounded-xl">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Baby className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-700">Age in Photo</p>
+                        <p className="text-base text-gray-900">{formatAge(age)}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {age.totalDays} {age.totalDays === 1 ? 'day' : 'days'} old
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Photo Date */}
                 <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
                   <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
