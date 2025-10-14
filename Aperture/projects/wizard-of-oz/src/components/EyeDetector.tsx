@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaceLandmarker, FilesetResolver, type FaceLandmarkerResult } from '@mediapipe/tasks-vision';
+import { logger } from '../lib/logger';
 
 export interface EyeCoordinates {
   leftEye: { x: number; y: number };
@@ -50,7 +51,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
         setDetector(faceLandmarker);
         setLoading(false);
       } catch (error) {
-        console.error('Failed to load MediaPipe detector:', error);
+        logger.error('Failed to load MediaPipe detector', { error: error instanceof Error ? error.message : String(error) }, 'EyeDetector');
         if (mounted) {
           setLoading(false);
           onError?.(error instanceof Error ? error : new Error('Failed to initialize face detector'));
@@ -130,7 +131,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
             onDetection(null);
           }
         } catch (error) {
-          console.error('Eye detection failed:', error);
+          logger.error('Eye detection failed', { error: error instanceof Error ? error.message : String(error) }, 'EyeDetector');
           onError?.(error instanceof Error ? error : new Error('Eye detection failed'));
           onDetection(null);
         } finally {
@@ -139,7 +140,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
       };
 
       img.onerror = () => {
-        console.error('Failed to load image for detection');
+        logger.error('Failed to load image for detection', {}, 'EyeDetector');
         URL.revokeObjectURL(url);
         onError?.(new Error('Failed to load image for detection'));
         onDetection(null);

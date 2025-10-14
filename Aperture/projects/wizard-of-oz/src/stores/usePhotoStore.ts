@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { logger } from '../lib/logger';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -57,7 +58,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       const { data, error } = result as Awaited<typeof fetchPromise>;
 
       if (error) {
-        console.error('Error fetching photos:', error);
+        logger.error('Error fetching photos', { error: error.message }, 'PhotoStore');
         const errorMsg = `Database error: ${error.message}`;
         set({ loading: false, fetchError: errorMsg });
         return;
@@ -65,7 +66,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       set({ photos: data || [], loading: false, fetchError: null });
     } catch (err) {
-      console.error('Unexpected error fetching photos:', err);
+      logger.error('Unexpected error fetching photos', { error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       set({ loading: false, photos: [], fetchError: errorMsg });
     }
@@ -108,7 +109,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         });
 
       if (uploadError) {
-        console.error('Storage upload error:', uploadError);
+        logger.error('Storage upload error', { error: uploadError.message, fileName }, 'PhotoStore');
         throw uploadError;
       }
 
@@ -144,7 +145,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         .single();
 
       if (insertError || !photoData) {
-        console.error('Database insert error:', insertError);
+        logger.error('Database insert error', { error: insertError?.message || 'No photo data returned' }, 'PhotoStore');
         throw insertError || new Error('Failed to create photo record');
       }
 
@@ -154,7 +155,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       set({ uploading: false });
       return (photoData as Photo).id;
     } catch (error) {
-      console.error('Upload failed:', error);
+      logger.error('Upload failed', { error: error instanceof Error ? error.message : String(error) }, 'PhotoStore');
       set({ uploading: false });
       throw error;
     }
@@ -183,7 +184,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       const updatedPhotos = currentPhotos.filter(photo => photo.id !== photoId);
       set({ photos: updatedPhotos, deleting: false });
     } catch (error) {
-      console.error('Delete photo failed:', error);
+      logger.error('Delete photo failed', { error: error instanceof Error ? error.message : String(error), photoId }, 'PhotoStore');
       set({ deleting: false });
       throw error;
     }

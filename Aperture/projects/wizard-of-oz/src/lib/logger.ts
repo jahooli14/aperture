@@ -11,7 +11,7 @@ export enum LogLevel {
 }
 
 export interface LogContext {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LogEntry {
@@ -146,7 +146,7 @@ class Logger {
     }, 'ALIGNMENT');
   }
 
-  public eyeDetection(photoId: string, landmarks: any): void {
+  public eyeDetection(photoId: string, landmarks: { leftEye?: unknown; rightEye?: unknown; confidence?: unknown; eyesOpen?: unknown }): void {
     this.info('Eye detection complete', {
       photoId,
       leftEye: landmarks.leftEye,

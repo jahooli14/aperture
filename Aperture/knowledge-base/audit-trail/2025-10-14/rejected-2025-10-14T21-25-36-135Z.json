@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-14T21:25:36.134Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "I Built Clueoai Because Every AI App Is a Security Nightmare Waiting to Happen",
+    "url": "https://dev.to/blackocra/i-built-clueoai-because-every-ai-app-is-a-security-nightmare-waiting-to-happen-na3",
+    "publishDate": "2025-10-14T20:28:53.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

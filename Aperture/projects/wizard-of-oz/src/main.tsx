@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { logger } from './lib/logger'
 
 // Register service worker for offline support
 if ('serviceWorker' in navigator) {
@@ -9,10 +10,10 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
-        console.log('Service Worker registered:', registration);
+        logger.info('Service Worker registered', { scope: registration.scope }, 'ServiceWorker');
       })
       .catch((error) => {
-        console.log('Service Worker registration failed:', error);
+        logger.warn('Service Worker registration failed', { error: error.message }, 'ServiceWorker');
       });
   });
 }

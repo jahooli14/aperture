@@ -1,10 +1,14 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, RotateCcw, RotateCw, CheckCircle, Loader2, Camera, FolderOpen } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
+import { DateSelector } from './DateSelector';
+import { UploadButtons } from './UploadButtons';
+import { PreviewControls } from './PreviewControls';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
 import { triggerHaptic } from '../lib/haptics';
+import { logger } from '../lib/logger';
 import type { ToastType } from './Toast';
 
 interface UploadPhotoProps {
@@ -63,7 +67,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       const dataURL = await fileToDataURL(rotatedFile);
       setPreview(dataURL);
     } catch (err) {
-      console.error('Error rotating image:', err);
+      logger.error('Error rotating image', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
       setError('Failed to rotate image');
     }
   };
@@ -102,7 +106,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setPreview(dataURL);
       setError('');
     } catch (err) {
-      console.error('Error processing image:', err);
+      logger.error('Error processing image', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
       setError('Failed to process image');
     }
   };
@@ -128,7 +132,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         setAlignedFile(result.alignedImage);
         setAligning(false);
       } catch (err) {
-        console.error('Alignment error:', err);
+        logger.error('Alignment error', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
         setAligning(false);
         setError('Failed to align photo. You can still upload the original.');
         setAlignedFile(null);
@@ -138,7 +142,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   };
 
   const handleDetectionError = (err: Error) => {
-    console.error('Eye detection error:', err);
+    logger.error('Eye detection error', { error: err.message }, 'UploadPhoto');
     setDetectingEyes(false);
     setError(`Eye detection failed: ${err.message}. You can still upload, but alignment may not work.`);
   };
@@ -191,8 +195,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         }
       }, 500);
     } catch (err: unknown) {
-      console.error('Upload error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
+      logger.error('Upload error', { error: errorMessage }, 'UploadPhoto');
       setError(errorMessage);
     }
   };
@@ -228,45 +232,13 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         {customDate ? 'Upload Photo' : "Today's Photo"}
       </h2>
 
-      {/* Date Selection - Always visible */}
-      <div className="mb-6">
-        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-center space-x-2 mb-3">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <label className="text-sm font-semibold text-gray-900">
-              Photo Date
-            </label>
-            {customDate && (
-              <button
-                type="button"
-                onClick={() => setCustomDate('')}
-                className="ml-auto p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                title="Reset to today"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <input
-            type="date"
-            value={customDate || today}
-            onChange={(e) => setCustomDate(e.target.value)}
-            min={minDate}
-            max={today}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base"
-          />
-
-          <div className="mt-2 flex items-start space-x-1.5">
-            <p className="text-xs text-gray-600">
-              {customDate
-                ? `📆 Backdating to ${new Date(customDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}`
-                : '📸 Uploading for today'
-              }
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Date Selection */}
+      <DateSelector
+        customDate={customDate}
+        today={today}
+        minDate={minDate}
+        onDateChange={setCustomDate}
+      />
 
       {!preview ? (
         <div>
@@ -287,29 +259,10 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             className="hidden"
           />
 
-          <motion.button
-            type="button"
-            onClick={handleCameraCapture}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-4 px-6 rounded-lg transition-colors mb-3 min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
-          >
-            <Camera className="w-5 h-5" />
-            <span>Take Photo</span>
-          </motion.button>
-
-          <motion.button
-            type="button"
-            onClick={handleGallerySelect}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            className="w-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
-          >
-            <FolderOpen className="w-5 h-5" />
-            <span>Choose from Gallery</span>
-          </motion.button>
+          <UploadButtons
+            onCameraClick={handleCameraCapture}
+            onGalleryClick={handleGallerySelect}
+          />
         </div>
       ) : (
         <div>
@@ -322,90 +275,18 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             />
           )}
 
-          <div className="mb-4 rounded-lg overflow-hidden relative">
-            <img src={preview} alt="Preview" className="w-full h-auto" />
+          <PreviewControls
+            preview={preview}
+            detectingEyes={detectingEyes}
+            aligning={aligning}
+            uploading={uploading}
+            hasEyeCoords={!!eyeCoords}
+            onRotateLeft={() => handleRotate('left')}
+            onRotateRight={() => handleRotate('right')}
+            onUpload={handleUpload}
+          />
 
-            {/* Rotation controls overlay */}
-            <div className="absolute top-2 right-2 flex gap-2">
-              <motion.button
-                type="button"
-                onClick={() => handleRotate('left')}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9, rotate: -15 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
-                title="Rotate left"
-                disabled={uploading}
-              >
-                <RotateCcw className="w-4 h-4" />
-              </motion.button>
-              <motion.button
-                type="button"
-                onClick={() => handleRotate('right')}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9, rotate: 15 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
-                title="Rotate right"
-                disabled={uploading}
-              >
-                <RotateCw className="w-4 h-4" />
-              </motion.button>
-            </div>
-
-            {/* Rotation indicator - more prominent */}
-            <AnimatePresence>
-              {rotation !== 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                >
-                  <div className="bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md shadow-lg border border-white/20">
-                    <p className="text-sm font-medium">Rotated {rotation}°</p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Detection and alignment status indicators */}
-          {detectingEyes && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm text-center flex items-center justify-center gap-2"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Detecting eyes...</span>
-            </motion.div>
-          )}
-
-          {aligning && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 text-sm text-center flex items-center justify-center gap-2"
-            >
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Aligning photo...</span>
-            </motion.div>
-          )}
-
-          {eyeCoords && !aligning && alignedFile && (
-            <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm text-center">
-              ✓ Eyes detected and photo aligned!
-            </div>
-          )}
-
-          {eyeCoords && !aligning && !alignedFile && (
-            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm text-center">
-              ⚠️ Eyes detected but alignment failed. Original will be uploaded.
-            </div>
-          )}
-
-          <div className="flex gap-3">
+          <div className="mt-4">
             <motion.button
               type="button"
               onClick={() => {
@@ -428,24 +309,10 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
               whileHover={{ scale: uploading ? 1 : 1.02 }}
               whileTap={{ scale: uploading ? 1 : 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors min-h-[48px] touch-manipulation disabled:opacity-50"
+              className="w-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors min-h-[48px] touch-manipulation disabled:opacity-50"
               disabled={uploading}
             >
               Cancel
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={handleUpload}
-              disabled={uploading || detectingEyes || aligning}
-              whileHover={{ scale: (uploading || detectingEyes || aligning) ? 1 : 1.02 }}
-              whileTap={{ scale: (uploading || detectingEyes || aligning) ? 1 : 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              className="flex-1 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
-            >
-              {(uploading || detectingEyes || aligning) && <Loader2 className="w-5 h-5 animate-spin" />}
-              <span>
-                {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : aligning ? 'Aligning...' : 'Upload'}
-              </span>
             </motion.button>
           </div>
         </div>

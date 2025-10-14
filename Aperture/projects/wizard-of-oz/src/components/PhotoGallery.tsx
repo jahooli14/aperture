@@ -4,6 +4,7 @@ import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
+import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
@@ -289,7 +290,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               setUndoTimer(timer);
 
             } catch (error) {
-              console.error('Failed to delete photo:', error);
+              logger.error('Failed to delete photo', { error: error instanceof Error ? error.message : String(error), photoId: photoToDelete.id }, 'PhotoGallery');
               if (showToast) {
                 showToast('Failed to delete photo', 'error');
               }

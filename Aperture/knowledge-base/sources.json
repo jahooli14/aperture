@@ -1,0 +1,53 @@
+{
+  "sources": [
+    {
+      "id": "google-ai-blog",
+      "name": "Google AI Blog",
+      "type": "rss",
+      "url": "https://blog.research.google/feeds/posts/default",
+      "keywords": ["gemini", "palm", "ai", "llm", "agents"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "hackernews",
+      "name": "Hacker News",
+      "type": "rss",
+      "url": "https://news.ycombinator.com/rss",
+      "keywords": ["anthropic", "claude", "gemini", "ai agents", "llm"],
+      "authority": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "medium-ai",
+      "name": "Medium AI Tag",
+      "type": "rss",
+      "url": "https://medium.com/feed/tag/artificial-intelligence",
+      "keywords": ["ai agents", "anthropic", "claude", "development patterns"],
+      "authority": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "devto-ai",
+      "name": "Dev.to AI Tag",
+      "type": "rss",
+      "url": "https://dev.to/feed/tag/ai",
+      "keywords": ["ai development", "claude", "agents", "tools"],
+      "authority": 0.6,
+      "enabled": true
+    },
+    {
+      "id": "reddit-claude",
+      "name": "Reddit r/ClaudeAI",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/ClaudeAI/.rss",
+      "keywords": ["claude", "anthropic", "tips", "patterns"],
+      "authority": 0.4,
+      "enabled": true
+    }
+  ],
+  "relevanceThreshold": 0.7,
+  "qualityThreshold": 0.75,
+  "maxDailyChanges": 5,
+  "maxSectionGrowth": 1.2
+}
