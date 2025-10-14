@@ -52,7 +52,7 @@
       "url": "https://rss.arxiv.org/rss/cs.AI+cs.LG+cs.SE",
       "keywords": ["ai agents", "llm", "machine learning", "software engineering", "ai safety"],
       "authority": 0.9,
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "deepseek-research",

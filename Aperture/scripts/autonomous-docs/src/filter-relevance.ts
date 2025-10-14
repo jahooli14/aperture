@@ -15,6 +15,24 @@ export class RelevanceFilter {
 
     if (articles.length === 0) return []
 
+    // Process in batches to avoid overwhelming the API
+    const batchSize = 20
+    const allAnalyses: RelevanceAnalysis[] = []
+
+    for (let i = 0; i < articles.length; i += batchSize) {
+      const batch = articles.slice(i, i + batchSize)
+      console.log(`  Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(articles.length / batchSize)} (${batch.length} articles)`)
+
+      const batchAnalyses = await this.analyzeBatch(batch)
+      allAnalyses.push(...batchAnalyses)
+    }
+
+    const relevant = allAnalyses.filter(a => a.isRelevant)
+    console.log(`  ${relevant.length}/${articles.length} articles are relevant`)
+    return allAnalyses
+  }
+
+  private async analyzeBatch(articles: Article[]): Promise<RelevanceAnalysis[]> {
     const prompt = this.buildRelevancePrompt(articles)
 
     try {
@@ -30,13 +48,10 @@ export class RelevanceFilter {
       const responseText = response.text()
 
       const analyses = this.parseRelevanceResponse(responseText, articles)
-      const relevant = analyses.filter(a => a.isRelevant)
-
-      console.log(`  ${relevant.length}/${articles.length} articles are relevant`)
       return analyses
 
     } catch (error) {
-      console.error('Error analyzing relevance:', error)
+      console.error('Error analyzing batch:', error)
       // Fallback: mark all articles as potentially relevant for manual review
       return articles.map(article => ({
         article,

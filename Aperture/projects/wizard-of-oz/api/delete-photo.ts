@@ -2,43 +2,61 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../src/types/database.js';
 
+// Simple logger for API routes (production logging)
+const logger = {
+  info: (msg: string, data?: Record<string, unknown>) => {
+    console.log(JSON.stringify({ level: 'INFO', message: msg, ...data, timestamp: new Date().toISOString() }));
+  },
+  error: (msg: string, data?: Record<string, unknown>) => {
+    console.error(JSON.stringify({ level: 'ERROR', message: msg, ...data, timestamp: new Date().toISOString() }));
+  },
+  warn: (msg: string, data?: Record<string, unknown>) => {
+    console.warn(JSON.stringify({ level: 'WARN', message: msg, ...data, timestamp: new Date().toISOString() }));
+  }
+};
+
 const supabase = createClient<Database>(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('delete-photo called with method:', req.method);
+  logger.info('delete-photo called', { method: req.method });
 
   if (req.method !== 'DELETE') {
-    console.log('❌ Method not allowed:', req.method);
+    logger.error('Method not allowed', { method: req.method });
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { photoId } = req.body;
-    console.log('Deleting photo with ID:', photoId);
+    logger.info('Deleting photo', { photoId });
 
     if (!photoId) {
-      console.log('❌ Missing photoId in request');
+      logger.error('Missing photoId in request');
       return res.status(400).json({ error: 'Photo ID is required' });
     }
 
     // First, get the photo to find the file paths
-    console.log('Fetching photo details...');
+    logger.info('Fetching photo details', { photoId });
     const { data: photo, error: fetchError } = await supabase
       .from('photos')
       .select('original_url, aligned_url, user_id')
       .eq('id', photoId)
       .single();
 
-    if (fetchError || !photo) {
-      console.error('❌ Error fetching photo:', fetchError);
+    if (fetchError) {
+      logger.error('Error fetching photo', { photoId, error: fetchError.message });
       return res.status(404).json({ error: 'Photo not found' });
     }
 
-    console.log('Photo found:', {
-      id: photoId,
+    if (!photo) {
+      logger.error('Photo not found', { photoId });
+      return res.status(404).json({ error: 'Photo not found' });
+    }
+
+    logger.info('Photo found', {
+      photoId,
       hasOriginal: !!photo.original_url,
       hasAligned: !!photo.aligned_url,
       userId: photo.user_id
@@ -61,36 +79,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    console.log('Files to delete:', filesToDelete);
+    logger.info('Files to delete', { count: filesToDelete.length, files: filesToDelete });
 
     // Delete files from storage buckets
     for (const file of filesToDelete) {
-      console.log(`Deleting from ${file.bucket}: ${file.path}`);
+      logger.info('Deleting file', { bucket: file.bucket, path: file.path });
       const { error: deleteError } = await supabase.storage
         .from(file.bucket)
         .remove([file.path]);
 
       if (deleteError) {
-        console.warn(`⚠️ Warning: Could not delete file ${file.path} from ${file.bucket}:`, deleteError);
+        logger.warn('Could not delete file', {
+          bucket: file.bucket,
+          path: file.path,
+          error: deleteError.message
+        });
         // Continue with database deletion even if file deletion fails
       } else {
-        console.log(`✅ Successfully deleted file from ${file.bucket}: ${file.path}`);
+        logger.info('File deleted successfully', { bucket: file.bucket, path: file.path });
       }
     }
 
     // Delete the database record
-    console.log('Deleting database record...');
+    logger.info('Deleting database record', { photoId });
     const { error: dbDeleteError } = await supabase
       .from('photos')
       .delete()
       .eq('id', photoId);
 
     if (dbDeleteError) {
-      console.error('❌ Error deleting photo from database:', dbDeleteError);
+      logger.error('Error deleting photo from database', {
+        photoId,
+        error: dbDeleteError.message
+      });
       return res.status(500).json({ error: 'Failed to delete photo from database' });
     }
 
-    console.log('✅ Photo deleted successfully:', photoId);
+    logger.info('Photo deleted successfully', { photoId, filesDeleted: filesToDelete.length });
     return res.status(200).json({
       success: true,
       message: 'Photo deleted successfully',
@@ -98,7 +123,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error) {
-    console.error('❌ Unexpected error in delete-photo:', error);
+    logger.error('Unexpected error in delete-photo', {
+      error: error instanceof Error ? error.message : String(error)
+    });
     return res.status(500).json({
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
