@@ -144,10 +144,9 @@ export function PhotoGallery() {
             <img
               src={photo.aligned_url || photo.original_url}
               alt={`Photo from ${photo.upload_date}`}
-              className="w-full h-full object-cover transition-opacity duration-300"
+              className="w-full h-full object-cover transition-opacity duration-300 opacity-0"
               loading="lazy"
               onLoad={(e) => e.currentTarget.classList.add('opacity-100')}
-              style={{ opacity: 0 }}
             />
 
             {/* Overlay with date - always visible on mobile, hover on desktop */}
