@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 interface PrivacySettingsProps {
   onClose: () => void;
@@ -12,12 +13,15 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const { photos } = usePhotoStore();
+  const { settings, updateBirthdate } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
   const [showPasscodeSetup, setShowPasscodeSetup] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
+  const [birthdate, setBirthdate] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -25,6 +29,12 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
     setPrivacyMode(savedPrivacyMode);
     setHasPasscode(!!savedPasscode);
   }, []);
+
+  useEffect(() => {
+    if (settings?.baby_birthdate) {
+      setBirthdate(settings.baby_birthdate);
+    }
+  }, [settings]);
 
   const handlePrivacyModeToggle = () => {
     const newValue = !privacyMode;
@@ -53,6 +63,19 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
     if (confirm('Are you sure you want to remove your passcode?')) {
       localStorage.removeItem(PASSCODE_KEY);
       setHasPasscode(false);
+    }
+  };
+
+  const handleSaveBirthdate = async () => {
+    if (!birthdate) return;
+
+    try {
+      setSaving(true);
+      await updateBirthdate(birthdate);
+      setSaving(false);
+    } catch (error) {
+      setSaving(false);
+      alert('Failed to save birthdate. Please try again.');
     }
   };
 
@@ -139,6 +162,44 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
                   `}
                 />
               </button>
+            </div>
+          </div>
+
+          {/* Baby's Birthdate */}
+          <div className="bg-purple-50 rounded-xl p-4">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Baby className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Baby's Birthdate</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Set your baby's birthdate to see age information on photos
+                </p>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <input
+                      type="date"
+                      value={birthdate}
+                      onChange={(e) => setBirthdate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveBirthdate}
+                    disabled={!birthdate || saving}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {settings?.baby_birthdate && (
+                  <p className="text-xs text-purple-700 mt-2">
+                    ✓ Birthdate set to {new Date(settings.baby_birthdate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

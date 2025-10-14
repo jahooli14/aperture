@@ -2,6 +2,7 @@ import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
+import { useSettingsStore } from '../stores/useSettingsStore';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -15,6 +16,8 @@ interface PhotoBottomSheetProps {
 export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBottomSheetProps) {
   if (!photo) return null;
 
+  const { settings } = useSettingsStore();
+
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Close if dragged down more than 100px or velocity is high
     if (info.offset.y > 100 || info.velocity.y > 500) {
@@ -22,7 +25,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
     }
   };
 
-  const photoDate = new Date(photo.upload_date).toLocaleDateString('en-US', {
+  const photoDate = new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -95,12 +98,9 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
               {/* Metadata Grid */}
               <div className="space-y-4 mb-6">
-                {/* Age Display */}
-                {(() => {
-                  // TODO: Get birthdate from user settings
-                  // For now, calculate from first photo as approximation
-                  const birthDate = '2024-10-08'; // Temporary - will be from user settings
-                  const age = calculateAge(birthDate, photo.upload_date);
+                {/* Age Display - only show if birthdate is set */}
+                {settings?.baby_birthdate && (() => {
+                  const age = calculateAge(settings.baby_birthdate, photo.upload_date);
 
                   return (
                     <div className="flex items-start gap-3 p-4 bg-purple-50 rounded-xl">

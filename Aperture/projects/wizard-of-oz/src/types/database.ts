@@ -54,6 +54,7 @@ export interface Database {
           target_eye_position: { x: number; y: number };
           reminder_time: string | null;
           timezone: string;
+          baby_birthdate: string | null; // YYYY-MM-DD format
           created_at: string;
           updated_at: string;
         };
@@ -62,6 +63,7 @@ export interface Database {
           target_eye_position?: { x: number; y: number };
           reminder_time?: string | null;
           timezone?: string;
+          baby_birthdate?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -70,6 +72,7 @@ export interface Database {
           target_eye_position?: { x: number; y: number };
           reminder_time?: string | null;
           timezone?: string;
+          baby_birthdate?: string | null;
           created_at?: string;
           updated_at?: string;
         };

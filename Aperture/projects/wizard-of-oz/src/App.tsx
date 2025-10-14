@@ -2,6 +2,7 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
+import { useSettingsStore } from './stores/useSettingsStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
@@ -21,6 +22,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
+  const { fetchSettings } = useSettingsStore();
   const [view, setView] = useState<ViewType>('gallery');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -39,15 +41,18 @@ function App() {
     }
   }, [user]);
 
-  // Check if user has completed onboarding
+  // Check if user has completed onboarding & fetch settings
   useEffect(() => {
     if (user) {
       const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
       if (!hasCompletedOnboarding) {
         setShowOnboarding(true);
       }
+
+      // Fetch user settings
+      fetchSettings();
     }
-  }, [user]);
+  }, [user, fetchSettings]);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
