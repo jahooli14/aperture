@@ -1,10 +1,13 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Settings } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
 import { Onboarding } from './components/Onboarding';
+import { PasscodeLock } from './components/PasscodeLock';
+import { PrivacySettings } from './components/PrivacySettings';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -14,12 +17,27 @@ const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({
 type ViewType = 'gallery' | 'calendar';
 
 const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
+const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const [view, setView] = useState<ViewType>('gallery');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [passcode, setPasscode] = useState<string | null>(null);
   const { toast, showToast, hideToast } = useToast();
+
+  // Check for passcode on mount
+  useEffect(() => {
+    if (user) {
+      const savedPasscode = localStorage.getItem(PASSCODE_KEY);
+      if (savedPasscode) {
+        setPasscode(savedPasscode);
+        setIsLocked(true);
+      }
+    }
+  }, [user]);
 
   // Check if user has completed onboarding
   useEffect(() => {
@@ -73,6 +91,16 @@ function App() {
     );
   }
 
+  // Show passcode lock
+  if (isLocked && passcode) {
+    return (
+      <PasscodeLock
+        expectedPasscode={passcode}
+        onUnlock={() => setIsLocked(false)}
+      />
+    );
+  }
+
   // Show onboarding for first-time users
   if (showOnboarding) {
     return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -88,13 +116,25 @@ function App() {
               <h1 className="text-xl md:text-2xl font-bold text-gray-900">Wizard of Oz</h1>
               <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Your baby's growth journey</p>
             </div>
-            <button
-              type="button"
-              onClick={signOut}
-              className="text-sm text-gray-600 active:text-gray-900 md:hover:text-gray-900 transition-colors min-h-[44px] px-3 touch-manipulation"
-            >
-              Sign out
-            </button>
+            <div className="flex items-center gap-2">
+              <motion.button
+                type="button"
+                onClick={() => setShowSettings(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                aria-label="Privacy settings"
+              >
+                <Settings className="w-5 h-5" />
+              </motion.button>
+              <button
+                type="button"
+                onClick={signOut}
+                className="text-sm text-gray-600 active:text-gray-900 md:hover:text-gray-900 transition-colors min-h-[44px] px-3 touch-manipulation"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -170,6 +210,11 @@ function App() {
           <p>Capturing precious moments, one day at a time ✨</p>
         </div>
       </footer>
+
+      {/* Privacy Settings Modal */}
+      {showSettings && (
+        <PrivacySettings onClose={() => setShowSettings(false)} />
+      )}
 
       {/* Toast Notifications */}
       <Toast
