@@ -20,6 +20,7 @@
     "@sentry/react": "^10.19.0",
     "@sentry/vite-plugin": "^4.4.0",
     "@supabase/supabase-js": "^2.75.0",
+    "@use-gesture/react": "^10.3.1",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",

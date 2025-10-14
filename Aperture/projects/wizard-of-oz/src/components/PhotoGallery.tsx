@@ -138,15 +138,18 @@ export function PhotoGallery() {
             onTouchCancel={handlePressEnd}
             className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group select-none"
           >
-            {/* Skeleton loader background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse" />
+            {/* Smooth background placeholder - no more skeleton flash */}
+            <div className="absolute inset-0 bg-gray-100" />
 
             <img
               src={photo.aligned_url || photo.original_url}
               alt={`Photo from ${photo.upload_date}`}
-              className="w-full h-full object-cover transition-opacity duration-300 opacity-0"
+              className="relative w-full h-full object-cover opacity-0 transition-opacity duration-500"
               loading="lazy"
-              onLoad={(e) => e.currentTarget.classList.add('opacity-100')}
+              onLoad={(e) => {
+                e.currentTarget.classList.remove('opacity-0');
+                e.currentTarget.classList.add('opacity-100');
+              }}
             />
 
             {/* Overlay with date - always visible on mobile, hover on desktop */}
