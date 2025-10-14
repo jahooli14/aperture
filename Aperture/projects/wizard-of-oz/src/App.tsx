@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/useAuthStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
+import { Onboarding } from './components/Onboarding';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -12,10 +13,28 @@ const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({
 
 type ViewType = 'gallery' | 'calendar';
 
+const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
+
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const [view, setView] = useState<ViewType>('gallery');
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { toast, showToast, hideToast } = useToast();
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    if (user) {
+      const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
+      if (!hasCompletedOnboarding) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setShowOnboarding(false);
+  };
 
   // Check if online
   useEffect(() => {
@@ -52,6 +71,11 @@ function App() {
         <AuthForm />
       </div>
     );
+  }
+
+  // Show onboarding for first-time users
+  if (showOnboarding) {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
   return (
