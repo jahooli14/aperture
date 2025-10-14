@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, RotateCcw, RotateCw, CheckCircle, Loader2 } from 'lucide-react';
+import { Calendar, RotateCcw, RotateCw, CheckCircle, Loader2, Camera, FolderOpen } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
@@ -287,21 +287,29 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             className="hidden"
           />
 
-          <button
+          <motion.button
             type="button"
             onClick={handleCameraCapture}
-            className="w-full bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-4 px-6 rounded-lg transition-colors mb-3 min-h-[48px] touch-manipulation"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-4 px-6 rounded-lg transition-colors mb-3 min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
           >
-            📸 Take Photo
-          </button>
+            <Camera className="w-5 h-5" />
+            <span>Take Photo</span>
+          </motion.button>
 
-          <button
+          <motion.button
             type="button"
             onClick={handleGallerySelect}
-            className="w-full bg-gray-100 active:bg-gray-200 md:hover:bg-gray-200 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors min-h-[48px] touch-manipulation"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            className="w-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium py-4 px-6 rounded-lg transition-colors min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
           >
-            📁 Choose from Gallery
-          </button>
+            <FolderOpen className="w-5 h-5" />
+            <span>Choose from Gallery</span>
+          </motion.button>
         </div>
       ) : (
         <div>
@@ -319,34 +327,47 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
 
             {/* Rotation controls overlay */}
             <div className="absolute top-2 right-2 flex gap-2">
-              <button
+              <motion.button
                 type="button"
                 onClick={() => handleRotate('left')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9, rotate: -15 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
                 title="Rotate left"
                 disabled={uploading}
               >
                 <RotateCcw className="w-4 h-4" />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
                 onClick={() => handleRotate('right')}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9, rotate: 15 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors backdrop-blur-sm"
                 title="Rotate right"
                 disabled={uploading}
               >
                 <RotateCw className="w-4 h-4" />
-              </button>
+              </motion.button>
             </div>
 
             {/* Rotation indicator - more prominent */}
-            {rotation !== 0 && (
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                <div className="bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md shadow-lg border border-white/20">
-                  <p className="text-sm font-medium">Rotated {rotation}°</p>
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {rotation !== 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                >
+                  <div className="bg-black/80 text-white px-4 py-2 rounded-lg backdrop-blur-md shadow-lg border border-white/20">
+                    <p className="text-sm font-medium">Rotated {rotation}°</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Detection and alignment status indicators */}
@@ -385,7 +406,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
           )}
 
           <div className="flex gap-3">
-            <button
+            <motion.button
               type="button"
               onClick={() => {
                 setPreview(null);
@@ -404,22 +425,28 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
                   cameraInputRef.current.value = '';
                 }
               }}
-              className="flex-1 bg-gray-100 active:bg-gray-200 md:hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors min-h-[48px] touch-manipulation"
+              whileHover={{ scale: uploading ? 1 : 1.02 }}
+              whileTap={{ scale: uploading ? 1 : 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors min-h-[48px] touch-manipulation disabled:opacity-50"
               disabled={uploading}
             >
               Cancel
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={handleUpload}
               disabled={uploading || detectingEyes || aligning}
-              className="flex-1 bg-primary-600 active:bg-primary-700 md:hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
+              whileHover={{ scale: (uploading || detectingEyes || aligning) ? 1 : 1.02 }}
+              whileTap={{ scale: (uploading || detectingEyes || aligning) ? 1 : 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              className="flex-1 bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[48px] touch-manipulation flex items-center justify-center gap-2"
             >
               {(uploading || detectingEyes || aligning) && <Loader2 className="w-5 h-5 animate-spin" />}
               <span>
                 {uploading ? 'Uploading...' : detectingEyes ? 'Detecting...' : aligning ? 'Aligning...' : 'Upload'}
               </span>
-            </button>
+            </motion.button>
           </div>
         </div>
       )}

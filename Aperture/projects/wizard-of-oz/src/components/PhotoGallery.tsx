@@ -161,7 +161,14 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
             key={photo.id}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.05 }}
+            whileHover={{ scale: 1.05, y: -4 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{
+              delay: index * 0.05,
+              type: 'spring',
+              stiffness: 400,
+              damping: 17
+            }}
             onClick={(e) => handlePhotoClick(photo, e)}
             onMouseDown={(e) => handlePressStart(photo, e)}
             onMouseUp={handlePressEnd}
@@ -169,7 +176,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
             onTouchStart={(e) => handlePressStart(photo, e)}
             onTouchEnd={handlePressEnd}
             onTouchCancel={handlePressEnd}
-            className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md active:shadow-xl md:hover:shadow-xl transition-shadow cursor-pointer group select-none"
+            className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl transition-shadow cursor-pointer group select-none"
           >
             {/* Smooth background placeholder - no more skeleton flash */}
             <div className="absolute inset-0 bg-gray-100" />
