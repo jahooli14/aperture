@@ -209,7 +209,9 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
     fileInputRef.current?.click();
   };
 
-  if (hasUploadedToday()) {
+  // Only show "uploaded today" message if user hasn't selected a custom date
+  // This allows uploading for previous dates even after uploading for today
+  if (hasUploadedToday() && !customDate) {
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -218,6 +220,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       >
         <div className="text-green-600 text-lg font-medium mb-2">✓ Today's photo uploaded!</div>
         <p className="text-green-700 text-sm">Come back tomorrow to capture another moment</p>
+        <p className="text-green-600 text-xs mt-3">Tip: You can still upload photos for previous dates</p>
       </motion.div>
     );
   }

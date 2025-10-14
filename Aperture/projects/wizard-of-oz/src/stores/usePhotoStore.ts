@@ -146,6 +146,17 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       if (insertError || !photoData) {
         logger.error('Database insert error', { error: insertError?.message || 'No photo data returned' }, 'PhotoStore');
+
+        // Handle duplicate photo for date
+        if (insertError?.code === '23505') {
+          const formattedDate = new Date(targetDate + 'T00:00:00').toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+          throw new Error(`You already have a photo for ${formattedDate}. Delete the existing photo first if you want to replace it.`);
+        }
+
         throw insertError || new Error('Failed to create photo record');
       }
 
