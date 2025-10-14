@@ -44,6 +44,105 @@
       "keywords": ["claude", "anthropic", "tips", "patterns"],
       "authority": 0.4,
       "enabled": true
+    },
+    {
+      "id": "arxiv-ai",
+      "name": "arXiv AI/ML/SE Papers",
+      "type": "rss",
+      "url": "https://rss.arxiv.org/rss/cs.AI+cs.LG+cs.SE",
+      "keywords": ["ai agents", "llm", "machine learning", "software engineering", "ai safety"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "deepseek-research",
+      "name": "DeepSeek Research",
+      "type": "rss",
+      "url": "http://export.arxiv.org/api/query?search_query=all:DeepSeek&sortBy=submittedDate&sortOrder=descending",
+      "keywords": ["deepseek", "ai models", "research", "llm"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "microsoft-research",
+      "name": "Microsoft Research AI",
+      "type": "rss",
+      "url": "https://www.microsoft.com/en-us/research/feed/",
+      "keywords": ["ai research", "microsoft", "copilot", "agents"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "stanford-ai",
+      "name": "Stanford AI Lab (SAIL)",
+      "type": "rss",
+      "url": "https://ai.stanford.edu/blog/feed.xml",
+      "keywords": ["ai research", "stanford", "foundation models", "agents"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "autogen-blog",
+      "name": "AutoGen Framework",
+      "type": "rss",
+      "url": "https://devblogs.microsoft.com/autogen/feed/",
+      "keywords": ["autogen", "multi-agent", "framework", "microsoft"],
+      "authority": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "crewai-blog",
+      "name": "CrewAI Framework",
+      "type": "rss",
+      "url": "https://blog.crewai.com/feed/",
+      "keywords": ["crewai", "ai agents", "framework", "orchestration"],
+      "authority": 0.6,
+      "enabled": true
+    },
+    {
+      "id": "import-ai",
+      "name": "Import AI Newsletter",
+      "type": "rss",
+      "url": "https://importai.substack.com/feed",
+      "keywords": ["ai policy", "research", "industry", "jack clark"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "karpathy-new",
+      "name": "Andrej Karpathy (New Blog)",
+      "type": "rss",
+      "url": "https://karpathy.bearblog.dev/feed/",
+      "keywords": ["karpathy", "ai", "neural networks", "training"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "karpathy-archive",
+      "name": "Andrej Karpathy (Archive)",
+      "type": "rss",
+      "url": "http://karpathy.github.io/feed.xml",
+      "keywords": ["karpathy", "ai", "neural networks", "deep learning"],
+      "authority": 0.9,
+      "enabled": false
+    },
+    {
+      "id": "reddit-llmdevs",
+      "name": "Reddit r/LLMDevs",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/LLMDevs.rss",
+      "keywords": ["llm development", "api", "tools", "frameworks"],
+      "authority": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "reddit-ai-agents",
+      "name": "Reddit r/AI_Agents",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/AI_Agents.rss",
+      "keywords": ["ai agents", "autonomous", "multi-agent", "frameworks"],
+      "authority": 0.5,
+      "enabled": true
     }
   ],
   "relevanceThreshold": 0.7,
