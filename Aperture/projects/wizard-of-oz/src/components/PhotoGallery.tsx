@@ -2,17 +2,24 @@ import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { triggerHaptic } from '../lib/haptics';
 import type { Database } from '../types/database';
+import type { ToastType } from './Toast';
 
 // Lazy load PhotoOverlay since it's only shown on user interaction
 const PhotoOverlay = lazy(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay })));
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
-export function PhotoGallery() {
-  const { photos, loading, fetchError, fetchPhotos, deletePhoto, deleting } = usePhotoStore();
+interface PhotoGalleryProps {
+  showToast?: (message: string, type?: ToastType, actionLabel?: string, onAction?: () => void) => void;
+}
+
+export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
+  const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch photos on mount
@@ -186,10 +193,58 @@ export function PhotoGallery() {
         onConfirm={async () => {
           if (photoToDelete) {
             try {
+              // Delete the photo
               await deletePhoto(photoToDelete.id);
+
+              // Close modal
               setPhotoToDelete(null);
+
+              // Trigger haptic feedback
+              triggerHaptic('warning');
+
+              // Show undo toast with action
+              const photoDate = new Date(photoToDelete.upload_date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              });
+
+              // Capture the photo in closure for undo callback
+              const photoToRestore = photoToDelete;
+
+              if (showToast) {
+                showToast(
+                  `Photo from ${photoDate} deleted`,
+                  'info',
+                  'UNDO',
+                  () => {
+                    // Restore the photo
+                    restorePhoto(photoToRestore);
+                    triggerHaptic('success');
+                    if (undoTimer) {
+                      clearTimeout(undoTimer);
+                      setUndoTimer(null);
+                    }
+                  }
+                );
+              }
+
+              // Set timer to clear undo after 5 seconds
+              if (undoTimer) {
+                clearTimeout(undoTimer);
+              }
+
+              const timer = setTimeout(() => {
+                // Timer expired, undo is no longer available
+                setUndoTimer(null);
+              }, 5000);
+
+              setUndoTimer(timer);
+
             } catch (error) {
               console.error('Failed to delete photo:', error);
+              if (showToast) {
+                showToast('Failed to delete photo', 'error');
+              }
               // Keep modal open on error so user can try again
             }
           }

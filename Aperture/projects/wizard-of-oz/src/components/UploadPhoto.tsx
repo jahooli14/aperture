@@ -1,11 +1,17 @@
 import { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, RotateCcw, RotateCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, RotateCcw, RotateCw, CheckCircle } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
 import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
+import { triggerHaptic } from '../lib/haptics';
+import type { ToastType } from './Toast';
 
-export function UploadPhoto() {
+interface UploadPhotoProps {
+  showToast?: (message: string, type?: ToastType) => void;
+}
+
+export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -16,6 +22,7 @@ export function UploadPhoto() {
   const [detectingEyes, setDetectingEyes] = useState(false);
   const [aligning, setAligning] = useState(false);
   const [alignedFile, setAlignedFile] = useState<File | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -148,23 +155,41 @@ export function UploadPhoto() {
       const fileToUpload = alignedFile || selectedFile;
       await uploadPhoto(fileToUpload, eyeCoords, displayDate);
 
-      // Clear component state
-      setPreview(null);
-      setSelectedFile(null);
-      setOriginalFile(null);
-      setRotation(0);
-      setEyeCoords(null);
-      setDetectingEyes(false);
-      setAligning(false);
-      setAlignedFile(null);
-      hasAlignedRef.current = false;
-      setCustomDate('');
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      // Success feedback
+      triggerHaptic('success');
+      setShowSuccess(true);
+
+      const formattedDate = new Date(displayDate + 'T00:00:00').toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+
+      if (showToast) {
+        showToast(`Photo added for ${formattedDate}`, 'success');
       }
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = '';
-      }
+
+      // Hide success animation after 1.5 seconds
+      setTimeout(() => setShowSuccess(false), 1500);
+
+      // Clear component state after brief delay for animation
+      setTimeout(() => {
+        setPreview(null);
+        setSelectedFile(null);
+        setOriginalFile(null);
+        setRotation(0);
+        setEyeCoords(null);
+        setDetectingEyes(false);
+        setAligning(false);
+        setAlignedFile(null);
+        hasAlignedRef.current = false;
+        setCustomDate('');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = '';
+        }
+      }, 500);
     } catch (err: unknown) {
       console.error('Upload error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to upload photo';
@@ -391,6 +416,30 @@ export function UploadPhoto() {
           <pre className="whitespace-pre-wrap font-mono">{error}</pre>
         </div>
       )}
+
+      {/* Success Animation Overlay */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-lg"
+          >
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="inline-flex items-center justify-center w-20 h-20 bg-green-500 rounded-full mb-4"
+              >
+                <CheckCircle className="w-12 h-12 text-white" />
+              </motion.div>
+              <p className="text-lg font-semibold text-gray-900">Photo Added!</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

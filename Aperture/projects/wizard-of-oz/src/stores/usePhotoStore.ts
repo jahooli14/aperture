@@ -21,6 +21,7 @@ interface PhotoState {
   fetchPhotos: () => Promise<void>;
   uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string) => Promise<string>;
   deletePhoto: (photoId: string) => Promise<void>;
+  restorePhoto: (photo: Photo) => void;
   hasUploadedToday: () => boolean;
 }
 
@@ -186,6 +187,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       set({ deleting: false });
       throw error;
     }
+  },
+
+  restorePhoto: (photo: Photo) => {
+    // Optimistically restore the photo to local state
+    const currentPhotos = get().photos;
+    const updatedPhotos = [...currentPhotos, photo].sort((a, b) =>
+      b.upload_date.localeCompare(a.upload_date)
+    );
+    set({ photos: updatedPhotos });
   },
 
   hasUploadedToday: () => {

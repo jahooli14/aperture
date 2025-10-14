@@ -119,7 +119,7 @@ function App() {
             className="space-y-8"
           >
             {/* Upload Section - always visible */}
-            <UploadPhoto />
+            <UploadPhoto showToast={showToast} />
 
             {/* View-specific content with loading fallback */}
             <Suspense fallback={
@@ -128,7 +128,7 @@ function App() {
                 <p className="mt-4 text-gray-600">Loading...</p>
               </div>
             }>
-              {view === 'gallery' ? <PhotoGallery /> : <CalendarView />}
+              {view === 'gallery' ? <PhotoGallery showToast={showToast} /> : <CalendarView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>
@@ -147,6 +147,8 @@ function App() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
+        actionLabel={toast.actionLabel}
+        onAction={toast.onAction}
       />
     </div>
   );

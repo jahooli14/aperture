@@ -10,9 +10,11 @@ export interface ToastProps {
   isVisible: boolean;
   onClose: () => void;
   duration?: number;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-export function Toast({ message, type, isVisible, onClose, duration = 5000 }: ToastProps) {
+export function Toast({ message, type, isVisible, onClose, duration = 5000, actionLabel, onAction }: ToastProps) {
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(onClose, duration);
@@ -52,9 +54,20 @@ export function Toast({ message, type, isVisible, onClose, duration = 5000 }: To
           <div className={`${colors[type]} border rounded-lg p-4 shadow-lg flex items-start gap-3`}>
             <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColors[type]}`} />
             <p className="flex-1 text-sm font-medium">{message}</p>
+            {actionLabel && onAction && (
+              <button
+                onClick={() => {
+                  onAction();
+                  onClose();
+                }}
+                className="flex-shrink-0 text-sm font-semibold underline hover:no-underline transition-all min-h-[44px] px-2"
+              >
+                {actionLabel}
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close notification"
             >
               <X className="w-4 h-4" />

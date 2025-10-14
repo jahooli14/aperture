@@ -5,6 +5,8 @@ export interface ToastState {
   message: string;
   type: ToastType;
   isVisible: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export function useToast() {
@@ -14,8 +16,13 @@ export function useToast() {
     isVisible: false,
   });
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    setToast({ message, type, isVisible: true });
+  const showToast = useCallback((
+    message: string,
+    type: ToastType = 'info',
+    actionLabel?: string,
+    onAction?: () => void
+  ) => {
+    setToast({ message, type, isVisible: true, actionLabel, onAction });
   }, []);
 
   const hideToast = useCallback(() => {
