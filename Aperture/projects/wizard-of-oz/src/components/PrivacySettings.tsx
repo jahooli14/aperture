@@ -75,7 +75,15 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       setSaving(false);
     } catch (error) {
       setSaving(false);
-      alert('Failed to save birthdate. Please try again.');
+      console.error('Birthdate save error:', error);
+
+      // Check if it's a database column error
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('column') || errorMessage.includes('baby_birthdate')) {
+        alert('Database migration needed! Please run the migration from QUICK_FIX_BIRTHDATE.md to add the birthdate column.');
+      } else {
+        alert('Failed to save birthdate. Please try again. Error: ' + errorMessage);
+      }
     }
   };
 
