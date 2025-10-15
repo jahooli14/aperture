@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, MessageSquare } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
 import { EyeDetector } from './EyeDetector';
 import { DateSelector } from './DateSelector';
@@ -28,6 +28,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [aligning, setAligning] = useState(false);
   const [alignedFile, setAlignedFile] = useState<File | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [note, setNote] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -159,7 +161,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setError('');
       // Upload aligned photo if available, otherwise upload original
       const fileToUpload = alignedFile || selectedFile;
-      await uploadPhoto(fileToUpload, eyeCoords, displayDate);
+      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined);
 
       // Success feedback
       triggerHaptic('success');
@@ -189,6 +191,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         setAlignedFile(null);
         hasAlignedRef.current = false;
         setCustomDate('');
+        setNote('');
+        setShowNoteInput(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -350,6 +354,41 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             onUpload={handleUpload}
           />
 
+          {/* Memory Note Input */}
+          <div className="mt-4 mb-2">
+            <button
+              type="button"
+              onClick={() => setShowNoteInput(!showNoteInput)}
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>{showNoteInput ? 'Hide' : 'Add a'} memory note (optional)</span>
+            </button>
+
+            <AnimatePresence>
+              {showNoteInput && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3"
+                >
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="What happened today? Any special moments or milestones..."
+                    maxLength={500}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {note.length}/500 characters
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <div className="mt-4">
             <motion.button
               type="button"
@@ -363,6 +402,8 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
                 setAligning(false);
                 setAlignedFile(null);
                 hasAlignedRef.current = false;
+                setNote('');
+                setShowNoteInput(false);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';
                 }

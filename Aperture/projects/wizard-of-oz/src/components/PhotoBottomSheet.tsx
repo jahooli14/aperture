@@ -1,5 +1,5 @@
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
@@ -98,6 +98,25 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
               {/* Metadata Grid */}
               <div className="space-y-4 mb-6">
+                {/* Memory Note - show if exists */}
+                {(() => {
+                  if (!photo.metadata || typeof photo.metadata !== 'object') return null;
+                  const metadata = photo.metadata as Record<string, unknown>;
+                  if (!('note' in metadata) || !metadata.note) return null;
+
+                  return (
+                    <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl">
+                      <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                        <MessageSquare className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-700">Memory Note</p>
+                        <p className="text-base text-gray-900 whitespace-pre-wrap">{String(metadata.note)}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Age Display - only show if birthdate is set */}
                 {settings?.baby_birthdate && (() => {
                   const age = calculateAge(settings.baby_birthdate, photo.upload_date);

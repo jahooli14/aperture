@@ -14,8 +14,9 @@ import { useToast } from './hooks/useToast';
 
 // Lazy load heavy components
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
+const ComparisonView = lazy(() => import('./components/ComparisonView').then(m => ({ default: m.ComparisonView })));
 
-type ViewType = 'gallery' | 'calendar';
+type ViewType = 'gallery' | 'calendar' | 'compare';
 
 const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
 const PASSCODE_KEY = 'wizard-passcode';
@@ -148,7 +149,7 @@ function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* View Toggle */}
         <div className="flex justify-center mb-6 md:mb-8">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full max-w-sm md:w-auto shadow-sm">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full max-w-lg md:w-auto shadow-sm">
             <motion.button
               type="button"
               onClick={() => setView('gallery')}
@@ -156,7 +157,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-4 md:px-6 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
+                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
                 ${view === 'gallery'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -172,7 +173,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-4 md:px-6 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
+                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
                 ${view === 'calendar'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -180,6 +181,22 @@ function App() {
               `}
             >
               📅 Calendar
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setView('compare')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              className={`
+                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
+                ${view === 'compare'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              ↔️ Compare
             </motion.button>
           </div>
         </div>
@@ -193,8 +210,8 @@ function App() {
             transition={{ duration: 0.2 }}
             className="space-y-8"
           >
-            {/* Upload Section - always visible */}
-            <UploadPhoto showToast={showToast} />
+            {/* Upload Section - only visible on gallery view */}
+            {view === 'gallery' && <UploadPhoto showToast={showToast} />}
 
             {/* View-specific content with loading fallback */}
             <Suspense fallback={
@@ -203,7 +220,9 @@ function App() {
                 <p className="mt-4 text-gray-600">Loading...</p>
               </div>
             }>
-              {view === 'gallery' ? <PhotoGallery showToast={showToast} /> : <CalendarView />}
+              {view === 'gallery' && <PhotoGallery showToast={showToast} />}
+              {view === 'calendar' && <CalendarView />}
+              {view === 'compare' && <ComparisonView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>
