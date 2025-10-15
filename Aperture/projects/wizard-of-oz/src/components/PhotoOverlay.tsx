@@ -136,13 +136,13 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
           onClick={() => scale === 1 && onClose()}
         >
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+            className="absolute top-4 right-4 z-10 p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all hover:scale-110 min-w-[48px] min-h-[48px] flex items-center justify-center shadow-lg"
             aria-label="Close overlay"
           >
             <X className="w-6 h-6 text-white" />
@@ -166,12 +166,15 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
             className="h-full flex flex-col items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Photo container with gestures */}
+            {/* Photo container with gestures - Card style */}
             <div
               ref={imageRef}
               className="relative w-full max-w-2xl aspect-square mb-6 touch-none select-none"
               onDoubleClick={handleDoubleTap}
             >
+              {/* Glassmorphism background card */}
+              <div className="absolute inset-0 bg-white/5 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/10" />
+
               {/* Photo with transform */}
               <div
                 {...(bind() as object)}
@@ -179,14 +182,14 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                   transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
                   touchAction: 'none',
                 }}
-                className="absolute inset-0 cursor-grab active:cursor-grabbing transition-transform"
+                className="absolute inset-0 cursor-grab active:cursor-grabbing transition-transform p-3"
               >
                 {sortedPhotos.map((photo, index) => (
                   <motion.img
                     key={photo.id}
                     src={photo.aligned_url || photo.original_url}
                     alt={`Photo from ${photo.upload_date}`}
-                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+                    className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover pointer-events-none rounded-2xl shadow-xl"
                     initial={{ opacity: 0 }}
                     animate={{
                       opacity: index === currentIndex ? 1 : 0,
@@ -197,9 +200,9 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
               </div>
             </div>
 
-            {/* Date display */}
-            <div className="text-white text-center mb-4">
-              <p className="text-2xl font-bold">
+            {/* Date display - Enhanced card */}
+            <div className="text-white text-center mb-6 bg-white/5 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/10 shadow-xl">
+              <p className="text-2xl font-bold bg-gradient-to-r from-white to-white/90 bg-clip-text text-transparent">
                 {new Date(currentPhoto.upload_date).toLocaleDateString('en-US', {
                   weekday: 'long',
                   year: 'numeric',
@@ -207,11 +210,11 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                   day: 'numeric',
                 })}
               </p>
-              <p className="text-sm text-white/60 mt-1">
+              <p className="text-sm text-white/70 mt-2 font-medium">
                 Day {currentIndex + 1} of {sortedPhotos.length}
               </p>
               {scale > 1 && (
-                <p className="text-xs text-white/40 mt-1">
+                <p className="text-xs text-white/50 mt-1">
                   Zoom: {scale.toFixed(1)}x
                 </p>
               )}
@@ -219,34 +222,40 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
 
             {/* Scrubber slider - hide when zoomed */}
             {scale === 1 && (
-              <div className="w-full max-w-2xl">
+              <div className="w-full max-w-2xl bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-xl">
                 <input
                   type="range"
                   min="0"
                   max={sortedPhotos.length - 1}
                   value={currentIndex}
                   onChange={(e) => setCurrentIndex(Number(e.target.value))}
-                  className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer
+                  className="w-full h-2 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-lg appearance-none cursor-pointer shadow-inner
                     [&::-webkit-slider-thumb]:appearance-none
-                    [&::-webkit-slider-thumb]:w-4
-                    [&::-webkit-slider-thumb]:h-4
+                    [&::-webkit-slider-thumb]:w-5
+                    [&::-webkit-slider-thumb]:h-5
                     [&::-webkit-slider-thumb]:rounded-full
-                    [&::-webkit-slider-thumb]:bg-white
+                    [&::-webkit-slider-thumb]:bg-gradient-to-br
+                    [&::-webkit-slider-thumb]:from-white
+                    [&::-webkit-slider-thumb]:to-gray-200
                     [&::-webkit-slider-thumb]:cursor-pointer
-                    [&::-webkit-slider-thumb]:shadow-lg
-                    [&::-webkit-slider-thumb]:transition-transform
-                    [&::-webkit-slider-thumb]:hover:scale-110
-                    [&::-moz-range-thumb]:w-4
-                    [&::-moz-range-thumb]:h-4
+                    [&::-webkit-slider-thumb]:shadow-xl
+                    [&::-webkit-slider-thumb]:transition-all
+                    [&::-webkit-slider-thumb]:hover:scale-125
+                    [&::-webkit-slider-thumb]:active:scale-110
+                    [&::-webkit-slider-thumb]:border-2
+                    [&::-webkit-slider-thumb]:border-white/50
+                    [&::-moz-range-thumb]:w-5
+                    [&::-moz-range-thumb]:h-5
                     [&::-moz-range-thumb]:rounded-full
                     [&::-moz-range-thumb]:bg-white
                     [&::-moz-range-thumb]:cursor-pointer
-                    [&::-moz-range-thumb]:border-0
-                    [&::-moz-range-thumb]:shadow-lg"
+                    [&::-moz-range-thumb]:border-2
+                    [&::-moz-range-thumb]:border-white/50
+                    [&::-moz-range-thumb]:shadow-xl"
                 />
 
                 {/* Timeline markers */}
-                <div className="flex justify-between mt-2 text-xs text-white/40">
+                <div className="flex justify-between mt-3 text-xs text-white/50 font-medium">
                   <span>Start</span>
                   <span>Today</span>
                 </div>
@@ -254,7 +263,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
             )}
 
             {/* Navigation hints */}
-            <div className="mt-6 text-center text-sm text-white/40">
+            <div className="mt-6 text-center text-sm text-white/50 font-medium">
               {scale === 1 ? (
                 <p>Swipe or use arrow keys to navigate • ESC to close</p>
               ) : (
