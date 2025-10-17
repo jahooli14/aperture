@@ -73,9 +73,11 @@ export class QualityComparator {
 
     // Find relevant documentation section
     const targetSection = this.findRelevantSection(article)
+
+    // If no existing section, evaluate as new content
     if (!targetSection) {
-      console.log('  No relevant documentation section found')
-      return null
+      console.log('  No existing section found - evaluating as new content')
+      return this.evaluateNewContent(article)
     }
 
     const currentContent = this.extractSectionContent(
@@ -86,7 +88,8 @@ export class QualityComparator {
 
     if (!currentContent) {
       console.log(`  Could not extract content from ${targetSection.file}`)
-      return null
+      // Treat as new content if section doesn't exist
+      return this.evaluateNewContent(article)
     }
 
     const prompt = this.buildQualityComparisonPrompt(article, currentContent, targetSection)
