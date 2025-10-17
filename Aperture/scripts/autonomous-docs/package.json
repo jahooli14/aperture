@@ -1,6 +1,7 @@
 {
   "name": "autonomous-docs",
   "version": "1.0.0",
+  "type": "module",
   "description": "Autonomous documentation improvement system",
   "main": "dist/index.js",
   "scripts": {
