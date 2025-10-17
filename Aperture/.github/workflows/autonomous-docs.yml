@@ -76,7 +76,8 @@ jobs:
             FILES_COUNT=$(echo "$SUMMARY" | grep "Files updated" | grep -o '[0-9]\+' | head -1)
 
             if [ -n "$MERGED_COUNT" ] && [ "$MERGED_COUNT" -gt 0 ]; then
-              COMMIT_MSG="docs: autonomous update - $MERGED_COUNT improvements across $FILES_COUNT files
+              git add .
+              git commit -m "docs: autonomous update - $MERGED_COUNT improvements across $FILES_COUNT files
 
 $SUMMARY
 
@@ -86,7 +87,8 @@ via [Happy](https://happy.engineering)
 Co-Authored-By: Claude <noreply@anthropic.com>
 Co-Authored-By: Happy <yesreply@happy.engineering>"
             else
-              COMMIT_MSG="docs: autonomous analysis - no improvements merged today
+              git add .
+              git commit -m "docs: autonomous analysis - no improvements merged today
 
 Daily content analysis completed with no qualifying improvements.
 
@@ -97,7 +99,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 Co-Authored-By: Happy <yesreply@happy.engineering>"
             fi
           else
-            COMMIT_MSG="docs: autonomous update
+            git add .
+            git commit -m "docs: autonomous update
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 via [Happy](https://happy.engineering)
@@ -106,8 +109,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 Co-Authored-By: Happy <yesreply@happy.engineering>"
           fi
 
-          git add .
-          git commit -m "$COMMIT_MSG"
           git push
 
       - name: Create notification comment (if changes)
