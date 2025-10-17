@@ -1,5 +1,4 @@
 name: Autonomous Documentation Updates
-
   on:
     schedule:
       - cron: '0 9 * * *'
@@ -10,37 +9,31 @@ name: Autonomous Documentation Updates
           required: false
           default: 'false'
           type: boolean
-
   jobs:
     update-docs:
       runs-on: ubuntu-latest
       permissions:
         contents: write
         pull-requests: write
-
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
           with:
             fetch-depth: 0
-
         - name: Setup Node.js
           uses: actions/setup-node@v4
           with:
             node-version: '18'
             cache: 'npm'
             cache-dependency-path: 'scripts/autonomous-docs/package.json'
-
         - name: Install dependencies
           run: |
             cd scripts/autonomous-docs
             npm ci
-
         - name: Build TypeScript
           run: |
             cd scripts/autonomous-docs
             npm run build
-
         - name: Run autonomous documentation system
           env:
             GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -48,7 +41,6 @@ name: Autonomous Documentation Updates
           run: |
             cd scripts/autonomous-docs
             npm start
-
         - name: Check for changes
           id: check_changes
           run: |
@@ -57,22 +49,15 @@ name: Autonomous Documentation Updates
             else
               echo "has_changes=true" >> $GITHUB_OUTPUT
             fi
-
         - name: Commit and push changes
           if: steps.check_changes.outputs.has_changes == 'true'
           run: |
             git config --local user.email "action@github.com"
             git config --local user.name "Autonomous Documentation Bot"
             git add .
-            git commit -m "docs: autonomous update" \
-              -m "" \
-              -m "Generated with Claude Code" \
-              -m "via Happy" \
-              -m "" \
-              -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
-              -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
+            git commit -m "docs: autonomous update" -m "" -m "Generated with Claude Code" -m "via Happy" -m "" -m "Co-Authored-By: Claude 
+  <noreply@anthropic.com>" -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
             git push
-
         - name: Upload artifacts (debug)
           if: failure() || inputs.debug == 'true'
           uses: actions/upload-artifact@v4
@@ -83,7 +68,6 @@ name: Autonomous Documentation Updates
               knowledge-base/changelogs/
               scripts/autonomous-docs/dist/
             retention-days: 7
-
         - name: Notify on failure
           if: failure()
           run: |
