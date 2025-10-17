@@ -8,10 +8,17 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.2.1"
+    "@google/generative-ai": "^0.2.1",
+    "better-sqlite3": "^9.2.2",
+    "date-fns": "^3.0.6",
+    "gray-matter": "^4.0.3",
+    "node-fetch": "^3.3.2",
+    "rss-parser": "^3.13.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   }
 }
