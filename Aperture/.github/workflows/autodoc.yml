@@ -2,10 +2,8 @@ name: Autonomous Documentation Updates
 
 on:
   schedule:
-    # Run daily at 9:00 AM UTC (adjust timezone as needed)
     - cron: '0 9 * * *'
   workflow_dispatch:
-    # Allow manual triggering
     inputs:
       debug:
         description: 'Enable debug logging'
@@ -17,14 +15,14 @@ jobs:
   update-docs:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to commit changes
-      pull-requests: write  # Required if we want to create PRs instead
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for better git operations
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -65,61 +63,15 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "Autonomous Documentation Bot"
-
-          # Create a comprehensive commit message
-          CHANGELOG_FILE="knowledge-base/changelogs/$(date +%Y-%m-%d).md"
-
           git add .
-
-          if [ -f "$CHANGELOG_FILE" ]; then
-            MERGED_COUNT=$(grep -c "^## " "$CHANGELOG_FILE" 2>/dev/null || echo "0")
-
-            if [ "$MERGED_COUNT" -gt 0 ]; then
-              git commit -m "docs: autonomous update - ${MERGED_COUNT} improvements merged" \
-                -m "" \
-                -m "🤖 Generated with [Claude Code](https://claude.ai/code)" \
-                -m "via [Happy](https://happy.engineering)" \
-                -m "" \
-                -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
-                -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
-            else
-              git commit -m "docs: autonomous analysis - no improvements merged today" \
-                -m "" \
-                -m "Daily content analysis completed with no qualifying improvements." \
-                -m "" \
-                -m "🤖 Generated with [Claude Code](https://claude.ai/code)" \
-                -m "via [Happy](https://happy.engineering)" \
-                -m "" \
-                -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
-                -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
-            fi
-          else
-            git commit -m "docs: autonomous update" \
-              -m "" \
-              -m "🤖 Generated with [Claude Code](https://claude.ai/code)" \
-              -m "via [Happy](https://happy.engineering)" \
-              -m "" \
-              -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
-              -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
-          fi
-
+          git commit -m "docs: autonomous update" \
+            -m "" \
+            -m "Generated with Claude Code" \
+            -m "via Happy" \
+            -m "" \
+            -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
+            -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
           git push
-
-      - name: Create notification comment (if changes)
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          CHANGELOG_FILE="knowledge-base/changelogs/$(date +%Y-%m-%d).md"
-
-          if [ -f "$CHANGELOG_FILE" ]; then
-            echo "📚 Autonomous Documentation Update completed!"
-            echo ""
-            echo "Summary from today's changelog:"
-            grep -A 15 "## Summary" "$CHANGELOG_FILE" | head -20
-            echo ""
-            echo "View full changelog: $CHANGELOG_FILE"
-          else
-            echo "📚 Autonomous Documentation Update completed with no changes."
-          fi
 
       - name: Upload artifacts (debug)
         if: failure() || inputs.debug == 'true'
@@ -135,6 +87,5 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: |
-          echo "❌ Autonomous Documentation Update failed!"
+          echo "Autonomous Documentation Update failed!"
           echo "Check the logs and debug artifacts for details."
-          echo "The system is designed to be resilient - tomorrow's run should work normally."
