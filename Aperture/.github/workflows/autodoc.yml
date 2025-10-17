@@ -89,6 +89,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 Co-Authored-By: Happy <yesreply@happy.engineering>
 EOF
             else
+              git add .
               git commit -F- <<EOF
 docs: autonomous analysis - no improvements merged today
 
