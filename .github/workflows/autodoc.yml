@@ -1,0 +1,145 @@
+name: Autonomous Documentation Updates
+
+on:
+  schedule:
+    # Run daily at 9:00 AM UTC (adjust timezone as needed)
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    # Allow manual triggering
+    inputs:
+      debug:
+        description: 'Enable debug logging'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to commit changes
+      pull-requests: write  # Required if we want to create PRs instead
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better git operations
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'scripts/autonomous-docs/package.json'
+
+      - name: Install dependencies
+        run: |
+          cd scripts/autonomous-docs
+          npm ci
+
+      - name: Build TypeScript
+        run: |
+          cd scripts/autonomous-docs
+          npm run build
+
+      - name: Run autonomous documentation system
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd scripts/autonomous-docs
+          npm start
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "Autonomous Documentation Bot"
+
+          # Create a comprehensive commit message
+          CHANGELOG_FILE="knowledge-base/changelogs/$(date +%Y-%m-%d).md"
+
+          if [ -f "$CHANGELOG_FILE" ]; then
+            # Extract summary from changelog
+            SUMMARY=$(grep -A 10 "## Summary" "$CHANGELOG_FILE" | grep -E "Merged|Files updated" | head -2 | sed 's/^- \*\*/- /' | sed 's/\*\*://')
+            MERGED_COUNT=$(echo "$SUMMARY" | grep "Merged" | grep -o '[0-9]\+' | head -1)
+            FILES_COUNT=$(echo "$SUMMARY" | grep "Files updated" | grep -o '[0-9]\+' | head -1)
+
+            if [ -n "$MERGED_COUNT" ] && [ "$MERGED_COUNT" -gt 0 ]; then
+              COMMIT_MSG="docs: autonomous update - $MERGED_COUNT improvements across $FILES_COUNT files
+
+$SUMMARY
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+via [Happy](https://happy.engineering)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Happy <yesreply@happy.engineering>"
+            else
+              COMMIT_MSG="docs: autonomous analysis - no improvements merged today
+
+Daily content analysis completed with no qualifying improvements.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+via [Happy](https://happy.engineering)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Happy <yesreply@happy.engineering>"
+            fi
+          else
+            COMMIT_MSG="docs: autonomous update
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+via [Happy](https://happy.engineering)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Happy <yesreply@happy.engineering>"
+          fi
+
+          git add .
+          git commit -m "$COMMIT_MSG"
+          git push
+
+      - name: Create notification comment (if changes)
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          CHANGELOG_FILE="knowledge-base/changelogs/$(date +%Y-%m-%d).md"
+
+          if [ -f "$CHANGELOG_FILE" ]; then
+            echo "📚 Autonomous Documentation Update completed!"
+            echo ""
+            echo "Summary from today's changelog:"
+            grep -A 15 "## Summary" "$CHANGELOG_FILE" | head -20
+            echo ""
+            echo "View full changelog: $CHANGELOG_FILE"
+          else
+            echo "📚 Autonomous Documentation Update completed with no changes."
+          fi
+
+      - name: Upload artifacts (debug)
+        if: failure() || inputs.debug == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-docs-debug
+          path: |
+            knowledge-base/audit-trail/
+            knowledge-base/changelogs/
+            scripts/autonomous-docs/dist/
+          retention-days: 7
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Autonomous Documentation Update failed!"
+          echo "Check the logs and debug artifacts for details."
+          echo "The system is designed to be resilient - tomorrow's run should work normally."
