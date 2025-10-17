@@ -64,13 +64,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "Autonomous Documentation Bot"
           git add .
-          git commit -m "docs: autonomous update" \
-            -m "" \
-            -m "Generated with Claude Code" \
-            -m "via Happy" \
-            -m "" \
-            -m "Co-Authored-By: Claude <noreply@anthropic.com>" \
-            -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
+          git commit -m "docs: autonomous update" -m "" -m "Generated with Claude Code via Happy" -m "" -m "Co-Authored-By: Claude <noreply@anthropic.com>" -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
           git push
 
       - name: Upload artifacts (debug)
@@ -87,5 +81,5 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: |
-          echo "Autonomous Documentation Update failed!"
-          echo "Check the logs and debug artifacts for details."
+          echo "Autonomous Documentation Update failed"
+          echo "Check the logs and debug artifacts for details"
