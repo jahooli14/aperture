@@ -29,16 +29,16 @@ jobs:
         with:
           node-version: '18'
           cache: npm
-          cache-dependency-path: scripts/autonomous-docs/package.json
+          cache-dependency-path: Aperture/scripts/autonomous-docs/package.json
 
       - name: Install dependencies
         run: |
-          cd scripts/autonomous-docs
+          cd Aperture/scripts/autonomous-docs
           npm ci
 
       - name: Build TypeScript
         run: |
-          cd scripts/autonomous-docs
+          cd Aperture/scripts/autonomous-docs
           npm run build
 
       - name: Run autonomous documentation system
@@ -46,7 +46,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd scripts/autonomous-docs
+          cd Aperture/scripts/autonomous-docs
           npm start
 
       - name: Check for changes
@@ -73,9 +73,9 @@ jobs:
         with:
           name: autonomous-docs-debug
           path: |
-            knowledge-base/audit-trail/
-            knowledge-base/changelogs/
-            scripts/autonomous-docs/dist/
+            Aperture/knowledge-base/audit-trail/
+            Aperture/knowledge-base/changelogs/
+            Aperture/scripts/autonomous-docs/dist/
           retention-days: 7
 
       - name: Notify on failure
