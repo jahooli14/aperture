@@ -1,11 +1,18 @@
 export interface Source {
   id: string
   name: string
-  type: 'rss' | 'api'
+  type: 'rss' | 'api' | 'web-scrape'
   url: string
   keywords: string[]
   authority: number
   enabled: boolean
+  scrapeConfig?: {
+    listSelector: string      // CSS selector for article list
+    titleSelector: string      // CSS selector for title within article
+    linkSelector: string       // CSS selector for link within article
+    dateSelector?: string      // Optional: CSS selector for date
+    contentSelector?: string   // Optional: CSS selector for content preview
+  }
 }
 
 export interface SourceConfig {

@@ -4,7 +4,7 @@ import { subDays, isAfter, parseISO } from 'date-fns'
 
 export class SourceFetcher {
   protected parser: Parser
-  private userAgent = 'AutonomousDocs/1.0 (+https://github.com/aperture-docs)'
+  protected userAgent = 'AutonomousDocs/1.0 (+https://github.com/aperture-docs)'
 
   constructor() {
     this.parser = new Parser({
@@ -126,8 +126,108 @@ export class SourceFetcher {
   }
 }
 
+// Web scraper for sources without RSS feeds
+export class WebScrapeFetcher extends SourceFetcher {
+  async fetchSource(source: Source, maxArticles: number = 50): Promise<Article[]> {
+    if (source.type !== 'web-scrape') {
+      return super.fetchSource(source, maxArticles)
+    }
+
+    if (!source.scrapeConfig) {
+      console.error(`Web scrape source ${source.name} missing scrapeConfig`)
+      return []
+    }
+
+    try {
+      console.log(`Web scraping: ${source.name}...`)
+
+      const response = await fetch(source.url, {
+        headers: {
+          'User-Agent': this.userAgent
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const html = await response.text()
+
+      // Use cheerio-like parsing or simple regex extraction
+      // For now, we'll use a simple approach with the fetch API
+      const articles = await this.parseWebPage(html, source, maxArticles)
+
+      console.log(`  Found ${articles.length} articles from ${source.name}`)
+      return articles
+
+    } catch (error) {
+      console.error(`Error scraping ${source.name}:`, error)
+      return []
+    }
+  }
+
+  private async parseWebPage(html: string, source: Source, maxArticles: number): Promise<Article[]> {
+    // For Anthropic News, we can extract JSON-LD or Open Graph data
+    // This is a simple implementation - for production, use a proper HTML parser
+
+    const articles: Article[] = []
+    const cutoff = subDays(new Date(), 30) // 30 days for web scraping
+
+    // Extract all links that look like news articles
+    const linkPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi
+    const matches = [...html.matchAll(linkPattern)]
+
+    for (const match of matches) {
+      const href = match[1]
+      const linkText = match[2].replace(/<[^>]*>/g, '').trim()
+
+      // Filter for news URLs (e.g., /news/something)
+      if (!href.includes('/news/') || href === '/news' || href === '/news/') {
+        continue
+      }
+
+      // Build full URL
+      const fullUrl = href.startsWith('http')
+        ? href
+        : new URL(href, source.url).toString()
+
+      // Check keywords in link text
+      const text = linkText.toLowerCase()
+      const hasRelevantKeywords = source.keywords.some(keyword =>
+        text.includes(keyword.toLowerCase())
+      )
+
+      if (!hasRelevantKeywords && linkText.length > 10) {
+        // If link text is substantial, still check if it's a news article
+        if (!linkText.match(/^[A-Z]/) || linkText.length < 15) {
+          continue
+        }
+      }
+
+      const article: Article = {
+        id: this.generateArticleId(fullUrl, new Date()),
+        title: linkText || 'Untitled',
+        url: fullUrl,
+        content: '', // Will be fetched when needed
+        summary: linkText,
+        publishDate: new Date(), // Will be extracted from article page if needed
+        source: source.id,
+        sourceAuthority: source.authority
+      }
+
+      articles.push(article)
+
+      if (articles.length >= maxArticles) {
+        break
+      }
+    }
+
+    return articles
+  }
+}
+
 // Reddit RSS feeds have specific formatting
-export class RedditSourceFetcher extends SourceFetcher {
+export class RedditSourceFetcher extends WebScrapeFetcher {
   async fetchSource(source: Source, maxArticles: number = 50): Promise<Article[]> {
     if (!source.url.includes('reddit.com')) {
       return super.fetchSource(source, maxArticles)

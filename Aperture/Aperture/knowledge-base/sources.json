@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "type": "rss",
+      "url": "https://dev.to/feed",
+      "name": "DEV Community",
+      "enabled": true
+    },
+    {
+      "type": "rss", 
+      "url": "https://github.blog/feed/",
+      "name": "GitHub Blog",
+      "enabled": true
+    }
+  ],
+  "settings": {
+    "maxArticlesPerSource": 10,
+    "minQualityScore": 0.7,
+    "updateFrequency": "daily"
+  }
+}

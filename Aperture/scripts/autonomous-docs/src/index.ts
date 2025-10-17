@@ -3,7 +3,7 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { format } from 'date-fns'
-import { SourceFetcher, RedditSourceFetcher } from './fetch-sources.js'
+import { SourceFetcher, WebScrapeFetcher } from './fetch-sources.js'
 import { RelevanceFilter } from './filter-relevance.js'
 import { QualityComparator } from './compare-quality.js'
 import { DocumentIntegrator } from './generate-integration.js'
@@ -31,7 +31,7 @@ class AutonomousDocumentationSystem {
       throw new Error('GEMINI_API_KEY environment variable is required')
     }
 
-    this.fetcher = new RedditSourceFetcher()
+    this.fetcher = new WebScrapeFetcher()
     this.relevanceFilter = new RelevanceFilter(apiKey)
     this.qualityComparator = new QualityComparator(apiKey, repoRoot)
     this.integrator = new DocumentIntegrator(apiKey)

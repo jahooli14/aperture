@@ -113,13 +113,36 @@ Only mark as relevant (isRelevant: true) if score >= 0.7.`
 
   private parseRelevanceResponse(response: string, articles: Article[]): RelevanceAnalysis[] {
     try {
-      // Extract JSON from response
-      const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
-      if (!jsonMatch) {
+      // Extract JSON from response - try multiple patterns
+      let jsonText: string | null = null
+
+      // Pattern 1: Standard code fence
+      let jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
+      if (jsonMatch) {
+        jsonText = jsonMatch[1]
+      }
+
+      // Pattern 2: Without closing fence (truncated response)
+      if (!jsonText) {
+        jsonMatch = response.match(/```json\n([\s\S]*)/)
+        if (jsonMatch) {
+          jsonText = jsonMatch[1]
+        }
+      }
+
+      // Pattern 3: Just JSON array
+      if (!jsonText) {
+        jsonMatch = response.match(/(\[[\s\S]*\])/)
+        if (jsonMatch) {
+          jsonText = jsonMatch[1]
+        }
+      }
+
+      if (!jsonText) {
         throw new Error('No JSON found in response')
       }
 
-      const parsed = JSON.parse(jsonMatch[1])
+      const parsed = JSON.parse(jsonText)
 
       if (!Array.isArray(parsed)) {
         throw new Error('Response is not an array')

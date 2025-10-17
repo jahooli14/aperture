@@ -3,11 +3,16 @@
     {
       "id": "anthropic-news",
       "name": "Anthropic News",
-      "type": "rss",
-      "url": "https://www.anthropic.com/news/rss.xml",
-      "keywords": ["claude", "anthropic", "ai safety", "constitutional ai", "skills", "mcp"],
+      "type": "web-scrape",
+      "url": "https://www.anthropic.com/news",
+      "keywords": ["claude", "anthropic", "ai safety", "constitutional ai", "skills", "mcp", "api"],
       "authority": 1.0,
-      "enabled": true
+      "enabled": true,
+      "scrapeConfig": {
+        "listSelector": "a[href*='/news/']",
+        "titleSelector": "text",
+        "linkSelector": "href"
+      }
     },
     {
       "id": "openai-blog",
