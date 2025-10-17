@@ -75,9 +75,10 @@ jobs:
             MERGED_COUNT=$(echo "$SUMMARY" | grep "Merged" | grep -o '[0-9]\+' | head -1)
             FILES_COUNT=$(echo "$SUMMARY" | grep "Files updated" | grep -o '[0-9]\+' | head -1)
 
+            git add .
             if [ -n "$MERGED_COUNT" ] && [ "$MERGED_COUNT" -gt 0 ]; then
-              git add .
-              git commit -m "docs: autonomous update - $MERGED_COUNT improvements across $FILES_COUNT files
+              git commit -F- <<EOF
+docs: autonomous update - $MERGED_COUNT improvements across $FILES_COUNT files
 
 $SUMMARY
 
@@ -85,10 +86,11 @@ $SUMMARY
 via [Happy](https://happy.engineering)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
-Co-Authored-By: Happy <yesreply@happy.engineering>"
+Co-Authored-By: Happy <yesreply@happy.engineering>
+EOF
             else
-              git add .
-              git commit -m "docs: autonomous analysis - no improvements merged today
+              git commit -F- <<EOF
+docs: autonomous analysis - no improvements merged today
 
 Daily content analysis completed with no qualifying improvements.
 
@@ -96,17 +98,20 @@ Daily content analysis completed with no qualifying improvements.
 via [Happy](https://happy.engineering)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
-Co-Authored-By: Happy <yesreply@happy.engineering>"
+Co-Authored-By: Happy <yesreply@happy.engineering>
+EOF
             fi
           else
             git add .
-            git commit -m "docs: autonomous update
+            git commit -F- <<EOF
+docs: autonomous update
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 via [Happy](https://happy.engineering)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
-Co-Authored-By: Happy <yesreply@happy.engineering>"
+Co-Authored-By: Happy <yesreply@happy.engineering>
+EOF
           fi
 
           git push
