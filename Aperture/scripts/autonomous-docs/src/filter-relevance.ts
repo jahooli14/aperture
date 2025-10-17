@@ -139,12 +139,22 @@ Only mark as relevant (isRelevant: true) if score >= 0.7.`
       }
 
       if (!jsonText) {
+        console.error('Failed to extract JSON from response')
+        console.error('Response preview:', response.slice(0, 500))
         throw new Error('No JSON found in response')
       }
 
-      const parsed = JSON.parse(jsonText)
+      let parsed
+      try {
+        parsed = JSON.parse(jsonText)
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError)
+        console.error('JSON text:', jsonText.slice(0, 500))
+        throw parseError
+      }
 
       if (!Array.isArray(parsed)) {
+        console.error('Response is not an array, got:', typeof parsed)
         throw new Error('Response is not an array')
       }
 

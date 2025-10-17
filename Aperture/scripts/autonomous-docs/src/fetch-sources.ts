@@ -204,13 +204,16 @@ export class WebScrapeFetcher extends SourceFetcher {
         }
       }
 
+      // Fetch article content
+      const articleContent = await this.fetchArticleContent(fullUrl)
+
       const article: Article = {
         id: this.generateArticleId(fullUrl, new Date()),
         title: linkText || 'Untitled',
         url: fullUrl,
-        content: '', // Will be fetched when needed
-        summary: linkText,
-        publishDate: new Date(), // Will be extracted from article page if needed
+        content: articleContent.content,
+        summary: articleContent.summary || linkText,
+        publishDate: articleContent.publishDate || new Date(),
         source: source.id,
         sourceAuthority: source.authority
       }
@@ -223,6 +226,67 @@ export class WebScrapeFetcher extends SourceFetcher {
     }
 
     return articles
+  }
+
+  private async fetchArticleContent(url: string): Promise<{
+    content: string
+    summary: string
+    publishDate?: Date
+  }> {
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': this.userAgent }
+      })
+
+      if (!response.ok) {
+        return { content: '', summary: '' }
+      }
+
+      const html = await response.text()
+
+      // Extract Open Graph description or meta description
+      const ogDescMatch = html.match(/<meta property="og:description" content="([^"]+)"/)
+      const metaDescMatch = html.match(/<meta name="description" content="([^"]+)"/)
+      const summary = (ogDescMatch?.[1] || metaDescMatch?.[1] || '').slice(0, 500)
+
+      // Extract main content - look for article tags or main content divs
+      let content = summary
+
+      // Try to extract article body
+      const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
+      if (articleMatch) {
+        const articleHtml = articleMatch[1]
+        // Strip HTML tags but keep text
+        content = articleHtml
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 3000) // Limit to 3000 chars
+      }
+
+      // Try to extract publish date
+      const dateMatch = html.match(/<time[^>]*datetime="([^"]+)"/)
+      let publishDate: Date | undefined
+      if (dateMatch) {
+        try {
+          publishDate = new Date(dateMatch[1])
+        } catch {
+          // Invalid date, skip
+        }
+      }
+
+      return {
+        content: content || summary,
+        summary,
+        publishDate
+      }
+
+    } catch (error) {
+      console.error(`Error fetching article content from ${url}:`, error)
+      return { content: '', summary: '' }
+    }
   }
 }
 
