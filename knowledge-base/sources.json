@@ -1,6 +1,24 @@
 {
   "sources": [
     {
+      "id": "anthropic-news",
+      "name": "Anthropic News",
+      "type": "rss",
+      "url": "https://www.anthropic.com/news/rss.xml",
+      "keywords": ["claude", "anthropic", "ai safety", "constitutional ai", "skills", "mcp"],
+      "authority": 1.0,
+      "enabled": true
+    },
+    {
+      "id": "openai-blog",
+      "name": "OpenAI Blog",
+      "type": "rss",
+      "url": "https://openai.com/blog/rss.xml",
+      "keywords": ["openai", "gpt", "chatgpt", "ai research", "agents"],
+      "authority": 1.0,
+      "enabled": true
+    },
+    {
       "id": "google-ai-blog",
       "name": "Google AI Blog",
       "type": "rss",
