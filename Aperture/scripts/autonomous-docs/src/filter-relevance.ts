@@ -131,12 +131,17 @@ Only mark as relevant (isRelevant: true) if score >= 0.7.`
           throw new Error(`Invalid article index: ${item.articleIndex}`)
         }
 
+        // Auto-set isRelevant based on score if not explicitly provided
+        const isRelevant = item.isRelevant !== undefined
+          ? item.isRelevant
+          : item.relevanceScore >= 0.7
+
         return {
           article: articles[articleIndex],
           relevanceScore: item.relevanceScore,
           category: item.category,
           reasoning: item.reasoning,
-          isRelevant: item.isRelevant
+          isRelevant
         }
       })
 
