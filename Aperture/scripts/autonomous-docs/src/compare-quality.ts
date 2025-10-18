@@ -7,6 +7,7 @@ export class QualityComparator {
   private genAI: GoogleGenerativeAI
   private model: any
   private documentationTargets: DocumentationTarget[]
+  private requestDelay = 2000 // 2 seconds between requests
 
   constructor(apiKey: string, repoRoot: string) {
     this.genAI = new GoogleGenerativeAI(apiKey)
@@ -71,6 +72,9 @@ export class QualityComparator {
   async compareQuality(article: Article): Promise<QualityComparison | null> {
     console.log(`Analyzing quality for: ${article.title}`)
 
+    // Add delay to avoid rate limiting
+    await this.sleep(this.requestDelay)
+
     // Find relevant documentation section
     const targetSection = this.findRelevantSection(article)
 
@@ -94,31 +98,52 @@ export class QualityComparator {
 
     const prompt = this.buildQualityComparisonPrompt(article, currentContent, targetSection)
 
-    try {
-      const result = await this.model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 2000,
-          temperature: 0.1,
-        },
-      })
+    // Retry up to 3 times with exponential backoff
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const result = await this.model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 1000,  // Reduced from 2000
+            temperature: 0.1,
+          },
+        })
 
-      const response = await result.response
-      const responseText = response.text()
+        const response = await result.response
+        const responseText = response.text()
 
-      const comparison = this.parseQualityResponse(responseText, article, targetSection, currentContent)
+        if (!responseText || responseText.trim() === '') {
+          console.log(`  Attempt ${attempt}: Empty response from Gemini`)
+          if (attempt < 3) {
+            await this.sleep(attempt * 3000)  // 3s, 6s backoff
+            continue
+          }
+          return null
+        }
 
-      if (comparison) {
-        console.log(`  Quality scores: S:${comparison.specificityScore.toFixed(2)} I:${comparison.implementabilityScore.toFixed(2)} E:${comparison.evidenceScore.toFixed(2)} Overall:${comparison.overallScore.toFixed(2)}`)
-        console.log(`  Should merge: ${comparison.shouldMerge}`)
+        const comparison = this.parseQualityResponse(responseText, article, targetSection, currentContent)
+
+        if (comparison) {
+          console.log(`  Quality scores: S:${comparison.specificityScore.toFixed(2)} I:${comparison.implementabilityScore.toFixed(2)} E:${comparison.evidenceScore.toFixed(2)} Overall:${comparison.overallScore.toFixed(2)}`)
+          console.log(`  Should merge: ${comparison.shouldMerge}`)
+        }
+
+        return comparison
+
+      } catch (error) {
+        console.error(`  Attempt ${attempt} error:`, error)
+        if (attempt < 3) {
+          await this.sleep(attempt * 3000)
+        }
       }
-
-      return comparison
-
-    } catch (error) {
-      console.error('Error comparing quality:', error)
-      return null
     }
+
+    console.log('  All retry attempts failed')
+    return null
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   private findRelevantSection(article: Article): { file: string; section: any } | null {
@@ -363,55 +388,78 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
 }
 \`\`\``;
 
-    try {
-      const result = await this.model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 2000,
-          temperature: 0.1,
-        },
-      })
-
-      const response = result.response.text()
-
+    // Retry up to 3 times with exponential backoff
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
-        if (!jsonMatch) {
-          console.log('  No JSON found in new content evaluation')
+        const result = await this.model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 1000,  // Reduced from 2000
+            temperature: 0.1,
+          },
+        })
+
+        const response = result.response.text()
+
+        if (!response || response.trim() === '') {
+          console.log(`  Attempt ${attempt}: Empty response from Gemini (new content)`)
+          if (attempt < 3) {
+            await this.sleep(attempt * 3000)
+            continue
+          }
           return null
         }
 
-        const parsed = JSON.parse(jsonMatch[1])
+        try {
+          const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
+          if (!jsonMatch) {
+            console.log('  No JSON found in new content evaluation')
+            if (attempt < 3) {
+              await this.sleep(attempt * 3000)
+              continue
+            }
+            return null
+          }
 
-        // Must meet quality bar for new content
-        if (parsed.overallScore < 0.75 || (parsed.relevanceScore || 0) < 0.6) {
-          console.log(`  Below quality threshold (overall: ${parsed.overallScore}, relevance: ${parsed.relevanceScore || 0})`)
-          return null
-        }
+          const parsed = JSON.parse(jsonMatch[1])
 
-        return {
-          article,
-          targetFile: parsed.suggestedFile || 'CLAUDE-APERTURE.md',
-          targetSection: parsed.suggestedSection || 'New Section',
-          currentContent: '', // No existing content for new sections
-          specificityScore: parsed.specificityScore,
-          implementabilityScore: parsed.implementabilityScore,
-          evidenceScore: parsed.evidenceScore,
-          hasConcreteExample: parsed.hasConcreteExample,
-          hasQuantifiableBenefit: parsed.hasQuantifiableBenefit,
-          fromAuthoritativeSource: parsed.fromAuthoritativeSource,
-          contradictionsResolved: true, // No contradictions possible with new content
-          shouldMerge: parsed.shouldMerge,
-          reasoning: parsed.reasoning,
-          overallScore: parsed.overallScore
+          // Must meet quality bar for new content
+          if (parsed.overallScore < 0.75 || (parsed.relevanceScore || 0) < 0.6) {
+            console.log(`  Below quality threshold (overall: ${parsed.overallScore}, relevance: ${parsed.relevanceScore || 0})`)
+            return null
+          }
+
+          return {
+            article,
+            targetFile: parsed.suggestedFile || 'Aperture/CLAUDE-APERTURE.md',
+            targetSection: parsed.suggestedSection || 'New Section',
+            currentContent: '', // No existing content for new sections
+            specificityScore: parsed.specificityScore,
+            implementabilityScore: parsed.implementabilityScore,
+            evidenceScore: parsed.evidenceScore,
+            hasConcreteExample: parsed.hasConcreteExample,
+            hasQuantifiableBenefit: parsed.hasQuantifiableBenefit,
+            fromAuthoritativeSource: parsed.fromAuthoritativeSource,
+            contradictionsResolved: true, // No contradictions possible with new content
+            shouldMerge: parsed.shouldMerge,
+            reasoning: parsed.reasoning,
+            overallScore: parsed.overallScore
+          }
+        } catch (error) {
+          console.error(`  Attempt ${attempt} parse error:`, error)
+          if (attempt < 3) {
+            await this.sleep(attempt * 3000)
+          }
         }
       } catch (error) {
-        console.error('  Error parsing new content evaluation:', error)
-        return null
+        console.error(`  Attempt ${attempt} API error:`, error)
+        if (attempt < 3) {
+          await this.sleep(attempt * 3000)
+        }
       }
-    } catch (error) {
-      console.error(`  Error evaluating new content:`, error)
-      return null
     }
+
+    console.log('  All retry attempts failed for new content')
+    return null
   }
 }
