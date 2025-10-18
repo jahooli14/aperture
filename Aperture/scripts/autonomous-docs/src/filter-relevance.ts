@@ -16,7 +16,7 @@ export class RelevanceFilter {
     if (articles.length === 0) return []
 
     // Process in batches to avoid overwhelming the API
-    const batchSize = 20
+    const batchSize = 5  // Reduced from 20 to avoid token limits
     const allAnalyses: RelevanceAnalysis[] = []
 
     for (let i = 0; i < articles.length; i += batchSize) {

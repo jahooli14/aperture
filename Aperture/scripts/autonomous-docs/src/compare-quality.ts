@@ -15,7 +15,7 @@ export class QualityComparator {
     // Define which sections of our docs can be auto-updated
     this.documentationTargets = [
       {
-        file: join(repoRoot, 'CLAUDE-APERTURE.md'),
+        file: join(repoRoot, 'Aperture', 'CLAUDE-APERTURE.md'),
         sections: [
           {
             name: 'Tool Design Philosophy',
@@ -44,7 +44,7 @@ export class QualityComparator {
         ]
       },
       {
-        file: join(repoRoot, '.claude/startup.md'),
+        file: join(repoRoot, 'Aperture', '.claude/startup.md'),
         sections: [
           {
             name: 'Claude Code Best Practices',
@@ -55,7 +55,7 @@ export class QualityComparator {
         ]
       },
       {
-        file: join(repoRoot, '.process/COMMON_MISTAKES.md'),
+        file: join(repoRoot, 'Aperture', '.process/COMMON_MISTAKES.md'),
         sections: [
           {
             name: 'Common Mistakes',
@@ -336,9 +336,9 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
 - Content is actionable and specific
 
 **Suggested location:** Determine best file and section title for this content:
-- CLAUDE-APERTURE.md for Claude/AI patterns
-- .claude/startup.md for Claude Code workflows
-- .process/ for development processes
+- Aperture/CLAUDE-APERTURE.md for Claude/AI patterns
+- Aperture/.claude/startup.md for Claude Code workflows
+- Aperture/.process/ for development processes
 
 **Response format (JSON):**
 \`\`\`json
