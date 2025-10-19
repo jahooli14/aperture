@@ -11,7 +11,7 @@ export class QualityComparator {
 
   constructor(apiKey: string, repoRoot: string) {
     this.genAI = new GoogleGenerativeAI(apiKey)
-    this.model = this.genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" })
+    this.model = this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" })
 
     // Define which sections of our docs can be auto-updated
     this.documentationTargets = [
@@ -98,6 +98,9 @@ export class QualityComparator {
 
     const prompt = this.buildQualityComparisonPrompt(article, currentContent, targetSection)
 
+    // Debug: Check prompt length
+    console.log(`  Prompt length: ${prompt.length} chars, Article content: ${article.content.length} chars`)
+
     // Retry up to 3 times with exponential backoff
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -110,10 +113,21 @@ export class QualityComparator {
         })
 
         const response = await result.response
+
+        // Check for blocked content or safety filters
+        if (response.promptFeedback?.blockReason) {
+          console.log(`  Blocked by safety filter: ${response.promptFeedback.blockReason}`)
+          return null
+        }
+
         const responseText = response.text()
 
         if (!responseText || responseText.trim() === '') {
           console.log(`  Attempt ${attempt}: Empty response from Gemini`)
+          console.log(`  Response candidates: ${response.candidates?.length || 0}`)
+          if (response.candidates?.[0]?.finishReason) {
+            console.log(`  Finish reason: ${response.candidates[0].finishReason}`)
+          }
           if (attempt < 3) {
             await this.sleep(attempt * 3000)  // 3s, 6s backoff
             continue
@@ -388,6 +402,9 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
 }
 \`\`\``;
 
+    // Debug: Check prompt length
+    console.log(`  New content prompt length: ${prompt.length} chars, Article content: ${article.content.length} chars`)
+
     // Retry up to 3 times with exponential backoff
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -399,10 +416,22 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
           },
         })
 
-        const response = result.response.text()
+        const response = await result.response
 
-        if (!response || response.trim() === '') {
+        // Check for blocked content or safety filters
+        if (response.promptFeedback?.blockReason) {
+          console.log(`  New content blocked by safety filter: ${response.promptFeedback.blockReason}`)
+          return null
+        }
+
+        const responseText = response.text()
+
+        if (!responseText || responseText.trim() === '') {
           console.log(`  Attempt ${attempt}: Empty response from Gemini (new content)`)
+          console.log(`  Response candidates: ${response.candidates?.length || 0}`)
+          if (response.candidates?.[0]?.finishReason) {
+            console.log(`  Finish reason: ${response.candidates[0].finishReason}`)
+          }
           if (attempt < 3) {
             await this.sleep(attempt * 3000)
             continue
