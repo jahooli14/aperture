@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-19T22:37:12.591Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Claude Code can use Gemini CLI & OpenCode as \"subagents\"!",
+    "url": "https://www.reddit.com/r/ClaudeAI/comments/1oaw0tu/claude_code_can_use_gemini_cli_opencode_as/",
+    "publishDate": "2025-10-19T17:46:46.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

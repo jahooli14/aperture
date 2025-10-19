@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-10-19T22:39:46.499Z",
+  "type": "merged",
+  "sourceArticle": {
+    "title": "Claude can now use Skills",
+    "url": "https://www.reddit.com/r/ClaudeAI/comments/1o8af9q/claude_can_now_use_skills/",
+    "publishDate": "2025-10-16T16:12:56.000Z"
+  },
+  "targetFile": "/home/runner/work/aperture/aperture/Aperture/CLAUDE-APERTURE.md",
+  "targetSection": "Tool Design Philosophy",
+  "qualityScores": {
+    "specificity": 0.7,
+    "implementability": 0.8,
+    "evidence": 1,
+    "overall": 0.88
+  },
+  "decision": "merged",
+  "reasoning": [
+    "The new article introduces 'Skills,' a significant new capability for Claude agents, directly relevant to how agents execute workflows and leverage tools.",
+    "Skills align with and exemplify existing 'Tool Design Philosophy' principles, particularly 'Quality Over Quantity' (by encapsulating complex workflows and institutional knowledge) and 'Targeted Operations' (by applying specific methodologies automatically).",
+    "The information comes from official Anthropic sources (linked from the Reddit post), providing high evidence.",
+    "The new content complements and extends the existing philosophy rather than replacing it, making MERGE the optimal mode.",
+    "Integration as a concise bullet point under an existing principle (e.g., 'Quality Over Quantity') maximizes information density with minimal token growth, adhering to the 'MINIMAL' goal.",
+    "The new content is 'FRONTIER-QUALITY' as it describes a new, advanced agent capability."
+  ],
+  "changes": {
+    "before": "## Tool Design Philosophy\n\n> **Source**: [Anthropic - Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)\n\n### Quality Over Quantity\n- Create focused, high-impact tools/utilities for specific workflows\n- Consolidate similar functionality instead of creating many small tools\n- Avoid unnecessary wrapper functions around existing APIs\n- Each tool should solve a real, recurring problem\n\n### Targeted Operations Over Broad Listing\n- **Prefer**: `grep \"pattern\" --glob \"*.tsx\"` (targeted search)\n- **Avoid**: Reading all files then filtering in memory\n- **Prefer**: Specific queries with filters\n- **Avoid**: Fetching everything then processing client-side\n\n**Examples**:\n```bash\n# ❌ BAD: Broad then filter\nfind . -name \"*.ts\" -exec cat {} \\; | grep \"useState\"\n\n# ✅ GOOD: Targeted from start\ngrep -r \"useState\" --include=\"*.ts\"\n\n# ❌ BAD: Read entire file to find one function\ncat src/utils/imageUtils.ts | grep \"alignPhoto\"\n\n# ✅ GOOD: Grep with context\ngrep -A 20 \"alignPhoto\" src/utils/imageUtils.ts\n```\n\n### High-Signal Output Design\n- Return meaningful, contextual information\n- Use natural language identifiers over cryptic codes\n- Set sensible limits (prefer 10-50 results, not 1000)\n- Truncate strategically with \"... N more results\"\n- Include actionable next steps in responses\n\n**Examples**:\n```typescript\n// ❌ BAD: Low-signal technical IDs\n{ photoId: \"uuid-1234\", status: 2, error: \"ERR_003\" }\n\n// ✅ GOOD: High-signal contextual info\n{\n  photo: \"baby-smile-2025-01-15.jpg\",\n  status: \"processing\",\n  issue: \"Eye detection failed - photo may be too dark\"\n}\n```\n\n### Error Context and Recovery\n- Explain what went wrong AND what to try next\n- Include specific file paths and line numbers\n- Provide recovery commands when possible\n- Reference related documentation\n\n**Format**:\n```\n❌ Error: [What failed]\n📍 Location: [file:line]\n🔍 Cause: [Why it failed]\n✅ Fix: [Specific command or action]\n📚 See: [Related doc]\n```\n",
+    "after": "## Tool Design Philosophy\n\n> **Source**: [Anthropic - Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)\n\n### Quality Over Quantity\n- Create focused, high-impact tools/utilities for specific workflows.\n- Consolidate similar functionality instead of creating many small tools.\n- Avoid unnecessary wrapper functions around existing APIs.\n- Each tool should solve a real, recurring problem.\n- **Example**: AI agent \"Skills\" (e.g., Claude's) exemplify this by encapsulating institutional knowledge into automatic, targeted workflows, ensuring consistency across specific tasks like report structuring or client communication. [Source: reddit-claude]\n\n### Targeted Operations Over Broad Listing\n- **Prefer**: `grep \"pattern\" --glob \"*.tsx\"` (targeted search)\n- **Avoid**: Reading all files then filtering in memory\n- **Prefer**: Specific queries with filters\n- **Avoid**: Fetching everything then processing client-side\n\n**Examples**:\n```bash\n# ❌ BAD: Broad then filter\nfind . -name \"*.ts\" -exec cat {} \\; | grep \"useState\"\n\n# ✅ GOOD: Targeted from start\ngrep -r \"useState\" --include=\"*.ts\"\n\n# ❌ BAD: Read entire file to find one function\ncat src/utils/imageUtils.ts | grep \"alignPhoto\"\n\n# ✅ GOOD: Grep with context\ngrep -A 20 \"alignPhoto\" src/utils/imageUtils.ts\n```\n\n### High-Signal Output Design\n- Return meaningful, contextual information\n- Use natural language identifiers over cryptic codes\n- Set sensible limits (prefer 10-50 results, not 1000)\n- Truncate strategically with \"... N more results\"\n- Include actionable next steps in responses\n\n**Examples**:\n```typescript\n// ❌ BAD: Low-signal technical IDs\n{ photoId: \"uuid-1234\", status: 2, error: \"ERR_003\" }\n\n// ✅ GOOD: High-signal contextual info\n{\n  photo: \"baby-smile-2025-01-15.jpg\",\n  status: \"processing\",\n  issue: \"Eye detection failed - photo may be too dark\"\n}\n```\n\n### Error Context and Recovery\n- Explain what went wrong AND what to try next\n- Include specific file paths and line numbers\n- Provide recovery commands when possible\n- Reference related documentation\n\n**Format**:\n```\n❌ Error: [What failed]\n📍 Location: [file:line]\n🔍 Cause: [Why it failed]\n✅ Fix: [Specific command or action]\n📚 See: [Related doc]\n```",
+    "summary": "Integrated an example of AI agent 'Skills' to illustrate the 'Quality Over Quantity' principle in tool design, linking it to focused, high-impact workflows."
+  }
+}

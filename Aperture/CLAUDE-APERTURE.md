@@ -124,10 +124,11 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 > **Source**: [Anthropic - Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
 
 ### Quality Over Quantity
-- Create focused, high-impact tools/utilities for specific workflows
-- Consolidate similar functionality instead of creating many small tools
-- Avoid unnecessary wrapper functions around existing APIs
-- Each tool should solve a real, recurring problem
+- Create focused, high-impact tools/utilities for specific workflows.
+- Consolidate similar functionality instead of creating many small tools.
+- Avoid unnecessary wrapper functions around existing APIs.
+- Each tool should solve a real, recurring problem.
+- **Example**: AI agent "Skills" (e.g., Claude's) exemplify this by encapsulating institutional knowledge into automatic, targeted workflows, ensuring consistency across specific tasks like report structuring or client communication. [Source: reddit-claude]
 
 ### Targeted Operations Over Broad Listing
 - **Prefer**: `grep "pattern" --glob "*.tsx"` (targeted search)
@@ -184,7 +185,6 @@ grep -A 20 "alignPhoto" src/utils/imageUtils.ts
 ✅ Fix: [Specific command or action]
 📚 See: [Related doc]
 ```
-
 ---
 
 ## Code Style & Standards

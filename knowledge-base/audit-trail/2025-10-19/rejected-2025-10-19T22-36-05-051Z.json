@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-10-19T22:36:05.051Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Usage Limits and Performance Discussion Megathread - beginning October 19, 2025",
+    "url": "https://www.reddit.com/r/ClaudeAI/comments/1oagi6l/usage_limits_and_performance_discussion/",
+    "publishDate": "2025-10-19T04:27:52.000Z"
+  },
+  "qualityScores": {
+    "specificity": 0.2,
+    "implementability": 0.1,
+    "evidence": 0.4,
+    "overall": 0.1
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "The new article discusses 'Usage Limits and Performance Discussion' for Claude AI, focusing on user experiences and community reporting.",
+    "The current documentation section is 'Tool Design Philosophy', outlining principles for building effective tools (e.g., targeted operations, high-signal output, error handling).",
+    "These two topics are fundamentally distinct. The new article is about operational feedback for an existing AI model, not about the design principles for creating tools.",
+    "Integrating this content would dilute the focus of the 'Tool Design Philosophy' section and introduce irrelevant information, decreasing information density.",
+    "The new article's source (reddit-claude, authority: 0.4) is not authoritative for tool design philosophy, especially compared to the current section's Anthropic engineering source.",
+    "No supersession indicators (version upgrades, official announcements, quantifiable improvements relevant to tool design) are present.",
+    "The content does not offer concrete examples or implementable guidance for tool design, nor does it provide quantifiable benefits in that context."
+  ]
+}

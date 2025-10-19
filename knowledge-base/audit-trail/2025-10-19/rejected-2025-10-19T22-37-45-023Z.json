@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-10-19T22:37:45.023Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Stop Guessing: A Profiling Guide for Nemo Agent Toolkit using Nsight Systems",
+    "url": "https://www.reddit.com/r/LLMDevs/comments/1ob0g22/stop_guessing_a_profiling_guide_for_nemo_agent/",
+    "publishDate": "2025-10-19T20:38:15.000Z"
+  },
+  "qualityScores": {
+    "specificity": 0.8,
+    "implementability": 0.9,
+    "evidence": 0.5,
+    "overall": 0.73
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "The existing documentation section focuses on 'Tool Design Philosophy' (principles for *creating* tools).",
+    "The new article focuses on 'Profiling Guide' (principles for *measuring performance* of tools, specifically NeMo agents).",
+    "These are distinct topics. The new article does not directly enhance or update the core design philosophy principles.",
+    "Integrating this content would introduce a new, advanced topic (performance profiling) that is out of scope for the current section's stated purpose.",
+    "The source authority (reddit-llmdevs, 0.5) is not high enough to warrant a direct merge or replacement, especially for a foundational design philosophy section.",
+    "Adding this content would increase token count without maximizing value for the 'Tool Design Philosophy' section, thus diluting its focus.",
+    "This content would be valuable in a dedicated 'Performance & Observability' or 'Profiling Tools' section, but not here."
+  ]
+}
