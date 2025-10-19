@@ -33,11 +33,26 @@ This includes:
 
 ---
 
+## 📖 Lazy Loading Strategy
+
+**IMPORTANT**: Don't read entire docs upfront. Use task-based navigation.
+
+**Navigation Tools**:
+- `NAVIGATION.md` - Task-based index (implementation, review, modification)
+- `.process/WHEN_TO_READ.md` - Meta-guide for when to read what
+
+**Examples**:
+- Implementing feature → Read CLAUDE-{PROJECT}.md → Tool Design section
+- Debugging → Read .process/COMMON_MISTAKES.md
+- Modifying autonomous docs → Read scripts/autonomous-docs/FEATURE_GUIDE.md
+
+---
+
 ## How to Tell Which Project You're On
 
 ### Check the User's Request
 - **Work keywords**: Nudj, admin app, user app, API, MongoDB, gamification, challenges, rewards
-- **Personal keywords**: Aperture, wizard-of-oz, baby photos, Supabase
+- **Personal keywords**: Aperture, wizard-of-oz, baby photos, Supabase, autonomous docs
 
 ### Check Current Directory
 ```bash
@@ -45,7 +60,7 @@ This includes:
 apps/api/, apps/admin/, apps/user/, packages/database/
 
 # If you see these directories → Aperture (personal)
-projects/wizard-of-oz/
+projects/wizard-of-oz/, scripts/autonomous-docs/
 ```
 
 ### Check git remote
@@ -58,6 +73,19 @@ git remote -v
 git remote -v
 # → github.com/jahooli14/aperture
 ```
+
+---
+
+## Autonomous Documentation System
+
+**Aperture projects include self-optimizing documentation**:
+- Updates daily at 09:00 UTC with latest AI/Claude best practices
+- **Replaces** outdated content (not additive)
+- Optimizes for token efficiency
+- Modes: REPLACE (supersede), MERGE (consolidate), REFACTOR (compress), NEW (add)
+
+**When docs update**: Check `knowledge-base/changelogs/` for what changed
+**Modifying system**: See `scripts/autonomous-docs/FEATURE_GUIDE.md`
 
 ---
 

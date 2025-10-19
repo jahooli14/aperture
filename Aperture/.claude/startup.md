@@ -6,6 +6,23 @@
 
 ---
 
+## 📚 LAZY LOADING STRATEGY
+
+**Read this file only** at startup (~300 tokens). **DON'T** read entire documentation upfront.
+
+**Navigation**:
+- Task-based index → `NAVIGATION.md`
+- Reading strategy → `.process/WHEN_TO_READ.md`
+- Project router → `CLAUDE.md` (NUDJ vs Aperture)
+
+**Autonomous Docs**: This repo uses self-optimizing documentation
+- Updates daily with frontier AI/Claude knowledge
+- **REPLACES** outdated content (not accumulative)
+- Minimizes tokens while maximizing value
+- **Modification guide**: `scripts/autonomous-docs/FEATURE_GUIDE.md`
+
+---
+
 ## 🚨 AUTOMATIC SESSION STARTUP SEQUENCE
 
 ### Step 0: Capability Quick Reference
@@ -14,7 +31,7 @@
 >
 > **Quick reference**: See `.process/CAPABILITIES.md` for full pattern catalog
 >
-> **Documentation map**: See `DOCUMENTATION_INDEX.md` for complete navigation and intent-based routing
+> **Documentation map**: See `NAVIGATION.md` for task-based navigation
 
 **Before starting work, these capabilities are available**:
 
