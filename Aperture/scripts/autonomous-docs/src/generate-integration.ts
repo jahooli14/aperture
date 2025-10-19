@@ -19,7 +19,7 @@ export class DocumentIntegrator {
       const result = await this.model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          maxOutputTokens: 3000,
+          maxOutputTokens: 8000,  // Increased for $0.25/day budget - allows complex multi-paragraph integrations
           temperature: 0.1,
         },
       })

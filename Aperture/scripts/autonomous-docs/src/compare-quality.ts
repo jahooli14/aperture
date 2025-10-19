@@ -107,7 +107,7 @@ export class QualityComparator {
         const result = await this.model.generateContent({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
-            maxOutputTokens: 2000,  // Increased back - 1000 was too low, causing MAX_TOKENS errors
+            maxOutputTokens: 6000,  // Increased for $0.25/day budget - prevents MAX_TOKENS on long articles
             temperature: 0.1,
           },
         })
@@ -411,7 +411,7 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
         const result = await this.model.generateContent({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
-            maxOutputTokens: 2000,  // Increased back - 1000 was too low, causing MAX_TOKENS errors
+            maxOutputTokens: 6000,  // Increased for $0.25/day budget - prevents MAX_TOKENS on long articles
             temperature: 0.1,
           },
         })

@@ -39,7 +39,7 @@ export class RelevanceFilter {
       const result = await this.model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          maxOutputTokens: 4000,
+          maxOutputTokens: 8000,  // Increased for $0.25/day budget - allows detailed reasoning
           temperature: 0.1,
         },
       })
