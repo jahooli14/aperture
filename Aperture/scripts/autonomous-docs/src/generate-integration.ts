@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { QualityComparison, MergeResult } from './types.js'
+import { config } from './config.js'
 
 export class DocumentIntegrator {
   private genAI: GoogleGenerativeAI
@@ -50,59 +51,108 @@ export class DocumentIntegrator {
   }
 
   private buildIntegrationPrompt(comparison: QualityComparison): string {
-    return `You are integrating new, higher-quality information into existing documentation.
+    const mode = comparison.integrationMode || 'merge'
+    const targetTokens = Math.floor(comparison.currentContent.length / 4) + (comparison.expectedTokenDelta || 0)
 
-**Task:** Seamlessly merge the new information into the current section while preserving all existing content.
+    const modeInstructions: Record<string, string> = {
+      replace: `**MODE: REPLACE** - The new information SUPERSEDES existing content.
+
+**Your Task:**
+- DELETE outdated information (${comparison.supersessionType || 'obsolete content'})
+- REPLACE with new, frontier-quality content
+- Preserve document structure but update facts
+- Aim for FEWER tokens than before (current: ~${Math.floor(comparison.currentContent.length / 4)}, target: ~${targetTokens})
+
+**What to Remove:**
+- Old version references
+- Outdated recommendations
+- Superseded examples
+- Lower-authority sources
+
+**What to Keep:**
+- Section headers and structure
+- Still-relevant context
+- Cross-references`,
+
+      merge: `**MODE: MERGE** - New information COMPLEMENTS existing content.
+
+**Your Task:**
+- Consolidate similar concepts
+- Combine redundant examples into one authoritative one
+- Cite most recent/authoritative source only
+- Add new information concisely
+
+**Optimization Rules:**
+- Don't add if already well-covered
+- Replace vague with quantifiable
+- Prefer "30s timeout" over "use timeouts"`,
+
+      refactor: `**MODE: REFACTOR** - Same information, more efficiently.
+
+**Your Task:**
+- Reorganize for clarity
+- Combine paragraphs where possible
+- Remove redundant phrasing
+- MUST achieve token reduction
+- NO information loss allowed`,
+
+      newSection: `**MODE: NEW SECTION** - Adding entirely new content.
+
+**Your Task:**
+- Create concise, high-density section
+- Follow existing document style
+- Cross-link to related sections where applicable
+- Aim for ~${targetTokens} tokens`,
+
+      skip: `**MODE: SKIP** - Content already covered adequately.`
+    }
+
+    return `You are a documentation optimizer focused on MAXIMUM INFORMATION DENSITY.
+
+**Goal**: ${modeInstructions[mode]}
 
 **Current Section:**
+Tokens: ~${Math.floor(comparison.currentContent.length / 4)}
 \`\`\`markdown
 ${comparison.currentContent}
 \`\`\`
 
-**New Article Information:**
+**New Article:**
 Title: ${comparison.article.title}
 Source: ${comparison.article.source} (authority: ${comparison.article.sourceAuthority})
 URL: ${comparison.article.url}
 Content: ${comparison.article.content.slice(0, 1000)}
 
-**Quality Analysis:**
-- Specificity: ${comparison.specificityScore}/1.0 (${comparison.hasConcreteExample ? 'has examples' : 'no examples'})
+**Quality Scores:**
+- Specificity: ${comparison.specificityScore}/1.0
 - Implementability: ${comparison.implementabilityScore}/1.0
-- Evidence: ${comparison.evidenceScore}/1.0 (${comparison.fromAuthoritativeSource ? 'authoritative' : 'non-authoritative'})
-- Has quantifiable benefit: ${comparison.hasQuantifiableBenefit}
+- Evidence: ${comparison.evidenceScore}/1.0
+- Expected token delta: ${comparison.expectedTokenDelta || 0}
 
-**Integration Requirements:**
-
-1. **Preserve Everything**: All existing content must remain
-2. **Seamless Integration**: New info should flow naturally, not feel bolted-on
-3. **Add Value**: Only include what improves upon current content
-4. **Maintain Style**: Keep consistent voice and formatting
-5. **Cite Sources**: Add [Source: [Title](URL)] for new information
-6. **No Duplication**: Don't repeat what's already covered well
-
-**Specific Instructions:**
-- If new info has concrete examples, add them to relevant sections
-- If new info has quantifiable benefits, integrate the numbers
-- If new info adds nuance to existing guidance, refine the text
-- If new info provides official backing, mention the source authority
-- Keep section length reasonable (max 20% growth)
+**Optimization Principles:**
+1. One source citation per concept (use most authoritative)
+2. Prefer quantifiable claims ("95% reduction" vs "much better")
+3. Remove hedging ("generally", "often", "typically")
+4. Combine related examples
+5. Use cross-links instead of repetition: [See Section](#link)
 
 **Response Format:**
-Provide the complete updated section in this format:
-
 \`\`\`json
 {
-  "updatedContent": "... complete markdown section ...",
-  "improvementSummary": "Brief description of what was improved",
+  "updatedContent": "... optimized markdown ...",
+  "improvementSummary": "Brief description",
+  "tokenDelta": -15,
   "keyChanges": [
-    "Added concrete timeout example from Anthropic",
-    "Included 95% error reduction metric",
-    "Added source citation"
-  ]
+    "Removed: Claude 3.5 references (superseded)",
+    "Added: Claude 4 with 2x performance metric",
+    "Consolidated: 3 timeout examples → 1 authoritative example"
+  ],
+  "contentRemoved": ["Old timeout approach without metrics"],
+  "contentAdded": ["30s timeout reduces errors 95% (Anthropic)"]
 }
 \`\`\`
 
-Generate the integration now:`
+Generate the optimized integration now:`
   }
 
   private parseIntegrationResponse(response: string, comparison: QualityComparison): MergeResult | null {
@@ -121,7 +171,11 @@ Generate the integration now:`
         afterContent: parsed.updatedContent,
         improvementSummary: parsed.improvementSummary,
         sourceUrl: comparison.article.url,
-        sourceTitle: comparison.article.title
+        sourceTitle: comparison.article.title,
+        integrationMode: comparison.integrationMode,
+        tokenDelta: parsed.tokenDelta,
+        contentRemoved: parsed.contentRemoved,
+        contentAdded: parsed.contentAdded
       }
 
     } catch (error) {
@@ -134,22 +188,35 @@ Generate the integration now:`
   private validateIntegration(result: MergeResult, comparison: QualityComparison): boolean {
     const beforeLength = result.beforeContent.length
     const afterLength = result.afterContent.length
+    const mode = result.integrationMode || comparison.integrationMode || 'merge'
 
-    // Check maximum growth (20%)
+    // Get validation rules for this mode
+    const rules = config.integrationModes[mode]?.validation || config.integrationModes.merge.validation
+
+    // Calculate metrics
     const growthRatio = afterLength / beforeLength
-    if (growthRatio > 1.2) {
-      console.log(`  Validation failed: Section grew too much (${(growthRatio * 100).toFixed(1)}%)`)
+    const growthPercent = (growthRatio - 1) * 100
+    const tokenDelta = result.tokenDelta || Math.floor((afterLength - beforeLength) / 4)
+
+    // Check growth limit (varies by mode)
+    if (growthRatio > (1 + rules.maxGrowth)) {
+      console.log(`  Validation failed: Section grew too much (${growthPercent.toFixed(1)}% vs ${(rules.maxGrowth * 100).toFixed(0)}% limit for ${mode} mode)`)
       return false
     }
 
-    // Check that content isn't just duplicated
-    const newWords = this.extractNewWords(result.beforeContent, result.afterContent)
-    if (newWords.length < 5) {
-      console.log('  Validation failed: Too few new words added')
+    // For replace/refactor modes: allow token reduction
+    if (rules.allowTokenReduction && growthRatio < 1.0) {
+      console.log(`  Validation passed: Token reduction achieved (${growthPercent.toFixed(1)}% = ${tokenDelta} tokens saved)`)
+      return true
+    }
+
+    // For refactor mode: REQUIRE token reduction
+    if (rules.requireTokenReduction && growthRatio >= 1.0) {
+      console.log(`  Validation failed: Refactor mode requires token reduction, got ${growthPercent.toFixed(1)}% growth`)
       return false
     }
 
-    // Check that original content is preserved (at least 80% of original words should remain)
+    // Check word preservation (varies by mode)
     const originalWords = new Set(result.beforeContent.toLowerCase().match(/\w+/g) || [])
     const newContentWords = new Set(result.afterContent.toLowerCase().match(/\w+/g) || [])
 
@@ -161,18 +228,31 @@ Generate the integration now:`
     }
 
     const preservationRatio = preservedWords / originalWords.size
-    if (preservationRatio < 0.8) {
-      console.log(`  Validation failed: Too much original content lost (${(preservationRatio * 100).toFixed(1)}% preserved)`)
+    const minPreservation = rules.minFactPreservation || 0.8
+
+    if (preservationRatio < minPreservation) {
+      console.log(`  Validation failed: Too much content lost (${(preservationRatio * 100).toFixed(1)}% preserved vs ${(minPreservation * 100).toFixed(0)}% required for ${mode} mode)`)
       return false
     }
 
-    // Check for source citation
-    if (!result.afterContent.includes('[Source:') && !result.afterContent.includes('Source: [')) {
-      console.log('  Validation failed: No source citation found')
-      return false
+    // Check for source citation (skip for refactor mode)
+    if (mode !== 'refactor') {
+      if (!result.afterContent.includes('[Source:') && !result.afterContent.includes('Source: [')) {
+        console.log('  Validation failed: No source citation found')
+        return false
+      }
     }
 
-    console.log(`  Validation passed: ${(growthRatio * 100).toFixed(1)}% growth, ${newWords.length} new words, ${(preservationRatio * 100).toFixed(1)}% preserved`)
+    // Check minimum new content (skip for replace/refactor)
+    if (mode === 'merge' || mode === 'newSection') {
+      const newWords = this.extractNewWords(result.beforeContent, result.afterContent)
+      if (newWords.length < 5) {
+        console.log('  Validation failed: Too few new words added')
+        return false
+      }
+    }
+
+    console.log(`  Validation passed (${mode}): ${growthPercent.toFixed(1)}% growth (${tokenDelta >= 0 ? '+' : ''}${tokenDelta} tokens), ${(preservationRatio * 100).toFixed(1)}% preserved`)
     return true
   }
 

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { Article, QualityComparison, DocumentationTarget } from './types.js'
+import { config } from './config.js'
 
 export class QualityComparator {
   private genAI: GoogleGenerativeAI
@@ -139,6 +140,7 @@ export class QualityComparator {
 
         if (comparison) {
           console.log(`  Quality scores: S:${comparison.specificityScore.toFixed(2)} I:${comparison.implementabilityScore.toFixed(2)} E:${comparison.evidenceScore.toFixed(2)} Overall:${comparison.overallScore.toFixed(2)}`)
+          console.log(`  Integration mode: ${comparison.integrationMode || 'merge'} (token delta: ${comparison.expectedTokenDelta || 0})`)
           console.log(`  Should merge: ${comparison.shouldMerge}`)
         }
 
@@ -219,11 +221,14 @@ export class QualityComparator {
     currentContent: string,
     targetSection: { file: string; section: any }
   ): string {
-    return `You are comparing new information against existing documentation to determine if it's objectively better.
+    return `You are optimizing documentation to be MINIMAL and FRONTIER-QUALITY.
+
+**Goal**: Maximize information density. Prefer replacing outdated content over accumulating history.
 
 **Current Documentation Section:**
 File: ${targetSection.file}
 Section: ${targetSection.section.name}
+Current tokens: ~${Math.floor(currentContent.length / 4)}
 
 \`\`\`markdown
 ${currentContent.slice(0, 2000)} ${currentContent.length > 2000 ? '...' : ''}
@@ -235,33 +240,44 @@ Source: ${article.source} (authority: ${article.sourceAuthority})
 URL: ${article.url}
 Content: ${article.content.slice(0, 1500)} ${article.content.length > 1500 ? '...' : ''}
 
-**Your task:** Compare the new information to existing content and score each dimension:
+**Your task:** Determine the OPTIMAL integration mode to minimize tokens while maximizing value.
 
-1. **Specificity** (0.0-1.0): How specific vs generic?
-   - 1.0: Concrete examples, exact numbers, specific code
-   - 0.5: Some specifics but still general advice
-   - 0.0: Generic platitudes, vague recommendations
+**Quality Dimensions** (0.0-1.0):
 
-2. **Implementability** (0.0-1.0): How actionable?
-   - 1.0: Copy-paste ready code, step-by-step instructions
-   - 0.5: Clear guidance but needs adaptation
-   - 0.0: Theoretical discussion, no implementation path
+1. **Specificity**: Concrete examples/numbers vs generic platitudes
+2. **Implementability**: Copy-paste ready vs theoretical
+3. **Evidence**: Official source + benchmarks vs opinion
 
-3. **Evidence** (0.0-1.0): How well-supported?
-   - 1.0: Official source + benchmarks/studies + quantifiable benefits
-   - 0.5: Credible source with some backing
-   - 0.0: Opinion, anecdotal, or unsubstantiated
+**Integration Mode Analysis:**
 
-**Answer these questions:**
-- hasConcreteExample: Does the article provide specific code/examples we don't have?
-- hasQuantifiableBenefit: Does it cite measurable improvements (%, time, errors)?
-- fromAuthoritativeSource: Is it from Anthropic, Google, or proven expert?
-- contradictionsResolved: Does it contradict our existing content?
+**REPLACE** - New info makes existing content obsolete
+- Evidence score must be ≥0.85 (high bar for deletion)
+- Examples: Version upgrades (Claude 3.5 → 4), API changes (v1 → v2)
+- Supersession indicators: "new version", "replaces", "deprecated", quantifiably better
+- Result: DELETE old content, ADD new (aim for token reduction)
 
-**Merge criteria:** Only recommend merge if:
-- At least 2 scores are ≥ 0.7
-- No unresolved contradictions
-- Adds concrete value to existing content
+**MERGE** - New info complements existing
+- Evidence score ≥0.75
+- Consolidate similar concepts, combine examples
+- Remove redundancy, cite most authoritative source only
+- Result: Refine existing content (modest token growth acceptable)
+
+**REFACTOR** - Same content, more efficient
+- Existing content is good but verbose
+- Reorganize for clarity, combine paragraphs
+- Use cross-links instead of repetition
+- Result: Token reduction required
+
+**SKIP** - Already covered adequately
+- New info doesn't add value
+- Existing content is better
+- Would add bloat without benefit
+
+**Supersession Detection:**
+Check if new article contains:
+- Version references: ${config.supersessionDetection.patterns.versionUpgrade.join(', ')}
+- Official updates: ${config.supersessionDetection.patterns.officialUpdate.join(', ')}
+- Quantifiable improvements: Numbers, percentages, "X times faster"
 
 **Response format (JSON):**
 \`\`\`json
@@ -273,11 +289,16 @@ Content: ${article.content.slice(0, 1500)} ${article.content.length > 1500 ? '..
   "hasQuantifiableBenefit": true,
   "fromAuthoritativeSource": true,
   "contradictionsResolved": true,
+  "integrationMode": "replace",
+  "supersessionType": "version-upgrade",
+  "expectedTokenDelta": -15,
   "shouldMerge": true,
   "reasoning": [
-    "Adds specific timeout implementation to generic guidance",
-    "Official Anthropic source with quantified benefits (95% issue reduction)",
-    "Extends existing pattern without contradicting"
+    "Claude 4 supersedes Claude 3.5 (version upgrade)",
+    "2x performance improvement is quantifiable",
+    "Official Anthropic source (evidence: 1.0)",
+    "Can DELETE old version references, ADD new recommendation",
+    "Expected: 45 tokens → 30 tokens (-33% more efficient)"
   ],
   "overallScore": 0.9
 }
@@ -310,6 +331,9 @@ Content: ${article.content.slice(0, 1500)} ${article.content.length > 1500 ? '..
         hasQuantifiableBenefit: parsed.hasQuantifiableBenefit,
         fromAuthoritativeSource: parsed.fromAuthoritativeSource,
         contradictionsResolved: parsed.contradictionsResolved,
+        integrationMode: parsed.integrationMode,
+        supersessionType: parsed.supersessionType,
+        expectedTokenDelta: parsed.expectedTokenDelta,
         shouldMerge: parsed.shouldMerge,
         reasoning: parsed.reasoning,
         overallScore: parsed.overallScore

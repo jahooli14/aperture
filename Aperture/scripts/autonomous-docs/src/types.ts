@@ -55,6 +55,9 @@ export interface QualityComparison {
   hasQuantifiableBenefit: boolean
   fromAuthoritativeSource: boolean
   contradictionsResolved: boolean
+  integrationMode?: 'replace' | 'merge' | 'refactor' | 'skip' | 'newSection'
+  supersessionType?: string
+  expectedTokenDelta?: number
   shouldMerge: boolean
   reasoning: string[]
   overallScore: number
@@ -68,6 +71,10 @@ export interface MergeResult {
   improvementSummary: string
   sourceUrl: string
   sourceTitle: string
+  integrationMode?: 'replace' | 'merge' | 'refactor' | 'newSection' | 'skip'
+  tokenDelta?: number
+  contentRemoved?: string[]
+  contentAdded?: string[]
 }
 
 export interface AuditEntry {
