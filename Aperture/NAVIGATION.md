@@ -16,8 +16,9 @@
 | Task | Read |
 |------|------|
 | Code review | .process/COMMON_MISTAKES.md |
-| Debugging | .process/COMMON_MISTAKES.md |
+| Debugging | .process/META_DEBUGGING_PROTOCOL.md |
 | Performance | CLAUDE-APERTURE.md → Optimization |
+| Quick reference | .process/QUICK_REFERENCE.md |
 
 ### System Modification
 | Task | Read |
@@ -29,13 +30,32 @@
 
 ```
 Aperture/
-├── .claude/startup.md       # Auto-read every session
-├── CLAUDE.md                # Router (NUDJ vs Aperture)
-├── NAVIGATION.md            # This file
-├── CLAUDE-APERTURE.md       # Read sections on-demand
-├── .process/
-│   ├── COMMON_MISTAKES.md   # Anti-patterns
-│   └── WHEN_TO_READ.md      # Reading strategy
+├── Root (Navigation)
+│   ├── .claude/startup.md       # Auto-read every session (thin orchestrator)
+│   ├── CLAUDE.md                # Router (NUDJ vs Aperture)
+│   ├── NAVIGATION.md            # This file (task-based index)
+│   ├── CLAUDE-APERTURE.md       # Project conventions (read sections on-demand)
+│   ├── START_HERE.md            # Onboarding guide
+│   ├── NEXT_SESSION.md          # Current status
+│   ├── CONTRIBUTING.md          # Contributor guide
+│   └── DOCUMENTATION_INDEX.md   # Complete doc map
+│
+├── .process/ (Methodology)
+│   ├── CAPABILITIES.md          # Patterns & how-tos
+│   ├── QUICK_REFERENCE.md       # Fast lookup
+│   ├── WHEN_TO_READ.md          # Reading strategy
+│   ├── COMMON_MISTAKES.md       # Anti-patterns
+│   ├── META_DEBUGGING_PROTOCOL.md # Debugging methodology
+│   ├── SESSION_CHECKLIST.md     # Session workflow
+│   ├── DEBUGGING_CHECKLIST.md   # Debug case study
+│   └── [other process docs]
+│
+├── research/ (Frontier Research)
+│   ├── FRONTIER_OPPORTUNITIES_2025.md
+│   ├── INSTANT_VISUAL_TEST_GENERATOR_RESEARCH.md
+│   ├── GOOGLE_CLOUD_PATTERNS_ANALYSIS.md
+│   └── GEMINI_MIGRATION_CHANGES.md
+│
 └── scripts/autonomous-docs/
     └── FEATURE_GUIDE.md     # System documentation
 ```
