@@ -23,6 +23,7 @@
 ### System Modification
 | Task | Read |
 |------|------|
+| Update documentation | .claude/commands/update-docs.md, .process/DOCUMENTATION_UPDATE_PROTOCOL.md |
 | Autonomous docs | scripts/autonomous-docs/FEATURE_GUIDE.md |
 | Workflows | .github/workflows/README.md |
 

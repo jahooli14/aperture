@@ -203,19 +203,27 @@ Which project are you working on today?
 
 ---
 
-### Step 7: Update Documentation During Work
+### Step 7: Update Documentation During Work (ENFORCED)
+
+**🚨 MANDATORY - Not Optional**
 
 **As you work**:
-- Update `NEXT_SESSION.md` with progress
-- If you make a mistake → Add to `.process/COMMON_MISTAKES.md`
+- Update `NEXT_SESSION.md` with progress (after each feature/fix)
+- If you make a mistake → Add to `.process/COMMON_MISTAKES.md` immediately
 - If pattern repeats 2+ times → Add to `.process/CONTINUOUS_IMPROVEMENT.md`
 
-**Session end**:
+**Session end (REQUIRED)**:
 - Update NEXT_SESSION.md with status
 - Detail any mistakes made
 - Note blockers or dependencies
+- Run `/update-docs` to validate completeness
 
-**Full process**: `SESSION_CHECKLIST.md` (moved to `.process/SESSION_CHECKLIST.md`)
+**Enforcement mechanisms**:
+1. **Pre-commit hook** - Blocks commits if code changed without doc updates
+2. **CI/CD check** - Validates doc freshness on PRs
+3. **/update-docs command** - Proactive check before commits
+
+**Full process**: `.process/SESSION_CHECKLIST.md`
 
 ---
 
