@@ -127,14 +127,58 @@ select * from bridges order by strength desc;
 
 ## 🚀 Future Enhancements
 
-### Google Maps Grounding (Week 3-4)
-Add location awareness to memories:
-- Capture location when recording
-- Use Gemini Maps grounding for place details
-- Add spatial bridges ("memories near here")
-- Daily digest: "You're near 3 past insights"
+### Google Maps Grounding Integration (Week 3-4)
 
-**Implementation**: 2-3 days after core system working
+**Source**: Google Maps grounding now available in Gemini API (GA October 2025)
+
+**Why Perfect Match for MemoryOS**:
+- Location is the strongest biological memory trigger
+- Spatial context reinforces recall bidirectionally
+- Pattern discovery: "I have creative insights at coffee shops, tactical insights at office"
+
+**Features to Add**:
+1. **Location-Tagged Memories**
+   - Auto-capture location via browser geolocation when recording
+   - Gemini Maps grounding resolves coordinates → place details (name, hours, reviews)
+   - Store in memory JSON: `{ place: "Bluestone Lane", address: "123 Main St", details: "outdoor seating" }`
+
+2. **Spatial Bridges**
+   - New bridge type: `location` (in addition to entity_match, semantic, temporal)
+   - Query: "memories within X miles of current location"
+   - Strength based on proximity + semantic relevance
+
+3. **Location-Based Insights**
+   - Daily digest: "You're near 3 past memories" (geo-triggered)
+   - "Last time here, you thought about X"
+   - Pattern discovery: "Your best insights happen at cafes with outdoor seating"
+
+4. **Memory Walks** (Novel Use Case)
+   - Open app at a location → shows memories recorded there
+   - Reinforces biological memory through spatial context
+   - Discover connections: "You always think about X topic in Y type of place"
+
+**Technical Implementation**:
+```typescript
+// Update gemini.ts to use combined grounding
+const response = await model.generateContent({
+  prompt: "Analyze this voice note...",
+  grounding: {
+    googleMaps: true,    // Real place data
+    googleSearch: true   // Contextual info
+  }
+});
+
+// Add location column to schema
+ALTER TABLE memories ADD COLUMN location JSONB;
+
+// Add location bridge type
+ALTER TABLE bridges DROP CONSTRAINT bridges_bridge_type_check;
+ALTER TABLE bridges ADD CONSTRAINT bridges_bridge_type_check
+  CHECK (bridge_type IN ('entity_match', 'semantic_similarity', 'temporal_proximity', 'location'));
+```
+
+**Estimated Effort**: 2-3 days after core system working
+**ROI**: 🔥🔥🔥 Very high - location + memory is scientifically proven powerful combination
 
 ---
 

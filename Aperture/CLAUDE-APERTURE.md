@@ -14,11 +14,11 @@
 
 ### Current Status
 - **Active Projects**: 5
-  - **Personal**: Wizard of Oz, MemoryOS (in design)
-  - **Meta**: Self-Healing Tests, Autonomous Docs
+  - **Personal**: Wizard of Oz (production), MemoryOS (ready to deploy)
+  - **Meta**: Visual Test Generator (documented), Self-Healing Tests, Autonomous Docs
 - **Framework**: React, TypeScript, Vite
 - **Deployment**: Vercel
-- **Last Updated**: 2025-10-20
+- **Last Updated**: 2025-10-20 (Session 19 - MemoryOS build complete)
 
 ---
 
@@ -130,34 +130,38 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 
 ### MemoryOS
 
-**Status**: 🔵 IN DESIGN
+**Status**: 🟡 READY TO DEPLOY (blocked on Vercel platform issues)
 
 A voice-to-memory personal knowledge graph that turns spoken thoughts into searchable, explorable insights with active connection finding.
 
 #### Quick Facts
 - **Location**: `projects/memory-os/`
-- **Tech Stack** (Planned): Audiopen, Supabase (pgvector), OpenAI embeddings, Claude API, Vercel
-- **Deployment**: Vercel (planned)
+- **Tech Stack**: Audiopen, Supabase (pgvector), Gemini AI (embeddings + extraction), Vercel
+- **Deployment**: Vercel (configured, awaiting successful deploy)
 - **Core Concept**: Bidirectional memory augmentation - system strengthens biological memory while getting smarter itself
 
-#### Key Features (Planned)
-- Voice capture via Audiopen (structured JSON output)
-- Semantic search with vector embeddings
-- Automatic connection finding (semantic, temporal, entity-based)
-- Daily insight digest via email
-- Query interface for on-demand memory exploration
+#### Key Features
+- ✅ Voice capture via Audiopen webhook
+- ✅ AI metadata extraction (entities, themes, emotional tone)
+- ✅ Vector embeddings with semantic search
+- ✅ Automatic bridge finding (entity, semantic, temporal)
+- ✅ React frontend with memory cards + connection visualization
+- ⏳ Daily insight digest (planned)
 
 #### Development Status
-- ✅ Complete system design documented (see session on 2025-10-20)
-- ✅ JSON schema defined for memory capture
-- ✅ Bridge-finding algorithm designed
-- ✅ Insight surfacing interface planned
-- ⏳ Implementation: Week 1-5 plan ready
-- ⏳ Next: Set up Supabase project + Audiopen webhook
+- ✅ Complete system implemented (Session 19 - 2025-10-20)
+- ✅ Database schema live on Supabase with vector extension
+- ✅ All API endpoints built (capture webhook, processing)
+- ✅ Bridge-finding algorithm implemented
+- ✅ Frontend with Zustand state management
+- ✅ Local build verified (passes all checks)
+- ⏳ Blocked on Vercel deployment (platform having temporary failures)
+- ⏳ Next: Deploy when Vercel stable → Configure Audiopen webhook → Test end-to-end
 
 #### Documentation
+- `projects/memory-os/NEXT_SESSION.md` - Complete deployment guide + future enhancements
 - `projects/memory-os/README.md` - Project overview
-- Design session (2025-10-20) - Complete technical specification
+- `projects/memory-os/SETUP.md` - Setup instructions
 
 ---
 
