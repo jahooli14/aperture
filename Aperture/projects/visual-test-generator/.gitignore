@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Model cache (large files)
+*.bin
+*.onnx
+models/
+
+# Recordings
+recordings/
+*.webm
+*.mp4
+
+# Test outputs
+test-results/
+playwright-report/
+
+# Temp files
+tmp/
+temp/
+*.tmp

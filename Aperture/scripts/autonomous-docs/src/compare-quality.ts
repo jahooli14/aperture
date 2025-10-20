@@ -464,7 +464,7 @@ Content: ${article.content.slice(0, 2000)} ${article.content.length > 2000 ? '..
         }
 
         try {
-          const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/)
+          const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/)
           if (!jsonMatch) {
             console.log('  No JSON found in new content evaluation')
             if (attempt < 3) {

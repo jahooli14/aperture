@@ -13,10 +13,12 @@
 **Aperture** is a multi-project development framework for personal experiments, prototypes, and side projects.
 
 ### Current Status
-- **Active Projects**: 1 (wizard-of-oz)
+- **Active Projects**: 5
+  - **Personal**: Wizard of Oz, MemoryOS (in design)
+  - **Meta**: Self-Healing Tests, Autonomous Docs
 - **Framework**: React, TypeScript, Vite
 - **Deployment**: Vercel
-- **Last Updated**: 2025-10-10
+- **Last Updated**: 2025-10-20
 
 ---
 
@@ -30,6 +32,9 @@ Read these files IN ORDER:
 
 ### For Specific Tasks
 - **Wizard of Oz Development**: See `projects/wizard-of-oz/` section below
+- **MemoryOS Development**: See `projects/memory-os/` section below
+- **Self-Healing Tests**: See `scripts/self-healing-tests/` (coming soon)
+- **Autonomous Docs**: See `scripts/autonomous-docs/FEATURE_GUIDE.md`
 - **Process Improvements**: See `.process/` directory
 - **GitHub Workflows**: See `.github/workflows/`
 
@@ -63,8 +68,12 @@ Aperture/
 ├── .github/              # GitHub workflows and templates
 ├── .process/             # Process documentation
 │   └── COMMON_MISTAKES.md
-├── projects/             # Individual projects
-│   └── wizard-of-oz/    # Baby photo alignment app
+├── projects/             # Personal projects
+│   ├── wizard-of-oz/    # Baby photo alignment app
+│   └── memory-os/       # Voice-to-memory knowledge graph
+├── scripts/             # Meta projects (infrastructure)
+│   ├── autonomous-docs/ # Self-optimizing documentation
+│   └── self-healing-tests/ # Automated test repair (coming soon)
 ├── knowledge-base/       # Reference materials
 ├── NEXT_SESSION.md      # 🔥 Current status
 ├── START_HERE.md        # 🔥 Entry point
@@ -116,6 +125,91 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 - **Environment Variables**: Set in Vercel dashboard
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
+
+---
+
+### MemoryOS
+
+**Status**: 🔵 IN DESIGN
+
+A voice-to-memory personal knowledge graph that turns spoken thoughts into searchable, explorable insights with active connection finding.
+
+#### Quick Facts
+- **Location**: `projects/memory-os/`
+- **Tech Stack** (Planned): Audiopen, Supabase (pgvector), OpenAI embeddings, Claude API, Vercel
+- **Deployment**: Vercel (planned)
+- **Core Concept**: Bidirectional memory augmentation - system strengthens biological memory while getting smarter itself
+
+#### Key Features (Planned)
+- Voice capture via Audiopen (structured JSON output)
+- Semantic search with vector embeddings
+- Automatic connection finding (semantic, temporal, entity-based)
+- Daily insight digest via email
+- Query interface for on-demand memory exploration
+
+#### Development Status
+- ✅ Complete system design documented (see session on 2025-10-20)
+- ✅ JSON schema defined for memory capture
+- ✅ Bridge-finding algorithm designed
+- ✅ Insight surfacing interface planned
+- ⏳ Implementation: Week 1-5 plan ready
+- ⏳ Next: Set up Supabase project + Audiopen webhook
+
+#### Documentation
+- `projects/memory-os/README.md` - Project overview
+- Design session (2025-10-20) - Complete technical specification
+
+---
+
+### Self-Healing Tests (Meta Project)
+
+**Status**: 🔵 PLANNED
+
+Automated test repair system that uses AI to detect, diagnose, and fix failing tests.
+
+#### Quick Facts
+- **Location**: `scripts/self-healing-tests/` (to be created)
+- **Purpose**: Reduce test maintenance burden through AI-powered repair
+- **Type**: Meta project (infrastructure/tooling)
+
+#### Concept
+- Monitors test runs for failures
+- Analyzes failure patterns
+- Attempts automated fixes
+- Generates reports on test health
+- Learns from successful repairs
+
+#### Development Status
+- ⏳ Not yet implemented
+- ⏳ Design phase pending
+
+---
+
+### Autonomous Docs (Meta Project)
+
+**Status**: 🟢 ACTIVE
+
+Self-optimizing documentation system that updates daily with latest AI/Claude best practices.
+
+#### Quick Facts
+- **Location**: `scripts/autonomous-docs/`
+- **Purpose**: Keep documentation current with frontier AI knowledge
+- **Type**: Meta project (infrastructure/tooling)
+- **Active**: Updates daily at 09:00 UTC
+
+#### How It Works
+- Fetches latest AI research and Claude best practices
+- Optimizes documentation for token efficiency
+- **Replaces** outdated content (not additive)
+- Four modes: REPLACE, MERGE, REFACTOR, NEW
+
+#### Key Files
+- `scripts/autonomous-docs/FEATURE_GUIDE.md` - How to use and modify the system
+- `knowledge-base/changelogs/` - Track what changed each day
+- `.github/workflows/autodoc.yml` - Daily automation workflow
+
+#### Documentation
+- See `scripts/autonomous-docs/FEATURE_GUIDE.md` for complete guide
 
 ---
 

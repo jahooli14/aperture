@@ -9,6 +9,7 @@ import { QualityComparator } from './compare-quality.js'
 import { DocumentIntegrator } from './generate-integration.js'
 import { ChangeApplicator, SafetyValidator } from './apply-changes.js'
 import { AuditTrail, ChangelogGenerator, NotificationGenerator } from './audit-changelog.js'
+import { DocumentationScanner } from './scan-docs.js'
 import { SourceConfig, Article, RelevanceAnalysis, QualityComparison, MergeResult } from './types.js'
 
 class AutonomousDocumentationSystem {
@@ -21,6 +22,7 @@ class AutonomousDocumentationSystem {
   private applicator: ChangeApplicator
   private auditTrail: AuditTrail
   private changelogGenerator: ChangelogGenerator
+  private docScanner: DocumentationScanner
 
   constructor(repoRoot: string) {
     this.repoRoot = repoRoot
@@ -38,6 +40,7 @@ class AutonomousDocumentationSystem {
     this.applicator = new ChangeApplicator(this.config)
     this.auditTrail = new AuditTrail(repoRoot)
     this.changelogGenerator = new ChangelogGenerator(repoRoot)
+    this.docScanner = new DocumentationScanner(repoRoot)
   }
 
   async run(): Promise<void> {
@@ -45,6 +48,11 @@ class AutonomousDocumentationSystem {
     console.log('=====================================')
 
     try {
+      // Phase 0: Scan and update documentation index
+      console.log('\n📚 Phase 0: Scanning documentation...')
+      const docs = await this.docScanner.scanDocumentation()
+      await this.docScanner.updateDocumentationIndex(docs)
+
       // Phase 1: Fetch articles
       console.log('\n📡 Phase 1: Fetching articles...')
       const articles = await this.fetcher.fetchAllSources(this.config.sources, this.config.maxArticlesPerSource)

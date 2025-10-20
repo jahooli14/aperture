@@ -25,11 +25,15 @@ This includes:
 
 **Read this file**: **`CLAUDE-APERTURE.md`**
 
-This includes:
-- Wizard of Oz (baby photo app)
-- Personal experiments and prototypes
-- Individual Vercel deployments
-- Supabase backends
+**Personal Projects**:
+- **Wizard of Oz** - Baby photo app with face alignment
+- **MemoryOS** - Voice-to-memory personal knowledge graph
+
+**Meta Projects** (Infrastructure):
+- **Self-Healing Tests** - Automated test repair system
+- **Autonomous Docs** - Self-optimizing documentation
+
+Other personal experiments, Vercel deployments, Supabase backends
 
 ---
 
@@ -52,15 +56,26 @@ This includes:
 
 ### Check the User's Request
 - **Work keywords**: Nudj, admin app, user app, API, MongoDB, gamification, challenges, rewards
-- **Personal keywords**: Aperture, wizard-of-oz, baby photos, Supabase, autonomous docs
+- **Personal project keywords**:
+  - Wizard of Oz, baby photos, face alignment
+  - MemoryOS, voice notes, Audiopen, memory graph
+- **Meta project keywords**:
+  - Self-healing tests, test repair, meta-testing
+  - Autonomous docs, documentation optimization, knowledge updates
 
 ### Check Current Directory
 ```bash
 # If you see these directories → NUDJ (work)
 apps/api/, apps/admin/, apps/user/, packages/database/
 
-# If you see these directories → Aperture (personal)
-projects/wizard-of-oz/, scripts/autonomous-docs/
+# If you see these directories → Aperture
+# Personal Projects:
+projects/wizard-of-oz/     # Baby photo app
+projects/memory-os/        # MemoryOS system
+
+# Meta Projects:
+scripts/autonomous-docs/   # Documentation automation
+scripts/self-healing-tests/ # Test repair system
 ```
 
 ### Check git remote
@@ -96,11 +111,20 @@ Is the user asking about:
 ├─ Nudj platform, admin interface, gamification?
 │  └─ Use CLAUDE-NUDJ.md
 │
-├─ Wizard of Oz, baby photos, Aperture?
-│  └─ Use CLAUDE-APERTURE.md
+├─ Wizard of Oz, baby photos?
+│  └─ Use CLAUDE-APERTURE.md (Wizard of Oz project)
+│
+├─ MemoryOS, voice notes, Audiopen, memory graph?
+│  └─ Use CLAUDE-APERTURE.md (MemoryOS project)
+│
+├─ Self-healing tests, test repair, meta-testing?
+│  └─ Use CLAUDE-APERTURE.md (Self-Healing Tests meta project)
+│
+├─ Autonomous docs, documentation optimization?
+│  └─ Use CLAUDE-APERTURE.md (Autonomous Docs meta project)
 │
 └─ Not sure?
-   └─ Ask the user which project they're working on
+   └─ Ask the user which project they're working on (see Step 2 in startup.md)
 ```
 
 ---

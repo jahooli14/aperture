@@ -12,12 +12,13 @@
 ## How It Works
 
 Daily workflow (09:00 UTC):
-1. **Fetch** articles from Anthropic News, Reddit, Dev.to, HackerNews
-2. **Filter** relevance with Gemini (~8-12 relevant from 20-30 total)
-3. **Compare** quality vs existing docs, determine integration mode
-4. **Integrate** using mode-specific optimization
-5. **Validate** based on mode rules
-6. **Commit** if changes improve docs
+1. **Scan** all .md files and update documentation index in `.claude/startup.md`
+2. **Fetch** articles from Anthropic News, Reddit, Dev.to, HackerNews
+3. **Filter** relevance with Gemini (~8-12 relevant from 20-30 total)
+4. **Compare** quality vs existing docs, determine integration mode
+5. **Integrate** using mode-specific optimization
+6. **Validate** based on mode rules
+7. **Commit** if changes improve docs
 
 ## Integration Modes
 
@@ -159,6 +160,8 @@ Actions → Autonomous Documentation Updates → Run workflow
 ```
 GitHub Actions (daily 09:00 UTC)
   ↓
+scan-docs.ts (Find all .md files, update index)
+  ↓
 fetch-sources.ts (RSS + web scraping)
   ↓
 filter-relevance.ts (Gemini: 0.7+ relevance)
@@ -171,6 +174,35 @@ Validation (config-based rules)
   ↓
 git commit + push (if valid)
 ```
+
+## Documentation Scanner
+
+**New as of 2025-10-20**: Automatically maintains the documentation index in `.claude/startup.md`.
+
+**How it works**:
+1. Scans all `.md` files in the repository
+2. Categorizes by purpose (core, debugging, development, meta, reference, etc.)
+3. Extracts title and description from each file
+4. Updates the "CONTEXTUAL DOCUMENTATION INDEX" section in startup.md
+5. Shows full list for important categories, top 5 + count for large categories
+6. Runs BEFORE the article fetching phase
+
+**What gets scanned**:
+- ✅ All `.md` files in repository root
+- ✅ Files in `.process/`, `projects/`, `scripts/`, etc.
+- ❌ Ignores: `node_modules`, `.git`, `.dev/worktree`, `.archive`
+
+**What Claude sees**:
+- Total file count (currently ~83 files)
+- Full list of core, navigation, debugging, quick-reference docs
+- Top 5 + count for development, meta, reference, project-specific, other
+- Link to DOCUMENTATION_INDEX.md for full list
+
+**Why this matters**:
+- Claude knows ALL docs exist (not just the 4 being auto-updated)
+- Index updates daily as you add/remove docs
+- No manual maintenance needed
+- Lazy loading still works (Claude sees index but doesn't read all files)
 
 ## Success Metrics
 

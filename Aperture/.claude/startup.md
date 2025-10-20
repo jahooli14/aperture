@@ -4,6 +4,8 @@
 
 **Effect**: Enforces critical checks without user having to remember.
 
+**Communication Style**: Keep all responses concise. Short explanations, focused answers. Users value efficiency.
+
 ---
 
 ## 📚 LAZY LOADING STRATEGY
@@ -20,6 +22,75 @@
 - **REPLACES** outdated content (not accumulative)
 - Minimizes tokens while maximizing value
 - **Modification guide**: `scripts/autonomous-docs/FEATURE_GUIDE.md`
+
+---
+
+## 📖 CONTEXTUAL DOCUMENTATION INDEX
+
+**These docs are read ONLY when needed, not at startup.**
+
+**Last scanned**: 2025-10-19
+**Total files**: 83
+
+### Core Documentation (Auto-Read)
+- `.claude/startup.md` - This file is automatically read by Claude Code at the start of EVERY session.
+- `CLAUDE-APERTURE.md` - Reduce test maintenance burden through AI-powered repair
+- `CLAUDE-NUDJ.md` - Core backend API service with tRPC v11, multi-tenant architecture
+- `CLAUDE.md` - Distinguish NUDJ (work) vs Aperture (personal) projects
+- `NEXT_SESSION.md` - Current status and immediate next steps.
+
+### Navigation & Strategy
+- `.process/CAPABILITIES.md` - Fast lookup for available patterns and when to use them
+- `.process/WHEN_TO_READ.md` - Optimize documentation reading for token efficiency
+- `NAVIGATION.md` - Task-based index for efficient documentation access.
+
+### Debugging & Troubleshooting (Read when debugging)
+- `.process/COMMON_MISTAKES.md` - Learn from every mistake. Capture immediately, detail at session end.
+- `.process/OBSERVABILITY.md` - Enable self-sufficient debugging - Claude should never ask users to check external logs.
+- `.process/PROACTIVE_LOG_MONITORING.md` - Enable Claude to proactively review Vercel logs and catch production issues early.
+- `DEBUGGING_CHECKLIST.md` - Documentation file
+- `META_DEBUGGING_PROTOCOL.md` - Prevent wasting hours debugging algorithms when inputs are wrong
+- `projects/wizard-of-oz/DEBUGGING.md` - Documentation file
+
+### Development & Process (Read when implementing)
+- `.process/DEPLOYMENT.md` - Deploy to production safely with Vercel + Supabase
+- `.process/DEVELOPMENT.md` - Documentation file
+- `.process/TESTING_GUIDE.md` - Define what, when, and how to test with Claude
+- `projects/wizard-of-oz/DEPLOYMENT.md` - Documentation file
+- `SESSION_CHECKLIST.md` - Structure each development session for maximum productivity and continuous improvement.
+
+### Meta Projects (Read when working on infrastructure)
+- `.process/CONTINUOUS_IMPROVEMENT.md` - Turn repeated mistakes into automated solutions
+- `.process/DECISION_LOG.md` - Document significant architectural decisions and their rationale
+- `.process/LESSONS_LEARNED.md` - Post-project reflections. What worked? What didn't? What would we do differently?
+- `scripts/autonomous-docs/FEATURE_GUIDE.md` - Keep documentation minimal, current, and frontier-quality through automated optimization.
+- *... and 7 more files (see DOCUMENTATION_INDEX.md for full list)*
+
+### Reference & Analysis (Read when researching)
+- `.process/CONTEXT_ENGINEERING_ANALYSIS.md` - Compare proposed context engineering best practices against Aperture's current process
+- `GOOGLE_CLOUD_PATTERNS_ANALYSIS.md` - Evaluate Google Cloud's agentic AI patterns against Aperture documentation to identify gaps and opportunities
+- *... and 6 more files (see DOCUMENTATION_INDEX.md for full list)*
+
+### Quick Reference (Read when needed)
+- `CHEATSHEET.md` - Documentation file
+- `DOCUMENTATION_INDEX.md` - Find the right doc for your current situation
+- `QUICK_REFERENCE.md` - Fast navigation for new sessions
+- `STARTUP_EXAMPLE.md` - This file shows EXACTLY what a correct session startup looks like.
+
+### Project-Specific Documentation
+- `projects/visual-test-generator/ARCHITECTURE.md` - UI element detection and understanding
+- `projects/visual-test-generator/docs/COMPARISON.md` - Proactive test creation
+- *... and 14 more files (see DOCUMENTATION_INDEX.md for full list)*
+
+### Other Documentation
+- `.claude/commands/token-health.md` - Quick visual check of current context window health.
+- `.claude/commands/vercel-logs.md` - Fetch Vercel runtime logs for self-sufficient debugging without user intervention.
+- `.claude/commands/verify-infra.md` - Check that all infrastructure is properly configured before debugging code issues.
+- `.claude/commands/which-project.md` - Automatically detect which project you're working on (NUDJ or Aperture) to load correct documentation.
+- `.claude/skills/aperture-router/SKILL.md` - ---
+- *... and 20 more files (see DOCUMENTATION_INDEX.md for full list)*
+
+**When to read what**: See `.process/WHEN_TO_READ.md` for complete reading strategy
 
 ---
 
@@ -216,23 +287,53 @@ Loading minimal context for efficiency.
 
 ---
 
-### Step 2: Project Detection (AUTOMATIC)
+### Step 2: Project Selection (INTERACTIVE - MANDATORY)
 
-**Checking git remote and directory structure...**
+**🚨 YOU MUST ASK THIS QUESTION AT THE START OF EVERY NEW SESSION 🚨**
 
-**Detection logic**:
-```bash
-# Git remote check
-git remote -v
-# If contains "nudj-digital" → NUDJ (work)
-# If contains "aperture" → APERTURE (personal)
+**Even if the user's first message clearly indicates a project, ALWAYS show this menu and ask them to select.**
 
-# Directory structure check
-# NUDJ: apps/api, apps/admin, pnpm-workspace.yaml
-# APERTURE: projects/wizard-of-oz, .process/
+**Ask the user which project they want to work on:**
+
+```
+Which project would you like to work on?
+
+WORK PROJECTS:
+1. 🏢 NUDJ
+   - Admin app, user app, API
+   - MongoDB gamification platform
+   - PNPM monorepo
+
+PERSONAL PROJECTS:
+2. 🏠 Wizard of Oz
+   - Baby photo app
+   - Supabase backend
+   - Vercel deployment
+
+3. 🧠 MemoryOS
+   - Voice-to-memory system
+   - Audiopen integration
+   - Personal knowledge graph
+
+META PROJECTS (Infrastructure):
+4. 🔬 Self-Healing Tests
+   - Automated test repair system
+   - Meta-testing framework
+   - AI-powered test maintenance
+
+5. 📚 Autonomous Docs
+   - Self-optimizing documentation
+   - Daily knowledge updates
+   - Token-efficient doc system
+
+6. 🔧 Other Aperture project
+   - (You'll specify)
 ```
 
-**Action Required**: Confirm project type and state which CLAUDE.md to follow.
+**After user selects**:
+- Load appropriate documentation (CLAUDE-NUDJ.md or CLAUDE-APERTURE.md)
+- Read NEXT_SESSION.md for current context
+- Proceed with session startup
 
 ---
 
@@ -841,12 +942,15 @@ Session 2+: Token check happens automatically
 
 ## 📋 Enforcement Checklist
 
-**At start of EVERY session**, you must:
+**At start of EVERY session**, you MUST do these in order:
 
-- [ ] Report token budget status (< 50K / 50-100K / > 100K)
-- [ ] Identify project (NUDJ or Aperture) and state which CLAUDE.md to follow
-- [ ] Read NEXT_SESSION.md and confirm current status
-- [ ] If user reports "doesn't work" → suggest /verify-infra BEFORE debugging
+1. [ ] **Report token budget status** (< 50K / 50-100K / > 100K)
+2. [ ] **ASK USER which project** using the menu from Step 2 (MANDATORY - never skip this)
+3. [ ] **Load appropriate docs** based on user's selection
+4. [ ] **Read NEXT_SESSION.md** and confirm current status
+5. [ ] **Proceed with work** (if user reports "doesn't work" → suggest /verify-infra first)
+
+**🚨 CRITICAL**: Step 2 (asking which project) is MANDATORY at the start of EVERY new session. Even if the user's first message suggests a project, ALWAYS show the menu and ask them to confirm.
 
 **If you skip any step**: User should remind you to read this file.
 

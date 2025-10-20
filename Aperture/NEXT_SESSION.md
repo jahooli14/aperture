@@ -4,9 +4,16 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-14 (Session 14 - Documentation improvements complete)
+> **Last Updated**: 2025-10-20 (Session 16 - Late Night)
 >
-> **Current Work**: ✅ Added Anthropic & DSPy principles to documentation
+> **Current Focus**: 🎬 Visual Test Generator - Starting Week 1 tomorrow
+>
+> **Projects in Aperture**:
+> - **Wizard of Oz** (🟢 Production) - Baby photo app
+> - **Self-Healing Tests** (🟢 Complete) - Test auto-fixing framework
+> - **Visual Test Generator** (🚀 Starting) - Video → Playwright test generation
+> - **MemoryOS** (🔵 Design) - Voice-to-memory knowledge graph
+> - **Autonomous Docs** (🟢 Active) - Meta project
 >
 > **For reference**: See `START_HERE.md` for onboarding guide (not part of startup sequence)
 
@@ -48,21 +55,21 @@ _Recent checkpoints will be listed here as they're created_
 
 ## 🎯 Current Status
 
-### Project State
+> **Note**: This section tracks the currently active project. For other projects, see CLAUDE-APERTURE.md.
+
+### Active Project: Wizard of Oz
 
 **Wizard of Oz (Baby Photo Alignment App)**:
-- **Status**: 🟢 FULLY WORKING - Auto-alignment with eye detection (PRODUCTION READY)
+- **Status**: 🟢 PRODUCTION - Operational and feature-complete
+- **Mode**: Maintenance + new feature additions only
 - **Vercel URL**: (User has deployment URL)
 - **Repository Path**: `Aperture/projects/wizard-of-oz`
-- **Supabase URL**: `https://zaruvcwdqkqmyscwvxci.supabase.co`
-- **Latest Changes**:
-  - ✅ Photo alignment fully implemented and debugged (Session 13)
-  - ✅ Fixed infinite loop bug (hasAlignedRef tracking)
-  - ✅ Fixed upside-down images (180° rotation)
-  - Photos auto-align to standardized 1080x1350 format
-  - Eyes positioned at 40% from top, horizontally centered
-  - All processing client-side (privacy-first, zero server cost)
-  - Ready for timelapse generation with consistently aligned frames
+- **Core Features Complete**:
+  - ✅ Upload system with MediaPipe eye detection
+  - ✅ Client-side photo alignment (1080x1350, eyes positioned)
+  - ✅ Calendar view and photo gallery
+  - ✅ All processing client-side (privacy-first)
+- **Future Enhancements**: Available for incremental feature additions
 
 ### Infrastructure Status
 
@@ -244,7 +251,76 @@ _Recent checkpoints will be listed here as they're created_
 
 ---
 
-## ⏭️ Next Steps
+## 🎬 NEW PROJECT: Visual Test Generator (Session 16)
+
+**Status**: ✅ Fully documented, ready to build
+**Location**: `projects/visual-test-generator/`
+**Timeline**: 4-6 weeks to MVP
+**Next Session**: Start Week 1 Day 1
+
+### What Was Accomplished Tonight
+
+**Decision Made**: Build full Visual Test Generator (Option B)
+- Video recording → AI analysis → Playwright test generation
+- 100% client-side processing
+- 20x faster than manual test writing
+
+**Documentation Created**:
+- ✅ `START_HERE.md` - Entry point (read tomorrow first)
+- ✅ `NEXT_STEPS.md` - Day 1 specific checklist
+- ✅ `README.md` - Complete project overview (9.8KB)
+- ✅ `ROADMAP.md` - Detailed 6-week plan (17KB)
+- ✅ `ARCHITECTURE.md` - Technical deep-dive (23KB)
+- ✅ `RESEARCH.md` - Links to 70K+ words research
+- ✅ `docs/COMPARISON.md` - vs Self-Healing Tests
+- ✅ `package.json` + `tsconfig.json` configured
+
+**Project Structure**: Complete directory layout, ready for `npm install`
+
+### The Vision
+
+**Input**: 2-minute video recording of manual testing + narration
+**Output**: Complete Playwright test file in 30 seconds
+**Cost**: $0 (all processing in browser)
+
+**Technology Stack**:
+- Florence-2 (UI element detection) - 80-95% accuracy
+- SmolVLM (multimodal understanding) - 2-3k tokens/sec
+- WebLLM (code generation) - browser-native LLMs
+- Whisper.cpp (audio transcription) - 2-3x real-time
+
+### Impact for NUDJ
+
+**Immediate Value**:
+- 20 core workflows × 45 min manual = 15 hours
+- With tool: 20 workflows × 4 min = 1.3 hours
+- **Savings: 13.7 hours** (91% faster)
+
+**Ongoing Value**:
+- 88 hours/year reduced maintenance (with self-healing)
+- Higher test coverage (easier to create tests)
+- Better documentation (screenshots as by-product)
+
+### Tomorrow Morning - Read This First
+
+**👉 `/projects/visual-test-generator/NEXT_STEPS.md`**
+
+Contains complete Day 1 checklist:
+1. Review all documentation (1-2 hours)
+2. Set up development environment (2-3 hours)
+3. Start Week 1 Day 1 implementation (2-3 hours)
+
+**Week 1 Goal**: Video recording + frame extraction working
+
+**Success Criteria**:
+- Can record 2-min workflow video in browser
+- Extracts 10-15 meaningful frames automatically
+- User can preview extracted frames
+- Ready for AI processing in Week 2
+
+---
+
+## ⏭️ Next Steps (Wizard of Oz)
 
 ### Priority 1: ✅ COMPLETE - System Working End-to-End
 
