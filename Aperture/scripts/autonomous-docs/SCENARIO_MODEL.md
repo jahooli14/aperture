@@ -266,7 +266,7 @@
 export GEMINI_API_KEY="your-key"
 
 # Run system
-cd Aperture/scripts/autonomous-docs
+cd scripts/autonomous-docs
 npm run build
 npm start
 

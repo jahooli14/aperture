@@ -63,7 +63,7 @@ _Recent checkpoints will be listed here as they're created_
 - **Status**: 🟢 PRODUCTION - Operational and feature-complete
 - **Mode**: Maintenance + new feature additions only
 - **Vercel URL**: (User has deployment URL)
-- **Repository Path**: `Aperture/projects/wizard-of-oz`
+- **Repository Path**: `projects/wizard-of-oz`
 - **Core Features Complete**:
   - ✅ Upload system with MediaPipe eye detection
   - ✅ Client-side photo alignment (1080x1350, eyes positioned)

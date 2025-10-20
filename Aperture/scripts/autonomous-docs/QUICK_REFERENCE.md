@@ -15,7 +15,7 @@
 gh run list --workflow=autodoc.yml --limit 1
 
 # See what changed
-cat Aperture/knowledge-base/changelogs/$(date +%Y-%m-%d).md
+cat knowledge-base/changelogs/$(date +%Y-%m-%d).md
 git diff CLAUDE-APERTURE.md
 ```
 

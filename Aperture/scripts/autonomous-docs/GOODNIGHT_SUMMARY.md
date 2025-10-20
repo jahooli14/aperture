@@ -207,10 +207,10 @@ gh run view <run-id> --log
 ### Check Output
 ```bash
 # Audit trail
-ls -la Aperture/knowledge-base/audit-trail/$(date +%Y-%m-%d)/
+ls -la knowledge-base/audit-trail/$(date +%Y-%m-%d)/
 
 # Changelog
-cat Aperture/knowledge-base/changelogs/$(date +%Y-%m-%d).md
+cat knowledge-base/changelogs/$(date +%Y-%m-%d).md
 
 # Documentation changes
 git diff CLAUDE-APERTURE.md
@@ -218,7 +218,7 @@ git diff CLAUDE-APERTURE.md
 
 ### Debug Issues
 ```bash
-cd Aperture/scripts/autonomous-docs
+cd scripts/autonomous-docs
 export GEMINI_API_KEY="your-key"
 npm run build
 npm start 2>&1 | tee debug.log

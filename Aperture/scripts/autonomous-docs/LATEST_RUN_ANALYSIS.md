@@ -156,8 +156,8 @@ gh run list --workflow=autodoc.yml --limit 1
 gh run view <run-id> --log | tail -200
 
 # Check for changes
-ls -la Aperture/knowledge-base/changelogs/
-git diff Aperture/CLAUDE-APERTURE.md
+ls -la knowledge-base/changelogs/
+git diff CLAUDE-APERTURE.md
 ```
 
 ---
