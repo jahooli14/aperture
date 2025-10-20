@@ -4,9 +4,9 @@
 >
 > **Purpose**: Current status and immediate next steps.
 >
-> **Last Updated**: 2025-10-20 (Session 16 - Late Night)
+> **Last Updated**: 2025-10-20 (Session 17 - Note Editing Feature)
 >
-> **Current Focus**: 🎬 Visual Test Generator - Starting Week 1 tomorrow
+> **Current Focus**: 🎬 Visual Test Generator - Ready to start Week 1
 >
 > **Projects in Aperture**:
 > - **Wizard of Oz** (🟢 Production) - Baby photo app
@@ -68,6 +68,7 @@ _Recent checkpoints will be listed here as they're created_
   - ✅ Upload system with MediaPipe eye detection
   - ✅ Client-side photo alignment (1080x1350, eyes positioned)
   - ✅ Calendar view and photo gallery
+  - ✅ Editable photo notes (add/edit any time)
   - ✅ All processing client-side (privacy-first)
 - **Future Enhancements**: Available for incremental feature additions
 
@@ -82,6 +83,21 @@ _Recent checkpoints will be listed here as they're created_
 - Observability system implemented (`/vercel-logs` available)
 
 ### Recent Improvements
+
+**Editable Photo Notes** (Session 17 - 2025-10-20):
+- ✅ **Added ability to edit notes after upload**
+  - Created `updatePhotoNote()` function in usePhotoStore for updating photo metadata
+  - Modified PhotoBottomSheet to include inline note editing UI
+  - Notes can now be added or edited at any time, not just during upload
+  - Edit UI includes textarea with 500 character limit, save/cancel buttons
+  - Consistent amber-themed styling matching upload flow
+  - Changes saved directly to Supabase `photos.metadata.note` field
+- ✅ **User Experience improvements**
+  - Edit button appears next to "Memory Note" header
+  - Shows "No note yet..." placeholder when empty
+  - Character counter shows progress (X/500)
+  - Save/Cancel buttons with loading state
+  - Error handling with user-friendly messages
 
 **Client-Side Photo Alignment** (Session 13 - 2025-10-13):
 - ✅ **Implemented automatic photo alignment**
