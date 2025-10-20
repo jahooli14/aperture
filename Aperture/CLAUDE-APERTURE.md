@@ -28,7 +28,7 @@
 Read these files IN ORDER:
 1. **`START_HERE.md`** - Session startup guide
 2. **`NEXT_SESSION.md`** - Current status and next steps
-3. **`SESSION_CHECKLIST.md`** - Workflow and best practices
+3. **`.process/SESSION_CHECKLIST.md`** - Workflow and best practices
 
 ### For Specific Tasks
 - **Wizard of Oz Development**: See `projects/wizard-of-oz/` section below
@@ -77,7 +77,7 @@ Aperture/
 ├── knowledge-base/       # Reference materials
 ├── NEXT_SESSION.md      # 🔥 Current status
 ├── START_HERE.md        # 🔥 Entry point
-└── SESSION_CHECKLIST.md # 🔥 Workflow guide
+└── .process/SESSION_CHECKLIST.md # 🔥 Workflow guide
 ```
 
 ---
@@ -549,7 +549,7 @@ Should Have:
 
 ### Before Starting Work
 1. Read `NEXT_SESSION.md` - understand current status
-2. Check `SESSION_CHECKLIST.md` - follow workflow
+2. Check `.process/SESSION_CHECKLIST.md` - follow workflow
 3. Review `.process/COMMON_MISTAKES.md` - avoid known pitfalls
 4. **For complex tasks**: Define task signature (see above)
 
@@ -942,10 +942,9 @@ git push origin main  # Auto-deploys to Vercel
 ### Key Documents
 - **START_HERE.md** - New session entry point
 - **NEXT_SESSION.md** - Current status and immediate next steps
-- **SESSION_CHECKLIST.md** - Complete workflow guide
+- **`.process/SESSION_CHECKLIST.md`** - Complete workflow guide
 - **CONTRIBUTING.md** - Contribution guidelines
-- **QUICK_REFERENCE.md** - Common commands and patterns
-- **CHEATSHEET.md** - Quick tips and shortcuts
+- **`.process/QUICK_REFERENCE.md`** - Common commands and patterns
 
 ### Process Documentation
 - **.process/COMMON_MISTAKES.md** - Lessons learned
@@ -977,7 +976,7 @@ git push origin main  # Auto-deploys to Vercel
 ### Documentation Hierarchy
 1. Project-specific docs (e.g., `projects/wizard-of-oz/DEPLOYMENT.md`)
 2. Process docs (`.process/COMMON_MISTAKES.md`)
-3. Root docs (`NEXT_SESSION.md`, `SESSION_CHECKLIST.md`)
+3. Root docs (`NEXT_SESSION.md`, `.process/SESSION_CHECKLIST.md`)
 
 ### Common Issues
 - **Build fails**: Check TypeScript errors with `npm run build`

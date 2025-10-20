@@ -12,7 +12,7 @@
 
 **Starting work?** → `.claude/startup.md` auto-reads and handles session initialization
 **Continuing work?** → `NEXT_SESSION.md` has current status and tasks
-**Debugging?** → `META_DEBUGGING_PROTOCOL.md` (read BEFORE debugging)
+**Debugging?** → `.process/META_DEBUGGING_PROTOCOL.md` (read BEFORE debugging)
 
 ---
 
@@ -54,7 +54,7 @@ That file handles:
 
 ## 🚨 CRITICAL: Before Any Debugging
 
-> **📍 Full protocol → `META_DEBUGGING_PROTOCOL.md` (5 min read)**
+> **📍 Full protocol → `.process/META_DEBUGGING_PROTOCOL.md` (5 min read)**
 
 **If debugging**: Read protocol FIRST, verify inputs before debugging logic. 80% of bugs are input issues.
 
@@ -177,7 +177,7 @@ Any blockers: [yes/no]
 5. **Begin work** → Only after all above complete
 
 **OPTIONAL (as needed)**:
-- `SESSION_CHECKLIST.md` - For major tasks
+- `.process/SESSION_CHECKLIST.md` - For major tasks
 - `projects/[name]/DEPLOYMENT.md` - For deployment tasks
 - `.process/COMMON_MISTAKES.md` - To avoid known errors
 
@@ -217,7 +217,7 @@ aperture/
 
 | Need | File |
 |------|------|
-| **🚨 Debugging anything** | `META_DEBUGGING_PROTOCOL.md` **(READ FIRST!)** |
+| **🚨 Debugging anything** | `.process/META_DEBUGGING_PROTOCOL.md` **(READ FIRST!)** |
 | **Which project am I on?** | `CLAUDE.md` (router) |
 | **Aperture documentation** | `CLAUDE-APERTURE.md` |
 | **NUDJ documentation** | `CLAUDE-NUDJ.md` |
@@ -225,7 +225,7 @@ aperture/
 | **Work more efficiently** | `.claude/startup.md` Steps 5.5-5.7, `.process/BACKGROUND_PROCESSES.md` |
 | **Deployment requirements** | `projects/wizard-of-oz/DEPLOYMENT.md` |
 | **Mistakes we've made** | `.process/COMMON_MISTAKES.md` |
-| **Session workflow** | `SESSION_CHECKLIST.md` |
+| **Session workflow** | `.process/SESSION_CHECKLIST.md` |
 | **How to start new project** | `CONTRIBUTING.md` |
 
 ### Core Philosophies (Aperture Projects)

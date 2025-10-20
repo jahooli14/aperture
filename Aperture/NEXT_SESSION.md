@@ -26,14 +26,15 @@
 
 ## 📊 Last Active
 
-**Most Recent**: Wizard of Oz (Session 17 - 2025-10-20)
-- Editable photo notes feature shipped
-- Memory notes can now be added/edited any time
-- See `projects/wizard-of-oz/NEXT_SESSION.md` for details
+**Most Recent**: Session Management Restructure (Session 18 - 2025-10-20)
+- Implemented project-specific NEXT_SESSION.md files
+- Root file now acts as router (92% size reduction)
+- Each project manages its own session state
+- See individual project files for current status
 
-**Previous**: Visual Test Generator (Session 16 - 2025-10-20)
-- Fully documented and ready to build
-- See `projects/visual-test-generator/NEXT_SESSION.md` for details
+**Previous Sessions**:
+- Session 17: Wizard of Oz - Editable photo notes
+- Session 16: Visual Test Generator - Full documentation
 
 ---
 

@@ -1,13 +1,39 @@
 # Next Session - Wizard of Oz
 
-**Last Updated**: 2025-10-15
-**Status**: Two major features shipped! 🚀
+**Last Updated**: 2025-10-20
+**Status**: 🟢 Production - Feature complete and stable
 
 ---
 
 ## 🎉 Recently Completed
 
-### Latest Session (2025-10-15 PM)
+### Session 17 (2025-10-20)
+
+**Editable Photo Notes** ✅
+
+Now you can add or edit memory notes at any time, not just during upload!
+
+1. **Edit Notes After Upload** ✅
+   - Created `updatePhotoNote()` function in usePhotoStore
+   - Modified PhotoBottomSheet to include inline note editing UI
+   - Edit button appears next to "Memory Note" header
+   - Shows "No note yet..." placeholder when empty
+   - **Files**: PhotoBottomSheet.tsx, usePhotoStore.ts
+
+2. **User Experience** ✅
+   - Textarea with 500 character limit
+   - Character counter shows progress (X/500)
+   - Save/Cancel buttons with loading states
+   - Error handling with user-friendly messages
+   - Consistent amber-themed styling
+   - Changes saved directly to Supabase `photos.metadata.note` field
+
+**Git commits**:
+- `856ce4f` - feat: add ability to edit photo notes after upload
+
+---
+
+### Session 16 (2025-10-15 PM)
 
 **Memory Notes & Photo Comparison** - Both features fully implemented and deployed! ✅
 
@@ -127,7 +153,6 @@ None! Everything is working well.
 - **Smart Reminders**: Notifications if you haven't uploaded
 - **Monthly Summaries**: Auto-generated "Month in Review"
 - **Export Features**: PDF collages, formatted exports
-- **Edit Notes**: Allow editing notes after upload
 - **Delete Notes**: Allow removing notes without deleting photo
 
 ---
