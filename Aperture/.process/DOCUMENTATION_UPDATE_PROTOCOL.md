@@ -27,25 +27,51 @@
 ### 1. **During Development**
 
 **As you code**:
-- Update NEXT_SESSION.md after completing each feature/fix
+- Update project-specific NEXT_SESSION.md after completing each feature/fix
 - Use `/update-docs` command before committing
+
+**Multi-project repository**:
+- `projects/wizard-of-oz/NEXT_SESSION.md` - For Wizard of Oz changes
+- `projects/memory-os/NEXT_SESSION.md` - For MemoryOS changes
+- `projects/visual-test-generator/NEXT_SESSION.md` - For Visual Test Generator changes
+- `scripts/autonomous-docs/NEXT_SESSION.md` - For Autonomous Docs changes
+- `NEXT_SESSION.md` (root) - For root-level or multi-project changes
 
 ### 2. **Before Commit** (Pre-Commit Hook)
 
 **Automated check**:
 ```bash
-Code changed? → Check if docs updated → Prompt/block if missing
+Code changed? → Detect which project(s) → Check project docs → Prompt/block if missing
 ```
 
+**Project detection**:
+- Analyzes staged files to identify which project(s) changed
+- Checks for code changes in each project independently
+- Prompts for the correct project-specific NEXT_SESSION.md
+
 **What it checks**:
-- Any `.ts`, `.tsx`, `.js`, `.jsx` files in `src/`, `api/`, `lib/`
+- Any `.ts`, `.tsx`, `.js`, `.jsx` files in project `src/`, `api/`, `lib/`
 - `package.json` changes (dependencies)
-- Whether `NEXT_SESSION.md` or other docs were staged
+- Whether project-specific `NEXT_SESSION.md` or root docs were staged
 
 **Actions**:
 - ✅ Docs updated → Proceed with commit
-- ⚠️ No docs → Prompt user (y/n/skip)
+- ⚠️ No docs → Prompt user showing which project(s) need updates
 - ❌ User declines → Block commit
+
+**Example output**:
+```
+⚠️ Code changes detected without documentation updates
+
+📁 projects/wizard-of-oz
+  - src/components/PhotoUpload.tsx
+  - api/upload-photo.ts
+
+📝 Documentation to update:
+  - projects/wizard-of-oz/NEXT_SESSION.md (required)
+
+Did you update documentation? (y/n/skip)
+```
 
 **To bypass** (use sparingly):
 ```bash
@@ -140,16 +166,21 @@ Proceed with update? (y/n)
 
 ## 📋 What to Update When
 
-### Code Changes
+### Code Changes (Project-Specific)
 
 | Type of Change | Update Required |
 |----------------|-----------------|
-| **New feature** | NEXT_SESSION.md (mandatory), README.md (if public-facing) |
-| **Bug fix** | NEXT_SESSION.md (mandatory) |
-| **Refactor** | NEXT_SESSION.md (what/why) |
-| **API change** | NEXT_SESSION.md + API docs |
-| **Dependencies** | NEXT_SESSION.md (note version bumps) |
-| **Configuration** | NEXT_SESSION.md + relevant process doc |
+| **New feature** | Project's NEXT_SESSION.md (mandatory), README.md (if public-facing) |
+| **Bug fix** | Project's NEXT_SESSION.md (mandatory) |
+| **Refactor** | Project's NEXT_SESSION.md (what/why) |
+| **API change** | Project's NEXT_SESSION.md + API docs |
+| **Dependencies** | Project's NEXT_SESSION.md (note version bumps) |
+| **Configuration** | Project's NEXT_SESSION.md + relevant process doc |
+
+**Example**:
+- Changed `projects/wizard-of-oz/src/components/PhotoUpload.tsx` → Update `projects/wizard-of-oz/NEXT_SESSION.md`
+- Changed `projects/memory-os/src/stores/memoryStore.ts` → Update `projects/memory-os/NEXT_SESSION.md`
+- Changed multiple projects → Update each project's NEXT_SESSION.md + optionally root NEXT_SESSION.md
 
 ### Non-Code Changes
 
@@ -166,11 +197,18 @@ Proceed with update? (y/n)
 
 **Before every commit, verify**:
 
-- [ ] Code changes reflected in NEXT_SESSION.md
-- [ ] "Last Updated" date refreshed
+- [ ] Code changes reflected in **project-specific** NEXT_SESSION.md
+- [ ] "Last Updated" date refreshed in the appropriate file(s)
 - [ ] Breaking changes noted (if any)
-- [ ] Project-specific docs updated (if needed)
+- [ ] Each changed project has its NEXT_SESSION.md updated
 - [ ] README updated (if public API changed)
+
+**Multi-project checklist**:
+- [ ] Wizard of Oz changes → `projects/wizard-of-oz/NEXT_SESSION.md` updated?
+- [ ] MemoryOS changes → `projects/memory-os/NEXT_SESSION.md` updated?
+- [ ] Visual Test Generator changes → `projects/visual-test-generator/NEXT_SESSION.md` updated?
+- [ ] Autonomous Docs changes → `scripts/autonomous-docs/NEXT_SESSION.md` updated?
+- [ ] Root-level changes → `NEXT_SESSION.md` (root) updated?
 
 **Use `/update-docs` to automate this check**
 
@@ -288,9 +326,22 @@ Always refresh "Last Updated" when modifying docs:
 ### "Pre-commit hook keeps blocking me"
 
 **Check**:
-1. Did you update NEXT_SESSION.md?
-2. Did you stage it? (`git add NEXT_SESSION.md`)
-3. If legitimately no doc update needed, use `--no-verify`
+1. Did you update the **correct project-specific** NEXT_SESSION.md?
+2. Did you stage it? (`git add projects/wizard-of-oz/NEXT_SESSION.md`)
+3. The hook will tell you which project's docs need updating
+4. If legitimately no doc update needed, use `--no-verify`
+
+**Example**:
+```
+# If you changed Wizard of Oz code:
+git add projects/wizard-of-oz/NEXT_SESSION.md
+
+# If you changed MemoryOS code:
+git add projects/memory-os/NEXT_SESSION.md
+
+# If you changed multiple projects:
+git add projects/wizard-of-oz/NEXT_SESSION.md projects/memory-os/NEXT_SESSION.md
+```
 
 ### "GitHub Action failing on doc check"
 
