@@ -21,6 +21,7 @@ interface PhotoState {
   fetchError: string | null;
   fetchPhotos: () => Promise<void>;
   uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string) => Promise<string>;
+  updatePhotoNote: (photoId: string, note: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   restorePhoto: (photo: Photo) => void;
   hasUploadedToday: () => boolean;
@@ -170,6 +171,40 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     } catch (error) {
       logger.error('Upload failed', { error: error instanceof Error ? error.message : String(error) }, 'PhotoStore');
       set({ uploading: false });
+      throw error;
+    }
+  },
+
+  updatePhotoNote: async (photoId: string, note: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) throw new Error('Not authenticated');
+
+      // Update the photo's metadata with the new note
+      const { error } = await supabase
+        .from('photos')
+        .update({ metadata: { note: note.trim() || null } } as never)
+        .eq('id', photoId)
+        .eq('user_id', user.id); // Ensure user can only update their own photos
+
+      if (error) {
+        logger.error('Error updating photo note', { error: error.message, photoId }, 'PhotoStore');
+        throw error;
+      }
+
+      // Update local state
+      const currentPhotos = get().photos;
+      const updatedPhotos = currentPhotos.map(photo =>
+        photo.id === photoId
+          ? { ...photo, metadata: { note: note.trim() || null } }
+          : photo
+      );
+      set({ photos: updatedPhotos });
+
+      logger.info('Photo note updated successfully', { photoId }, 'PhotoStore');
+    } catch (error) {
+      logger.error('Failed to update photo note', { error: error instanceof Error ? error.message : String(error), photoId }, 'PhotoStore');
       throw error;
     }
   },

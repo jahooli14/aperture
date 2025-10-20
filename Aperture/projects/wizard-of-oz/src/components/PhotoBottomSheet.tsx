@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { usePhotoStore } from '../stores/usePhotoStore';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -17,6 +19,38 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
   if (!photo) return null;
 
   const { settings } = useSettingsStore();
+  const { updatePhotoNote } = usePhotoStore();
+
+  // Get existing note from metadata
+  const existingNote = (() => {
+    if (!photo.metadata || typeof photo.metadata !== 'object') return '';
+    const metadata = photo.metadata as Record<string, unknown>;
+    return ('note' in metadata && metadata.note) ? String(metadata.note) : '';
+  })();
+
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteText, setNoteText] = useState(existingNote);
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState('');
+
+  const handleSaveNote = async () => {
+    try {
+      setIsSavingNote(true);
+      setNoteError('');
+      await updatePhotoNote(photo.id, noteText);
+      setIsEditingNote(false);
+    } catch (err) {
+      setNoteError(err instanceof Error ? err.message : 'Failed to save note');
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setNoteText(existingNote);
+    setIsEditingNote(false);
+    setNoteError('');
+  };
 
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Close if dragged down more than 100px or velocity is high
@@ -98,24 +132,73 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
               {/* Metadata Grid */}
               <div className="space-y-4 mb-6">
-                {/* Memory Note - show if exists */}
-                {(() => {
-                  if (!photo.metadata || typeof photo.metadata !== 'object') return null;
-                  const metadata = photo.metadata as Record<string, unknown>;
-                  if (!('note' in metadata) || !metadata.note) return null;
-
-                  return (
-                    <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl">
-                      <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-700">Memory Note</p>
-                        <p className="text-base text-gray-900 whitespace-pre-wrap">{String(metadata.note)}</p>
-                      </div>
+                {/* Memory Note - editable */}
+                <div className="p-4 bg-amber-50 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <MessageSquare className="w-5 h-5 text-amber-600" />
                     </div>
-                  );
-                })()}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-700">Memory Note</p>
+                        {!isEditingNote && (
+                          <button
+                            onClick={() => setIsEditingNote(true)}
+                            className="p-1.5 hover:bg-amber-200 rounded-lg transition-colors"
+                            aria-label={existingNote ? 'Edit note' : 'Add note'}
+                          >
+                            <Edit2 className="w-4 h-4 text-amber-600" />
+                          </button>
+                        )}
+                      </div>
+
+                      {isEditingNote ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={noteText}
+                            onChange={(e) => setNoteText(e.target.value)}
+                            placeholder="What happened on this day? Any special moments or milestones..."
+                            maxLength={500}
+                            rows={4}
+                            className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-sm bg-white"
+                            autoFocus
+                          />
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-gray-500">
+                              {noteText.length}/500 characters
+                            </p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleCancelEdit}
+                                disabled={isSavingNote}
+                                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-amber-100 rounded-lg transition-colors disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={handleSaveNote}
+                                disabled={isSavingNote}
+                                className="px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                              >
+                                <Check className="w-4 h-4" />
+                                {isSavingNote ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                          {noteError && (
+                            <p className="text-xs text-red-600">{noteError}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-base text-gray-900 whitespace-pre-wrap">
+                          {existingNote || (
+                            <span className="text-gray-500 italic">No note yet. Click the edit button to add one.</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Age Display - only show if birthdate is set */}
                 {settings?.baby_birthdate && (() => {
