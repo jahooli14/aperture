@@ -13,6 +13,15 @@
 
 Now you can add or edit memory notes at any time, not just during upload!
 
+**⚠️ DEPLOYMENT STATUS**:
+- ✅ Code committed and pushed to GitHub (commits `856ce4f` + `90c1207`)
+- ✅ Build verified locally (no errors)
+- ⏳ **Deployment pending** - Vercel having issues, deployment queued
+- 🔍 **Action for next session**: Verify feature is live in production
+  - Check https://aperture-bjyvlfonv-daniels-projects-ca7c7923.vercel.app
+  - Open any photo → should see edit button (✏️) next to "Memory Note"
+  - If still not deployed, manually trigger redeploy in Vercel dashboard
+
 1. **Edit Notes After Upload** ✅
    - Created `updatePhotoNote()` function in usePhotoStore
    - Modified PhotoBottomSheet to include inline note editing UI
