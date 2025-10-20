@@ -112,19 +112,24 @@ Which project are you working on today?
 
 ### Step 3: Read Current Status (MANDATORY)
 
-**Always read** `NEXT_SESSION.md` to understand:
-- Current sprint/milestone
+**Two-step approach**:
+
+1. **Read root** `NEXT_SESSION.md` (router)
+   - Quick overview of all projects
+   - See which project was last active
+   - Get links to project-specific files
+
+2. **Read project-specific** NEXT_SESSION.md after user selects project:
+   - `projects/wizard-of-oz/NEXT_SESSION.md`
+   - `projects/visual-test-generator/NEXT_SESSION.md`
+   - `projects/memory-os/NEXT_SESSION.md`
+   - `scripts/autonomous-docs/NEXT_SESSION.md`
+
+**What you'll find**:
+- Current sprint/milestone for that project
 - Active tasks and blockers
 - Recent changes and context
 - What to work on next
-
-**Format**:
-```
-Latest update: [date]
-Current focus: [what we're working on]
-Next steps: [what to do]
-Blockers: [what's blocking progress]
-```
 
 ---
 

@@ -4,7 +4,7 @@
 >
 > **Purpose**: Find the right doc for your current situation
 >
-> **Last Updated**: 2025-10-13
+> **Last Updated**: 2025-10-20 (Post-restructuring)
 
 ---
 
@@ -18,7 +18,7 @@
 → `NEXT_SESSION.md` - Current tasks and next steps
 
 ### "Something's broken (debugging)"
-→ `META_DEBUGGING_PROTOCOL.md` - Read BEFORE debugging (mandatory)
+→ `.process/META_DEBUGGING_PROTOCOL.md` - Read BEFORE debugging (mandatory)
 → Then `projects/[name]/DEBUGGING.md` - Project-specific tips
 
 ### "I'm starting a new feature"
@@ -27,7 +27,7 @@
 
 ### "I need to understand the process"
 → `START_HERE.md` - Onboarding guide (reference)
-→ `SESSION_CHECKLIST.md` - Session workflow
+→ `.process/SESSION_CHECKLIST.md` - Session workflow
 
 ### "I made a mistake"
 → `.process/COMMON_MISTAKES.md` - Add entry immediately
@@ -55,10 +55,13 @@
 
 | File | Purpose | When to Use |
 |------|---------|-------------|
-| `.claude/startup.md` | **AUTOMATIC** session init | Auto-read every session |
+| `README.md` | **PROJECT OVERVIEW** | First-time visitors, GitHub landing |
+| `.claude/startup.md` | **AUTOMATIC** session init (thin orchestrator) | Auto-read every session |
 | `CLAUDE.md` | **ROUTER** for project type | Choose NUDJ vs Aperture |
 | `START_HERE.md` | **ONBOARDING** guide | Learning the process |
 | `NEXT_SESSION.md` | **CURRENT STATUS** | Continuing work |
+| `NAVIGATION.md` | **TASK INDEX** | Find docs by task type |
+| `DOCUMENTATION_INDEX.md` | **COMPLETE MAP** | You are here |
 
 **Navigation tip**: These have distinct roles - no confusion about authority
 
@@ -68,9 +71,10 @@
 
 | File | Purpose | Key Sections |
 |------|---------|--------------|
-| `SESSION_CHECKLIST.md` | Session workflow | Start/During/End checklists |
+| `.process/SESSION_CHECKLIST.md` | Session workflow | Start/During/End checklists |
 | `.process/DEVELOPMENT.md` | Development workflow | Plan Mode, TDD, Git workflow |
 | `CLAUDE-APERTURE.md` | Project conventions | Code style, patterns, structure |
+| `.process/CAPABILITIES.md` | Patterns library | Task Signature, Loop Safeguards, etc. |
 
 ---
 
@@ -78,8 +82,8 @@
 
 | File | Purpose | When to Use |
 |------|---------|-------------|
-| `META_DEBUGGING_PROTOCOL.md` | Universal debugging principles | BEFORE debugging anything |
-| `DEBUGGING_CHECKLIST.md` | Case study (coordinate scaling) | Dimension/scaling bugs |
+| `.process/META_DEBUGGING_PROTOCOL.md` | Universal debugging principles | BEFORE debugging anything |
+| `.process/DEBUGGING_CHECKLIST.md` | Case study (coordinate scaling) | Dimension/scaling bugs |
 | `projects/wizard-of-oz/DEBUGGING.md` | Project-specific debugging | Wizard of Oz issues |
 | `.process/OBSERVABILITY.md` | Logging & self-sufficient debugging | Adding features, monitoring |
 | `.process/PROACTIVE_LOG_MONITORING.md` | Production log review process | Session start, after deployment |
@@ -198,35 +202,37 @@ START: Mistake happened
 
 ---
 
-## 📊 File Statistics (Post-Phase 1)
+## 📊 File Statistics (Post-Restructuring 2025-10-20)
 
-| Category | Count | Notes |
-|----------|-------|-------|
-| **Entry points** | 3 | Clear distinct roles |
-| **Core workflow** | 3 | Essential for daily work |
-| **Debugging/Quality** | 5 | Support debugging workflow |
-| **Process/Learning** | 3 | Continuous improvement |
-| **Architecture** | 3 | Decision support |
-| **Meta docs** | 4 | Process improvement reference |
-| **Total active docs** | 22 | Down from 31 (10 will be archived) |
+| Category | Count | Location | Notes |
+|----------|-------|----------|-------|
+| **Root navigation** | 8 | `/` | Core entry points (56% reduction from 18) |
+| **Process docs** | 16 | `.process/` | Methodology & patterns |
+| **Research docs** | 4 | `research/` | Frontier research (NEW) |
+| **Project docs** | 4 projects | `projects/` | Individual project documentation |
+| **Meta infrastructure** | 1 | `scripts/autonomous-docs/` | Self-optimizing docs |
+| **Claude Code config** | ~25 | `.claude/` | Commands, skills, startup |
+
+**Key improvements**:
+- ✅ Root reduced from 18 to 8 files (56% reduction)
+- ✅ startup.md reduced from 995 to 261 lines (74% reduction)
+- ✅ Estimated startup token cost: 1000 tokens (down from 5000, 80% reduction)
+- ✅ Clear hierarchy: Root → .process/ → research/
+- ✅ Removed duplicates (CHEATSHEET merged into QUICK_REFERENCE)
+- ✅ Archived historical files (.archive/, .dev/ removed)
 
 ---
 
-## 🗂️ Files to Archive (Phase 2 cleanup)
+## 🔬 Research Directory (NEW)
 
-**Orphaned files** (no clear navigation path):
-1. `CHEATSHEET.md` - Consolidate into QUICK_REFERENCE.md
-2. `AUTONOMOUS_ENHANCEMENTS.md` - Archive (historical)
-3. `AUTONOMOUS_IMPROVEMENTS_REPORT.md` - Archive (historical)
-4. `AUTONOMOUS_SESSION_REPORT.md` - Archive (historical)
-5. `NIGHT_SESSION_SUMMARY.md` - Archive (historical)
-6. `EXTREME_FRONTIER_FEATURES.md` - Archive (speculative)
-7. `FRONTIER_FEATURE_AI_MUSIC.md` - Archive (speculative)
-8. `CI_PHILOSOPHY_IMPROVEMENTS.md` - Merged into ARCHITECTURE.md
-9. `CONTRIBUTING.md` - Update to reference current docs
-10. `STARTUP_EXAMPLE.md` - Merge into START_HERE.md
+| File | Purpose | Status |
+|------|---------|--------|
+| `research/FRONTIER_OPPORTUNITIES_2025.md` | 2025 frontier AI features & opportunities | Active research |
+| `research/INSTANT_VISUAL_TEST_GENERATOR_RESEARCH.md` | AI visual test generation research | Active - Week 1 project |
+| `research/GOOGLE_CLOUD_PATTERNS_ANALYSIS.md` | Google Cloud agentic patterns analysis | Reference |
+| `research/GEMINI_MIGRATION_CHANGES.md` | Claude → Gemini migration notes | Reference |
 
-**Action**: Create `.archive/` directory and move these files
+**Purpose**: Frontier research documents separated from active process docs for clarity
 
 ---
 
@@ -239,10 +245,11 @@ START: Mistake happened
 - [x] No circular references without escape routes
 
 ### Redundancy Test
-- [x] Token budget: ONE source only (startup.md)
+- [x] Token budget: ONE source only (.claude/startup.md)
 - [x] Current status: ONE source only (NEXT_SESSION.md)
-- [x] Debugging protocol: ONE source only (META_DEBUGGING_PROTOCOL.md)
+- [x] Debugging protocol: ONE source only (.process/META_DEBUGGING_PROTOCOL.md)
 - [x] Observability: ONE source only (.process/OBSERVABILITY.md)
+- [x] Quick reference: ONE source only (.process/QUICK_REFERENCE.md - CHEATSHEET removed)
 
 ### Discoverability Test
 - [x] All active files reachable from this index
