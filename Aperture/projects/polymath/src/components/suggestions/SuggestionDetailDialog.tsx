@@ -81,34 +81,72 @@ export function SuggestionDetailDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Why This Project Is Good */}
+          <div className="space-y-3 bg-gradient-to-br from-orange-50 to-amber-50 p-5 rounded-xl border border-orange-200">
+            <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-orange-600" />
+              Why This Project Is Good For You
+            </h3>
+
+            <div className="space-y-3 text-sm text-neutral-700 leading-relaxed">
+              {suggestion.novelty_score > 0.7 && (
+                <div className="flex gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p><strong>Fresh idea:</strong> You haven't explored this combination before. It's a new direction that could unlock creative potential.</p>
+                </div>
+              )}
+
+              {suggestion.feasibility_score > 0.6 && (
+                <div className="flex gap-2">
+                  <Hammer className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p><strong>Totally doable:</strong> You have {suggestion.capability_ids.length > 0 ? 'the skills' : 'what it takes'} to make this happen. Not too hard, not too easy—just right for growth.</p>
+                </div>
+              )}
+
+              {suggestion.interest_score > 0.5 && (
+                <div className="flex gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <p><strong>Matches your vibe:</strong> Based on your memories and interests, this aligns with what you care about right now.</p>
+                </div>
+              )}
+
+              {suggestion.memory_ids && suggestion.memory_ids.length > 0 && (
+                <div className="flex gap-2">
+                  <Brain className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p><strong>Connects your dots:</strong> This idea pulls together {suggestion.memory_ids.length} different thoughts you've captured—creating something bigger than any one piece.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Scores */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <ScoreCard
-              icon={<TrendingUp className="h-5 w-5" />}
+              icon={<TrendingUp className="h-4 w-4" />}
               label="Fresh"
               score={suggestion.novelty_score}
-              description="How unique this idea is"
+              description="Uniqueness"
             />
             <ScoreCard
-              icon={<Hammer className="h-5 w-5" />}
+              icon={<Hammer className="h-4 w-4" />}
               label="Doable"
               score={suggestion.feasibility_score}
-              description="How achievable it is"
+              description="Within reach"
             />
             <ScoreCard
-              icon={<Sparkles className="h-5 w-5" />}
+              icon={<Sparkles className="h-4 w-4" />}
               label="Exciting"
               score={suggestion.interest_score}
-              description="How well it matches your interests"
+              description="Matches you"
             />
           </div>
 
-          {/* Why This Suggestion */}
+          {/* AI Reasoning (if available) */}
           {suggestion.synthesis_reasoning && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
                 <Brain className="h-4 w-4" />
-                Why This Suggestion
+                AI Analysis
               </h3>
               <p className="text-sm text-neutral-600 leading-relaxed bg-neutral-50 p-4 rounded-lg border border-neutral-200">
                 {suggestion.synthesis_reasoning}
@@ -204,12 +242,12 @@ function ScoreCard({
       : 'text-red-700 bg-red-50 border-red-200'
 
   return (
-    <div className={`p-4 rounded-lg border ${colorClass}`}>
-      <div className="flex items-center gap-2 mb-1">
+    <div className={`p-3 rounded-lg border ${colorClass}`}>
+      <div className="flex items-center gap-1.5 mb-1">
         {icon}
-        <span className="text-sm font-semibold">{label}</span>
+        <span className="text-xs font-semibold">{label}</span>
       </div>
-      <div className="text-2xl font-bold mb-1">{percentage}%</div>
+      <div className="text-xl font-bold mb-0.5">{percentage}%</div>
       <div className="text-xs opacity-75">{description}</div>
     </div>
   )

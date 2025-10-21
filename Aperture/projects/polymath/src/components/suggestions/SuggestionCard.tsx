@@ -50,11 +50,14 @@ export function SuggestionCard({
   const isCreative = suggestion.capability_ids.length === 0
 
   return (
-    <Card className={`group h-full flex flex-col pro-card transition-smooth hover-lift ${
-      suggestion.is_wildcard
-        ? 'bg-orange-50/40'
-        : ''
-    }`}>
+    <Card
+      className={`group h-full flex flex-col pro-card transition-smooth hover-lift cursor-pointer ${
+        suggestion.is_wildcard
+          ? 'bg-orange-50/40'
+          : ''
+      }`}
+      onClick={handleMore}
+    >
       {/* Subtle accent bar */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-40" />
 
@@ -65,7 +68,7 @@ export function SuggestionCard({
         </div>
       )}
 
-      <CardHeader className="relative">
+      <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
             <div className="px-4 py-1.5 rounded-md bg-orange-100 text-orange-700 text-sm font-semibold border border-orange-200 flex items-center gap-1">
@@ -85,12 +88,14 @@ export function SuggestionCard({
           </div>
         </div>
 
-        <CardTitle className="text-xl font-semibold leading-tight text-neutral-900">
+        <CardTitle className="text-xl font-semibold leading-tight text-neutral-900 mb-2">
           {suggestion.title}
         </CardTitle>
-        <CardDescription className={`${compact ? 'line-clamp-2' : 'line-clamp-3'} text-base leading-relaxed`}>
-          {suggestion.description}
-        </CardDescription>
+        {!compact && (
+          <CardDescription className="text-base leading-relaxed text-neutral-700">
+            {suggestion.description}
+          </CardDescription>
+        )}
       </CardHeader>
 
       {!compact && (
@@ -124,12 +129,12 @@ export function SuggestionCard({
         </CardContent>
       )}
 
-      <CardFooter className="flex gap-2 border-t border-neutral-200 pt-4">
+      <CardFooter className="flex gap-2 border-t border-neutral-200 pt-4" onClick={(e) => e.stopPropagation()}>
         <Button
           onClick={handleSpark}
           variant="outline"
           size="sm"
-          className="flex-1 btn-secondary"
+          className="flex-1 btn-secondary h-11"
           title="This sparks my interest!"
           disabled={loadingAction !== null}
         >
@@ -142,21 +147,23 @@ export function SuggestionCard({
         </Button>
         <Button
           onClick={handleMeh}
-          variant="ghost"
+          variant="outline"
           size="sm"
+          className="flex-1 btn-secondary h-11"
           title="Not interested"
           disabled={loadingAction !== null}
         >
           {loadingAction === 'meh' ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
           ) : (
-            <ThumbsDown className="h-4 w-4" />
+            <ThumbsDown className="h-4 w-4 mr-1" />
           )}
+          Meh
         </Button>
         <Button
           onClick={handleBuild}
           size="sm"
-          className="flex-1 btn-primary"
+          className="flex-1 btn-primary h-11"
           title="Build this project!"
           disabled={loadingAction !== null}
         >
@@ -166,15 +173,6 @@ export function SuggestionCard({
             <Hammer className="h-4 w-4 mr-1" />
           )}
           Build
-        </Button>
-        <Button
-          onClick={handleMore}
-          variant="ghost"
-          size="sm"
-          title="View details"
-          disabled={loadingAction !== null}
-        >
-          <MoreHorizontal className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
