@@ -39,7 +39,11 @@ export function MemoriesPage() {
 
   const handleReview = async (memoryId: string) => {
     try {
-      await fetch(`/api/memories/${memoryId}/review`, { method: 'POST' })
+      await fetch(`/api/memories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: memoryId })
+      })
       // Remove from resurfacing queue
       setResurfacing(prev => prev.filter(m => m.id !== memoryId))
     } catch (err) {
