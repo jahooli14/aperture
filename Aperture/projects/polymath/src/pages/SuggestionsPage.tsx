@@ -2,7 +2,7 @@
  * Suggestions Page - Stunning Visual Design
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
@@ -36,9 +36,11 @@ export function SuggestionsPage() {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [buildDialogOpen, setBuildDialogOpen] = useState(false)
   const [suggestionToBuild, setSuggestionToBuild] = useState<ProjectSuggestion | null>(null)
+  const [progress, setProgress] = useState(0)
 
   const navigate = useNavigate()
   const { addToast } = useToast()
+  const progressInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     fetchSuggestions()
@@ -94,11 +96,47 @@ export function SuggestionsPage() {
 
   const handleSynthesize = async () => {
     try {
+      // Reset and start progress
+      setProgress(0)
+
+      // Simulate progress (real synthesis takes ~20-40 seconds)
+      progressInterval.current = setInterval(() => {
+        setProgress(prev => {
+          // Slow down as we approach 90% to avoid completing before API
+          if (prev < 50) return prev + 3
+          if (prev < 70) return prev + 2
+          if (prev < 90) return prev + 1
+          return prev + 0.5
+        })
+      }, 500)
+
       await triggerSynthesis()
+
+      // Complete progress
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+      setProgress(100)
+
+      // Reset after short delay
+      setTimeout(() => setProgress(0), 500)
     } catch (error) {
       console.error('Synthesis failed:', error)
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+      setProgress(0)
     }
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+    }
+  }, [])
 
   return (
     <div className="min-h-screen py-12">
@@ -114,23 +152,35 @@ export function SuggestionsPage() {
           <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
             Ideas that match what you can do with what you care about
           </p>
-          <Button
-            onClick={handleSynthesize}
-            disabled={synthesizing}
-            className="btn-primary inline-flex items-center gap-2"
-          >
-            {synthesizing ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Generate Ideas
-              </>
+          <div className="flex flex-col items-center gap-3">
+            <Button
+              onClick={handleSynthesize}
+              disabled={synthesizing}
+              className="btn-primary inline-flex items-center gap-2 min-w-[200px]"
+            >
+              {synthesizing ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generate Ideas
+                </>
+              )}
+            </Button>
+
+            {/* Progress Bar */}
+            {synthesizing && (
+              <div className="w-[300px] h-2 bg-neutral-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
             )}
-          </Button>
+          </div>
         </div>
 
         {/* Controls */}
