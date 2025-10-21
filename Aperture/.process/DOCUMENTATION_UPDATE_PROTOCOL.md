@@ -30,12 +30,21 @@
 - Update project-specific NEXT_SESSION.md after completing each feature/fix
 - Use `/update-docs` command before committing
 
-**Multi-project repository**:
-- `projects/wizard-of-oz/NEXT_SESSION.md` - For Wizard of Oz changes
-- `projects/memory-os/NEXT_SESSION.md` - For MemoryOS changes
-- `projects/visual-test-generator/NEXT_SESSION.md` - For Visual Test Generator changes
-- `scripts/autonomous-docs/NEXT_SESSION.md` - For Autonomous Docs changes
-- `NEXT_SESSION.md` (root) - For root-level or multi-project changes
+**🚨 CRITICAL - NEXT_SESSION.md Routing Pattern**:
+
+**Root NEXT_SESSION.md is a ROUTER, not detailed content**:
+- ✅ **DO**: Update project-specific files with detailed progress
+  - `projects/wizard-of-oz/NEXT_SESSION.md` ← Full details HERE
+  - `projects/polymath/NEXT_SESSION.md` ← Full details HERE
+  - `projects/visual-test-generator/NEXT_SESSION.md` ← Full details HERE
+  - `scripts/autonomous-docs/NEXT_SESSION.md` ← Full details HERE
+
+- ✅ **DO**: Update root `NEXT_SESSION.md` "Last Active" (one line summary)
+  - Example: "Session 23 (2025-10-21): Wizard of Oz - Comment chips, email reminders, build fixes"
+
+- ❌ **DON'T**: Put detailed status in root file (it's just a router!)
+
+**Pattern**: Root = lightweight index → Project files = actual content
 
 ### 2. **Before Commit** (Pre-Commit Hook)
 

@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick session startup - choose your project and get context
 >
-> **Last Updated**: 2025-10-20
+> **Last Updated**: 2025-10-21
 >
 > **How it works**:
 > 1. Check token budget
@@ -26,18 +26,13 @@
 
 ## 📊 Last Active
 
-**Most Recent**: Polymath Processing Pipeline Fixed (Session 22 - 2025-10-21)
-- **Voice note → interest extraction pipeline restored** ✅
-- Fixed broken imports after security cleanup (deleted `src/lib/`)
-- Created `api/lib/process-memory.ts` with Gemini entity extraction
-- Fixed `api/capture.ts` and `api/process.ts` imports
-- Added base `memories` and `entities` tables to migration.sql
-- Corrected all vector dimensions (1536→768 for Gemini text-embedding-004)
-- Complete user flow working: voice note → processing → synthesis → personalized suggestions
-- See `projects/polymath/PROCESSING_PIPELINE_FIXED.md` for details
+**Session 23** (2025-10-21): Wizard of Oz - Comment chips, email reminders, build fixes
 
 **Previous Sessions**:
-- Session 19: MemoryOS Build Complete (ready to deploy)
+- Session 22: Polymath - Fixed voice processing pipeline + added end-to-end flow verification to process
+- Session 21: Polymath - Consolidation complete (MemoryOS → Polymath)
+- Session 20: Process improvements (documentation automation)
+- Session 19: MemoryOS Build Complete
 - Session 18: Session Management Restructure
 - Session 17: Wizard of Oz - Editable photo notes
 

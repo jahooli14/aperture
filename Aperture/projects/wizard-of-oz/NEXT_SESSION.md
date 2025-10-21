@@ -1,26 +1,103 @@
 # Next Session - Wizard of Oz
 
-**Last Updated**: 2025-10-20
+**Last Updated**: 2025-10-21
 **Status**: 🟢 Production - Feature complete and stable
 
 ---
 
 ## 🎉 Recently Completed
 
+### Session 18 (2025-10-21)
+
+**Comment Chips, Email Reminders & Build Fixes** ✅
+
+Three major updates shipped today!
+
+**⚠️ DEPLOYMENT STATUS**:
+- ✅ Code committed and pushed (commits `a761e24`, `abfcc19`, `b9817eb`)
+- ✅ Build errors resolved
+- ⏳ **Deployment in progress** - Waiting for Vercel to pick up latest commit
+- 🔍 **Action for next session**:
+  - Verify build succeeded in Vercel dashboard
+  - Test comment chips on photos with notes
+  - Complete email reminder setup (see below)
+
+**What Was Built**:
+
+1. **Comment Chip Indicators** ✅
+   - Blue chat bubble chip appears on photos with notes/comments
+   - Positioned in top-right corner of photo cards
+   - Easy visual indicator for which photos have context
+   - **Files**: PhotoGallery.tsx
+
+2. **Email Reminder System** ✅ (Setup required - see below)
+   - Complete infrastructure for daily photo upload reminders
+   - Vercel cron job runs hourly, handles all timezones automatically
+   - Beautiful HTML email template via Resend
+   - Settings UI in Privacy & Security panel
+   - Users can set email, preferred time, and enable/disable
+   - **Files**:
+     - `api/cron/send-reminders.ts` - Cron job
+     - `supabase/migrations/003_add_email_reminders.sql` - Database schema
+     - `PrivacySettings.tsx` - UI
+     - `useSettingsStore.ts` - State management
+     - `EMAIL_REMINDERS_SETUP.md` - Complete setup guide
+     - `EMAIL_REMINDERS_SUMMARY.md` - Implementation docs
+
+3. **TypeScript Build Fix** ✅
+   - Fixed React 19 type inference error in PhotoGallery
+   - Wrapped motion.div children in Fragment
+   - Build now passes successfully
+   - **Files**: PhotoGallery.tsx
+
+**Git commits**:
+- `a761e24` - feat: add comment chip indicator to photos with notes
+- `abfcc19` - feat: implement email reminder system for daily photo uploads
+- `b9817eb` - fix: resolve TypeScript build error in PhotoGallery
+
+---
+
+## ⚙️ SETUP REQUIRED - Email Reminders
+
+The email reminder system is built but needs configuration to work:
+
+### Step 1: Resend Account Setup
+1. Create free account at [resend.com](https://resend.com)
+2. Get API key from dashboard
+3. (Optional) Verify custom domain for professional emails
+
+### Step 2: Add Environment Variables to Vercel
+```bash
+RESEND_API_KEY=re_...
+CRON_SECRET=<generate-random-string>
+SUPABASE_SERVICE_ROLE_KEY=<from-supabase>
+VITE_APP_URL=https://your-production-url.vercel.app
+```
+
+### Step 3: Run Database Migration
+Run in Supabase SQL Editor:
+```sql
+-- File: supabase/migrations/003_add_email_reminders.sql
+-- (Copy contents from file and execute)
+```
+
+### Step 4: Test
+1. Go to Privacy & Security settings
+2. Enter your email
+3. Set reminder time to current time + 5 minutes
+4. Enable reminders
+5. Don't upload a photo
+6. Check your email!
+
+**Documentation**: See `EMAIL_REMINDERS_SETUP.md` for detailed instructions
+
+---
+
 ### Session 17 (2025-10-20)
 
 **Editable Photo Notes** ✅
 
 Now you can add or edit memory notes at any time, not just during upload!
-
-**⚠️ DEPLOYMENT STATUS**:
-- ✅ Code committed and pushed to GitHub (commits `856ce4f` + `90c1207`)
-- ✅ Build verified locally (no errors)
-- ⏳ **Deployment pending** - Vercel having issues, deployment queued
-- 🔍 **Action for next session**: Verify feature is live in production
-  - Check https://aperture-bjyvlfonv-daniels-projects-ca7c7923.vercel.app
-  - Open any photo → should see edit button (✏️) next to "Memory Note"
-  - If still not deployed, manually trigger redeploy in Vercel dashboard
 
 1. **Edit Notes After Upload** ✅
    - Created `updatePhotoNote()` function in usePhotoStore
@@ -70,42 +147,27 @@ Now you can add or edit memory notes at any time, not just during upload!
    - All TypeScript checks passed ✅
    - Deployed to production via Vercel
 
-### Previous Session (2025-10-15 AM)
-
-1. **Face Alignment Improvements** ✅
-   - Lowered detection thresholds (0.4 → 0.3)
-   - Relaxed validation constraints for challenging photos
-   - 4-level fallback landmark detection system
-   - Enhanced diagnostic logging
-   - **Result**: Oct 10th photo (and others) now align correctly!
-
-2. **UX Improvements** ✅
-   - Removed confusing eye detection error messages
-   - Hide upload buttons for dates with existing photos
-   - Removed meaningless "1% confidence" display
-   - Improved backdate upload UI (button toggle instead of always visible)
-
-3. **Calendar Timezone Fix** ✅
-   - Fixed off-by-one date display bug
-   - Photos now show on correct dates in calendar
-
-4. **Baby Age Display** ✅
-   - Shows age when viewing a photo (tap to see)
-   - Smart formatting: "2 weeks, 3 days" or "1 month, 5 days"
-   - Purple card with baby icon
-   - Only shows if birthdate is set
-
-5. **Birthdate Management** ✅
-   - Date picker in Privacy & Security settings
-   - Saves to database (user_settings.baby_birthdate)
-   - Age calculation utilities in `src/lib/ageUtils.ts`
-   - Settings store created (`src/stores/useSettingsStore.ts`)
-
 ---
 
 ## 🚀 Next Features to Implement
 
-### Priority 1: Timelapse Generator (~4-6 hours)
+### Priority 1: Email Reminders Setup
+**Complete the setup steps above** to activate daily photo reminders!
+
+### Priority 2: Native Mobile App (Discussed in Session 18)
+
+**Why**: Email reminders are good, but native push notifications are better!
+
+**Path Forward**:
+- React Native with Expo
+- Reuse business logic (~60% code share)
+- Native camera & push notifications
+- 2-3 weeks to MVP
+- See session notes for full native app roadmap
+
+**For now**: Email reminders provide good MVP validation
+
+### Priority 3: Timelapse Generator (~4-6 hours)
 
 **What**: Automatically create video/GIF timelapses from aligned photos
 
@@ -134,7 +196,7 @@ Now you can add or edit memory notes at any time, not just during upload!
 
 ---
 
-### Priority 2: Shareable Links (~4-6 hours)
+### Priority 4: Shareable Links (~4-6 hours)
 
 **What**: Generate public comparison links (no auth required)
 
@@ -159,19 +221,21 @@ None! Everything is working well.
 - **Growth Visualization**: Chart showing face changes over time
 - **Custom Watermarks**: Add baby's name/age to photos
 - **Multiple Babies**: Support for twins/siblings
-- **Smart Reminders**: Notifications if you haven't uploaded
 - **Monthly Summaries**: Auto-generated "Month in Review"
 - **Export Features**: PDF collages, formatted exports
-- **Delete Notes**: Allow removing notes without deleting photo
+- **PWA Push Notifications**: Before going fully native
+- **SMS Reminders**: Twilio integration for higher engagement
 
 ---
 
 ## 🔗 Deployment
 
-Current deployment: **https://aperture-bjyvlfonv-daniels-projects-ca7c7923.vercel.app**
+Current deployment: **Production URL TBD** (check Vercel dashboard)
 
 Auto-deploys on push to `main` branch.
 
 ---
 
-**Ready to rock! 🚀**
+**Ready for the next session! 🚀**
+
+**Remember**: Complete email reminder setup to activate daily reminders!

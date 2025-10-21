@@ -137,24 +137,30 @@ Is that correct, or are you working on something else?
 
 ### Step 3: Read Current Status (MANDATORY)
 
-**Two-step approach**:
+**🚨 CRITICAL - NEXT_SESSION.md Routing Pattern**:
 
-1. **Read root** `NEXT_SESSION.md` (router)
-   - Quick overview of all projects
-   - See which project was last active
-   - Get links to project-specific files
+**Root NEXT_SESSION.md is a ROUTER, not content**:
+1. **Read root** `NEXT_SESSION.md` ONLY to see which project was last active
+2. **Immediately load project-specific** `NEXT_SESSION.md` for actual details:
+   - `projects/wizard-of-oz/NEXT_SESSION.md` ← Detailed status HERE
+   - `projects/visual-test-generator/NEXT_SESSION.md` ← Detailed status HERE
+   - `projects/polymath/NEXT_SESSION.md` ← Detailed status HERE
+   - `scripts/autonomous-docs/NEXT_SESSION.md` ← Detailed status HERE
 
-2. **Read project-specific** NEXT_SESSION.md after user selects project:
-   - `projects/wizard-of-oz/NEXT_SESSION.md`
-   - `projects/visual-test-generator/NEXT_SESSION.md`
-   - `projects/memory-os/NEXT_SESSION.md`
-   - `scripts/autonomous-docs/NEXT_SESSION.md`
+**Pattern**: Root = router index → Project file = actual content
 
-**What you'll find**:
+**When updating docs**:
+- ✅ **DO**: Update project-specific `NEXT_SESSION.md` with detailed progress
+- ✅ **DO**: Update root `NEXT_SESSION.md` "Last Active" section (one line)
+- ❌ **DON'T**: Put detailed status in root file (it's just a router!)
+
+**What you'll find in project-specific files**:
 - Current sprint/milestone for that project
 - Active tasks and blockers
 - Recent changes and context
 - What to work on next
+- Setup instructions
+- Known issues
 
 ---
 
