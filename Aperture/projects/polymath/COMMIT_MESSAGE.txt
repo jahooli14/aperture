@@ -1,0 +1,114 @@
+feat(memory-os): integrate Polymath meta-creative synthesis engine
+
+BREAKING: This is a major integration that merges the Polymath project
+into MemoryOS, creating a unified creative intelligence system.
+
+## What Changed
+
+### New Features
+- **Polymath Integration**: Meta-creative synthesis engine now part of MemoryOS
+  - AI generates project ideas by combining codebase capabilities × user interests
+  - Weekly synthesis (Vercel cron: Monday 09:00 UTC)
+  - Daily node strengthening based on git activity
+  - Point allocation: novelty (30%) + feasibility (40%) + interest (30%)
+  - Diversity injection: every 4th suggestion is a "wild card"
+  - Permanent ideas list with rating system (👍 Spark / 👎 Meh / 💡 Build)
+  - Bidirectional integration with MemoryOS knowledge graph
+
+### Files Added (16 total)
+
+#### Scripts (scripts/polymath/)
+- capability-scanner.ts - Scans Aperture codebase for technical capabilities
+- synthesis.ts - AI synthesis engine (Claude Sonnet 4.5 + OpenAI embeddings)
+- strengthen-nodes.ts - Git activity tracker and node strength updater
+- seed-test-data.ts - Test data generator (no AI needed)
+- migration.sql - Database schema (6 new tables)
+
+#### API Endpoints (api/)
+- projects.ts - Projects CRUD
+- projects/[id].ts - Single project operations
+- suggestions.ts - GET all suggestions with filtering
+- suggestions/[id]/rate.ts - Rating with learning feedback
+- suggestions/[id]/build.ts - Build project from suggestion
+- cron/weekly-synthesis.ts - Monday synthesis job
+- cron/strengthen-nodes.ts - Daily node strengthening job
+
+#### React Components (src/components/)
+- suggestions/SuggestionCard.tsx - Suggestion display with scores
+- suggestions/RatingActions.tsx - Quick rating buttons
+- suggestions/WildcardBadge.tsx - Diversity indicator
+- projects/ProjectCard.tsx - Project display card
+- capabilities/CapabilityBadge.tsx - Capability badge component
+
+### Files Updated (5 total)
+- package.json - Added @anthropic-ai/sdk, openai, react-router-dom, tsx
+- vercel.json - Added cron jobs (weekly synthesis + daily strengthening)
+- src/types.ts - Added 400+ lines of Polymath types
+- README.md - Documented Polymath integration
+- NEXT_SESSION.md - Consolidated MemoryOS + Polymath status
+
+### Documentation (4 guides)
+- WAKE_UP_SUMMARY.md - Quick overview for next session
+- INTEGRATION_COMPLETE.md - Complete integration summary
+- TESTING_GUIDE.md - Step-by-step testing instructions
+- Reference docs in ../polymath/ (13 files: CONCEPT, ARCHITECTURE, etc.)
+
+## Database Changes
+Requires migration: scripts/migration.sql creates 6 new tables:
+- projects - Personal/technical/meta projects
+- capabilities - Technical capabilities from codebase
+- project_suggestions - AI-generated project ideas
+- suggestion_ratings - User ratings and feedback
+- node_strengths - Activity-based capability strengths
+- capability_combinations - Novel capability pairings
+
+## Technical Details
+
+### Architecture
+- **MemoryOS → Polymath**: Interests extracted from memories feed synthesis
+- **Polymath → MemoryOS**: Active projects become entities in knowledge graph
+- **Activity Loop**: Git commits → strengthen nodes → influence future suggestions
+- **Diversity**: Anti-echo-chamber wild cards prevent filter bubble
+
+### AI Stack
+- Claude Sonnet 4.5: Project idea generation and synthesis
+- OpenAI: Embeddings for semantic similarity
+- Gemini 2.5 Flash: Entity extraction (existing MemoryOS)
+
+### Automation
+- Monday 09:00 UTC: Weekly synthesis generates 10 new suggestions
+- Daily 00:00 UTC: Node strengthening based on git activity
+
+## Testing
+No tests added yet (UI pending). Testing guide provided:
+- Seed test data: `npx tsx scripts/polymath/seed-test-data.ts`
+- Verify Supabase: 8 capabilities, 4 suggestions
+
+## Next Steps (Not in this commit)
+- [ ] Create UI pages (ProjectsPage, SuggestionsPage, AllIdeasPage)
+- [ ] Add routing (react-router-dom)
+- [ ] Create Zustand stores (useProjectStore, useSuggestionStore)
+- [ ] Deploy to Vercel with environment variables
+
+## Deployment Checklist
+Required environment variables:
+- ANTHROPIC_API_KEY (Claude Sonnet 4.5)
+- OPENAI_API_KEY (embeddings)
+- USER_ID (Supabase user ID)
+- CRON_SECRET (optional, for cron job security)
+
+## Integration Stats
+- 16 implementation files added
+- 5 configuration files updated
+- 4,000+ lines of code
+- 15,000+ words of documentation
+- 100% unified (no separate repos/deployments)
+
+## Breaking Changes
+None. This is purely additive to MemoryOS. Existing functionality unchanged.
+
+Generated with [Claude Code](https://claude.com/claude-code)
+via [Happy](https://happy.engineering)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+Co-Authored-By: Happy <yesreply@happy.engineering>

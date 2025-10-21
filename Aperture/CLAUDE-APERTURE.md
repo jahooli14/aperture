@@ -14,11 +14,11 @@
 
 ### Current Status
 - **Active Projects**: 5
-  - **Personal**: Wizard of Oz (production), MemoryOS (ready to deploy)
+  - **Personal**: Wizard of Oz (production), Polymath (ready to deploy)
   - **Meta**: Visual Test Generator (documented), Self-Healing Tests, Autonomous Docs
 - **Framework**: React, TypeScript, Vite
 - **Deployment**: Vercel
-- **Last Updated**: 2025-10-20 (Session 19 - MemoryOS build complete)
+- **Last Updated**: 2025-10-21 (Session 21 - Polymath consolidated, OpenAI replaced with Gemini)
 
 ---
 
@@ -32,7 +32,7 @@ Read these files IN ORDER:
 
 ### For Specific Tasks
 - **Wizard of Oz Development**: See `projects/wizard-of-oz/` section below
-- **MemoryOS Development**: See `projects/memory-os/` section below
+- **Polymath Development**: See `projects/polymath/` section below
 - **Self-Healing Tests**: See `scripts/self-healing-tests/` (coming soon)
 - **Autonomous Docs**: See `scripts/autonomous-docs/FEATURE_GUIDE.md`
 - **Process Improvements**: See `.process/` directory
@@ -70,7 +70,8 @@ Aperture/
 │   └── COMMON_MISTAKES.md
 ├── projects/             # Personal projects
 │   ├── wizard-of-oz/    # Baby photo alignment app
-│   └── memory-os/       # Voice-to-memory knowledge graph
+│   ├── memory-os/       # Voice-to-memory knowledge graph
+│   └── polymath/        # Creative project tracker
 ├── scripts/             # Meta projects (infrastructure)
 │   ├── autonomous-docs/ # Self-optimizing documentation
 │   └── self-healing-tests/ # Automated test repair (coming soon)
@@ -128,40 +129,59 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 
 ---
 
-### MemoryOS
 
-**Status**: 🟡 READY TO DEPLOY (blocked on Vercel platform issues)
+### Polymath
 
-A voice-to-memory personal knowledge graph that turns spoken thoughts into searchable, explorable insights with active connection finding.
+**Status**: ✅ READY TO DEPLOY - Database Migration Required
 
-#### Quick Facts
-- **Location**: `projects/memory-os/`
-- **Tech Stack**: Audiopen, Supabase (pgvector), Gemini AI (embeddings + extraction), Vercel
-- **Deployment**: Vercel (configured, awaiting successful deploy)
-- **Core Concept**: Bidirectional memory augmentation - system strengthens biological memory while getting smarter itself
+A meta-creative synthesis engine that generates novel project ideas by combining your capabilities with your interests.
 
-#### Key Features
-- ✅ Voice capture via Audiopen webhook
-- ✅ AI metadata extraction (entities, themes, emotional tone)
-- ✅ Vector embeddings with semantic search
-- ✅ Automatic bridge finding (entity, semantic, temporal)
-- ✅ React frontend with memory cards + connection visualization
-- ⏳ Daily insight digest (planned)
+#### What It Is
+- **Captures interests** via voice notes (Audiopen) → extracts recurring themes
+- **Scans codebase** → identifies technical capabilities
+- **AI synthesis** → generates novel project suggestions at the intersection
+- **Activity learning** → tracks git commits → strengthens capability nodes
+- **Knowledge graph** → builds connections between interests, capabilities, and projects
 
-#### Development Status
-- ✅ Complete system implemented (Session 19 - 2025-10-20)
-- ✅ Database schema live on Supabase with vector extension
-- ✅ All API endpoints built (capture webhook, processing)
-- ✅ Bridge-finding algorithm implemented
-- ✅ Frontend with Zustand state management
-- ✅ Local build verified (passes all checks)
-- ⏳ Blocked on Vercel deployment (platform having temporary failures)
-- ⏳ Next: Deploy when Vercel stable → Configure Audiopen webhook → Test end-to-end
+#### Core Mechanisms
+- **Weekly Synthesis**: AI scans capabilities + interests, generates 10 project suggestions
+- **Point Allocation**: Each suggestion scored on novelty (30%) + feasibility (40%) + interest (30%)
+- **Diversity Injection**: Every 4th suggestion is a "wild card" 🎲 to prevent echo chamber
+- **Node Strengthening**: Git activity strengthens capability nodes → influences future suggestions
+- **Permanent Ideas List**: All suggestions tracked (pending, spark, meh, built, dismissed, saved)
 
-#### Documentation
-- `projects/memory-os/NEXT_SESSION.md` - Complete deployment guide + future enhancements
-- `projects/memory-os/README.md` - Project overview
-- `projects/memory-os/SETUP.md` - Setup instructions
+#### Tech Stack
+- **Frontend**: React 18.3, TypeScript, Vite, React Router DOM, Zustand
+- **Backend**: Vercel Serverless Functions (Node.js 20.x)
+- **Database**: Supabase (PostgreSQL 15 + pgvector)
+- **AI**: Claude Sonnet 4.5 (synthesis), Gemini 2.5 Flash (embeddings + entity extraction)
+- **Automation**: Vercel Cron Jobs (Monday 09:00 UTC synthesis, Daily 00:00 UTC strengthening)
+
+#### Implementation Status
+- ✅ Complete design (13 documentation files)
+- ✅ All implementation files in `projects/polymath/`
+- ✅ Scripts ready (capability-scanner, synthesis, strengthen-nodes, seed-test-data)
+- ✅ API endpoints ready (7 endpoints)
+- ✅ React components ready (5 components)
+- ✅ TypeScript types complete (477 lines)
+- ✅ Dependencies configured (Gemini for embeddings, no OpenAI)
+- ✅ Cron jobs configured
+- ⏳ Database migration needed (`scripts/migration.sql`)
+- ⏳ UI pages to be created (ProjectsPage, SuggestionsPage, AllIdeasPage)
+- ⏳ Routing to be added (react-router-dom)
+- ⏳ State management to be added (Zustand stores)
+
+#### Location
+**All files in**: `projects/polymath/`
+
+#### Key Documentation
+- `projects/polymath/START_HERE.md` - Entry point and navigation
+- `projects/polymath/README.md` - Project overview
+- `projects/polymath/CONCEPT.md` - Vision and design principles
+- `projects/polymath/ARCHITECTURE.md` - Technical design with algorithms
+- `projects/polymath/ROADMAP.md` - 10-phase implementation plan
+- `projects/polymath/TESTING_GUIDE.md` - Step-by-step testing instructions
+- `projects/polymath/NEXT_SESSION.md` - Current status and quick start
 
 ---
 
@@ -401,6 +421,19 @@ Found 247 files containing "upload"...
 ## Development Philosophy
 
 > **Source**: Adapted from DSPy principles - Programming language model systems
+
+### Debugging First Principles
+
+> **Source**: [META_DEBUGGING_PROTOCOL.md](/META_DEBUGGING_PROTOCOL.md) - Universal debugging methodology
+>
+> **Core insight**: 80% of bugs are input/assumption issues, not algorithm issues
+
+**Two-phase approach**:
+
+1. **Verify Inputs First** (10 min) - Check infrastructure, logs, and input assumptions
+2. **Systematic Reduction** (variable) - Find repro → Narrow → Remove → Root cause
+
+**See** [`META_DEBUGGING_PROTOCOL.md`](/META_DEBUGGING_PROTOCOL.md) for complete methodology.
 
 ### Separation of Concerns
 

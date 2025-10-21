@@ -111,12 +111,12 @@ export interface TestConfig {
 // Stub implementation for Week 1 Day 2-3
 export class VideoRecorder {
   async startRecording(): Promise<void> {
-    // TODO: Implement MediaRecorder API
+    // Implementation needed: MediaRecorder API
     throw new Error('Not implemented yet');
   }
 
   async stopRecording(): Promise<Blob> {
-    // TODO: Implement
+    // Implementation needed
     throw new Error('Not implemented yet');
   }
 }

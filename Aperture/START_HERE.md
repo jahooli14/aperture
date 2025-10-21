@@ -74,6 +74,33 @@ That file handles:
 
 ---
 
+## ⚡ True Minimal Startup (30 seconds - 80% of sessions)
+
+**Don't overthink it. Most sessions need < 500 tokens of context.**
+
+```markdown
+1. Read NEXT_SESSION.md (1 min) - What's the current status?
+2. If debugging → Read META_DEBUGGING_PROTOCOL.md summary (50 lines)
+3. Start work
+
+Skip everything else unless your specific task requires it.
+```
+
+**That's it.** You now know:
+- Current project status
+- What was working/broken last session
+- Next steps to take
+- (If debugging) Input verification mindset
+
+**Only read additional docs if**:
+- Building complex feature (> 30 min) → Task Signature pattern
+- Modifying infrastructure → Relevant architecture docs
+- Unfamiliar with project → Project README
+
+**The navigation system exists to help you find what you need, not to force you to read everything.**
+
+---
+
 ## 🏃 Quick Start (1-2 minutes)
 
 **For continuing work or simple fixes**:

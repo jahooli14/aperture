@@ -1,0 +1,136 @@
+/**
+ * Suggestion Store (Zustand)
+ * Manages project suggestions state and API calls
+ */
+
+import { create } from 'zustand'
+
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
+interface ProjectSuggestion {
+  id: string
+  user_id: string
+  title: string
+  description: string
+  capability_ids: string[]
+  novelty_score: number
+  feasibility_score: number
+  interest_score: number
+  total_points: number
+  is_wildcard: boolean
+  status: 'pending' | 'spark' | 'meh' | 'built' | 'dismissed' | 'saved'
+  created_at: string
+  metadata?: any
+}
+
+interface SuggestionState {
+  suggestions: ProjectSuggestion[]
+  loading: boolean
+  error: string | null
+  filter: 'all' | 'pending' | 'spark' | 'saved' | 'built'
+  sortBy: 'points' | 'recent' | 'rating'
+
+  // Actions
+  fetchSuggestions: () => Promise<void>
+  rateSuggestion: (id: string, rating: number) => Promise<void>
+  buildSuggestion: (id: string) => Promise<void>
+  setFilter: (filter: SuggestionState['filter']) => void
+  setSortBy: (sortBy: SuggestionState['sortBy']) => void
+}
+
+export const useSuggestionStore = create<SuggestionState>((set, get) => ({
+  suggestions: [],
+  loading: false,
+  error: null,
+  filter: 'pending',
+  sortBy: 'points',
+
+  fetchSuggestions: async () => {
+    set({ loading: true, error: null })
+
+    try {
+      const { filter } = get()
+      const params = new URLSearchParams()
+
+      if (filter !== 'all') {
+        params.append('status', filter)
+      }
+
+      const response = await fetch(`${API_BASE}/suggestions?${params}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions')
+      }
+
+      const data = await response.json()
+      set({ suggestions: data.suggestions || [], loading: false })
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        loading: false
+      })
+    }
+  },
+
+  rateSuggestion: async (id: string, rating: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/suggestions/${id}/rate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to rate suggestion')
+      }
+
+      // Refresh suggestions after rating
+      await get().fetchSuggestions()
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  },
+
+  buildSuggestion: async (id: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/suggestions/${id}/build`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to build suggestion')
+      }
+
+      // Refresh suggestions after building
+      await get().fetchSuggestions()
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  },
+
+  setFilter: (filter) => {
+    set({ filter })
+    get().fetchSuggestions()
+  },
+
+  setSortBy: (sortBy) => {
+    set({ sortBy })
+    // Sort existing suggestions in memory
+    const { suggestions } = get()
+    const sorted = [...suggestions].sort((a, b) => {
+      if (sortBy === 'points') return b.total_points - a.total_points
+      if (sortBy === 'recent') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (sortBy === 'rating') {
+        const ratingOrder = { spark: 3, saved: 2, pending: 1, meh: 0, dismissed: -1, built: 4 }
+        return ratingOrder[b.status] - ratingOrder[a.status]
+      }
+      return 0
+    })
+    set({ suggestions: sorted })
+  }
+}))

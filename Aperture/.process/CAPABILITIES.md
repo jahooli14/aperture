@@ -2,7 +2,126 @@
 
 > **Purpose**: Fast lookup for available patterns and when to use them
 >
-> **Last Updated**: 2025-10-14 (Session 14)
+> **Last Updated**: 2025-01-21 (Session 21 - Pattern Tiers Added)
+
+---
+
+## Pattern Tiers
+
+**How to use this guide**:
+- 🔵 **Core** - Use these always. Required for effective development.
+- 🟢 **Reliability-Critical** - Use when building uploads/APIs/auth/payments.
+- 🟡 **Complex Features** - Use only for features > 30 min or cross-session work.
+- 🔴 **Experimental** - Low usage. Use if you understand the trade-offs.
+
+---
+
+## 🔵 Core Patterns (Always Use)
+
+### Meta Debugging Protocol
+**Tier**: 🔵 Core (always)
+**When to Use**: Any bug, any issue, any "doesn't work"
+**Where Documented**: `META_DEBUGGING_PROTOCOL.md`
+**Why Core**: 80% of bugs are input issues. Verify inputs first saves hours.
+
+**Two-phase approach**:
+1. Verify inputs first (10 min) - Infrastructure, logs, assumptions
+2. Systematic reduction (variable) - Find repro → Narrow → Remove → Root cause
+
+**Example**: Photo alignment bug (90 min wasted debugging perfect algorithm applied to wrong coordinates)
+
+---
+
+### Targeted Operations
+**Tier**: 🔵 Core (always)
+**When to Use**: File searches, code lookups, any search operation
+**Where Documented**: `CLAUDE-APERTURE.md:210-240` (Tool Design Philosophy)
+**Why Core**: 10-100x faster than broad operations. Token efficient.
+
+**Prefer**:
+- `grep "pattern" --glob "*.tsx"` over reading all files
+- Specific queries with filters over fetch-everything-then-filter
+
+---
+
+### Parallel Execution
+**Tier**: 🔵 Core (always)
+**When to Use**: Multiple independent operations
+**Where Documented**: `.claude/startup.md:341-361` (Step 5.6)
+**Why Core**: 3x faster than sequential. Standard practice.
+
+**Example**: Run `git status`, `git diff`, `git log` in parallel (single message, 3 tool calls)
+
+---
+
+## 🟢 Reliability-Critical Patterns
+
+### Loop Pattern with Safeguards
+**Tier**: 🟢 Reliability-Critical (uploads/payments/auth)
+**When to Use**: Retry logic, iterative refinement, progressive workflows
+**Where Documented**: `CLAUDE-APERTURE.md:616-895`
+**Why Reliability-Critical**: Prevents infinite loops, token waste, user-facing failures
+
+**Required safeguards**:
+1. Max attempts (3-5, not 100)
+2. Total timeout (30s typical)
+3. Explicit success condition
+4. Error classification (fatal vs retryable)
+5. Progress tracking
+6. State logging
+
+**Example**: Photo upload with retry (3 attempts, 30s timeout, exponential backoff)
+
+---
+
+### Validation-Driven Development
+**Tier**: 🟢 Reliability-Critical (uploads/APIs/auth/payments)
+**When to Use**: Reliability-critical features
+**Where Documented**: `.claude/startup.md:264-379`
+**Maturity**: 🟡 Learning (cited research, local validation needed)
+
+**Pattern**: Define constraints → Implement validation → Retry with refinement
+
+---
+
+## 🟡 Complex Feature Patterns
+
+### Task Signature Pattern
+**Tier**: 🟡 Complex Features (>30 min or cross-session)
+**When to Use**: Complex features, user-facing work, unclear requirements
+**Where Documented**: `CLAUDE-APERTURE.md:490-587`
+**Why Use**: Saves 30-60 min in rework by clarifying upfront
+
+**Template**: `inputs → outputs` + validation criteria + success metrics + constraints
+
+**Example**: Photo gallery pagination (clear contract prevents scope creep)
+
+**Skip when**: Trivial tasks (< 10 min), obvious requirements, one-line fixes
+
+---
+
+### Three-Stage Development
+**Tier**: 🟡 Complex Features (>30 min)
+**Where Documented**: `SESSION_CHECKLIST.md:84-167`
+**Maturity**: 🔴 Rare (aspirational DSPy pattern, no local examples)
+
+**Stages**: Programming → Evaluation → Optimization
+
+**Note**: Experimental. Use Task Signature instead unless you're familiar with DSPy.
+
+---
+
+## 🔴 Experimental Patterns
+
+### Subagent Delegation
+**Tier**: 🔴 Experimental (low usage)
+**When to Use**: Deep research, codebase analysis, multi-step autonomous tasks
+**Where Documented**: `.claude/startup.md:394-421`
+**Maturity**: 🟡 Learning (basic usage working, advanced patterns TBD)
+
+**Available agents**: general-purpose, deep-research, codebase-pattern-analyzer, check-and-challenge
+
+**Use sparingly**: Adds coordination overhead. Only use when task truly requires autonomy.
 
 ---
 

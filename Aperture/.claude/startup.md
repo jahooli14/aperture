@@ -46,65 +46,90 @@
 
 ---
 
-### Step 1.5: Query Classification & Smart Routing
+### Step 1.5: Query Classification (STRONGLY RECOMMENDED)
 
-**Purpose**: Load only relevant context based on user intent
+**Purpose**: Load only what you need. Make classification visible.
 
-**Classify user's request**:
+**Best Practice: Report your classification before proceeding:**
 
-```
-User query type → What to read → Pattern to use
-
-"doesn't work", "broken", "error", "bug"
-  → DEBUG → .process/META_DEBUGGING_PROTOCOL.md
-
-"implement", "add feature", "create", "build"
-  → FEATURE_NEW → .process/CAPABILITIES.md (Task Signature Pattern)
-
-"understand", "how does", "explain", "why"
-  → RESEARCH → Launch deep-research subagent
-
-"fix typo", "update text", "quick change"
-  → QUICK_FIX → Skip planning, implement directly
-
-"refactor", "improve", "clean up"
-  → REFACTOR → Create checkpoint first (.process/CAPABILITIES.md)
-
-"check", "verify", "test", "validate"
-  → VERIFICATION → .process/OBSERVABILITY.md
-
-"continue", "keep going", "next"
-  → CONTINUATION → Read NEXT_SESSION.md
+**Template:**
+```markdown
+📋 Query Classification: [DEBUGGING|IMPLEMENTATION|CONTINUATION]
+📝 Reasoning: [One sentence why]
+📖 Loading: [Specific files to read]
+⏭️  Skipping: [What I'm NOT reading to save tokens]
 ```
 
-**Full routing guide**: `.process/CAPABILITIES.md:9-32`
+**Classification Rules:**
+
+**🐛 DEBUGGING** - User reports something broken/not working
+```markdown
+Keywords: "doesn't work", "broken", "error", "bug", "failing"
+Loading: META_DEBUGGING_PROTOCOL.md, /verify-infra (if infrastructure-related)
+Skipping: CAPABILITIES.md, Task Signature pattern, session management
+Example: "Photo upload is broken" → DEBUGGING
+```
+
+**🔨 IMPLEMENTATION** - User wants to build/add/modify something
+```markdown
+Keywords: "implement", "add", "build", "create", "refactor"
+
+Simple (<30 min): Just start, load project NEXT_SESSION.md
+Complex (>30 min): Load CAPABILITIES.md (Task Signature Pattern)
+
+Loading: NEXT_SESSION.md + (if complex) CAPABILITIES.md (Task Signature section)
+Skipping: Debugging docs, full pattern list
+Example: "Add dark mode toggle" → IMPLEMENTATION (complex)
+```
+
+**📖 CONTINUATION** - User wants to continue previous work
+```markdown
+Keywords: "continue", "keep going", "next", "where were we"
+Loading: NEXT_SESSION.md ONLY (that's it!)
+Skipping: Everything else until specific need emerges
+Example: "Continue building Polymath" → CONTINUATION
+```
+
+**If unsure**: Default to CONTINUATION (safest, minimal loading)
 
 ---
 
-### Step 2: Project Selection (INTERACTIVE - MANDATORY)
+### Step 2: Project Detection (SMART INFERENCE)
 
-**Ask the user** which project they're working on:
+**Auto-detect project based on context (95% of sessions):**
 
+**Detection algorithm:**
+1. Check current working directory (`pwd`)
+   - If path contains `/nudj-digital/` → NUDJ (work)
+   - If path contains `/Aperture/projects/X/` → Aperture project X
+2. If ambiguous, check `NEXT_SESSION.md` "Last Active" field
+3. If still unclear, check user's first message for project keywords
+
+**Examples:**
+```bash
+# Auto-detected (no confirmation needed)
+pwd: /Aperture/projects/polymath/
+Last Active: Polymath (Session 21)
+User: "continue where we left off"
+→ Silently load: projects/polymath/NEXT_SESSION.md
+
+# Auto-detected with inference
+pwd: /Aperture/
+Last Active: Wizard of Oz
+User: "fix the upload bug"
+→ Infer: Wizard of Oz (was last active, user mentions upload)
+→ Silently load: projects/wizard-of-oz/NEXT_SESSION.md
 ```
-Which project are you working on today?
 
-1. 🏢 NUDJ (Work) - Multi-tenant SaaS platform
-   → Read: CLAUDE-NUDJ.md
-
-2. 🏠 Aperture (Personal Projects)
-   → Read: CLAUDE-APERTURE.md
-   → Then ask which sub-project:
-      - Wizard of Oz (baby photo app) - 🟢 Production
-      - MemoryOS (voice-to-memory) - 🔵 Design phase
-      - Self-Healing Tests (meta) - 🟢 Complete
-      - Visual Test Generator (meta) - 🚀 Week 1
-      - Autonomous Docs (meta) - 🟢 Active
+**Only ask if truly ambiguous (<5% of cases):**
+```
+Detected: [Project X based on Y]
+Is that correct, or are you working on something else?
 ```
 
-**Why ask?**
-- Different projects have different conventions
-- Prevents mixing concerns
-- Loads appropriate context only
+**Manual override always works:**
+- User can say "actually working on Y" → switch immediately
+- Saves 30 seconds + 500-1000 tokens per session
 
 **Full router**: `CLAUDE.md`
 
@@ -162,27 +187,27 @@ Which project are you working on today?
 ### Step 5: Development Patterns
 
 **For complex features** (> 30 min):
-- **Task Signature Pattern** → `.process/CAPABILITIES.md:62-74`
+- **Task Signature Pattern** → `.process/CAPABILITIES.md` (Complex Feature Patterns section)
   - Define inputs → outputs contract
   - Set validation criteria
   - Document constraints
 
 **For reliability-critical** (uploads, APIs, auth, payments):
-- **Validation-Driven Development** → `.process/CAPABILITIES.md:91-100`
+- **Validation-Driven Development** → `.process/CAPABILITIES.md` (Reliability-Critical Patterns section)
   - Define constraints upfront
   - Add validation checks
   - Implement retry with refinement
 
 **For iterative operations** (retry logic, refinement):
-- **Loop Pattern with Safeguards** → `.process/CAPABILITIES.md:35-57`
+- **Loop Pattern with Safeguards** → `.process/CAPABILITIES.md` (Reliability-Critical Patterns section)
   - Max attempts (3-5, not 100)
   - Explicit exit conditions
   - Progress tracking
 
 **For performance**:
-- **Parallel Execution** → `.process/CAPABILITIES.md:130-136`
-- **Subagent Delegation** → `.process/CAPABILITIES.md:136-142`
-- **Checkpoint Before Changes** → `.process/CAPABILITIES.md:142-164`
+- **Parallel Execution** → See Step 5.6 below
+- **Subagent Delegation** → See Step 5.7 below
+- **Checkpoint Before Changes** → `.process/CAPABILITIES.md` (Query Routing section)
 
 **Full patterns**: `.process/CAPABILITIES.md`
 

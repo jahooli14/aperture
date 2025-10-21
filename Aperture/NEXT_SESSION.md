@@ -15,28 +15,31 @@
 
 **Which project are you working on today?**
 
-| Project | Status | Next Session File |
-|---------|--------|-------------------|
-| 🎬 **Visual Test Generator** | 🚀 Week 1 Starting | [`projects/visual-test-generator/NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
-| 🧙 **Wizard of Oz** | 🟢 Production | [`projects/wizard-of-oz/NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
-| 🧠 **MemoryOS** | 🟡 Ready to Deploy | [`projects/memory-os/NEXT_SESSION.md`](projects/memory-os/NEXT_SESSION.md) |
-| 📚 **Autonomous Docs** | 🟢 Active | [`scripts/autonomous-docs/NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
+| Project | Status | Evidence | Next Session File |
+|---------|--------|----------|-------------------|
+| 🎬 **Visual Test Generator** | 🚀 Week 1 Starting | [Docs created](projects/visual-test-generator/), no code yet | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
+| 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
+| 🎨 **Polymath** | ✅ Ready to Deploy | [27 files](projects/polymath/), DB migration ready, no deployment attempts | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
+| 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
 
 ---
 
 ## 📊 Last Active
 
-**Most Recent**: MemoryOS Build Complete (Session 19 - 2025-10-20)
-- Built complete MemoryOS system (voice → memory graph with AI bridges)
-- All code implemented: webhook, processing pipeline, bridge finding
-- Database schema live on Supabase
-- Blocked on Vercel deployment (platform issues)
-- Ready to deploy once Vercel stable
+**Most Recent**: Polymath Consolidation Complete (Session 21 - 2025-10-21)
+- **Polymath is now the primary project** - MemoryOS merged into it
+- All implementation files in `projects/polymath/` folder
+- Replaced OpenAI with Gemini Flash 2.5 for embeddings
+- Anthropic Claude only used for synthesis (optional)
+- Scripts, API endpoints, React components, types all ready
+- 16 implementation files + 13 documentation files
+- 4,000+ lines of code, complete type safety
+- Ready for database migration and UI implementation
 
 **Previous Sessions**:
+- Session 19: MemoryOS Build Complete (ready to deploy)
 - Session 18: Session Management Restructure
 - Session 17: Wizard of Oz - Editable photo notes
-- Session 16: Visual Test Generator - Full documentation
 
 ---
 
