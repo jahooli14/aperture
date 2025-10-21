@@ -14,13 +14,23 @@
 Three major updates shipped today!
 
 **⚠️ DEPLOYMENT STATUS**:
-- ✅ Code committed and pushed (commits `a761e24`, `abfcc19`, `b9817eb`)
-- ✅ Build errors resolved
-- ⏳ **Deployment in progress** - Waiting for Vercel to pick up latest commit
-- 🔍 **Action for next session**:
-  - Verify build succeeded in Vercel dashboard
-  - Test comment chips on photos with notes
-  - Complete email reminder setup (see below)
+- ✅ Code committed and pushed (commits `a761e24`, `abfcc19`, `b9817eb`, `258f8f6`)
+- ✅ Build errors resolved (TypeScript fix in `b9817eb`)
+- ❌ **Deployment blocked** - Vercel had major outage Oct 20-21
+  - Incident: "Elevated errors across multiple services" affecting Builds, API, Dashboard
+  - Status: https://www.vercel-status.com/ (still recovering as of Oct 21 03:42 UTC)
+  - Webhooks didn't fire during outage, so commits weren't deployed
+
+**🔍 FIRST THING NEXT SESSION**:
+1. **Check Vercel status**: https://www.vercel-status.com/
+2. **If incident resolved**:
+   - Option A: Wait for Vercel to auto-deploy (may reprocess missed webhooks)
+   - Option B: Manually click "Redeploy" in Vercel dashboard
+3. **Verify deployment succeeds** (build should pass - TypeScript fixed)
+4. **Test new features**:
+   - Comment chips on photos with notes
+   - Email reminder settings UI in Privacy & Security
+5. **Complete email reminder setup** (see below)
 
 **What Was Built**:
 

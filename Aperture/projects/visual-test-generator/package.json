@@ -1,18 +1,17 @@
 {
   "name": "visual-test-generator",
   "version": "0.1.0",
-  "description": "AI-powered test generation from video recordings - transform manual testing into Playwright tests in 30 seconds",
+  "description": "Visual regression testing with Playwright - capture, compare, approve screenshots",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "type-check": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "test": "vitest",
-    "test:ui": "vitest --ui"
+    "capture": "tsx src/cli/capture.ts",
+    "compare": "tsx src/cli/compare.ts",
+    "approve": "tsx src/cli/approve.ts",
+    "test": "vitest"
   },
   "keywords": [
     "testing",
@@ -32,24 +31,27 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@xenova/transformers": "^2.17.0",
-    "@mlc-ai/web-llm": "^0.2.0",
-    "playwright": "^1.56.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "@playwright/test": "^1.48.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.5",
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.20.0"
   },
   "devDependencies": {
-    "@types/node": "^24.7.2",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
-    "@typescript-eslint/eslint-plugin": "^8.46.1",
-    "@typescript-eslint/parser": "^8.46.1",
-    "@vitejs/plugin-react": "^5.0.4",
-    "eslint": "^9.37.0",
-    "prettier": "^3.4.2",
-    "typescript": "^5.9.3",
-    "vite": "^7.1.7",
-    "vitest": "^3.2.4"
+    "@types/node": "^22.10.2",
+    "@types/pixelmatch": "^5.2.6",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.8"
   },
   "repository": {
     "type": "git",

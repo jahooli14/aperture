@@ -17,7 +17,7 @@
 
 | Project | Status | Evidence | Next Session File |
 |---------|--------|----------|-------------------|
-| 🎬 **Visual Test Generator** | 🚀 Week 1 Starting | [Docs created](projects/visual-test-generator/), no code yet | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
+| 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
 | 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
 | 🎨 **Polymath** | ✅ Pipeline Fixed | [Complete system](projects/polymath/), voice processing restored | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
 | 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
