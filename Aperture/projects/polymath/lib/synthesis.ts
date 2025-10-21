@@ -161,7 +161,8 @@ async function getCapabilities(): Promise<Capability[]> {
  * Lower score = less novel (suggested many times, especially if dismissed)
  */
 async function calculateNovelty(capabilityIds: string[]): Promise<number> {
-  const supabase = createSupabaseClient()
+  const { url, serviceRoleKey } = getSupabaseConfig()
+  const supabase = createClient(url, serviceRoleKey)
 
   // Sort capability IDs for consistent lookup
   const sortedIds = [...capabilityIds].sort()
@@ -223,7 +224,8 @@ async function calculateInterestScore(
 ): Promise<number> {
   if (interests.length === 0) return 0.5 // Neutral if no interests
 
-  const supabase = createSupabaseClient()
+  const { url, serviceRoleKey } = getSupabaseConfig()
+  const supabase = createClient(url, serviceRoleKey)
 
   // Generate embedding for project description
   const projectEmbedding = await generateEmbedding(projectDescription)
@@ -291,7 +293,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
  * Find memories that inspired a project idea using vector similarity
  */
 async function findInspiringMemories(projectDescription: string): Promise<string[]> {
-  const supabase = createSupabaseClient()
+  const { url, serviceRoleKey } = getSupabaseConfig()
+  const supabase = createClient(url, serviceRoleKey)
 
   // Generate embedding for project description
   const projectEmbedding = await generateEmbedding(projectDescription)
