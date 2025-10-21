@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import { HomePage } from './pages/HomePage'
+import { MemoriesPage } from './pages/MemoriesPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import './App.css'
@@ -13,6 +14,9 @@ export default function App() {
             🎨 Polymath
           </Link>
           <div className="nav-links">
+            <Link to="/memories" className="nav-link">
+              Memories
+            </Link>
             <Link to="/suggestions" className="nav-link">
               Suggestions
             </Link>
@@ -25,13 +29,14 @@ export default function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/memories" element={<MemoriesPage />} />
             <Route path="/suggestions" element={<SuggestionsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
           </Routes>
         </main>
 
         <footer className="app-footer">
-          <p>Meta-creative synthesis engine • Generates novel project ideas</p>
+          <p>Personal knowledge graph + meta-creative synthesis • Capture memories, generate projects</p>
         </footer>
 
         <style>{`

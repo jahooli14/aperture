@@ -198,7 +198,64 @@ async function calculateInterestScore(
 }
 
 /**
- * Generate project idea using Gemini
+ * Generate creative (non-technical) project idea from interests only
+ * Interest × Interest mode for pure creative pursuits
+ */
+async function generateCreativeProject(
+  interests: Interest[]
+): Promise<{ title: string; description: string; reasoning: string }> {
+  const interestList = interests.slice(0, 5).map(i => `- ${i.name} (${i.type}, ${i.mentions} mentions)`).join('\n')
+
+  const prompt = `You are a creative synthesis engine that generates novel creative project ideas.
+
+Given these user interests (from voice notes):
+${interestList}
+
+Generate ONE creative project idea that combines these interests in a unique way.
+
+IMPORTANT: This should be a CREATIVE project (art, writing, music, crafts, etc.), NOT a technical/coding project.
+
+Examples of creative projects:
+- "Paint an abstract art collection on the theme of communism"
+- "Write a series of short stories exploring memory and identity"
+- "Create a photo essay documenting local architecture"
+- "Compose ambient music inspired by nature sounds"
+
+Requirements:
+- NO coding, NO technical implementation
+- Should feel energizing and inspiring, not like work
+- Should combine 2-3 interests in a novel way
+- Title should be catchy and clear
+- Description should be 2-3 sentences, focusing on WHY this is interesting
+- Reasoning should explain why these interests work together
+
+Return ONLY valid JSON (no markdown, no code blocks):
+{
+  "title": "...",
+  "description": "...",
+  "reasoning": "..."
+}`
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash-exp',
+    generationConfig: {
+      temperature: 1.0, // Higher temp for more creative ideas
+      maxOutputTokens: 1024,
+    }
+  })
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+
+  // Extract JSON from response
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('No JSON found in response')
+
+  return JSON.parse(jsonMatch[0])
+}
+
+/**
+ * Generate project idea using Gemini (Tech × Tech or Tech × Interest)
  */
 async function generateProjectIdea(
   capabilities: Capability[],
@@ -326,7 +383,47 @@ async function generateWildcard(
 }
 
 /**
- * Generate normal suggestion
+ * Generate creative suggestion (Interest × Interest, no tech)
+ */
+async function generateCreativeSuggestion(
+  interests: Interest[]
+): Promise<ProjectIdea> {
+  console.log('  🎨 Generating creative (non-tech) suggestion...')
+
+  if (interests.length < 2) {
+    throw new Error('Need at least 2 interests for creative suggestions')
+  }
+
+  // Generate pure creative idea
+  const idea = await generateCreativeProject(interests)
+
+  // Score differently for creative projects
+  const noveltyScore = 0.8 // Creative combos are inherently novel
+  const feasibilityScore = 0.9 // No code = highly feasible
+  const interestScore = 1.0 // Directly from interests = perfect alignment
+
+  const totalPoints = Math.round(
+    (noveltyScore * CONFIG.NOVELTY_WEIGHT +
+      feasibilityScore * CONFIG.FEASIBILITY_WEIGHT +
+      interestScore * CONFIG.INTEREST_WEIGHT) * 100
+  )
+
+  return {
+    title: idea.title,
+    description: idea.description,
+    reasoning: idea.reasoning,
+    capabilityIds: [], // No capabilities for creative projects
+    memoryIds: [], // TODO: Link to inspiring memories
+    noveltyScore,
+    feasibilityScore,
+    interestScore,
+    totalPoints,
+    isWildcard: false,
+  }
+}
+
+/**
+ * Generate normal suggestion (Tech × Tech or Tech × Interest)
  */
 async function generateSuggestion(
   capabilities: Capability[],
@@ -435,10 +532,19 @@ export async function runSynthesis(userId: string) {
     // Every Nth suggestion is a wildcard
     const isWildcardSlot = (i + 1) % CONFIG.WILDCARD_FREQUENCY === 0
 
+    // Every 3rd non-wildcard suggestion is creative (Interest × Interest)
+    const isCreativeSlot = !isWildcardSlot && ((i + 1) % 3 === 0) && interests.length >= 2
+
     try {
-      const suggestion = isWildcardSlot
-        ? await generateWildcard(capabilities, interests, i)
-        : await generateSuggestion(capabilities, interests)
+      let suggestion: ProjectIdea
+
+      if (isWildcardSlot) {
+        suggestion = await generateWildcard(capabilities, interests, i)
+      } else if (isCreativeSlot) {
+        suggestion = await generateCreativeSuggestion(interests)
+      } else {
+        suggestion = await generateSuggestion(capabilities, interests)
+      }
 
       suggestions.push(suggestion)
 

@@ -219,7 +219,11 @@ CREATE TABLE IF NOT EXISTS memories (
   -- Processing status
   processed BOOLEAN DEFAULT false,
   processed_at TIMESTAMP WITH TIME ZONE,
-  error TEXT
+  error TEXT,
+
+  -- Resurfacing / spaced repetition tracking
+  last_reviewed_at TIMESTAMP WITH TIME ZONE,
+  review_count INTEGER DEFAULT 0
 );
 
 CREATE INDEX idx_memories_audiopen_id ON memories(audiopen_id);
