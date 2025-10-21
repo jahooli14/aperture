@@ -9,7 +9,8 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Calendar, Brain, Lightbulb } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export function SuggestionsPage() {
   const {
@@ -121,26 +122,74 @@ export function SuggestionsPage() {
             </CardContent>
           </Card>
         ) : suggestions.length === 0 ? (
-          /* Empty State */
+          /* Production-Ready Empty State */
           <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
-            <CardContent className="py-24">
-              <div className="text-center space-y-6">
-                <div className="relative inline-block">
-                  <Sparkles className="h-20 w-20 text-purple-600 mx-auto float-animation" />
-                  <div className="absolute inset-0 bg-purple-600/20 blur-2xl" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900">No suggestions yet</h3>
-                <div className="space-y-4 max-w-lg mx-auto">
-                  <p className="text-gray-600">
-                    Run the synthesis script to generate project ideas:
+            <CardContent className="py-16">
+              <div className="max-w-3xl mx-auto">
+                <div className="text-center mb-12">
+                  <div className="relative inline-block mb-6">
+                    <Sparkles className="h-20 w-20 text-purple-600 mx-auto float-animation" />
+                    <div className="absolute inset-0 bg-purple-600/20 blur-2xl" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Your Suggestions Are On The Way!</h3>
+                  <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                    Polymath generates personalized project ideas by analyzing your interests and capabilities.
                   </p>
-                  <code className="block px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl text-sm font-mono text-purple-800 border border-purple-200 shadow-sm">
-                    npx tsx scripts/polymath/synthesis.ts
-                  </code>
-                  <p className="text-gray-600">Or seed test data:</p>
-                  <code className="block px-6 py-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl text-sm font-mono text-purple-800 border border-purple-200 shadow-sm">
-                    npx tsx scripts/polymath/seed-test-data.ts
-                  </code>
+                </div>
+
+                {/* How it works */}
+                <div className="grid md:grid-cols-3 gap-6 mb-12">
+                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
+                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                      <Brain className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">1. Capture Ideas</h4>
+                    <p className="text-sm text-gray-600">
+                      Record your thoughts and interests via voice notes or manual entries
+                    </p>
+                  </div>
+
+                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
+                    <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                      <Calendar className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">2. AI Synthesis</h4>
+                    <p className="text-sm text-gray-600">
+                      Every Monday at 9am UTC, AI generates unique project suggestions for you
+                    </p>
+                  </div>
+
+                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                      <Lightbulb className="h-6 w-6 text-white" />
+                    </div>
+                    <h4 className="font-bold text-gray-900 mb-2">3. Get Inspired</h4>
+                    <p className="text-sm text-gray-600">
+                      Review suggestions, rate what sparks your interest, and build projects
+                    </p>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <div className="text-center space-y-4">
+                  <p className="text-gray-600 font-medium">
+                    Next synthesis runs <span className="font-bold text-purple-600">Monday at 9:00 AM UTC</span>
+                  </p>
+                  <div className="flex gap-4 justify-center flex-wrap">
+                    <Link to="/memories">
+                      <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                        Capture Your First Memory
+                      </Button>
+                    </Link>
+                    <Link to="/projects">
+                      <Button variant="outline" className="hover:scale-105 transition-transform">
+                        View Your Projects
+                      </Button>
+                    </Link>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-6">
+                    💡 Tip: The more memories and interests you capture, the better your suggestions will be!
+                  </p>
                 </div>
               </div>
             </CardContent>
