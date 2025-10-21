@@ -1,6 +1,6 @@
 /**
  * CreateMemoryDialog - Manual Memory Creation
- * Mobile-optimized dialog for capturing thoughts manually
+ * Visually stunning dialog for capturing thoughts manually
  */
 
 import { useState } from 'react'
@@ -82,45 +82,44 @@ export function CreateMemoryDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="btn-primary text-sm sm:text-base px-4 sm:px-6 h-12 sm:h-14 w-full sm:w-auto">
-        <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+      <DialogTrigger className="btn-primary">
+        <Plus className="mr-2 h-4 w-4" />
         New Memory
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 w-[calc(100vw-2rem)]">
+      <DialogContent className="sm:max-w-[600px]">
         {/* Subtle accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
 
-        <DialogHeader className="pb-3 sm:pb-4">
-          <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0" />
-            <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Capture Memory</DialogTitle>
+        <DialogHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <Sparkles className="h-6 w-6 text-orange-600" />
+            <DialogTitle className="text-2xl font-semibold text-neutral-900">Capture a Memory</DialogTitle>
           </div>
-          <DialogDescription className="text-sm sm:text-base text-left">
-            Add a thought, idea, or insight
+          <DialogDescription className="text-base">
+            Manually add a thought, idea, or insight to your personal knowledge graph
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-4 sm:space-y-6">
-          <div className="space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-6 py-6">
             {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="font-semibold text-gray-700 text-sm sm:text-base">
+            <div className="grid gap-2">
+              <Label htmlFor="title" className="font-semibold text-gray-700">
                 Title <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="title"
-                placeholder="What's this about?"
+                placeholder="What's this memory about?"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
-                autoComplete="off"
+                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400"
               />
             </div>
 
             {/* Body */}
-            <div className="space-y-2">
-              <Label htmlFor="body" className="font-semibold text-gray-700 text-sm sm:text-base">
+            <div className="grid gap-2">
+              <Label htmlFor="body" className="font-semibold text-gray-700">
                 Content <span className="text-red-500">*</span>
               </Label>
               <Textarea
@@ -129,18 +128,18 @@ export function CreateMemoryDialog() {
                 value={formData.body}
                 onChange={(e) => setFormData({ ...formData, body: e.target.value })}
                 required
-                rows={5}
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 resize-none text-base min-h-[120px] sm:min-h-[140px]"
+                rows={6}
+                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 resize-none"
               />
               <p className="text-xs text-gray-500">
-                AI will analyze this to extract entities and themes
+                This will be analyzed by AI to extract entities, themes, and connections
               </p>
             </div>
 
             {/* Memory Type */}
-            <div className="space-y-2">
-              <Label htmlFor="memory_type" className="font-semibold text-gray-700 text-sm sm:text-base">
-                Type (Optional)
+            <div className="grid gap-2">
+              <Label htmlFor="memory_type" className="font-semibold text-gray-700">
+                Memory Type
               </Label>
               <Select
                 id="memory_type"
@@ -151,35 +150,34 @@ export function CreateMemoryDialog() {
                     memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight',
                   })
                 }
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
+                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400"
               >
                 <option value="">Auto-detect</option>
-                <option value="foundational">Foundational - Core knowledge</option>
+                <option value="foundational">Foundational - Core knowledge or skill</option>
                 <option value="event">Event - Something that happened</option>
                 <option value="insight">Insight - Realization or learning</option>
               </Select>
             </div>
 
             {/* Tags */}
-            <div className="space-y-2">
-              <Label htmlFor="tags" className="font-semibold text-gray-700 text-sm sm:text-base">
-                Tags (Optional)
+            <div className="grid gap-2">
+              <Label htmlFor="tags" className="font-semibold text-gray-700">
+                Tags
               </Label>
               <Input
                 id="tags"
-                placeholder="ai, programming, health"
+                placeholder="ai, programming, health (comma-separated)"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
-                autoComplete="off"
+                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400"
               />
               <p className="text-xs text-gray-500">
-                Comma-separated tags to categorize this memory
+                Optional. Add tags to help categorize this memory
               </p>
             </div>
           </div>
 
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               type="button"
               variant="ghost"
@@ -188,14 +186,13 @@ export function CreateMemoryDialog() {
                 setOpen(false)
               }}
               disabled={loading}
-              className="w-full sm:w-auto h-11 sm:h-12"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={loading || !formData.title || !formData.body}
-              className="btn-primary w-full sm:w-auto h-11 sm:h-12"
+              className="btn-primary"
             >
               {loading ? (
                 <>

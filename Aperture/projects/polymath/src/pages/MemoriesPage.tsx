@@ -74,24 +74,26 @@ export function MemoriesPage() {
         </div>
 
         {/* View Toggle & Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10 glass-panel p-6">
-          <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:gap-4 mb-10 glass-panel p-4 sm:p-6">
+          <div className="flex gap-2 sm:gap-3 justify-center w-full">
             <Button
               variant={view === 'all' ? 'default' : 'outline'}
               onClick={() => setView('all')}
-              className={view === 'all' ? 'btn-primary' : 'btn-secondary'}
+              className={`flex-1 sm:flex-none ${view === 'all' ? 'btn-primary' : 'btn-secondary'} h-11 sm:h-12 text-sm sm:text-base`}
             >
-              All Memories ({memories.length})
+              All ({memories.length})
             </Button>
             <Button
               variant={view === 'resurfacing' ? 'default' : 'outline'}
               onClick={() => setView('resurfacing')}
-              className={view === 'resurfacing' ? 'btn-primary' : 'btn-secondary'}
+              className={`flex-1 sm:flex-none ${view === 'resurfacing' ? 'btn-primary' : 'btn-secondary'} h-11 sm:h-12 text-sm sm:text-base`}
             >
               Resurface ({resurfacing.length})
             </Button>
           </div>
-          <CreateMemoryDialog />
+          <div className="w-full sm:w-auto flex justify-center">
+            <CreateMemoryDialog />
+          </div>
         </div>
 
         {/* Resurfacing Info Banner */}
@@ -181,8 +183,10 @@ export function MemoriesPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-center">
-                      <CreateMemoryDialog />
+                    <div className="flex justify-center px-4 sm:px-0">
+                      <div className="w-full sm:w-auto">
+                        <CreateMemoryDialog />
+                      </div>
                     </div>
 
                     <p className="text-sm text-neutral-500">
