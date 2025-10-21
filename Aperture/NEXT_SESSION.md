@@ -26,6 +26,8 @@
 
 ## 📊 Last Active
 
+> **Note**: This is just recent history. Next session can work on ANY project - not necessarily the last one!
+
 **Session 23** (2025-10-21): Wizard of Oz - Comment chips, email reminders, build fixes
 
 **Previous Sessions**:
