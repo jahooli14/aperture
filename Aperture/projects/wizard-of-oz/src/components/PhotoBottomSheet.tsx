@@ -21,15 +21,22 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
   const { settings } = useSettingsStore();
   const { updatePhotoNote } = usePhotoStore();
 
-  // Get existing note from metadata
+  // Get existing note and emoji from metadata
   const existingNote = (() => {
     if (!photo.metadata || typeof photo.metadata !== 'object') return '';
     const metadata = photo.metadata as Record<string, unknown>;
     return ('note' in metadata && metadata.note) ? String(metadata.note) : '';
   })();
 
+  const existingEmoji = (() => {
+    if (!photo.metadata || typeof photo.metadata !== 'object') return '💬';
+    const metadata = photo.metadata as Record<string, unknown>;
+    return ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
+  })();
+
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [noteText, setNoteText] = useState(existingNote);
+  const [selectedEmoji, setSelectedEmoji] = useState(existingEmoji);
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [noteError, setNoteError] = useState('');
 
@@ -37,7 +44,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
     try {
       setIsSavingNote(true);
       setNoteError('');
-      await updatePhotoNote(photo.id, noteText);
+      await updatePhotoNote(photo.id, noteText, selectedEmoji);
       setIsEditingNote(false);
     } catch (err) {
       setNoteError(err instanceof Error ? err.message : 'Failed to save note');
@@ -48,6 +55,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
   const handleCancelEdit = () => {
     setNoteText(existingNote);
+    setSelectedEmoji(existingEmoji);
     setIsEditingNote(false);
     setNoteError('');
   };
@@ -154,6 +162,25 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
                       {isEditingNote ? (
                         <div className="space-y-3">
+                          {/* Emoji Picker */}
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700">Icon:</label>
+                            <input
+                              type="text"
+                              value={selectedEmoji}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                // Only allow single emoji/character
+                                const emoji = Array.from(value)[0] || '💬';
+                                setSelectedEmoji(emoji);
+                              }}
+                              className="w-16 h-12 text-center text-2xl border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                              placeholder="💬"
+                              maxLength={2}
+                            />
+                            <p className="text-xs text-gray-500">Tap to type any emoji</p>
+                          </div>
+
                           <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
@@ -161,7 +188,6 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                             maxLength={500}
                             rows={4}
                             className="w-full px-3 py-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-sm bg-white"
-                            autoFocus
                           />
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-gray-500">

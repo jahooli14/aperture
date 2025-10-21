@@ -21,7 +21,7 @@ interface PhotoState {
   fetchError: string | null;
   fetchPhotos: () => Promise<void>;
   uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string) => Promise<string>;
-  updatePhotoNote: (photoId: string, note: string) => Promise<void>;
+  updatePhotoNote: (photoId: string, note: string, emoji?: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   restorePhoto: (photo: Photo) => void;
   hasUploadedToday: () => boolean;
@@ -175,16 +175,21 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
   },
 
-  updatePhotoNote: async (photoId: string, note: string) => {
+  updatePhotoNote: async (photoId: string, note: string, emoji: string = '💬') => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) throw new Error('Not authenticated');
 
-      // Update the photo's metadata with the new note
+      // Update the photo's metadata with the new note and emoji
+      const metadata = {
+        note: note.trim() || null,
+        emoji: emoji || '💬'
+      };
+
       const { error } = await supabase
         .from('photos')
-        .update({ metadata: { note: note.trim() || null } } as never)
+        .update({ metadata } as never)
         .eq('id', photoId)
         .eq('user_id', user.id); // Ensure user can only update their own photos
 
@@ -197,7 +202,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       const currentPhotos = get().photos;
       const updatedPhotos = currentPhotos.map(photo =>
         photo.id === photoId
-          ? { ...photo, metadata: { note: note.trim() || null } }
+          ? { ...photo, metadata }
           : photo
       );
       set({ photos: updatedPhotos });

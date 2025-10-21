@@ -199,12 +199,11 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
                 if (!photo.metadata || typeof photo.metadata !== 'object') return null;
                 const metadata = photo.metadata as Record<string, unknown>;
                 const note = ('note' in metadata && metadata.note) ? String(metadata.note) : '';
+                const emoji = ('emoji' in metadata && metadata.emoji) ? String(metadata.emoji) : '💬';
 
                 return note.trim() && (
-                  <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                    </svg>
+                  <div className="absolute top-2 right-2 bg-blue-500/90 backdrop-blur-sm text-white px-2 py-1 rounded-full flex items-center shadow-lg">
+                    <span className="text-base">{emoji}</span>
                   </div>
                 );
               })()}
