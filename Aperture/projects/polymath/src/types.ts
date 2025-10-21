@@ -167,6 +167,7 @@ export interface ProjectSuggestion {
   interest_score: number // 0-1
   total_points: number
   capability_ids: string[]
+  capabilities?: Array<{ id: string; name: string }> // Enriched from API
   memory_ids?: string[]
   is_wildcard: boolean
   suggested_at?: string

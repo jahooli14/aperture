@@ -155,19 +155,19 @@ export function SuggestionDetailDialog({
           )}
 
           {/* Capabilities */}
-          {suggestion.capability_ids.length > 0 && (
+          {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
                 <Code2 className="h-4 w-4" />
                 Uses These Skills
               </h3>
               <div className="flex flex-wrap gap-2">
-                {suggestion.capability_ids.map((capId) => (
+                {suggestion.capabilities.map((cap) => (
                   <span
-                    key={capId}
+                    key={cap.id}
                     className="px-3 py-1.5 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-sm font-medium border border-blue-200/50"
                   >
-                    {formatCapabilityName(capId)}
+                    {cap.name}
                   </span>
                 ))}
               </div>

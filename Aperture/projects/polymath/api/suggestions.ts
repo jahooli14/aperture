@@ -57,8 +57,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: error.message })
     }
 
+    // Enrich suggestions with capability names
+    const enrichedSuggestions = await Promise.all(
+      (data || []).map(async (suggestion) => {
+        if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
+          const { data: capabilities } = await supabase
+            .from('capabilities')
+            .select('id, name')
+            .in('id', suggestion.capability_ids)
+
+          return {
+            ...suggestion,
+            capabilities: capabilities || []
+          }
+        }
+        return {
+          ...suggestion,
+          capabilities: []
+        }
+      })
+    )
+
     return res.status(200).json({
-      suggestions: data || [],
+      suggestions: enrichedSuggestions,
       total: count || 0,
       limit: Number(limit),
       offset: Number(offset)

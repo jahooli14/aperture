@@ -100,21 +100,21 @@ export function SuggestionCard({
 
       {!compact && (
         <CardContent className="flex-1 space-y-4">
-          {suggestion.capability_ids.length > 0 && (
+          {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Uses:</p>
               <div className="flex flex-wrap gap-2">
-                {suggestion.capability_ids.slice(0, 3).map((capId) => (
+                {suggestion.capabilities.slice(0, 3).map((cap) => (
                   <span
-                    key={capId}
+                    key={cap.id}
                     className="px-3 py-1.5 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-xs font-semibold border border-blue-200/50 shadow-sm hover:shadow-md transition-shadow"
                   >
-                    {formatCapabilityName(capId)}
+                    {cap.name}
                   </span>
                 ))}
-                {suggestion.capability_ids.length > 3 && (
+                {suggestion.capabilities.length > 3 && (
                   <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-semibold border border-purple-200/50 shadow-sm">
-                    +{suggestion.capability_ids.length - 3} more
+                    +{suggestion.capabilities.length - 3} more
                   </span>
                 )}
               </div>
