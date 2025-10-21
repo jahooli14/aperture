@@ -677,6 +677,52 @@ async function recordCombination(capabilityIds: string[]) {
 }
 
 /**
+ * Check if suggestion is too similar to existing ones
+ * Uses semantic similarity with embeddings
+ */
+async function isSimilarToExisting(
+  title: string,
+  description: string,
+  userId: string,
+  threshold: number = 0.85
+): Promise<boolean> {
+  // Generate embedding for new suggestion
+  const newEmbedding = await generateEmbedding(`${title}\n${description}`)
+
+  // Get recent suggestions (last 100 to avoid checking entire history)
+  const { data: existingSuggestions, error } = await supabase
+    .from('project_suggestions')
+    .select('id, title, description')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+
+  if (error || !existingSuggestions || existingSuggestions.length === 0) {
+    return false
+  }
+
+  // Check similarity against each existing suggestion
+  for (const existing of existingSuggestions) {
+    const existingEmbedding = await generateEmbedding(`${existing.title}\n${existing.description}`)
+    const similarity = cosineSimilarity(newEmbedding, existingEmbedding)
+
+    if (similarity > threshold) {
+      logger.debug(
+        {
+          new_title: title,
+          existing_title: existing.title,
+          similarity: similarity.toFixed(3)
+        },
+        'Found similar existing suggestion'
+      )
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
  * Main synthesis function
  */
 export async function runSynthesis(userId: string) {
@@ -697,7 +743,7 @@ export async function runSynthesis(userId: string) {
   logger.info({ count: CONFIG.SUGGESTIONS_PER_RUN }, 'Generating suggestions')
 
   const suggestions: ProjectIdea[] = []
-  const usedCapabilitySets = new Set<string>() // Track used combinations
+  const usedCapabilitySets = new Set<string>() // Track used combinations in this batch
   const usedInterestSets = new Set<string>() // Track used interest combinations
 
   for (let i = 0; i < CONFIG.SUGGESTIONS_PER_RUN; i++) {
@@ -708,12 +754,12 @@ export async function runSynthesis(userId: string) {
     const isCreativeSlot = !isWildcardSlot && ((i + 1) % 3 === 0) && interests.length >= 2
 
     let attempts = 0
-    const maxAttempts = 5
+    const maxAttempts = 10 // Increased for similarity checks
 
     try {
       let suggestion: ProjectIdea
 
-      // Retry until we get a unique combination
+      // Retry until we get a unique combination AND not similar to existing
       while (attempts < maxAttempts) {
         if (isWildcardSlot) {
           suggestion = await generateWildcard(capabilities, interests, i)
@@ -723,17 +769,55 @@ export async function runSynthesis(userId: string) {
           suggestion = await generateSuggestion(capabilities, interests)
         }
 
-        // Check if this combination is unique
+        // Check 1: Is this capability combination unique in this batch?
         const capabilityKey = suggestion.capabilityIds.sort().join(',')
-        const isDuplicate = usedCapabilitySets.has(capabilityKey) && capabilityKey !== '' // Allow empty for creative
+        const isDuplicateCombo = usedCapabilitySets.has(capabilityKey) && capabilityKey !== '' // Allow empty for creative
 
-        if (!isDuplicate || attempts === maxAttempts - 1) {
+        // Check 2: Is this too similar to past suggestions?
+        const isSimilar = await isSimilarToExisting(
+          suggestion.title,
+          suggestion.description,
+          userId,
+          0.85 // 85% similarity threshold
+        )
+
+        if (!isDuplicateCombo && !isSimilar) {
           usedCapabilitySets.add(capabilityKey)
           break
         }
 
         attempts++
-        logger.debug({ attempt: attempts, title: suggestion.title }, 'Duplicate combination, retrying')
+        logger.debug(
+          {
+            attempt: attempts,
+            title: suggestion.title,
+            duplicate_combo: isDuplicateCombo,
+            similar_to_existing: isSimilar
+          },
+          'Rejecting suggestion, retrying'
+        )
+
+        // If we've tried many times, lower the threshold
+        if (attempts >= 7 && isSimilar) {
+          const relaxedSimilar = await isSimilarToExisting(
+            suggestion.title,
+            suggestion.description,
+            userId,
+            0.90 // Relaxed to 90% for last attempts
+          )
+          if (!relaxedSimilar && !isDuplicateCombo) {
+            usedCapabilitySets.add(capabilityKey)
+            logger.info({ title: suggestion.title }, 'Accepted with relaxed threshold')
+            break
+          }
+        }
+
+        // Last attempt - accept it anyway to ensure we generate something
+        if (attempts === maxAttempts - 1) {
+          usedCapabilitySets.add(capabilityKey)
+          logger.warn({ title: suggestion.title }, 'Max attempts reached, accepting anyway')
+          break
+        }
       }
 
       suggestions.push(suggestion!)
@@ -746,13 +830,16 @@ export async function runSynthesis(userId: string) {
           is_wildcard: suggestion.isWildcard,
           novelty: (suggestion.noveltyScore * 100).toFixed(0),
           feasibility: (suggestion.feasibilityScore * 100).toFixed(0),
-          interest: (suggestion.interestScore * 100).toFixed(0)
+          interest: (suggestion.interestScore * 100).toFixed(0),
+          attempts: attempts + 1
         },
         'Generated suggestion'
       )
 
-      // Record combination (commented out for now - array format issue)
-      // await recordCombination(suggestion.capabilityIds)
+      // Record combination for future novelty calculations and feedback learning
+      if (suggestion.capabilityIds.length > 0) {
+        await recordCombination(suggestion.capabilityIds)
+      }
 
     } catch (error) {
       logger.error({ index: i + 1, error }, 'Error generating suggestion')
