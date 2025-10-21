@@ -205,7 +205,8 @@ When implementing new functionality:
 **For non-trivial features (> 30 min work)**:
 1. Use TodoWrite to create task list BEFORE starting
 2. Mark tasks in_progress/completed as you work
-3. At session end: Update NEXT_SESSION.md with summary
+3. **End-to-end flow verification** (see COMMON_MISTAKES.md 2025-10-21)
+4. At session end: Update NEXT_SESSION.md with summary
 
 ```markdown
 Example TodoWrite usage:
@@ -259,6 +260,12 @@ Example TodoWrite usage:
 ## ✅ End of Session (10-15 minutes)
 
 ### 1. Update Project State
+- [ ] **End-to-end flow verification** (if declaring feature complete):
+  - [ ] Identify critical user path
+  - [ ] Trace every step explicitly
+  - [ ] Verify data flows between components
+  - [ ] Check integration points
+  - [ ] Document findings (see COMMON_MISTAKES.md 2025-10-21)
 - [ ] Update `projects/[name]/plan.md` with:
   - [ ] Completed tasks (check boxes)
   - [ ] Current state (what works now)

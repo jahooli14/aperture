@@ -568,5 +568,5 @@ Skim recent entries before starting work to keep lessons fresh.
 
 ---
 
-**Last Updated**: 2025-10-10
-**Total Entries**: 1 (Testing Agent Anti-Pattern)
+**Last Updated**: 2025-10-21
+**Total Entries**: 6

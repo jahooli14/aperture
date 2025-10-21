@@ -33,7 +33,7 @@ In the previous session, we deleted `src/lib/` directory for security reasons (c
 
 **Functionality**:
 - ✅ Fetches memory from database
-- ✅ Extracts entities using Gemini 2.0 Flash (JSON structured output)
+- ✅ Extracts entities using Gemini 2.5 Flash (JSON structured output)
 - ✅ Generates embeddings using Gemini text-embedding-004 (768 dims)
 - ✅ Stores entities in `entities` table
 - ✅ Marks memory as processed
@@ -48,7 +48,7 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
 ```
 
 **Entity Extraction Prompt**:
-- Uses Gemini 2.0 Flash with structured JSON output
+- Uses Gemini 2.5 Flash with structured JSON output
 - Extracts: memory_type, entities (people/places/topics), themes, emotional_tone
 - Returns clean JSON for parsing
 
@@ -134,7 +134,7 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
 
 ### Step 4: Process Memory ✅ **FIXED!**
 **What Happens**:
-1. ✅ Call Gemini 2.0 Flash to extract entities
+1. ✅ Call Gemini 2.5 Flash to extract entities
 2. ✅ Generate embeddings (Gemini text-embedding-004)
 3. ✅ Store entities in `entities` table
 4. ✅ Mark memory as processed
@@ -257,7 +257,7 @@ Store in memories table
   ↓
 processMemory(id) ← Background async
   ↓
-Gemini 2.0 Flash → Extract entities
+Gemini 2.5 Flash → Extract entities
   ↓
 Gemini text-embedding-004 → Generate embedding
   ↓
@@ -269,7 +269,7 @@ Combine interests + capabilities → suggestions
 ```
 
 ### AI Models Used:
-- **Gemini 2.0 Flash**: Entity extraction (structured JSON)
+- **Gemini 2.5 Flash**: Entity extraction (structured JSON)
 - **Gemini text-embedding-004**: Embeddings (768 dims)
 - **Claude Sonnet 4.5**: Synthesis (project idea generation)
 

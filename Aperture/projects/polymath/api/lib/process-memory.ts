@@ -83,7 +83,7 @@ export async function processMemory(memoryId: string): Promise<void> {
  * Extract metadata using Gemini
  */
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
 
   const prompt = `Analyze this voice note and extract structured metadata.
 
