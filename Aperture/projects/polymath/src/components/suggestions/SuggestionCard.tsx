@@ -1,13 +1,13 @@
 /**
  * SuggestionCard Component
- * Copy to: projects/memory-os/src/components/suggestions/SuggestionCard.tsx
  */
 
 import React from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
+import { Sparkles, ThumbsDown, Hammer, MoreHorizontal } from 'lucide-react'
 import type { SuggestionCardProps } from '../../types'
-import { CapabilityBadge } from '../capabilities/CapabilityBadge'
-import { RatingActions } from './RatingActions'
-import { WildcardBadge } from './WildcardBadge'
 
 export function SuggestionCard({
   suggestion,
@@ -21,167 +21,124 @@ export function SuggestionCard({
   const handleBuild = () => onBuild(suggestion.id)
   const handleMore = () => onViewDetail(suggestion.id)
 
+  // Determine if this is a creative (Interest × Interest) or technical suggestion
+  const isCreative = suggestion.capability_ids.length === 0
+
   return (
-    <div className={`suggestion-card ${compact ? 'compact' : ''} ${suggestion.is_wildcard ? 'wildcard' : ''}`}>
-      {suggestion.is_wildcard && <WildcardBadge />}
-
-      <div className="card-header">
-        <h3 className="card-title">{suggestion.title}</h3>
-        <span className="points-badge">{suggestion.total_points}pts</span>
-      </div>
-
-      <p className="card-description">{suggestion.description}</p>
+    <Card className={`h-full flex flex-col hover:shadow-lg transition-all ${suggestion.is_wildcard ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-white' : ''}`}>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="default" className="text-xs font-bold">
+              {suggestion.total_points}pts
+            </Badge>
+            {suggestion.is_wildcard && (
+              <Badge variant="wildcard" className="text-xs">
+                🎲 Wildcard
+              </Badge>
+            )}
+            {isCreative && (
+              <Badge variant="creative" className="text-xs">
+                🎨 Creative
+              </Badge>
+            )}
+          </div>
+        </div>
+        <CardTitle className="text-lg leading-tight">{suggestion.title}</CardTitle>
+        <CardDescription className={compact ? 'line-clamp-2' : 'line-clamp-3'}>
+          {suggestion.description}
+        </CardDescription>
+      </CardHeader>
 
       {!compact && (
-        <>
-          <div className="capabilities-section">
-            <span className="section-label">Combines:</span>
-            <div className="capabilities-list">
-              {suggestion.capability_ids.map((capId) => (
-                <CapabilityBadge key={capId} capability={{ id: capId, name: capId }} />
-              ))}
+        <CardContent className="flex-1 space-y-3">
+          {suggestion.capability_ids.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-2">Combines:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestion.capability_ids.slice(0, 3).map((capId) => (
+                  <Badge key={capId} variant="outline" className="text-xs">
+                    {formatCapabilityName(capId)}
+                  </Badge>
+                ))}
+                {suggestion.capability_ids.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{suggestion.capability_ids.length - 3} more
+                  </Badge>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="scores-section">
+          <div className="flex gap-2">
             <ScorePill label="Novelty" score={suggestion.novelty_score} />
             <ScorePill label="Feasibility" score={suggestion.feasibility_score} />
             <ScorePill label="Interest" score={suggestion.interest_score} />
           </div>
-        </>
+        </CardContent>
       )}
 
-      <RatingActions
-        onSpark={handleSpark}
-        onMeh={handleMeh}
-        onBuild={handleBuild}
-        onMore={handleMore}
-      />
-    </div>
+      <CardFooter className="flex gap-2 border-t pt-4">
+        <Button
+          onClick={handleSpark}
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          title="This sparks my interest!"
+        >
+          <Sparkles className="h-4 w-4 mr-1" />
+          Spark
+        </Button>
+        <Button
+          onClick={handleMeh}
+          variant="ghost"
+          size="sm"
+          title="Not interested"
+        >
+          <ThumbsDown className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={handleBuild}
+          variant="default"
+          size="sm"
+          className="flex-1"
+          title="Build this project!"
+        >
+          <Hammer className="h-4 w-4 mr-1" />
+          Build
+        </Button>
+        <Button
+          onClick={handleMore}
+          variant="ghost"
+          size="sm"
+          title="View details"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
   )
 }
 
 function ScorePill({ label, score }: { label: string; score: number }) {
   const percentage = Math.round(score * 100)
-  const color = score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low'
+  const variant = score > 0.7 ? 'default' : score > 0.4 ? 'secondary' : 'outline'
 
   return (
-    <div className={`score-pill score-${color}`}>
-      <span className="score-label">{label}</span>
-      <span className="score-value">{percentage}%</span>
+    <div className="flex flex-col items-center gap-1 flex-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <Badge variant={variant} className="text-xs font-bold">
+        {percentage}%
+      </Badge>
     </div>
   )
 }
 
-// ============================================================================
-// STYLES (CSS Module or styled-components)
-// ============================================================================
-
-/*
-.suggestion-card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  transition: box-shadow 0.2s;
+function formatCapabilityName(capId: string): string {
+  // Convert capability ID to readable name
+  // e.g., "voice_processing" -> "Voice Processing"
+  return capId
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
-
-.suggestion-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.suggestion-card.wildcard {
-  border-color: #f59e0b;
-  background: linear-gradient(to right, #fffbeb 0%, var(--color-bg) 10%);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-sm);
-}
-
-.card-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.points-badge {
-  background: var(--color-primary);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.card-description {
-  margin: var(--spacing-sm) 0;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.capabilities-section {
-  margin: var(--spacing-md) 0;
-}
-
-.section-label {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-  margin-right: var(--spacing-sm);
-}
-
-.capabilities-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-xs);
-}
-
-.scores-section {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin: var(--spacing-md) 0;
-}
-
-.score-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-}
-
-.score-pill.score-high {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.score-pill.score-medium {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.score-pill.score-low {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.suggestion-card.compact {
-  padding: var(--spacing-md);
-}
-
-.suggestion-card.compact .card-title {
-  font-size: 1rem;
-}
-
-.suggestion-card.compact .card-description {
-  font-size: 0.875rem;
-  margin: var(--spacing-xs) 0;
-}
-*/

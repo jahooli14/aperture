@@ -1,9 +1,11 @@
 /**
  * ProjectCard Component
- * Copy to: projects/memory-os/src/components/projects/ProjectCard.tsx
  */
 
 import React from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
 import type { ProjectCardProps } from '../../types'
 
 export function ProjectCard({
@@ -15,81 +17,98 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
 
-  const statusColors: Record<string, string> = {
-    active: 'green',
-    dormant: 'gray',
-    completed: 'blue',
-    archived: 'purple'
+  const statusConfig: Record<string, { emoji: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+    active: { emoji: '🚀', variant: 'default' },
+    dormant: { emoji: '💤', variant: 'secondary' },
+    completed: { emoji: '✅', variant: 'outline' },
+    archived: { emoji: '📦', variant: 'secondary' }
   }
 
-  const typeLabels: Record<string, string> = {
-    personal: 'Personal',
-    technical: 'Technical',
-    meta: 'Meta'
+  const typeConfig: Record<string, { emoji: string; variant: 'creative' | 'technical' | 'meta' }> = {
+    personal: { emoji: '👤', variant: 'creative' },
+    technical: { emoji: '⚙️', variant: 'technical' },
+    meta: { emoji: '🧠', variant: 'meta' }
   }
 
   return (
-    <div className={`project-card ${compact ? 'compact' : ''}`}>
-      <div className="card-header">
-        <h3 className="card-title">{project.title}</h3>
-        <span className={`type-badge type-${project.type}`}>
-          {typeLabels[project.type]}
-        </span>
-      </div>
-
-      {project.description && (
-        <p className="card-description">{project.description}</p>
-      )}
-
-      <div className="card-metadata">
-        <span className="metadata-item">
-          <span className="metadata-label">Last active:</span>
-          <span className="metadata-value">{relativeTime}</span>
-        </span>
-
-        <span className={`status-badge status-${statusColors[project.status]}`}>
-          {project.status}
-        </span>
-      </div>
-
-      {project.metadata?.tags && project.metadata.tags.length > 0 && (
-        <div className="tags-section">
-          {project.metadata.tags.map((tag) => (
-            <span key={tag} className="tag-badge">{tag}</span>
-          ))}
+    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-xl">{project.title}</CardTitle>
+          <Badge variant={typeConfig[project.type].variant}>
+            {typeConfig[project.type].emoji} {project.type}
+          </Badge>
         </div>
-      )}
+        {project.description && (
+          <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+        )}
+      </CardHeader>
 
-      {project.metadata?.energy_level && (
-        <div className="energy-section">
-          <span className="energy-label">Energy:</span>
-          <span className={`energy-badge energy-${project.metadata.energy_level}`}>
-            {project.metadata.energy_level}
-          </span>
+      <CardContent className="flex-1">
+        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+          <span>Last active: <span className="font-medium text-foreground">{relativeTime}</span></span>
         </div>
-      )}
+
+        <div className="flex items-center gap-2">
+          <Badge variant={statusConfig[project.status].variant}>
+            {statusConfig[project.status].emoji} {project.status}
+          </Badge>
+        </div>
+
+        {project.metadata?.tags && project.metadata.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {project.metadata.tags.map((tag) => (
+              <Badge key={tag} variant="outline" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {project.metadata?.energy_level && (
+          <div className="mt-3 text-sm">
+            <span className="text-muted-foreground">Energy: </span>
+            <Badge
+              variant={
+                project.metadata.energy_level === 'high'
+                  ? 'destructive'
+                  : project.metadata.energy_level === 'low'
+                    ? 'secondary'
+                    : 'outline'
+              }
+              className="text-xs"
+            >
+              {project.metadata.energy_level}
+            </Badge>
+          </div>
+        )}
+      </CardContent>
 
       {showActions && (onEdit || onDelete) && (
-        <div className="card-actions">
+        <CardFooter className="flex gap-2 border-t pt-4">
           {onEdit && (
-            <button
+            <Button
               onClick={() => onEdit(project.id)}
-              className="action-button action-edit"
+              variant="outline"
+              size="sm"
+              className="flex-1"
             >
               Edit
-            </button>
+            </Button>
           )}
           {onDelete && (
-            <button
+            <Button
               onClick={() => onDelete(project.id)}
-              className="action-button action-delete"
+              variant="destructive"
+              size="sm"
+              className="flex-1"
             >
               Delete
-            </button>
+            </Button>
           )}
-        </div>
+        </CardFooter>
       )}
-    </div>
+    </Card>
   )
 }
 
@@ -122,209 +141,3 @@ function formatRelativeTime(isoString: string): string {
     return `${years}y ago`
   }
 }
-
-// ============================================================================
-// STYLES
-// ============================================================================
-
-/*
-.project-card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  transition: box-shadow 0.2s;
-}
-
-.project-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-sm);
-}
-
-.card-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.type-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.type-badge.type-personal {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.type-badge.type-technical {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.type-badge.type-meta {
-  background: #f3e8ff;
-  color: #6b21a8;
-}
-
-.card-description {
-  margin: var(--spacing-sm) 0;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.card-metadata {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: var(--spacing-md) 0;
-  padding-top: var(--spacing-sm);
-  border-top: 1px solid var(--color-border);
-  font-size: 0.875rem;
-}
-
-.metadata-item {
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.metadata-label {
-  color: var(--color-text-muted);
-}
-
-.metadata-value {
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.status-badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-badge.status-green {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.status-gray {
-  background: #f3f4f6;
-  color: #4b5563;
-}
-
-.status-badge.status-blue {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.status-badge.status-purple {
-  background: #f3e8ff;
-  color: #6b21a8;
-}
-
-.tags-section {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin: var(--spacing-sm) 0;
-}
-
-.tag-badge {
-  padding: 2px 8px;
-  background: #f3f4f6;
-  color: #4b5563;
-  border-radius: 4px;
-  font-size: 0.75rem;
-}
-
-.energy-section {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin: var(--spacing-sm) 0;
-  font-size: 0.875rem;
-}
-
-.energy-label {
-  color: var(--color-text-muted);
-}
-
-.energy-badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.energy-badge.energy-low {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.energy-badge.energy-medium {
-  background: #fef9c3;
-  color: #854d0e;
-}
-
-.energy-badge.energy-high {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.card-actions {
-  display: flex;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-sm);
-  border-top: 1px solid var(--color-border);
-}
-
-.action-button {
-  padding: var(--spacing-xs) var(--spacing-md);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.action-button:hover {
-  background: var(--color-bg);
-  border-color: var(--color-primary);
-}
-
-.action-button.action-delete {
-  color: #dc2626;
-  border-color: #fee2e2;
-}
-
-.action-button.action-delete:hover {
-  background: #fee2e2;
-  border-color: #dc2626;
-}
-
-.project-card.compact {
-  padding: var(--spacing-md);
-}
-
-.project-card.compact .card-title {
-  font-size: 1rem;
-}
-*/

@@ -6,6 +6,8 @@
 import { useEffect, useState } from 'react'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { MemoryCard } from '../components/MemoryCard'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
 import type { Memory } from '../types'
 
 export function MemoriesPage() {
@@ -55,234 +57,107 @@ export function MemoriesPage() {
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
   return (
-    <div className="memories-page">
-      <header className="page-header">
-        <h1>📝 Memories</h1>
-        <p className="subtitle">Your captured thoughts and voice notes</p>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">📝 Memories</h1>
+        <p className="text-muted-foreground mt-2">
+          Your captured thoughts and voice notes
+        </p>
+      </div>
 
-      <div className="view-toggle">
-        <button
-          className={`toggle-btn ${view === 'all' ? 'active' : ''}`}
+      {/* View Toggle */}
+      <div className="flex gap-3 justify-center mb-8">
+        <Button
+          variant={view === 'all' ? 'default' : 'outline'}
           onClick={() => setView('all')}
         >
           All Memories ({memories.length})
-        </button>
-        <button
-          className={`toggle-btn ${view === 'resurfacing' ? 'active' : ''}`}
+        </Button>
+        <Button
+          variant={view === 'resurfacing' ? 'default' : 'outline'}
           onClick={() => setView('resurfacing')}
         >
           🔄 Resurface ({resurfacing.length})
-        </button>
+        </Button>
       </div>
 
+      {/* Resurfacing Info Banner */}
       {view === 'resurfacing' && resurfacing.length > 0 && (
-        <div className="resurfacing-info">
-          <h3>💡 Time to Review</h3>
-          <p>
-            These memories are ready for review based on spaced repetition.
-            Reviewing strengthens your memory and extends the next review interval.
-          </p>
-        </div>
+        <Card className="mb-8 border-yellow-400 bg-gradient-to-br from-yellow-50 to-white">
+          <CardContent className="pt-6">
+            <h3 className="font-semibold text-lg mb-2">💡 Time to Review</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              These memories are ready for review based on spaced repetition.
+              Reviewing strengthens your memory and extends the next review interval.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Error Banner */}
       {error && (
-        <div className="error-message">
-          {error}
-        </div>
+        <Card className="mb-6 border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">{error}</p>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Loading State */}
       {isLoading && (
-        <div className="loading-state">
-          Loading memories...
-        </div>
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center text-muted-foreground">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-4"></div>
+              <p>Loading memories...</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Empty State */}
       {!isLoading && displayMemories.length === 0 && (
-        <div className="empty-state">
-          {view === 'all' ? (
-            <>
-              <h3>No memories yet</h3>
-              <p>Start recording voice notes via Audiopen to capture your thoughts</p>
-            </>
-          ) : (
-            <>
-              <h3>Nothing to review right now</h3>
-              <p>Check back later for memories ready to resurface</p>
-            </>
-          )}
-        </div>
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center">
+              {view === 'all' ? (
+                <>
+                  <h3 className="text-lg font-semibold mb-2">No memories yet</h3>
+                  <p className="text-muted-foreground">
+                    Start recording voice notes via Audiopen to capture your thoughts
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold mb-2">Nothing to review right now</h3>
+                  <p className="text-muted-foreground">
+                    Check back later for memories ready to resurface
+                  </p>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="memories-grid">
+      {/* Memories Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayMemories.map((memory) => (
-          <div key={memory.id} className="memory-wrapper">
+          <div key={memory.id} className="flex flex-col gap-2">
             <MemoryCard memory={memory} />
             {view === 'resurfacing' && (
-              <button
-                className="review-btn"
+              <Button
                 onClick={() => handleReview(memory.id)}
+                variant="default"
+                className="w-full bg-green-600 hover:bg-green-700"
               >
                 ✓ Reviewed
-              </button>
+              </Button>
             )}
           </div>
         ))}
       </div>
-
-      <style>{`
-        .memories-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
-
-        .page-header {
-          text-align: center;
-          margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-          margin: 0;
-          font-size: 2.5rem;
-          color: #1a1a1a;
-        }
-
-        .subtitle {
-          margin: 0.5rem 0 0 0;
-          color: #666;
-          font-size: 1.125rem;
-        }
-
-        .view-toggle {
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-          margin-bottom: 2rem;
-        }
-
-        .toggle-btn {
-          padding: 0.75rem 1.5rem;
-          border: 2px solid #e5e7eb;
-          background: white;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 500;
-          transition: all 0.2s;
-          color: #666;
-        }
-
-        .toggle-btn:hover {
-          border-color: #2563eb;
-          color: #2563eb;
-        }
-
-        .toggle-btn.active {
-          background: #2563eb;
-          color: white;
-          border-color: #2563eb;
-        }
-
-        .resurfacing-info {
-          background: linear-gradient(135deg, #fff9e6 0%, white 50%);
-          border: 2px solid #fbbf24;
-          border-radius: 12px;
-          padding: 1.5rem;
-          margin-bottom: 2rem;
-        }
-
-        .resurfacing-info h3 {
-          margin: 0 0 0.5rem 0;
-          color: #1a1a1a;
-        }
-
-        .resurfacing-info p {
-          margin: 0;
-          color: #666;
-          line-height: 1.6;
-        }
-
-        .error-message {
-          background: #fee2e2;
-          border: 2px solid #ef4444;
-          border-radius: 8px;
-          padding: 1rem;
-          margin-bottom: 2rem;
-          color: #991b1b;
-        }
-
-        .loading-state {
-          text-align: center;
-          padding: 4rem 2rem;
-          color: #666;
-          font-size: 1.125rem;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 4rem 2rem;
-          color: #666;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 0.5rem 0;
-          color: #1a1a1a;
-        }
-
-        .empty-state p {
-          margin: 0;
-        }
-
-        .memories-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 1.5rem;
-        }
-
-        .memory-wrapper {
-          position: relative;
-        }
-
-        .review-btn {
-          margin-top: 0.5rem;
-          width: 100%;
-          padding: 0.75rem;
-          background: #10b981;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .review-btn:hover {
-          background: #059669;
-          transform: translateY(-1px);
-        }
-
-        @media (max-width: 768px) {
-          .memories-page {
-            padding: 1rem;
-          }
-
-          .page-header h1 {
-            font-size: 2rem;
-          }
-
-          .view-toggle {
-            flex-direction: column;
-          }
-
-          .toggle-btn {
-            width: 100%;
-          }
-
-          .memories-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   )
 }

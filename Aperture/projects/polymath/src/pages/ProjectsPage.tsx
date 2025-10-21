@@ -6,6 +6,9 @@
 import { useEffect } from 'react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
+import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
 
 export function ProjectsPage() {
   const {
@@ -21,85 +24,92 @@ export function ProjectsPage() {
     fetchProjects()
   }, [])
 
-  const getStatusEmoji = (status: string) => {
-    switch (status) {
-      case 'active': return '🚀'
-      case 'dormant': return '💤'
-      case 'completed': return '✅'
-      case 'archived': return '📦'
-      default: return ''
-    }
-  }
-
-  const getTypeEmoji = (type: string) => {
-    switch (type) {
-      case 'personal': return '👤'
-      case 'technical': return '⚙️'
-      case 'meta': return '🧠'
-      default: return ''
-    }
-  }
-
   return (
-    <div className="projects-page">
-      <header className="page-header">
-        <h1>My Projects</h1>
-        <p className="subtitle">Track your creative work and strengthen capabilities</p>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">My Projects</h1>
+        <p className="text-muted-foreground mt-2">
+          Track your creative work and strengthen capabilities
+        </p>
+      </div>
 
-      <div className="controls">
-        <div className="filters">
-          <button
-            className={filter === 'all' ? 'active' : ''}
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('all')}
           >
             All
-          </button>
-          <button
-            className={filter === 'active' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'active' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('active')}
           >
             🚀 Active
-          </button>
-          <button
-            className={filter === 'dormant' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'dormant' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('dormant')}
           >
             💤 Dormant
-          </button>
-          <button
-            className={filter === 'completed' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'completed' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('completed')}
           >
             ✅ Completed
-          </button>
+          </Button>
         </div>
 
-        <div className="stats">
-          <span className="stat">
-            <strong>{projects.length}</strong> project{projects.length !== 1 ? 's' : ''}
-          </span>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            <span className="font-semibold">{projects.length}</span> project{projects.length !== 1 ? 's' : ''}
+          </div>
+          <CreateProjectDialog />
         </div>
       </div>
 
+      {/* Error Banner */}
       {error && (
-        <div className="error-banner">
-          ❌ {error}
-        </div>
+        <Card className="mb-6 border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">❌ {error}</p>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Loading State */}
       {loading ? (
-        <div className="loading">
-          <p>Loading projects...</p>
-        </div>
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center text-muted-foreground">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-4"></div>
+              <p>Loading projects...</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : projects.length === 0 ? (
-        <div className="empty-state">
-          <h3>No projects yet</h3>
-          <p>Build a project from a suggestion to get started!</p>
-          <p>Or add one manually via the API</p>
-        </div>
+        /* Empty State */
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Build a project from a suggestion or create one manually
+              </p>
+              <CreateProjectDialog />
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="projects-grid">
+        /* Projects Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
             <ProjectCard
               key={project.id}
@@ -108,115 +118,6 @@ export function ProjectsPage() {
           ))}
         </div>
       )}
-
-      <style>{`
-        .projects-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
-
-        .page-header {
-          margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-          margin: 0;
-          font-size: 2rem;
-          color: #1a1a1a;
-        }
-
-        .subtitle {
-          margin: 0.5rem 0 0 0;
-          color: #666;
-        }
-
-        .controls {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-          gap: 1rem;
-          flex-wrap: wrap;
-        }
-
-        .filters {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .filters button {
-          padding: 0.5rem 1rem;
-          border: 1px solid #ddd;
-          background: white;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .filters button:hover {
-          background: #f5f5f5;
-        }
-
-        .filters button.active {
-          background: #2563eb;
-          color: white;
-          border-color: #2563eb;
-        }
-
-        .stats {
-          color: #666;
-        }
-
-        .stat {
-          padding: 0.5rem 1rem;
-          background: #f5f5f5;
-          border-radius: 6px;
-        }
-
-        .error-banner {
-          padding: 1rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 6px;
-          color: #c00;
-          margin-bottom: 1rem;
-        }
-
-        .loading {
-          text-align: center;
-          padding: 4rem;
-          color: #666;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 4rem;
-          color: #666;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 1rem 0;
-          color: #333;
-        }
-
-        .projects-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-          gap: 1.5rem;
-        }
-
-        @media (max-width: 768px) {
-          .projects-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .controls {
-            flex-direction: column;
-            align-items: stretch;
-          }
-        }
-      `}</style>
     </div>
   )
 }

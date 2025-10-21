@@ -6,6 +6,10 @@
 import { useEffect } from 'react'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+import { Select } from '../components/ui/select'
+import { Label } from '../components/ui/label'
 
 export function SuggestionsPage() {
   const {
@@ -41,76 +45,115 @@ export function SuggestionsPage() {
   }
 
   return (
-    <div className="suggestions-page">
-      <header className="page-header">
-        <h1>Project Suggestions</h1>
-        <p className="subtitle">AI-generated ideas combining your capabilities and interests</p>
-      </header>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Project Suggestions</h1>
+        <p className="text-muted-foreground mt-2">
+          AI-generated ideas combining your capabilities and interests
+        </p>
+      </div>
 
-      <div className="controls">
-        <div className="filters">
-          <button
-            className={filter === 'pending' ? 'active' : ''}
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={filter === 'pending' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('pending')}
           >
             New
-          </button>
-          <button
-            className={filter === 'spark' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'spark' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('spark')}
           >
             ⚡ Sparks
-          </button>
-          <button
-            className={filter === 'saved' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'saved' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('saved')}
           >
             💾 Saved
-          </button>
-          <button
-            className={filter === 'built' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'built' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('built')}
           >
             ✅ Built
-          </button>
-          <button
-            className={filter === 'all' ? 'active' : ''}
+          </Button>
+          <Button
+            variant={filter === 'all' ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setFilter('all')}
           >
             All
-          </button>
+          </Button>
         </div>
 
-        <div className="sort">
-          <label>Sort by:</label>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="sort" className="text-sm whitespace-nowrap">
+            Sort by:
+          </Label>
+          <Select
+            id="sort"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="w-32"
+          >
             <option value="points">Points</option>
             <option value="recent">Recent</option>
             <option value="rating">Rating</option>
-          </select>
+          </Select>
         </div>
       </div>
 
+      {/* Error Banner */}
       {error && (
-        <div className="error-banner">
-          ❌ {error}
-        </div>
+        <Card className="mb-6 border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-sm text-destructive">❌ {error}</p>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Loading State */}
       {loading ? (
-        <div className="loading">
-          <p>Loading suggestions...</p>
-        </div>
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center text-muted-foreground">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] mb-4"></div>
+              <p>Loading suggestions...</p>
+            </div>
+          </CardContent>
+        </Card>
       ) : suggestions.length === 0 ? (
-        <div className="empty-state">
-          <h3>No suggestions yet</h3>
-          <p>Run the synthesis script to generate project ideas:</p>
-          <code>npx tsx scripts/polymath/synthesis.ts</code>
-          <p>Or seed test data:</p>
-          <code>npx tsx scripts/polymath/seed-test-data.ts</code>
-        </div>
+        /* Empty State */
+        <Card>
+          <CardContent className="py-16">
+            <div className="text-center space-y-4">
+              <h3 className="text-lg font-semibold">No suggestions yet</h3>
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  Run the synthesis script to generate project ideas:
+                </p>
+                <code className="block px-4 py-2 bg-muted rounded-md text-sm font-mono">
+                  npx tsx scripts/polymath/synthesis.ts
+                </code>
+                <p className="text-muted-foreground">Or seed test data:</p>
+                <code className="block px-4 py-2 bg-muted rounded-md text-sm font-mono">
+                  npx tsx scripts/polymath/seed-test-data.ts
+                </code>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="suggestions-grid">
+        /* Suggestions Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {suggestions.map((suggestion) => (
             <SuggestionCard
               key={suggestion.id}
@@ -122,133 +165,6 @@ export function SuggestionsPage() {
           ))}
         </div>
       )}
-
-      <style>{`
-        .suggestions-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
-
-        .page-header {
-          margin-bottom: 2rem;
-        }
-
-        .page-header h1 {
-          margin: 0;
-          font-size: 2rem;
-          color: #1a1a1a;
-        }
-
-        .subtitle {
-          margin: 0.5rem 0 0 0;
-          color: #666;
-        }
-
-        .controls {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
-          gap: 1rem;
-          flex-wrap: wrap;
-        }
-
-        .filters {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .filters button {
-          padding: 0.5rem 1rem;
-          border: 1px solid #ddd;
-          background: white;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .filters button:hover {
-          background: #f5f5f5;
-        }
-
-        .filters button.active {
-          background: #2563eb;
-          color: white;
-          border-color: #2563eb;
-        }
-
-        .sort {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
-
-        .sort select {
-          padding: 0.5rem;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          background: white;
-          cursor: pointer;
-        }
-
-        .error-banner {
-          padding: 1rem;
-          background: #fee;
-          border: 1px solid #fcc;
-          border-radius: 6px;
-          color: #c00;
-          margin-bottom: 1rem;
-        }
-
-        .loading {
-          text-align: center;
-          padding: 4rem;
-          color: #666;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 4rem;
-          color: #666;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 1rem 0;
-          color: #333;
-        }
-
-        .empty-state code {
-          display: block;
-          margin: 0.5rem auto;
-          padding: 0.5rem 1rem;
-          background: #f5f5f5;
-          border-radius: 4px;
-          font-family: monospace;
-          max-width: 400px;
-        }
-
-        .suggestions-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-          gap: 1.5rem;
-        }
-
-        @media (max-width: 768px) {
-          .suggestions-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .controls {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .filters {
-            flex-wrap: wrap;
-          }
-        }
-      `}</style>
     </div>
   )
 }
