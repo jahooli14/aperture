@@ -46,13 +46,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // 2. Create project from suggestion
     const userId = process.env.USER_ID || 'default-user'
 
+    // Determine project type from capabilities or metadata
+    const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
+    const defaultType = hasCapabilities ? 'technical' : 'personal'
+    const projectType = metadata.type || defaultType
+
     const { data: project, error: createError } = await supabase
       .from('projects')
       .insert({
         user_id: userId,
         title: project_title || suggestion.title,
         description: project_description || suggestion.description,
-        type: 'technical', // Projects built from suggestions are technical
+        type: projectType,
         status: 'active',
         last_active: new Date().toISOString(),
         metadata: {

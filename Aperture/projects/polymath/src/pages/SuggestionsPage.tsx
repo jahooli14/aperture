@@ -60,13 +60,15 @@ export function SuggestionsPage() {
     if (!suggestionToBuild) return
 
     try {
-      await buildSuggestion(suggestionToBuild.id)
+      await buildSuggestion(suggestionToBuild.id, projectData)
 
       addToast({
         title: '🎉 Project built!',
         description: `"${projectData.title}" is now in your projects.`,
         variant: 'success',
       })
+
+      setBuildDialogOpen(false)
 
       // Navigate to projects page after short delay
       setTimeout(() => {

@@ -34,7 +34,11 @@ interface SuggestionState {
   // Actions
   fetchSuggestions: () => Promise<void>
   rateSuggestion: (id: string, rating: number) => Promise<void>
-  buildSuggestion: (id: string) => Promise<void>
+  buildSuggestion: (id: string, projectData?: {
+    title?: string
+    description?: string
+    type?: 'personal' | 'technical' | 'meta'
+  }) => Promise<any>
   triggerSynthesis: () => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
   setSortBy: (sortBy: SuggestionState['sortBy']) => void
@@ -96,11 +100,20 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     }
   },
 
-  buildSuggestion: async (id: string) => {
+  buildSuggestion: async (id: string, projectData?: {
+    title?: string
+    description?: string
+    type?: 'personal' | 'technical' | 'meta'
+  }) => {
     try {
       const response = await fetch(`${API_BASE}/suggestions/${id}/build`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project_title: projectData?.title,
+          project_description: projectData?.description,
+          metadata: projectData?.type ? { type: projectData.type } : {}
+        })
       })
 
       if (!response.ok) {
@@ -109,10 +122,13 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
 
       // Refresh suggestions after building
       await get().fetchSuggestions()
+
+      return await response.json()
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      throw error
     }
   },
 
