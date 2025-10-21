@@ -366,23 +366,6 @@ export interface ApiError {
 }
 
 // ============================================================================
-// MEMORY (from MemoryOS - for reference)
-// ============================================================================
-
-export interface Memory {
-  id: string
-  audiopen_id: string
-  title: string
-  body: string
-  orig_transcript: string | null
-  tags: string[]
-  audiopen_created_at: string
-  processed: boolean
-  created_at: string
-  embedding?: number[]
-}
-
-// ============================================================================
 // HELPER TYPES
 // ============================================================================
 

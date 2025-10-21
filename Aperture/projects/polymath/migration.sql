@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS projects (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   metadata JSONB DEFAULT '{}',
-  embedding VECTOR(1536) -- For semantic similarity search
+  embedding VECTOR(768) -- Gemini text-embedding-004
 );
 
 CREATE INDEX idx_projects_user_id ON projects(user_id);
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS capabilities (
   last_used TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  embedding VECTOR(1536)
+  embedding VECTOR(768) -- Gemini text-embedding-004
 );
 
 CREATE INDEX idx_capabilities_name ON capabilities(name);
@@ -161,15 +161,89 @@ COMMENT ON TABLE capability_combinations IS 'Tracks which capability combination
 COMMENT ON COLUMN capability_combinations.capability_ids IS 'Sorted array of capability UUIDs (e.g., [uuid1, uuid2])';
 
 -- ============================================================================
--- EXTEND EXISTING TABLE: entities
--- Add interest tracking to existing MemoryOS entities
+-- TABLE: entities
+-- Core entities extracted from memories (people, places, topics)
 -- ============================================================================
 
--- Add new columns to existing entities table
-ALTER TABLE entities
-  ADD COLUMN IF NOT EXISTS is_interest BOOLEAN DEFAULT false,
-  ADD COLUMN IF NOT EXISTS interest_strength FLOAT DEFAULT 0.0 CHECK (interest_strength >= 0),
-  ADD COLUMN IF NOT EXISTS last_mentioned TIMESTAMP WITH TIME ZONE;
+CREATE TABLE IF NOT EXISTS entities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  memory_id UUID NOT NULL, -- References memories table
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('person', 'place', 'topic')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+
+  -- Interest tracking (added by Polymath)
+  is_interest BOOLEAN DEFAULT false,
+  interest_strength FLOAT DEFAULT 0.0 CHECK (interest_strength >= 0),
+  last_mentioned TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_entities_memory_id ON entities(memory_id);
+CREATE INDEX idx_entities_name ON entities(name);
+CREATE INDEX idx_entities_type ON entities(type);
+CREATE INDEX idx_entities_created_at ON entities(created_at DESC);
+CREATE INDEX idx_entities_is_interest ON entities(is_interest) WHERE is_interest = true;
+CREATE INDEX idx_entities_interest_strength ON entities(interest_strength DESC);
+
+COMMENT ON TABLE entities IS 'Entities extracted from voice note memories (people, places, topics)';
+COMMENT ON COLUMN entities.type IS 'person = people mentioned, place = locations, topic = interests/concepts';
+COMMENT ON COLUMN entities.is_interest IS 'True if this entity represents a recurring interest (frequency > 3, recency > 0.5)';
+COMMENT ON COLUMN entities.interest_strength IS 'Calculated from frequency * 0.5 + recency * 0.5';
+
+-- ============================================================================
+-- TABLE: memories
+-- Raw voice notes from Audiopen
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS memories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+
+  -- Raw Audiopen data
+  audiopen_id TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  orig_transcript TEXT,
+  tags TEXT[] DEFAULT '{}',
+  audiopen_created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+
+  -- AI-extracted metadata
+  memory_type TEXT CHECK (memory_type IN ('foundational', 'event', 'insight')),
+  entities JSONB, -- Structured: {people: [], places: [], topics: []}
+  themes TEXT[] DEFAULT '{}',
+  emotional_tone TEXT,
+
+  -- Vector search
+  embedding VECTOR(768), -- Gemini text-embedding-004 dimension
+
+  -- Processing status
+  processed BOOLEAN DEFAULT false,
+  processed_at TIMESTAMP WITH TIME ZONE,
+  error TEXT
+);
+
+CREATE INDEX idx_memories_audiopen_id ON memories(audiopen_id);
+CREATE INDEX idx_memories_created_at ON memories(created_at DESC);
+CREATE INDEX idx_memories_processed ON memories(processed);
+CREATE INDEX idx_memories_embedding ON memories USING ivfflat(embedding vector_cosine_ops) WITH (lists = 100);
+
+COMMENT ON TABLE memories IS 'Voice notes captured from Audiopen webhook';
+COMMENT ON COLUMN memories.embedding IS 'Vector embedding (768 dims from Gemini text-embedding-004)';
+
+-- ============================================================================
+-- EXTEND EXISTING TABLES WITH POLYMATH FEATURES
+-- (This section kept for backwards compatibility if tables already exist)
+-- ============================================================================
+
+-- Add interest tracking columns if they don't exist (in case entities table was already created elsewhere)
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'entities') THEN
+    ALTER TABLE entities ADD COLUMN IF NOT EXISTS is_interest BOOLEAN DEFAULT false;
+    ALTER TABLE entities ADD COLUMN IF NOT EXISTS interest_strength FLOAT DEFAULT 0.0 CHECK (interest_strength >= 0);
+    ALTER TABLE entities ADD COLUMN IF NOT EXISTS last_mentioned TIMESTAMP WITH TIME ZONE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_entities_is_interest ON entities(is_interest) WHERE is_interest = true;
 CREATE INDEX IF NOT EXISTS idx_entities_interest_strength ON entities(interest_strength DESC);
@@ -183,7 +257,7 @@ COMMENT ON COLUMN entities.interest_strength IS 'Calculated from frequency * 0.5
 
 -- Function to search similar projects
 CREATE OR REPLACE FUNCTION search_similar_projects(
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(768),
   match_threshold FLOAT DEFAULT 0.7,
   match_count INT DEFAULT 5
 )
@@ -211,7 +285,7 @@ $$;
 
 -- Function to search similar capabilities
 CREATE OR REPLACE FUNCTION search_similar_capabilities(
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(768),
   match_threshold FLOAT DEFAULT 0.7,
   match_count INT DEFAULT 10
 )

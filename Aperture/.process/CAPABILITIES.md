@@ -47,7 +47,7 @@
 ### Parallel Execution
 **Tier**: 🔵 Core (always)
 **When to Use**: Multiple independent operations
-**Where Documented**: `.claude/startup.md:341-361` (Step 5.6)
+**Where Documented**: `.claude/startup.md` (Step 5: Development Patterns)
 **Why Core**: 3x faster than sequential. Standard practice.
 
 **Example**: Run `git status`, `git diff`, `git log` in parallel (single message, 3 tool calls)
@@ -247,7 +247,7 @@
 
 ### Parallel Execution
 **When to Use**: Multiple independent operations
-**Where Documented**: `.claude/startup.md:400-461` (Step 5.5)
+**Where Documented**: `.claude/startup.md` (Step 5: Development Patterns)
 **Performance Gain**: 3x faster execution
 
 **Applies to**:
@@ -263,7 +263,7 @@
 
 ### Subagent Delegation
 **When to Use**: Research, code analysis, review tasks that can run in background
-**Where Documented**: `.claude/startup.md:463-518` (Step 5.6)
+**Where Documented**: `.claude/startup.md` (Step 5: Development Patterns)
 **Performance Gain**: Work continues while agents gather specialized information
 
 **Available Agents**:
@@ -340,7 +340,7 @@
 
 ### Checkpoints
 **When to Use**: Risky changes, major refactoring, architectural modifications
-**Where Documented**: `.claude/startup.md:520-568` (Step 5.7)
+**Where Documented**: `.claude/startup.md` (Step 5: Development Patterns)
 **Performance Gain**: Safe experimentation without fear of breaking things
 
 **When to checkpoint**:

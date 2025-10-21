@@ -55,6 +55,8 @@ export interface Database {
           reminder_time: string | null;
           timezone: string;
           baby_birthdate: string | null; // YYYY-MM-DD format
+          reminder_email: string | null;
+          reminders_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -64,6 +66,8 @@ export interface Database {
           reminder_time?: string | null;
           timezone?: string;
           baby_birthdate?: string | null;
+          reminder_email?: string | null;
+          reminders_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -73,6 +77,8 @@ export interface Database {
           reminder_time?: string | null;
           timezone?: string;
           baby_birthdate?: string | null;
+          reminder_email?: string | null;
+          reminders_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };

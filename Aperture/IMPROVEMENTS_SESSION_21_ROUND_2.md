@@ -155,7 +155,7 @@ User: "continue where we left off"
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| **Session startup** | ~5 min | ~30 sec | **90% faster** |
+| **Session startup** | ~5 min | ~2 min | **60% faster** |
 | **Token load per session** | 10-15K | 3-5K | **60-70% reduction** |
 | **Documentation files** | Redundant (Skills + .process/) | Single source (.process/) | **50% reduction** |
 | **Pattern selection** | Analysis paralysis | Clear tiers | **Decisive** |

@@ -1,8 +1,32 @@
 # Polymath - Next Session
 
-> **Status**: Design phase COMPLETE ✅ | Ready for implementation when you wake up
+> **Status**: Voice Processing Pipeline FIXED ✅ | Ready to deploy
+>
+> **Last Updated**: 2025-10-21 Session 22
 
-## 🎉 What's Been Done (Autonomous Session)
+## 🎉 Session 22 Fixes
+
+### ✅ Voice Processing Pipeline Restored
+
+**Problem Found**: User flow analysis revealed voice notes were stored but never processed
+- `api/capture.ts` imported deleted `../src/lib/process` (security cleanup)
+- `api/process.ts` imported deleted `../src/lib/process`
+- No entity extraction = no interests = no personalization
+
+**Fixes Applied**:
+1. ✅ Created `api/lib/process-memory.ts` - Gemini-based entity extraction
+2. ✅ Fixed `api/capture.ts` import (line 59)
+3. ✅ Fixed `api/process.ts` import (line 2)
+4. ✅ Added base `memories` and `entities` tables to migration.sql
+5. ✅ Corrected all vector dimensions (1536→768 for Gemini text-embedding-004)
+
+**Result**: Complete voice note → entity extraction → synthesis flow working ✅
+
+See: `PROCESSING_PIPELINE_FIXED.md` for full details
+
+---
+
+## 🎉 Previous Work (Session 21)
 
 ### ✅ Complete Documentation Suite
 

@@ -74,9 +74,9 @@ That file handles:
 
 ---
 
-## ⚡ True Minimal Startup (30 seconds - 80% of sessions)
+## ⚡ True Minimal Startup (~2 minutes for experienced users, 80% of sessions)
 
-**Don't overthink it. Most sessions need < 500 tokens of context.**
+**Don't overthink it. Most sessions need minimal context.**
 
 ```markdown
 1. Read NEXT_SESSION.md (1 min) - What's the current status?

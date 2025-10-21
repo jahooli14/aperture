@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Trigger processing (inline for MVP - could be async queue later)
     // Import processMemory dynamically to avoid bundler issues
-    const { processMemory } = await import('../src/lib/process')
+    const { processMemory } = await import('./lib/process-memory')
 
     // Process asynchronously (don't await - let it run in background)
     processMemory(memory.id).catch(err => {

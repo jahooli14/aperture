@@ -205,8 +205,8 @@ Is that correct, or are you working on something else?
   - Progress tracking
 
 **For performance**:
-- **Parallel Execution** → See Step 5.6 below
-- **Subagent Delegation** → See Step 5.7 below
+- **Parallel Execution** → `.process/CAPABILITIES.md` (Core Patterns section)
+- **Subagent Delegation** → `.process/CAPABILITIES.md` (Experimental Patterns section)
 - **Checkpoint Before Changes** → `.process/CAPABILITIES.md` (Query Routing section)
 
 **Full patterns**: `.process/CAPABILITIES.md`

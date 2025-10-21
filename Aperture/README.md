@@ -67,7 +67,7 @@ This repository is optimized for use with [Claude Code](https://claude.com/claud
 
 - `.claude/startup.md` - Auto-read initialization sequence
 - `.claude/commands/` - Custom slash commands
-- `.claude/skills/` - Reusable automation patterns
+- `.process/` - Development patterns and workflows
 
 ## 📚 Key Documentation
 

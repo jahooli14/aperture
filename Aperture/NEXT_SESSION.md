@@ -19,22 +19,22 @@
 |---------|--------|----------|-------------------|
 | 🎬 **Visual Test Generator** | 🚀 Week 1 Starting | [Docs created](projects/visual-test-generator/), no code yet | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
 | 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
-| 🎨 **Polymath** | ✅ Ready to Deploy | [27 files](projects/polymath/), DB migration ready, no deployment attempts | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
+| 🎨 **Polymath** | ✅ Pipeline Fixed | [Complete system](projects/polymath/), voice processing restored | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
 | 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
 
 ---
 
 ## 📊 Last Active
 
-**Most Recent**: Polymath Consolidation Complete (Session 21 - 2025-10-21)
-- **Polymath is now the primary project** - MemoryOS merged into it
-- All implementation files in `projects/polymath/` folder
-- Replaced OpenAI with Gemini Flash 2.5 for embeddings
-- Anthropic Claude only used for synthesis (optional)
-- Scripts, API endpoints, React components, types all ready
-- 16 implementation files + 13 documentation files
-- 4,000+ lines of code, complete type safety
-- Ready for database migration and UI implementation
+**Most Recent**: Polymath Processing Pipeline Fixed (Session 22 - 2025-10-21)
+- **Voice note → interest extraction pipeline restored** ✅
+- Fixed broken imports after security cleanup (deleted `src/lib/`)
+- Created `api/lib/process-memory.ts` with Gemini entity extraction
+- Fixed `api/capture.ts` and `api/process.ts` imports
+- Added base `memories` and `entities` tables to migration.sql
+- Corrected all vector dimensions (1536→768 for Gemini text-embedding-004)
+- Complete user flow working: voice note → processing → synthesis → personalized suggestions
+- See `projects/polymath/PROCESSING_PIPELINE_FIXED.md` for details
 
 **Previous Sessions**:
 - Session 19: MemoryOS Build Complete (ready to deploy)

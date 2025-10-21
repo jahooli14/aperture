@@ -23,6 +23,7 @@
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "resend": "^4.0.3",
     "sharp": "^0.34.4",
     "zustand": "^5.0.8"
   },

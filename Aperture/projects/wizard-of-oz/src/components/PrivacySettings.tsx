@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 
@@ -13,7 +13,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const { photos } = usePhotoStore();
-  const { settings, updateBirthdate } = useSettingsStore();
+  const { settings, updateBirthdate, updateReminderSettings } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
   const [showPasscodeSetup, setShowPasscodeSetup] = useState(false);
@@ -22,6 +22,10 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const [passcodeError, setPasscodeError] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [reminderEmail, setReminderEmail] = useState('');
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState('19:00');
+  const [savingReminders, setSavingReminders] = useState(false);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -33,6 +37,15 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   useEffect(() => {
     if (settings?.baby_birthdate) {
       setBirthdate(settings.baby_birthdate);
+    }
+    if (settings?.reminder_email) {
+      setReminderEmail(settings.reminder_email);
+    }
+    if (settings?.reminders_enabled !== undefined) {
+      setRemindersEnabled(settings.reminders_enabled);
+    }
+    if (settings?.reminder_time) {
+      setReminderTime(settings.reminder_time);
     }
   }, [settings]);
 
@@ -84,6 +97,27 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       } else {
         alert('Failed to save birthdate. Please try again. Error: ' + errorMessage);
       }
+    }
+  };
+
+  const handleSaveReminders = async () => {
+    if (!reminderEmail || !reminderEmail.includes('@')) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      setSavingReminders(true);
+      await updateReminderSettings({
+        reminder_email: reminderEmail,
+        reminders_enabled: remindersEnabled,
+        reminder_time: reminderTime,
+      });
+      setSavingReminders(false);
+    } catch (error) {
+      setSavingReminders(false);
+      console.error('Reminder settings save error:', error);
+      alert('Failed to save reminder settings. Please try again.');
     }
   };
 
@@ -207,6 +241,84 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
                     ✓ Birthdate set to {new Date(settings.baby_birthdate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Reminders */}
+          <div className="bg-blue-50 rounded-xl p-4">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Bell className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Daily Photo Reminders</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Get an email reminder if you haven't uploaded today's photo
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={reminderEmail}
+                      onChange={(e) => setReminderEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Reminder Time
+                    </label>
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <label className="text-sm font-medium text-gray-900">
+                      Enable reminders
+                    </label>
+                    <button
+                      onClick={() => setRemindersEnabled(!remindersEnabled)}
+                      className={`
+                        relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                        ${remindersEnabled ? 'bg-blue-600' : 'bg-gray-200'}
+                      `}
+                    >
+                      <span
+                        className={`
+                          pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
+                          transition duration-200 ease-in-out
+                          ${remindersEnabled ? 'translate-x-5' : 'translate-x-0'}
+                        `}
+                      />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={handleSaveReminders}
+                    disabled={!reminderEmail || savingReminders}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                  >
+                    {savingReminders ? 'Saving...' : 'Save Reminder Settings'}
+                  </button>
+
+                  {settings?.reminders_enabled && (
+                    <p className="text-xs text-blue-700">
+                      ✓ Reminders enabled at {settings.reminder_time} in your timezone
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

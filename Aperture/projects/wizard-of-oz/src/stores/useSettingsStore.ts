@@ -10,6 +10,11 @@ interface SettingsState {
   loading: boolean;
   fetchSettings: () => Promise<void>;
   updateBirthdate: (birthdate: string) => Promise<void>;
+  updateReminderSettings: (settings: {
+    reminder_email: string;
+    reminders_enabled: boolean;
+    reminder_time: string;
+  }) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -87,6 +92,38 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       logger.info('Birthdate updated', { birthdate }, 'SettingsStore');
     } catch (error) {
       logger.error('Unexpected error updating birthdate', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'SettingsStore');
+      throw error;
+    }
+  },
+
+  updateReminderSettings: async (reminderSettings) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update({
+          reminder_email: reminderSettings.reminder_email,
+          reminders_enabled: reminderSettings.reminders_enabled,
+          reminder_time: reminderSettings.reminder_time,
+          updated_at: new Date().toISOString()
+        } as never)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Error updating reminder settings', { error: error.message }, 'SettingsStore');
+        throw error;
+      }
+
+      set({ settings: data as UserSettings });
+      logger.info('Reminder settings updated', reminderSettings, 'SettingsStore');
+    } catch (error) {
+      logger.error('Unexpected error updating reminder settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
       throw error;

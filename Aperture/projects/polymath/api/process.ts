@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { processMemory } from '../src/lib/process'
+import { processMemory } from './lib/process-memory'
 
 /**
  * Background processing endpoint

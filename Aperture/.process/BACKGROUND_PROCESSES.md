@@ -288,16 +288,16 @@ Session with background processes:
 ## 🧭 Navigation
 
 **Where to go next**:
-- If starting session → `.claude/startup.md` Step 5.5 (auto-enforces parallel execution)
+- If starting session → `.claude/startup.md` Step 5 (auto-enforces parallel execution)
 - If implementing feature → Apply patterns from this guide during work
 - If checking patterns → `CLAUDE-APERTURE.md` Communication Patterns section
 
 **Related documentation**:
-- `.claude/startup.md` Steps 5.5-5.7 - Parallel execution, subagents, checkpoints
+- `.claude/startup.md` Step 5 - Parallel execution, subagents, checkpoints
 - `CLAUDE-APERTURE.md` - Communication patterns for transparency
 - `DOCUMENTATION_INDEX.md` - Find this file under "Process & Learning"
 
 **Referenced by**:
-- `.claude/startup.md:234` - Step 5.6 mentions background processes
-- `CLAUDE-APERTURE.md:200` - Communication patterns reference this guide
-- `DOCUMENTATION_INDEX.md:92` - Listed in Process & Learning category
+- `.claude/startup.md` Step 5 - Development Patterns mentions background processes
+- `CLAUDE-APERTURE.md` - Communication patterns reference this guide
+- `DOCUMENTATION_INDEX.md` - Listed in Process & Learning category
