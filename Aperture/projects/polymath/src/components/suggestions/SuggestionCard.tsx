@@ -2,11 +2,11 @@
  * SuggestionCard Component - Stunning Visual Design
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb } from 'lucide-react'
+import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2 } from 'lucide-react'
 import type { SuggestionCardProps } from '../../types'
 
 export function SuggestionCard({
@@ -16,9 +16,35 @@ export function SuggestionCard({
   onViewDetail,
   compact = false
 }: SuggestionCardProps) {
-  const handleSpark = () => onRate(suggestion.id, 1)
-  const handleMeh = () => onRate(suggestion.id, -1)
-  const handleBuild = () => onBuild(suggestion.id)
+  const [loadingAction, setLoadingAction] = useState<'spark' | 'meh' | 'build' | null>(null)
+
+  const handleSpark = async () => {
+    setLoadingAction('spark')
+    try {
+      await onRate(suggestion.id, 1)
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const handleMeh = async () => {
+    setLoadingAction('meh')
+    try {
+      await onRate(suggestion.id, -1)
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  const handleBuild = async () => {
+    setLoadingAction('build')
+    try {
+      await onBuild(suggestion.id)
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
   const handleMore = () => onViewDetail(suggestion.id)
 
   const isCreative = suggestion.capability_ids.length === 0
@@ -105,8 +131,13 @@ export function SuggestionCard({
           size="sm"
           className="flex-1 btn-secondary"
           title="This sparks my interest!"
+          disabled={loadingAction !== null}
         >
-          <Sparkles className="h-4 w-4 mr-1" />
+          {loadingAction === 'spark' ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-1" />
+          )}
           Spark
         </Button>
         <Button
@@ -114,16 +145,26 @@ export function SuggestionCard({
           variant="ghost"
           size="sm"
           title="Not interested"
+          disabled={loadingAction !== null}
         >
-          <ThumbsDown className="h-4 w-4" />
+          {loadingAction === 'meh' ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ThumbsDown className="h-4 w-4" />
+          )}
         </Button>
         <Button
           onClick={handleBuild}
           size="sm"
           className="flex-1 btn-primary"
           title="Build this project!"
+          disabled={loadingAction !== null}
         >
-          <Hammer className="h-4 w-4 mr-1" />
+          {loadingAction === 'build' ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <Hammer className="h-4 w-4 mr-1" />
+          )}
           Build
         </Button>
         <Button
@@ -131,6 +172,7 @@ export function SuggestionCard({
           variant="ghost"
           size="sm"
           title="View details"
+          disabled={loadingAction !== null}
         >
           <MoreHorizontal className="h-4 w-4" />
         </Button>

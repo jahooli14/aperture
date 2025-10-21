@@ -71,7 +71,7 @@ export function ProjectCard({
       <CardContent className="flex-1 space-y-4">
         <div className="flex items-center gap-2 text-sm text-neutral-600">
           <Clock className="h-4 w-4 text-orange-600" />
-          <span>Last active <span className="font-semibold text-neutral-900">{relativeTime}</span></span>
+          <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold text-neutral-900">{relativeTime}</span></span>
         </div>
 
         <div className={`px-4 py-2 rounded-xl ${statusConfig[project.status].bg} border border-neutral-200`}>
