@@ -773,15 +773,39 @@ export async function runSynthesis(userId: string) {
         const capabilityKey = suggestion.capabilityIds.sort().join(',')
         const isDuplicateCombo = usedCapabilitySets.has(capabilityKey) && capabilityKey !== '' // Allow empty for creative
 
-        // Check 2: Is this too similar to past suggestions?
-        const isSimilar = await isSimilarToExisting(
+        // Check 2: Is this too similar to past suggestions in database?
+        const isSimilarToHistory = await isSimilarToExisting(
           suggestion.title,
           suggestion.description,
           userId,
           0.85 // 85% similarity threshold
         )
 
-        if (!isDuplicateCombo && !isSimilar) {
+        // Check 3: Is this too similar to suggestions already generated in this batch?
+        let isSimilarToBatch = false
+        if (suggestions.length > 0) {
+          const newEmbedding = await generateEmbedding(`${suggestion.title}\n${suggestion.description}`)
+
+          for (const existing of suggestions) {
+            const existingEmbedding = await generateEmbedding(`${existing.title}\n${existing.description}`)
+            const similarity = cosineSimilarity(newEmbedding, existingEmbedding)
+
+            if (similarity > 0.75) { // Lower threshold for within-batch (75%)
+              isSimilarToBatch = true
+              logger.debug(
+                {
+                  new_title: suggestion.title,
+                  existing_title: existing.title,
+                  similarity: similarity.toFixed(3)
+                },
+                'Too similar to suggestion in current batch'
+              )
+              break
+            }
+          }
+        }
+
+        if (!isDuplicateCombo && !isSimilarToHistory && !isSimilarToBatch) {
           usedCapabilitySets.add(capabilityKey)
           break
         }
@@ -792,20 +816,21 @@ export async function runSynthesis(userId: string) {
             attempt: attempts,
             title: suggestion.title,
             duplicate_combo: isDuplicateCombo,
-            similar_to_existing: isSimilar
+            similar_to_history: isSimilarToHistory,
+            similar_to_batch: isSimilarToBatch
           },
           'Rejecting suggestion, retrying'
         )
 
         // If we've tried many times, lower the threshold
-        if (attempts >= 7 && isSimilar) {
+        if (attempts >= 7 && (isSimilarToHistory || isSimilarToBatch)) {
           const relaxedSimilar = await isSimilarToExisting(
             suggestion.title,
             suggestion.description,
             userId,
             0.90 // Relaxed to 90% for last attempts
           )
-          if (!relaxedSimilar && !isDuplicateCombo) {
+          if (!relaxedSimilar && !isDuplicateCombo && !isSimilarToBatch) {
             usedCapabilitySets.add(capabilityKey)
             logger.info({ title: suggestion.title }, 'Accepted with relaxed threshold')
             break
