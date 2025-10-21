@@ -18,50 +18,47 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
 
-  const statusConfig: Record<string, { emoji: string; gradient: string; bg: string }> = {
+  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
     active: {
-      emoji: '🚀',
-      gradient: 'from-green-500 to-emerald-600',
-      bg: 'bg-gradient-to-br from-green-50 to-emerald-50'
+      label: 'Active',
+      color: 'text-green-700 bg-green-100 border-green-200',
+      bg: 'bg-green-50'
     },
     dormant: {
-      emoji: '💤',
-      gradient: 'from-gray-400 to-gray-600',
-      bg: 'bg-gradient-to-br from-gray-50 to-slate-50'
+      label: 'Dormant',
+      color: 'text-gray-700 bg-gray-100 border-gray-200',
+      bg: 'bg-gray-50'
     },
     completed: {
-      emoji: '✅',
-      gradient: 'from-blue-500 to-indigo-600',
-      bg: 'bg-gradient-to-br from-blue-50 to-indigo-50'
+      label: 'Completed',
+      color: 'text-blue-700 bg-blue-100 border-blue-200',
+      bg: 'bg-blue-50'
     },
     archived: {
-      emoji: '📦',
-      gradient: 'from-purple-500 to-violet-600',
-      bg: 'bg-gradient-to-br from-purple-50 to-violet-50'
+      label: 'Archived',
+      color: 'text-purple-700 bg-purple-100 border-purple-200',
+      bg: 'bg-purple-50'
     }
   }
 
-  const typeConfig: Record<string, { emoji: string; gradient: string }> = {
-    personal: { emoji: '👤', gradient: 'from-pink-500 via-rose-500 to-purple-600' },
-    technical: { emoji: '⚙️', gradient: 'from-blue-500 via-cyan-500 to-teal-600' },
-    meta: { emoji: '🧠', gradient: 'from-amber-500 via-orange-500 to-red-600' }
+  const typeConfig: Record<string, { label: string; color: string }> = {
+    personal: { label: 'Personal', color: 'text-rose-700 bg-rose-100 border-rose-200' },
+    technical: { label: 'Technical', color: 'text-cyan-700 bg-cyan-100 border-cyan-200' },
+    meta: { label: 'Meta', color: 'text-orange-700 bg-orange-100 border-orange-200' }
   }
 
   return (
-    <Card className="group h-full flex flex-col relative overflow-hidden backdrop-blur-xl bg-white/80 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 glow-hover">
-      {/* Gradient overlay on hover */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${typeConfig[project.type].gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
-
-      {/* Top accent line */}
-      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${typeConfig[project.type].gradient}`} />
+    <Card className="group h-full flex flex-col pro-card transition-smooth hover-lift">
+      {/* Subtle accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-40" />
 
       <CardHeader className="relative">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <CardTitle className="text-xl font-bold group-hover:gradient-text transition-all duration-300">
+          <CardTitle className="text-xl font-semibold text-neutral-900">
             {project.title}
           </CardTitle>
-          <div className={`relative px-3 py-1 rounded-full bg-gradient-to-r ${typeConfig[project.type].gradient} text-white text-xs font-bold shadow-lg`}>
-            {typeConfig[project.type].emoji} {project.type}
+          <div className={`px-3 py-1 rounded-md text-xs font-medium border ${typeConfig[project.type].color}`}>
+            {typeConfig[project.type].label}
           </div>
         </div>
         {project.description && (
@@ -72,15 +69,15 @@ export function ProjectCard({
       </CardHeader>
 
       <CardContent className="flex-1 space-y-4">
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <Clock className="h-4 w-4 text-purple-600" />
-          <span>Last active <span className="font-semibold text-purple-600">{relativeTime}</span></span>
+        <div className="flex items-center gap-2 text-sm text-neutral-600">
+          <Clock className="h-4 w-4 text-orange-600" />
+          <span>Last active <span className="font-semibold text-neutral-900">{relativeTime}</span></span>
         </div>
 
-        <div className={`px-4 py-2 rounded-xl ${statusConfig[project.status].bg} border border-white/40 shadow-inner`}>
+        <div className={`px-4 py-2 rounded-xl ${statusConfig[project.status].bg} border border-neutral-200`}>
           <div className="flex items-center gap-2">
-            <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${statusConfig[project.status].gradient} text-white text-xs font-bold shadow-md`}>
-              {statusConfig[project.status].emoji} {project.status}
+            <div className={`px-3 py-1 rounded-md text-xs font-medium border ${statusConfig[project.status].color}`}>
+              {statusConfig[project.status].label}
             </div>
           </div>
         </div>
@@ -90,7 +87,7 @@ export function ProjectCard({
             {project.metadata.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-semibold border border-purple-200/50 shadow-sm"
+                className="px-3 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium border border-purple-200"
               >
                 #{tag}
               </span>
@@ -100,14 +97,14 @@ export function ProjectCard({
 
         {project.metadata?.energy_level && (
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-yellow-500" />
-            <span className="text-sm text-gray-600">Energy:</span>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-md ${
+            <Zap className="h-4 w-4 text-amber-500" />
+            <span className="text-sm text-neutral-600">Energy:</span>
+            <span className={`px-3 py-1 rounded-md text-xs font-medium border ${
               project.metadata.energy_level === 'high'
-                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                ? 'bg-red-100 text-red-700 border-red-200'
                 : project.metadata.energy_level === 'low'
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                  : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white'
+                  ? 'bg-green-100 text-green-700 border-green-200'
+                  : 'bg-amber-100 text-amber-700 border-amber-200'
             }`}>
               {project.metadata.energy_level}
             </span>
@@ -116,13 +113,13 @@ export function ProjectCard({
       </CardContent>
 
       {showActions && (onEdit || onDelete) && (
-        <CardFooter className="flex gap-2 border-t border-white/20 pt-4 bg-gradient-to-b from-transparent to-gray-50/50">
+        <CardFooter className="flex gap-2 border-t border-neutral-200 pt-4">
           {onEdit && (
             <Button
               onClick={() => onEdit(project.id)}
               variant="outline"
               size="sm"
-              className="flex-1 hover:scale-105 transition-transform duration-200"
+              className="flex-1 btn-secondary"
             >
               Edit
             </Button>
@@ -132,7 +129,7 @@ export function ProjectCard({
               onClick={() => onDelete(project.id)}
               variant="destructive"
               size="sm"
-              className="flex-1 hover:scale-105 transition-transform duration-200"
+              className="flex-1"
             >
               Delete
             </Button>

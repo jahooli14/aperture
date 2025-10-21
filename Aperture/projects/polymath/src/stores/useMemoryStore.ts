@@ -2,6 +2,13 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { Memory, Bridge } from '../types'
 
+interface CreateMemoryInput {
+  title: string
+  body: string
+  tags?: string[]
+  memory_type?: 'foundational' | 'event' | 'insight'
+}
+
 interface MemoryStore {
   memories: Memory[]
   bridges: Bridge[]
@@ -10,6 +17,7 @@ interface MemoryStore {
 
   fetchMemories: () => Promise<void>
   fetchBridgesForMemory: (memoryId: string) => Promise<Bridge[]>
+  createMemory: (input: CreateMemoryInput) => Promise<Memory>
 }
 
 export const useMemoryStore = create<MemoryStore>((set) => ({
@@ -56,6 +64,46 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
     } catch (error) {
       console.error('[store] Failed to fetch bridges:', error)
       return []
+    }
+  },
+
+  createMemory: async (input: CreateMemoryInput) => {
+    try {
+      const now = new Date().toISOString()
+
+      const newMemory = {
+        audiopen_id: `manual_${Date.now()}`, // Generate unique ID for manual entries
+        title: input.title,
+        body: input.body,
+        orig_transcript: null, // Manual entries don't have transcripts
+        tags: input.tags || [],
+        audiopen_created_at: now,
+        memory_type: input.memory_type || null,
+        entities: null,
+        themes: null,
+        emotional_tone: null,
+        embedding: null,
+        processed: false,
+        processed_at: null,
+        error: null,
+      }
+
+      const { data, error } = await supabase
+        .from('memories')
+        .insert(newMemory)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Add to local state
+      set((state) => ({
+        memories: [data, ...state.memories],
+      }))
+
+      return data
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to create memory')
     }
   },
 }))

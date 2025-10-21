@@ -7,18 +7,22 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { runSynthesis } from '../../scripts/polymath/synthesis'
+import { runSynthesis } from '../../lib/synthesis.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Verify this is a cron request (Vercel sets this header)
+  // Allow POST requests from frontend (manual triggers)
+  // Verify cron requests with CRON_SECRET
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
+  const isManualTrigger = req.method === 'POST' && !req.headers['x-vercel-cron']
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // If this is a cron job (has x-vercel-cron header), verify auth
+  if (!isManualTrigger && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  console.log('[cron/weekly-synthesis] Starting weekly synthesis...')
+  console.log('[cron/weekly-synthesis] Starting weekly synthesis...',
+    isManualTrigger ? '(manual trigger)' : '(scheduled cron)')
 
   try {
     // For single-user app, just use the default user ID

@@ -2,15 +2,17 @@
  * Suggestions Page - Stunning Visual Design
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
+import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
 import { Sparkles, Calendar, Brain, Lightbulb } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import type { ProjectSuggestion } from '../types'
 
 export function SuggestionsPage() {
   const {
@@ -28,6 +30,9 @@ export function SuggestionsPage() {
     setSortBy
   } = useSuggestionStore()
 
+  const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+
   useEffect(() => {
     fetchSuggestions()
   }, [])
@@ -43,7 +48,11 @@ export function SuggestionsPage() {
   }
 
   const handleViewDetail = (id: string) => {
-    console.log('View detail:', id)
+    const suggestion = suggestions.find(s => s.id === id)
+    if (suggestion) {
+      setSelectedSuggestion(suggestion)
+      setDetailDialogOpen(true)
+    }
   }
 
   const handleSynthesize = async () => {
@@ -232,6 +241,15 @@ export function SuggestionsPage() {
           </div>
         )}
       </div>
+
+      {/* Detail Dialog */}
+      <SuggestionDetailDialog
+        suggestion={selectedSuggestion}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        onRate={handleRate}
+        onBuild={handleBuild}
+      />
     </div>
   )
 }

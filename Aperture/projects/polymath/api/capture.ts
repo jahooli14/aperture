@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { AudiopenWebhook } from '../src/types'
+import { getSupabaseConfig } from '../lib/env.js'
+import { logger } from '../lib/logger.js'
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const { url, serviceRoleKey } = getSupabaseConfig()
+const supabase = createClient(url, serviceRoleKey)
 
 /**
  * Webhook endpoint for Audiopen
@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    console.log(`[capture] Received note: ${webhook.id} - "${webhook.title}"`)
+    logger.info({ webhook_id: webhook.id, title: webhook.title }, 'Received note')
 
     // Parse tags (comma-separated string to array)
     const tags = webhook.tags
@@ -48,19 +48,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .single()
 
     if (insertError) {
-      console.error('[capture] Insert error:', insertError)
+      logger.error({ error: insertError }, 'Insert error')
       return res.status(500).json({ error: 'Failed to store memory' })
     }
 
-    console.log(`[capture] Stored memory: ${memory.id}`)
+    logger.info({ memory_id: memory.id }, 'Stored memory')
 
     // Trigger processing (inline for MVP - could be async queue later)
     // Import processMemory dynamically to avoid bundler issues
-    const { processMemory } = await import('./lib/process-memory')
+    const { processMemory } = await import('../lib/process-memory.js')
 
     // Process asynchronously (don't await - let it run in background)
     processMemory(memory.id).catch(err => {
-      console.error('[capture] Background processing error:', err)
+      logger.error({ memory_id: memory.id, error: err }, 'Background processing error')
     })
 
     // Return success immediately
@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[capture] Unexpected error:', error)
+    logger.error({ error }, 'Unexpected error')
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

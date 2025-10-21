@@ -5,33 +5,44 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { z } from 'zod'
+import { getSupabaseConfig, getUserId } from '../../../lib/env.js'
+import { ValidationError, handleAPIError } from '../../../lib/error-handler.js'
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabaseConfig = getSupabaseConfig()
+const supabase = createClient(supabaseConfig.url, supabaseConfig.serviceRoleKey)
+
+// Request validation schema
+const RateRequestSchema = z.object({
+  rating: z.number().int().min(-1).max(2),
+  feedback: z.string().optional()
+})
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  const { id } = req.query
-  const { rating, feedback } = req.body
-
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Suggestion ID required' })
-  }
-
-  if (![- 1, 1, 2].includes(rating)) {
-    return res.status(400).json({
-      error: 'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)'
-    })
-  }
-
   try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    const { id } = req.query
+
+    if (!id || typeof id !== 'string') {
+      throw new ValidationError('Suggestion ID required')
+    }
+
+    // Validate request body
+    const parseResult = RateRequestSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      throw new ValidationError(
+        'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)',
+        parseResult.error.format()
+      )
+    }
+
+    const { rating, feedback } = parseResult.data
+
     // Get user ID
-    const userId = process.env.USER_ID || 'default-user'
+    const userId = getUserId()
 
     // 1. Store rating
     const { data: ratingData, error: ratingError } = await supabase
@@ -51,7 +62,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // 2. Update suggestion status
-    const newStatus = rating > 0 ? 'rated' : 'dismissed'
+    // rating: -1 = meh, 1 = spark, 2 = built
+    let newStatus: string
+    if (rating === 2) {
+      newStatus = 'built'
+    } else if (rating === 1) {
+      newStatus = 'spark'
+    } else {
+      newStatus = 'meh'
+    }
 
     const { data: suggestion, error: updateError } = await supabase
       .from('project_suggestions')
@@ -88,8 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[rate] Unexpected error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return handleAPIError(error, res)
   }
 }
 

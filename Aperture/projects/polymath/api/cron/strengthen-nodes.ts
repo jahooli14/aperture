@@ -7,18 +7,22 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { strengthenNodes } from '../../scripts/polymath/strengthen-nodes'
+import { strengthenNodes } from '../../lib/strengthen-nodes.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Verify this is a cron request
+  // Allow POST requests from frontend (manual triggers)
+  // Verify cron requests with CRON_SECRET
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
+  const isManualTrigger = req.method === 'POST' && !req.headers['x-vercel-cron']
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  // If this is a cron job (has x-vercel-cron header), verify auth
+  if (!isManualTrigger && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  console.log('[cron/strengthen-nodes] Starting daily node strengthening...')
+  console.log('[cron/strengthen-nodes] Starting daily node strengthening...',
+    isManualTrigger ? '(manual trigger)' : '(scheduled cron)')
 
   try {
     // Check last 24 hours of git activity

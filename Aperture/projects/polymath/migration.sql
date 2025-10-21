@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS project_suggestions (
   memory_ids UUID[] DEFAULT '{}', -- Memories that inspired it
   is_wildcard BOOLEAN DEFAULT false, -- Anti-echo-chamber diversity injection
   suggested_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'rated', 'built', 'dismissed', 'saved')),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'spark', 'meh', 'built', 'dismissed', 'saved')),
   built_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   metadata JSONB DEFAULT '{}'
 );

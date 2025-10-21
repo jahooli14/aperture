@@ -1,19 +1,20 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../src/types'
+import { getSupabaseConfig, getGeminiConfig } from './env.js'
+import { logger } from './logger.js'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const { apiKey } = getGeminiConfig()
+const genAI = new GoogleGenerativeAI(apiKey)
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const { url, serviceRoleKey } = getSupabaseConfig()
+const supabase = createClient(url, serviceRoleKey)
 
 /**
  * Process a memory: extract entities, generate embeddings, store results
  */
 export async function processMemory(memoryId: string): Promise<void> {
-  console.log(`[process-memory] Starting processing for memory ${memoryId}`)
+  logger.info({ memory_id: memoryId }, 'Starting memory processing')
 
   try {
     // 1. Get the memory from database
@@ -27,7 +28,7 @@ export async function processMemory(memoryId: string): Promise<void> {
       throw new Error(`Failed to fetch memory: ${fetchError?.message}`)
     }
 
-    console.log(`[process-memory] Processing: "${memory.title}"`)
+    logger.info({ memory_id: memoryId, title: memory.title }, 'Processing memory')
 
     // 2. Extract entities and metadata using Gemini
     const metadata = await extractMetadata(memory.title, memory.body)
@@ -58,13 +59,15 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 5. Store individual entities in the entities table
     await storeEntities(memoryId, metadata.entities)
 
-    console.log(`[process-memory] Successfully processed memory ${memoryId}`)
-    console.log(`[process-memory] - Type: ${metadata.memory_type}`)
-    console.log(`[process-memory] - Entities: ${JSON.stringify(metadata.entities)}`)
-    console.log(`[process-memory] - Themes: ${metadata.themes.join(', ')}`)
+    logger.info({
+      memory_id: memoryId,
+      type: metadata.memory_type,
+      entities: metadata.entities,
+      themes: metadata.themes
+    }, 'Successfully processed memory')
 
   } catch (error) {
-    console.error(`[process-memory] Error processing memory ${memoryId}:`, error)
+    logger.error({ memory_id: memoryId, error }, 'Error processing memory')
 
     // Store error in database
     await supabase
@@ -151,7 +154,7 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
   }
 
   if (allEntities.length === 0) {
-    console.log('[process-memory] No entities to store')
+    logger.debug('No entities to store')
     return
   }
 
@@ -164,9 +167,9 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
     })))
 
   if (error) {
-    console.error('[process-memory] Error storing entities:', error)
+    logger.warn({ error }, 'Error storing entities')
     // Don't throw - entity storage is non-critical
   } else {
-    console.log(`[process-memory] Stored ${allEntities.length} entities`)
+    logger.debug({ count: allEntities.length }, 'Stored entities')
   }
 }

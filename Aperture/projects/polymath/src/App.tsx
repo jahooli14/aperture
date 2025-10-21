@@ -14,23 +14,20 @@ function Navigation() {
   const isActive = (path: string) => location.pathname === path
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur-2xl bg-white/40 border-b border-white/20 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+    <nav className="sticky top-0 z-50 glass-panel border-b border-neutral-200">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
           <Link
             to="/"
-            className="flex items-center gap-3 text-2xl font-bold group"
+            className="flex items-center gap-2.5 group transition-smooth"
           >
-            <div className="relative">
-              <Sparkles className="h-8 w-8 text-purple-600 group-hover:text-pink-600 transition-all duration-300 group-hover:rotate-12" />
-              <div className="absolute inset-0 bg-purple-600/20 blur-xl group-hover:bg-pink-600/20 transition-all duration-300" />
-            </div>
-            <span className="gradient-text text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600">
+            <Sparkles className="h-5 w-5 text-orange-600" />
+            <span className="text-xl font-semibold tracking-tight text-neutral-900">
               Polymath
             </span>
           </Link>
 
-          <div className="flex gap-8">
+          <div className="flex gap-1">
             {[
               { path: '/memories', label: 'Memories' },
               { path: '/suggestions', label: 'Suggestions' },
@@ -40,19 +37,13 @@ function Navigation() {
                 key={path}
                 to={path}
                 className={cn(
-                  "relative font-semibold transition-all duration-300 group",
+                  "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth",
                   isActive(path)
-                    ? "text-purple-600"
-                    : "text-gray-600 hover:text-purple-600"
+                    ? "text-orange-600 bg-orange-50"
+                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                 )}
               >
                 {label}
-                <span
-                  className={cn(
-                    "absolute -bottom-6 left-0 h-1 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 transition-all duration-300 rounded-full",
-                    isActive(path) ? "w-full" : "w-0 group-hover:w-full"
-                  )}
-                />
               </Link>
             ))}
           </div>

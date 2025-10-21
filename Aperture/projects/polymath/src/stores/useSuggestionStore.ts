@@ -29,11 +29,13 @@ interface SuggestionState {
   error: string | null
   filter: 'all' | 'pending' | 'spark' | 'saved' | 'built'
   sortBy: 'points' | 'recent' | 'rating'
+  synthesizing: boolean
 
   // Actions
   fetchSuggestions: () => Promise<void>
   rateSuggestion: (id: string, rating: number) => Promise<void>
   buildSuggestion: (id: string) => Promise<void>
+  triggerSynthesis: () => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
   setSortBy: (sortBy: SuggestionState['sortBy']) => void
 }
@@ -44,6 +46,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
   error: null,
   filter: 'pending',
   sortBy: 'points',
+  synthesizing: false,
 
   fetchSuggestions: async () => {
     set({ loading: true, error: null })
@@ -110,6 +113,36 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+    }
+  },
+
+  triggerSynthesis: async () => {
+    set({ synthesizing: true, error: null })
+
+    try {
+      const response = await fetch(`${API_BASE}/cron/weekly-synthesis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger synthesis')
+      }
+
+      const data = await response.json()
+
+      // Refresh suggestions after synthesis
+      await get().fetchSuggestions()
+
+      set({ synthesizing: false })
+
+      return data
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        synthesizing: false
+      })
+      throw error
     }
   },
 

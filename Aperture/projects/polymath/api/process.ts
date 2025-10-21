@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { processMemory } from './lib/process-memory'
+import { processMemory } from '../lib/process-memory.js'
+import { logger } from '../lib/logger.js'
 
 /**
  * Background processing endpoint
@@ -24,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Memory processed successfully'
     })
   } catch (error) {
-    console.error('[process-api] Error:', error)
+    logger.error({ memory_id, error }, 'Processing failed')
     return res.status(500).json({
       error: 'Processing failed',
       details: error instanceof Error ? error.message : 'Unknown error'

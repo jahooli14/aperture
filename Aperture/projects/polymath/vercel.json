@@ -3,7 +3,16 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
-    "api/**/*.ts": {
+    "api/*.ts": {
+      "maxDuration": 60
+    },
+    "api/cron/*.ts": {
+      "maxDuration": 60
+    },
+    "api/projects/**/*.ts": {
+      "maxDuration": 60
+    },
+    "api/suggestions/**/*.ts": {
       "maxDuration": 60
     }
   },
