@@ -332,28 +332,36 @@ async function generateCreativeProject(
 ): Promise<{ title: string; description: string; reasoning: string }> {
   const interestList = interests.slice(0, 5).map(i => `- ${i.name} (${i.type}, ${i.mentions} mentions)`).join('\n')
 
-  const prompt = `You are a creative synthesis engine that generates novel creative project ideas.
+  const prompt = `You are a creative synthesis engine that generates DIVERSE, UNIQUE creative project ideas.
 
 Given these user interests (from voice notes):
 ${interestList}
 
-Generate ONE creative project idea that combines these interests in a unique way.
+Generate ONE creative project idea that combines these interests in a NOTABLY DIFFERENT, SPECIFIC way.
 
 IMPORTANT: This should be a CREATIVE project (art, writing, music, crafts, etc.), NOT a technical/coding project.
 
-Examples of creative projects:
-- "Paint an abstract art collection on the theme of communism"
-- "Write a series of short stories exploring memory and identity"
-- "Create a photo essay documenting local architecture"
-- "Compose ambient music inspired by nature sounds"
+CRITICAL - Diversity Requirements:
+- Each project must explore different creative mediums, themes, or audiences
+- Be ultra-specific about the creative output and approach
+- Avoid generic phrases like "explore themes of" or "create art about"
+- Examples of GOOD diversity:
+  * "Paint 12 watercolors showing daily routines of endangered animals" ✓
+  * "Write a choose-your-own-adventure novel set in a Martian colony" ✓
+  * "Build miniature dioramas recreating scenes from family memories" ✓
+  * "Compose lo-fi beats sampling sounds from vintage video games" ✓
+- Examples of BAD (too vague):
+  * "Create art exploring nature" ✗
+  * "Write stories about life" ✗
+  * "Make music inspired by feelings" ✗
 
 Requirements:
 - NO coding, NO technical implementation
 - Should feel energizing and inspiring, not like work
-- Should combine 2-3 interests in a novel way
-- Title should be catchy and clear
-- Description should be 2-3 sentences, focusing on WHY this is interesting
-- Reasoning should explain why these interests work together
+- Should combine 2-3 interests in a specific, concrete way
+- Title should be vivid and describe the actual creative output
+- Description should be 2-3 sentences with specific details about what you'll create and why it matters
+- Reasoning should explain the unique synthesis of these interests
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
@@ -390,7 +398,7 @@ async function generateProjectIdea(
   const capabilityList = capabilities.map(c => `- ${c.name}: ${c.description}`).join('\n')
   const interestList = interests.slice(0, 5).map(i => `- ${i.name} (${i.type}, ${i.mentions} mentions)`).join('\n')
 
-  const prompt = `You are a creative synthesis engine that generates novel project ideas.
+  const prompt = `You are a creative synthesis engine that generates DIVERSE, UNIQUE project ideas.
 
 Given these technical capabilities:
 ${capabilityList}
@@ -398,14 +406,28 @@ ${capabilityList}
 And these user interests (from MemoryOS):
 ${interestList}
 
-Generate ONE novel project idea that combines these capabilities in a unique way, aligned with the user's interests.
+Generate ONE novel project idea that combines these capabilities in a NOTABLY DIFFERENT way.
+
+CRITICAL - Diversity Requirements:
+- Each project must have distinct use cases, domains, or applications
+- Avoid generic terms like "platform", "app", "tool", "system"
+- Be specific about WHAT the project does and WHO it serves
+- Think about unique angles: education vs entertainment vs productivity vs social impact
+- Examples of GOOD diversity:
+  * "AI-powered recipe generator for dietary restrictions" ✓
+  * "Interactive music visualizer for meditation" ✓
+  * "Collaborative story builder for kids" ✓
+- Examples of BAD (too similar):
+  * "Social platform for X" ✗
+  * "Dashboard to track Y" ✗
+  * "App for managing Z" ✗
 
 Requirements:
-- Must use ALL listed capabilities
-- Should feel energizing, not like work
-- Title should be catchy and clear
-- Description should be 2-3 sentences, focusing on WHY this is interesting
-- Reasoning should explain the Venn diagram overlap (why this combination is special)
+- Must use ALL listed capabilities in a creative, specific way
+- Should feel energizing and novel, not generic
+- Title should be concrete and descriptive (not vague)
+- Description should be 2-3 sentences explaining the SPECIFIC use case and unique value
+- Reasoning should explain why THIS particular combination creates something special
 
 Return ONLY valid JSON (no markdown, no code blocks):
 {
@@ -561,19 +583,32 @@ async function generateSuggestion(
   capabilities: Capability[],
   interests: Interest[]
 ): Promise<ProjectIdea> {
-  // Pick 2-3 capabilities, weighted by strength
-  const numCapabilities = Math.random() > 0.5 ? 2 : 3
+  // Pick 2-3 capabilities, with variance
+  const numCapabilities = Math.random() > 0.6 ? 2 : Math.random() > 0.3 ? 3 : 4
 
-  // Weighted random selection (stronger capabilities more likely)
+  // Mix weighted and random selection for diversity
   const selectedCapabilities: Capability[] = []
-  const weightedCaps = capabilities.flatMap(c =>
-    Array(Math.max(1, Math.floor(c.strength))).fill(c)
-  )
 
-  for (let i = 0; i < numCapabilities; i++) {
-    const randomCap = weightedCaps[Math.floor(Math.random() * weightedCaps.length)]
-    if (!selectedCapabilities.find(c => c.id === randomCap.id)) {
-      selectedCapabilities.push(randomCap)
+  // 60% weighted by strength, 40% completely random for diversity
+  const useWeightedSelection = Math.random() < 0.6
+
+  if (useWeightedSelection) {
+    // Weighted random selection (stronger capabilities more likely)
+    const weightedCaps = capabilities.flatMap(c =>
+      Array(Math.max(1, Math.floor(c.strength))).fill(c)
+    )
+
+    for (let i = 0; i < numCapabilities; i++) {
+      const randomCap = weightedCaps[Math.floor(Math.random() * weightedCaps.length)]
+      if (!selectedCapabilities.find(c => c.id === randomCap.id)) {
+        selectedCapabilities.push(randomCap)
+      }
+    }
+  } else {
+    // Pure random selection for more surprising combinations
+    const shuffled = [...capabilities].sort(() => Math.random() - 0.5)
+    for (let i = 0; i < Math.min(numCapabilities, shuffled.length); i++) {
+      selectedCapabilities.push(shuffled[i])
     }
   }
 
@@ -658,10 +693,12 @@ export async function runSynthesis(userId: string) {
     return
   }
 
-  // 3. Generate suggestions
+  // 3. Generate suggestions with diversity enforcement
   logger.info({ count: CONFIG.SUGGESTIONS_PER_RUN }, 'Generating suggestions')
 
   const suggestions: ProjectIdea[] = []
+  const usedCapabilitySets = new Set<string>() // Track used combinations
+  const usedInterestSets = new Set<string>() // Track used interest combinations
 
   for (let i = 0; i < CONFIG.SUGGESTIONS_PER_RUN; i++) {
     // Every Nth suggestion is a wildcard
@@ -670,18 +707,36 @@ export async function runSynthesis(userId: string) {
     // Every 3rd non-wildcard suggestion is creative (Interest × Interest)
     const isCreativeSlot = !isWildcardSlot && ((i + 1) % 3 === 0) && interests.length >= 2
 
+    let attempts = 0
+    const maxAttempts = 5
+
     try {
       let suggestion: ProjectIdea
 
-      if (isWildcardSlot) {
-        suggestion = await generateWildcard(capabilities, interests, i)
-      } else if (isCreativeSlot) {
-        suggestion = await generateCreativeSuggestion(interests)
-      } else {
-        suggestion = await generateSuggestion(capabilities, interests)
+      // Retry until we get a unique combination
+      while (attempts < maxAttempts) {
+        if (isWildcardSlot) {
+          suggestion = await generateWildcard(capabilities, interests, i)
+        } else if (isCreativeSlot) {
+          suggestion = await generateCreativeSuggestion(interests)
+        } else {
+          suggestion = await generateSuggestion(capabilities, interests)
+        }
+
+        // Check if this combination is unique
+        const capabilityKey = suggestion.capabilityIds.sort().join(',')
+        const isDuplicate = usedCapabilitySets.has(capabilityKey) && capabilityKey !== '' // Allow empty for creative
+
+        if (!isDuplicate || attempts === maxAttempts - 1) {
+          usedCapabilitySets.add(capabilityKey)
+          break
+        }
+
+        attempts++
+        logger.debug({ attempt: attempts, title: suggestion.title }, 'Duplicate combination, retrying')
       }
 
-      suggestions.push(suggestion)
+      suggestions.push(suggestion!)
 
       logger.info(
         {
