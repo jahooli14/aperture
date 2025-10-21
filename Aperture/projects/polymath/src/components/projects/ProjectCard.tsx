@@ -1,11 +1,12 @@
 /**
- * ProjectCard Component
+ * ProjectCard Component - Stunning Visual Design
  */
 
 import React from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
+import { Clock, Zap } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 
 export function ProjectCard({
@@ -17,81 +18,111 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
 
-  const statusConfig: Record<string, { emoji: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-    active: { emoji: '🚀', variant: 'default' },
-    dormant: { emoji: '💤', variant: 'secondary' },
-    completed: { emoji: '✅', variant: 'outline' },
-    archived: { emoji: '📦', variant: 'secondary' }
+  const statusConfig: Record<string, { emoji: string; gradient: string; bg: string }> = {
+    active: {
+      emoji: '🚀',
+      gradient: 'from-green-500 to-emerald-600',
+      bg: 'bg-gradient-to-br from-green-50 to-emerald-50'
+    },
+    dormant: {
+      emoji: '💤',
+      gradient: 'from-gray-400 to-gray-600',
+      bg: 'bg-gradient-to-br from-gray-50 to-slate-50'
+    },
+    completed: {
+      emoji: '✅',
+      gradient: 'from-blue-500 to-indigo-600',
+      bg: 'bg-gradient-to-br from-blue-50 to-indigo-50'
+    },
+    archived: {
+      emoji: '📦',
+      gradient: 'from-purple-500 to-violet-600',
+      bg: 'bg-gradient-to-br from-purple-50 to-violet-50'
+    }
   }
 
-  const typeConfig: Record<string, { emoji: string; variant: 'creative' | 'technical' | 'meta' }> = {
-    personal: { emoji: '👤', variant: 'creative' },
-    technical: { emoji: '⚙️', variant: 'technical' },
-    meta: { emoji: '🧠', variant: 'meta' }
+  const typeConfig: Record<string, { emoji: string; gradient: string }> = {
+    personal: { emoji: '👤', gradient: 'from-pink-500 via-rose-500 to-purple-600' },
+    technical: { emoji: '⚙️', gradient: 'from-blue-500 via-cyan-500 to-teal-600' },
+    meta: { emoji: '🧠', gradient: 'from-amber-500 via-orange-500 to-red-600' }
   }
 
   return (
-    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-xl">{project.title}</CardTitle>
-          <Badge variant={typeConfig[project.type].variant}>
+    <Card className="group h-full flex flex-col relative overflow-hidden backdrop-blur-xl bg-white/80 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 glow-hover">
+      {/* Gradient overlay on hover */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${typeConfig[project.type].gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+
+      {/* Top accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${typeConfig[project.type].gradient}`} />
+
+      <CardHeader className="relative">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <CardTitle className="text-xl font-bold group-hover:gradient-text transition-all duration-300">
+            {project.title}
+          </CardTitle>
+          <div className={`relative px-3 py-1 rounded-full bg-gradient-to-r ${typeConfig[project.type].gradient} text-white text-xs font-bold shadow-lg`}>
             {typeConfig[project.type].emoji} {project.type}
-          </Badge>
+          </div>
         </div>
         {project.description && (
-          <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+          <CardDescription className="line-clamp-2 text-base">
+            {project.description}
+          </CardDescription>
         )}
       </CardHeader>
 
-      <CardContent className="flex-1">
-        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-          <span>Last active: <span className="font-medium text-foreground">{relativeTime}</span></span>
+      <CardContent className="flex-1 space-y-4">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="h-4 w-4 text-purple-600" />
+          <span>Last active <span className="font-semibold text-purple-600">{relativeTime}</span></span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant={statusConfig[project.status].variant}>
-            {statusConfig[project.status].emoji} {project.status}
-          </Badge>
+        <div className={`px-4 py-2 rounded-xl ${statusConfig[project.status].bg} border border-white/40 shadow-inner`}>
+          <div className="flex items-center gap-2">
+            <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${statusConfig[project.status].gradient} text-white text-xs font-bold shadow-md`}>
+              {statusConfig[project.status].emoji} {project.status}
+            </div>
+          </div>
         </div>
 
         {project.metadata?.tags && project.metadata.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2">
             {project.metadata.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
+              <span
+                key={tag}
+                className="px-3 py-1 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-semibold border border-purple-200/50 shadow-sm"
+              >
+                #{tag}
+              </span>
             ))}
           </div>
         )}
 
         {project.metadata?.energy_level && (
-          <div className="mt-3 text-sm">
-            <span className="text-muted-foreground">Energy: </span>
-            <Badge
-              variant={
-                project.metadata.energy_level === 'high'
-                  ? 'destructive'
-                  : project.metadata.energy_level === 'low'
-                    ? 'secondary'
-                    : 'outline'
-              }
-              className="text-xs"
-            >
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-yellow-500" />
+            <span className="text-sm text-gray-600">Energy:</span>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-md ${
+              project.metadata.energy_level === 'high'
+                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                : project.metadata.energy_level === 'low'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                  : 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white'
+            }`}>
               {project.metadata.energy_level}
-            </Badge>
+            </span>
           </div>
         )}
       </CardContent>
 
       {showActions && (onEdit || onDelete) && (
-        <CardFooter className="flex gap-2 border-t pt-4">
+        <CardFooter className="flex gap-2 border-t border-white/20 pt-4 bg-gradient-to-b from-transparent to-gray-50/50">
           {onEdit && (
             <Button
               onClick={() => onEdit(project.id)}
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 hover:scale-105 transition-transform duration-200"
             >
               Edit
             </Button>
@@ -101,7 +132,7 @@ export function ProjectCard({
               onClick={() => onDelete(project.id)}
               variant="destructive"
               size="sm"
-              className="flex-1"
+              className="flex-1 hover:scale-105 transition-transform duration-200"
             >
               Delete
             </Button>
@@ -111,10 +142,6 @@ export function ProjectCard({
     </Card>
   )
 }
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
 
 function formatRelativeTime(isoString: string): string {
   const date = new Date(isoString)
