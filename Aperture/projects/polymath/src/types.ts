@@ -88,8 +88,8 @@ export interface Project {
   status: ProjectStatus
   last_active: string // ISO 8601
   created_at: string
-  updated_at: string
-  metadata: ProjectMetadata
+  updated_at?: string
+  metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)
 }
 
@@ -161,21 +161,21 @@ export interface ProjectSuggestion {
   user_id: string
   title: string
   description: string
-  synthesis_reasoning: string
+  synthesis_reasoning?: string
   novelty_score: number // 0-1
   feasibility_score: number // 0-1
   interest_score: number // 0-1
   total_points: number
   capability_ids: string[]
-  memory_ids: string[]
+  memory_ids?: string[]
   is_wildcard: boolean
-  suggested_at: string
+  suggested_at?: string
   status: SuggestionStatus
-  built_project_id: string | null
-  metadata: SuggestionMetadata
+  built_project_id?: string | null
+  metadata?: SuggestionMetadata
 }
 
-export type SuggestionStatus = 'pending' | 'rated' | 'built' | 'dismissed' | 'saved'
+export type SuggestionStatus = 'pending' | 'rated' | 'built' | 'dismissed' | 'saved' | 'spark' | 'meh'
 
 export interface SuggestionMetadata {
   tags?: string[]

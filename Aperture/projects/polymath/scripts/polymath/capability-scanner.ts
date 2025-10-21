@@ -4,10 +4,14 @@
  * Generates embeddings and populates capabilities table
  */
 
+import { config } from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+
+// Load environment variables from .env.local
+config({ path: '.env.local' })
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -200,19 +204,13 @@ const SHARED_CAPABILITIES = [
   },
   {
     name: 'gemini-ai',
-    description: 'Google Gemini 2.5 Flash for fast AI processing. Structured output for entity extraction.',
+    description: 'Google Gemini 2.0 Flash for fast AI processing and synthesis. Multimodal model with excellent quality and low cost.',
     source_project: 'shared',
     codeRefs: []
   },
   {
-    name: 'claude-ai',
-    description: 'Anthropic Claude Sonnet 4.5 for complex reasoning and synthesis. Long context, high quality output.',
-    source_project: 'shared',
-    codeRefs: []
-  },
-  {
-    name: 'openai-embeddings',
-    description: 'OpenAI embeddings API for vector representations. text-embedding-3-small model.',
+    name: 'gemini-embeddings',
+    description: 'Gemini text-embedding-004 for vector representations. 768-dimensional embeddings for semantic search.',
     source_project: 'shared',
     codeRefs: []
   }
@@ -268,7 +266,9 @@ export async function scanCapabilities() {
     )
 
     allCapabilities.push({
-      ...cap,
+      name: cap.name,
+      description: cap.description,
+      source_project: cap.source_project,
       code_references: cap.codeRefs,
       embedding,
       strength: 1.0,

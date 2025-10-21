@@ -1,29 +1,26 @@
 {
-  "name": "visual-test-generator",
-  "version": "0.1.0",
-  "description": "Visual regression testing with Playwright - capture, compare, approve screenshots",
+  "name": "@aperture/self-healing-tests",
+  "version": "1.0.0",
+  "description": "Self-healing Playwright tests powered by Google Gemini Computer Use - automatically repair broken locators",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "capture": "tsx src/cli/capture.ts",
-    "compare": "tsx src/cli/compare.ts",
-    "approve": "tsx src/cli/approve.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "setup": "bash scripts/setup.sh"
   },
   "keywords": [
     "testing",
     "automation",
     "playwright",
+    "self-healing",
     "ai",
-    "vision-language",
-    "florence-2",
-    "smolvlm",
-    "webllm",
-    "test-generation",
-    "video-to-code"
+    "gemini",
+    "computer-use",
+    "test-repair",
+    "visual-testing"
   ],
   "author": "Aperture Projects",
   "license": "MIT",
@@ -31,23 +28,24 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@playwright/test": "^1.48.0",
     "@supabase/supabase-js": "^2.45.4",
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
-    "pixelmatch": "^6.0.0",
-    "pngjs": "^7.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "zustand": "^5.0.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/pixelmatch": "^5.2.6",
-    "@types/pngjs": "^6.0.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

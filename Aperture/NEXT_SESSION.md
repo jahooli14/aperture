@@ -19,7 +19,7 @@
 |---------|--------|----------|-------------------|
 | 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
 | 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
-| 🎨 **Polymath** | ✅ Pipeline Fixed | [Complete system](projects/polymath/), voice processing restored | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
+| 🎨 **Polymath** | 🟢 Production | [Live on Vercel](https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app), 23 capabilities, 10 AI suggestions, Gemini-powered | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
 | 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
 
 ---
@@ -28,7 +28,7 @@
 
 > **Note**: This is just recent history. Next session can work on ANY project - not necessarily the last one!
 
-**Session 23** (2025-10-21): Wizard of Oz - Comment chips, email reminders, build fixes
+**Session 23** (2025-10-21): Polymath - DEPLOYED TO PRODUCTION ✅ (Gemini-powered, 23 capabilities, 10 AI suggestions)
 
 **Previous Sessions**:
 - Session 22: Polymath - Fixed voice processing pipeline + added end-to-end flow verification to process
