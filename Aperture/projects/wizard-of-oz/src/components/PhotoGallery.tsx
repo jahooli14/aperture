@@ -196,6 +196,18 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
 
               {/* Comment indicator chip */}
               {(() => {
+                // Debug logging - remove after testing
+                if (photo.upload_date === '2025-10-20') {
+                  console.log('Oct 20 photo metadata:', {
+                    metadata: photo.metadata,
+                    metadataType: typeof photo.metadata,
+                    hasMetadata: !!photo.metadata,
+                    isObject: photo.metadata && typeof photo.metadata === 'object',
+                    hasNoteKey: photo.metadata && typeof photo.metadata === 'object' && 'note' in photo.metadata,
+                    noteValue: photo.metadata && typeof photo.metadata === 'object' && 'note' in photo.metadata ? photo.metadata.note : 'N/A',
+                  });
+                }
+
                 const hasNote = photo.metadata &&
                   typeof photo.metadata === 'object' &&
                   'note' in photo.metadata &&
