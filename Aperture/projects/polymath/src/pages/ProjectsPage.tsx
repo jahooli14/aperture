@@ -2,13 +2,16 @@
  * Projects Page - Stunning Visual Design
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
+import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Rocket } from 'lucide-react'
+import { useToast } from '../components/ui/toast'
+import type { Project } from '../types'
 
 export function ProjectsPage() {
   const {
@@ -17,12 +20,41 @@ export function ProjectsPage() {
     error,
     filter,
     fetchProjects,
+    deleteProject,
     setFilter
   } = useProjectStore()
+
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const { addToast } = useToast()
 
   useEffect(() => {
     fetchProjects()
   }, [])
+
+  const handleEdit = (project: Project) => {
+    setSelectedProject(project)
+    setEditDialogOpen(true)
+  }
+
+  const handleDelete = async (project: Project) => {
+    if (confirm(`Delete "${project.title}"? This action cannot be undone.`)) {
+      try {
+        await deleteProject(project.id)
+        addToast({
+          title: 'Project deleted',
+          description: `"${project.title}" has been removed.`,
+          variant: 'success',
+        })
+      } catch (error) {
+        addToast({
+          title: 'Failed to delete project',
+          description: error instanceof Error ? error.message : 'An error occurred',
+          variant: 'destructive',
+        })
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen py-12">
@@ -112,11 +144,20 @@ export function ProjectsPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
+                onEdit={() => handleEdit(project)}
+                onDelete={() => handleDelete(project)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <EditProjectDialog
+        project={selectedProject}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }

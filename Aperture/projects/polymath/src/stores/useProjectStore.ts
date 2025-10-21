@@ -30,6 +30,7 @@ interface ProjectState {
   fetchProjects: () => Promise<void>
   createProject: (data: Partial<Project>) => Promise<void>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
 }
 
@@ -105,6 +106,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      throw error
+    }
+  },
+
+  deleteProject: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/projects/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete project')
+      }
+
+      // Refresh projects after deleting
+      await get().fetchProjects()
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      throw error
     }
   },
 

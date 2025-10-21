@@ -6,12 +6,14 @@ import { useEffect, useState } from 'react'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
+import { BuildProjectDialog } from '../components/suggestions/BuildProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
 import { Sparkles, Calendar, Brain, Lightbulb } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
 
 export function SuggestionsPage() {
@@ -32,6 +34,11 @@ export function SuggestionsPage() {
 
   const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [buildDialogOpen, setBuildDialogOpen] = useState(false)
+  const [suggestionToBuild, setSuggestionToBuild] = useState<ProjectSuggestion | null>(null)
+
+  const navigate = useNavigate()
+  const { addToast } = useToast()
 
   useEffect(() => {
     fetchSuggestions()
@@ -42,8 +49,36 @@ export function SuggestionsPage() {
   }
 
   const handleBuild = async (id: string) => {
-    if (confirm('Build this project? This will create a new project and boost related capabilities.')) {
-      await buildSuggestion(id)
+    const suggestion = suggestions.find(s => s.id === id)
+    if (suggestion) {
+      setSuggestionToBuild(suggestion)
+      setBuildDialogOpen(true)
+    }
+  }
+
+  const handleBuildConfirm = async (projectData: { title: string; description: string; type: 'personal' | 'technical' | 'meta' }) => {
+    if (!suggestionToBuild) return
+
+    try {
+      await buildSuggestion(suggestionToBuild.id)
+
+      addToast({
+        title: '🎉 Project built!',
+        description: `"${projectData.title}" is now in your projects.`,
+        variant: 'success',
+      })
+
+      // Navigate to projects page after short delay
+      setTimeout(() => {
+        navigate('/projects')
+      }, 1500)
+    } catch (error) {
+      addToast({
+        title: 'Failed to build project',
+        description: error instanceof Error ? error.message : 'An error occurred',
+        variant: 'destructive',
+      })
+      throw error // Re-throw to keep dialog open
     }
   }
 
@@ -249,6 +284,14 @@ export function SuggestionsPage() {
         onOpenChange={setDetailDialogOpen}
         onRate={handleRate}
         onBuild={handleBuild}
+      />
+
+      {/* Build Project Dialog */}
+      <BuildProjectDialog
+        suggestion={suggestionToBuild}
+        open={buildDialogOpen}
+        onOpenChange={setBuildDialogOpen}
+        onConfirm={handleBuildConfirm}
       />
     </div>
   )
