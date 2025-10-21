@@ -1,5 +1,5 @@
 /**
- * Home Page
+ * Home Page - Prestigious Design
  * Landing page with overview and quick stats
  */
 
@@ -7,14 +7,18 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
+import { useMemoryStore } from '../stores/useMemoryStore'
+import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight } from 'lucide-react'
 
 export function HomePage() {
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
+  const { memories, fetchMemories } = useMemoryStore()
 
   useEffect(() => {
     fetchSuggestions()
     fetchProjects()
+    fetchMemories()
   }, [])
 
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
@@ -22,273 +26,229 @@ export function HomePage() {
   const activeProjects = projects.filter(p => p.status === 'active')
 
   return (
-    <div className="home-page">
-      <header className="hero">
-        <h1>🎨 Polymath</h1>
-        <p className="tagline">Your meta-creative synthesis engine</p>
-        <p className="description">
-          Generates novel project ideas by combining your capabilities with your interests
-        </p>
-      </header>
+    <div className="min-h-screen">
+      {/* Hero Section - Prestigious */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-white via-orange-50/30 to-white py-24 px-4">
+        {/* Subtle background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-100/40 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-50/60 rounded-full blur-3xl" />
+        </div>
 
-      <div className="stats-grid">
-        <Link to="/suggestions" className="stat-card">
-          <div className="stat-value">{pendingSuggestions.length}</div>
-          <div className="stat-label">New Suggestions</div>
-          <div className="stat-hint">Ready to rate →</div>
-        </Link>
-
-        <Link to="/suggestions?filter=spark" className="stat-card spark">
-          <div className="stat-value">{sparkSuggestions.length}</div>
-          <div className="stat-label">⚡ Sparks</div>
-          <div className="stat-hint">Ideas you liked →</div>
-        </Link>
-
-        <Link to="/projects" className="stat-card">
-          <div className="stat-value">{activeProjects.length}</div>
-          <div className="stat-label">Active Projects</div>
-          <div className="stat-hint">Currently working on →</div>
-        </Link>
-
-        <Link to="/projects?filter=all" className="stat-card">
-          <div className="stat-value">{projects.length}</div>
-          <div className="stat-label">Total Projects</div>
-          <div className="stat-hint">All time →</div>
-        </Link>
-      </div>
-
-      <section className="how-it-works">
-        <h2>How It Works</h2>
-        <div className="steps">
-          <div className="step">
-            <div className="step-number">1</div>
-            <div className="step-content">
-              <h3>📝 Capture Interests</h3>
-              <p>Voice notes reveal recurring themes and topics you care about</p>
+        <div className="relative max-w-5xl mx-auto text-center">
+          {/* Icon */}
+          <div className="inline-flex items-center justify-center mb-8">
+            <div className="relative">
+              <Sparkles className="h-16 w-16 text-orange-600" strokeWidth={1.5} />
+              <div className="absolute inset-0 bg-orange-600/10 blur-xl rounded-full" />
             </div>
           </div>
 
-          <div className="step">
-            <div className="step-number">2</div>
-            <div className="step-content">
-              <h3>🔍 Scan Capabilities</h3>
-              <p>System scans your codebase to find technical skills you have</p>
-            </div>
-          </div>
+          {/* Main heading */}
+          <h1 className="text-6xl md:text-7xl font-bold mb-6 text-neutral-900 tracking-tight">
+            Polymath
+          </h1>
 
-          <div className="step">
-            <div className="step-number">3</div>
-            <div className="step-content">
-              <h3>🤖 AI Synthesis</h3>
-              <p>Generates novel project ideas at the intersection</p>
-            </div>
-          </div>
+          {/* Tagline */}
+          <p className="text-2xl md:text-3xl font-light text-neutral-600 mb-6 tracking-wide">
+            Your creative project companion
+          </p>
 
-          <div className="step">
-            <div className="step-number">4</div>
-            <div className="step-content">
-              <h3>⚡ Rate & Build</h3>
-              <p>Spark ideas you like, build them, system learns</p>
-            </div>
+          {/* Description */}
+          <p className="text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
+            Discovers project ideas by connecting what you can do with what you love
+          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+            <Link
+              to="/suggestions"
+              className="btn-primary inline-flex items-center gap-2 text-lg px-8"
+            >
+              View Suggestions
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link
+              to="/memories"
+              className="btn-secondary inline-flex items-center gap-2 text-lg px-8"
+            >
+              <Brain className="h-5 w-5" />
+              My Memories
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="cta">
-        <Link to="/suggestions" className="primary-button">
-          View Suggestions →
-        </Link>
-        <Link to="/projects" className="secondary-button">
-          View Projects
-        </Link>
+      {/* Stats Grid - Elevated Design */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 mb-24">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Memories Stat */}
+          <Link
+            to="/memories"
+            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+          >
+            <Brain className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
+            <div className="text-4xl font-bold text-neutral-900 mb-2">
+              {memories.length}
+            </div>
+            <div className="text-sm font-medium text-neutral-600 mb-1">
+              Total Memories
+            </div>
+            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              View all →
+            </div>
+          </Link>
+
+          {/* New Suggestions Stat */}
+          <Link
+            to="/suggestions"
+            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+          >
+            <Sparkles className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
+            <div className="text-4xl font-bold text-neutral-900 mb-2">
+              {pendingSuggestions.length}
+            </div>
+            <div className="text-sm font-medium text-neutral-600 mb-1">
+              New Suggestions
+            </div>
+            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              Rate ideas →
+            </div>
+          </Link>
+
+          {/* Sparks Stat */}
+          <Link
+            to="/suggestions?filter=spark"
+            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-amber-200 bg-gradient-to-br from-amber-50/50 to-white"
+          >
+            <TrendingUp className="h-10 w-10 text-amber-600 mx-auto mb-4" strokeWidth={1.5} />
+            <div className="text-4xl font-bold text-neutral-900 mb-2">
+              {sparkSuggestions.length}
+            </div>
+            <div className="text-sm font-medium text-neutral-600 mb-1">
+              Sparks
+            </div>
+            <div className="text-xs text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              Ideas you liked →
+            </div>
+          </Link>
+
+          {/* Active Projects Stat */}
+          <Link
+            to="/projects"
+            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+          >
+            <Rocket className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
+            <div className="text-4xl font-bold text-neutral-900 mb-2">
+              {activeProjects.length}
+            </div>
+            <div className="text-sm font-medium text-neutral-600 mb-1">
+              Active Projects
+            </div>
+            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              Currently working →
+            </div>
+          </Link>
+        </div>
       </section>
 
-      <style>{`
-        .home-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem;
-        }
+      {/* How It Works - Premium Design */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-neutral-900 mb-4">
+            How It Works
+          </h2>
+          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            Polymath combines AI synthesis with your personal knowledge graph
+          </p>
+        </div>
 
-        .hero {
-          text-align: center;
-          padding: 3rem 0;
-        }
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Step 1 */}
+          <div className="relative">
+            <div className="pro-card p-8 h-full">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
+                1
+              </div>
+              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+                Capture Interests
+              </h3>
+              <p className="text-neutral-600 leading-relaxed">
+                Voice notes and manual entries reveal recurring themes and topics you care about
+              </p>
+            </div>
+            {/* Connector line - hidden on mobile */}
+            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
+          </div>
 
-        .hero h1 {
-          margin: 0;
-          font-size: 3rem;
-          color: #1a1a1a;
-        }
+          {/* Step 2 */}
+          <div className="relative">
+            <div className="pro-card p-8 h-full">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
+                2
+              </div>
+              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+                Build Capabilities
+              </h3>
+              <p className="text-neutral-600 leading-relaxed">
+                System tracks your technical skills and strengths as you complete projects
+              </p>
+            </div>
+            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
+          </div>
 
-        .tagline {
-          margin: 1rem 0 0.5rem 0;
-          font-size: 1.5rem;
-          color: #666;
-        }
+          {/* Step 3 */}
+          <div className="relative">
+            <div className="pro-card p-8 h-full">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
+                3
+              </div>
+              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+                AI Synthesis
+              </h3>
+              <p className="text-neutral-600 leading-relaxed">
+                Weekly generation of novel project ideas at the intersection of your skills and interests
+              </p>
+            </div>
+            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
+          </div>
 
-        .description {
-          margin: 0;
-          color: #888;
-          max-width: 600px;
-          margin: 0 auto;
-        }
+          {/* Step 4 */}
+          <div className="pro-card p-8 h-full">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
+              4
+            </div>
+            <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+              Rate & Build
+            </h3>
+            <p className="text-neutral-600 leading-relaxed">
+              Spark ideas you like, build them into projects, and the system learns your preferences
+            </p>
+          </div>
+        </div>
+      </section>
 
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1.5rem;
-          margin: 3rem 0;
-        }
-
-        .stat-card {
-          background: white;
-          border: 2px solid #e5e7eb;
-          border-radius: 12px;
-          padding: 2rem;
-          text-align: center;
-          text-decoration: none;
-          color: inherit;
-          transition: all 0.2s;
-        }
-
-        .stat-card:hover {
-          border-color: #2563eb;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-card.spark {
-          background: linear-gradient(135deg, #fff9e6 0%, white 50%);
-        }
-
-        .stat-value {
-          font-size: 3rem;
-          font-weight: bold;
-          color: #2563eb;
-          margin-bottom: 0.5rem;
-        }
-
-        .stat-label {
-          font-size: 1rem;
-          color: #666;
-          margin-bottom: 0.5rem;
-        }
-
-        .stat-hint {
-          font-size: 0.875rem;
-          color: #2563eb;
-        }
-
-        .how-it-works {
-          margin: 4rem 0;
-        }
-
-        .how-it-works h2 {
-          text-align: center;
-          font-size: 2rem;
-          margin-bottom: 2rem;
-          color: #1a1a1a;
-        }
-
-        .steps {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 2rem;
-        }
-
-        .step {
-          display: flex;
-          gap: 1rem;
-        }
-
-        .step-number {
-          flex-shrink: 0;
-          width: 40px;
-          height: 40px;
-          background: #2563eb;
-          color: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: bold;
-        }
-
-        .step-content h3 {
-          margin: 0 0 0.5rem 0;
-          font-size: 1.125rem;
-          color: #1a1a1a;
-        }
-
-        .step-content p {
-          margin: 0;
-          color: #666;
-          font-size: 0.875rem;
-          line-height: 1.5;
-        }
-
-        .cta {
-          text-align: center;
-          margin: 4rem 0;
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-        }
-
-        .primary-button,
-        .secondary-button {
-          padding: 1rem 2rem;
-          border-radius: 8px;
-          text-decoration: none;
-          font-weight: 600;
-          transition: all 0.2s;
-          display: inline-block;
-        }
-
-        .primary-button {
-          background: #2563eb;
-          color: white;
-        }
-
-        .primary-button:hover {
-          background: #1d4ed8;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-
-        .secondary-button {
-          background: white;
-          color: #2563eb;
-          border: 2px solid #2563eb;
-        }
-
-        .secondary-button:hover {
-          background: #eff6ff;
-        }
-
-        @media (max-width: 768px) {
-          .hero h1 {
-            font-size: 2rem;
-          }
-
-          .tagline {
-            font-size: 1.25rem;
-          }
-
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .steps {
-            grid-template-columns: 1fr;
-          }
-
-          .cta {
-            flex-direction: column;
-          }
-        }
-      `}</style>
+      {/* Bottom CTA */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <div className="pro-card p-12 text-center bg-gradient-to-br from-orange-50/50 to-white border-2 border-orange-100">
+          <h3 className="text-3xl font-bold text-neutral-900 mb-4">
+            Ready to start synthesizing?
+          </h3>
+          <p className="text-lg text-neutral-600 mb-8 max-w-2xl mx-auto">
+            Capture your first memory or explore AI-generated project suggestions
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/suggestions" className="btn-primary inline-flex items-center gap-2 text-lg px-8">
+              View Suggestions
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <Link to="/projects" className="btn-secondary inline-flex items-center gap-2 text-lg px-8">
+              <Rocket className="h-5 w-5" />
+              My Projects
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

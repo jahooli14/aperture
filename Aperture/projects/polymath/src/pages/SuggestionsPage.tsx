@@ -19,9 +19,11 @@ export function SuggestionsPage() {
     error,
     filter,
     sortBy,
+    synthesizing,
     fetchSuggestions,
     rateSuggestion,
     buildSuggestion,
+    triggerSynthesis,
     setFilter,
     setSortBy
   } = useSuggestionStore()
@@ -44,33 +46,55 @@ export function SuggestionsPage() {
     console.log('View detail:', id)
   }
 
+  const handleSynthesize = async () => {
+    try {
+      await triggerSynthesis()
+    } catch (error) {
+      console.error('Synthesis failed:', error)
+    }
+  }
+
   return (
     <div className="min-h-screen py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Stunning Header */}
-        <div className="text-center mb-12 relative">
-          <div className="inline-block mb-4">
-            <div className="relative">
-              <Sparkles className="h-16 w-16 text-purple-600 mx-auto mb-4 float-animation" />
-              <div className="absolute inset-0 bg-purple-600/20 blur-2xl" />
-            </div>
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center mb-4">
+            <Sparkles className="h-12 w-12 text-orange-600" />
           </div>
-          <h1 className="text-5xl font-bold mb-4 gradient-text">
+          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
             Project Suggestions
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            AI-generated ideas combining your capabilities and interests
+          <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
+            Ideas that match what you can do with what you care about
           </p>
+          <Button
+            onClick={handleSynthesize}
+            disabled={synthesizing}
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            {synthesizing ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Generate Ideas
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 glass-panel p-6">
           <div className="flex flex-wrap gap-2">
             {[
               { key: 'pending', label: 'New' },
-              { key: 'spark', label: '⚡ Sparks' },
-              { key: 'saved', label: '💾 Saved' },
-              { key: 'built', label: '✅ Built' },
+              { key: 'spark', label: 'Sparks' },
+              { key: 'saved', label: 'Saved' },
+              { key: 'built', label: 'Built' },
               { key: 'all', label: 'All' }
             ].map(({ key, label }) => (
               <Button
@@ -78,22 +102,22 @@ export function SuggestionsPage() {
                 variant={filter === key ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilter(key as typeof filter)}
-                className={filter === key ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg' : 'hover:scale-105 transition-transform'}
+                className={filter === key ? 'btn-primary' : 'btn-secondary'}
               >
                 {label}
               </Button>
             ))}
           </div>
 
-          <div className="flex items-center gap-3 bg-white/80 rounded-xl px-4 py-2 border border-white/40 shadow-sm">
-            <Label htmlFor="sort" className="text-sm font-semibold whitespace-nowrap text-gray-700">
+          <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2 border border-neutral-200">
+            <Label htmlFor="sort" className="text-sm font-semibold whitespace-nowrap text-neutral-700">
               Sort by:
             </Label>
             <Select
               id="sort"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+              className="select-pro"
             >
               <option value="points">Points</option>
               <option value="recent">Recent</option>
@@ -104,67 +128,66 @@ export function SuggestionsPage() {
 
         {/* Error Banner */}
         {error && (
-          <Card className="mb-6 border-red-300 bg-gradient-to-r from-red-50 to-pink-50">
+          <Card className="mb-6 border-red-300 bg-red-50">
             <CardContent className="pt-6">
-              <p className="text-sm text-red-600 font-semibold">❌ {error}</p>
+              <p className="text-sm text-red-600 font-semibold">{error}</p>
             </CardContent>
           </Card>
         )}
 
         {/* Loading State */}
         {loading ? (
-          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+          <Card className="pro-card">
             <CardContent className="py-24">
               <div className="text-center">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-purple-600 border-r-transparent mb-4"></div>
-                <p className="text-lg text-gray-600">Loading suggestions...</p>
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                <p className="text-lg text-neutral-600">Loading suggestions...</p>
               </div>
             </CardContent>
           </Card>
         ) : suggestions.length === 0 ? (
-          /* Production-Ready Empty State */
-          <Card className="backdrop-blur-xl bg-white/80 border-white/20 shadow-xl">
+          /* Empty State */
+          <Card className="pro-card">
             <CardContent className="py-16">
               <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-12">
-                  <div className="relative inline-block mb-6">
-                    <Sparkles className="h-20 w-20 text-purple-600 mx-auto float-animation" />
-                    <div className="absolute inset-0 bg-purple-600/20 blur-2xl" />
+                  <div className="inline-flex items-center justify-center mb-6">
+                    <Sparkles className="h-16 w-16 text-orange-600" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4">Your Suggestions Are On The Way!</h3>
-                  <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                  <h3 className="text-3xl font-bold text-neutral-900 mb-4">Your Suggestions Are On The Way</h3>
+                  <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
                     Polymath generates personalized project ideas by analyzing your interests and capabilities.
                   </p>
                 </div>
 
                 {/* How it works */}
                 <div className="grid md:grid-cols-3 gap-6 mb-12">
-                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
-                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Brain className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-gray-900 mb-2">1. Capture Ideas</h4>
-                    <p className="text-sm text-gray-600">
+                    <h4 className="font-bold text-neutral-900 mb-2">1. Capture Ideas</h4>
+                    <p className="text-sm text-neutral-600">
                       Record your thoughts and interests via voice notes or manual entries
                     </p>
                   </div>
 
-                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
-                    <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Calendar className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-gray-900 mb-2">2. AI Synthesis</h4>
-                    <p className="text-sm text-gray-600">
+                    <h4 className="font-bold text-neutral-900 mb-2">2. AI Synthesis</h4>
+                    <p className="text-sm text-neutral-600">
                       Every Monday at 9am UTC, AI generates unique project suggestions for you
                     </p>
                   </div>
 
-                  <div className="backdrop-blur-xl bg-white/60 rounded-2xl p-6 border border-white/20 shadow-lg">
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Lightbulb className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-gray-900 mb-2">3. Get Inspired</h4>
-                    <p className="text-sm text-gray-600">
+                    <h4 className="font-bold text-neutral-900 mb-2">3. Get Inspired</h4>
+                    <p className="text-sm text-neutral-600">
                       Review suggestions, rate what sparks your interest, and build projects
                     </p>
                   </div>
@@ -172,31 +195,31 @@ export function SuggestionsPage() {
 
                 {/* CTA */}
                 <div className="text-center space-y-4">
-                  <p className="text-gray-600 font-medium">
-                    Next synthesis runs <span className="font-bold text-purple-600">Monday at 9:00 AM UTC</span>
+                  <p className="text-neutral-600 font-medium">
+                    Next synthesis runs <span className="font-bold text-orange-600">Monday at 9:00 AM UTC</span>
                   </p>
                   <div className="flex gap-4 justify-center flex-wrap">
                     <Link to="/memories">
-                      <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all">
+                      <Button className="btn-primary">
                         Capture Your First Memory
                       </Button>
                     </Link>
                     <Link to="/projects">
-                      <Button variant="outline" className="hover:scale-105 transition-transform">
+                      <Button className="btn-secondary">
                         View Your Projects
                       </Button>
                     </Link>
                   </div>
-                  <p className="text-sm text-gray-500 mt-6">
-                    💡 Tip: The more memories and interests you capture, the better your suggestions will be!
+                  <p className="text-sm text-neutral-500 mt-6">
+                    Tip: The more memories and interests you capture, the better your suggestions will be
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         ) : (
-          /* Suggestions Grid */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          /* Suggestions Grid - Bento Box Layout with Stagger Animation */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
             {suggestions.map((suggestion) => (
               <SuggestionCard
                 key={suggestion.id}
