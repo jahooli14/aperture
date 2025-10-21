@@ -7,35 +7,48 @@ const supabase = createClient(
 )
 
 /**
- * Memories API
+ * Unified Memories API
  * GET /api/memories - List all memories
  * GET /api/memories?resurfacing=true - Get memories to resurface (spaced repetition)
+ * POST /api/memories - Mark memory as reviewed (requires id in body)
+ * GET /api/memories?bridges=true&id=xxx - Get bridges for memory
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
-    const { resurfacing } = req.query
+    const { resurfacing, bridges, id } = req.query
 
-    if (resurfacing === 'true') {
-      // Resurfacing mode: spaced repetition algorithm
-      return await handleResurfacing(req, res)
+    // POST: Mark memory as reviewed
+    if (req.method === 'POST') {
+      const memoryId = req.body.id || id
+      return await handleReview(memoryId as string, res)
     }
 
-    // Standard mode: list all memories
-    const { data: memories, error } = await supabase
-      .from('memories')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('[api/memories] Fetch error:', error)
-      return res.status(500).json({ error: 'Failed to fetch memories' })
+    // GET: Bridges for memory
+    if (req.method === 'GET' && bridges === 'true') {
+      return await handleBridges(id as string | undefined, res)
     }
 
-    return res.status(200).json({ memories })
+    // GET: Resurfacing queue
+    if (req.method === 'GET' && resurfacing === 'true') {
+      return await handleResurfacing(res)
+    }
+
+    // GET: List all memories (default)
+    if (req.method === 'GET') {
+      const { data: memories, error } = await supabase
+        .from('memories')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('[api/memories] Fetch error:', error)
+        return res.status(500).json({ error: 'Failed to fetch memories' })
+      }
+
+      return res.status(200).json({ memories })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
 
   } catch (error) {
     console.error('[api/memories] Unexpected error:', error)
@@ -44,17 +57,99 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Resurfacing algorithm: Spaced repetition
- *
- * Strategy:
- * 1. Find memories that haven't been "reviewed" in a while
- * 2. Use spaced intervals: 1d, 3d, 7d, 14d, 30d, 60d, 90d
- * 3. Prioritize:
- *    - High entity count (rich memories)
- *    - High bridge count (well-connected)
- *    - Matched to recent interests
+ * Mark memory as reviewed
  */
-async function handleResurfacing(req: VercelRequest, res: VercelResponse) {
+async function handleReview(memoryId: string, res: VercelResponse) {
+  if (!memoryId) {
+    return res.status(400).json({ error: 'Memory ID required' })
+  }
+
+  try {
+    // First, get current review count
+    const { data: existing } = await supabase
+      .from('memories')
+      .select('review_count')
+      .eq('id', memoryId)
+      .single()
+
+    // Update review metadata
+    const { data: memory, error } = await supabase
+      .from('memories')
+      .update({
+        last_reviewed_at: new Date().toISOString(),
+        review_count: (existing?.review_count || 0) + 1
+      })
+      .eq('id', memoryId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[api/memories/review] Update error:', error)
+      return res.status(500).json({ error: 'Failed to mark as reviewed' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      memory
+    })
+  } catch (error) {
+    console.error('[api/memories/review] Unexpected error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * Get bridges for memory
+ */
+async function handleBridges(memoryId: string | undefined, res: VercelResponse) {
+  try {
+    if (memoryId) {
+      // Get bridges for specific memory
+      const { data: bridges, error } = await supabase
+        .from('bridges')
+        .select(`
+          *,
+          memory_a:memories!bridges_memory_a_fkey(id, title, created_at),
+          memory_b:memories!bridges_memory_b_fkey(id, title, created_at)
+        `)
+        .or(`memory_a.eq.${memoryId},memory_b.eq.${memoryId}`)
+        .order('strength', { ascending: false })
+
+      if (error) {
+        console.error('[api/bridges] Fetch error:', error)
+        return res.status(500).json({ error: 'Failed to fetch bridges' })
+      }
+
+      return res.status(200).json({ bridges })
+    }
+
+    // Get all bridges
+    const { data: bridges, error } = await supabase
+      .from('bridges')
+      .select(`
+        *,
+        memory_a:memories!bridges_memory_a_fkey(id, title, created_at),
+        memory_b:memories!bridges_memory_b_fkey(id, title, created_at)
+      `)
+      .order('strength', { ascending: false })
+      .limit(100)
+
+    if (error) {
+      console.error('[api/bridges] Fetch error:', error)
+      return res.status(500).json({ error: 'Failed to fetch bridges' })
+    }
+
+    return res.status(200).json({ bridges })
+  } catch (error) {
+    console.error('[api/bridges] Unexpected error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * Resurfacing algorithm: Spaced repetition
+ */
+async function handleResurfacing(res: VercelResponse) {
   try {
     // Get all memories with metadata
     const { data: memories, error } = await supabase
@@ -89,9 +184,9 @@ async function handleResurfacing(req: VercelRequest, res: VercelResponse) {
         // Should resurface if days since review >= target interval
         const shouldReview = daysSinceReview >= targetInterval
 
-        // Priority score: entity count + bridge count (simulated) + recency factor
+        // Priority score: entity count + recency factor
         const entityCount = memory.entities?.[0]?.count || 0
-        const recencyFactor = Math.max(0, 1 - (daysSinceReview / 365)) // decay over year
+        const recencyFactor = Math.max(0, 1 - (daysSinceReview / 365))
         const priority = entityCount * 0.5 + recencyFactor * 0.5
 
         return {

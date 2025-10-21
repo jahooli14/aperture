@@ -25,12 +25,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Memory ID required' })
     }
 
+    // First, get current review count
+    const { data: existing } = await supabase
+      .from('memories')
+      .select('review_count')
+      .eq('id', memoryId)
+      .single()
+
     // Update review metadata
     const { data: memory, error } = await supabase
       .from('memories')
       .update({
         last_reviewed_at: new Date().toISOString(),
-        review_count: supabase.sql`COALESCE(review_count, 0) + 1`
+        review_count: (existing?.review_count || 0) + 1
       })
       .eq('id', memoryId)
       .select()
