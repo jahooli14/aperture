@@ -140,18 +140,21 @@ export function SuggestionsPage() {
 
   return (
     <div className="min-h-screen py-12">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-        <div className="inline-flex items-center justify-center mb-4">
-          <Sparkles className="h-12 w-12 text-orange-600" />
-        </div>
-        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-          Project Suggestions
-        </h1>
-        <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
-          Ideas that match what you can do with what you care about
-        </p>
-          <div className="flex flex-col items-center gap-3">
+      {/* Header with Action */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="flex items-start justify-between">
+          <div className="text-center flex-1">
+            <div className="inline-flex items-center justify-center mb-4">
+              <Sparkles className="h-12 w-12 text-orange-600" />
+            </div>
+            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+              Project Suggestions
+            </h1>
+            <p className="text-lg text-neutral-600">
+              Ideas that match what you can do with what you care about
+            </p>
+          </div>
+          <div className="flex-shrink-0 ml-4">
             <button
               onClick={handleSynthesize}
               disabled={synthesizing}
@@ -169,23 +172,24 @@ export function SuggestionsPage() {
                 </>
               )}
             </button>
-
-            {/* Progress Bar */}
-            {synthesizing && (
-              <div className="w-[300px] h-2 bg-neutral-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500 ease-out"
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
-            )}
           </div>
+        </div>
+        {/* Progress Bar */}
+        {synthesizing && (
+          <div className="flex justify-center mt-4">
+            <div className="w-[300px] h-2 bg-neutral-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500 ease-out"
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 mb-10">
-          <div className="flex flex-wrap gap-2 justify-center">
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
             {[
               { key: 'pending', label: 'New' },
               { key: 'spark', label: 'Sparks' },
@@ -206,23 +210,6 @@ export function SuggestionsPage() {
                 {label}
               </Button>
             ))}
-          </div>
-
-          <div className="flex items-center justify-center gap-3 bg-white rounded-full px-6 py-3 border-2 border-gray-200 w-fit mx-auto">
-            <Label htmlFor="sort" className="text-sm font-semibold whitespace-nowrap text-gray-700">
-              Sort by:
-            </Label>
-            <Select
-              id="sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="border-0 bg-transparent font-medium text-gray-900 focus:ring-0 pr-8"
-            >
-              <option value="points">Points</option>
-              <option value="recent">Recent</option>
-              <option value="rating">Rating</option>
-            </Select>
-          </div>
         </div>
 
         {/* Error Banner */}

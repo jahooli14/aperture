@@ -58,51 +58,48 @@ export function ProjectsPage() {
 
   return (
     <div className="min-h-screen py-12">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-        <div className="inline-flex items-center justify-center mb-4">
-          <Rocket className="h-12 w-12 text-orange-600" />
+      {/* Header with Action */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="flex items-start justify-between">
+          <div className="text-center flex-1">
+            <div className="inline-flex items-center justify-center mb-4">
+              <Rocket className="h-12 w-12 text-orange-600" />
+            </div>
+            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+              My Projects
+            </h1>
+            <p className="text-lg text-neutral-600">
+              Track your creative work and strengthen capabilities
+            </p>
+          </div>
+          <div className="flex-shrink-0 ml-4">
+            <CreateProjectDialog />
+          </div>
         </div>
-        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-          My Projects
-        </h1>
-        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-          Track your creative work and strengthen capabilities
-        </p>
       </div>
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-4 mb-10">
-          <div className="flex flex-wrap gap-2 justify-center">
-              {[
-                { key: 'all', label: 'All' },
-                { key: 'active', label: 'Active' },
-                { key: 'dormant', label: 'Dormant' },
-                { key: 'completed', label: 'Completed' }
-              ].map(({ key, label }) => (
-                <Button
-                  key={key}
-                  variant={filter === key ? 'default' : 'outline'}
-                  onClick={() => setFilter(key as typeof filter)}
-                  className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                    filter === key
-                      ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                  }`}
-                >
-                  {label}
-                </Button>
-              ))}
-          </div>
-
-          <div className="flex items-center justify-center gap-4">
-            <div className="px-5 py-2.5 bg-orange-50 rounded-full border-2 border-orange-200">
-              <span className="font-bold text-neutral-900 text-lg">{projects.length}</span>
-              <span className="text-neutral-600 ml-1.5">project{projects.length !== 1 ? 's' : ''}</span>
-            </div>
-            <CreateProjectDialog />
-          </div>
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'active', label: 'Active' },
+            { key: 'dormant', label: 'Dormant' },
+            { key: 'completed', label: 'Completed' }
+          ].map(({ key, label }) => (
+            <Button
+              key={key}
+              variant={filter === key ? 'default' : 'outline'}
+              onClick={() => setFilter(key as typeof filter)}
+              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                filter === key
+                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
 
         {/* Error Banner */}

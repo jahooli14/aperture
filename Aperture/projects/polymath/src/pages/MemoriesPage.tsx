@@ -116,63 +116,65 @@ export function MemoriesPage() {
 
   return (
     <div className="min-h-screen py-12">
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-        <div className="inline-flex items-center justify-center mb-4">
-          <Brain className="h-12 w-12 text-orange-600" />
+      {/* Header with Action */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="flex items-start justify-between">
+          <div className="text-center flex-1">
+            <div className="inline-flex items-center justify-center mb-4">
+              <Brain className="h-12 w-12 text-orange-600" />
+            </div>
+            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+              Memories
+            </h1>
+            <p className="text-lg text-neutral-600">
+              Your captured thoughts and voice notes
+            </p>
+          </div>
+          {view === 'all' && (
+            <div className="flex-shrink-0 ml-4">
+              <CreateMemoryDialog />
+            </div>
+          )}
         </div>
-        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-          Memories
-        </h1>
-        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-          Your captured thoughts and voice notes
-        </p>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* View Toggle & Actions */}
-        <div className="flex flex-col gap-4 mb-10">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Button
-              variant={view === 'foundational' ? 'default' : 'outline'}
-              onClick={() => setView('foundational')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'foundational'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
-            </Button>
-            <Button
-              variant={view === 'all' ? 'default' : 'outline'}
-              onClick={() => setView('all')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'all'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              My Memories ({memories.length})
-            </Button>
-            <Button
-              variant={view === 'resurfacing' ? 'default' : 'outline'}
-              onClick={() => setView('resurfacing')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'resurfacing'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              Resurface ({resurfacing.length})
-            </Button>
-          </div>
-          {view === 'all' && (
-            <div className="w-full flex justify-center">
-              <CreateMemoryDialog />
-            </div>
-          )}
+        {/* View Toggle */}
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
+          <Button
+            variant={view === 'foundational' ? 'default' : 'outline'}
+            onClick={() => setView('foundational')}
+            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+              view === 'foundational'
+                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+            }`}
+          >
+            Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
+          </Button>
+          <Button
+            variant={view === 'all' ? 'default' : 'outline'}
+            onClick={() => setView('all')}
+            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+              view === 'all'
+                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+            }`}
+          >
+            My Memories ({memories.length})
+          </Button>
+          <Button
+            variant={view === 'resurfacing' ? 'default' : 'outline'}
+            onClick={() => setView('resurfacing')}
+            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+              view === 'resurfacing'
+                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+            }`}
+          >
+            Resurface ({resurfacing.length})
+          </Button>
         </div>
 
         {/* Resurfacing Info Banner */}
