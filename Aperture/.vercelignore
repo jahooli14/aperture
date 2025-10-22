@@ -1,0 +1,3 @@
+# Ignore the entire repository at root level
+# Individual projects have their own Vercel configurations
+*
