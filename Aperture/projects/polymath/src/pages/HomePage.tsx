@@ -1,6 +1,6 @@
 /**
- * Home Page - Prestigious Design
- * Landing page with overview and quick stats
+ * Home Page - App Dashboard
+ * Quick overview and navigation to key sections
  */
 
 import { useEffect } from 'react'
@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
-import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight } from 'lucide-react'
+import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
 
 export function HomePage() {
   const { suggestions, fetchSuggestions } = useSuggestionStore()
@@ -24,231 +24,241 @@ export function HomePage() {
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
   const sparkSuggestions = suggestions.filter(s => s.status === 'spark')
   const activeProjects = projects.filter(p => p.status === 'active')
+  const recentMemories = memories.slice(0, 3)
+  const recentSuggestions = pendingSuggestions.slice(0, 2)
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section - Prestigious */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-white via-orange-50/30 to-white py-24 px-4">
-        {/* Subtle background decoration */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-orange-100/40 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-50/60 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative max-w-5xl mx-auto text-center">
-          {/* Icon */}
-          <div className="inline-flex items-center justify-center mb-8">
-            <div className="relative">
-              <Sparkles className="h-16 w-16 text-orange-600" strokeWidth={1.5} />
-              <div className="absolute inset-0 bg-orange-600/10 blur-xl rounded-full" />
-            </div>
-          </div>
-
-          {/* Main heading */}
-          <h1 className="text-6xl md:text-7xl font-bold mb-6 text-neutral-900 tracking-tight">
-            Polymath
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <div className="bg-white border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-3xl font-bold text-neutral-900">
+            Overview
           </h1>
-
-          {/* Tagline */}
-          <p className="text-2xl md:text-3xl font-light text-neutral-600 mb-6 tracking-wide">
-            Your creative project companion
+          <p className="text-neutral-600 mt-1">
+            Your creative workspace at a glance
           </p>
-
-          {/* Description */}
-          <p className="text-lg text-neutral-500 max-w-2xl mx-auto leading-relaxed">
-            Discovers project ideas by connecting what you can do with what you love
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-            <Link
-              to="/suggestions"
-              className="btn-primary inline-flex items-center gap-2 text-lg px-8"
-            >
-              View Suggestions
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              to="/memories"
-              className="btn-secondary inline-flex items-center gap-2 text-lg px-8"
-            >
-              <Brain className="h-5 w-5" />
-              My Memories
-            </Link>
-          </div>
         </div>
-      </section>
+      </div>
 
-      {/* Stats Grid - Elevated Design */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 mb-24">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Memories Stat */}
           <Link
             to="/memories"
-            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+            className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
           >
-            <Brain className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
-            <div className="text-4xl font-bold text-neutral-900 mb-2">
+            <div className="flex items-center justify-between mb-3">
+              <Brain className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+              <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-3xl font-bold text-neutral-900 mb-1">
               {memories.length}
             </div>
-            <div className="text-sm font-medium text-neutral-600 mb-1">
-              Total Memories
-            </div>
-            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              View all →
+            <div className="text-sm text-neutral-600">
+              Memories
             </div>
           </Link>
 
           {/* New Suggestions Stat */}
           <Link
             to="/suggestions"
-            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+            className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
           >
-            <Sparkles className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
-            <div className="text-4xl font-bold text-neutral-900 mb-2">
+            <div className="flex items-center justify-between mb-3">
+              <Sparkles className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+              <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-3xl font-bold text-neutral-900 mb-1">
               {pendingSuggestions.length}
             </div>
-            <div className="text-sm font-medium text-neutral-600 mb-1">
-              New Suggestions
-            </div>
-            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              Rate ideas →
+            <div className="text-sm text-neutral-600">
+              New Ideas
             </div>
           </Link>
 
           {/* Sparks Stat */}
           <Link
             to="/suggestions?filter=spark"
-            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-amber-200 bg-gradient-to-br from-amber-50/50 to-white"
+            className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-amber-200"
           >
-            <TrendingUp className="h-10 w-10 text-amber-600 mx-auto mb-4" strokeWidth={1.5} />
-            <div className="text-4xl font-bold text-neutral-900 mb-2">
+            <div className="flex items-center justify-between mb-3">
+              <TrendingUp className="h-8 w-8 text-amber-600" strokeWidth={1.5} />
+              <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-3xl font-bold text-neutral-900 mb-1">
               {sparkSuggestions.length}
             </div>
-            <div className="text-sm font-medium text-neutral-600 mb-1">
+            <div className="text-sm text-neutral-600">
               Sparks
-            </div>
-            <div className="text-xs text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              Ideas you liked →
             </div>
           </Link>
 
           {/* Active Projects Stat */}
           <Link
             to="/projects"
-            className="group pro-card hover-lift p-8 text-center border-2 border-transparent hover:border-orange-200"
+            className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
           >
-            <Rocket className="h-10 w-10 text-orange-600 mx-auto mb-4" strokeWidth={1.5} />
-            <div className="text-4xl font-bold text-neutral-900 mb-2">
+            <div className="flex items-center justify-between mb-3">
+              <Rocket className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+              <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <div className="text-3xl font-bold text-neutral-900 mb-1">
               {activeProjects.length}
             </div>
-            <div className="text-sm font-medium text-neutral-600 mb-1">
-              Active Projects
-            </div>
-            <div className="text-xs text-orange-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              Currently working →
+            <div className="text-sm text-neutral-600">
+              Active
             </div>
           </Link>
         </div>
       </section>
 
-      {/* How It Works - Premium Design */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-neutral-900 mb-4">
-            How It Works
-          </h2>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            Polymath combines AI synthesis with your personal knowledge graph
-          </p>
-        </div>
+      {/* Main Content Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Suggestions */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Recent Suggestions
+              </h2>
+              <Link
+                to="/suggestions"
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              >
+                View all →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentSuggestions.length > 0 ? (
+                recentSuggestions.map(suggestion => (
+                  <Link
+                    key={suggestion.id}
+                    to={`/suggestions/${suggestion.id}`}
+                    className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-orange-200"
+                  >
+                    <h3 className="font-medium text-neutral-900 mb-1">
+                      {suggestion.title}
+                    </h3>
+                    <p className="text-sm text-neutral-600 line-clamp-2">
+                      {suggestion.description}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <div className="pro-card p-8 text-center">
+                  <Sparkles className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-600 mb-4">No new suggestions yet</p>
+                  <Link
+                    to="/suggestions"
+                    className="btn-secondary inline-flex items-center gap-2"
+                  >
+                    View Suggestions
+                  </Link>
+                </div>
+              )}
+            </div>
+          </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Step 1 */}
-          <div className="relative">
-            <div className="pro-card p-8 h-full">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
-                1
+          {/* Recent Memories */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Recent Memories
+              </h2>
+              <Link
+                to="/memories"
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              >
+                View all →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {recentMemories.length > 0 ? (
+                recentMemories.map(memory => (
+                  <div
+                    key={memory.id}
+                    className="pro-card p-4 border-2 border-transparent"
+                  >
+                    <div className="text-sm text-neutral-900 line-clamp-3">
+                      {memory.body || memory.title}
+                    </div>
+                    <div className="text-xs text-neutral-500 mt-2">
+                      {new Date(memory.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="pro-card p-8 text-center">
+                  <Brain className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
+                  <p className="text-neutral-600 mb-4">No memories captured yet</p>
+                  <Link
+                    to="/memories"
+                    className="btn-primary inline-flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Memory
+                  </Link>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Active Projects */}
+          <section className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Active Projects
+              </h2>
+              <Link
+                to="/projects"
+                className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+              >
+                View all →
+              </Link>
+            </div>
+            {activeProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeProjects.slice(0, 3).map(project => (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="pro-card p-5 hover-lift border-2 border-transparent hover:border-orange-200"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-neutral-900 flex-1">
+                        {project.title}
+                      </h3>
+                      <Rocket className="h-5 w-5 text-orange-600 flex-shrink-0 ml-2" />
+                    </div>
+                    <p className="text-sm text-neutral-600 line-clamp-2">
+                      {project.description}
+                    </p>
+                  </Link>
+                ))}
               </div>
-              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-                Capture Interests
-              </h3>
-              <p className="text-neutral-600 leading-relaxed">
-                Voice notes and manual entries reveal recurring themes and topics you care about
-              </p>
-            </div>
-            {/* Connector line - hidden on mobile */}
-            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
-          </div>
-
-          {/* Step 2 */}
-          <div className="relative">
-            <div className="pro-card p-8 h-full">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
-                2
+            ) : (
+              <div className="pro-card p-12 text-center">
+                <Rocket className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
+                  No active projects
+                </h3>
+                <p className="text-neutral-600 mb-6">
+                  Start building by turning sparks into projects
+                </p>
+                <Link
+                  to="/suggestions?filter=spark"
+                  className="btn-primary inline-flex items-center gap-2"
+                >
+                  View Sparks
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-                Build Capabilities
-              </h3>
-              <p className="text-neutral-600 leading-relaxed">
-                System tracks your technical skills and strengths as you complete projects
-              </p>
-            </div>
-            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
-          </div>
-
-          {/* Step 3 */}
-          <div className="relative">
-            <div className="pro-card p-8 h-full">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
-                3
-              </div>
-              <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-                AI Synthesis
-              </h3>
-              <p className="text-neutral-600 leading-relaxed">
-                Weekly generation of novel project ideas at the intersection of your skills and interests
-              </p>
-            </div>
-            <div className="hidden lg:block absolute top-14 left-full w-8 h-px bg-gradient-to-r from-orange-200 to-transparent" />
-          </div>
-
-          {/* Step 4 */}
-          <div className="pro-card p-8 h-full">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white font-semibold mb-6">
-              4
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-900 mb-3">
-              Rate & Build
-            </h3>
-            <p className="text-neutral-600 leading-relaxed">
-              Spark ideas you like, build them into projects, and the system learns your preferences
-            </p>
-          </div>
+            )}
+          </section>
         </div>
-      </section>
-
-      {/* Bottom CTA */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="pro-card p-12 text-center bg-gradient-to-br from-orange-50/50 to-white border-2 border-orange-100">
-          <h3 className="text-3xl font-bold text-neutral-900 mb-4">
-            Ready to start synthesizing?
-          </h3>
-          <p className="text-lg text-neutral-600 mb-8 max-w-2xl mx-auto">
-            Capture your first memory or explore AI-generated project suggestions
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/suggestions" className="btn-primary inline-flex items-center gap-2 text-lg px-8">
-              View Suggestions
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link to="/projects" className="btn-secondary inline-flex items-center gap-2 text-lg px-8">
-              <Rocket className="h-5 w-5" />
-              My Projects
-            </Link>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   )
 }

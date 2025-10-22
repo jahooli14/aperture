@@ -42,27 +42,26 @@ export function ProjectCard({
   }
 
   const typeConfig: Record<string, { label: string; color: string }> = {
-    personal: { label: 'Personal', color: 'text-rose-700 bg-rose-100 border-rose-200' },
-    technical: { label: 'Technical', color: 'text-cyan-700 bg-cyan-100 border-cyan-200' },
-    meta: { label: 'Meta', color: 'text-orange-700 bg-orange-100 border-orange-200' }
+    personal: { label: 'Personal', color: 'text-pink-700 bg-pink-100 border-pink-300' },
+    technical: { label: 'Technical', color: 'text-cyan-700 bg-cyan-100 border-cyan-300' },
+    meta: { label: 'Meta', color: 'text-orange-700 bg-orange-100 border-orange-300' },
+    creative: { label: 'Creative', color: 'text-purple-700 bg-purple-100 border-purple-300' },
+    learning: { label: 'Learning', color: 'text-blue-700 bg-blue-100 border-blue-300' }
   }
 
   return (
-    <Card className="group h-full flex flex-col pro-card transition-smooth hover-lift">
-      {/* Subtle accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-40" />
-
-      <CardHeader className="relative">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <CardTitle className="text-xl font-semibold text-neutral-900">
+    <Card className="group h-full flex flex-col pro-card transition-smooth hover-lift border-2">
+      <CardHeader className="relative pb-4">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <CardTitle className="text-2xl font-bold text-neutral-900 flex-1">
             {project.title}
           </CardTitle>
-          <div className={`px-3 py-1 rounded-md text-xs font-medium border ${typeConfig[project.type].color}`}>
-            {typeConfig[project.type].label}
+          <div className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${typeConfig[project.type]?.color || typeConfig.personal.color}`}>
+            {typeConfig[project.type]?.label || project.type}
           </div>
         </div>
         {project.description && (
-          <CardDescription className="line-clamp-2 text-base">
+          <CardDescription className="line-clamp-3 text-base text-neutral-600 leading-relaxed">
             {project.description}
           </CardDescription>
         )}

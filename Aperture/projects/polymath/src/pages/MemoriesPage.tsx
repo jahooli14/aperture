@@ -5,22 +5,50 @@
 
 import { useEffect, useState } from 'react'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
+import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
+import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
+import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Brain, Mic, Zap } from 'lucide-react'
-import type { Memory } from '../types'
+import { Brain, Mic, Zap, ArrowLeft } from 'lucide-react'
+import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
   const { memories, fetchMemories, loading, error } = useMemoryStore()
+  const { progress } = useOnboardingStore()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
-  const [view, setView] = useState<'all' | 'resurfacing'>('all')
+  const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
+
+  // Theme clustering state
+  const [clusters, setClusters] = useState<ThemeCluster[]>([])
+  const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
+  const [loadingClusters, setLoadingClusters] = useState(false)
+  const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('themes')
 
   useEffect(() => {
     fetchMemories()
-  }, [])
+    if (view === 'all') {
+      fetchThemeClusters()
+    }
+  }, [view])
+
+  const fetchThemeClusters = async () => {
+    setLoadingClusters(true)
+    try {
+      const response = await fetch('/api/memory-themes')
+      if (!response.ok) throw new Error('Failed to fetch themes')
+      const data: ThemeClustersResponse = await response.json()
+      setClusters(data.clusters)
+    } catch (err) {
+      console.error('Failed to fetch theme clusters:', err)
+    } finally {
+      setLoadingClusters(false)
+    }
+  }
 
   const fetchResurfacing = async () => {
     setLoadingResurfacing(true)
@@ -74,26 +102,47 @@ export function MemoriesPage() {
         </div>
 
         {/* View Toggle & Actions */}
-        <div className="flex flex-col gap-3 sm:gap-4 mb-10 glass-panel p-4 sm:p-6">
-          <div className="flex gap-2 sm:gap-3 justify-center w-full">
+        <div className="flex flex-col gap-4 mb-10">
+          <div className="flex gap-2 justify-center w-full overflow-x-auto">
+            <Button
+              variant={view === 'foundational' ? 'default' : 'outline'}
+              onClick={() => setView('foundational')}
+              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                view === 'foundational'
+                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
+            >
+              Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
+            </Button>
             <Button
               variant={view === 'all' ? 'default' : 'outline'}
               onClick={() => setView('all')}
-              className={`flex-1 sm:flex-none ${view === 'all' ? 'btn-primary' : 'btn-secondary'} h-11 sm:h-12 text-sm sm:text-base`}
+              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                view === 'all'
+                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
             >
-              All ({memories.length})
+              My Memories ({memories.length})
             </Button>
             <Button
               variant={view === 'resurfacing' ? 'default' : 'outline'}
               onClick={() => setView('resurfacing')}
-              className={`flex-1 sm:flex-none ${view === 'resurfacing' ? 'btn-primary' : 'btn-secondary'} h-11 sm:h-12 text-sm sm:text-base`}
+              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                view === 'resurfacing'
+                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+              }`}
             >
               Resurface ({resurfacing.length})
             </Button>
           </div>
-          <div className="w-full sm:w-auto flex justify-center">
-            <CreateMemoryDialog />
-          </div>
+          {view === 'all' && (
+            <div className="w-full flex justify-center">
+              <CreateMemoryDialog />
+            </div>
+          )}
         </div>
 
         {/* Resurfacing Info Banner */}
@@ -121,8 +170,30 @@ export function MemoriesPage() {
           </Card>
         )}
 
-        {/* Loading State */}
-        {isLoading && (
+        {/* Foundational Tab */}
+        {view === 'foundational' && <FoundationalPrompts />}
+
+        {/* My Memories Tab */}
+        {view === 'all' && (
+          <>
+            <SuggestedPrompts />
+
+            {/* Loading State */}
+            {isLoading && (
+              <Card className="pro-card">
+                <CardContent className="py-24">
+                  <div className="text-center text-neutral-600">
+                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                    <p className="text-lg">Loading memories...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+
+        {/* Resurfacing Tab Loading */}
+        {view === 'resurfacing' && isLoading && (
           <Card className="pro-card">
             <CardContent className="py-24">
               <div className="text-center text-neutral-600">
@@ -209,21 +280,111 @@ export function MemoriesPage() {
           </Card>
         )}
 
-        {/* Memories Grid - Bento Box Layout with Stagger Animation */}
-        {!isLoading && displayMemories.length > 0 && (
+        {/* My Memories: Theme Clusters or Recent View */}
+        {view === 'all' && !isLoading && memories.length > 0 && (
+          <>
+            {/* Sub-navigation for Themes vs Recent */}
+            <div className="flex gap-2 justify-center mb-8">
+              <Button
+                variant={memoryView === 'themes' ? 'default' : 'outline'}
+                onClick={() => setMemoryView('themes')}
+                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                  memoryView === 'themes'
+                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                }`}
+              >
+                By Theme
+              </Button>
+              <Button
+                variant={memoryView === 'recent' ? 'default' : 'outline'}
+                onClick={() => setMemoryView('recent')}
+                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                  memoryView === 'recent'
+                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                }`}
+              >
+                Recent
+              </Button>
+            </div>
+
+            {/* Theme cluster detail view */}
+            {selectedCluster && memoryView === 'themes' && (
+              <div className="mb-8">
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedCluster(null)}
+                  className="mb-6 flex items-center gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Themes
+                </Button>
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <span className="text-3xl">{selectedCluster.icon}</span>
+                  {selectedCluster.name}
+                  <span className="text-sm font-normal text-gray-600">
+                    ({selectedCluster.memory_count} memories)
+                  </span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedCluster.memories.map((memory) => (
+                    <MemoryCard key={memory.id} memory={memory} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Theme clusters grid */}
+            {!selectedCluster && memoryView === 'themes' && (
+              <>
+                {loadingClusters ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                    <p className="text-lg text-gray-600">Analyzing themes...</p>
+                  </div>
+                ) : clusters.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {clusters.map((cluster) => (
+                      <ThemeClusterCard
+                        key={cluster.id}
+                        cluster={cluster}
+                        onClick={() => setSelectedCluster(cluster)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <Card className="p-8 text-center">
+                    <p className="text-gray-600">No themes detected yet. Add more memories with diverse topics!</p>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* Recent memories view */}
+            {memoryView === 'recent' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
+                {memories.slice(0, 20).map((memory) => (
+                  <MemoryCard key={memory.id} memory={memory} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Resurfacing Memories Grid */}
+        {view === 'resurfacing' && !loadingResurfacing && resurfacing.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
-            {displayMemories.map((memory) => (
+            {resurfacing.map((memory) => (
               <div key={memory.id} className="flex flex-col gap-3">
                 <MemoryCard memory={memory} />
-                {view === 'resurfacing' && (
-                  <Button
-                    onClick={() => handleReview(memory.id)}
-                    variant="default"
-                    className="w-full btn-primary"
-                  >
-                    Reviewed
-                  </Button>
-                )}
+                <Button
+                  onClick={() => handleReview(memory.id)}
+                  variant="default"
+                  className="w-full btn-primary"
+                >
+                  Reviewed
+                </Button>
               </div>
             ))}
           </div>

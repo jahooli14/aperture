@@ -1,254 +1,325 @@
 # Polymath - Next Session
 
-> **Status**: ✅ Production Ready - Mobile Optimized + Quality Focus
->
-> **Last Updated**: 2025-01-21 - Mobile UX + Category Redesign
->
-> **Live URL**: https://polymath-hn3yc6lsf-daniels-projects-ca7c7923.vercel.app
+> **Status**: 🟢 Memory Onboarding System - Foundation Complete, Ready to Build
+> **Last Updated**: 2025-10-22
+> **Next**: Run database migrations and start implementing UI/API
 
 ---
 
-## 🎉 Latest Session - Mobile UX + Category Redesign (2025-01-21)
+## 🎉 Latest Session - Memory Onboarding System Designed (2025-10-22)
 
-### ✅ What Was Fixed
+### ✅ What Was Built
 
-**1. Mobile Dialog Layout** ✅
-- Fixed submit buttons being cut off/hidden under cards on mobile
-- Restructured CreateMemoryDialog and CreateProjectDialog
-- Sticky footer design ensures buttons always visible
-- Reduced dialog max-height to 85vh for better mobile fit
+**1. Complete Specification** ✅
+- File: `MEMORY_ONBOARDING_SPEC.md`
+- 40 memory prompts (10 required, 30 optional)
+- AI gap detection with Gemini Flash 2.5
+- Node strengthening algorithm
+- Dormant project resurfacing
+- Synthesis transparency ("Why this matches you")
+- Mobile-first UX flows
 
-**2. Synthesis Quality Focus** ✅
-- Changed batch size: 10 → **5 suggestions** per generation
-- Wildcard frequency: Every 4th → **Every 3rd** suggestion
-- Focus on quality over quantity
+**2. Database Schema** ✅
+- File: `migration-memory-onboarding.sql`
+- New tables:
+  - `memory_prompts` - 40 template prompts
+  - `memory_responses` - User's 3+ bullet responses
+  - `user_prompt_status` - Completion tracking per user
+  - `project_notes` - Project journal entries
+- Extended tables:
+  - `projects.days_dormant` - Auto-computed dormancy
+  - `project_suggestions.source_analysis` - Synthesis transparency
+- Helper functions:
+  - `get_memory_progress(user_id)` - Check completion percentage
+  - `has_unlocked_projects(user_id)` - Gate at 10 memories
 
-**3. Project Categories Redesign** ✅
-- **Old**: `personal | technical | meta` (inconsistent scales)
-- **New**: `creative | technical | learning` (domain-based)
-  - 🎨 **Creative**: Art, design, hobbies, personal projects
-  - ⚙️ **Technical**: Code, build, make, engineering
-  - 📚 **Learning**: Study, courses, research, skill development
+**3. Seed Data** ✅
+- File: `scripts/seed-memory-prompts.sql`
+- 40 prompts organized by category
+- Categories: Core Identity, Relationships, Places, Career, Interests, Life Events, Daily Life, Aspirations, Creative/Professional
 
-**4. Project Statuses Improved** ✅
-- **Old**: `active | dormant | completed | archived`
-- **New**: `active | on-hold | maintaining | completed | archived`
-  - 🚀 **Active**: Currently working on
-  - ⏸️ **On Hold**: Paused (replaced "dormant")
-  - 🔧 **Maintaining**: Built and needs occasional love (NEW!)
-  - ✅ **Completed**: Finished
-  - 📦 **Archived**: Stored away
+**4. TypeScript Types** ✅
+- File: `src/types.ts` (enhanced)
+- All interfaces for memory system
+- Project enhancements (notes, dormancy)
+- Synthesis transparency types
+- Node strengthening types
+- API response types
 
-### 📁 Files Modified
-- Dialog components: CreateMemoryDialog, CreateProjectDialog, EditProjectDialog, BuildProjectDialog
-- Type definitions: `src/types.ts`, `types.ts`
-- Store files: `useProjectStore.ts`, `useSuggestionStore.ts`
-- API: `api/suggestions/[id]/build.ts`
-- Database: `migration.sql`, `scripts/update-project-types.sql`
-- Config: `lib/synthesis.ts`
-
-### 🗄️ Database Migration
-
-**Run this on Supabase** (in `scripts/update-project-types.sql`):
-```sql
--- Migrates existing data from old categories to new
-UPDATE projects SET type = 'creative' WHERE type = 'personal';
-UPDATE projects SET status = 'on-hold' WHERE status = 'dormant';
-
--- Updates constraints
-ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_type_check;
-ALTER TABLE projects ADD CONSTRAINT projects_type_check
-  CHECK (type IN ('creative', 'technical', 'learning'));
-
-ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;
-ALTER TABLE projects ADD CONSTRAINT projects_status_check
-  CHECK (status IN ('active', 'on-hold', 'maintaining', 'completed', 'archived'));
-```
+**5. Implementation Guide** ✅
+- File: `IMPLEMENTATION_READY.md`
+- Phase-by-phase build plan
+- API endpoint code examples
+- Component specifications
+- Testing checklist
+- Success criteria
 
 ---
 
-## 🚀 Quick Start (Next Session)
+## 🚀 Immediate Next Steps
 
-### Immediate Actions:
-1. **Run database migration** - Execute `scripts/update-project-types.sql` in Supabase
-2. **Test mobile dialogs** - Verify submit buttons visible on mobile devices
-3. **Generate suggestions** - Test new 5-suggestion batch size
-4. **Try new categories** - Create projects with creative/technical/learning types
+### **Step 1: Database Setup** (30 mins)
 
-### If Continuing Development:
 ```bash
-cd /Users/dancroome-horgan/Documents/GitHub/Aperture/projects/polymath
+# 1. Open Supabase SQL Editor
+# 2. Run migration-memory-onboarding.sql
+# 3. Run scripts/seed-memory-prompts.sql
 
-# Build and test
-npm run build
-npm run dev
+# 4. Verify
+SELECT COUNT(*) FROM memory_prompts WHERE is_required = true;
+-- Should return: 10
 
-# Deploy (already done)
-vercel deploy --prod --yes
+SELECT COUNT(*) FROM memory_prompts;
+-- Should return: 40
+
+# 5. Test helper functions
+SELECT * FROM get_memory_progress('your-user-id');
+SELECT has_unlocked_projects('your-user-id');
 ```
 
+### **Step 2: Choose Implementation Track**
+
+**Track A: API-First** (Backend)
+1. `api/memory-prompts.ts` - Get prompts with user status
+2. `api/memory-responses.ts` - Submit responses with validation
+3. `api/projects/nudges.ts` - Dormant project detection
+4. `api/projects/[id]/notes.ts` - Add journal entries
+5. `api/projects/[id]/quick-update.ts` - Quick status changes
+6. `api/synthesis/active-skills.ts` - Strengthened nodes
+
+**Track B: UI-First** (Frontend)
+1. `FoundationalPrompts.tsx` - Show 10 required prompts
+2. `PromptModal.tsx` - Full-screen mobile prompt entry
+3. `ProgressBar.tsx` - Visual completion tracking
+4. `SuggestedPrompts.tsx` - AI-generated follow-ups
+5. `DormantProjectNudge.tsx` - Sticky resurrection nudges
+6. `SynthesisTransparency.tsx` - "Why this matches" section
+
 ---
 
-## 📊 Current Feature Status
+## 📋 System Overview
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Voice Capture** | ✅ Working | Audiopen webhook → Memory storage |
-| **Memory Browsing** | ✅ Working | `/memories` page with resurfacing |
-| **Spaced Repetition** | ✅ Working | Scientific interval tracking |
-| **Entity Extraction** | ✅ Working | AI-powered metadata extraction |
-| **Bridge Discovery** | ✅ Working | Connection finding between memories |
-| **Tech Synthesis** | ✅ Working | Capability × Capability/Interest |
-| **Creative Synthesis** | ✅ Working | Interest × Interest (no code) |
-| **Capability Scanning** | ✅ Working | Git-based skill extraction |
-| **Project Management** | ✅ Working | Full CRUD with new categories |
-| **Mobile UX** | ✅ **FIXED** | Dialogs work properly on mobile |
-| **Suggestion Quality** | ✅ **IMPROVED** | 5 per batch, better diversity |
+### User Flow
+
+```
+New User
+  ↓
+10 Foundational Prompts (3+ bullets each)
+  ↓
+AI Gap Detection (Gemini Flash 2.5 analyzes ALL memories)
+  ↓
+Projects Section Unlocks
+  ↓
+[Ongoing] AI suggests follow-up prompts
+[Ongoing] User adds ad-hoc memories
+[Weekly] Synthesis uses memories for project suggestions
+```
+
+### Key Mechanisms
+
+**Memory Onboarding:**
+- 10 required prompts before projects unlock
+- 3+ bullet minimum per response
+- AI validates quality (Gemini Flash 2.5)
+- Gap detection suggests 0-2 follow-ups per submission
+
+**Node Strengthening:**
+- Git commits scanned daily (00:00 UTC)
+- Files mapped to capabilities
+- Strength boost: +0.10 to +0.30 per commit
+- Higher strength = more appearances in suggestions
+
+**Dormant Project Resurfacing:**
+- 7 days: Gentle reminder
+- 30 days: Strong nudge
+- 90 days: Archive suggestion
+- AI learns dormancy patterns over time
+
+**Synthesis Transparency:**
+- Every suggestion shows sources
+- "You have: [capabilities]"
+- "You love: [interests from memories]"
+- Shows strength boost if built (+0.30)
 
 ---
 
-## 🎨 Three Synthesis Modes
+## 🎯 Design Principles
 
-| Mode | Input | Example Output | Code Required? |
-|------|-------|---------------|----------------|
-| **Tech × Tech** | 2-3 capabilities | "Voice-to-Text Knowledge Graph" | ✅ Yes |
-| **Tech × Interest** | Capabilities + interests | "AI Baby Photo Timeline" | ✅ Yes |
-| **Interest × Interest** | 2-3 interests only | "Paint abstract art on communism" | ❌ No! |
+1. **3-bullet constraint** - Forces clarity, prevents vague responses
+2. **Mobile-first** - Thumb zones, bottom CTAs, swipe gestures
+3. **AI everywhere** - Gap detection, quality validation, synthesis
+4. **Visual feedback** - Progress bars, strength changes, node boosts
+5. **Low friction** - Quick updates, offline drafts, haptic feedback
+6. **Transparency** - Show exact sources for every suggestion
 
-**Distribution**:
-- 50% Tech combinations
-- 30% Creative (Interest × Interest)
-- 20% Wildcards (diversity injection)
+---
+
+## 📊 Implementation Estimate
+
+| Phase | Time | Status |
+|-------|------|--------|
+| Database setup | 30 mins | ⏳ Next |
+| API endpoints | 6 hours | ⏳ Pending |
+| UI components | 12 hours | ⏳ Pending |
+| Helper functions | 3 hours | ⏳ Pending |
+| Zustand stores | 2 hours | ⏳ Pending |
+| Testing & polish | 3 hours | ⏳ Pending |
+| **Total** | **~27 hours** | **0% complete** |
+
+---
+
+## 📁 Files Created This Session
+
+```
+projects/polymath/
+├── MEMORY_ONBOARDING_SPEC.md              ← Full specification
+├── IMPLEMENTATION_READY.md                ← Build guide
+├── migration-memory-onboarding.sql        ← Database schema
+├── scripts/
+│   └── seed-memory-prompts.sql            ← 40 prompts
+└── src/
+    └── types.ts                           ← Enhanced (memory types added)
+```
 
 ---
 
 ## 🧪 Testing Checklist
 
-### Mobile UX
-- [x] CreateMemoryDialog - Submit button visible on mobile
-- [x] CreateProjectDialog - Submit button visible on mobile
-- [x] Dialog scrolling works properly
-- [x] Footer stays at bottom
+### Database
+- [ ] Run migration-memory-onboarding.sql
+- [ ] Run seed-memory-prompts.sql
+- [ ] Verify 40 prompts inserted
+- [ ] Test `get_memory_progress` function
+- [ ] Test `has_unlocked_projects` function
+- [ ] Verify RLS policies work
 
-### New Categories
-- [ ] Create creative project (art, hobby, design)
-- [ ] Create technical project (code, build)
-- [ ] Create learning project (study, course)
-- [ ] Edit existing project - verify type updates
+### API
+- [ ] GET /api/memory-prompts returns correct structure
+- [ ] POST /api/memory-responses validates 3+ bullets
+- [ ] AI quality check rejects poor responses
+- [ ] Gap detection generates 0-2 follow-ups
+- [ ] Progress unlocks projects at 10 memories
+- [ ] Dormant nudges appear at correct thresholds
 
-### New Statuses
-- [ ] Set project to "On Hold" (instead of dormant)
-- [ ] Set project to "Maintaining" (new status)
-- [ ] Verify status filtering works
+### UI
+- [ ] FoundationalPrompts shows 10 in order
+- [ ] PromptModal enforces 3+ bullets
+- [ ] Progress bar updates accurately
+- [ ] Projects unlock message appears
+- [ ] Dormant nudges sticky at top
+- [ ] Quick update increments progress
+- [ ] Synthesis transparency shows sources
+- [ ] Active skills widget filters suggestions
 
-### Synthesis Quality
-- [ ] Generate suggestions - verify only 5 per batch
-- [ ] Check wildcard frequency (every 3rd)
-- [ ] Verify diverse, unique suggestions
-
----
-
-## 📝 Known Issues & Next Steps
-
-### Completed This Session ✅
-- Mobile dialog layout fixed
-- Category system redesigned
-- Synthesis quality improved
-- Database schema updated
-
-### Short-term Improvements
-1. Add visual indicators for creative/technical/learning in UI
-2. Add status badges (on-hold, maintaining) to project cards
-3. Improve empty states with better onboarding
-4. Add filtering by project type
-
-### Medium-term Features
-1. Bulk project status updates
-2. Project templates by category
-3. Better mobile memory capture (AudioPen integration)
-4. Project timeline visualization
-
-### Long-term Vision
-1. Smart project suggestions based on status patterns
-2. Auto-transition projects (active → maintaining → archived)
-3. Cross-project learning (completed projects → new capabilities)
-4. Mobile-first redesign
+### Mobile
+- [ ] All components render on 360px width
+- [ ] FAB positioned bottom-right (thumb zone)
+- [ ] Bottom sheets slide up smoothly
+- [ ] Swipe gestures work (left/right/up)
+- [ ] Haptic feedback triggers
+- [ ] Offline drafts saved locally
 
 ---
 
-## 🏁 Current Status Summary
+## 🎯 Success Criteria
 
-**Core Features**: ✅ 100% Working
-- MemoryOS: Voice → Entities → Browsing → Resurfacing
-- Polymath: Scanning → Synthesis → Suggestions → Rating
-- Integration: Unified app, three modes
+When complete, we should see:
 
-**Recent Fixes**: ✅ Complete
-- Mobile dialogs work properly
-- Categories consistent and clear
-- Quality over quantity (5 suggestions)
-- Better status lifecycle
-
-**Ready For**:
-- Production use on mobile devices
-- Daily synthesis runs
-- Project lifecycle management
-- Creative + Technical balance
+- [ ] New user completes 10 prompts in <30 minutes
+- [ ] AI generates 0-2 relevant follow-up prompts per submission
+- [ ] Project suggestions unlock after 10 memories
+- [ ] Dormant projects resurface within 24 hours
+- [ ] Mobile UX is one-handed friendly
+- [ ] Node strengthening reflects git activity (±7 days)
+- [ ] Synthesis shows "Why this matches you" with exact quotes
 
 ---
 
-## 🎯 Recommended Next Session
+## 💡 Key Insights from Design
 
-### High Priority
-1. Test mobile experience end-to-end
-2. Populate with real voice notes via Audiopen
-3. Generate first 5-suggestion batch
-4. Create projects with new categories
-
-### Medium Priority
-1. Add visual category indicators to UI
-2. Implement project filtering by type/status
-3. Improve empty state messaging
-4. Add onboarding tooltips
-
-### Low Priority
-1. Database optimization (indexes, views)
-2. Analytics/metrics tracking
-3. Export functionality
-4. Dark mode support
+1. **3-bullet constraint** - Brilliant forcing function, prevents vagueness
+2. **Gap detection is the secret sauce** - Keeps users engaged, feels magical
+3. **Dormant project resurrection** - Unlike other PM tools, we bring projects back
+4. **Node strengthening feedback loop** - Build more → capability strengthens → more suggestions
+5. **Transparency builds trust** - Showing exact sources makes AI feel less black-box
 
 ---
 
 ## 📚 Documentation
 
-**Key Files**:
-- `CHANGELOG.md` - Latest changes (2025-01-21)
-- `SESSION_24_MEMORYOS_INTEGRATION.md` - Full integration summary
-- `START_HERE.md` - Onboarding guide
-- `CONCEPT.md` - Vision and philosophy
+**Read These First:**
+- `MEMORY_ONBOARDING_SPEC.md` - Full system design
+- `IMPLEMENTATION_READY.md` - Step-by-step build guide
 
-**Implementation**:
+**Reference:**
+- `CONCEPT.md` - Original vision
 - `ARCHITECTURE.md` - Technical design
-- `API_SPEC.md` - Complete API reference
-- `migration.sql` - Database schema
-- `scripts/update-project-types.sql` - Category migration
+- `API_SPEC.md` - API reference
+- `UI_COMPONENTS.md` - Component specs
 
 ---
 
-## 💡 What This Session Enables
+## 🚨 Important Reminders
+
+1. **Always use Gemini Flash 2.5** - Million token context = send ALL memories every time
+2. **Mobile-first** - Test on 360px width, thumb zones matter
+3. **3+ bullets enforced** - Hard requirement, AI validates quality
+4. **Projects locked until 10 memories** - No bypass, no exceptions
+5. **Synthesis transparency required** - Every suggestion must show exact sources
+
+---
+
+## 🎬 Next Session Start Here
+
+1. Open Supabase SQL Editor
+2. Run `migration-memory-onboarding.sql`
+3. Run `scripts/seed-memory-prompts.sql`
+4. Verify: `SELECT COUNT(*) FROM memory_prompts` → 40
+5. Choose track: API-first or UI-first
+6. See `IMPLEMENTATION_READY.md` for detailed guide
+
+---
+
+## 🏁 Current Feature Status
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| **Memory Onboarding** | 🟡 Designed | Foundation complete, needs implementation |
+| **Voice Capture** | ✅ Working | Audiopen webhook → Memory storage |
+| **Memory Browsing** | ✅ Working | Resurfacing with spaced repetition |
+| **Entity Extraction** | ✅ Working | AI-powered metadata |
+| **Bridge Discovery** | ✅ Working | Connection finding |
+| **Tech Synthesis** | ✅ Working | Capability combinations |
+| **Creative Synthesis** | ✅ Working | Interest combinations |
+| **Project Management** | ✅ Working | Full CRUD |
+| **Capability Scanning** | ✅ Working | Git-based extraction |
+| **Node Strengthening** | 🟡 Designed | Algorithm ready, needs implementation |
+| **Dormant Resurfacing** | 🟡 Designed | Logic ready, needs implementation |
+| **Synthesis Transparency** | 🟡 Designed | Structure ready, needs UI |
+
+---
+
+## 🎨 What This System Enables
 
 ### For Users
-- **Mobile-friendly** creation of memories and projects
-- **Clear categories** (creative/technical/learning)
-- **Proper lifecycle** (active → on-hold → maintaining → completed)
-- **Quality suggestions** (5 focused ideas vs 10 scattered)
+- **Structured memory capture** instead of scattered voice notes
+- **AI-guided exploration** via follow-up prompts
+- **Progressive unlocking** (10 memories → projects)
+- **Project resurrection** (dormant nudges)
+- **Transparent AI** ("Here's why I suggested this")
+- **Mobile-optimized** (thumb-friendly, swipe gestures)
 
 ### For System
-- Consistent classification scale
-- Better mobile UX patterns
-- Clearer project status transitions
-- More focused synthesis batches
+- **Rich knowledge graph** from 3-bullet responses
+- **Better synthesis** from structured memories
+- **Feedback loops** via node strengthening
+- **Pattern recognition** from dormancy tracking
+- **Quality enforcement** via AI validation
 
 ---
 
-**Welcome back! Everything is deployed and mobile-optimized. Ready to use!** 🎨✨📱
+**Status**: 🟢 Foundation complete, ready for 27 hours of implementation
+**Difficulty**: Medium (well-specified, clear path forward)
+**Estimated completion**: 3-4 focused work days
+
+**Let's ship this!** 🚀

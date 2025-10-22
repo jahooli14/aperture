@@ -184,8 +184,8 @@ export function SuggestionsPage() {
         </div>
 
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10 glass-panel p-6">
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-4 mb-10">
+          <div className="flex flex-wrap gap-2 justify-center">
             {[
               { key: 'pending', label: 'New' },
               { key: 'spark', label: 'Sparks' },
@@ -196,24 +196,27 @@ export function SuggestionsPage() {
               <Button
                 key={key}
                 variant={filter === key ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setFilter(key as typeof filter)}
-                className={filter === key ? 'btn-primary' : 'btn-secondary'}
+                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                  filter === key
+                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                }`}
               >
                 {label}
               </Button>
             ))}
           </div>
 
-          <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2 border border-neutral-200">
-            <Label htmlFor="sort" className="text-sm font-semibold whitespace-nowrap text-neutral-700">
+          <div className="flex items-center justify-center gap-3 bg-white rounded-full px-6 py-3 border-2 border-gray-200 w-fit mx-auto">
+            <Label htmlFor="sort" className="text-sm font-semibold whitespace-nowrap text-gray-700">
               Sort by:
             </Label>
             <Select
               id="sort"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="select-pro"
+              className="border-0 bg-transparent font-medium text-gray-900 focus:ring-0 pr-8"
             >
               <option value="points">Points</option>
               <option value="recent">Recent</option>

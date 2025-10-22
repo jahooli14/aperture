@@ -46,6 +46,222 @@ export interface Memory {
   error: string | null
 }
 
+// ============================================================================
+// THEME CLUSTERING TYPES
+// ============================================================================
+
+export interface ThemeCluster {
+  id: string
+  name: string
+  icon: string
+  color: string
+  memory_count: number
+  sample_keywords: string[]
+  memories: Memory[]
+}
+
+export interface ThemeClustersResponse {
+  clusters: ThemeCluster[]
+  total_memories: number
+  uncategorized_count: number
+}
+
+// ============================================================================
+// MEMORY ONBOARDING TYPES
+// ============================================================================
+
+export type PromptCategory =
+  | 'core_identity'
+  | 'relationships'
+  | 'places'
+  | 'education_career'
+  | 'interests_hobbies'
+  | 'life_events'
+  | 'daily_life'
+  | 'aspirations'
+  | 'creative_professional'
+  | 'ai_suggested'
+
+export type PromptStatus = 'pending' | 'completed' | 'dismissed' | 'suggested'
+
+export interface MemoryPrompt {
+  id: string
+  prompt_text: string
+  prompt_description: string | null
+  category: PromptCategory
+  priority_order: number | null  // 1-10 for required, null for optional
+  is_required: boolean
+  created_at: string
+}
+
+export interface MemoryResponse {
+  id: string
+  user_id: string
+  prompt_id: string | null
+  custom_title: string | null  // For ad-hoc memories
+  bullets: string[]
+  is_template: boolean
+  created_at: string
+  updated_at: string
+  embedding?: number[]
+}
+
+export interface UserPromptStatus {
+  id: string
+  user_id: string
+  prompt_id: string
+  status: PromptStatus
+  response_id: string | null
+  suggested_at: string | null  // When AI suggested as follow-up
+  completed_at: string | null
+  dismissed_at: string | null
+  created_at: string
+}
+
+export interface MemoryPromptWithStatus extends MemoryPrompt {
+  status?: PromptStatus
+  response?: MemoryResponse
+}
+
+export interface MemoryProgress {
+  completed_required: number
+  total_required: number
+  completed_total: number
+  total_prompts: number
+  completion_percentage: number
+  has_unlocked_projects: boolean
+}
+
+export interface GapAnalysisResult {
+  followUpPrompts: Array<{
+    promptText: string
+    reasoning: string
+  }>
+}
+
+// ============================================================================
+// PROJECT ENHANCEMENTS
+// ============================================================================
+
+export interface ProjectNote {
+  id: string
+  project_id: string
+  user_id: string
+  bullets: string[]
+  created_at: string
+  embedding?: number[]
+}
+
+export interface ProjectWithNotes extends Project {
+  notes?: ProjectNote[]
+  days_dormant?: number
+}
+
+export type DormancyLevel = 'fresh' | 'cooling' | 'cold' | 'frozen'
+
+export interface DormantProjectNudge {
+  project_id: string
+  project: Project
+  type: 'gentle_reminder' | 'strong_nudge' | 'archive_suggestion'
+  days_dormant: number
+  message: string
+  actions: string[]
+  dormancy_level: DormancyLevel
+}
+
+// ============================================================================
+// SYNTHESIS TRANSPARENCY
+// ============================================================================
+
+export interface CapabilityUsed {
+  id: string
+  name: string
+  strength: number
+  source_project: string
+  recent_commits?: number
+}
+
+export interface InterestMatched {
+  memory_id: string
+  quote: string
+  relevance_score: number
+}
+
+export interface NodeStrengthChange {
+  capability_id: string
+  strength_boost: number
+}
+
+export interface SourceAnalysis {
+  capabilities_used: CapabilityUsed[]
+  interests_matched: InterestMatched[]
+  synthesis_reasoning: string
+  node_strength_changes: NodeStrengthChange[]
+}
+
+export interface ProjectSuggestionEnhanced extends ProjectSuggestion {
+  source_analysis?: SourceAnalysis
+}
+
+// ============================================================================
+// NODE STRENGTHENING
+// ============================================================================
+
+export interface NodeStrengthUpdate {
+  node_type: NodeType
+  node_id: string
+  old_strength: number
+  new_strength: number
+  change: number
+  reason: string
+}
+
+export interface ActiveSkill {
+  capability_id: string
+  name: string
+  strength: number
+  change: number  // e.g., +0.30
+  commits: number
+  last_activity: string
+  related_suggestions?: ProjectSuggestion[]
+}
+
+// ============================================================================
+// API RESPONSES
+// ============================================================================
+
+export interface MemoryPromptsResponse {
+  required: MemoryPromptWithStatus[]
+  suggested: MemoryPromptWithStatus[]
+  optional: MemoryPromptWithStatus[]
+  progress: MemoryProgress
+}
+
+export interface CreateMemoryResponseInput {
+  prompt_id?: string
+  custom_title?: string
+  bullets: string[]
+}
+
+export interface SubmitMemoryResponse {
+  response: MemoryResponse
+  gap_analysis?: GapAnalysisResult
+  progress: MemoryProgress
+}
+
+export interface DormantProjectsResponse {
+  nudges: DormantProjectNudge[]
+}
+
+export interface ActiveSkillsResponse {
+  activeSkills: ActiveSkill[]
+}
+
+export interface QuickUpdateInput {
+  action: 'did_session' | 'taking_break'
+  bullets?: string[]
+}
+
 export interface Bridge {
   id: string
   created_at: string

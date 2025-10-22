@@ -70,10 +70,10 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="btn-primary">
-          <Plus className="mr-2 h-4 w-4" />
+        <button className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2">
+          <Plus className="h-4 w-4" />
           New Project
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col">
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
