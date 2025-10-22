@@ -191,9 +191,10 @@ export function HomePage() {
             <div className="space-y-3">
               {recentMemories.length > 0 ? (
                 recentMemories.map(memory => (
-                  <div
+                  <Link
                     key={memory.id}
-                    className="pro-card p-4 border-2 border-transparent"
+                    to="/memories"
+                    className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-orange-200"
                   >
                     <div className="text-sm text-neutral-900 line-clamp-3">
                       {memory.body || memory.title}
@@ -201,7 +202,7 @@ export function HomePage() {
                     <div className="text-xs text-neutral-500 mt-2">
                       {new Date(memory.created_at).toLocaleDateString()}
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="pro-card p-8 text-center">
@@ -237,7 +238,7 @@ export function HomePage() {
                 {activeProjects.slice(0, 3).map(project => (
                   <Link
                     key={project.id}
-                    to={`/projects/${project.id}`}
+                    to="/projects"
                     className="pro-card p-5 hover-lift border-2 border-transparent hover:border-orange-200"
                   >
                     <div className="flex items-start justify-between mb-2">
