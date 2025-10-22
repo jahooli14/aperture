@@ -103,6 +103,18 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
         memories: [data, ...state.memories],
       }))
 
+      // Trigger background processing
+      try {
+        await fetch('/api/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memory_id: data.id })
+        })
+      } catch (processError) {
+        console.error('Failed to trigger processing:', processError)
+        // Don't throw - memory was created successfully
+      }
+
       return data
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to create memory')
@@ -132,6 +144,18 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
       set((state) => ({
         memories: state.memories.map((m) => (m.id === id ? data : m)),
       }))
+
+      // Trigger background processing
+      try {
+        await fetch('/api/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memory_id: data.id })
+        })
+      } catch (processError) {
+        console.error('Failed to trigger processing:', processError)
+        // Don't throw - memory was updated successfully
+      }
 
       return data
     } catch (error) {
