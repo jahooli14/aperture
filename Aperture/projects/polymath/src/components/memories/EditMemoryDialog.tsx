@@ -118,7 +118,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
 
         <DialogHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">

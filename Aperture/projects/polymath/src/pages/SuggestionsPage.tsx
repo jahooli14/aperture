@@ -152,10 +152,10 @@ export function SuggestionsPage() {
           Ideas that match what you can do with what you care about
         </p>
           <div className="flex flex-col items-center gap-3">
-            <Button
+            <button
               onClick={handleSynthesize}
               disabled={synthesizing}
-              className="btn-primary inline-flex items-center gap-2 min-w-[200px]"
+              className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {synthesizing ? (
                 <>
@@ -168,7 +168,7 @@ export function SuggestionsPage() {
                   Generate Ideas
                 </>
               )}
-            </Button>
+            </button>
 
             {/* Progress Bar */}
             {synthesizing && (

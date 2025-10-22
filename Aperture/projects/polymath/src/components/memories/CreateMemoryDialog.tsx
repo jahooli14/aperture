@@ -102,11 +102,13 @@ export function CreateMemoryDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="btn-primary text-sm sm:text-base px-4 sm:px-6 h-12 sm:h-14 w-full sm:w-auto">
-        <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-        New Memory
+      <DialogTrigger asChild>
+        <button className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          New Memory
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col overflow-hidden">
         {/* Subtle accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
 
