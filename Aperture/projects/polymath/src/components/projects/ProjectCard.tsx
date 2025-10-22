@@ -6,7 +6,7 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2 } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 
 export function ProjectCard({
@@ -56,8 +56,30 @@ export function ProjectCard({
           <CardTitle className="text-2xl font-bold text-neutral-900 flex-1">
             {project.title}
           </CardTitle>
-          <div className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${typeConfig[project.type]?.color || typeConfig.personal.color}`}>
-            {typeConfig[project.type]?.label || project.type}
+          <div className="flex items-center gap-2">
+            <div className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${typeConfig[project.type]?.color || typeConfig.personal.color}`}>
+              {typeConfig[project.type]?.label || project.type}
+            </div>
+            {showActions && onEdit && (
+              <Button
+                onClick={() => onEdit(project.id)}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {showActions && onDelete && (
+              <Button
+                onClick={() => onDelete(project.id)}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
         {project.description && (
@@ -110,31 +132,6 @@ export function ProjectCard({
           </div>
         )}
       </CardContent>
-
-      {showActions && (onEdit || onDelete) && (
-        <CardFooter className="flex gap-2 border-t border-neutral-200 pt-4">
-          {onEdit && (
-            <Button
-              onClick={() => onEdit(project.id)}
-              variant="outline"
-              size="sm"
-              className="flex-1 btn-secondary"
-            >
-              Edit
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              onClick={() => onDelete(project.id)}
-              variant="destructive"
-              size="sm"
-              className="flex-1"
-            >
-              Delete
-            </Button>
-          )}
-        </CardFooter>
-      )}
     </Card>
   )
 }
