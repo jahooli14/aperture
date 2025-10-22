@@ -3,17 +3,22 @@
  * Quick overview and navigation to key sections
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
+import type { ProjectSuggestion } from '../types'
 
 export function HomePage() {
-  const { suggestions, fetchSuggestions } = useSuggestionStore()
+  const { suggestions, fetchSuggestions, rateSuggestion, buildSuggestion } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
   const { memories, fetchMemories } = useMemoryStore()
+
+  const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
 
   useEffect(() => {
     fetchSuggestions()
@@ -27,16 +32,27 @@ export function HomePage() {
   const recentMemories = memories.slice(0, 3)
   const recentSuggestions = pendingSuggestions.slice(0, 2)
 
+  const handleSuggestionClick = (suggestion: ProjectSuggestion) => {
+    setSelectedSuggestion(suggestion)
+    setDetailDialogOpen(true)
+  }
+
+  const handleRate = async (id: string, rating: number) => {
+    await rateSuggestion(id, rating)
+  }
+
+  const handleBuild = async (id: string) => {
+    // This would normally open build dialog, but we'll just navigate
+    window.location.href = '/suggestions'
+  }
+
   return (
     <div className="min-h-screen py-12">
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+        <h1 className="text-4xl font-bold text-neutral-900">
           Overview
         </h1>
-        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-          Your creative workspace at a glance
-        </p>
       </div>
 
       {/* Stats Grid */}
@@ -131,9 +147,10 @@ export function HomePage() {
             <div className="space-y-3">
               {recentSuggestions.length > 0 ? (
                 recentSuggestions.map(suggestion => (
-                  <div
+                  <button
                     key={suggestion.id}
-                    className="pro-card p-4"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="pro-card p-4 w-full text-left hover-lift border-2 border-transparent hover:border-orange-200"
                   >
                     <h3 className="font-medium text-neutral-900 mb-1">
                       {suggestion.title}
@@ -141,7 +158,7 @@ export function HomePage() {
                     <p className="text-sm text-neutral-600 line-clamp-2">
                       {suggestion.description}
                     </p>
-                  </div>
+                  </button>
                 ))
               ) : (
                 <div className="pro-card p-8 text-center">
@@ -236,26 +253,29 @@ export function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="pro-card p-12 text-center">
-                <Rocket className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-neutral-900 mb-2">
-                  No active projects
-                </h3>
-                <p className="text-neutral-600 mb-6">
-                  Start building by turning sparks into projects
-                </p>
+              <div className="pro-card p-8 text-center">
+                <Rocket className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
+                <p className="text-neutral-600 mb-4">No active projects</p>
                 <Link
                   to="/suggestions?filter=spark"
                   className="btn-primary inline-flex items-center gap-2"
                 >
                   View Sparks
-                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             )}
           </section>
         </div>
       </div>
+
+      {/* Suggestion Detail Dialog */}
+      <SuggestionDetailDialog
+        suggestion={selectedSuggestion}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        onRate={handleRate}
+        onBuild={handleBuild}
+      />
     </div>
   )
 }
