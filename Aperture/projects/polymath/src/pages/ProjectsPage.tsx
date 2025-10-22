@@ -60,21 +60,21 @@ export function ProjectsPage() {
     <div className="min-h-screen py-12">
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="flex items-start justify-between">
-          <div className="text-center flex-1">
-            <div className="inline-flex items-center justify-center mb-4">
-              <Rocket className="h-12 w-12 text-orange-600" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-              My Projects
-            </h1>
-            <p className="text-lg text-neutral-600">
-              Track your creative work and strengthen capabilities
-            </p>
+        {/* Button row - pushes content down */}
+        <div className="flex items-center justify-end mb-6">
+          <CreateProjectDialog />
+        </div>
+        {/* Centered header content below button */}
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center mb-4">
+            <Rocket className="h-12 w-12 text-orange-600" />
           </div>
-          <div className="flex-shrink-0 ml-4">
-            <CreateProjectDialog />
-          </div>
+          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+            My Projects
+          </h1>
+          <p className="text-lg text-neutral-600">
+            Track your creative work and strengthen capabilities
+          </p>
         </div>
       </div>
 

@@ -142,37 +142,37 @@ export function SuggestionsPage() {
     <div className="min-h-screen py-12">
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="flex items-start justify-between">
-          <div className="text-center flex-1">
-            <div className="inline-flex items-center justify-center mb-4">
-              <Sparkles className="h-12 w-12 text-orange-600" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-              Project Suggestions
-            </h1>
-            <p className="text-lg text-neutral-600">
-              Ideas that match what you can do with what you care about
-            </p>
+        {/* Button row - pushes content down */}
+        <div className="flex items-center justify-end mb-6">
+          <button
+            onClick={handleSynthesize}
+            disabled={synthesizing}
+            className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {synthesizing ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" />
+                Generate Ideas
+              </>
+            )}
+          </button>
+        </div>
+        {/* Centered header content below button */}
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center mb-4">
+            <Sparkles className="h-12 w-12 text-orange-600" />
           </div>
-          <div className="flex-shrink-0 ml-4">
-            <button
-              onClick={handleSynthesize}
-              disabled={synthesizing}
-              className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {synthesizing ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  Generate Ideas
-                </>
-              )}
-            </button>
-          </div>
+          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+            Project Suggestions
+          </h1>
+          <p className="text-lg text-neutral-600">
+            Ideas that match what you can do with what you care about
+          </p>
         </div>
         {/* Progress Bar */}
         {synthesizing && (
