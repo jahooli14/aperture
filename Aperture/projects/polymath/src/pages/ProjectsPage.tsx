@@ -9,7 +9,7 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Rocket } from 'lucide-react'
+import { Rocket, LayoutGrid, List, Edit, Trash2, Clock } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import type { Project } from '../types'
 
@@ -26,6 +26,7 @@ export function ProjectsPage() {
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid')
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -80,6 +81,26 @@ export function ProjectsPage() {
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* View Mode Toggle - Mobile optimized */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className={`h-9 w-9 p-0 ${viewMode === 'grid' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'text-gray-600'}`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode('compact')}
+            className={`h-9 w-9 p-0 ${viewMode === 'compact' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'text-gray-600'}`}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+
         <div className="flex flex-wrap gap-2 justify-center mb-10">
           {[
             { key: 'all', label: 'All' },
@@ -137,11 +158,23 @@ export function ProjectsPage() {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          /* Projects Grid - Bento Box Layout with Stagger Animation */
+        ) : viewMode === 'grid' ? (
+          /* Grid View - Full Cards */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
             {projects.map((project) => (
               <ProjectCard
+                key={project.id}
+                project={project}
+                onEdit={() => handleEdit(project)}
+                onDelete={() => handleDelete(project)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Compact View - Mobile-optimized list */
+          <div className="space-y-3 mt-8">
+            {projects.map((project) => (
+              <CompactProjectCard
                 key={project.id}
                 project={project}
                 onEdit={() => handleEdit(project)}
@@ -160,4 +193,124 @@ export function ProjectsPage() {
       />
     </div>
   )
+}
+
+/* Compact Project Card - Mobile-optimized for seeing many projects at once */
+function CompactProjectCard({
+  project,
+  onEdit,
+  onDelete,
+}: {
+  project: Project
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const statusConfig: Record<string, { color: string; emoji: string }> = {
+    active: { color: 'bg-green-100 text-green-700 border-green-300', emoji: '🚀' },
+    'on-hold': { color: 'bg-gray-100 text-gray-700 border-gray-300', emoji: '⏸️' },
+    maintaining: { color: 'bg-blue-100 text-blue-700 border-blue-300', emoji: '🔧' },
+    completed: { color: 'bg-purple-100 text-purple-700 border-purple-300', emoji: '✅' },
+    archived: { color: 'bg-neutral-100 text-neutral-700 border-neutral-300', emoji: '📦' },
+  }
+
+  const typeConfig: Record<string, { emoji: string }> = {
+    creative: { emoji: '🎨' },
+    technical: { emoji: '⚙️' },
+    learning: { emoji: '📚' },
+  }
+
+  const relativeTime = formatRelativeTime(project.last_active)
+
+  return (
+    <Card className="pro-card hover-lift border-2">
+      <CardContent className="p-4">
+        {/* Header Row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">{typeConfig[project.type]?.emoji || '📄'}</span>
+              <h3 className="font-bold text-neutral-900 truncate text-base">
+                {project.title}
+              </h3>
+            </div>
+            {project.description && (
+              <p className="text-sm text-neutral-600 line-clamp-1">
+                {project.description}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              onClick={onEdit}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={onDelete}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Next Step - Compact */}
+        {project.metadata?.next_step && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-3">
+            <div className="text-xs font-semibold text-orange-800 mb-1">Next</div>
+            <p className="text-sm text-neutral-900 line-clamp-2 leading-snug">
+              {project.metadata.next_step}
+            </p>
+          </div>
+        )}
+
+        {/* Bottom Row - Status, Progress, Last Active */}
+        <div className="flex items-center gap-3 text-xs">
+          <div className={`px-2 py-1 rounded-md font-medium border ${statusConfig[project.status].color}`}>
+            {statusConfig[project.status].emoji}
+          </div>
+
+          {typeof project.metadata?.progress === 'number' && (
+            <div className="flex items-center gap-2 flex-1">
+              <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600"
+                  style={{ width: `${project.metadata.progress}%` }}
+                />
+              </div>
+              <span className="font-bold text-orange-600 w-8 text-right">
+                {project.metadata.progress}%
+              </span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 text-neutral-500 ml-auto">
+            <Clock className="h-3 w-3" />
+            <span className="whitespace-nowrap">{relativeTime}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function formatRelativeTime(isoString: string): string {
+  const date = new Date(isoString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 60) return `${diffMins}m`
+  if (diffHours < 24) return `${diffHours}h`
+  if (diffDays < 7) return `${diffDays}d`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`
+  return `${Math.floor(diffDays / 365)}y`
 }
