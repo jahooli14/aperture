@@ -4,15 +4,18 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, Link2, Sparkles, User, Tag } from 'lucide-react'
+import { Brain, Calendar, Link2, Sparkles, User, Tag, Edit, Trash2 } from 'lucide-react'
+import { Button } from './ui/button'
 import type { Memory, Bridge } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 
 interface MemoryCardProps {
   memory: Memory
+  onEdit?: (memory: Memory) => void
+  onDelete?: (memory: Memory) => void
 }
 
-export function MemoryCard({ memory }: MemoryCardProps) {
+export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const [bridges, setBridges] = useState<Bridge[]>([])
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
 
@@ -60,14 +63,36 @@ export function MemoryCard({ memory }: MemoryCardProps) {
 
       <CardHeader className="relative">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <CardTitle className="text-lg font-semibold text-neutral-900 leading-tight">
+          <CardTitle className="text-lg font-semibold text-neutral-900 leading-tight flex-1">
             {memory.title}
           </CardTitle>
-          {isManual && (
-            <div className="px-2 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-medium border border-orange-200">
-              Manual
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {isManual && (
+              <div className="px-2 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-medium border border-orange-200">
+                Manual
+              </div>
+            )}
+            {onEdit && (
+              <Button
+                onClick={() => onEdit(memory)}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                onClick={() => onDelete(memory)}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-sm text-neutral-500">

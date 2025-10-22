@@ -1,9 +1,8 @@
 /**
- * CreateMemoryDialog - Manual Memory Creation
- * Mobile-optimized dialog for capturing thoughts manually
+ * EditMemoryDialog - Edit existing memories with bullet-point input
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -12,19 +11,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, Sparkles, X } from 'lucide-react'
+import { Sparkles, Plus, X } from 'lucide-react'
+import type { Memory } from '../../types'
 
-export function CreateMemoryDialog() {
-  const [open, setOpen] = useState(false)
+interface EditMemoryDialogProps {
+  memory: Memory | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialogProps) {
   const [loading, setLoading] = useState(false)
-  const { createMemory } = useMemoryStore()
+  const { updateMemory } = useMemoryStore()
   const { addToast } = useToast()
 
   const [bullets, setBullets] = useState<string[]>([''])
@@ -34,14 +38,23 @@ export function CreateMemoryDialog() {
     memory_type: '' as '' | 'foundational' | 'event' | 'insight',
   })
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      tags: '',
-      memory_type: '',
-    })
-    setBullets([''])
-  }
+  useEffect(() => {
+    if (memory && open) {
+      setFormData({
+        title: memory.title,
+        tags: memory.tags?.join(', ') || '',
+        memory_type: memory.memory_type || '',
+      })
+
+      // Convert body text to bullets (split by newlines or sentences)
+      const bodyBullets = memory.body
+        .split(/\n+/)
+        .map(b => b.trim())
+        .filter(b => b.length > 0)
+
+      setBullets(bodyBullets.length > 0 ? bodyBullets : [''])
+    }
+  }, [memory, open])
 
   const addBullet = () => {
     setBullets([...bullets, ''])
@@ -61,6 +74,8 @@ export function CreateMemoryDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!memory) return
+
     setLoading(true)
 
     try {
@@ -74,7 +89,7 @@ export function CreateMemoryDialog() {
         .filter(b => b.length > 0)
         .join('\n\n')
 
-      await createMemory({
+      await updateMemory(memory.id, {
         title: formData.title,
         body,
         tags: tags.length > 0 ? tags : undefined,
@@ -82,16 +97,15 @@ export function CreateMemoryDialog() {
       })
 
       addToast({
-        title: 'Memory captured!',
-        description: 'Your thought has been saved to your knowledge graph',
+        title: 'Memory updated!',
+        description: 'Your changes have been saved',
         variant: 'success',
       })
 
-      resetForm()
-      setOpen(false)
+      onOpenChange(false)
     } catch (error) {
       addToast({
-        title: 'Failed to create memory',
+        title: 'Failed to update memory',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
@@ -100,23 +114,20 @@ export function CreateMemoryDialog() {
     }
   }
 
+  if (!memory) return null
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="btn-primary text-sm sm:text-base px-4 sm:px-6 h-12 sm:h-14 w-full sm:w-auto">
-        <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-        New Memory
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
-        {/* Subtle accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
 
         <DialogHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0" />
-            <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Capture Memory</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Edit Memory</DialogTitle>
           </div>
           <DialogDescription className="text-sm sm:text-base text-left">
-            Add a thought, idea, or insight
+            Update your captured thought
           </DialogDescription>
         </DialogHeader>
 
@@ -185,7 +196,7 @@ export function CreateMemoryDialog() {
               </div>
 
               <p className="text-xs text-gray-500">
-                AI will analyze this to extract entities and themes
+                AI will re-analyze this to extract entities and themes
               </p>
             </div>
 
@@ -235,10 +246,7 @@ export function CreateMemoryDialog() {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => {
-                resetForm()
-                setOpen(false)
-              }}
+              onClick={() => onOpenChange(false)}
               disabled={loading}
               className="w-full sm:w-auto h-11 sm:h-12"
             >
@@ -257,7 +265,7 @@ export function CreateMemoryDialog() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Capture Memory
+                  Save Changes
                 </>
               )}
             </Button>

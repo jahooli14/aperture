@@ -18,6 +18,8 @@ interface MemoryStore {
   fetchMemories: () => Promise<void>
   fetchBridgesForMemory: (memoryId: string) => Promise<Bridge[]>
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
+  updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
+  deleteMemory: (id: string) => Promise<void>
 }
 
 export const useMemoryStore = create<MemoryStore>((set) => ({
@@ -104,6 +106,51 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
       return data
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to create memory')
+    }
+  },
+
+  updateMemory: async (id: string, input: CreateMemoryInput) => {
+    try {
+      const updateData = {
+        title: input.title,
+        body: input.body,
+        tags: input.tags || [],
+        memory_type: input.memory_type || null,
+        processed: false, // Trigger reprocessing
+      }
+
+      const { data, error } = await supabase
+        .from('memories')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Update local state
+      set((state) => ({
+        memories: state.memories.map((m) => (m.id === id ? data : m)),
+      }))
+
+      return data
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to update memory')
+    }
+  },
+
+  deleteMemory: async (id: string) => {
+    try {
+      const { error } = await supabase.from('memories').delete().eq('id', id)
+
+      if (error) throw error
+
+      // Remove from local state
+      set((state) => ({
+        memories: state.memories.filter((m) => m.id !== id),
+      }))
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Failed to delete memory')
     }
   },
 }))

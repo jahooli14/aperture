@@ -8,20 +8,25 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
+import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
 import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
+import { useToast } from '../components/ui/toast'
 import { Brain, Mic, Zap, ArrowLeft } from 'lucide-react'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
-  const { memories, fetchMemories, loading, error } = useMemoryStore()
+  const { memories, fetchMemories, loading, error, deleteMemory } = useMemoryStore()
   const { progress } = useOnboardingStore()
+  const { addToast } = useToast()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
@@ -79,6 +84,30 @@ export function MemoriesPage() {
       setResurfacing(prev => prev.filter(m => m.id !== memoryId))
     } catch (err) {
       console.error('Failed to mark as reviewed:', err)
+    }
+  }
+
+  const handleEdit = (memory: Memory) => {
+    setSelectedMemory(memory)
+    setEditDialogOpen(true)
+  }
+
+  const handleDelete = async (memory: Memory) => {
+    if (confirm(`Delete "${memory.title}"? This action cannot be undone.`)) {
+      try {
+        await deleteMemory(memory.id)
+        addToast({
+          title: 'Memory deleted',
+          description: `"${memory.title}" has been removed.`,
+          variant: 'success',
+        })
+      } catch (error) {
+        addToast({
+          title: 'Failed to delete memory',
+          description: error instanceof Error ? error.message : 'An error occurred',
+          variant: 'destructive',
+        })
+      }
     }
   }
 
@@ -310,7 +339,12 @@ export function MemoriesPage() {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {selectedCluster.memories.map((memory) => (
-                    <MemoryCard key={memory.id} memory={memory} />
+                    <MemoryCard
+                      key={memory.id}
+                      memory={memory}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </div>
               </div>
@@ -346,7 +380,12 @@ export function MemoriesPage() {
             {memoryView === 'recent' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
                 {memories.slice(0, 20).map((memory) => (
-                  <MemoryCard key={memory.id} memory={memory} />
+                  <MemoryCard
+                    key={memory.id}
+                    memory={memory}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
                 ))}
               </div>
             )}
@@ -358,7 +397,11 @@ export function MemoriesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
             {resurfacing.map((memory) => (
               <div key={memory.id} className="flex flex-col gap-3">
-                <MemoryCard memory={memory} />
+                <MemoryCard
+                  memory={memory}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
                 <Button
                   onClick={() => handleReview(memory.id)}
                   variant="default"
@@ -371,6 +414,13 @@ export function MemoriesPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <EditMemoryDialog
+        memory={selectedMemory}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }
