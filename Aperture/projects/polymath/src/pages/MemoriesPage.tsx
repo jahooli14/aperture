@@ -86,57 +86,47 @@ export function MemoriesPage() {
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Brain className="h-12 w-12 text-orange-600" />
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <div className="bg-white border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center mb-4">
+              <Brain className="h-12 w-12 text-orange-600" />
+            </div>
+            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+              Memories
+            </h1>
+            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+              Your captured thoughts and voice notes
+            </p>
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-            Memories
-          </h1>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            Your captured thoughts and voice notes
-          </p>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* View Toggle & Actions */}
         <div className="flex flex-col gap-4 mb-10">
           <div className="flex gap-2 justify-center w-full overflow-x-auto">
-            <Button
-              variant={view === 'foundational' ? 'default' : 'outline'}
-              onClick={() => setView('foundational')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'foundational'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
-            </Button>
-            <Button
-              variant={view === 'all' ? 'default' : 'outline'}
-              onClick={() => setView('all')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'all'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              My Memories ({memories.length})
-            </Button>
-            <Button
-              variant={view === 'resurfacing' ? 'default' : 'outline'}
-              onClick={() => setView('resurfacing')}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                view === 'resurfacing'
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-              }`}
-            >
-              Resurface ({resurfacing.length})
-            </Button>
+            {[
+              { key: 'foundational', label: `Foundational ${progress ? `(${progress.completed_required}/${progress.total_required})` : ''}` },
+              { key: 'all', label: `My Memories (${memories.length})` },
+              { key: 'resurfacing', label: `Resurface (${resurfacing.length})` }
+            ].map(({ key, label }) => (
+              <Button
+                key={key}
+                variant={view === key ? 'default' : 'outline'}
+                onClick={() => setView(key as typeof view)}
+                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                  view === key
+                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                }`}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
           {view === 'all' && (
             <div className="w-full flex justify-center">
@@ -285,28 +275,23 @@ export function MemoriesPage() {
           <>
             {/* Sub-navigation for Themes vs Recent */}
             <div className="flex gap-2 justify-center mb-8">
-              <Button
-                variant={memoryView === 'themes' ? 'default' : 'outline'}
-                onClick={() => setMemoryView('themes')}
-                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                  memoryView === 'themes'
-                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                }`}
-              >
-                By Theme
-              </Button>
-              <Button
-                variant={memoryView === 'recent' ? 'default' : 'outline'}
-                onClick={() => setMemoryView('recent')}
-                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                  memoryView === 'recent'
-                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                }`}
-              >
-                Recent
-              </Button>
+              {[
+                { key: 'themes', label: 'By Theme' },
+                { key: 'recent', label: 'Recent' }
+              ].map(({ key, label }) => (
+                <Button
+                  key={key}
+                  variant={memoryView === key ? 'default' : 'outline'}
+                  onClick={() => setMemoryView(key as typeof memoryView)}
+                  className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                    memoryView === key
+                      ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                  }`}
+                >
+                  {label}
+                </Button>
+              ))}
             </div>
 
             {/* Theme cluster detail view */}
@@ -389,6 +374,7 @@ export function MemoriesPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   )
