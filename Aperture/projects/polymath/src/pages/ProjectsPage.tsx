@@ -57,26 +57,22 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Header Section - Light Background */}
-      <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center mb-4">
-              <Rocket className="h-12 w-12 text-orange-600" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-              My Projects
-            </h1>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Track your creative work and strengthen capabilities
-            </p>
-          </div>
+    <div className="min-h-screen py-12">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
+        <div className="inline-flex items-center justify-center mb-4">
+          <Rocket className="h-12 w-12 text-orange-600" />
         </div>
+        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+          My Projects
+        </h1>
+        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          Track your creative work and strengthen capabilities
+        </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Controls */}
+      {/* Controls */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 mb-10">
           <div className="flex flex-wrap gap-2 justify-center">
               {[

@@ -86,25 +86,21 @@ export function MemoriesPage() {
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen py-12">
       {/* Header */}
-      <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center mb-4">
-              <Brain className="h-12 w-12 text-orange-600" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-              Memories
-            </h1>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Your captured thoughts and voice notes
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
+        <div className="inline-flex items-center justify-center mb-4">
+          <Brain className="h-12 w-12 text-orange-600" />
         </div>
+        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+          Memories
+        </h1>
+        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          Your captured thoughts and voice notes
+        </p>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* View Toggle & Actions */}
         <div className="flex flex-col gap-4 mb-10">

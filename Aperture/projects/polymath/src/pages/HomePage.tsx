@@ -28,26 +28,19 @@ export function HomePage() {
   const recentSuggestions = pendingSuggestions.slice(0, 2)
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen py-12">
       {/* Header */}
-      <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center mb-4">
-              <Sparkles className="h-12 w-12 text-orange-600" />
-            </div>
-            <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-              Overview
-            </h1>
-            <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-              Your creative workspace at a glance
-            </p>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
+        <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+          Overview
+        </h1>
+        <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+          Your creative workspace at a glance
+        </p>
       </div>
 
       {/* Stats Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Memories Stat */}
           <Link
@@ -120,7 +113,7 @@ export function HomePage() {
       </section>
 
       {/* Main Content Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Suggestions */}
           <section>
