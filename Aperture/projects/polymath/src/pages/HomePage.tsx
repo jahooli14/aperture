@@ -131,10 +131,9 @@ export function HomePage() {
             <div className="space-y-3">
               {recentSuggestions.length > 0 ? (
                 recentSuggestions.map(suggestion => (
-                  <Link
+                  <div
                     key={suggestion.id}
-                    to={`/suggestions/${suggestion.id}`}
-                    className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-orange-200"
+                    className="pro-card p-4"
                   >
                     <h3 className="font-medium text-neutral-900 mb-1">
                       {suggestion.title}
@@ -142,7 +141,7 @@ export function HomePage() {
                     <p className="text-sm text-neutral-600 line-clamp-2">
                       {suggestion.description}
                     </p>
-                  </Link>
+                  </div>
                 ))
               ) : (
                 <div className="pro-card p-8 text-center">
