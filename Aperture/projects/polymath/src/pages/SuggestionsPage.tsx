@@ -348,7 +348,6 @@ export function SuggestionsPage() {
         onOpenChange={setBuildDialogOpen}
         onConfirm={handleBuildConfirm}
       />
-      </div>
     </div>
   )
 }
