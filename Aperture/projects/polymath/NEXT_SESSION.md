@@ -104,22 +104,39 @@ Not just features - **insight engines** that:
 ## 📋 Phase 2: Intelligence Layer (22-27 hours)
 
 ### 3. Capability Decay Detection (10-12h)
-**What**: Track skill usage over time, prevent atrophy
-**Why**: "Your Python skills haven't been touched in 8 months"
+**What**: Track skill usage across ALL projects (code, physical, design, research)
+**Why**: "Your woodworking skills haven't been touched in 14 months"
 **How**:
-- Scan git commits (already have capability scanning ✅)
-- Track `last_used_at` per capability
+- Query `MAX(project.last_active)` for each capability
+- Works for code projects (git auto-updates last_active) AND offline projects (manual updates)
 - Calculate decay score (6mo = yellow, 12mo = red)
 - Generate micro-projects to maintain skills
 
 **Database**:
 ```sql
-ALTER TABLE capabilities ADD COLUMN last_used_at TIMESTAMPTZ;
-ALTER TABLE capabilities ADD COLUMN decay_score FLOAT; -- 0-1
-
--- Function to update from git commits
-CREATE FUNCTION update_capability_usage()...
+-- Query decay per capability from project activity
+SELECT
+  c.id,
+  c.name,
+  MAX(p.last_active) as last_used_at,
+  EXTRACT(EPOCH FROM (NOW() - MAX(p.last_active))) / 86400 as days_since_use,
+  CASE
+    WHEN MAX(p.last_active) > NOW() - INTERVAL '6 months' THEN 0.0  -- Fresh
+    WHEN MAX(p.last_active) > NOW() - INTERVAL '12 months' THEN 0.5 -- Decaying
+    ELSE 1.0 -- Critical
+  END as decay_score
+FROM capabilities c
+LEFT JOIN projects p ON p.metadata->>'capabilities' ? c.id
+WHERE p.user_id = $1
+GROUP BY c.id, c.name
+ORDER BY days_since_use DESC;
 ```
+
+**Why this is better than git commits**:
+- Captures offline projects (woodworking, design, research)
+- Uses existing `project.last_active` timestamp
+- No new data collection needed
+- Works for ANY project type
 
 **API**:
 - `/api/capabilities/decay` - Get decaying skills
@@ -127,10 +144,10 @@ CREATE FUNCTION update_capability_usage()...
 
 **UI**:
 - Dashboard widget: "⚠️ 3 skills weakening"
-- Capability heatmap visualization
+- Capability heatmap visualization (last 12 months)
 - "Maintain this skill" button → generates project
 
-**Success**: See "Python: Last used 8mo ago → Here's a weekend project"
+**Success**: See "Woodworking: Last used 14mo ago in 'Standing Desk Build' → Here's a weekend project"
 
 ---
 
