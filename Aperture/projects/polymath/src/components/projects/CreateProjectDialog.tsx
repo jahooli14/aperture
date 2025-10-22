@@ -69,9 +69,11 @@ export function CreateProjectDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="btn-primary">
-        <Plus className="mr-2 h-4 w-4" />
-        New Project
+      <DialogTrigger asChild>
+        <Button className="btn-primary">
+          <Plus className="mr-2 h-4 w-4" />
+          New Project
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col">
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
