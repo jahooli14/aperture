@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Determine project type from capabilities or metadata
     const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
-    const defaultType = hasCapabilities ? 'technical' : 'personal'
+    const defaultType = hasCapabilities ? 'technical' : 'creative'
     const projectType = metadata.type || defaultType
 
     const { data: project, error: createError } = await supabase

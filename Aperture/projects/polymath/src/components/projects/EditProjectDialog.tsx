@@ -30,8 +30,8 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'personal' as 'personal' | 'technical' | 'meta',
-    status: 'active' as 'active' | 'dormant' | 'completed' | 'archived',
+    type: 'creative' as 'creative' | 'technical' | 'learning',
+    status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived',
   })
 
   // Update form when project changes
@@ -82,18 +82,18 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>
+      <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
+            <DialogTitle className="text-lg sm:text-2xl">Edit Project</DialogTitle>
+            <DialogDescription className="text-sm sm:text-base">
               Update your project details and track its progress.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-title">Title *</Label>
+              <Label htmlFor="edit-title" className="text-sm sm:text-base">Title *</Label>
               <Input
                 id="edit-title"
                 placeholder="My Awesome Project"
@@ -102,11 +102,12 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                   setFormData({ ...formData, title: e.target.value })
                 }
                 required
+                className="text-base h-11 sm:h-12"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description" className="text-sm sm:text-base">Description</Label>
               <Textarea
                 id="edit-description"
                 placeholder="What is this project about?"
@@ -115,59 +116,62 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                   setFormData({ ...formData, description: e.target.value })
                 }
                 rows={4}
+                className="text-base min-h-[100px]"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-type">Type</Label>
-                <Select
-                  id="edit-type"
-                  value={formData.type}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      type: e.target.value as typeof formData.type,
-                    })
-                  }
-                >
-                  <option value="personal">👤 Personal</option>
-                  <option value="technical">⚙️ Technical</option>
-                  <option value="meta">🧠 Meta</option>
-                </Select>
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-type" className="text-sm sm:text-base">Type</Label>
+              <Select
+                id="edit-type"
+                value={formData.type}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    type: e.target.value as typeof formData.type,
+                  })
+                }
+                className="text-base h-11 sm:h-12"
+              >
+                <option value="creative">🎨 Creative</option>
+                <option value="technical">⚙️ Technical</option>
+                <option value="learning">📚 Learning</option>
+              </Select>
+            </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  id="edit-status"
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      status: e.target.value as typeof formData.status,
-                    })
-                  }
-                >
-                  <option value="active">🚀 Active</option>
-                  <option value="dormant">💤 Dormant</option>
-                  <option value="completed">✅ Completed</option>
-                  <option value="archived">📦 Archived</option>
-                </Select>
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status" className="text-sm sm:text-base">Status</Label>
+              <Select
+                id="edit-status"
+                value={formData.status}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.value as typeof formData.status,
+                  })
+                }
+                className="text-base h-11 sm:h-12"
+              >
+                <option value="active">🚀 Active</option>
+                <option value="on-hold">⏸️ On Hold</option>
+                <option value="maintaining">🔧 Maintaining</option>
+                <option value="completed">✅ Completed</option>
+                <option value="archived">📦 Archived</option>
+              </Select>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t bg-white">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto h-11 sm:h-12"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.title}>
+            <Button type="submit" disabled={loading || !formData.title} className="w-full sm:w-auto h-11 sm:h-12">
               {loading ? 'Updating...' : 'Update Project'}
             </Button>
           </DialogFooter>

@@ -2,7 +2,7 @@
 
 > **Purpose**: Quick session startup - choose your project and get context
 >
-> **Last Updated**: 2025-10-21
+> **Last Updated**: 2025-10-22
 >
 > **How it works**:
 > 1. Check token budget
@@ -17,9 +17,10 @@
 
 | Project | Status | Evidence | Next Session File |
 |---------|--------|----------|-------------------|
-| 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
 | 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
 | 🎨 **Polymath** | 🟢 Production | [Live on Vercel](https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app), 23 capabilities, 10 AI suggestions, Gemini-powered | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
+| 🌱 **Baby Milestone Tracker** | 🆕 New (2025-10-22) | Extracted from Polymath, standalone project, 60+ milestones, AI-powered | [`NEXT_SESSION.md`](projects/baby-milestone-tracker/NEXT_SESSION.md) |
+| 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
 | 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
 
 ---
@@ -27,6 +28,11 @@
 ## 📊 Last Active
 
 > **Note**: This is just recent history. Next session can work on ANY project - not necessarily the last one!
+
+**Session 24** (2025-10-22): Baby Milestone Tracker - EXTRACTED FROM POLYMATH ✅
+- Created standalone project with 60+ milestones
+- Full documentation and project template system
+- Updated all Aperture documentation
 
 **Session 23** (2025-10-21): Polymath - DEPLOYED TO PRODUCTION ✅ (Gemini-powered, 23 capabilities, 10 AI suggestions)
 
@@ -96,6 +102,8 @@ git status
 - `.claude/startup.md` - Auto-read session initialization
 - `DOCUMENTATION_INDEX.md` - Complete documentation map
 - `START_HERE.md` - Onboarding guide
+- `PROJECT_IDEAS.md` - New project ideas tracking
+- `PROJECT_TEMPLATE.md` - Template for creating new projects
 
 **Process Guides**:
 - `.process/META_DEBUGGING_PROTOCOL.md` - Universal debugging

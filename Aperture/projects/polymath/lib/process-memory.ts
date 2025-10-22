@@ -83,7 +83,7 @@ export async function processMemory(memoryId: string): Promise<void> {
 }
 
 /**
- * Extract metadata using Gemini
+ * Extract metadata using Gemini (enhanced with milestone detection)
  */
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
@@ -107,11 +107,13 @@ Extract the following in JSON format:
 
 Rules:
 - memory_type: "foundational" = core belief/value, "event" = something that happened, "insight" = realization/idea
-- entities.people: Names of people (exclude generic terms like "my baby")
+- entities.people: Names of people (exclude generic terms like "my baby" but DO include child names)
 - entities.places: Specific locations mentioned
-- entities.topics: Topics, interests, concepts, technologies, activities
-- themes: High-level themes (max 5)
-- emotional_tone: One short phrase (e.g., "excited and curious", "reflective", "frustrated")
+- entities.topics: Topics, interests, concepts, technologies, activities, developmental milestones
+- themes: High-level themes (max 5) - include "child_development" if this is about a child's growth
+- emotional_tone: One short phrase (e.g., "excited and curious", "reflective", "frustrated", "proud parent")
+
+**Special attention:** If this voice note mentions child development, milestones, or parenting moments, include relevant developmental topics in entities.topics (e.g., "first steps", "language development", "motor skills", "emotional regulation")
 
 Return ONLY the JSON, no other text.`
 

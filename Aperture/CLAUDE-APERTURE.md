@@ -13,12 +13,12 @@
 **Aperture** is a multi-project development framework for personal experiments, prototypes, and side projects.
 
 ### Current Status
-- **Active Projects**: 5
-  - **Personal**: Wizard of Oz (production), Polymath (ready to deploy)
+- **Active Projects**: 6
+  - **Personal**: Wizard of Oz (production), Polymath (ready to deploy), Baby Milestone Tracker (new)
   - **Meta**: Visual Test Generator (documented), Self-Healing Tests, Autonomous Docs
 - **Framework**: React, TypeScript, Vite
 - **Deployment**: Vercel
-- **Last Updated**: 2025-10-21 (Session 21 - Polymath consolidated, OpenAI replaced with Gemini)
+- **Last Updated**: 2025-10-22 (Baby Milestone Tracker extracted from Polymath)
 
 ---
 
@@ -32,11 +32,13 @@ Read these files IN ORDER:
 
 ### For Specific Tasks
 - **Wizard of Oz Development**: See `projects/wizard-of-oz/` section below
+- **Baby Milestone Tracker**: See `projects/baby-milestone-tracker/` section below
 - **Polymath Development**: See `projects/polymath/` section below
 - **Self-Healing Tests**: See `scripts/self-healing-tests/` (coming soon)
 - **Autonomous Docs**: See `scripts/autonomous-docs/FEATURE_GUIDE.md`
 - **Process Improvements**: See `.process/` directory
 - **GitHub Workflows**: See `.github/workflows/`
+- **New Project Ideas**: See `PROJECT_IDEAS.md`
 
 ---
 
@@ -70,6 +72,7 @@ Aperture/
 │   └── COMMON_MISTAKES.md
 ├── projects/             # Personal projects
 │   ├── wizard-of-oz/    # Baby photo alignment app
+│   ├── baby-milestone-tracker/  # AI-powered developmental milestone tracker
 │   ├── memory-os/       # Voice-to-memory knowledge graph
 │   └── polymath/        # Creative project tracker
 ├── scripts/             # Meta projects (infrastructure)
@@ -129,6 +132,71 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 
 ---
 
+### Baby Milestone Tracker
+
+**Status**: 🆕 NEWLY CREATED - Extracted from Polymath
+
+An AI-powered developmental milestone tracking system that helps parents capture and understand their child's development through voice memories.
+
+#### Quick Facts
+- **Location**: `projects/baby-milestone-tracker/`
+- **Tech Stack**: React, TypeScript, Vite, Supabase, Gemini AI
+- **Deployment**: Standalone or integrated with other memory systems
+- **Created**: 2025-10-22 (Extracted from Polymath)
+
+#### What It Is
+- **Voice-first**: Simply speak about your child's day naturally
+- **AI detection**: Automatically identifies developmental milestones (60+ milestones across 6 domains)
+- **Timeline view**: Beautiful visualization of development progress
+- **Evidence-based**: Every milestone linked to actual quotes from your voice notes
+- **Insights**: AI-generated patterns and progression analysis
+
+#### Features
+- 🌱 **Automatic Milestone Detection**
+  - Gross Motor (rolling, crawling, walking)
+  - Fine Motor (grasping, stacking)
+  - Language (first words, phrases)
+  - Cognitive (problem-solving, object permanence)
+  - Social-Emotional (smiles, sharing)
+  - Self-Care (feeding, dressing)
+- 📊 **Timeline Visualization** - See all milestones chronologically
+- 🔍 **Evidence Extraction** - Exact quotes showing each milestone
+- 💡 **AI Insights** - Pattern recognition and development analysis
+- 📈 **Progression Tracking** - Velocity and domain coverage
+- 🎯 **Confidence Scoring** - High/medium/low certainty on detections
+
+#### Integration
+Can be integrated with:
+- **Polymath** - Add milestone detection to memory processing
+- **MemoryOS** - Voice note milestone tracking
+- **Audiopen** - Direct webhook integration
+- **Custom Apps** - Standalone API available
+
+#### Key Files
+- `projects/baby-milestone-tracker/README.md` - Complete documentation
+- `projects/baby-milestone-tracker/NEXT_SESSION.md` - Setup and next steps
+- `projects/baby-milestone-tracker/lib/milestone-detector.ts` - AI detection engine
+- `projects/baby-milestone-tracker/lib/milestone-taxonomy.ts` - 60+ milestone library
+- `projects/baby-milestone-tracker/scripts/add-milestone-tables.sql` - Database schema
+
+#### Development Status
+- ✅ Core library complete (detection, taxonomy, processing)
+- ✅ Database schema ready
+- ✅ API endpoints ready
+- ✅ Timeline UI component ready
+- ⏳ Not yet deployed (standalone)
+- ⏳ Integration testing needed
+
+#### Quick Start
+```bash
+cd projects/baby-milestone-tracker
+npm install
+cp .env.example .env
+# Edit .env with your Supabase and Gemini API keys
+npm run dev
+```
+
+---
 
 ### Polymath
 

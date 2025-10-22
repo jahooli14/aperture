@@ -86,11 +86,11 @@ export function CreateMemoryDialog() {
         <Plus className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
         New Memory
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[95vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6 w-[calc(100vw-2rem)]">
+      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col">
         {/* Subtle accent */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
 
-        <DialogHeader className="pb-3 sm:pb-4">
+        <DialogHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
             <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0" />
             <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Capture Memory</DialogTitle>
@@ -100,8 +100,8 @@ export function CreateMemoryDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-4 sm:space-y-6">
-          <div className="space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 space-y-4 sm:space-y-6">
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title" className="font-semibold text-gray-700 text-sm sm:text-base">
@@ -161,7 +161,7 @@ export function CreateMemoryDialog() {
             </div>
 
             {/* Tags */}
-            <div className="space-y-2">
+            <div className="space-y-2 pb-4">
               <Label htmlFor="tags" className="font-semibold text-gray-700 text-sm sm:text-base">
                 Tags (Optional)
               </Label>
@@ -179,7 +179,7 @@ export function CreateMemoryDialog() {
             </div>
           </div>
 
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t bg-white">
             <Button
               type="button"
               variant="ghost"

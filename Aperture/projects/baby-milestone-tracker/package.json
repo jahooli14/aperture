@@ -1,17 +1,14 @@
 {
-  "name": "polymath",
-  "version": "0.1.0",
+  "name": "baby-milestone-tracker",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "AI-powered developmental milestone tracker for parents",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "seed": "tsx scripts/polymath/seed-test-data.ts",
-    "scan": "tsx scripts/polymath/capability-scanner.ts",
-    "synthesize": "tsx scripts/polymath/synthesis.ts",
-    "strengthen": "tsx scripts/polymath/strengthen-nodes.ts",
     "deploy": "vercel --prod",
     "deploy:preview": "vercel"
   },

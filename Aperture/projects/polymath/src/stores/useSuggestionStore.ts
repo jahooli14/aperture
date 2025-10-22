@@ -37,7 +37,7 @@ interface SuggestionState {
   buildSuggestion: (id: string, projectData?: {
     title?: string
     description?: string
-    type?: 'personal' | 'technical' | 'meta'
+    type?: 'creative' | 'technical' | 'learning'
   }) => Promise<any>
   triggerSynthesis: () => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
@@ -103,7 +103,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
   buildSuggestion: async (id: string, projectData?: {
     title?: string
     description?: string
-    type?: 'personal' | 'technical' | 'meta'
+    type?: 'creative' | 'technical' | 'learning'
   }) => {
     try {
       const response = await fetch(`${API_BASE}/suggestions/${id}/build`, {

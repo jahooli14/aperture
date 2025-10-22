@@ -12,8 +12,8 @@ interface Project {
   user_id: string
   title: string
   description: string
-  type: 'personal' | 'technical' | 'meta'
-  status: 'active' | 'dormant' | 'completed' | 'archived'
+  type: 'creative' | 'technical' | 'learning'
+  status: 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
   last_active: string
   created_at: string
   metadata?: any
@@ -24,7 +24,7 @@ interface ProjectState {
   projects: Project[]
   loading: boolean
   error: string | null
-  filter: 'all' | 'active' | 'dormant' | 'completed'
+  filter: 'all' | 'active' | 'on-hold' | 'maintaining' | 'completed'
 
   // Actions
   fetchProjects: () => Promise<void>

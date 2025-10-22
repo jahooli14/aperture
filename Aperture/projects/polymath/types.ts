@@ -21,9 +21,9 @@ export interface Project {
   embedding?: number[] // Vector embedding (1536 dims)
 }
 
-export type ProjectType = 'personal' | 'technical' | 'meta'
+export type ProjectType = 'creative' | 'technical' | 'learning'
 
-export type ProjectStatus = 'active' | 'dormant' | 'completed' | 'archived'
+export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
 
 export interface ProjectMetadata {
   tags?: string[]
@@ -48,6 +48,7 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   title?: string
   description?: string
+  type?: ProjectType
   status?: ProjectStatus
   metadata?: ProjectMetadata
 }

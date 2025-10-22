@@ -58,7 +58,7 @@ export function SuggestionsPage() {
     }
   }
 
-  const handleBuildConfirm = async (projectData: { title: string; description: string; type: 'personal' | 'technical' | 'meta' }) => {
+  const handleBuildConfirm = async (projectData: { title: string; description: string; type: 'creative' | 'technical' | 'learning' }) => {
     if (!suggestionToBuild) return
 
     try {
@@ -315,7 +315,7 @@ export function SuggestionsPage() {
           </Card>
         ) : (
           /* Suggestions Grid - Bento Box Layout with Stagger Animation */
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children mt-8">
             {suggestions.map((suggestion) => (
               <SuggestionCard
                 key={suggestion.id}

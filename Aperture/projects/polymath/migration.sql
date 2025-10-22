@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS projects (
   user_id UUID NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
-  type TEXT NOT NULL CHECK (type IN ('personal', 'technical', 'meta')),
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'dormant', 'completed', 'archived')),
+  type TEXT NOT NULL CHECK (type IN ('creative', 'technical', 'learning')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'on-hold', 'maintaining', 'completed', 'archived')),
   last_active TIMESTAMP WITH TIME ZONE DEFAULT now(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
@@ -27,8 +27,8 @@ CREATE INDEX idx_projects_type ON projects(type);
 CREATE INDEX idx_projects_last_active ON projects(last_active DESC);
 CREATE INDEX idx_projects_embedding ON projects USING ivfflat(embedding vector_cosine_ops) WITH (lists = 100);
 
-COMMENT ON TABLE projects IS 'User projects - personal creative pursuits and technical projects';
-COMMENT ON COLUMN projects.type IS 'personal = creative hobbies, technical = code projects, meta = infrastructure/tools';
+COMMENT ON TABLE projects IS 'User projects - hobbies, side projects, and learning pursuits';
+COMMENT ON COLUMN projects.type IS 'creative = artistic/hobby projects, technical = coding/building projects, learning = educational pursuits';
 COMMENT ON COLUMN projects.metadata IS 'Flexible JSON storage: energy_level, materials_needed, tags, photos, etc.';
 
 -- ============================================================================

@@ -17,8 +17,8 @@ const genAI = new GoogleGenerativeAI(apiKey)
 
 // Synthesis configuration
 const CONFIG = {
-  SUGGESTIONS_PER_RUN: 10,
-  WILDCARD_FREQUENCY: 4, // Every 4th suggestion is a wildcard
+  SUGGESTIONS_PER_RUN: 5,
+  WILDCARD_FREQUENCY: 3, // Every 3rd suggestion is a wildcard
   NOVELTY_WEIGHT: 0.3,
   FEASIBILITY_WEIGHT: 0.4,
   INTEREST_WEIGHT: 0.3,

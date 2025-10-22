@@ -28,7 +28,7 @@ interface BuildProjectDialogProps {
   onConfirm: (projectData: {
     title: string
     description: string
-    type: 'personal' | 'technical' | 'meta'
+    type: 'creative' | 'technical' | 'learning'
   }) => Promise<void>
 }
 
@@ -42,7 +42,7 @@ export function BuildProjectDialog({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'personal' as 'personal' | 'technical' | 'meta',
+    type: 'creative' as 'creative' | 'technical' | 'learning',
   })
 
   // Pre-fill form when suggestion changes
@@ -50,7 +50,7 @@ export function BuildProjectDialog({
     if (suggestion) {
       // Determine type based on capabilities
       const hasCapabilities = suggestion.capability_ids.length > 0
-      const defaultType = hasCapabilities ? 'technical' : 'personal'
+      const defaultType = hasCapabilities ? 'technical' : 'creative'
 
       setFormData({
         title: suggestion.title,
@@ -150,9 +150,9 @@ export function BuildProjectDialog({
                   })
                 }
               >
-                <option value="personal">👤 Personal (Creative hobby or interest)</option>
-                <option value="technical">⚙️ Technical (Code or technical project)</option>
-                <option value="meta">🧠 Meta (Tools or infrastructure)</option>
+                <option value="creative">🎨 Creative (Art, design, hobbies)</option>
+                <option value="technical">⚙️ Technical (Code, build, make)</option>
+                <option value="learning">📚 Learning (Study, courses, research)</option>
               </Select>
             </div>
 
