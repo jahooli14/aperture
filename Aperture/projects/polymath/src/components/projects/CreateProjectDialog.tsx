@@ -28,6 +28,8 @@ export function CreateProjectDialog() {
     description: '',
     type: 'creative' as 'creative' | 'technical' | 'learning',
     status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived',
+    next_step: '',
+    progress: 0,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +42,10 @@ export function CreateProjectDialog() {
         description: formData.description,
         type: formData.type,
         status: formData.status,
+        metadata: {
+          next_step: formData.next_step || undefined,
+          progress: formData.progress > 0 ? formData.progress : undefined,
+        },
       })
 
       addToast({
@@ -54,6 +60,8 @@ export function CreateProjectDialog() {
         description: '',
         type: 'creative',
         status: 'active',
+        next_step: '',
+        progress: 0,
       })
       setOpen(false)
     } catch (error) {
@@ -151,6 +159,20 @@ export function CreateProjectDialog() {
                 <option value="completed">✅ Completed</option>
                 <option value="archived">📦 Archived</option>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="next-step" className="text-sm sm:text-base">Next Step (Optional)</Label>
+              <Input
+                id="next-step"
+                placeholder="e.g., Fix the login bug, Add color palette, Research frameworks"
+                value={formData.next_step}
+                onChange={(e) =>
+                  setFormData({ ...formData, next_step: e.target.value })
+                }
+                className="text-base h-11 sm:h-12"
+              />
+              <p className="text-xs text-gray-500">What's the immediate next action?</p>
             </div>
           </div>
 

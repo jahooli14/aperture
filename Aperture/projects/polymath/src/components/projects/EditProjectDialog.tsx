@@ -32,6 +32,8 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     description: '',
     type: 'creative' as 'creative' | 'technical' | 'learning',
     status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived',
+    next_step: '',
+    progress: 0,
   })
 
   // Update form when project changes
@@ -42,6 +44,8 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         description: project.description || '',
         type: project.type,
         status: project.status,
+        next_step: project.metadata?.next_step || '',
+        progress: project.metadata?.progress || 0,
       })
     }
   }, [project])
@@ -58,6 +62,11 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         description: formData.description,
         type: formData.type,
         status: formData.status,
+        metadata: {
+          ...project.metadata,
+          next_step: formData.next_step || undefined,
+          progress: formData.progress > 0 ? formData.progress : undefined,
+        },
       })
 
       addToast({
@@ -158,6 +167,46 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 <option value="completed">✅ Completed</option>
                 <option value="archived">📦 Archived</option>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-next-step" className="text-sm sm:text-base">Next Step</Label>
+              <Input
+                id="edit-next-step"
+                placeholder="e.g., Fix the login bug, Add color palette, Research frameworks"
+                value={formData.next_step}
+                onChange={(e) =>
+                  setFormData({ ...formData, next_step: e.target.value })
+                }
+                className="text-base h-11 sm:h-12"
+              />
+              <p className="text-xs text-gray-500">What's the immediate next action for this project?</p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-progress" className="text-sm sm:text-base flex items-center justify-between">
+                <span>Progress</span>
+                <span className="text-orange-600 font-bold">{formData.progress}%</span>
+              </Label>
+              <input
+                id="edit-progress"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={formData.progress}
+                onChange={(e) =>
+                  setFormData({ ...formData, progress: parseInt(e.target.value) })
+                }
+                className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-orange-600 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+              />
+              <div className="h-2 bg-neutral-200 rounded-full overflow-hidden -mt-2 pointer-events-none">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-300"
+                  style={{ width: `${formData.progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500">Optional: Track completion percentage</p>
             </div>
           </div>
 

@@ -90,6 +90,34 @@ export function ProjectCard({
       </CardHeader>
 
       <CardContent className="flex-1 space-y-4">
+        {/* Next Step - Prominent Display */}
+        {project.metadata?.next_step && (
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4">
+            <div className="text-xs font-semibold text-orange-800 uppercase tracking-wide mb-2">
+              Next Step
+            </div>
+            <p className="text-sm font-medium text-neutral-900 leading-relaxed">
+              {project.metadata.next_step}
+            </p>
+          </div>
+        )}
+
+        {/* Progress Bar - Optional */}
+        {typeof project.metadata?.progress === 'number' && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-gray-600 uppercase tracking-wide">Progress</span>
+              <span className="font-bold text-orange-600">{project.metadata.progress}%</span>
+            </div>
+            <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                style={{ width: `${project.metadata.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 text-sm text-neutral-600">
           <Clock className="h-4 w-4 text-orange-600" />
           <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold text-neutral-900">{relativeTime}</span></span>

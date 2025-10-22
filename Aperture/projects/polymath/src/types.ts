@@ -322,6 +322,8 @@ export interface ProjectMetadata {
   from_suggestion?: string // Suggestion ID if built from suggestion
   capabilities?: string[] // Capability IDs used
   original_points?: number // Points from suggestion
+  next_step?: string // Next action to take on this project
+  progress?: number // 0-100 percentage complete
   [key: string]: any // Allow arbitrary metadata
 }
 
