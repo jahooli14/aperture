@@ -375,7 +375,6 @@ export function MemoriesPage() {
           </div>
         )}
       </div>
-      </div>
     </div>
   )
 }
