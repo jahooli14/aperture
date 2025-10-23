@@ -177,6 +177,25 @@ export function MemoriesPage() {
           </Button>
         </div>
 
+        {/* Demo Data Context Banner - Only show on "My Memories" view with demo data */}
+        {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
+          <Card className="mb-8 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+            <CardContent className="pt-6">
+              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                <Brain className="h-5 w-5 text-orange-600" />
+                Demo Memories - Cross-Domain Examples
+              </h3>
+              <p className="text-neutral-600 leading-relaxed mb-3">
+                These 8 memories demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
+                Notice how they span <strong>technical skills AND hobbies</strong> - this is the key to powerful synthesis.
+              </p>
+              <p className="text-sm text-neutral-500">
+                💡 <strong>Tip:</strong> Real-world usage works best with 5-10 memories covering both your professional expertise and personal interests.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Resurfacing Info Banner */}
         {view === 'resurfacing' && resurfacing.length > 0 && (
           <Card className="mb-8 border-amber-300 bg-amber-50/50">

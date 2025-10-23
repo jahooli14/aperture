@@ -123,6 +123,25 @@ export function ProjectsPage() {
           ))}
         </div>
 
+        {/* Demo Projects Context Banner - Only show when projects include demo data */}
+        {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
+          <Card className="mb-8 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+            <CardContent className="pt-6">
+              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                <Rocket className="h-5 w-5 text-orange-600" />
+                Demo Projects - Progress Tracking in Action
+              </h3>
+              <p className="text-neutral-600 leading-relaxed mb-3">
+                These 4 demo projects show different stages: <strong>Completed</strong> (Standing Desk 100%), <strong>Active</strong> (Portfolio 65%, Image Classifier 80%, Meditation 40%).
+                Each has <strong>next steps</strong> and tracks capability growth as you work.
+              </p>
+              <p className="text-sm text-neutral-500">
+                💡 <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Error Banner */}
         {error && (
           <Card className="mb-6 border-red-300 bg-red-50">

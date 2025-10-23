@@ -223,13 +223,20 @@ export function HomePage() {
                   ))
                 ) : (
                   <div className="pro-card p-8 text-center">
-                    <Sparkles className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-                    <p className="text-neutral-600 mb-4">No new suggestions yet</p>
+                    <Sparkles className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                    <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Ideas?</p>
+                    <p className="text-sm text-neutral-600 mb-4">
+                      {memories.length > 0
+                        ? "You have memories captured. Click Generate Ideas to see AI synthesis!"
+                        : "Add some memories, then generate personalized project suggestions"
+                      }
+                    </p>
                     <Link
                       to="/suggestions"
-                      className="btn-secondary inline-flex items-center gap-2"
+                      className="btn-primary inline-flex items-center gap-2"
                     >
-                      View Suggestions
+                      <Sparkles className="h-4 w-4" />
+                      {memories.length > 0 ? "Generate Ideas" : "View Suggestions"}
                     </Link>
                   </div>
                 )}
@@ -267,8 +274,11 @@ export function HomePage() {
                   ))
                 ) : (
                   <div className="pro-card p-8 text-center">
-                    <Brain className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-                    <p className="text-neutral-600 mb-4">No memories captured yet</p>
+                    <Brain className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                    <p className="text-neutral-900 font-semibold mb-2">Start Your Knowledge Graph</p>
+                    <p className="text-sm text-neutral-600 mb-4">
+                      Capture your thoughts, skills, and interests via voice notes or text
+                    </p>
                     <Link
                       to="/memories"
                       className="btn-primary inline-flex items-center gap-2"
@@ -316,13 +326,17 @@ export function HomePage() {
                 </div>
               ) : (
                 <div className="pro-card p-8 text-center">
-                  <Rocket className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-                  <p className="text-neutral-600 mb-4">No active projects</p>
+                  <Rocket className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                  <p className="text-neutral-900 font-semibold mb-2">Build Your First Project</p>
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Generate ideas, find what sparks, then build with progress tracking
+                  </p>
                   <Link
-                    to="/suggestions?filter=spark"
+                    to="/suggestions"
                     className="btn-primary inline-flex items-center gap-2"
                   >
-                    View Sparks
+                    <Sparkles className="h-4 w-4" />
+                    View Suggestions
                   </Link>
                 </div>
               )}
