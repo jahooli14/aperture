@@ -188,110 +188,111 @@ async function resetWithDemo() {
   console.log(`✅ Seeded ${capabilities.length} capabilities`)
   const memoryMap = new Map(insertedMemories.map(m => [m.audiopen_id, m.id]))
   const capMap = new Map(insertedCaps?.map(c => [c.name, c.id]) || [])
-  // Insert project suggestions
-  console.log('Seeding suggestions...')
-  const suggestions = [
-    {
-      user_id: USER_ID,      title: 'Interactive Learning Platform for Kids',
-      description: 'Build an educational web app that uses hands-on interactive exercises rather than passive content. Inspired by Emma\'s learning style - activities where kids manipulate objects, solve puzzles, and experiment. Could include visual programming blocks, interactive math games, and science simulations.',
-      synthesis_reasoning: 'Combines your React/TypeScript capabilities with parenting insights about hands-on learning. Your technical skills + understanding of child development = practical educational tool.',
-      novelty_score: 0.82,
-      feasibility_score: 0.88,
-      interest_score: 0.90,
-      total_points: 86,
-      capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-3`), memoryMap.get(`demo-${USER_ID}-1`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'Smart Workshop Project Planner',
-      description: 'Web app for planning woodworking projects with material calculators, cut list generators, and cost estimators. Upload project sketches, get optimized cutting patterns to minimize waste. Track tool inventory and project timeline.',
-      synthesis_reasoning: 'Your woodworking interests + software engineering skills. The standing desk project showed you think systematically about materials and time. This tool could help you and others plan better.',
-      novelty_score: 0.75,
-      feasibility_score: 0.85,
-      interest_score: 0.88,
-      total_points: 82,
-      capability_ids: [capMap.get('react-typescript'), capMap.get('woodworking')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-2`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'SaaS Cost Optimizer Dashboard',
-      description: 'Analytics dashboard that tracks cloud infrastructure spending across providers. Auto-detects optimization opportunities (unused resources, oversized instances, cold start issues). Provides tiered pricing model calculators for unit economics.',
-      synthesis_reasoning: 'Directly addresses your Q3 budget concerns. Your experience with cloud costs + technical skills = tool that could save thousands monthly. High personal utility, potential SaaS product.',
-      novelty_score: 0.70,
-      feasibility_score: 0.80,
-      interest_score: 0.85,
-      total_points: 78,
-      capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-4`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'Photography Composition Analyzer',
-      description: 'Upload photos and get AI-powered composition feedback. Detects rule of thirds alignment, leading lines, balance, and symmetry. Learn from your best shots - shows what makes them work. Could use your ML + photography knowledge.',
-      synthesis_reasoning: 'Bridges your machine learning expertise with photography passion. Your image classification experience + composition insights = practical learning tool for photographers.',
-      novelty_score: 0.85,
-      feasibility_score: 0.75,
-      interest_score: 0.82,
-      total_points: 80,
-      capability_ids: [capMap.get('machine-learning'), capMap.get('photography'), capMap.get('ai-integration')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-5`), memoryMap.get(`demo-${USER_ID}-6`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'Mindful Coding Timer',
-      description: 'Pomodoro timer specifically for developers with meditation breaks. After 25min coding, guided 5min breathing exercises. Tracks focus quality and correlation with meditation practice. Your 3-week meditation insight + dev workflow = better sustained attention.',
-      synthesis_reasoning: 'Personal need identified: meditation improves coding focus. This tool creates the feedback loop between practice and performance. Low lift, high impact for daily workflow.',
-      novelty_score: 0.65,
-      feasibility_score: 0.95,
-      interest_score: 0.75,
-      total_points: 76,
-      capability_ids: [capMap.get('react-typescript')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-7`), memoryMap.get(`demo-${USER_ID}-1`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'Sourdough Experiment Logger',
-      description: 'Track bread baking experiments with photos, recipe variations, and outcomes. Input hydration %, fermentation time, baking temp - get insights on what produces best results. Build your personal sourdough knowledge graph.',
-      synthesis_reasoning: 'Your systematic approach to recipe experimentation mirrors your coding process. Database skills + baking hobby = tool that helps iterate toward perfection. Shareable recipes too.',
-      novelty_score: 0.60,
-      feasibility_score: 0.92,
-      interest_score: 0.70,
-      total_points: 72,
-      capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-8`)].filter(Boolean),
-      is_wildcard: false,
-      status: 'pending'
-    },
-    {
-      user_id: USER_ID,      title: 'Neural Sourdough Predictor (Wildcard)',
-      description: 'Train a deep learning model to predict bread quality from fermentation photos. Time-lapse camera + computer vision detects bubble formation patterns. Alerts when dough is ready to bake. Completely over-engineered but fascinating ML application.',
-      synthesis_reasoning: 'WILD CARD - This is absurdly over-engineered for making bread, but it combines ML + baking in a unique way. Low practical value, high fun factor. Your image classification skills applied to... dough.',
-      novelty_score: 0.98,
-      feasibility_score: 0.40,
-      interest_score: 0.55,
-      total_points: 58,
-      capability_ids: [capMap.get('machine-learning')].filter(Boolean),
-      memory_ids: [memoryMap.get(`demo-${USER_ID}-8`), memoryMap.get(`demo-${USER_ID}-6`)].filter(Boolean),
-      is_wildcard: true,
-      status: 'pending'
-    }
-  ]
-  const { error: sugInsertError } = await supabase
-    .from('project_suggestions')
-    .insert(suggestions)
-  if (sugInsertError) {
-    console.error('❌ Error seeding suggestions:', sugInsertError)
-    return
-  }
-  console.log(`✅ Seeded ${suggestions.length} suggestions`)
-  // Insert projects
+
+  // SKIP SEEDING SUGGESTIONS - Let user generate them with "Generate Ideas" button!
+  console.log('⏭️  Skipping suggestions (user will generate them for wow moment)...')
+  //   const suggestions = [
+  //     {
+  //       user_id: USER_ID,      title: 'Interactive Learning Platform for Kids',
+  //       description: 'Build an educational web app that uses hands-on interactive exercises rather than passive content. Inspired by Emma\'s learning style - activities where kids manipulate objects, solve puzzles, and experiment. Could include visual programming blocks, interactive math games, and science simulations.',
+  //       synthesis_reasoning: 'Combines your React/TypeScript capabilities with parenting insights about hands-on learning. Your technical skills + understanding of child development = practical educational tool.',
+  //       novelty_score: 0.82,
+  //       feasibility_score: 0.88,
+  //       interest_score: 0.90,
+  //       total_points: 86,
+  //       capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-3`), memoryMap.get(`demo-${USER_ID}-1`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'Smart Workshop Project Planner',
+  //       description: 'Web app for planning woodworking projects with material calculators, cut list generators, and cost estimators. Upload project sketches, get optimized cutting patterns to minimize waste. Track tool inventory and project timeline.',
+  //       synthesis_reasoning: 'Your woodworking interests + software engineering skills. The standing desk project showed you think systematically about materials and time. This tool could help you and others plan better.',
+  //       novelty_score: 0.75,
+  //       feasibility_score: 0.85,
+  //       interest_score: 0.88,
+  //       total_points: 82,
+  //       capability_ids: [capMap.get('react-typescript'), capMap.get('woodworking')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-2`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'SaaS Cost Optimizer Dashboard',
+  //       description: 'Analytics dashboard that tracks cloud infrastructure spending across providers. Auto-detects optimization opportunities (unused resources, oversized instances, cold start issues). Provides tiered pricing model calculators for unit economics.',
+  //       synthesis_reasoning: 'Directly addresses your Q3 budget concerns. Your experience with cloud costs + technical skills = tool that could save thousands monthly. High personal utility, potential SaaS product.',
+  //       novelty_score: 0.70,
+  //       feasibility_score: 0.80,
+  //       interest_score: 0.85,
+  //       total_points: 78,
+  //       capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-4`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'Photography Composition Analyzer',
+  //       description: 'Upload photos and get AI-powered composition feedback. Detects rule of thirds alignment, leading lines, balance, and symmetry. Learn from your best shots - shows what makes them work. Could use your ML + photography knowledge.',
+  //       synthesis_reasoning: 'Bridges your machine learning expertise with photography passion. Your image classification experience + composition insights = practical learning tool for photographers.',
+  //       novelty_score: 0.85,
+  //       feasibility_score: 0.75,
+  //       interest_score: 0.82,
+  //       total_points: 80,
+  //       capability_ids: [capMap.get('machine-learning'), capMap.get('photography'), capMap.get('ai-integration')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-5`), memoryMap.get(`demo-${USER_ID}-6`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'Mindful Coding Timer',
+  //       description: 'Pomodoro timer specifically for developers with meditation breaks. After 25min coding, guided 5min breathing exercises. Tracks focus quality and correlation with meditation practice. Your 3-week meditation insight + dev workflow = better sustained attention.',
+  //       synthesis_reasoning: 'Personal need identified: meditation improves coding focus. This tool creates the feedback loop between practice and performance. Low lift, high impact for daily workflow.',
+  //       novelty_score: 0.65,
+  //       feasibility_score: 0.95,
+  //       interest_score: 0.75,
+  //       total_points: 76,
+  //       capability_ids: [capMap.get('react-typescript')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-7`), memoryMap.get(`demo-${USER_ID}-1`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'Sourdough Experiment Logger',
+  //       description: 'Track bread baking experiments with photos, recipe variations, and outcomes. Input hydration %, fermentation time, baking temp - get insights on what produces best results. Build your personal sourdough knowledge graph.',
+  //       synthesis_reasoning: 'Your systematic approach to recipe experimentation mirrors your coding process. Database skills + baking hobby = tool that helps iterate toward perfection. Shareable recipes too.',
+  //       novelty_score: 0.60,
+  //       feasibility_score: 0.92,
+  //       interest_score: 0.70,
+  //       total_points: 72,
+  //       capability_ids: [capMap.get('react-typescript'), capMap.get('supabase-backend')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-8`)].filter(Boolean),
+  //       is_wildcard: false,
+  //       status: 'pending'
+  //     },
+  //     {
+  //       user_id: USER_ID,      title: 'Neural Sourdough Predictor (Wildcard)',
+  //       description: 'Train a deep learning model to predict bread quality from fermentation photos. Time-lapse camera + computer vision detects bubble formation patterns. Alerts when dough is ready to bake. Completely over-engineered but fascinating ML application.',
+  //       synthesis_reasoning: 'WILD CARD - This is absurdly over-engineered for making bread, but it combines ML + baking in a unique way. Low practical value, high fun factor. Your image classification skills applied to... dough.',
+  //       novelty_score: 0.98,
+  //       feasibility_score: 0.40,
+  //       interest_score: 0.55,
+  //       total_points: 58,
+  //       capability_ids: [capMap.get('machine-learning')].filter(Boolean),
+  //       memory_ids: [memoryMap.get(`demo-${USER_ID}-8`), memoryMap.get(`demo-${USER_ID}-6`)].filter(Boolean),
+  //       is_wildcard: true,
+  //       status: 'pending'
+  //     }
+  //   ]
+  //   const { error: sugInsertError } = await supabase
+  //     .from('project_suggestions')
+  //     .insert(suggestions)
+  //   if (sugInsertError) {
+  //     console.error('❌ Error seeding suggestions:', sugInsertError)
+  //     return
+  //   }
+  //   console.log(`✅ Seeded ${suggestions.length} suggestions`)
+  //   // Insert projects
   console.log('Seeding projects...')
   const projects = [
     {
@@ -362,9 +363,9 @@ async function resetWithDemo() {
   console.log('📊 Summary:')
   console.log(`  Memories: ${memories.length}`)
   console.log(`  Capabilities: ${capabilities.length}`)
-  console.log(`  Suggestions: ${suggestions.length} (2 sparks, 1 wildcard)`)
+  console.log(`  Suggestions: 0 (user will generate them!)`)
   console.log(`  Projects: ${projects.length} (1 completed, 3 active)`)
-  console.log('\n🎭 Demo data is now live and ready to explore!')
+  console.log('\n🎭 Demo data loaded! User should now click "Generate Ideas" for the wow moment! 🎉')
 }
 // Run
 resetWithDemo()
