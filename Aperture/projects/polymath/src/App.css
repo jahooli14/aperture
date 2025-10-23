@@ -250,6 +250,22 @@
   .stagger-children > *:nth-child(5) { animation-delay: 0.25s; opacity: 0; animation-fill-mode: forwards; }
   .stagger-children > *:nth-child(6) { animation-delay: 0.30s; opacity: 0; animation-fill-mode: forwards; }
 
+  /* Subtle pulse animation for callouts */
+  @keyframes pulseSubtle {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.95;
+      transform: scale(1.01);
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulseSubtle 3s ease-in-out infinite;
+  }
+
   /* Professional input - Premium */
   .input-pro {
     @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;

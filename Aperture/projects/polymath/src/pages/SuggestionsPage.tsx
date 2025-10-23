@@ -240,10 +240,17 @@ export function SuggestionsPage() {
                   <div className="inline-flex items-center justify-center mb-6">
                     <Sparkles className="h-16 w-16 text-orange-600" />
                   </div>
-                  <h3 className="text-3xl font-bold text-neutral-900 mb-4">Your Suggestions Are On The Way</h3>
-                  <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-                    Polymath generates personalized project ideas by analyzing your interests and capabilities.
+                  <h3 className="text-3xl font-bold text-neutral-900 mb-4">Ready to See the Magic?</h3>
+                  <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
+                    You have memories captured. Let's see what happens when AI connects them.
                   </p>
+
+                  {/* Highlight Generate Ideas button */}
+                  <div className="inline-block bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-8 mb-8 animate-pulse-subtle">
+                    <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">Click the button above ↗</p>
+                    <p className="text-2xl font-bold text-neutral-900 mb-2">Generate Ideas</p>
+                    <p className="text-sm text-neutral-600">Watch AI synthesize your memories into project suggestions in real-time</p>
+                  </div>
                 </div>
 
                 {/* How it works */}
@@ -252,19 +259,19 @@ export function SuggestionsPage() {
                     <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Brain className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-neutral-900 mb-2">1. Capture Ideas</h4>
+                    <h4 className="font-bold text-neutral-900 mb-2">1. Analyze Memories</h4>
                     <p className="text-sm text-neutral-600">
-                      Record your thoughts and interests via voice notes or manual entries
+                      AI reads your captured interests, skills, and life insights
                     </p>
                   </div>
 
                   <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
                     <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                      <Calendar className="h-6 w-6 text-white" />
+                      <Sparkles className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-neutral-900 mb-2">2. AI Synthesis</h4>
+                    <h4 className="font-bold text-neutral-900 mb-2">2. Find Connections</h4>
                     <p className="text-sm text-neutral-600">
-                      Every Monday at 9am UTC, AI generates unique project suggestions for you
+                      Discovers unexpected combinations between your work AND hobbies
                     </p>
                   </div>
 
@@ -272,32 +279,20 @@ export function SuggestionsPage() {
                     <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Lightbulb className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-neutral-900 mb-2">3. Get Inspired</h4>
+                    <h4 className="font-bold text-neutral-900 mb-2">3. Generate Projects</h4>
                     <p className="text-sm text-neutral-600">
-                      Review suggestions, rate what sparks your interest, and build projects
+                      Creates unique project ideas that bridge domains
                     </p>
                   </div>
                 </div>
 
-                {/* CTA */}
-                <div className="text-center space-y-4">
-                  <p className="text-neutral-600 font-medium">
-                    Next synthesis runs <span className="font-bold text-orange-600">Monday at 9:00 AM UTC</span>
+                {/* Demo tip */}
+                <div className="text-center">
+                  <p className="text-sm text-neutral-500 mb-2">
+                    💡 <strong>Demo Tip:</strong> Watch for cross-domain synthesis like "Parenting + React" or "Woodworking + Tech"
                   </p>
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    <Link to="/memories">
-                      <Button className="btn-primary">
-                        Capture Your First Memory
-                      </Button>
-                    </Link>
-                    <Link to="/projects">
-                      <Button className="btn-secondary">
-                        View Your Projects
-                      </Button>
-                    </Link>
-                  </div>
-                  <p className="text-sm text-neutral-500 mt-6">
-                    Tip: The more memories and interests you capture, the better your suggestions will be
+                  <p className="text-xs text-neutral-400">
+                    Synthesis takes 20-30 seconds - real AI at work, not static templates
                   </p>
                 </div>
               </div>

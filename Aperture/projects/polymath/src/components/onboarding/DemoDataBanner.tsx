@@ -89,9 +89,8 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
               You're viewing demo data
             </h3>
             <p className="text-sm text-amber-50 mb-3">
-              This is template data to show you how Polymath works. You're seeing{' '}
-              <strong>8 memories</strong>, <strong>7 AI suggestions</strong>, and{' '}
-              <strong>4 projects</strong> that demonstrate the voice notes → synthesis → projects flow.
+              Explore <strong>8 diverse memories</strong> spanning tech, hobbies, and life insights.{' '}
+              <strong>Click "Generate Ideas"</strong> to watch AI synthesis in action - it connects your interests in unexpected ways!
             </p>
             <div className="flex flex-wrap gap-3">
               <button
