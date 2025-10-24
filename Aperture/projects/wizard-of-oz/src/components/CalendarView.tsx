@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { getPhotoDisplayUrl } from '../lib/photoUtils';
 
 export function CalendarView() {
   const { photos } = usePhotoStore();
@@ -179,7 +180,7 @@ export function CalendarView() {
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0 w-32 h-32 rounded-lg overflow-hidden bg-gray-100">
               <img
-                src={selectedPhoto.aligned_url || selectedPhoto.original_url}
+                src={getPhotoDisplayUrl(selectedPhoto)}
                 alt={`Photo from ${selectedPhoto.upload_date}`}
                 className="w-full h-full object-cover"
               />

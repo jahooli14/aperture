@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, X, Loader2 } from 'lucide-react';
-import type { Database } from '../types/database';
+import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import type { Database} from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -59,7 +60,7 @@ export function DeleteConfirmModal({ photo, isOpen, onClose, onConfirm, deleting
             <div className="mb-4">
               <div className="aspect-square w-24 h-24 mx-auto rounded-lg overflow-hidden bg-gray-100 mb-3">
                 <img
-                  src={photo.aligned_url || photo.original_url}
+                  src={getPhotoDisplayUrl(photo)}
                   alt={`Photo from ${photo.upload_date}`}
                   className="w-full h-full object-cover"
                 />

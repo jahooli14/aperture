@@ -66,7 +66,56 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         return;
       }
 
-      set({ photos: data || [], loading: false, fetchError: null });
+      // Generate signed URLs for each photo (24 hour expiry)
+      const photosWithSignedUrls = await Promise.all(
+        (data || []).map(async (photo) => {
+          const signedPhoto = { ...photo } as Photo;
+
+          // Generate signed URL for original photo
+          if (photo.original_url) {
+            try {
+              const path = photo.original_url.split('/storage/v1/object/public/originals/')[1];
+              if (path) {
+                const { data: signedData, error: signError } = await supabase.storage
+                  .from('originals')
+                  .createSignedUrl(path, 86400); // 24 hours
+
+                if (!signError && signedData) {
+                  signedPhoto.signed_original_url = signedData.signedUrl;
+                } else {
+                  logger.warn('Failed to create signed URL for original', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                }
+              }
+            } catch (err) {
+              logger.warn('Error creating signed URL for original', { photoId: photo.id, error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
+            }
+          }
+
+          // Generate signed URL for aligned photo if it exists
+          if (photo.aligned_url) {
+            try {
+              const path = photo.aligned_url.split('/storage/v1/object/public/originals/')[1];
+              if (path) {
+                const { data: signedData, error: signError } = await supabase.storage
+                  .from('originals')
+                  .createSignedUrl(path, 86400); // 24 hours
+
+                if (!signError && signedData) {
+                  signedPhoto.signed_aligned_url = signedData.signedUrl;
+                } else {
+                  logger.warn('Failed to create signed URL for aligned', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                }
+              }
+            } catch (err) {
+              logger.warn('Error creating signed URL for aligned', { photoId: photo.id, error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
+            }
+          }
+
+          return signedPhoto;
+        })
+      );
+
+      set({ photos: photosWithSignedUrls, loading: false, fetchError: null });
     } catch (err) {
       logger.error('Unexpected error fetching photos', { error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';

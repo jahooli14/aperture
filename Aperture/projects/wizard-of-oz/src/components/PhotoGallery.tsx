@@ -6,6 +6,7 @@ import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import { PhotoSkeleton } from './PhotoSkeleton';
+import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
 
@@ -184,7 +185,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               <div className="absolute inset-0 bg-gray-100" />
 
               <img
-                src={photo.aligned_url || photo.original_url}
+                src={getPhotoDisplayUrl(photo)}
                 alt={`Photo from ${photo.upload_date}`}
                 className="relative w-full h-full object-cover opacity-0 transition-opacity duration-500"
                 loading="lazy"

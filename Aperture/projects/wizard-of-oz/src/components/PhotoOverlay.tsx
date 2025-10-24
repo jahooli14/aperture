@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ZoomIn } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
+import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -187,7 +188,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                 {sortedPhotos.map((photo, index) => (
                   <motion.img
                     key={photo.id}
-                    src={photo.aligned_url || photo.original_url}
+                    src={getPhotoDisplayUrl(photo)}
                     alt={`Photo from ${photo.upload_date}`}
                     className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover pointer-events-none rounded-2xl shadow-xl"
                     initial={{ opacity: 0 }}

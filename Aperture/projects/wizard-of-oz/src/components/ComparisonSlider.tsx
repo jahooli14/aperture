@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -92,7 +93,7 @@ export function ComparisonSlider({ photo1, photo2, position, onPositionChange }:
       {/* Photo 2 (background - right side) */}
       <div className="absolute inset-0">
         <img
-          src={photo2.aligned_url || photo2.original_url}
+          src={getPhotoDisplayUrl(photo2)}
           alt={`Photo from ${photo2.upload_date}`}
           className="w-full h-full object-cover"
           draggable={false}
@@ -115,7 +116,7 @@ export function ComparisonSlider({ photo1, photo2, position, onPositionChange }:
         }}
       >
         <img
-          src={photo1.aligned_url || photo1.original_url}
+          src={getPhotoDisplayUrl(photo1)}
           alt={`Photo from ${photo1.upload_date}`}
           className="w-full h-full object-cover"
           draggable={false}

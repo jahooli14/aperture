@@ -3,6 +3,7 @@ import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
+import { getPhotoDisplayUrl, isPhotoAligned } from '../lib/photoUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
 
@@ -81,7 +82,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
   });
 
   const hasEyeDetection = !!photo.eye_coordinates;
-  const isAligned = !!photo.aligned_url && photo.aligned_url !== photo.original_url;
+  const photoIsAligned = isPhotoAligned(photo);
 
   return (
     <AnimatePresence>
@@ -131,7 +132,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
               <div className="mb-6">
                 <div className="aspect-square w-full max-w-xs mx-auto rounded-2xl overflow-hidden bg-gray-100 shadow-lg">
                   <img
-                    src={photo.aligned_url || photo.original_url}
+                    src={getPhotoDisplayUrl(photo)}
                     alt={`Photo from ${photo.upload_date}`}
                     className="w-full h-full object-cover"
                   />
@@ -333,7 +334,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                     <p className="text-sm font-semibold text-gray-700">Face Detection</p>
                     <p className="text-base text-gray-900">
                       {hasEyeDetection ? (
-                        isAligned ? 'Eyes detected & aligned' : 'Eyes detected'
+                        photoIsAligned ? 'Eyes detected & aligned' : 'Eyes detected'
                       ) : (
                         'No eyes detected'
                       )}

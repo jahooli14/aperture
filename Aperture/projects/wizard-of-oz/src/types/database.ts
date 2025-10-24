@@ -24,6 +24,9 @@ export interface Database {
           } | null;
           metadata: Record<string, unknown> | null;
           created_at: string;
+          // Client-side only: signed URLs (not stored in DB)
+          signed_original_url?: string;
+          signed_aligned_url?: string;
         };
         Insert: {
           id?: string;
