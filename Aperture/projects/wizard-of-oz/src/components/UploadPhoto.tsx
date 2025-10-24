@@ -30,6 +30,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [alignedFile, setAlignedFile] = useState<File | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [note, setNote] = useState('');
+  const [emoji, setEmoji] = useState('💬');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(0.40); // Track zoom level used for alignment
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
@@ -190,7 +191,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setError('');
       // Upload aligned photo if available, otherwise upload original
       const fileToUpload = alignedFile || selectedFile;
-      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined, alignedFile ? zoomLevel : undefined);
+      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined, emoji, alignedFile ? zoomLevel : undefined);
 
       // Success feedback
       triggerHaptic('success');
@@ -221,6 +222,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
         hasAlignedRef.current = false;
         setCustomDate('');
         setNote('');
+        setEmoji('💬');
         setShowNoteInput(false);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -384,6 +386,77 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             onUpload={handleUpload}
           />
 
+          {/* Emoji Picker */}
+          <div className="mt-4 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Day Icon (optional)
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = emoji;
+                input.className = 'w-20 h-14 text-center text-3xl border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white';
+                input.placeholder = '💬';
+                input.inputMode = 'text';
+
+                // Create a dialog-like overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+                overlay.onclick = (e) => {
+                  if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                  }
+                };
+
+                const container = document.createElement('div');
+                container.className = 'bg-white p-6 rounded-xl shadow-xl m-4 max-w-sm w-full';
+
+                const title = document.createElement('p');
+                title.className = 'text-sm font-medium text-gray-700 mb-3';
+                title.textContent = 'Type or paste an emoji:';
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'flex gap-2 mt-4';
+
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = 'Save';
+                saveBtn.className = 'flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium';
+                saveBtn.onclick = () => {
+                  const value = input.value;
+                  // Extract first emoji using spread operator to handle multi-byte characters
+                  const emojis = [...value];
+                  const newEmoji = emojis[0] || '💬';
+                  setEmoji(newEmoji);
+                  document.body.removeChild(overlay);
+                };
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.className = 'flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium';
+                cancelBtn.onclick = () => {
+                  document.body.removeChild(overlay);
+                };
+
+                buttonContainer.appendChild(cancelBtn);
+                buttonContainer.appendChild(saveBtn);
+
+                container.appendChild(title);
+                container.appendChild(input);
+                container.appendChild(buttonContainer);
+                overlay.appendChild(container);
+                document.body.appendChild(overlay);
+
+                setTimeout(() => input.focus(), 100);
+              }}
+              className="w-16 h-16 text-4xl border-2 border-gray-300 rounded-lg hover:border-blue-400 transition-colors bg-white flex items-center justify-center"
+            >
+              {emoji}
+            </button>
+            <p className="text-xs text-gray-500 mt-1">Tap to choose an icon for this day</p>
+          </div>
+
           {/* Memory Note Input */}
           <div className="mt-4 mb-2">
             <button
@@ -433,6 +506,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
                 setAlignedFile(null);
                 hasAlignedRef.current = false;
                 setNote('');
+                setEmoji('💬');
                 setShowNoteInput(false);
                 if (fileInputRef.current) {
                   fileInputRef.current.value = '';

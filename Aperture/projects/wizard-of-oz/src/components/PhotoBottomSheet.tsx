@@ -141,6 +141,89 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
               {/* Metadata Grid */}
               <div className="space-y-4 mb-6">
+                {/* Day Icon - separate from note */}
+                <div className="p-4 bg-blue-50 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-2xl">
+                      {existingEmoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-700">Day Icon</p>
+                        <button
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'text';
+                            input.value = existingEmoji;
+                            input.className = 'w-20 h-14 text-center text-3xl border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white';
+                            input.placeholder = '💬';
+                            input.inputMode = 'text';
+
+                            // Create a dialog-like overlay
+                            const overlay = document.createElement('div');
+                            overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+                            overlay.onclick = (e) => {
+                              if (e.target === overlay) {
+                                document.body.removeChild(overlay);
+                              }
+                            };
+
+                            const container = document.createElement('div');
+                            container.className = 'bg-white p-6 rounded-xl shadow-xl m-4 max-w-sm w-full';
+
+                            const title = document.createElement('p');
+                            title.className = 'text-sm font-medium text-gray-700 mb-3';
+                            title.textContent = 'Type or paste an emoji:';
+
+                            const buttonContainer = document.createElement('div');
+                            buttonContainer.className = 'flex gap-2 mt-4';
+
+                            const saveBtn = document.createElement('button');
+                            saveBtn.textContent = 'Save';
+                            saveBtn.className = 'flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium';
+                            saveBtn.onclick = async () => {
+                              const value = input.value;
+                              // Extract first emoji using spread operator to handle multi-byte characters
+                              const emojis = [...value];
+                              const newEmoji = emojis[0] || '💬';
+
+                              try {
+                                await updatePhotoNote(photo.id, existingNote, newEmoji);
+                                document.body.removeChild(overlay);
+                              } catch (err) {
+                                alert('Failed to save icon: ' + (err instanceof Error ? err.message : String(err)));
+                              }
+                            };
+
+                            const cancelBtn = document.createElement('button');
+                            cancelBtn.textContent = 'Cancel';
+                            cancelBtn.className = 'flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium';
+                            cancelBtn.onclick = () => {
+                              document.body.removeChild(overlay);
+                            };
+
+                            buttonContainer.appendChild(cancelBtn);
+                            buttonContainer.appendChild(saveBtn);
+
+                            container.appendChild(title);
+                            container.appendChild(input);
+                            container.appendChild(buttonContainer);
+                            overlay.appendChild(container);
+                            document.body.appendChild(overlay);
+
+                            setTimeout(() => input.focus(), 100);
+                          }}
+                          className="p-1.5 hover:bg-blue-200 rounded-lg transition-colors"
+                          aria-label="Change icon"
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600">Tap the edit button to change this day's icon</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Memory Note - editable */}
                 <div className="p-4 bg-amber-50 rounded-xl">
                   <div className="flex items-start gap-3">
@@ -163,75 +246,6 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
                       {isEditingNote ? (
                         <div className="space-y-3">
-                          {/* Emoji Picker */}
-                          <div className="flex items-center gap-3">
-                            <label className="text-sm font-medium text-gray-700">Icon:</label>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const input = document.createElement('input');
-                                input.type = 'text';
-                                input.value = selectedEmoji;
-                                input.className = 'w-20 h-14 text-center text-3xl border-2 border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white';
-                                input.placeholder = '💬';
-                                input.inputMode = 'text';
-
-                                // Create a dialog-like overlay
-                                const overlay = document.createElement('div');
-                                overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
-                                overlay.onclick = (e) => {
-                                  if (e.target === overlay) {
-                                    document.body.removeChild(overlay);
-                                  }
-                                };
-
-                                const container = document.createElement('div');
-                                container.className = 'bg-white p-6 rounded-xl shadow-xl m-4 max-w-sm w-full';
-
-                                const title = document.createElement('p');
-                                title.className = 'text-sm font-medium text-gray-700 mb-3';
-                                title.textContent = 'Type or paste an emoji:';
-
-                                const buttonContainer = document.createElement('div');
-                                buttonContainer.className = 'flex gap-2 mt-4';
-
-                                const saveBtn = document.createElement('button');
-                                saveBtn.textContent = 'Save';
-                                saveBtn.className = 'flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-medium';
-                                saveBtn.onclick = () => {
-                                  const value = input.value;
-                                  // Extract first emoji using spread operator to handle multi-byte characters
-                                  const emojis = [...value];
-                                  const emoji = emojis[0] || '💬';
-                                  setSelectedEmoji(emoji);
-                                  document.body.removeChild(overlay);
-                                };
-
-                                const cancelBtn = document.createElement('button');
-                                cancelBtn.textContent = 'Cancel';
-                                cancelBtn.className = 'flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium';
-                                cancelBtn.onclick = () => {
-                                  document.body.removeChild(overlay);
-                                };
-
-                                buttonContainer.appendChild(cancelBtn);
-                                buttonContainer.appendChild(saveBtn);
-
-                                container.appendChild(title);
-                                container.appendChild(input);
-                                container.appendChild(buttonContainer);
-                                overlay.appendChild(container);
-                                document.body.appendChild(overlay);
-
-                                setTimeout(() => input.focus(), 100);
-                              }}
-                              className="w-16 h-12 text-3xl border-2 border-amber-300 rounded-lg hover:border-amber-400 transition-colors bg-white flex items-center justify-center"
-                            >
-                              {selectedEmoji}
-                            </button>
-                            <p className="text-xs text-gray-500">Tap to change</p>
-                          </div>
-
                           <textarea
                             value={noteText}
                             onChange={(e) => setNoteText(e.target.value)}
