@@ -22,7 +22,7 @@ export default defineConfig({
         name: 'Pupils - Baby Photo Timeline',
         short_name: 'Pupils',
         description: 'Track your baby\'s growth with daily photos',
-        theme_color: '#8B5CF6',
+        theme_color: '#0891B2',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',
