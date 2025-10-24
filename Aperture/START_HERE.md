@@ -33,8 +33,8 @@ That's it! Automatic checks will run.
 **Automatic file**: `.claude/startup.md` (auto-read FIRST every session)
 
 That file handles:
-- ✅ Token budget health check
-- ✅ Project detection (NUDJ vs Aperture)
+- ✅ Query classification (debugging, implementation, continuation)
+- ✅ Project auto-detection (NUDJ vs Aperture)
 - ✅ Reading NEXT_SESSION.md
 - ✅ Debugging protocol enforcement
 - ✅ Parallel execution policy (Steps 5.5-5.7)

@@ -222,7 +222,7 @@ START: Something's broken
 START: Beginning session
 │
 ├─ .claude/startup.md (auto-read)
-│  └─ Token budget check
+│  └─ Query classification
 │  └─ Project detection
 │  └─ Read NEXT_SESSION.md
 │
@@ -296,9 +296,9 @@ START: Mistake happened
 - [x] No circular references without escape routes
 
 ### Redundancy Test
-- [x] Token budget: ONE source only (.claude/startup.md)
 - [x] Current status: ONE source only (NEXT_SESSION.md)
 - [x] Debugging protocol: ONE source only (.process/META_DEBUGGING_PROTOCOL.md)
+- [x] Documentation maintenance: ONE source only (DOCUMENTATION_MAINTENANCE.md)
 - [x] Observability: ONE source only (.process/OBSERVABILITY.md)
 - [x] Quick reference: ONE source only (.process/QUICK_REFERENCE.md - CHEATSHEET removed)
 

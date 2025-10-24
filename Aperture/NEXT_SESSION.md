@@ -116,8 +116,8 @@ git status
 ## ⚠️ Before Starting Work
 
 **Mandatory Checks** (from `.claude/startup.md`):
-- [ ] Token budget < 100K (or note if higher)
-- [ ] Project selected (which NEXT_SESSION.md to read)
+- [ ] Query type classified (debugging, implementation, continuation)
+- [ ] Project auto-detected (which NEXT_SESSION.md to read)
 - [ ] Project-specific NEXT_SESSION.md reviewed
 - [ ] If debugging: Read META_DEBUGGING_PROTOCOL.md first
 
