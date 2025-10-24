@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
-import webpush from 'web-push';
 import type { Database } from '../../src/types/database.js';
 
 // Initialize Resend
@@ -11,13 +10,6 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const supabase = createClient<Database>(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-// Configure web push for notifications
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL || 'mailto:notifications@pupils.app',
-  process.env.VITE_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -31,12 +23,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const now = new Date();
     const currentHour = now.getUTCHours();
 
-    // Get all users with reminders enabled (email or push)
-    type UserSettings = Pick<Database['public']['Tables']['user_settings']['Row'], 'user_id' | 'reminder_email' | 'reminder_time' | 'timezone' | 'push_subscription'>;
+    // Get all users with reminders enabled
+    type UserSettings = Pick<Database['public']['Tables']['user_settings']['Row'], 'user_id' | 'reminder_email' | 'reminder_time' | 'timezone'>;
     const { data: users, error: usersError } = await supabase
       .from('user_settings')
-      .select('user_id, reminder_email, reminder_time, timezone, push_subscription')
-      .eq('reminders_enabled', true) as { data: UserSettings[] | null; error: unknown };
+      .select('user_id, reminder_email, reminder_time, timezone')
+      .eq('reminders_enabled', true)
+      .not('reminder_email', 'is', null) as { data: UserSettings[] | null; error: unknown };
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
@@ -65,7 +58,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Check which users haven't uploaded today
     const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const emailsSent: string[] = [];
-    const pushSent: string[] = [];
     const errors: { userId: string; error: string }[] = [];
 
     for (const user of usersToRemind) {
@@ -88,63 +80,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         continue;
       }
 
-      // Try push notification first (preferred for mobile)
-      let pushSuccess = false;
-      if (user.push_subscription) {
-        try {
-          const payload = JSON.stringify({
-            title: 'Don\'t forget today\'s photo! 📸',
-            body: 'Keep the streak alive and capture today\'s memory',
-            url: '/?upload=true'
-          });
+      // Send reminder email
+      try {
+        await resend.emails.send({
+          from: 'Pupils <onboarding@resend.dev>', // Change to your domain once verified
+          to: user.reminder_email!,
+          subject: "Don't forget today's photo! 📸",
+          html: generateEmailHTML(user.user_id),
+        });
 
-          await webpush.sendNotification(user.push_subscription, payload);
-          pushSent.push(user.user_id);
-          pushSuccess = true;
-          console.log(`Push notification sent to user ${user.user_id}`);
-        } catch (pushError: any) {
-          console.error(`Failed to send push to user ${user.user_id}:`, pushError);
-
-          // If subscription is expired/invalid, remove it
-          if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-            await supabase
-              .from('user_settings')
-              .update({ push_subscription: null })
-              .eq('user_id', user.user_id);
-            console.log(`Removed expired push subscription for user ${user.user_id}`);
-          }
-        }
-      }
-
-      // Fall back to email if push failed or not available
-      if (!pushSuccess && user.reminder_email) {
-        try {
-          await resend.emails.send({
-            from: 'Pupils <onboarding@resend.dev>', // Change to your domain once verified
-            to: user.reminder_email,
-            subject: "Don't forget today's photo! 📸",
-            html: generateEmailHTML(user.user_id),
-          });
-
-          emailsSent.push(user.reminder_email);
-          console.log(`Email reminder sent to ${user.reminder_email}`);
-        } catch (emailError) {
-          console.error(`Failed to send email to ${user.reminder_email}:`, emailError);
-          errors.push({
-            userId: user.user_id,
-            error: emailError instanceof Error ? emailError.message : String(emailError)
-          });
-        }
+        emailsSent.push(user.reminder_email!);
+      } catch (emailError) {
+        console.error(`Failed to send email to ${user.reminder_email}:`, emailError);
+        errors.push({
+          userId: user.user_id,
+          error: emailError instanceof Error ? emailError.message : String(emailError)
+        });
       }
     }
 
     return res.status(200).json({
       message: 'Reminders sent successfully',
-      pushNotifications: pushSent.length,
-      emailsSent: emailsSent.length,
-      total: pushSent.length + emailsSent.length,
-      pushRecipients: pushSent,
-      emailRecipients: emailsSent,
+      sent: emailsSent.length,
+      recipients: emailsSent,
       errors: errors.length > 0 ? errors : undefined,
     });
 
