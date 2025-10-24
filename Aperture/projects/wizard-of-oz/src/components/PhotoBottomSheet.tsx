@@ -339,7 +339,26 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                         'No eyes detected'
                       )}
                     </p>
-                    {/* Confidence metric removed - not meaningful to end users */}
+                    {/* Show zoom level if available */}
+                    {(() => {
+                      if (!photo.metadata || typeof photo.metadata !== 'object') return null;
+                      const metadata = photo.metadata as Record<string, unknown>;
+                      const zoomLevel = ('zoom_level' in metadata && typeof metadata.zoom_level === 'number')
+                        ? metadata.zoom_level
+                        : null;
+
+                      if (!zoomLevel) return null;
+
+                      return (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Crop level: {(zoomLevel * 100).toFixed(0)}%
+                          {zoomLevel >= 0.35 && ' (Tight: face focus)'}
+                          {zoomLevel < 0.35 && zoomLevel >= 0.28 && ' (Medium: shows torso)'}
+                          {zoomLevel < 0.28 && zoomLevel >= 0.22 && ' (Wide: upper body)'}
+                          {zoomLevel < 0.22 && ' (Very wide: full context)'}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
