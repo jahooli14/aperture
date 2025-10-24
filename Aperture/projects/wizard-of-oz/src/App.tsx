@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
 import { useSettingsStore } from './stores/useSettingsStore';
+import { usePhotoStore } from './stores/usePhotoStore';
 import { AuthForm } from './components/AuthForm';
 import { UploadPhoto } from './components/UploadPhoto';
 import { PhotoGallery } from './components/PhotoGallery';
@@ -24,6 +25,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const { fetchSettings } = useSettingsStore();
+  const { fetchPhotos } = usePhotoStore();
   const [view, setView] = useState<ViewType>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -42,7 +44,7 @@ function App() {
     }
   }, [user]);
 
-  // Check if user has completed onboarding & fetch settings
+  // Check if user has completed onboarding & fetch settings + photos
   useEffect(() => {
     if (user) {
       const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
@@ -50,10 +52,11 @@ function App() {
         setShowOnboarding(true);
       }
 
-      // Fetch user settings
+      // Fetch user settings and photos once on login
       fetchSettings();
+      fetchPhotos();
     }
-  }, [user, fetchSettings]);
+  }, [user, fetchSettings, fetchPhotos]);
 
   const handleOnboardingComplete = () => {
     localStorage.setItem(ONBOARDING_KEY, 'true');

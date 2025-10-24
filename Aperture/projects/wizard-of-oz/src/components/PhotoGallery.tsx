@@ -28,10 +28,12 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch photos on mount
+  // Fetch photos on mount (only if not already loaded)
   useEffect(() => {
-    fetchPhotos();
-  }, [fetchPhotos]);
+    if (photos.length === 0 && !loading) {
+      fetchPhotos();
+    }
+  }, [photos.length, loading, fetchPhotos]);
 
   const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
