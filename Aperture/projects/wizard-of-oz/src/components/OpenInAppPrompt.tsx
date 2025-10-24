@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Smartphone, ExternalLink } from 'lucide-react';
+import { Smartphone } from 'lucide-react';
 
 export function OpenInAppPrompt() {
   const appUrl = window.location.origin;

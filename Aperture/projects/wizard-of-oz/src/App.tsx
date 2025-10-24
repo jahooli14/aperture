@@ -37,10 +37,6 @@ function App() {
   const [passcode, setPasscode] = useState<string | null>(null);
   const { toast, showToast, hideToast } = useToast();
 
-  // Check if running as PWA (standalone mode)
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                (window.navigator as any).standalone === true;
-
   // Check for passcode on mount
   useEffect(() => {
     if (user) {
@@ -121,11 +117,6 @@ function App() {
         <AuthForm />
       </div>
     );
-  }
-
-  // If user is logged in but NOT in PWA mode, show prompt to open the app
-  if (user && !isPWA) {
-    return <OpenInAppPrompt />;
   }
 
   // Show passcode lock
