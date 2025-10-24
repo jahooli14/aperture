@@ -196,7 +196,16 @@ export async function getPushSubscriptionStatus(): Promise<{
   const permission = Notification.permission;
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Service worker timeout')), 5000);
+    });
+
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      timeoutPromise
+    ]);
+
     const subscription = await registration.pushManager.getSubscription();
 
     return {
@@ -205,6 +214,9 @@ export async function getPushSubscriptionStatus(): Promise<{
       subscribed: !!subscription
     };
   } catch (error) {
+    logger.warn('Failed to get push subscription status', {
+      error: error instanceof Error ? error.message : String(error)
+    }, 'Notifications');
     return {
       supported: true,
       permission,

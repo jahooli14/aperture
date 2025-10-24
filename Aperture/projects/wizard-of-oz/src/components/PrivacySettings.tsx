@@ -30,6 +30,7 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
   const [pushNotificationsSupported, setPushNotificationsSupported] = useState(false);
   const [enablingPushNotifications, setEnablingPushNotifications] = useState(false);
+  const [pushStatusChecked, setPushStatusChecked] = useState(false);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -53,9 +54,13 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
     }
   }, [settings]);
 
-  // Check push notification status on mount
+  // Check push notification status only once on first render
+  // Use a lazy approach to avoid blocking app load
   useEffect(() => {
-    async function checkPushStatus() {
+    if (pushStatusChecked) return;
+
+    // Delay check slightly to not block initial render
+    const timer = setTimeout(async () => {
       try {
         const supported = isPushNotificationSupported();
         setPushNotificationsSupported(supported);
@@ -64,14 +69,17 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
           const status = await getPushSubscriptionStatus();
           setPushNotificationsEnabled(status.subscribed);
         }
+        setPushStatusChecked(true);
       } catch (error) {
         // Silently fail - push notifications just won't be available
         console.warn('Push notifications not available:', error);
         setPushNotificationsSupported(false);
+        setPushStatusChecked(true);
       }
-    }
-    checkPushStatus();
-  }, []);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [pushStatusChecked]);
 
   const handlePrivacyModeToggle = () => {
     const newValue = !privacyMode;
