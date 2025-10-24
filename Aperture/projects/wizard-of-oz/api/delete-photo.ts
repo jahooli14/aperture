@@ -39,14 +39,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // First, get the photo to find the file paths
     logger.info('Fetching photo details', { photoId });
+    type PhotoData = Pick<Database['public']['Tables']['photos']['Row'], 'original_url' | 'aligned_url' | 'user_id'>;
     const { data: photo, error: fetchError } = await supabase
       .from('photos')
       .select('original_url, aligned_url, user_id')
       .eq('id', photoId)
-      .single();
+      .single() as { data: PhotoData | null; error: unknown };
 
     if (fetchError) {
-      logger.error('Error fetching photo', { photoId, error: fetchError.message });
+      logger.error('Error fetching photo', { photoId, error: fetchError instanceof Error ? fetchError.message : String(fetchError) });
       return res.status(404).json({ error: 'Photo not found' });
     }
 
