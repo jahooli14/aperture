@@ -6,5 +6,5 @@
     }
   },
   "buildCommand": "npm run build",
-  "ignoreCommand": "bash -c '[ \"$VERCEL_ENV\" == \"production\" ] && git diff --quiet HEAD^ HEAD -- ./projects/wizard-of-oz/ && exit 0 || exit 1'"
+  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD . && exit 0 || exit 1'"
 }
