@@ -31,7 +31,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     title: '',
     description: '',
     type: 'creative' as 'creative' | 'technical' | 'learning',
-    status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived',
+    status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
     next_step: '',
     progress: 0,
   })
@@ -61,7 +61,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: formData.title,
         description: formData.description,
         type: formData.type,
-        status: formData.status,
+        status: formData.status as any, // Status type updated to include 'abandoned'
         metadata: {
           ...project.metadata,
           next_step: formData.next_step || undefined,

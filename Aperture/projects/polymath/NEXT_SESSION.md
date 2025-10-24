@@ -1,282 +1,325 @@
 # Polymath - Next Session
 
-> **Status**: 🟢 Production - UI Consistency & Progress Tracking Complete
-> **Last Updated**: 2025-10-22
-> **Next**: Start Phase 1 - Memory Clusters as Lenses + Project DNA
+> **Status**: 🟡 Enhancement Specs Ready - Implementation Pending
+> **Last Updated**: 2025-10-24
+> **Next**: Implement Daily Actionable Queue (highest priority)
 
 ---
 
-## 🎉 Latest Session - UI Polish & Progress Tracking (2025-10-22)
+## 🎉 Latest Session - Enhancement Design (2025-10-24)
 
-### ✅ What Was Built
+### ✅ What Was Designed
 
-**1. Header Layout Fix** ✅
-- Action buttons in dedicated top-right row above headers
-- No overlap/squashing on all pages
+**Major enhancement specs created for both core pillars:**
 
-**2. UI Consistency Standardization** ✅
-- Edit/Delete: Icon-only ghost buttons (orange/red hover)
-- Create Buttons: Identical orange rounded-full styling
-- Filter Chips: Consistent pill design
-- Full app review completed
+**Memory Storage Improvements:**
+1. ✅ Context Windows - Time-based clustering with AI themes
+2. ✅ Memory Decay Visualization - Strength heatmaps & alerts
+3. ✅ Cross-Memory Synthesis Notes - Connect memories into meta-memories
+4. ✅ Memory Export as Narrative - AI-generated summaries
+5. ✅ Memory Collision Detection - Surface contradictory memories
+6. ✅ Dead Memory Pruning - Archive with tombstones
 
-**3. Project Progress Tracking** ✅
-- Next Step: Prominent orange/amber gradient box
-- Progress Bar: 0-100% with gradient orange bar
-- Both optional, stored in `project.metadata`
+**Project Tracking Improvements:**
+1. ✅ Project Graveyard - Post-mortems for abandoned projects
+2. ✅ Capability Decay Tracking - Skill freshness monitoring
+3. ✅ Refresh Recipes - AI-generated micro-projects to restore skills
+4. ✅ **Daily Actionable Queue** - "What should I work on today?"
 
-**4. Mobile Compact View** ✅
-- View toggle: Grid vs Compact modes
-- Compact: 5-8 projects visible without scrolling
-- ~60-80px height per card
+**Cross-Pillar Improvements:**
+1. ✅ Memory → Project Dependencies - Required context tracking
+2. ✅ Project Completion → Auto-Memory - Capture learnings
+3. ✅ Synthesis Constraints UI - User control over AI suggestions
 
-**Commits**: 0d1c097, 76734d6, 1b03e6e, 2517a84, 124a5f6, 32b9a01
+**Database Migration:**
+- ✅ `migration-enhancements.sql` created with all schema changes
 
----
-
-## 🚀 Priority Roadmap: 6 Insight Engine Features
-
-### Why These Matter
-Not just features - **insight engines** that:
-- Analyze what you've ALREADY done vs forcing new work
-- Surface invisible patterns in your behavior
-- Turn your data into strategic advantage
-- Prevent problems before they happen
+**Documentation:**
+- ✅ `MEMORY_ENHANCEMENTS.md` (6 improvements)
+- ✅ `PROJECT_ENHANCEMENTS.md` (4 improvements)
+- ✅ `DAILY_ACTIONABLE_QUEUE.md` (detailed spec)
+- ✅ `CROSS_PILLAR_IMPROVEMENTS.md` (3 improvements)
 
 ---
 
-## 📋 Phase 1: Foundation (14-18 hours)
+## 🚀 Implementation Priority (Phased Approach)
 
-### 1. Memory Clusters as Lenses (6-8h) 🎯 START HERE
-**What**: Turn theme clusters into exploration filters
-**Why**: Already have clustering ✅ - unlock cross-pollination
-**How**:
-- Add cluster filter UI (stackable chips)
-- Filter suggestions by cluster combinations
-- "Show suggestions through Finance + Parenting lens"
-- Discover unexpected project spaces
+### 🔥 Phase 1: Daily Actionable Queue (HIGHEST PRIORITY)
 
-**Implementation**:
-```typescript
-// Already have: ThemeCluster[] from /api/memories?themes=true
-// Need: Filter suggestions by memory_ids in selected clusters
-// UI: Multi-select cluster chips → filter suggestion list
+**Why This First:**
+- Solves core user need: "What should I work on today?"
+- Immediate value without other features
+- Foundation for all project enhancements
+- Anti-overwhelm built-in (max 3 projects shown)
+
+**What It Does:**
+```
+Opens app → sees max 3 projects:
+1. 🔥 Hot Streak - Worked on yesterday, keep momentum
+2. ⚠️ Needs Attention - 14 days idle, getting stale
+3. ✨ Fresh Energy - New from suggestion, explore?
+
+Each with:
+- Clear reason WHY it's suggested
+- Time estimate (45 min)
+- Energy level (moderate)
+- Next step (concrete action)
+- [Continue] or [Skip Today] buttons
 ```
 
-**Database**: No changes needed (use existing memory_ids linking)
+**Implementation Estimate:** 12-16 hours
 
-**Files to modify**:
-- `src/pages/SuggestionsPage.tsx` - Add cluster filter UI
-- `src/stores/useSuggestionStore.ts` - Add cluster filtering logic
-- `src/components/memories/ThemeClusterCard.tsx` - Make selectable
+**Tasks:**
+1. Run `migration-enhancements.sql` on Supabase ✅
+2. Create Daily Queue scoring API endpoint (4-5h)
+   - 5 dimensions: momentum, staleness, freshness, alignment, unlock
+   - Context matching: time/energy/location
+3. Create User Context API (1-2h)
+   - Store user's available time/energy/context
+4. Build Queue Frontend UI (4-5h)
+   - Context input dialog
+   - Project cards with categories
+   - Skip actions
+5. Update Projects page with queue view (2-3h)
+   - Toggle between "Today's Queue" and "All Projects"
+6. Testing & polish (1-2h)
 
-**Success**: Click "Finance" + "Technology" clusters → see only suggestions using those memories
-
----
-
-### 2. Project DNA & Lineage (8-10h)
-**What**: Show which memories inspired each project
-**Why**: Visualize creative evolution, reveal patterns
-**How**:
-- Link `project_suggestions.memory_ids` to display
-- "This project came from 3 voice notes about automation + parenting"
-- Show creation story on project detail page
-- Visualize as tree/timeline
-
-**Implementation**:
-```typescript
-// Already have: project_suggestions.memory_ids (array of UUIDs)
-// Need: Fetch actual memory objects, display with timestamps
-// UI: Expandable "Origins" section in project detail
-```
-
-**Database**: No changes needed (already linking memory_ids)
-
-**Files to create/modify**:
-- `src/components/projects/ProjectLineage.tsx` - NEW component
-- `src/pages/ProjectsPage.tsx` - Add detail view/modal
-- `src/stores/useProjectStore.ts` - Fetch related memories
-
-**Success**: Open project → see "Inspired by memories: [memory cards with timestamps]"
+**Success Criteria:**
+- User opens app → sees 3 actionable projects immediately
+- Context changes → queue updates
+- Skip project → removed from queue
+- 70%+ of users work on queued project within 30 min
 
 ---
 
-## 📋 Phase 2: Intelligence Layer (22-27 hours)
+### Phase 2: Memory Decay & Collision Detection (8-10h)
 
-### 3. Capability Decay Detection (10-12h)
-**What**: Track skill usage across ALL projects (code, physical, design, research)
-**Why**: "Your woodworking skills haven't been touched in 14 months"
-**How**:
-- Query `MAX(project.last_active)` for each capability
-- Works for code projects (git auto-updates last_active) AND offline projects (manual updates)
-- Calculate decay score (6mo = yellow, 12mo = red)
-- Generate micro-projects to maintain skills
+**Why Second:**
+- Prevents memory loss before it happens
+- Novel feature (no PKM tool has collision detection)
+- Uses existing memory data
 
-**Database**:
-```sql
--- Query decay per capability from project activity
-SELECT
-  c.id,
-  c.name,
-  MAX(p.last_active) as last_used_at,
-  EXTRACT(EPOCH FROM (NOW() - MAX(p.last_active))) / 86400 as days_since_use,
-  CASE
-    WHEN MAX(p.last_active) > NOW() - INTERVAL '6 months' THEN 0.0  -- Fresh
-    WHEN MAX(p.last_active) > NOW() - INTERVAL '12 months' THEN 0.5 -- Decaying
-    ELSE 1.0 -- Critical
-  END as decay_score
-FROM capabilities c
-LEFT JOIN projects p ON p.metadata->>'capabilities' ? c.id
-WHERE p.user_id = $1
-GROUP BY c.id, c.name
-ORDER BY days_since_use DESC;
-```
+**Features:**
+1. **Memory Decay Visualization**
+   - Strength score on each memory card
+   - Alert for top 5 fading memories
+   - Review button updates strength
 
-**Why this is better than git commits**:
-- Captures offline projects (woodworking, design, research)
-- Uses existing `project.last_active` timestamp
-- No new data collection needed
-- Works for ANY project type
+2. **Memory Collision Detection**
+   - AI detects contradictions when new memory created
+   - "Your view on React changed: March vs June"
+   - Resolution tracking (evolved, error, context-dependent)
 
-**API**:
-- `/api/capabilities/decay` - Get decaying skills
-- `/api/capabilities/maintenance-projects` - AI generates micro-projects
-
-**UI**:
-- Dashboard widget: "⚠️ 3 skills weakening"
-- Capability heatmap visualization (last 12 months)
-- "Maintain this skill" button → generates project
-
-**Success**: See "Woodworking: Last used 14mo ago in 'Standing Desk Build' → Here's a weekend project"
+**Implementation:**
+- Backend: Decay calculation function, collision detection API
+- Frontend: Strength indicators, collision alert modal
 
 ---
 
-### 4. Project Archaeology (12-15h) 🔥 HIGH IMPACT
-**What**: Analyze ALL projects, extract behavioral patterns
-**Why**: "You abandon projects at 65% when they need deployment"
-**How**:
-- Analyze status, progress, timestamps across all projects
-- Extract completion %, abandonment points, duration patterns
-- ML-lite clustering: success/failure factors
-- Insight dashboard showing meta-patterns
+### Phase 3: Project Graveyard & Capability Freshness (10-12h)
 
-**Database**:
-```sql
-CREATE TABLE project_insights (
-  user_id UUID REFERENCES auth.users,
-  pattern_type TEXT, -- 'abandonment_point', 'completion_rate', 'duration_pattern'
-  pattern_data JSONB, -- { threshold: 65, reason: 'deployment', confidence: 0.87 }
-  detected_at TIMESTAMPTZ,
-  insight_text TEXT -- Human-readable insight
-);
-```
+**Why Third:**
+- Embraces reality of abandoned projects
+- Freshness alerts prevent skill decay
+- Refresh recipes provide concrete actions
 
-**Analysis Logic**:
-```typescript
-// Analyze all projects for user
-const patterns = analyzeProjects(projects)
-// Returns: {
-//   abandonmentPoints: [65, 72, 68], // avg 68%
-//   completionRate: 0.23,
-//   successFactors: ['started_on_weekend', 'had_mentor'],
-//   timeToCompletion: { median: 21, avg: 34 } // days
-// }
-```
+**Features:**
+1. **Project Graveyard**
+   - Mandatory post-mortem when abandoning
+   - Pattern analysis: "You abandon at deployment 70% of time"
+   - Graveyard view with insights
 
-**UI**:
-- Insights page: Cards showing each pattern
-- "How to improve" suggestions
-- Project detail: "Based on patterns, you'll likely abandon at deployment"
+2. **Capability Freshness Alerts**
+   - Track last usage per capability
+   - Alert when rusty (45+ days)
+   - AI generates refresh recipe (2-hour micro-project)
 
-**Success**: Dashboard shows "You finish 78% of weekend projects vs 12% of weekday projects"
+**Implementation:**
+- Backend: Abandonment flow, freshness tracking, recipe generation
+- Frontend: Post-mortem modal, freshness dashboard, recipe cards
 
 ---
 
-## 📋 Phase 3: Advanced Synthesis (14-18 hours)
+### Phase 4: Cross-Pillar Features (6-8h)
 
-### 5. Constraint-Based Synthesis (8-10h)
-**What**: Filter suggestions by real-life constraints
-**Why**: "Show only projects needing <3h/week with existing skills"
-**How**:
-- Store user constraints in preferences
-- Re-rank suggestions by constraints
-- Filter by: time/week, capabilities required, new tools needed, offline-capable
+**Why Fourth:**
+- Closes feedback loops between memories & projects
+- Requires other features as foundation
 
-**Database**:
-```sql
-CREATE TABLE user_constraints (
-  user_id UUID REFERENCES auth.users PRIMARY KEY,
-  max_hours_per_week INT,
-  only_existing_capabilities BOOLEAN DEFAULT false,
-  no_new_frameworks BOOLEAN DEFAULT false,
-  offline_only BOOLEAN DEFAULT false,
-  updated_at TIMESTAMPTZ
-);
-```
+**Features:**
+1. **Memory → Project Dependencies**
+   - Link required memories to projects
+   - "Review Design System memory before continuing"
 
-**UI**:
-- Settings page: Configure constraints
-- Suggestions page: "Filtered by your constraints" badge
-- Quick toggles: "Weekend mode" (3h/week + no new tools)
+2. **Project Completion → Auto-Memory**
+   - Reflection prompt on completion
+   - Creates memory with learnings
 
-**Success**: Toggle "Only existing skills" → suggestions update instantly
+3. **Synthesis Constraints**
+   - "Only projects under 1 week"
+   - "Use stale capabilities"
+   - Quick presets
 
 ---
 
-### 6. Suggestion Decay System (6-8h)
-**What**: Auto-archive unrated suggestions after 7 days
-**Why**: Prevents "suggestion debt" paralysis
-**How**:
-- Cron job archives `pending` suggestions older than 7 days
-- Track ignored categories/types
-- Meta-learning: "You ignored 15 blockchain suggestions"
-- Suggest stopping certain suggestion types
+### Phase 5: Context Windows & Synthesis Notes (8-10h)
 
-**Database**:
-```sql
-ALTER TABLE project_suggestions ADD COLUMN archived_at TIMESTAMPTZ;
-CREATE INDEX idx_suggestions_archived ON project_suggestions(archived_at);
+**Why Last:**
+- Nice-to-have vs. must-have
+- More complex AI work
+- Lower immediate impact
 
-CREATE TABLE suggestion_patterns (
-  user_id UUID REFERENCES auth.users,
-  ignored_categories JSONB, -- { 'blockchain': 15, 'mobile': 3 }
-  should_stop_generating TEXT[], -- ['blockchain', 'crypto']
-  updated_at TIMESTAMPTZ
-);
-```
+**Features:**
+1. **Context Windows**
+   - Auto-cluster memories by week/month
+   - AI-generated theme summaries
+   - Timeline view
 
-**Cron**:
-```typescript
-// Daily at 00:00 UTC
-// Archive pending suggestions older than 7 days
-// Update ignored_categories count
-// Suggest stopping categories if ignored > 10
-```
-
-**UI**:
-- Settings: "You've ignored 15 blockchain suggestions - stop generating?"
-- Archive view: See what you passed on
-- Meta-stats: "Ignored 23% of all suggestions this month"
-
-**Success**: Fresh suggestions every week, see "You consistently ignore ML projects"
+2. **Cross-Memory Synthesis Notes**
+   - Link 2-3 memories into new memory
+   - Meta-insights from combinations
 
 ---
 
-## 🗺️ Implementation Order
+## 📊 Implementation Timeline
 
-**Week 1: Foundation (Phase 1)**
-1. Memory Clusters as Lenses (6-8h)
-2. Project DNA & Lineage (8-10h)
+### Realistic Scope (50-60 hours total)
 
-**Week 2-3: Intelligence (Phase 2)**
-3. Capability Decay Detection (10-12h)
-4. Project Archaeology (12-15h)
+**Week 1-2: Daily Queue (Core Value)**
+- Phase 1: Daily Actionable Queue (12-16h)
+- Deploy to production
+- Gather user feedback
 
-**Week 4: Synthesis (Phase 3)**
-5. Constraint-Based Synthesis (8-10h)
-6. Suggestion Decay System (6-8h)
+**Week 3-4: Memory Intelligence**
+- Phase 2: Memory Decay & Collision (8-10h)
+- Deploy incremental updates
 
-**Total: 50-63 hours (4 weeks of focused work)**
+**Week 5-6: Project Intelligence**
+- Phase 3: Project Graveyard & Freshness (10-12h)
+- Deploy incremental updates
+
+**Week 7-8: Integration & Polish**
+- Phase 4: Cross-Pillar Features (6-8h)
+- Phase 5: Context Windows (8-10h)
+- Final testing & deployment
+
+**OR: MVP Approach (16-20 hours)**
+- Just Phase 1: Daily Queue
+- Deploy & validate
+- Build rest based on user feedback
+
+---
+
+## 🎯 Next Session: Start Here
+
+### Option A: MVP (Daily Queue Only)
+
+**Hour 1:**
+```bash
+# 1. Run migration
+psql $SUPABASE_URL < migration-enhancements.sql
+
+# 2. Review current project schema
+cat src/types.ts # Line 298-344 (Project interface)
+
+# 3. Check existing project API
+cat api/projects.ts
+```
+
+**Hours 2-5: Backend**
+- Create `/api/projects/daily-queue` endpoint
+- Implement scoring algorithm (5 dimensions)
+- Create `/api/projects/daily-context` for user preferences
+
+**Hours 6-10: Frontend**
+- Build `DailyQueuePage.tsx` component
+- Context input dialog
+- Project cards with categories
+- Skip actions
+
+**Hours 11-12: Testing**
+- Seed test data
+- Verify scoring
+- Test context matching
+
+**Hours 13-16: Polish & Deploy**
+- Mobile optimization
+- Empty states
+- Deploy to Vercel
+- Update routing
+
+---
+
+### Option B: Full Implementation (All Phases)
+
+Follow phased approach above, implementing each phase sequentially with incremental deploys.
+
+---
+
+## 🔥 Key Design Principles (Anti-Overwhelm)
+
+**Max 3 Rule:**
+- Daily queue shows MAX 3 projects
+- Fading memories alert MAX 5
+- Pruning suggestions MAX 10
+
+**Skip Options:**
+- Every card has "Skip Today" button
+- No guilt, no nagging
+- Queue resets daily
+
+**Collapsed by Default:**
+- "Also Available" section collapsed
+- Full project list separate view
+- Don't show everything at once
+
+**Optional Everything:**
+- All features can be disabled
+- Core app works without enhancements
+- Progressive disclosure
+
+---
+
+## ��� New Documentation
+
+**Enhancement Specs:**
+- `MEMORY_ENHANCEMENTS.md` - 6 improvements with full implementation details
+- `PROJECT_ENHANCEMENTS.md` - 4 improvements + Daily Queue system
+- `DAILY_ACTIONABLE_QUEUE.md` - Complete spec with scoring algorithm
+- `CROSS_PILLAR_IMPROVEMENTS.md` - 3 improvements connecting memories & projects
+
+**Database:**
+- `migration-enhancements.sql` - All schema changes in one file
+  - New tables: context_windows, memory_collisions, memory_tombstones, capability_freshness, refresh_recipes, user_daily_context, project_memory_dependencies, synthesis_constraints
+  - Extended tables: memories, projects
+  - RLS policies, triggers, helper functions
+
+**Key Files to Review:**
+- Read each enhancement spec for implementation details
+- Database migration is ready to run
+- All types defined in specs
+- API endpoints documented
+
+---
+
+## 🏁 Decision Point
+
+**Before starting implementation, decide:**
+
+1. **MVP vs. Full?**
+   - MVP: Just Daily Queue (16-20h, immediate value)
+   - Full: All phases (50-60h, complete vision)
+
+2. **Deployment Strategy?**
+   - Incremental: Deploy each phase as completed
+   - Big Bang: Deploy all together at end
+
+3. **Priority Adjustments?**
+   - Is Daily Queue actually highest priority?
+   - Any features to skip entirely?
+   - Any features to fast-track?
+
+**Recommendation:** Start with MVP (Daily Queue only), validate user value, then build rest based on real usage patterns.
 
 ---
 
@@ -295,113 +338,58 @@ CREATE TABLE suggestion_patterns (
 | Progress Tracking | ✅ Next step + % |
 | Mobile Compact View | ✅ See all projects |
 
-### Archived (Replaced by Better Features) 🗄️
-| Feature | Reason |
-|---------|--------|
-| Memory Onboarding (10 prompts) | Replaced by Memory Clusters as Lenses |
-| Node Strengthening (git commits) | Replaced by Capability Decay Detection |
-| Dormant Resurfacing (time-based) | Replaced by Project Archaeology |
-| Synthesis Transparency | Replaced by Project DNA & Lineage |
-
-**Why archived**: New features analyze existing data vs forcing new work. They surface insights vs collecting more data.
+### Ready to Implement 🟡
+| Enhancement | Priority | Estimate |
+|-------------|----------|----------|
+| Daily Actionable Queue | 🔥 Highest | 12-16h |
+| Memory Decay Viz | High | 4-5h |
+| Memory Collision Detection | High | 4-5h |
+| Project Graveyard | Medium | 6-8h |
+| Capability Freshness | Medium | 4-6h |
+| Cross-Pillar Features | Medium | 6-8h |
+| Context Windows | Low | 4-5h |
+| Synthesis Notes | Low | 4-5h |
 
 ---
 
-## 🎯 Next Session: Start Here
+## 🎯 Immediate Next Action
 
-### Immediate Action (Hour 1)
+**Choose your path:**
+
+### Path 1: MVP (Recommended)
 ```bash
-# 1. Review current theme clustering implementation
+# Start Daily Queue implementation
 cd /Users/dancroome-horgan/Documents/GitHub/Aperture/projects/polymath
-cat src/pages/MemoriesPage.tsx # Line 370-393 (theme cluster grid)
 
-# 2. Check suggestion data structure
-cat src/types.ts # ProjectSuggestion interface, line 376
+# 1. Review Daily Queue spec
+cat DAILY_ACTIONABLE_QUEUE.md
 
-# 3. Verify memory_ids linking exists
-# Open Supabase → project_suggestions table → check memory_ids column
+# 2. Run migration
+# Open Supabase dashboard → SQL Editor → Run migration-enhancements.sql
+
+# 3. Start building backend
+# Create api/projects/daily-queue.ts
+# Create api/projects/daily-context.ts
+
+# 4. Build frontend
+# Create src/pages/DailyQueuePage.tsx
+# Create src/components/queue/ directory
 ```
 
-### Build Memory Clusters as Lenses (Hours 2-8)
-1. **UI Component** (2h):
-   - Add multi-select cluster chips to SuggestionsPage
-   - Selected clusters highlight in orange
-   - Clear filters button
-
-2. **Filtering Logic** (3h):
-   - Fetch all suggestions with memory_ids
-   - Filter: suggestions where ANY memory_id is in selected cluster memories
-   - Re-render suggestion grid
-
-3. **State Management** (1h):
-   - Add `selectedClusters: ThemeCluster[]` to useSuggestionStore
-   - Persist selection in localStorage
-
-4. **Polish** (2h):
-   - Empty state: "Select clusters to filter suggestions"
-   - Count badge: "Showing 3 suggestions matching Finance + Technology"
-   - Animation: Suggestions fade in/out on filter change
-
-**Success Criteria**:
-- Click "Finance" cluster → only suggestions using Finance memories
-- Click "Finance" + "Parenting" → only suggestions using BOTH
-- Click cluster again → unselect
-- Persists across page refreshes
+### Path 2: Full Implementation
+```bash
+# Follow phased approach
+# Week 1-2: Daily Queue
+# Week 3-4: Memory enhancements
+# Week 5-6: Project enhancements
+# Week 7-8: Cross-pillar & polish
+```
 
 ---
 
-## 🔥 Why This Roadmap is Different
+**Status**: 🟡 Design Complete - Ready for Implementation
+**Priority**: Daily Actionable Queue (solves "what to work on today?")
+**Estimated MVP**: 16-20 hours (Daily Queue only)
+**Estimated Full**: 50-60 hours (all enhancements)
 
-**Before**: Collecting more data (onboarding prompts, manual entries)
-**After**: Mining existing data for insights
-
-**Before**: Time-based heuristics (7 days dormant → nudge)
-**After**: Behavioral pattern recognition (you abandon at deployment)
-
-**Before**: Black-box synthesis (AI decides)
-**After**: Transparent lineage (see exactly which memories → project)
-
-**Before**: More suggestions = better
-**After**: Right suggestions = better (decay unused, learn preferences)
-
-**This is an insight engine, not a data collector.**
-
----
-
-## 📁 Key Documentation
-
-**Current Implementation**:
-- `ARCHITECTURE.md` - System design
-- `API_SPEC.md` - Endpoint reference
-- `CONCEPT.md` - Original vision
-
-**Archived (Reference Only)**:
-- `MEMORY_ONBOARDING_SPEC.md` - Replaced by new roadmap
-- `IMPLEMENTATION_READY.md` - Superseded
-- `migration-memory-onboarding.sql` - Keep project_notes table only
-
----
-
-## 🏁 Session Handoff
-
-**What's Stable**:
-- All UI consistency work deployed ✅
-- Progress tracking working ✅
-- Mobile compact view functional ✅
-- No bugs or deployment issues ✅
-
-**What's Next**:
-- Start Phase 1: Memory Clusters as Lenses (6-8h)
-- Foundation for all other features
-- No database changes needed
-- Uses existing theme clustering
-
-**Live App**: https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app
-
----
-
-**Status**: 🟢 Production + Clear 4-week roadmap
-**Priority**: Phase 1 (Memory Clusters) unlocks everything else
-**Estimated delivery**: 4 weeks of focused work (50-63 hours)
-
-**Let's build insight engines, not data collectors!** 🔥
+**Key Insight:** Daily Queue is the killer feature. Everything else supports it but isn't required for initial value. Start there, validate, then expand. 🚀

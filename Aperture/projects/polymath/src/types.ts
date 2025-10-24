@@ -307,11 +307,24 @@ export interface Project {
   updated_at?: string
   metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)
+
+  // Daily Queue fields
+  energy_level?: 'low' | 'moderate' | 'high'
+  estimated_next_step_time?: number // minutes
+  context_requirements?: string[] // ['desk', 'tools', etc.]
+  blockers?: any[] // Array of blocker objects
+  recently_unblocked?: boolean
+
+  // Project Graveyard fields
+  abandoned_at?: string
+  abandoned_reason?: 'time' | 'energy' | 'interest' | 'external' | 'wrong_goal'
+  post_mortem?: any
+  would_restart?: boolean
 }
 
 export type ProjectType = 'creative' | 'technical' | 'learning'
 
-export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
+export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
 
 export interface ProjectMetadata {
   tags?: string[]
@@ -677,4 +690,35 @@ export interface ScoreBarProps {
   label: string
   score: number // 0-1
   color?: string
+}
+
+// ============================================================================
+// DAILY ACTIONABLE QUEUE
+// ============================================================================
+
+export interface UserContext {
+  available_time: 'quick' | 'moderate' | 'deep' // <30min, 30min-2hr, 2hr+
+  current_energy: 'low' | 'moderate' | 'high'
+  available_context: string[] // ['desk', 'tools', 'mobile', 'workshop']
+}
+
+export interface ProjectScore {
+  project_id: string
+  project: Project
+  total_score: number
+  category: 'hot_streak' | 'needs_attention' | 'fresh_energy' | 'available'
+  match_reason: string
+  breakdown: {
+    momentum: number
+    staleness: number
+    freshness: number
+    alignment: number
+    unlock_bonus: number
+  }
+}
+
+export interface DailyQueueResponse {
+  queue: ProjectScore[]
+  context: UserContext
+  total_projects: number
 }

@@ -1,0 +1,487 @@
+/**
+ * Daily Actionable Queue Page
+ * Shows max 3 projects for today based on context
+ */
+
+import { useEffect, useState } from 'react'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+import { Zap, Settings, Clock, Battery, MapPin, ArrowRight, X } from 'lucide-react'
+import type { ProjectScore, UserContext, DailyQueueResponse } from '../types'
+
+export function DailyQueuePage() {
+  const [queue, setQueue] = useState<ProjectScore[]>([])
+  const [context, setContext] = useState<UserContext | null>(null)
+  const [totalProjects, setTotalProjects] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [showContextDialog, setShowContextDialog] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchQueue()
+  }, [])
+
+  const fetchQueue = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch('/api/projects/daily-queue')
+      if (!response.ok) throw new Error('Failed to fetch queue')
+      const data: DailyQueueResponse = await response.json()
+      setQueue(data.queue)
+      setContext(data.context)
+      setTotalProjects(data.total_projects)
+    } catch (err) {
+      console.error('Failed to fetch queue:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load queue')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateContext = async (newContext: Partial<UserContext>) => {
+    try {
+      const response = await fetch('/api/projects/daily-context', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newContext)
+      })
+      if (!response.ok) throw new Error('Failed to update context')
+      const data = await response.json()
+      setContext(data.context)
+      setShowContextDialog(false)
+      // Refresh queue with new context
+      fetchQueue()
+    } catch (err) {
+      console.error('Failed to update context:', err)
+    }
+  }
+
+  const skipProject = (projectId: string) => {
+    setQueue(prev => prev.filter(p => p.project_id !== projectId))
+  }
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'hot_streak': return '🔥'
+      case 'needs_attention': return '⚠️'
+      case 'fresh_energy': return '✨'
+      default: return '💡'
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'hot_streak': return 'Hot Streak'
+      case 'needs_attention': return 'Needs Attention'
+      case 'fresh_energy': return 'Fresh Energy'
+      default: return 'Available'
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'hot_streak': return 'from-orange-500 to-red-500'
+      case 'needs_attention': return 'from-amber-500 to-orange-500'
+      case 'fresh_energy': return 'from-purple-500 to-pink-500'
+      default: return 'from-gray-400 to-gray-500'
+    }
+  }
+
+  const formatTime = (minutes?: number) => {
+    if (!minutes) return '~1 hour'
+    if (minutes < 60) return `${minutes} min`
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`
+  }
+
+  const formatEnergy = (energy?: string) => {
+    if (!energy) return 'Moderate'
+    return energy.charAt(0).toUpperCase() + energy.slice(1)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Card className="pro-card">
+            <CardContent className="py-24">
+              <div className="text-center text-neutral-600">
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                <p className="text-lg">Loading your queue...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen py-12">
+      {/* Header */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center mb-4">
+            <Zap className="h-12 w-12 text-orange-600" />
+          </div>
+          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+            Today's Focus
+          </h1>
+          <p className="text-lg text-neutral-600">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </p>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Context Bar */}
+        {context && (
+          <Card className="mb-8 border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-orange-600" />
+                    <span className="font-medium">
+                      {context.available_time === 'quick' && 'Quick (<30 min)'}
+                      {context.available_time === 'moderate' && 'Moderate (30 min - 2 hours)'}
+                      {context.available_time === 'deep' && 'Deep (2+ hours)'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Battery className="h-5 w-5 text-orange-600" />
+                    <span className="font-medium">
+                      {formatEnergy(context.current_energy)} energy
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5 text-orange-600" />
+                    <span className="font-medium">
+                      {context.available_context.join(', ') || 'Desk'}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowContextDialog(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Edit Context
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Card className="mb-6 border-red-300 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-sm text-red-600">{error}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State */}
+        {queue.length === 0 && !loading && (
+          <Card className="pro-card">
+            <CardContent className="py-16">
+              <div className="max-w-2xl mx-auto text-center">
+                <div className="inline-flex items-center justify-center mb-4">
+                  <Zap className="h-16 w-16 text-orange-600" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4 text-neutral-900">
+                  {totalProjects === 0 ? 'No active projects yet' : 'Nothing to work on right now'}
+                </h3>
+                <p className="text-lg text-neutral-600 mb-8">
+                  {totalProjects === 0
+                    ? 'Create your first project or build a suggestion to get started.'
+                    : 'All your projects are either blocked or don\'t match your current context. Try changing your context or viewing all projects.'}
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    onClick={() => window.location.href = '/projects'}
+                    className="btn-primary"
+                  >
+                    View All Projects
+                  </Button>
+                  <Button
+                    onClick={() => window.location.href = '/suggestions'}
+                    variant="outline"
+                  >
+                    Browse Suggestions
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Queue Projects */}
+        {queue.length > 0 && (
+          <div className="space-y-6">
+            {queue.map((score) => {
+              const project = score.project
+              const nextStep = project.metadata?.next_step
+              const progress = project.metadata?.progress
+
+              return (
+                <Card
+                  key={score.project_id}
+                  className="pro-card hover:shadow-xl transition-shadow"
+                >
+                  <CardContent className="pt-6">
+                    {/* Category Badge */}
+                    <div className="mb-4">
+                      <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium text-white bg-gradient-to-r ${getCategoryColor(score.category)}`}>
+                        <span>{getCategoryIcon(score.category)}</span>
+                        {getCategoryLabel(score.category)}
+                      </span>
+                    </div>
+
+                    {/* Project Title & Description */}
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-bold text-neutral-900 mb-2">
+                        {project.title}
+                      </h3>
+                      {project.description && (
+                        <p className="text-neutral-600">{project.description}</p>
+                      )}
+                    </div>
+
+                    {/* Match Reason */}
+                    <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200">
+                      <p className="text-sm font-medium text-neutral-800">
+                        {score.match_reason}
+                      </p>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {progress !== undefined && (
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-neutral-700">Progress</span>
+                          <span className="text-sm font-bold text-neutral-900">{progress}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Next Step */}
+                    {nextStep && (
+                      <div className="mb-4 p-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg">
+                        <p className="text-sm font-medium text-white mb-1">Next Step</p>
+                        <p className="text-white font-semibold">{nextStep}</p>
+                      </div>
+                    )}
+
+                    {/* Requirements */}
+                    <div className="mb-6 flex items-center gap-4 text-sm text-neutral-600">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        {formatTime(project.estimated_next_step_time)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Battery className="h-4 w-4" />
+                        {formatEnergy(project.energy_level)} energy
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => window.location.href = `/projects`}
+                        className="btn-primary flex-1 flex items-center justify-center gap-2"
+                      >
+                        Continue
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => skipProject(score.project_id)}
+                        className="flex items-center gap-2"
+                      >
+                        <X className="h-4 w-4" />
+                        Skip Today
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+
+            {/* Also Available */}
+            {totalProjects > queue.length && (
+              <Card className="border-2 border-dashed border-gray-300">
+                <CardContent className="pt-6 text-center">
+                  <p className="text-neutral-600 mb-4">
+                    💡 <strong>{totalProjects - queue.length} more projects</strong> available
+                  </p>
+                  <Button
+                    onClick={() => window.location.href = '/projects'}
+                    variant="outline"
+                  >
+                    View All Projects
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Skip Day */}
+            <Card className="border-2 border-gray-200 bg-gray-50">
+              <CardContent className="pt-6 text-center">
+                <p className="text-neutral-600 mb-4">
+                  Not feeling it today? That's okay.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setQueue([])}
+                >
+                  🚫 Take a Break
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Context Dialog */}
+      {showContextDialog && context && (
+        <ContextDialog
+          context={context}
+          onSave={updateContext}
+          onClose={() => setShowContextDialog(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+interface ContextDialogProps {
+  context: UserContext
+  onSave: (context: Partial<UserContext>) => void
+  onClose: () => void
+}
+
+function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
+  const [availableTime, setAvailableTime] = useState(context.available_time)
+  const [currentEnergy, setCurrentEnergy] = useState(context.current_energy)
+  const [availableContext, setAvailableContext] = useState(context.available_context)
+
+  const toggleContext = (ctx: string) => {
+    setAvailableContext(prev =>
+      prev.includes(ctx) ? prev.filter(c => c !== ctx) : [...prev, ctx]
+    )
+  }
+
+  const handleSave = () => {
+    onSave({
+      available_time: availableTime,
+      current_energy: currentEnergy,
+      available_context: availableContext
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-lg">
+        <CardContent className="pt-6">
+          <h2 className="text-2xl font-bold mb-6">Set Today's Context</h2>
+
+          {/* Available Time */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-neutral-700 mb-3">
+              How much time do you have?
+            </label>
+            <div className="space-y-2">
+              {[
+                { value: 'quick', label: 'Quick (< 30 min)' },
+                { value: 'moderate', label: 'Moderate (30 min - 2 hours)' },
+                { value: 'deep', label: 'Deep (2+ hours)' }
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setAvailableTime(option.value as any)}
+                  className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                    availableTime === option.value
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Energy Level */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-neutral-700 mb-3">
+              What's your energy level?
+            </label>
+            <div className="space-y-2">
+              {[
+                { value: 'low', label: 'Low (tired, maintenance only)' },
+                { value: 'moderate', label: 'Moderate (normal work)' },
+                { value: 'high', label: 'High (flow state, creative)' }
+              ].map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setCurrentEnergy(option.value as any)}
+                  className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                    currentEnergy === option.value
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Context */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-neutral-700 mb-3">
+              Where are you / what's available?
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {['desk', 'computer', 'tools', 'workshop', 'mobile'].map(ctx => (
+                <button
+                  key={ctx}
+                  onClick={() => toggleContext(ctx)}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    availableContext.includes(ctx)
+                      ? 'border-orange-500 bg-orange-50 font-medium'
+                      : 'border-gray-200 hover:border-orange-300'
+                  }`}
+                >
+                  {ctx.charAt(0).toUpperCase() + ctx.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <Button onClick={handleSave} className="btn-primary flex-1">
+              Update Queue
+            </Button>
+            <Button onClick={onClose} variant="outline">
+              Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
