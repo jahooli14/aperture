@@ -11,7 +11,6 @@ import { Onboarding } from './components/Onboarding';
 import { PasscodeLock } from './components/PasscodeLock';
 import { PrivacySettings } from './components/PrivacySettings';
 import { JoinCodePrompt } from './components/JoinCodePrompt';
-import { OpenInAppPrompt } from './components/OpenInAppPrompt';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
