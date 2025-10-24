@@ -378,6 +378,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
             aligning={aligning}
             uploading={uploading}
             hasEyeCoords={!!eyeCoords}
+            zoomLevel={zoomLevel}
             onRotateLeft={() => handleRotate('left')}
             onRotateRight={() => handleRotate('right')}
             onUpload={handleUpload}

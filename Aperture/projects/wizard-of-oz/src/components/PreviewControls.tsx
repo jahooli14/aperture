@@ -7,6 +7,7 @@ interface PreviewControlsProps {
   aligning: boolean;
   uploading: boolean;
   hasEyeCoords: boolean;
+  zoomLevel?: number;
   onRotateLeft: () => void;
   onRotateRight: () => void;
   onUpload: () => void;
@@ -18,6 +19,7 @@ export function PreviewControls({
   aligning,
   uploading,
   hasEyeCoords,
+  zoomLevel,
   onRotateLeft,
   onRotateRight,
   onUpload,
@@ -82,9 +84,20 @@ export function PreviewControls({
 
       {/* Eye Detection Status */}
       {hasEyeCoords && (
-        <div className="flex items-center gap-2 text-green-600 text-sm">
-          <CheckCircle className="w-4 h-4" />
-          <span>Eyes detected and aligned!</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-green-600 text-sm">
+            <CheckCircle className="w-4 h-4" />
+            <span>Eyes detected and aligned!</span>
+          </div>
+          {zoomLevel !== undefined && (
+            <div className="text-xs text-gray-500 pl-6">
+              Zoom level: {(zoomLevel * 100).toFixed(0)}%
+              {zoomLevel === 0.40 && ' (Newborn: tight crop)'}
+              {zoomLevel === 0.30 && ' (6-18mo: medium crop)'}
+              {zoomLevel === 0.25 && ' (Toddler: wide crop)'}
+              {zoomLevel === 0.20 && ' (3+ yrs: very wide)'}
+            </div>
+          )}
         </div>
       )}
 
