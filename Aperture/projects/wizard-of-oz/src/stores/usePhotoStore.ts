@@ -67,9 +67,10 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       }
 
       // Generate signed URLs for each photo (24 hour expiry)
+      const dataArray: Photo[] = data || [];
       const photosWithSignedUrls = await Promise.all(
-        (data || []).map(async (photo: Photo) => {
-          const signedPhoto: Photo = { ...photo };
+        dataArray.map(async (photo) => {
+          const signedPhoto = { ...photo } as Photo;
 
           // Generate signed URL for original photo
           if (photo.original_url) {
