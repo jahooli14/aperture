@@ -8,16 +8,16 @@
 
 ## Migration Files
 
-All migration SQL files are located in `/Users/dancroome-horgan/Documents/GitHub/Aperture/projects/polymath/`
+All migration SQL files are now organized in `migrations/` directory with numbered prefixes for clear ordering.
 
-### Base Schema
-**File**: `migration.sql`
-**Applied**: Initial deployment
+### 001 - Initial Schema
+**File**: `migrations/001-initial-schema.sql`
+**Applied**: ✅ Initial deployment (Oct 21, 2025)
 **Description**: Core tables for Polymath - memories, projects, capabilities, suggestions
 
-### Enhancement Migrations
-**File**: `migration-enhancements.sql`
-**Applied**: Not yet applied
+### 002 - Enhancements
+**File**: `migrations/002-enhancements.sql`
+**Applied**: ⏳ Not yet applied
 **Description**:
 - Context windows (time-based memory clustering)
 - Memory collision detection
@@ -28,19 +28,19 @@ All migration SQL files are located in `/Users/dancroome-horgan/Documents/GitHub
 - Project-memory dependencies
 - Synthesis constraints
 
-### Daily Queue Migration
-**File**: `migration-daily-queue.sql`
-**Applied**: Not yet applied
+### 003 - Daily Queue
+**File**: `migrations/003-daily-queue.sql`
+**Applied**: ⏳ Not yet applied
 **Description**: Daily actionable queue system for project prioritization
 
-### Memory Onboarding Migration
-**File**: `migration-memory-onboarding.sql`
-**Applied**: Not yet applied
+### 004 - Memory Onboarding
+**File**: `migrations/004-memory-onboarding.sql`
+**Applied**: ⏳ Not yet applied
 **Description**: Memory onboarding flow and prompts system
 
-### Fixes
-**File**: `fix-rls-public.sql`
-**Applied**: As needed
+### 999 - RLS Fixes (Utility)
+**File**: `migrations/999-fix-rls-public.sql`
+**Applied**: 🔧 Apply as needed
 **Description**: Row-level security fixes for public access
 
 ---

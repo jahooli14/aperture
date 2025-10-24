@@ -1,268 +1,149 @@
 # 📚 Polymath - Complete Documentation Index
 
 > **Find any document quickly**
+>
+> **Last Updated**: 2025-10-24
 
 ---
 
 ## 🚀 Getting Started
 
 **Start here if you're new**:
-1. **START_HERE.md** - Main entry point, navigation guide
-2. **README.md** - Project overview and features
-3. **QUICK_DEPLOY.md** - 5-minute deployment (if you had MemoryOS)
+1. **README.md** - Project overview and features
+2. **SETUP.md** - Local development setup
+3. **DEPLOYMENT.md** - Deployment guide
 
 ---
 
-## 📖 User Guides
+## 📖 Core Documentation (Root Level)
 
-### Quick References
-- **UI_COMPLETE.md** - What's built, how to run locally
-- **UI_PREVIEW.md** - Visual mockups of the interface
-- **TESTING_GUIDE.md** - Step-by-step testing instructions
-- **API_TESTING.md** - Curl commands for API testing
-
-### Deployment
-- **QUICK_DEPLOY.md** - Fast deploy (existing setup)
-- **DEPLOYMENT_CHECKLIST.md** - Full deployment guide
-- **CONSOLIDATION_SUMMARY.md** - MemoryOS → Polymath merge notes
-
----
-
-## 🏗️ Architecture & Design
-
-### Concept
+### Essential
+- **README.md** - Project overview, what it is, how it works
+- **NEXT_SESSION.md** - Current status, what to work on next
 - **CONCEPT.md** - Vision, design philosophy, core mechanisms
-- **RATING_UX.md** - User interaction design
-
-### Technical Design
 - **ARCHITECTURE.md** - Complete technical design with algorithms
-- **ARCHITECTURE_DIAGRAM.md** - Visual system architecture
-- **DATABASE_SCHEMA.sql** → `scripts/migration.sql`
 
-### APIs
+### Deployment & Operations
+- **DEPLOYMENT.md** - Full deployment guide and troubleshooting
+- **SETUP.md** - Local development setup
+- **MIGRATIONS.md** - Database migration tracking and sequence
+- **RUN_MIGRATIONS.md** - How to apply migrations
+
+### Planning & Roadmap
+- **BACKLOG.md** - Consolidated improvement backlog (NEW!)
+- **ROADMAP.md** - Long-term feature roadmap
+- **CHANGELOG.md** - Version history and changes
+
+### UX & Product
+- **RATING_UX.md** - Rating interface design
+- **SUGGESTION_CADENCE.md** - Suggestion timing optimization
+
+---
+
+## 📁 /docs - Technical Documentation
+
+Detailed technical specs and API documentation:
+
 - **API_SPEC.md** - Complete API documentation
-- **API_TESTING.md** - Curl commands and testing workflows
-
-### UI/UX
+- **API_TESTING.md** - curl commands and testing workflows
+- **ARCHITECTURE_DIAGRAM.md** - Visual system architecture
 - **UI_COMPONENTS.md** - React component specifications
 - **UI_PREVIEW.md** - Visual interface mockups
+- **TESTING_GUIDE.md** - Step-by-step testing instructions
+- **DEPENDENCIES.md** - Dependency management and rationale
 
 ---
 
-## 🛠️ Implementation
+## 📂 /migrations - Database Migrations
 
-### Planning
-- **ROADMAP.md** - 10-phase implementation plan
-- **IMPLEMENTATION_SUMMARY.md** - Quick implementation reference
+Numbered migration files in order of application:
 
-### Dependencies
-- **DEPENDENCIES.md** - NPM packages and environment variables
-- **.env.local.example** - Environment variable template
+- **001-initial-schema.sql** - Core tables (✅ applied)
+- **002-enhancements.sql** - Advanced features (⏳ pending)
+- **003-daily-queue.sql** - Daily actionable queue (⏳ pending)
+- **004-memory-onboarding.sql** - Onboarding flow (⏳ pending)
+- **999-fix-rls-public.sql** - RLS fixes (🔧 utility)
 
-### Deployment
-- **DEPLOYMENT.md** - General deployment guide
-- **DEPLOYMENT_CHECKLIST.md** - Step-by-step checklist
+See **MIGRATIONS.md** for details and application status.
 
 ---
 
-## 📁 Code Organization
+## 🗄️ /.archive - Historical Documentation
 
-### Frontend (src/)
-```
-src/
-├── App.tsx                    # Router + navigation
-├── App.css                    # Global styles
-├── pages/
-│   ├── HomePage.tsx           # Landing page
-│   ├── SuggestionsPage.tsx    # Browse suggestions
-│   └── ProjectsPage.tsx       # View projects
-├── stores/
-│   ├── useSuggestionStore.ts  # Suggestion state
-│   └── useProjectStore.ts     # Project state
-└── components/
-    ├── suggestions/
-    │   ├── SuggestionCard.tsx
-    │   ├── RatingActions.tsx
-    │   └── WildcardBadge.tsx
-    ├── projects/
-    │   └── ProjectCard.tsx
-    └── capabilities/
-        └── CapabilityBadge.tsx
-```
+### /implementation
+Historical implementation summaries (completed work):
+- **IMPLEMENTATION_SUMMARY.md** - Post-deployment review (Oct 21)
+- **DEPLOYMENT_SUCCESS.md** - Initial deployment notes (Oct 24)
 
-### Backend (api/)
-```
-api/
-├── capture.ts                # Voice note webhook
-├── process.ts                # Interest extraction
-├── projects.ts               # Projects CRUD
-├── projects/[id].ts          # Single project
-├── suggestions.ts            # List suggestions
-├── suggestions/[id]/
-│   ├── rate.ts              # Rate suggestion
-│   └── build.ts             # Build project
-└── cron/
-    ├── weekly-synthesis.ts  # Monday synthesis
-    └── strengthen-nodes.ts  # Daily strengthening
-```
+### /specs
+Feature specifications and analysis (consolidated into BACKLOG.md):
+- **CRITICAL_REVIEW.md** - Security audit (✅ issues resolved)
+- **QUICK_FIXES.md** - Critical fixes (✅ completed)
+- **IMPROVEMENTS.md** - Code quality analysis
+- **PROJECT_ENHANCEMENTS.md** - Feature backlog
+- **MEMORY_ENHANCEMENTS.md** - Memory system features
+- **CROSS_PILLAR_IMPROVEMENTS.md** - Synthesis improvements
+- **DAILY_ACTIONABLE_QUEUE.md** - Queue feature spec
+- **MEMORY_ONBOARDING_SPEC.md** - Onboarding improvements
+- **DEMO_FLOW.md** - Demo walkthrough
+- **DEMO_ONBOARDING.md** - Onboarding demo
+- **USER_FLOW_ANALYSIS.md** - User flow review
+- **UX_IMPROVEMENTS_STATUS.md** - UX tracking
 
-### Scripts (scripts/polymath/)
-```
-scripts/polymath/
-├── capability-scanner.ts    # Scan codebase
-├── synthesis.ts             # AI synthesis engine
-├── strengthen-nodes.ts      # Git activity tracker
-└── seed-test-data.ts        # Test data generator
-```
+### /deprecated
+- **START_HERE.md** - Replaced by README.md + INDEX.md
 
 ---
 
-## 🎯 By Use Case
+## 🗺️ Navigation Guide
 
-### "I want to run it locally"
-→ **UI_COMPLETE.md** → Quick Start section
+### "I want to understand what Polymath is"
+→ Start with **README.md**, then **CONCEPT.md**
 
-### "I want to deploy it"
-→ **QUICK_DEPLOY.md** (if had MemoryOS)
-→ **DEPLOYMENT_CHECKLIST.md** (full guide)
+### "I want to set it up locally"
+→ **SETUP.md** → **MIGRATIONS.md** → **RUN_MIGRATIONS.md**
 
-### "I want to understand how it works"
-→ **CONCEPT.md** → Design philosophy
-→ **ARCHITECTURE.md** → Technical details
+### "I want to deploy to production"
+→ **DEPLOYMENT.md**
+
+### "I want to understand the technical design"
+→ **ARCHITECTURE.md** → **docs/ARCHITECTURE_DIAGRAM.md** → **docs/API_SPEC.md**
+
+### "I want to work on an improvement"
+→ **NEXT_SESSION.md** → **BACKLOG.md** → relevant spec in .archive/specs/
 
 ### "I want to test the API"
-→ **API_TESTING.md** → Curl commands
+→ **docs/API_TESTING.md** → **docs/TESTING_GUIDE.md**
 
-### "I want to see what the UI looks like"
-→ **UI_PREVIEW.md** → Visual mockups
-
-### "I want to modify the code"
-→ **ARCHITECTURE.md** → System design
-→ **UI_COMPONENTS.md** → Component specs
-→ **API_SPEC.md** → API reference
-
-### "I need help troubleshooting"
-→ **DEPLOYMENT_CHECKLIST.md** → Troubleshooting section
-→ **TESTING_GUIDE.md** → Common issues
+### "I need to apply a database migration"
+→ **MIGRATIONS.md** → **RUN_MIGRATIONS.md** → migrations/XXX-*.sql
 
 ---
 
-## 📊 By Document Type
+## 📊 Documentation Stats
 
-### Guides (How-to)
-- START_HERE.md
-- QUICK_DEPLOY.md
-- TESTING_GUIDE.md
-- DEPLOYMENT_CHECKLIST.md
-- API_TESTING.md
+- **Root level**: 14 files (down from 35!)
+- **/docs**: 7 files
+- **/migrations**: 5 files
+- **/.archive**: 16 files
 
-### Reference (What/Why)
-- README.md
-- CONCEPT.md
-- ARCHITECTURE.md
-- API_SPEC.md
-- DEPENDENCIES.md
-
-### Visual (Show me)
-- UI_PREVIEW.md
-- ARCHITECTURE_DIAGRAM.md
-- UI_COMPONENTS.md
-
-### Planning (Roadmap)
-- ROADMAP.md
-- IMPLEMENTATION_SUMMARY.md
-
-### Meta (About changes)
-- CONSOLIDATION_SUMMARY.md
-- UI_COMPLETE.md
-- INTEGRATION_COMPLETE.md
+**Token savings**: Estimated 60% reduction from consolidation
 
 ---
 
-## 🔍 Quick Search
+## 🔄 Maintenance
 
-**Looking for...**
+**When creating new documentation**:
+1. Determine appropriate location (root vs /docs vs /migrations)
+2. Add entry to this index
+3. Update "Last Updated" date here
+4. Link from relevant navigation sections
 
-- **"How do I deploy?"** → QUICK_DEPLOY.md or DEPLOYMENT_CHECKLIST.md
-- **"What does it look like?"** → UI_PREVIEW.md
-- **"How does synthesis work?"** → ARCHITECTURE.md (Synthesis section)
-- **"What APIs exist?"** → API_SPEC.md
-- **"How do I test?"** → TESTING_GUIDE.md or API_TESTING.md
-- **"What's the database schema?"** → scripts/migration.sql
-- **"What are the environment variables?"** → .env.local.example
-- **"What NPM scripts exist?"** → package.json or UI_COMPLETE.md
-- **"What changed from MemoryOS?"** → CONSOLIDATION_SUMMARY.md
-- **"How do I contribute?"** → (Create CONTRIBUTING.md if needed)
+**When archiving documentation**:
+1. Move to appropriate .archive subdirectory
+2. Update this index
+3. Note in CHANGELOG.md
 
 ---
 
-## 📦 File Count
-
-**Documentation**: 20+ files
-- Guides: 6
-- Reference: 7
-- Visual: 3
-- Planning: 2
-- Meta: 4
-
-**Implementation**: 20+ files
-- Frontend: 9 files (3 pages, 2 stores, 4 components + App)
-- Backend: 7 API endpoints
-- Scripts: 4 files
-- Types: 1 file (477 lines)
-
-**Total**: 40+ files, ~6,000 lines of code + docs
-
----
-
-## 🏆 Recommended Reading Order
-
-### For Users (Want to use it)
-1. README.md (overview)
-2. QUICK_DEPLOY.md (deploy)
-3. UI_PREVIEW.md (see what it looks like)
-4. TESTING_GUIDE.md (test it)
-
-### For Developers (Want to modify it)
-1. START_HERE.md (orientation)
-2. CONCEPT.md (philosophy)
-3. ARCHITECTURE.md (technical design)
-4. UI_COMPONENTS.md (component specs)
-5. API_SPEC.md (API reference)
-
-### For DevOps (Want to deploy/maintain)
-1. DEPLOYMENT_CHECKLIST.md (deploy)
-2. DEPENDENCIES.md (requirements)
-3. API_TESTING.md (testing)
-4. DEPLOYMENT.md (operations)
-
----
-
-## 🆕 Latest Additions (Session 21)
-
-**New in this session**:
-- UI_COMPLETE.md
-- UI_PREVIEW.md
-- API_TESTING.md
-- QUICK_DEPLOY.md
-- CONSOLIDATION_SUMMARY.md
-- INDEX.md (this file)
-
-**Updated**:
-- README.md (rewritten for Polymath)
-- START_HERE.md (Polymath-focused)
-- DEPLOYMENT_CHECKLIST.md (simplified for existing setup)
-- package.json (added helper scripts)
-
----
-
-## 🎯 Status
-
-**Documentation**: ✅ Complete (20+ files)
-**Implementation**: ✅ Complete (UI, API, scripts)
-**Testing**: ✅ Guides provided
-**Deployment**: ✅ Ready (5 min with existing setup)
-
----
-
-**Need help?** Start with **START_HERE.md** 🚀
+**Keep this index updated! It's the map to all Polymath documentation.**
