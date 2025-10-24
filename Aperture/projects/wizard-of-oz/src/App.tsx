@@ -10,6 +10,7 @@ import { PhotoGallery } from './components/PhotoGallery';
 import { Onboarding } from './components/Onboarding';
 import { PasscodeLock } from './components/PasscodeLock';
 import { PrivacySettings } from './components/PrivacySettings';
+import { JoinCodePrompt } from './components/JoinCodePrompt';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -20,6 +21,7 @@ const ComparisonView = lazy(() => import('./components/ComparisonView').then(m =
 type ViewType = 'gallery' | 'calendar' | 'compare';
 
 const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
+const JOIN_CODE_PROMPTED_KEY = 'wizard-join-code-prompted';
 const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
@@ -28,6 +30,7 @@ function App() {
   const { fetchPhotos } = usePhotoStore();
   const [view, setView] = useState<ViewType>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showJoinCodePrompt, setShowJoinCodePrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
@@ -44,11 +47,15 @@ function App() {
     }
   }, [user]);
 
-  // Check if user has completed onboarding & fetch settings + photos
+  // Check if user has completed onboarding & join code prompt & fetch settings + photos
   useEffect(() => {
     if (user) {
       const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
-      if (!hasCompletedOnboarding) {
+      const hasSeenJoinCodePrompt = localStorage.getItem(JOIN_CODE_PROMPTED_KEY);
+
+      if (!hasSeenJoinCodePrompt) {
+        setShowJoinCodePrompt(true);
+      } else if (!hasCompletedOnboarding) {
         setShowOnboarding(true);
       }
 
@@ -57,6 +64,17 @@ function App() {
       fetchPhotos();
     }
   }, [user, fetchSettings, fetchPhotos]);
+
+  const handleJoinCodeComplete = () => {
+    localStorage.setItem(JOIN_CODE_PROMPTED_KEY, 'true');
+    setShowJoinCodePrompt(false);
+
+    // Show onboarding if they haven't seen it
+    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
+    if (!hasCompletedOnboarding) {
+      setShowOnboarding(true);
+    }
+  };
 
   const handleOnboardingComplete = () => {
     localStorage.setItem(ONBOARDING_KEY, 'true');
@@ -108,6 +126,11 @@ function App() {
         onUnlock={() => setIsLocked(false)}
       />
     );
+  }
+
+  // Show join code prompt for new users
+  if (showJoinCodePrompt) {
+    return <JoinCodePrompt onComplete={handleJoinCodeComplete} />;
   }
 
   // Show onboarding for first-time users

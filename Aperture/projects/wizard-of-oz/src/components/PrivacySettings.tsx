@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing, Users, Copy, RefreshCw } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { subscribeToPushNotifications, unsubscribeFromPushNotifications, getPushSubscriptionStatus, isPushNotificationSupported } from '../lib/notifications';
@@ -14,7 +14,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const { photos } = usePhotoStore();
-  const { settings, updateBirthdate, updateReminderSettings } = useSettingsStore();
+  const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
   const [showPasscodeSetup, setShowPasscodeSetup] = useState(false);
@@ -31,6 +31,9 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const [pushNotificationsSupported, setPushNotificationsSupported] = useState(false);
   const [enablingPushNotifications, setEnablingPushNotifications] = useState(false);
   const [pushStatusChecked, setPushStatusChecked] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [sharedUsers, setSharedUsers] = useState<Array<{ user_id: string; email: string | null }>>([]);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -80,6 +83,19 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
 
     return () => clearTimeout(timer);
   }, [pushStatusChecked]);
+
+  // Load shared users
+  useEffect(() => {
+    async function loadSharedUsers() {
+      try {
+        const users = await getSharedUsers();
+        setSharedUsers(users);
+      } catch (error) {
+        console.warn('Could not load shared users:', error);
+      }
+    }
+    loadSharedUsers();
+  }, [getSharedUsers]);
 
   const handlePrivacyModeToggle = () => {
     const newValue = !privacyMode;
@@ -176,6 +192,39 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       alert(`Failed to enable push notifications:\n\n${errorMessage}\n\nCheck the browser console (F12) for more details.`);
     } finally {
       setEnablingPushNotifications(false);
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    try {
+      setGeneratingCode(true);
+      await generateInviteCode();
+      setGeneratingCode(false);
+    } catch (error) {
+      setGeneratingCode(false);
+      console.error('Error generating code:', error);
+      alert('Failed to generate invite code. Please try again.');
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (settings?.invite_code) {
+      navigator.clipboard.writeText(settings.invite_code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleRemoveSharedUser = async (userId: string) => {
+    if (confirm('Remove this user\'s access to your photos?')) {
+      try {
+        await removeSharedUser(userId);
+        const users = await getSharedUsers();
+        setSharedUsers(users);
+      } catch (error) {
+        console.error('Error removing user:', error);
+        alert('Failed to remove user. Please try again.');
+      }
     }
   };
 
@@ -444,6 +493,86 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
               </div>
             </div>
           )}
+
+          {/* Shared Access */}
+          <div className="bg-indigo-50 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Shared Access</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Invite your partner to access and upload photos
+                </p>
+
+                {!settings?.invite_code ? (
+                  <button
+                    onClick={handleGenerateCode}
+                    disabled={generatingCode}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${generatingCode ? 'animate-spin' : ''}`} />
+                    {generatingCode ? 'Generating...' : 'Generate Invite Code'}
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-white border-2 border-indigo-300 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 mb-1">Your Invite Code</p>
+                          <p className="text-3xl font-bold text-indigo-600 tracking-wider">{settings.invite_code}</p>
+                        </div>
+                        <button
+                          onClick={handleCopyCode}
+                          className="p-2 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          <Copy className="w-5 h-5 text-indigo-600" />
+                        </button>
+                      </div>
+                      {copiedCode && (
+                        <p className="text-xs text-green-600 mt-2">✓ Copied to clipboard!</p>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-600">
+                      Share this code with your partner. They can enter it when they first open the app to access your shared photos.
+                    </p>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleGenerateCode}
+                        disabled={generatingCode}
+                        className="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        <RefreshCw className="w-3 h-3 inline mr-1" />
+                        New Code
+                      </button>
+                    </div>
+
+                    {sharedUsers.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-indigo-200">
+                        <p className="text-xs font-medium text-gray-700 mb-2">Connected Users ({sharedUsers.length})</p>
+                        <div className="space-y-2">
+                          {sharedUsers.map(user => (
+                            <div key={user.user_id} className="flex items-center justify-between bg-white rounded-lg p-2">
+                              <span className="text-sm text-gray-700">User ID: {user.user_id.slice(0, 8)}...</span>
+                              <button
+                                onClick={() => handleRemoveSharedUser(user.user_id)}
+                                className="text-xs text-red-600 hover:text-red-700 font-medium"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Passcode Lock */}
           <div className="bg-gray-50 rounded-xl p-4">

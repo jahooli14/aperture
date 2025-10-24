@@ -61,6 +61,7 @@ export interface Database {
           reminder_email: string | null;
           reminders_enabled: boolean;
           push_subscription: Record<string, unknown> | null;
+          invite_code: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +74,7 @@ export interface Database {
           reminder_email?: string | null;
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
+          invite_code?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -85,8 +87,29 @@ export interface Database {
           reminder_email?: string | null;
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
+          invite_code?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      user_shares: {
+        Row: {
+          id: string;
+          owner_user_id: string;
+          shared_user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_user_id: string;
+          shared_user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_user_id?: string;
+          shared_user_id?: string;
+          created_at?: string;
         };
       };
     };
