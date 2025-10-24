@@ -173,6 +173,8 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      console.log('Looking for invite code:', inviteCode);
+
       // Find the user with this invite code
       const { data: ownerSettings, error: findError } = await supabase
         .from('user_settings')
@@ -180,8 +182,15 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         .eq('invite_code', inviteCode)
         .single();
 
-      if (findError || !ownerSettings) {
-        throw new Error('Invalid invite code');
+      console.log('Query result:', { ownerSettings, error: findError });
+
+      if (findError) {
+        console.error('Database error finding invite code:', findError);
+        throw new Error(`Database error: ${findError.message}`);
+      }
+
+      if (!ownerSettings) {
+        throw new Error('Invalid invite code - no matching user found');
       }
 
       const ownerUserId = (ownerSettings as { user_id: string }).user_id;
