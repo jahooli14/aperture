@@ -12,7 +12,7 @@ const screens = [
     icon: Camera,
     iconColor: 'text-blue-600',
     iconBg: 'bg-blue-100',
-    title: 'Welcome to Wizard of Oz',
+    title: 'Welcome to Pupils',
     subtitle: 'Watch Your Baby Grow',
     description: 'Capture one photo each day and create a magical timelapse of your baby\'s first year. Our app automatically aligns photos for a smooth, professional result.',
     features: [

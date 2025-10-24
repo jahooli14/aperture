@@ -1,5 +1,5 @@
 /**
- * Structured Logging System for Wizard of Oz
+ * Structured Logging System for Pupils
  * Replaces console.log with environment-aware, structured logging
  */
 

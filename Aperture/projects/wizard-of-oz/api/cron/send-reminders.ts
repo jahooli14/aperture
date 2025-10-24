@@ -83,7 +83,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Send reminder email
       try {
         await resend.emails.send({
-          from: 'Wizard of Oz <onboarding@resend.dev>', // Change to your domain once verified
+          from: 'Pupils <onboarding@resend.dev>', // Change to your domain once verified
           to: user.reminder_email!,
           subject: "Don't forget today's photo! 📸",
           html: generateEmailHTML(user.user_id),
@@ -151,7 +151,7 @@ function generateEmailHTML(userId: string): string {
     <tr>
       <td style="padding: 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <h1 style="margin: 0; color: white; font-size: 32px;">📸</h1>
-        <h2 style="margin: 10px 0 0 0; color: white; font-size: 24px; font-weight: 600;">Wizard of Oz</h2>
+        <h2 style="margin: 10px 0 0 0; color: white; font-size: 24px; font-weight: 600;">Pupils</h2>
       </td>
     </tr>
     <tr>

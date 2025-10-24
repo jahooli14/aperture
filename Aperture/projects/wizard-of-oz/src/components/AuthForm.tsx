@@ -46,7 +46,7 @@ export function AuthForm() {
       className="w-full max-w-md"
     >
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Wizard of Oz</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Pupils</h1>
         <p className="text-gray-600">Watch your baby grow, day by day</p>
       </div>
 
