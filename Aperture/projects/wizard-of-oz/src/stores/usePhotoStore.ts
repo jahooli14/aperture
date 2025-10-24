@@ -13,6 +13,31 @@ export interface EyeCoordinates {
   imageHeight: number;
 }
 
+// In-memory cache for signed URLs (1 hour expiry)
+interface SignedUrlCache {
+  url: string;
+  expiresAt: number;
+}
+const signedUrlCache = new Map<string, SignedUrlCache>();
+
+function getCachedSignedUrl(path: string): string | null {
+  const cached = signedUrlCache.get(path);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.url;
+  }
+  if (cached) {
+    signedUrlCache.delete(path); // Remove expired entry
+  }
+  return null;
+}
+
+function setCachedSignedUrl(path: string, url: string, expirySeconds: number): void {
+  signedUrlCache.set(path, {
+    url,
+    expiresAt: Date.now() + (expirySeconds * 1000)
+  });
+}
+
 interface PhotoState {
   photos: Photo[];
   loading: boolean;
@@ -72,19 +97,27 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         dataArray.map(async (photo) => {
           const signedPhoto = { ...photo } as Photo;
 
-          // Generate signed URL for original photo
+          // Generate signed URL for original photo (with caching)
           if (photo.original_url) {
             try {
               const path = photo.original_url.split('/storage/v1/object/public/originals/')[1];
               if (path) {
-                const { data: signedData, error: signError } = await supabase.storage
-                  .from('originals')
-                  .createSignedUrl(path, 86400); // 24 hours
-
-                if (!signError && signedData) {
-                  signedPhoto.signed_original_url = signedData.signedUrl;
+                // Check cache first
+                const cachedUrl = getCachedSignedUrl(`original_${path}`);
+                if (cachedUrl) {
+                  signedPhoto.signed_original_url = cachedUrl;
                 } else {
-                  logger.warn('Failed to create signed URL for original', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                  // Generate new signed URL
+                  const { data: signedData, error: signError } = await supabase.storage
+                    .from('originals')
+                    .createSignedUrl(path, 3600); // 1 hour
+
+                  if (!signError && signedData) {
+                    signedPhoto.signed_original_url = signedData.signedUrl;
+                    setCachedSignedUrl(`original_${path}`, signedData.signedUrl, 3600);
+                  } else {
+                    logger.warn('Failed to create signed URL for original', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                  }
                 }
               }
             } catch (err) {
@@ -92,19 +125,27 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
             }
           }
 
-          // Generate signed URL for aligned photo if it exists
+          // Generate signed URL for aligned photo if it exists (with caching)
           if (photo.aligned_url) {
             try {
               const path = photo.aligned_url.split('/storage/v1/object/public/originals/')[1];
               if (path) {
-                const { data: signedData, error: signError } = await supabase.storage
-                  .from('originals')
-                  .createSignedUrl(path, 86400); // 24 hours
-
-                if (!signError && signedData) {
-                  signedPhoto.signed_aligned_url = signedData.signedUrl;
+                // Check cache first
+                const cachedUrl = getCachedSignedUrl(`aligned_${path}`);
+                if (cachedUrl) {
+                  signedPhoto.signed_aligned_url = cachedUrl;
                 } else {
-                  logger.warn('Failed to create signed URL for aligned', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                  // Generate new signed URL
+                  const { data: signedData, error: signError } = await supabase.storage
+                    .from('originals')
+                    .createSignedUrl(path, 3600); // 1 hour
+
+                  if (!signError && signedData) {
+                    signedPhoto.signed_aligned_url = signedData.signedUrl;
+                    setCachedSignedUrl(`aligned_${path}`, signedData.signedUrl, 3600);
+                  } else {
+                    logger.warn('Failed to create signed URL for aligned', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
+                  }
                 }
               }
             } catch (err) {
