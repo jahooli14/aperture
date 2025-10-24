@@ -12,6 +12,7 @@ import { PasscodeLock } from './components/PasscodeLock';
 import { PrivacySettings } from './components/PrivacySettings';
 import { JoinCodePrompt } from './components/JoinCodePrompt';
 import { PWAInstallGuide } from './components/PWAInstallGuide';
+import { MilestoneBanner } from './components/MilestoneBanner';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -175,6 +176,9 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Milestone Banner */}
+        <MilestoneBanner />
+
         {/* View Toggle */}
         <div className="flex justify-center mb-6 md:mb-8">
           <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full max-w-lg md:w-auto shadow-sm">
