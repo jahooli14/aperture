@@ -154,14 +154,38 @@ export function validateImageFile(file: File): { isValid: boolean; error?: strin
 }
 
 /**
- * Target eye positions for aligned photos
- * Eyes should be horizontally aligned at 40% from top
+ * Target dimensions for aligned photos
+ * Eyes should be horizontally aligned at variable Y position (age-based)
  * Left eye at 33%, right eye at 67% horizontally
  */
 const TARGET_WIDTH = 1080;
 const TARGET_HEIGHT = 1350;
-const TARGET_LEFT_EYE = { x: TARGET_WIDTH * 0.33, y: TARGET_HEIGHT * 0.40 };
-const TARGET_RIGHT_EYE = { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * 0.40 };
+
+/**
+ * Calculate appropriate zoom level (eye Y position) based on baby's age
+ * Zoom evolves as baby grows to show more context and environment
+ *
+ * @param ageInMonths - Baby's age in months at time of photo
+ * @returns Y position as fraction (0-1) where eyes should be positioned
+ */
+export function calculateZoomLevel(ageInMonths: number): number {
+  if (ageInMonths < 6) return 0.40;      // 0-6 months: Tight crop, face focus (newborn)
+  if (ageInMonths < 18) return 0.30;     // 6-18 months: Medium crop, shows torso (sitting/crawling)
+  if (ageInMonths < 36) return 0.25;     // 18-36 months: Wide crop, upper body (toddler standing)
+  return 0.20;                            // 3+ years: Very wide, almost full body
+}
+
+/**
+ * Get target eye positions for a given zoom level
+ * @param zoomLevel - Y position as fraction (0-1) where eyes should be
+ * @returns Object with left and right eye target positions
+ */
+function getTargetEyePositions(zoomLevel: number) {
+  return {
+    leftEye: { x: TARGET_WIDTH * 0.33, y: TARGET_HEIGHT * zoomLevel },
+    rightEye: { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * zoomLevel }
+  };
+}
 
 /**
  * Aligns a photo based on detected eye coordinates
@@ -170,11 +194,13 @@ const TARGET_RIGHT_EYE = { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * 0.40 };
  *
  * @param file - The image file to align
  * @param eyeCoords - Detected eye coordinates
+ * @param zoomLevel - Y position (0-1) where eyes should be placed (default 0.40 for backward compatibility)
  * @returns Promise resolving to aligned image file and transformation details
  */
 export async function alignPhoto(
   file: File,
-  eyeCoords: EyeCoordinates
+  eyeCoords: EyeCoordinates,
+  zoomLevel: number = 0.40
 ): Promise<AlignmentResult> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -189,6 +215,9 @@ export async function alignPhoto(
         canvas.width = TARGET_WIDTH;
         canvas.height = TARGET_HEIGHT;
 
+        // Get target eye positions for the specified zoom level
+        const targetPositions = getTargetEyePositions(zoomLevel);
+
         // Calculate transformation parameters
         const { leftEye, rightEye } = eyeCoords;
 
@@ -199,7 +228,7 @@ export async function alignPhoto(
 
         // Calculate scale to match target eye distance
         const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
-        const targetEyeDistance = TARGET_RIGHT_EYE.x - TARGET_LEFT_EYE.x;
+        const targetEyeDistance = targetPositions.rightEye.x - targetPositions.leftEye.x;
         const scale = targetEyeDistance / currentEyeDistance;
 
         // Calculate center point between eyes (source)
@@ -207,8 +236,8 @@ export async function alignPhoto(
         const sourceCenterY = (leftEye.y + rightEye.y) / 2;
 
         // Calculate center point between eyes (target)
-        const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
-        const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
+        const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
+        const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
 
         // Determine if image needs 180° rotation based on eye left-right order
         // If leftEye.x > rightEye.x, eyes are swapped (upside-down) and need flipping

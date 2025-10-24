@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, MessageSquare } from 'lucide-react';
 import { usePhotoStore, type EyeCoordinates } from '../stores/usePhotoStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { EyeDetector } from './EyeDetector';
 import { DateSelector } from './DateSelector';
 import { UploadButtons } from './UploadButtons';
 import { PreviewControls } from './PreviewControls';
-import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage } from '../lib/imageUtils';
+import { rotateImage, fileToDataURL, validateImageFile, alignPhoto, compressImage, calculateZoomLevel } from '../lib/imageUtils';
 import { triggerHaptic } from '../lib/haptics';
 import { logger } from '../lib/logger';
 import type { ToastType } from './Toast';
@@ -30,10 +31,12 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [note, setNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(0.40); // Track zoom level used for alignment
   const hasAlignedRef = useRef(false); // Track if we've already aligned this file
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { uploadPhoto, uploading, hasUploadedToday, hasUploadedForDate } = usePhotoStore();
+  const { settings } = useSettingsStore();
 
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0];
@@ -132,7 +135,33 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       try {
         setAligning(true);
         setError('');
-        const result = await alignPhoto(selectedFile, coords);
+
+        // Calculate zoom level based on baby's age
+        let calculatedZoom = 0.40; // Default: tight crop for newborns
+
+        if (settings?.baby_birthdate) {
+          // Calculate baby's age in months at photo date
+          const photoDate = new Date(displayDate);
+          const birthDate = new Date(settings.baby_birthdate);
+          const ageInMonths = Math.floor(
+            (photoDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+          );
+
+          // Get age-appropriate zoom level
+          calculatedZoom = calculateZoomLevel(ageInMonths);
+
+          logger.info('Age-based zoom calculated', {
+            birthdate: settings.baby_birthdate,
+            photoDate: displayDate,
+            ageInMonths,
+            zoomLevel: calculatedZoom
+          }, 'UploadPhoto');
+        }
+
+        // Store zoom level for upload metadata
+        setZoomLevel(calculatedZoom);
+
+        const result = await alignPhoto(selectedFile, coords, calculatedZoom);
         setAlignedFile(result.alignedImage);
         setAligning(false);
       } catch (err) {
@@ -161,7 +190,7 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       setError('');
       // Upload aligned photo if available, otherwise upload original
       const fileToUpload = alignedFile || selectedFile;
-      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined);
+      await uploadPhoto(fileToUpload, eyeCoords, displayDate, note || undefined, alignedFile ? zoomLevel : undefined);
 
       // Success feedback
       triggerHaptic('success');

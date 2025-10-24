@@ -20,7 +20,7 @@ interface PhotoState {
   deleting: boolean;
   fetchError: string | null;
   fetchPhotos: () => Promise<void>;
-  uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string) => Promise<string>;
+  uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string, zoomLevel?: number) => Promise<string>;
   updatePhotoNote: (photoId: string, note: string, emoji?: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
   restorePhoto: (photo: Photo) => void;
@@ -124,7 +124,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     }
   },
 
-  uploadPhoto: async (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string) => {
+  uploadPhoto: async (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string, zoomLevel?: number) => {
     set({ uploading: true });
 
     try {
@@ -187,7 +187,10 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
           imageWidth: eyeCoords.imageWidth,
           imageHeight: eyeCoords.imageHeight
         } : null,
-        metadata: note ? { note } : null,
+        metadata: {
+          ...(note ? { note } : {}),
+          ...(zoomLevel !== undefined ? { zoom_level: zoomLevel } : {})
+        },
       };
 
       // Insert photo record (type assertion required for Supabase generated types)
