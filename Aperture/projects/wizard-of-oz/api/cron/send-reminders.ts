@@ -24,11 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentHour = now.getUTCHours();
 
     // Get all users with reminders enabled
+    type UserSettings = Pick<Database['public']['Tables']['user_settings']['Row'], 'user_id' | 'reminder_email' | 'reminder_time' | 'timezone'>;
     const { data: users, error: usersError } = await supabase
       .from('user_settings')
       .select('user_id, reminder_email, reminder_time, timezone')
       .eq('reminders_enabled', true)
-      .not('reminder_email', 'is', null);
+      .not('reminder_email', 'is', null) as { data: UserSettings[] | null; error: unknown };
 
     if (usersError) {
       console.error('Error fetching users:', usersError);
