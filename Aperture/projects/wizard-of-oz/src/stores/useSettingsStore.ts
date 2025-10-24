@@ -184,7 +184,9 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         throw new Error('Invalid invite code');
       }
 
-      if (ownerSettings.user_id === user.id) {
+      const ownerUserId = (ownerSettings as { user_id: string }).user_id;
+
+      if (ownerUserId === user.id) {
         throw new Error('You cannot join your own account');
       }
 
@@ -192,7 +194,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const { error: shareError } = await supabase
         .from('user_shares')
         .insert({
-          owner_user_id: ownerSettings.user_id,
+          owner_user_id: ownerUserId,
           shared_user_id: user.id
         } as never);
 
@@ -204,7 +206,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         throw shareError;
       }
 
-      logger.info('Successfully joined account', { ownerUserId: ownerSettings.user_id }, 'SettingsStore');
+      logger.info('Successfully joined account', { ownerUserId }, 'SettingsStore');
     } catch (error) {
       logger.error('Unexpected error joining with code', {
         error: error instanceof Error ? error.message : String(error)
@@ -231,7 +233,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
       // Get user details from auth.users (this requires a server-side function in production)
       // For now, just return the user IDs
-      return (shares || []).map(share => ({
+      return (shares || []).map((share: { shared_user_id: string }) => ({
         user_id: share.shared_user_id,
         email: null // Would need server-side function to get email
       }));
