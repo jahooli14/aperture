@@ -32,9 +32,23 @@ export function AuthForm() {
         className="text-center"
       >
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mb-4">
           We sent a magic link to <strong>{email}</strong>
         </p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-left">
+          <p className="text-blue-800 font-semibold mb-2">
+            📱 Important for PWA users:
+          </p>
+          <ol className="text-blue-700 space-y-1 text-xs list-decimal list-inside">
+            <li>Click the magic link in your email</li>
+            <li>It will open in Safari (not the PWA)</li>
+            <li>Complete login and join code entry in Safari</li>
+            <li>Then you can close Safari and use the PWA</li>
+          </ol>
+          <p className="text-blue-600 text-xs mt-2 italic">
+            Note: Safari and PWA don't share sessions on iOS. Use Safari for the initial setup.
+          </p>
+        </div>
       </motion.div>
     );
   }
