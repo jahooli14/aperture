@@ -6,10 +6,10 @@
 
 | Project | Status | Description |
 |---------|--------|-------------|
-| **[Wizard of Oz](projects/wizard-of-oz/)** | 🟢 Production | Baby photo alignment app with AI eye detection |
-| **[MemoryOS](projects/memory-os/)** | 🔵 Design | Voice-to-memory personal knowledge graph |
-| **[Self-Healing Tests](projects/self-healing-tests/)** | 🟢 Complete | Automated test repair using Gemini AI |
-| **[Visual Test Generator](projects/visual-test-generator/)** | 🚀 Starting | Video → Playwright test generation |
+| **[Pupils](projects/wizard-of-oz/)** | 🟢 Production | Baby photo alignment app with AI eye detection |
+| **[Polymath](projects/polymath/)** | 🟢 Production | Voice-to-memory knowledge graph & creative project tracker |
+| **[Baby Milestone Tracker](projects/baby-milestone-tracker/)** | 🆕 New | AI-powered developmental milestone tracking |
+| **[Self-Healing Tests](projects/self-healing-tests/)** | 🔵 Design | Automated test repair using Gemini AI |
 | **[Autonomous Docs](scripts/autonomous-docs/)** | 🟢 Active | Self-optimizing documentation system |
 
 ## 📖 Documentation
@@ -28,10 +28,10 @@
 ```
 Aperture/
 ├── projects/              # Individual projects
-│   ├── wizard-of-oz/      # 🟢 Production baby photo app
-│   ├── memory-os/         # 🔵 Design phase knowledge graph
-│   ├── self-healing-tests/ # 🟢 Complete test framework
-│   └── visual-test-generator/ # 🚀 Week 1 starting
+│   ├── wizard-of-oz/      # 🟢 Pupils (baby photo app)
+│   ├── polymath/          # 🟢 Voice-to-memory & creative projects
+│   ├── baby-milestone-tracker/ # 🆕 Milestone tracking
+│   └── self-healing-tests/ # 🔵 Test repair framework
 │
 ├── scripts/               # Meta-infrastructure
 │   └── autonomous-docs/   # Self-optimizing docs

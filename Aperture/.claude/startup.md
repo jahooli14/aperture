@@ -115,9 +115,9 @@ User: "continue where we left off"
 
 # Auto-detected with inference
 pwd: /Aperture/
-Last Active: Wizard of Oz
+Last Active: Pupils
 User: "fix the upload bug"
-→ Infer: Wizard of Oz (was last active, user mentions upload)
+→ Infer: Pupils (was last active, user mentions upload)
 → Silently load: projects/wizard-of-oz/NEXT_SESSION.md
 ```
 
@@ -142,10 +142,10 @@ Is that correct, or are you working on something else?
 **Root NEXT_SESSION.md is a ROUTER, not content**:
 1. **Read root** `NEXT_SESSION.md` ONLY to see which project was last active
 2. **Immediately load project-specific** `NEXT_SESSION.md` for actual details:
-   - `projects/wizard-of-oz/NEXT_SESSION.md` ← Detailed status HERE
-   - `projects/visual-test-generator/NEXT_SESSION.md` ← Detailed status HERE
-   - `projects/polymath/NEXT_SESSION.md` ← Detailed status HERE
-   - `scripts/autonomous-docs/NEXT_SESSION.md` ← Detailed status HERE
+   - `projects/wizard-of-oz/NEXT_SESSION.md` ← Pupils project (folder kept as wizard-of-oz)
+   - `projects/visual-test-generator/NEXT_SESSION.md` ← Visual Test Generator
+   - `projects/polymath/NEXT_SESSION.md` ← Polymath project
+   - `scripts/autonomous-docs/NEXT_SESSION.md` ← Autonomous Docs
 
 **Pattern**: Root = router index → Project file = actual content
 

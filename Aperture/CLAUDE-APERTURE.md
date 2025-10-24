@@ -13,8 +13,8 @@
 **Aperture** is a multi-project development framework for personal experiments, prototypes, and side projects.
 
 ### Current Status
-- **Active Projects**: 6
-  - **Personal**: Wizard of Oz (production), Polymath (ready to deploy), Baby Milestone Tracker (new)
+- **Active Projects**: 5
+  - **Personal**: Pupils (production), Polymath (production), Baby Milestone Tracker (new)
   - **Meta**: Visual Test Generator (documented), Self-Healing Tests, Autonomous Docs
 - **Framework**: React, TypeScript, Vite
 - **Deployment**: Vercel
@@ -31,7 +31,7 @@ Read these files IN ORDER:
 3. **`.process/SESSION_CHECKLIST.md`** - Workflow and best practices
 
 ### For Specific Tasks
-- **Wizard of Oz Development**: See `projects/wizard-of-oz/` section below
+- **Pupils Development**: See `projects/wizard-of-oz/` section below (app renamed to "Pupils")
 - **Baby Milestone Tracker**: See `projects/baby-milestone-tracker/` section below
 - **Polymath Development**: See `projects/polymath/` section below
 - **Self-Healing Tests**: See `scripts/self-healing-tests/` (coming soon)
@@ -48,17 +48,18 @@ Read these files IN ORDER:
 >
 > **📍 For detailed tasks, implementation notes, and verification steps → See `NEXT_SESSION.md`**
 
-**Active Project**: Wizard of Oz (Baby Photo App)
-**Status**: 🟢 Upload working end-to-end, ready for client-side alignment implementation
+**Active Project**: Pupils (Baby Photo App)
+**Status**: 🟢 Production - Feature complete and stable
 **Blockers**: None
 
-**Session 12 Accomplishments**:
-- ✅ Fixed invalid Supabase API key (was truncated)
-- ✅ Fixed photos stuck in "processing" state
-- ✅ Fixed upload button stuck on "Detecting..."
-- ✅ Enhanced logging throughout upload flow
+**Recent Updates**:
+- ✅ App renamed from "Wizard of Oz" to "Pupils" (Oct 24, 2025)
+- ✅ Smooth zoom level transitions
+- ✅ Age-based zoom levels for photo alignment
+- ✅ Email reminders system
+- ✅ Comment chips on photos with notes
 
-**Next**: Implement client-side photo alignment using Canvas API
+**Next**: See `projects/wizard-of-oz/NEXT_SESSION.md` for latest tasks
 
 ---
 
@@ -71,10 +72,9 @@ Aperture/
 ├── .process/             # Process documentation
 │   └── COMMON_MISTAKES.md
 ├── projects/             # Personal projects
-│   ├── wizard-of-oz/    # Baby photo alignment app
+│   ├── wizard-of-oz/    # Pupils (baby photo alignment app)
 │   ├── baby-milestone-tracker/  # AI-powered developmental milestone tracker
-│   ├── memory-os/       # Voice-to-memory knowledge graph
-│   └── polymath/        # Creative project tracker
+│   └── polymath/        # Voice-to-memory knowledge graph & creative project tracker
 ├── scripts/             # Meta projects (infrastructure)
 │   ├── autonomous-docs/ # Self-optimizing documentation
 │   └── self-healing-tests/ # Automated test repair (coming soon)
@@ -88,11 +88,13 @@ Aperture/
 
 ## Projects
 
-### Wizard of Oz
+### Pupils
 
 **Status**: ✅ LIVE & DEPLOYED
 
 A baby photo alignment application with AI-powered eye detection and timelapse generation.
+
+> **Note**: The app is named "Pupils" but the folder remains `wizard-of-oz/` to avoid breaking Vercel deployments.
 
 #### Quick Facts
 - **Location**: `projects/wizard-of-oz/`
@@ -134,7 +136,7 @@ See `projects/wizard-of-oz/DEPLOYMENT.md` for complete deployment workflow.
 
 ### Baby Milestone Tracker
 
-**Status**: 🆕 NEWLY CREATED - Extracted from Polymath
+**Status**: 🆕 NEW - Extracted from Polymath (Oct 22, 2025)
 
 An AI-powered developmental milestone tracking system that helps parents capture and understand their child's development through voice memories.
 
@@ -200,9 +202,9 @@ npm run dev
 
 ### Polymath
 
-**Status**: ✅ READY TO DEPLOY - Database Migration Required
+**Status**: ✅ LIVE & DEPLOYED
 
-A meta-creative synthesis engine that generates novel project ideas by combining your capabilities with your interests.
+A meta-creative synthesis engine that generates novel project ideas by combining your capabilities with your interests. Voice-to-memory personal knowledge graph with AI-powered project suggestions.
 
 #### What It Is
 - **Captures interests** via voice notes (Audiopen) → extracts recurring themes

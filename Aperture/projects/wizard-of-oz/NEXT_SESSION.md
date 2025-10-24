@@ -1,7 +1,9 @@
-# Next Session - Wizard of Oz
+# Next Session - Pupils
 
-**Last Updated**: 2025-10-21
+**Last Updated**: 2025-10-24
 **Status**: 🟢 Production - Feature complete and stable
+
+> **Note**: App renamed to "Pupils" on Oct 24, 2025. Folder remains `wizard-of-oz` to avoid breaking Vercel deployments.
 
 ---
 

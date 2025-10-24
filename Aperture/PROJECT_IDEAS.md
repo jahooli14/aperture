@@ -19,10 +19,10 @@
 ### Photo + Milestone Integration
 **Category**: Enhancement to existing projects
 **Status**: Design phase
-**Description**: Link Wizard of Oz baby photos with milestone tracker timeline
+**Description**: Link Pupils baby photos with milestone tracker timeline
 **Value**: Visual + text timeline showing development with actual photos
 **Dependencies**:
-- Wizard of Oz (exists)
+- Pupils (exists, folder: wizard-of-oz)
 - Baby Milestone Tracker (exists)
 **Next Steps**:
 - Design data model for linking photos to milestones
@@ -57,11 +57,11 @@
 **Dependencies**: Baby Milestone Tracker
 **Effort**: Low
 
-### MemoryOS Voice Integration
-**Category**: New feature for existing project
-**Status**: On hold (MemoryOS not actively developed)
-**Description**: Better Audiopen integration and voice note processing
-**Dependencies**: MemoryOS project
+### Polymath Voice Integration Enhancement
+**Category**: Enhancement to existing project
+**Status**: Future consideration
+**Description**: Enhanced Audiopen integration and voice note processing
+**Dependencies**: Polymath project (in production)
 **Effort**: Medium
 
 ### Shared Family Timeline
@@ -69,7 +69,7 @@
 **Status**: Idea
 **Description**: Share baby milestones + photos with family members
 **Value**: Grandparents can see updates, comment, celebrate
-**Dependencies**: Wizard of Oz + Baby Milestone Tracker
+**Dependencies**: Pupils + Baby Milestone Tracker
 **Effort**: High (requires auth, sharing, permissions)
 
 ---

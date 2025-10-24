@@ -17,7 +17,7 @@
 
 | Project | Status | Evidence | Next Session File |
 |---------|--------|----------|-------------------|
-| 🧙 **Wizard of Oz** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), [commit 0c99d39](https://github.com/jahooli14/aperture/commit/0c99d39) | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
+| 👁️ **Pupils** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), renamed Oct 24, folder: `wizard-of-oz` | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
 | 🎨 **Polymath** | 🟢 Production | [Live on Vercel](https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app), 23 capabilities, 10 AI suggestions, Gemini-powered | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
 | 🌱 **Baby Milestone Tracker** | 🆕 New (2025-10-22) | Extracted from Polymath, standalone project, 60+ milestones, AI-powered | [`NEXT_SESSION.md`](projects/baby-milestone-tracker/NEXT_SESSION.md) |
 | 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
