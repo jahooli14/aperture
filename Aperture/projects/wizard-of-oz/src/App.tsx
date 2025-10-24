@@ -11,6 +11,7 @@ import { Onboarding } from './components/Onboarding';
 import { PasscodeLock } from './components/PasscodeLock';
 import { PrivacySettings } from './components/PrivacySettings';
 import { JoinCodePrompt } from './components/JoinCodePrompt';
+import { OpenInAppPrompt } from './components/OpenInAppPrompt';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -35,6 +36,10 @@ function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const { toast, showToast, hideToast } = useToast();
+
+  // Check if running as PWA (standalone mode)
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                (window.navigator as any).standalone === true;
 
   // Check for passcode on mount
   useEffect(() => {
@@ -116,6 +121,11 @@ function App() {
         <AuthForm />
       </div>
     );
+  }
+
+  // If user is logged in but NOT in PWA mode, show prompt to open the app
+  if (user && !isPWA) {
+    return <OpenInAppPrompt />;
   }
 
   // Show passcode lock
