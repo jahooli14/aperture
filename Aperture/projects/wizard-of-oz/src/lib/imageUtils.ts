@@ -163,16 +163,30 @@ const TARGET_HEIGHT = 1350;
 
 /**
  * Calculate appropriate zoom level (eye Y position) based on baby's age
+ * Uses smooth, gradual transitions to avoid jarring jumps in timelapse
  * Zoom evolves as baby grows to show more context and environment
  *
  * @param ageInMonths - Baby's age in months at time of photo
  * @returns Y position as fraction (0-1) where eyes should be positioned
  */
 export function calculateZoomLevel(ageInMonths: number): number {
-  if (ageInMonths < 6) return 0.40;      // 0-6 months: Tight crop, face focus (newborn)
-  if (ageInMonths < 18) return 0.30;     // 6-18 months: Medium crop, shows torso (sitting/crawling)
-  if (ageInMonths < 36) return 0.25;     // 18-36 months: Wide crop, upper body (toddler standing)
-  return 0.20;                            // 3+ years: Very wide, almost full body
+  // Start: 0.40 (tight crop for newborns)
+  // End: 0.20 (wide crop for 3+ years)
+  // Smooth logarithmic curve for gradual zoom out
+
+  const START_ZOOM = 0.40;
+  const END_ZOOM = 0.20;
+  const MAX_AGE = 36; // 3 years
+
+  if (ageInMonths <= 0) return START_ZOOM;
+  if (ageInMonths >= MAX_AGE) return END_ZOOM;
+
+  // Use logarithmic interpolation for smooth, natural transition
+  // More rapid change early (newborn phase) then gradual
+  const t = ageInMonths / MAX_AGE;
+  const logT = Math.log(1 + t * 9) / Math.log(10); // log scale 1-10
+
+  return START_ZOOM - (START_ZOOM - END_ZOOM) * logT;
 }
 
 /**

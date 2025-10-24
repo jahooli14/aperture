@@ -91,11 +91,11 @@ export function PreviewControls({
           </div>
           {zoomLevel !== undefined && (
             <div className="text-xs text-gray-500 pl-6">
-              Zoom level: {(zoomLevel * 100).toFixed(0)}%
-              {zoomLevel === 0.40 && ' (Newborn: tight crop)'}
-              {zoomLevel === 0.30 && ' (6-18mo: medium crop)'}
-              {zoomLevel === 0.25 && ' (Toddler: wide crop)'}
-              {zoomLevel === 0.20 && ' (3+ yrs: very wide)'}
+              Crop level: {(zoomLevel * 100).toFixed(0)}%
+              {zoomLevel >= 0.35 && ' (Tight: face focus)'}
+              {zoomLevel < 0.35 && zoomLevel >= 0.28 && ' (Medium: shows torso)'}
+              {zoomLevel < 0.28 && zoomLevel >= 0.22 && ' (Wide: upper body)'}
+              {zoomLevel < 0.22 && ' (Very wide: full context)'}
             </div>
           )}
         </div>
