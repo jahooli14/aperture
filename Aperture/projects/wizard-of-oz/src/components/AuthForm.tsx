@@ -9,6 +9,11 @@ export function AuthForm() {
   const [error, setError] = useState('');
   const signIn = useAuthStore((state) => state.signIn);
 
+  // Check if user is in PWA mode
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                (window.navigator as any).standalone === true;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -48,6 +53,47 @@ export function AuthForm() {
           <p className="text-blue-600 text-xs mt-2 italic">
             Note: Safari and PWA don't share sessions on iOS. Use Safari for the initial setup.
           </p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Show warning if user is in PWA but not logged in (iOS only)
+  if (isPWA && isIOS && !sent) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Pupils</h1>
+          <p className="text-gray-600">Watch your baby grow, day by day</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <p className="text-sm font-semibold text-amber-900 mb-2">⚠️ PWA Login Issue</p>
+            <p className="text-sm text-amber-800 mb-3">
+              You're using the PWA app, but magic links won't work here on iOS.
+            </p>
+            <p className="text-xs text-amber-700">
+              To fix this, you need to login in Safari first, then reinstall the app:
+            </p>
+            <ol className="text-xs text-amber-700 mt-2 space-y-1 list-decimal list-inside">
+              <li>Delete this app from your home screen</li>
+              <li>Open Safari and go to aperture-production.vercel.app</li>
+              <li>Login with your email there</li>
+              <li>Then tap "Add to Home Screen" while logged in</li>
+            </ol>
+          </div>
+
+          <a
+            href="https://aperture-production.vercel.app"
+            className="block w-full bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-3 px-4 rounded-lg transition-colors text-center"
+          >
+            Open in Safari Instead
+          </a>
         </div>
       </motion.div>
     );
