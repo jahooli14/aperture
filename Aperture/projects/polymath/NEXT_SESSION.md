@@ -1,12 +1,71 @@
 # Polymath - Next Session
 
-> **Status**: 🟡 Enhancement Specs Ready - Implementation Pending
+> **Status**: 🟢 Killer Features Identified - Onboarding Redesign Priority
 > **Last Updated**: 2025-10-24
-> **Next**: Implement Daily Actionable Queue (highest priority)
+> **Next**: Implement new onboarding flow + 3 killer features
 
 ---
 
-## 🎉 Latest Session - Enhancement Design (2025-10-24)
+## 🎉 Latest Session - Killer Features & Onboarding Strategy (2025-10-24)
+
+### ✅ Research Completed: 2025 App Trends
+- Deep research into PKM apps, investment trends, voice-first AI, creator tools
+- Key findings: AI-powered personalization (265% valuation premium), voice-first adoption (8.4B users), personal AI memory systems breakthrough
+- Validated user needs: instant value, zero learning curve, mobile-first, local-first privacy options
+
+### ✅ 4 Killer Features Identified
+
+**1. Creative Intelligence Engine - "What Can I Make From This?"**
+- AI scans knowledge graph for creative project opportunities
+- Surfaces patterns: "12 notes about X + skill Y learned 6mo ago = Project Z"
+- Shows capability freshness tied to suggestions
+- Auto-generates project scaffolding from user's own knowledge
+- **Moat**: Only tool connecting temporal knowledge graph + creative projects
+
+**2. Proactive Gap-Filling Prompts - "The Questions You Didn't Know to Ask"**
+- AI detects valuable missing context in knowledge graph
+- Surfaces prompts at optimal moments: "You mentioned quitting your 9-5 twice - what would make that possible?"
+- Personalized to user's creative goals and side-hustle trajectory
+- Fills gaps that unlock insights user wouldn't see otherwise
+- **Target**: People with 9-5s building creative work on the side, aiming to go full-time
+- **Moat**: Only tool that knows what you DON'T know about yourself
+
+**3. Cognitive State Timeline - "Show Me When I Think Best"**
+- Analyzes WHEN and HOW users capture thoughts
+- Patterns: "Breakthrough insights Tuesday mornings" or "Best ideas after walks"
+- Tracks thought velocity and emotional continuity over time
+- Context windows with AI-generated narrative summaries
+- **Moat**: No tool analyzes temporal patterns of knowledge capture
+
+**4. Cross-Pollination Synthesis - "Combine Your Past Selves"**
+- Multi-memory synthesis showing evolution of thinking
+- Project archaeology: "Last 3 projects died at deployment - here's the pattern"
+- Capability evolution tracking based on terminology shifts
+- Memory collision detection: contradictions or growth?
+- **Moat**: Graph-based memory across time + projects dimension
+
+### ✅ Demo Strategy Defined
+
+**60-Second Onboarding Flow:**
+1. "What's a skill you learned in the past year?" (structured)
+2. "Tell me about something you started but didn't finish" (structured)
+3-5. Three freeform voice notes: "What's on your mind? Projects, ideas, frustrations"
+
+**Immediate Payoff:**
+- Show first graph with connections
+- Display detected patterns/themes/capabilities
+- First Creative Intelligence suggestion
+- Optional: "Want to track projects too?" (lightweight for most, powerful for power users)
+
+**Key Design Principle:**
+- Don't force project tracking in onboarding
+- Memory capture = primary experience for most users
+- Projects = first-class citizen for power users (20+ creative pursuits)
+- AI suggests "turn frustration into project" when relevant
+
+---
+
+## 🎉 Previous Session - Enhancement Design (2025-10-24)
 
 ### ✅ What Was Designed
 
@@ -212,12 +271,86 @@ Each with:
 
 ## 🎯 Next Session: Start Here
 
-### Option A: MVP (Daily Queue Only)
+### 🔥 NEW PRIORITY: Killer Features Implementation
+
+**Phase 1: New Onboarding Flow (8-12h)**
+1. Build 5-question onboarding UI
+   - 2 structured questions (skill learned, abandoned project)
+   - 3 freeform voice capture slots
+2. Create `/api/onboarding/analyze` endpoint
+   - Extract capabilities, themes, patterns from 5 inputs
+   - Generate first knowledge graph
+   - Return Creative Intelligence suggestion
+3. Build results screen
+   - Visual graph display
+   - Pattern/theme/capability summary
+   - First project suggestion
+   - Optional "track projects?" branch
+
+**Phase 2: Proactive Gap-Filling Prompts (8-12h)**
+1. `/api/prompts/gap-analysis` endpoint
+   - Detect missing context in knowledge graph
+   - Identify patterns around 9-5 → full-time creative transition
+   - Generate personalized follow-up questions
+   - Smart timing: surface when user is capturing related thoughts
+2. UI for prompt delivery
+   - Contextual notification: "Got 30 seconds? I have a question"
+   - Show reasoning: "You mentioned X twice but never said Y"
+   - One-tap voice response
+   - Dismissable without guilt
+
+**Phase 3: Creative Intelligence Engine (12-16h)**
+1. `/api/intelligence/opportunities` endpoint
+   - Scan knowledge graph for project patterns
+   - Match capabilities with frustrations/ideas
+   - Calculate capability freshness
+   - Generate project scaffolds from user's own memories
+   - Side-hustle → full-time revenue path suggestions
+2. UI for project suggestions
+   - Card-based suggestions with reasoning
+   - "Why this project fits you" breakdown
+   - "Path to $X/month" if user has mentioned income goals
+   - One-click create project from suggestion
+
+**Phase 4: Cognitive State Timeline (10-14h)**
+1. `/api/timeline/patterns` endpoint
+   - Analyze capture timestamps for patterns
+   - Track thought velocity (captures per week/month)
+   - Detect emotional tone shifts
+   - Context window generation with themes
+   - Evening/weekend patterns (side-hustle work times)
+2. Timeline visualization
+   - Calendar heatmap of captures
+   - "Your best thinking times" insights (e.g., "Most ideas: Sundays 9am")
+   - Emotional continuity tracking
+   - Weekly/monthly narrative summaries
+   - "Side project hours this month" tracking
+
+**Phase 5: Cross-Pollination Synthesis (8-12h)**
+1. `/api/synthesis/evolution` endpoint
+   - Multi-memory synthesis across time
+   - Project abandonment pattern detection
+   - Memory collision detection
+   - Capability evolution tracking
+2. Synthesis UI
+   - "How your thinking evolved" cards
+   - Project graveyard with pattern analysis
+   - Contradiction/growth highlights
+
+**Total Estimate: 46-66 hours for all 4 killer features + daily queue**
+
+**Key User Insight:** Target is people with 9-5s doing creative work on the side, aiming to go full-time. Gap-filling prompts should detect and nurture this transition journey.
+
+---
+
+### Option A (ORIGINAL): MVP (Daily Queue Only)
 
 **Hour 1:**
 ```bash
-# 1. Run migration
-psql $SUPABASE_URL < migration-enhancements.sql
+# 1. Run migration (NEEDS TO BE DONE - see .env.local for SUPABASE_URL)
+# Extract the connection string from .env.local and run:
+# psql "postgresql://..." < migrations/003-daily-queue.sql
+# OR use Supabase Dashboard SQL Editor (recommended)
 
 # 2. Review current project schema
 cat src/types.ts # Line 298-344 (Project interface)
@@ -387,9 +520,24 @@ cat DAILY_ACTIONABLE_QUEUE.md
 
 ---
 
-**Status**: 🟡 Design Complete - Ready for Implementation
-**Priority**: Daily Actionable Queue (solves "what to work on today?")
-**Estimated MVP**: 16-20 hours (Daily Queue only)
-**Estimated Full**: 50-60 hours (all enhancements)
+**Status**: 🟢 Killer Features Identified - Ready for Implementation
+**Priority**: New onboarding flow → 4 killer features (Gap-Filling Prompts, Creative Intelligence, Cognitive Timeline, Cross-Pollination)
+**Original Plan**: 16-20 hours (Daily Queue only) - NOW SUPERSEDED
+**New Plan**: 46-66 hours (all 4 killer features + daily queue)
 
-**Key Insight:** Daily Queue is the killer feature. Everything else supports it but isn't required for initial value. Start there, validate, then expand. 🚀
+**Key Insight:** The moat isn't project management—it's the unique combination of temporal knowledge graph + creative project tracking + AI synthesis. Build the features that leverage this unfair advantage.
+
+**Business Model**: $12/mo subscription (market validated: AudioPen $6/mo, Capacities $10/mo, Notion AI $15/mo)
+- Free: 50 voice captures/mo
+- Creator ($12/mo): Unlimited captures + Creative Intelligence + basic synthesis
+- Architect ($20/mo): All features + local-first + graph memory + API
+
+**Target User:** Side-hustlers with 9-5s aiming to go full-time creative. App nurtures this transition.
+
+**Next Steps:**
+1. Implement new onboarding (5 questions → immediate graph)
+2. Build Proactive Gap-Filling Prompts (asks the questions they didn't know to ask)
+3. Build Creative Intelligence Engine (project opportunities + revenue paths)
+4. Add Cognitive Timeline (when you think best, side-project hours tracking)
+5. Add Cross-Pollination Synthesis (evolution tracking + abandonment patterns)
+6. Keep projects as first-class citizen for power users, lightweight for everyone else

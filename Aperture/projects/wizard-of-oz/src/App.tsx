@@ -15,6 +15,7 @@ import { PWAInstallGuide } from './components/PWAInstallGuide';
 import { MilestoneBanner } from './components/MilestoneBanner';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
+import { UpdateNotification } from './components/UpdateNotification';
 
 // Lazy load heavy components
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -343,6 +344,9 @@ function App() {
         actionLabel={toast.actionLabel}
         onAction={toast.onAction}
       />
+
+      {/* PWA Update Notification */}
+      <UpdateNotification />
     </div>
   );
 }

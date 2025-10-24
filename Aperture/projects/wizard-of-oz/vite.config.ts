@@ -16,7 +16,7 @@ export default defineConfig({
     }),
     // PWA configuration with push notifications
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Pupils - Baby Photo Timeline',
