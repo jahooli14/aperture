@@ -91,71 +91,79 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         return;
       }
 
-      // Generate signed URLs for each photo (24 hour expiry)
+      // Generate signed URLs using batch API for performance
       const dataArray: Photo[] = data || [];
-      const photosWithSignedUrls = await Promise.all(
-        dataArray.map(async (photo) => {
-          const signedPhoto = { ...photo } as Photo;
 
-          // Generate signed URL for original photo (with caching)
-          if (photo.original_url) {
-            try {
-              const path = photo.original_url.split('/storage/v1/object/public/originals/')[1];
-              if (path) {
-                // Check cache first
-                const cachedUrl = getCachedSignedUrl(`original_${path}`);
-                if (cachedUrl) {
-                  signedPhoto.signed_original_url = cachedUrl;
-                } else {
-                  // Generate new signed URL
-                  const { data: signedData, error: signError } = await supabase.storage
-                    .from('originals')
-                    .createSignedUrl(path, 3600); // 1 hour
+      // Collect all paths that need signed URLs (check cache first)
+      const pathsToGenerate: { type: 'original' | 'aligned', path: string, photoIndex: number }[] = [];
+      const photosWithSignedUrls = dataArray.map(photo => ({ ...photo } as Photo));
 
-                  if (!signError && signedData) {
-                    signedPhoto.signed_original_url = signedData.signedUrl;
-                    setCachedSignedUrl(`original_${path}`, signedData.signedUrl, 3600);
-                  } else {
-                    logger.warn('Failed to create signed URL for original', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
-                  }
-                }
-              }
-            } catch (err) {
-              logger.warn('Error creating signed URL for original', { photoId: photo.id, error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
+      dataArray.forEach((photo, index) => {
+        // Check original URL
+        if (photo.original_url) {
+          const path = photo.original_url.split('/storage/v1/object/public/originals/')[1];
+          if (path) {
+            const cachedUrl = getCachedSignedUrl(`original_${path}`);
+            if (cachedUrl) {
+              photosWithSignedUrls[index].signed_original_url = cachedUrl;
+            } else {
+              pathsToGenerate.push({ type: 'original', path, photoIndex: index });
             }
           }
+        }
 
-          // Generate signed URL for aligned photo if it exists (with caching)
-          if (photo.aligned_url) {
-            try {
-              const path = photo.aligned_url.split('/storage/v1/object/public/originals/')[1];
-              if (path) {
-                // Check cache first
-                const cachedUrl = getCachedSignedUrl(`aligned_${path}`);
-                if (cachedUrl) {
-                  signedPhoto.signed_aligned_url = cachedUrl;
-                } else {
-                  // Generate new signed URL
-                  const { data: signedData, error: signError } = await supabase.storage
-                    .from('originals')
-                    .createSignedUrl(path, 3600); // 1 hour
-
-                  if (!signError && signedData) {
-                    signedPhoto.signed_aligned_url = signedData.signedUrl;
-                    setCachedSignedUrl(`aligned_${path}`, signedData.signedUrl, 3600);
-                  } else {
-                    logger.warn('Failed to create signed URL for aligned', { photoId: photo.id, error: signError?.message }, 'PhotoStore');
-                  }
-                }
-              }
-            } catch (err) {
-              logger.warn('Error creating signed URL for aligned', { photoId: photo.id, error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
+        // Check aligned URL
+        if (photo.aligned_url) {
+          const path = photo.aligned_url.split('/storage/v1/object/public/originals/')[1];
+          if (path) {
+            const cachedUrl = getCachedSignedUrl(`aligned_${path}`);
+            if (cachedUrl) {
+              photosWithSignedUrls[index].signed_aligned_url = cachedUrl;
+            } else {
+              pathsToGenerate.push({ type: 'aligned', path, photoIndex: index });
             }
           }
+        }
+      });
 
-          return signedPhoto;
-        })
-      );
+      // Batch generate signed URLs for uncached paths
+      if (pathsToGenerate.length > 0) {
+        try {
+          const paths = pathsToGenerate.map(item => item.path);
+          const { data: signedData, error: signError } = await supabase.storage
+            .from('originals')
+            .createSignedUrls(paths, 3600); // 1 hour
+
+          if (signError) {
+            logger.error('Batch signed URL generation failed', { error: signError.message }, 'PhotoStore');
+          } else if (signedData) {
+            // Map signed URLs back to photos and cache them
+            signedData.forEach((urlData, idx) => {
+              if (urlData.signedUrl) {
+                const { type, path, photoIndex } = pathsToGenerate[idx];
+                const cacheKey = `${type}_${path}`;
+
+                if (type === 'original') {
+                  photosWithSignedUrls[photoIndex].signed_original_url = urlData.signedUrl;
+                } else {
+                  photosWithSignedUrls[photoIndex].signed_aligned_url = urlData.signedUrl;
+                }
+
+                setCachedSignedUrl(cacheKey, urlData.signedUrl, 3600);
+              } else if (urlData.error) {
+                logger.warn('Failed to create signed URL', {
+                  path: pathsToGenerate[idx].path,
+                  error: urlData.error
+                }, 'PhotoStore');
+              }
+            });
+          }
+        } catch (err) {
+          logger.error('Unexpected error in batch signed URL generation', {
+            error: err instanceof Error ? err.message : String(err)
+          }, 'PhotoStore');
+        }
+      }
 
       set({ photos: photosWithSignedUrls, loading: false, fetchError: null });
     } catch (err) {

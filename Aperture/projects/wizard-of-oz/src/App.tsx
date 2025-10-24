@@ -24,7 +24,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
   const { fetchSettings } = useSettingsStore();
-  const [view, setView] = useState<ViewType>('gallery');
+  const [view, setView] = useState<ViewType>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
