@@ -56,12 +56,18 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   // Check push notification status on mount
   useEffect(() => {
     async function checkPushStatus() {
-      const supported = isPushNotificationSupported();
-      setPushNotificationsSupported(supported);
+      try {
+        const supported = isPushNotificationSupported();
+        setPushNotificationsSupported(supported);
 
-      if (supported) {
-        const status = await getPushSubscriptionStatus();
-        setPushNotificationsEnabled(status.subscribed);
+        if (supported) {
+          const status = await getPushSubscriptionStatus();
+          setPushNotificationsEnabled(status.subscribed);
+        }
+      } catch (error) {
+        // Silently fail - push notifications just won't be available
+        console.warn('Push notifications not available:', error);
+        setPushNotificationsSupported(false);
       }
     }
     checkPushStatus();
