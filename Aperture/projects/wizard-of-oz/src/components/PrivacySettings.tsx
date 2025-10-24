@@ -153,7 +153,7 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
         setPushNotificationsEnabled(!!subscription);
 
         if (!subscription) {
-          alert('Push notification permission was denied. Please enable notifications in your browser settings.');
+          alert('Could not enable push notifications.\n\nPossible reasons:\n• Notification permission was denied\n• App needs to be installed to home screen (iOS requirement)\n• VAPID keys not configured on server\n\nCheck browser console (F12) for details.');
         }
       }
     } catch (error) {

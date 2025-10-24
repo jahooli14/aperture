@@ -51,7 +51,8 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     const permission = await requestNotificationPermission();
     if (permission !== 'granted') {
       logger.warn('Notification permission denied', { permission }, 'Notifications');
-      throw new Error(`Notification permission was ${permission}. Please allow notifications in your browser settings.`);
+      // Don't throw - just return null so it doesn't break the app
+      return null;
     }
 
     // Get service worker registration
