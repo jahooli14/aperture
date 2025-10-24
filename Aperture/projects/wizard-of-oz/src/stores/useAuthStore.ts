@@ -6,6 +6,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   signIn: (email: string) => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
 }
@@ -15,23 +16,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   signIn: async (email: string) => {
-    // Detect if we're in PWA mode
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                  (window.navigator as any).standalone === true;
-
-    // Use a URL with hash fragment for PWA - this works better on iOS
-    const redirectUrl = isPWA
-      ? `${window.location.origin}/#/auth/callback`
-      : window.location.origin;
-
+    // Send OTP code via email (no magic link redirect needed)
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: redirectUrl,
+        shouldCreateUser: true, // Auto-create user if doesn't exist
       },
     });
 
     if (error) throw error;
+  },
+
+  verifyOtp: async (email: string, token: string) => {
+    const { data: { session }, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+
+    if (error) throw error;
+
+    // Update auth state
+    set({ user: session?.user ?? null });
   },
 
   signOut: async () => {
