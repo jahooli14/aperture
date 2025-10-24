@@ -15,10 +15,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
 
   signIn: async (email: string) => {
+    // Detect if we're in PWA mode
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                  (window.navigator as any).standalone === true;
+
+    // Use a URL with hash fragment for PWA - this works better on iOS
+    const redirectUrl = isPWA
+      ? `${window.location.origin}/#/auth/callback`
+      : window.location.origin;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectUrl,
       },
     });
 

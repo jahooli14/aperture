@@ -11,6 +11,7 @@ import { Onboarding } from './components/Onboarding';
 import { PasscodeLock } from './components/PasscodeLock';
 import { PrivacySettings } from './components/PrivacySettings';
 import { JoinCodePrompt } from './components/JoinCodePrompt';
+import { PWAInstallGuide } from './components/PWAInstallGuide';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 
@@ -32,6 +33,7 @@ function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showJoinCodePrompt, setShowJoinCodePrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPWAGuide, setShowPWAGuide] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const { toast, showToast, hideToast } = useToast();
@@ -254,8 +256,47 @@ function App() {
         </AnimatePresence>
       </main>
 
+      {/* Install PWA Banner for iOS Safari users */}
+      {(() => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                      (window.navigator as any).standalone === true;
+        const dismissed = localStorage.getItem('pwa-install-banner-dismissed');
+
+        if (isIOS && !isPWA && !dismissed) {
+          return (
+            <div className="fixed bottom-0 left-0 right-0 bg-cyan-600 text-white p-4 shadow-lg z-40">
+              <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">📱 Install Pupils as an app</p>
+                  <p className="text-xs opacity-90">Get the full app experience on your home screen</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('pwa-install-banner-dismissed', 'true');
+                      window.location.reload();
+                    }}
+                    className="text-xs text-white/80 hover:text-white px-2"
+                  >
+                    Later
+                  </button>
+                  <button
+                    onClick={() => setShowPWAGuide(true)}
+                    className="bg-white text-cyan-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-cyan-50"
+                  >
+                    Show me how
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
+      <footer className="bg-white border-t border-gray-200 mt-16 mb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-gray-600">
           <p>Capturing precious moments, one day at a time ✨</p>
         </div>
@@ -264,6 +305,11 @@ function App() {
       {/* Privacy Settings Modal */}
       {showSettings && (
         <PrivacySettings onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* PWA Install Guide */}
+      {showPWAGuide && (
+        <PWAInstallGuide onDismiss={() => setShowPWAGuide(false)} />
       )}
 
       {/* Toast Notifications */}
