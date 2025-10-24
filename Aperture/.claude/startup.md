@@ -29,24 +29,7 @@
 
 ## 🚨 AUTOMATIC SESSION STARTUP SEQUENCE
 
-### Step 1: Token Budget Check (MANDATORY)
-
-**Current token usage**: [Claude will report this]
-
-**Health Assessment**:
-- ✅ **< 50K tokens**: Healthy - proceed normally
-- ⚠️ **50-100K tokens**: Warning - can you finish current task in < 50K more?
-  - If NO → Update NEXT_SESSION.md and start fresh session
-- 🛑 **> 100K tokens**: CRITICAL - STOP
-  - DO NOT start new work
-  - Update NEXT_SESSION.md
-  - Close session and start fresh
-
-**Action Required**: Acknowledge token health status before proceeding.
-
----
-
-### Step 1.5: Query Classification (STRONGLY RECOMMENDED)
+### Step 1: Query Classification (RECOMMENDED)
 
 **Purpose**: Load only what you need. Make classification visible.
 
@@ -280,8 +263,8 @@ Is that correct, or are you working on something else?
 ## 📋 Enforcement Checklist
 
 Before starting work, confirm:
-- [ ] Token budget checked (< 100K or noted if higher)
-- [ ] Project selected (NUDJ vs Aperture sub-project)
+- [ ] Query type classified (debugging, implementation, continuation)
+- [ ] Project auto-detected (NUDJ vs Aperture sub-project)
 - [ ] NEXT_SESSION.md read
 - [ ] Appropriate pattern selected based on task type
 - [ ] If debugging: META_DEBUGGING_PROTOCOL.md read
@@ -291,8 +274,8 @@ Before starting work, confirm:
 ## 🎯 Success Criteria
 
 **You're following this correctly if**:
-- ✅ You check token budget at session start
-- ✅ You ask which project before loading docs
+- ✅ You classify the query type before loading docs
+- ✅ You auto-detect the project based on context
 - ✅ You read NEXT_SESSION.md for context
 - ✅ You reference appropriate docs based on task type (not reading everything)
 - ✅ You update NEXT_SESSION.md as you work

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Download, ChevronRight, AlertCircle, Baby, Bell, BellRing } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { subscribeToPushNotifications, unsubscribeFromPushNotifications, getPushSubscriptionStatus, isPushNotificationSupported } from '../lib/notifications';
 
 interface PrivacySettingsProps {
   onClose: () => void;
@@ -26,6 +27,9 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('19:00');
   const [savingReminders, setSavingReminders] = useState(false);
+  const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
+  const [pushNotificationsSupported, setPushNotificationsSupported] = useState(false);
+  const [enablingPushNotifications, setEnablingPushNotifications] = useState(false);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -48,6 +52,20 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       setReminderTime(settings.reminder_time);
     }
   }, [settings]);
+
+  // Check push notification status on mount
+  useEffect(() => {
+    async function checkPushStatus() {
+      const supported = isPushNotificationSupported();
+      setPushNotificationsSupported(supported);
+
+      if (supported) {
+        const status = await getPushSubscriptionStatus();
+        setPushNotificationsEnabled(status.subscribed);
+      }
+    }
+    checkPushStatus();
+  }, []);
 
   const handlePrivacyModeToggle = () => {
     const newValue = !privacyMode;
@@ -118,6 +136,31 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       setSavingReminders(false);
       console.error('Reminder settings save error:', error);
       alert('Failed to save reminder settings. Please try again.');
+    }
+  };
+
+  const handleTogglePushNotifications = async () => {
+    try {
+      setEnablingPushNotifications(true);
+
+      if (pushNotificationsEnabled) {
+        // Unsubscribe
+        await unsubscribeFromPushNotifications();
+        setPushNotificationsEnabled(false);
+      } else {
+        // Subscribe
+        const subscription = await subscribeToPushNotifications();
+        setPushNotificationsEnabled(!!subscription);
+
+        if (!subscription) {
+          alert('Push notification permission was denied. Please enable notifications in your browser settings.');
+        }
+      }
+    } catch (error) {
+      console.error('Push notification error:', error);
+      alert('Failed to update push notification settings. Make sure notifications are allowed in your browser.');
+    } finally {
+      setEnablingPushNotifications(false);
     }
   };
 
@@ -322,6 +365,70 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
               </div>
             </div>
           </div>
+
+          {/* Push Notifications */}
+          {pushNotificationsSupported && (
+            <div className="bg-purple-50 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <BellRing className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">Push Notifications</h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Get instant reminders on your device (preferred over email)
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {pushNotificationsEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {pushNotificationsEnabled
+                          ? 'You\'ll receive instant notifications'
+                          : 'Enable to get instant reminders'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleTogglePushNotifications}
+                      disabled={enablingPushNotifications}
+                      className={`
+                        relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${pushNotificationsEnabled ? 'bg-purple-600' : 'bg-gray-200'}
+                      `}
+                    >
+                      <span
+                        className={`
+                          pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
+                          transition duration-200 ease-in-out
+                          ${pushNotificationsEnabled ? 'translate-x-5' : 'translate-x-0'}
+                        `}
+                      />
+                    </button>
+                  </div>
+
+                  {pushNotificationsEnabled && (
+                    <div className="mt-3 p-3 bg-purple-100 rounded-lg">
+                      <p className="text-xs text-purple-900">
+                        ✓ Push notifications are active. You'll receive reminders even when the app is closed.
+                      </p>
+                    </div>
+                  )}
+
+                  {!pushNotificationsEnabled && (
+                    <div className="mt-3 p-3 bg-gray-100 rounded-lg">
+                      <p className="text-xs text-gray-700">
+                        💡 Tip: Push notifications work even when you're not in the app. Perfect for daily reminders after 5pm!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Passcode Lock */}
           <div className="bg-gray-50 rounded-xl p-4">
