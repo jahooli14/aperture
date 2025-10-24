@@ -44,6 +44,20 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
   // Gesture handling
   const bind = useGesture(
     {
+      onDragStart: ({ event }) => {
+        // Prevent swipe detection if touch starts within 50px of screen edges
+        // This prevents accidental swipes when using iOS/Android edge gestures
+        const touch = (event as TouchEvent).touches?.[0];
+        if (touch) {
+          const edgeThreshold = 50;
+          const isNearLeftEdge = touch.clientX < edgeThreshold;
+          const isNearRightEdge = touch.clientX > window.innerWidth - edgeThreshold;
+
+          if (scale <= 1 && (isNearLeftEdge || isNearRightEdge)) {
+            return false; // Cancel gesture
+          }
+        }
+      },
       onDrag: ({ offset: [x, y], cancel }) => {
         // Only allow dragging when zoomed in
         if (scale <= 1) {
@@ -68,14 +82,24 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
         }
       },
       // Swipe to change photos (only when not zoomed)
-      onDragEnd: ({ movement: [mx], direction: [dx], cancel }) => {
+      onDragEnd: ({ movement: [mx], direction: [dx], cancel, initial: [startX] }) => {
         if (scale > 1) {
           cancel();
           return;
         }
 
-        // Swipe threshold
-        if (Math.abs(mx) > 50) {
+        // Prevent swipe if started near screen edges
+        const edgeThreshold = 50;
+        const isNearLeftEdge = startX < edgeThreshold;
+        const isNearRightEdge = startX > window.innerWidth - edgeThreshold;
+
+        if (isNearLeftEdge || isNearRightEdge) {
+          cancel();
+          return;
+        }
+
+        // Swipe threshold (require more movement for swipe)
+        if (Math.abs(mx) > 100) {
           if (dx > 0 && currentIndex > 0) {
             setCurrentIndex(currentIndex - 1);
           } else if (dx < 0 && currentIndex < sortedPhotos.length - 1) {

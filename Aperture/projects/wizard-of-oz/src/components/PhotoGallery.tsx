@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -19,6 +19,8 @@ interface PhotoGalleryProps {
   showToast?: (message: string, type?: ToastType, actionLabel?: string, onAction?: () => void) => void;
 }
 
+const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
+
 export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
@@ -26,7 +28,13 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [privacyMode, setPrivacyMode] = useState(false);
+
+  // Load privacy mode setting
+  useEffect(() => {
+    const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
+    setPrivacyMode(savedPrivacyMode);
+  }, []);
 
   // Fetch photos on mount (only if not already loaded)
   useEffect(() => {
@@ -35,28 +43,16 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     }
   }, [photos.length, loading, fetchPhotos]);
 
-  const handlePressStart = (photo: Photo, e: React.TouchEvent | React.MouseEvent) => {
+  const handlePhotoClick = (photo: Photo, e: React.MouseEvent) => {
     e.preventDefault();
-    longPressTimer.current = setTimeout(() => {
-      setSelectedPhoto(photo);
-      setIsBottomSheetOpen(true);
-      // Haptic feedback on mobile
-      triggerHaptic('selection');
-    }, 800); // 800ms long press
+    // Click opens photo details
+    setSelectedPhoto(photo);
+    setIsBottomSheetOpen(true);
+    triggerHaptic('selection');
   };
 
-  const handlePressEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-
-  const handlePhotoClick = (_photo: Photo, _e: React.MouseEvent) => {
-    // Only open overlay if we have multiple photos and not in a long press state
-    if (photos.length > 1 && !longPressTimer.current) {
-      setIsOverlayOpen(true);
-    }
+  const handleViewAll = () => {
+    setIsOverlayOpen(true);
   };
 
   if (fetchError) {
@@ -145,19 +141,20 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
-        <p className="text-gray-600">{photos.length} {photos.length === 1 ? 'day' : 'days'}</p>
-      </div>
-
-      {hasPhotos && photos.length > 1 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <span className="font-semibold">✨ Tip:</span> Click any photo to see your baby's journey timeline!
-          </p>
-          <p className="text-xs text-blue-600 mt-1">
-            Long press to view details & actions
-          </p>
+        <div className="flex items-center gap-3">
+          {hasPhotos && photos.length > 1 && (
+            <motion.button
+              onClick={handleViewAll}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium text-sm rounded-lg transition-colors shadow-md"
+            >
+              View All
+            </motion.button>
+          )}
+          <p className="text-gray-600">{photos.length} {photos.length === 1 ? 'day' : 'days'}</p>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {photos.map((photo, index) => (
@@ -174,12 +171,6 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               damping: 17
             }}
             onClick={(e) => handlePhotoClick(photo, e)}
-            onMouseDown={(e) => handlePressStart(photo, e)}
-            onMouseUp={handlePressEnd}
-            onMouseLeave={handlePressEnd}
-            onTouchStart={(e) => handlePressStart(photo, e)}
-            onTouchEnd={handlePressEnd}
-            onTouchCancel={handlePressEnd}
             className="relative aspect-square rounded-lg overflow-hidden bg-gray-200 shadow-md hover:shadow-2xl transition-shadow cursor-pointer group select-none"
           >
             <>
@@ -189,7 +180,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               <img
                 src={getPhotoDisplayUrl(photo)}
                 alt={`Photo from ${photo.upload_date}`}
-                className="relative w-full h-full object-cover opacity-0 transition-opacity duration-500"
+                className={`relative w-full h-full object-cover opacity-0 transition-opacity duration-500 ${privacyMode ? 'blur-2xl' : ''}`}
                 loading="lazy"
                 onLoad={(e) => {
                   e.currentTarget.classList.remove('opacity-0');
