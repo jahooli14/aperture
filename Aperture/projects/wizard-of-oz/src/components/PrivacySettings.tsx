@@ -158,7 +158,8 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
       }
     } catch (error) {
       console.error('Push notification error:', error);
-      alert('Failed to update push notification settings. Make sure notifications are allowed in your browser.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to enable push notifications:\n\n${errorMessage}\n\nCheck the browser console (F12) for more details.`);
     } finally {
       setEnablingPushNotifications(false);
     }

@@ -50,12 +50,14 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     // Check permission
     const permission = await requestNotificationPermission();
     if (permission !== 'granted') {
-      logger.warn('Notification permission denied', {}, 'Notifications');
-      return null;
+      logger.warn('Notification permission denied', { permission }, 'Notifications');
+      throw new Error(`Notification permission was ${permission}. Please allow notifications in your browser settings.`);
     }
 
     // Get service worker registration
+    logger.info('Getting service worker registration', {}, 'Notifications');
     const registration = await navigator.serviceWorker.ready;
+    logger.info('Service worker ready', {}, 'Notifications');
 
     // Check for existing subscription
     let subscription = await registration.pushManager.getSubscription();
@@ -63,10 +65,15 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     if (!subscription) {
       // Create new subscription
       if (!VAPID_PUBLIC_KEY) {
-        throw new Error('VAPID public key not configured');
+        logger.error('VAPID public key not configured', {
+          envVarExists: !!import.meta.env.VITE_VAPID_PUBLIC_KEY
+        }, 'Notifications');
+        throw new Error('Push notifications are not configured. Missing VAPID public key.');
       }
 
+      logger.info('Creating new push subscription', { vapidKeyLength: VAPID_PUBLIC_KEY.length }, 'Notifications');
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey as any
