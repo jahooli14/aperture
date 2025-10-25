@@ -25,9 +25,13 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       if (!user) return
 
       // Clear user's data in order (respecting foreign keys)
+      // Delete in reverse dependency order to avoid FK violations
+      await supabase.from('gap_prompts').delete().eq('user_id', user.id)
+      await supabase.from('creative_opportunities').delete().eq('user_id', user.id)
       await supabase.from('project_suggestions').delete().eq('user_id', user.id)
       await supabase.from('projects').delete().eq('user_id', user.id)
       await supabase.from('memories').delete().eq('user_id', user.id)
+      await supabase.from('user_daily_context').delete().eq('user_id', user.id)
 
       // Mark demo as dismissed
       localStorage.setItem('polymath_demo_dismissed', 'true')
