@@ -3,15 +3,22 @@ import { supabase } from '../lib/supabase';
 import type { Database } from '../types/database';
 
 type MilestoneAchievement = Database['public']['Tables']['milestone_achievements']['Row'];
-type MilestoneAchievementInsert = Database['public']['Tables']['milestone_achievements']['Insert'];
 type MilestoneAchievementUpdate = Database['public']['Tables']['milestone_achievements']['Update'];
+
+// Input type for adding achievements (user_id is added automatically)
+type AddAchievementInput = {
+  milestone_id: string;
+  achieved_date: string;
+  photo_id?: string | null;
+  notes?: string | null;
+};
 
 interface MilestoneStore {
   achievements: MilestoneAchievement[];
   loading: boolean;
   error: string | null;
   fetchAchievements: () => Promise<void>;
-  addAchievement: (achievement: MilestoneAchievementInsert) => Promise<MilestoneAchievement>;
+  addAchievement: (achievement: AddAchievementInput) => Promise<MilestoneAchievement>;
   updateAchievement: (id: string, updates: MilestoneAchievementUpdate) => Promise<void>;
   deleteAchievement: (id: string) => Promise<void>;
   isAchieved: (milestoneId: string) => boolean;
@@ -27,14 +34,14 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
   fetchAchievements: async () => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('milestone_achievements')
         .select('*')
         .order('achieved_date', { ascending: false });
 
       if (error) throw error;
 
-      set({ achievements: data || [], loading: false });
+      set({ achievements: (data || []) as MilestoneAchievement[], loading: false });
     } catch (error) {
       console.error('Error fetching milestone achievements:', error);
       set({
@@ -44,13 +51,13 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
     }
   },
 
-  addAchievement: async (achievement: MilestoneAchievementInsert) => {
+  addAchievement: async (achievement: AddAchievementInput) => {
     set({ error: null });
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('milestone_achievements')
         .insert({ ...achievement, user_id: user.id })
         .select()
@@ -59,10 +66,10 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
       if (error) throw error;
 
       set((state) => ({
-        achievements: [data, ...state.achievements],
+        achievements: [data as MilestoneAchievement, ...state.achievements],
       }));
 
-      return data;
+      return data as MilestoneAchievement;
     } catch (error) {
       console.error('Error adding milestone achievement:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to add achievement';
@@ -74,7 +81,7 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
   updateAchievement: async (id: string, updates: MilestoneAchievementUpdate) => {
     set({ error: null });
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('milestone_achievements')
         .update(updates)
         .eq('id', id);
@@ -97,7 +104,7 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
   deleteAchievement: async (id: string) => {
     set({ error: null });
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('milestone_achievements')
         .delete()
         .eq('id', id);
