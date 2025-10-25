@@ -22,23 +22,44 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        console.error('No user found')
+        alert('Not logged in')
+        return
+      }
+
+      console.log('Clearing data for user:', user.id)
 
       // Clear user's data in order (respecting foreign keys)
       // Delete in reverse dependency order to avoid FK violations
-      await supabase.from('gap_prompts').delete().eq('user_id', user.id)
-      await supabase.from('creative_opportunities').delete().eq('user_id', user.id)
-      await supabase.from('project_suggestions').delete().eq('user_id', user.id)
-      await supabase.from('projects').delete().eq('user_id', user.id)
-      await supabase.from('memories').delete().eq('user_id', user.id)
-      await supabase.from('user_daily_context').delete().eq('user_id', user.id)
+      const tables = [
+        'gap_prompts',
+        'creative_opportunities',
+        'project_suggestions',
+        'projects',
+        'memories',
+        'user_daily_context'
+      ]
+
+      for (const table of tables) {
+        const { error } = await supabase.from(table).delete().eq('user_id', user.id)
+        if (error) {
+          console.error(`Error deleting from ${table}:`, error)
+        } else {
+          console.log(`✓ Cleared ${table}`)
+        }
+      }
 
       // Mark demo as dismissed
       localStorage.setItem('polymath_demo_dismissed', 'true')
 
+      console.log('All data cleared successfully')
+      alert('Demo data cleared! Refreshing page...')
+
       onDataCleared()
     } catch (error) {
       console.error('Error clearing demo data:', error)
+      alert('Error clearing data: ' + (error as Error).message)
     } finally {
       setIsClearing(false)
     }
