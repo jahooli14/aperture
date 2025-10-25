@@ -13,7 +13,7 @@ interface Project {
   user_id: string
   title: string
   description: string
-  type: 'creative' | 'technical' | 'learning'
+  type: 'personal' | 'technical' | 'meta' // Updated to match actual DB constraint
   status: 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
   last_active: string
   created_at: string
