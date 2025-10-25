@@ -11,17 +11,23 @@ const supabase = createClient(
  * GET /api/memories - List all memories
  * GET /api/memories?resurfacing=true - Get memories to resurface (spaced repetition)
  * GET /api/memories?themes=true - Get theme clusters
+ * GET /api/memories?prompts=true - Get memory prompts with status
  * POST /api/memories - Mark memory as reviewed (requires id in body)
  * GET /api/memories?bridges=true&id=xxx - Get bridges for memory
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { resurfacing, bridges, themes, id } = req.query
+    const { resurfacing, bridges, themes, prompts, id } = req.query
 
     // POST: Mark memory as reviewed
     if (req.method === 'POST') {
       const memoryId = req.body.id || id
       return await handleReview(memoryId as string, res)
+    }
+
+    // GET: Memory prompts
+    if (req.method === 'GET' && prompts === 'true') {
+      return await handlePrompts(req, res)
     }
 
     // GET: Theme clusters
@@ -333,5 +339,104 @@ async function handleThemes(res: VercelResponse) {
       total_memories: 0,
       uncategorized_count: 0
     })
+  }
+}
+
+/**
+ * Handle memory prompts request (consolidated from memory-prompts.ts)
+ */
+async function handlePrompts(req: VercelRequest, res: VercelResponse) {
+  try {
+    const userId = req.headers['x-user-id'] as string | undefined
+
+    // Fetch all prompts
+    const { data: prompts, error: promptsError } = await supabase
+      .from('memory_prompts')
+      .select('*')
+      .order('priority_order', { ascending: true })
+
+    if (promptsError) {
+      console.error('[api/memories] Prompts fetch error:', promptsError)
+      return res.status(500).json({ error: 'Failed to fetch prompts' })
+    }
+
+    // If no user, return prompts with pending status
+    if (!userId) {
+      const required = prompts.filter(p => p.is_required)
+      const optional = prompts.filter(p => !p.is_required)
+
+      return res.status(200).json({
+        required: required.map(p => ({ ...p, status: 'pending' })),
+        suggested: [],
+        optional: optional.map(p => ({ ...p, status: 'pending' })),
+        progress: {
+          completed_required: 0,
+          total_required: required.length,
+          completed_total: 0,
+          total_prompts: prompts.length,
+          completion_percentage: 0,
+          has_unlocked_projects: false
+        }
+      })
+    }
+
+    // Fetch user's prompt statuses
+    const { data: userStatuses, error: statusError } = await supabase
+      .from('user_prompt_status')
+      .select(`
+        *,
+        response:memory_responses(*)
+      `)
+      .eq('user_id', userId)
+
+    if (statusError) {
+      console.error('[api/memories] Status fetch error:', statusError)
+    }
+
+    // Create status map
+    const statusMap = new Map(
+      (userStatuses || []).map(s => [s.prompt_id, s])
+    )
+
+    // Enrich prompts with status
+    const enrichedPrompts = prompts.map(prompt => {
+      const userStatus = statusMap.get(prompt.id)
+      return {
+        ...prompt,
+        status: userStatus?.status || 'pending',
+        response: userStatus?.response || undefined
+      }
+    })
+
+    // Categorize prompts
+    const required = enrichedPrompts.filter(p => p.is_required)
+    const optional = enrichedPrompts.filter(p => !p.is_required && p.status !== 'suggested')
+    const suggested = enrichedPrompts.filter(p => p.status === 'suggested')
+
+    // Calculate progress
+    const completedRequired = required.filter(p => p.status === 'completed').length
+    const completedTotal = enrichedPrompts.filter(p => p.status === 'completed').length
+    const totalRequired = required.length
+    const completionPercentage = totalRequired > 0
+      ? Math.round((completedRequired / totalRequired) * 100)
+      : 0
+
+    return res.status(200).json({
+      required,
+      suggested,
+      optional,
+      progress: {
+        completed_required: completedRequired,
+        total_required: totalRequired,
+        completed_total: completedTotal,
+        total_prompts: prompts.length,
+        completion_percentage: completionPercentage,
+        has_unlocked_projects: completedRequired >= totalRequired
+      }
+    })
+
+  } catch (error) {
+    console.error('[api/memories] Prompts error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

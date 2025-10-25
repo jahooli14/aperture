@@ -48,7 +48,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         headers['x-user-id'] = user.id
       }
 
-      const response = await fetch('/api/memory-prompts', { headers })
+      const response = await fetch('/api/memories?prompts=true', { headers })
 
       if (!response.ok) {
         throw new Error('Failed to fetch prompts')
