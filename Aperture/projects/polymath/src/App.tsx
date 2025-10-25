@@ -5,6 +5,8 @@ import { SuggestionsPage } from './pages/SuggestionsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { DailyQueuePage } from './pages/DailyQueuePage'
 import { OnboardingPage } from './pages/OnboardingPage'
+import { TimelinePage } from './pages/TimelinePage'
+import { InsightsPage } from './pages/InsightsPage'
 import { ToastProvider } from './components/ui/toast'
 import { cn } from './lib/utils'
 import { Sparkles } from 'lucide-react'
@@ -33,8 +35,9 @@ function Navigation() {
             {[
               { path: '/today', label: 'Today' },
               { path: '/memories', label: 'Memories' },
-              { path: '/suggestions', label: 'Suggestions' },
-              { path: '/projects', label: 'Projects' }
+              { path: '/projects', label: 'Projects' },
+              { path: '/timeline', label: 'Timeline' },
+              { path: '/insights', label: 'Insights' }
             ].map(({ path, label }) => (
               <Link
                 key={path}
@@ -71,6 +74,8 @@ export default function App() {
               <Route path="/memories" element={<MemoriesPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/timeline" element={<TimelinePage />} />
+              <Route path="/insights" element={<InsightsPage />} />
             </Routes>
           </main>
 
