@@ -112,6 +112,38 @@ export interface Database {
           created_at?: string;
         };
       };
+      milestone_achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          milestone_id: string; // References milestone.id from data/milestones.ts
+          achieved_date: string; // YYYY-MM-DD format
+          photo_id: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          milestone_id: string;
+          achieved_date: string;
+          photo_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          milestone_id?: string;
+          achieved_date?: string;
+          photo_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
   };
 }

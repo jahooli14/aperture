@@ -1,13 +1,26 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Info, Check, Calendar, Camera, X } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { useMilestoneStore } from '../stores/useMilestoneStore';
+import { usePhotoStore } from '../stores/usePhotoStore';
 import { milestones, calculateAgeInWeeks, formatAgeRange, type Milestone } from '../data/milestones';
 
 export function MilestonesView() {
   const { settings } = useSettingsStore();
+  const { achievements, fetchAchievements, addAchievement, deleteAchievement, isAchieved, getAchievement } = useMilestoneStore();
+  const { photos } = usePhotoStore();
   const [showInfo, setShowInfo] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('all');
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [achievementDate, setAchievementDate] = useState('');
+  const [achievementNotes, setAchievementNotes] = useState('');
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+
+  // Fetch achievements on mount
+  useEffect(() => {
+    fetchAchievements();
+  }, [fetchAchievements]);
 
   const babyAgeWeeks = settings?.baby_birthdate ? calculateAgeInWeeks(settings.baby_birthdate) : 0;
 
@@ -40,6 +53,39 @@ export function MilestonesView() {
       description: 'Problem-solving, understanding, and imagination',
       color: 'green',
     },
+  };
+
+  const handleMilestoneClick = (milestone: Milestone) => {
+    if (isAchieved(milestone.id)) {
+      // If already achieved, allow user to uncheck
+      const achievement = getAchievement(milestone.id);
+      if (achievement && confirm(`Unmark "${milestone.title}"?`)) {
+        deleteAchievement(achievement.id);
+      }
+    } else {
+      // Open achievement dialog
+      setSelectedMilestone(milestone);
+      setAchievementDate(new Date().toISOString().split('T')[0]); // Default to today
+      setAchievementNotes('');
+      setSelectedPhotoId(null);
+    }
+  };
+
+  const handleSaveAchievement = async () => {
+    if (!selectedMilestone || !achievementDate) return;
+
+    try {
+      await addAchievement({
+        milestone_id: selectedMilestone.id,
+        achieved_date: achievementDate,
+        photo_id: selectedPhotoId,
+        notes: achievementNotes || null,
+      });
+      setSelectedMilestone(null);
+    } catch (error) {
+      console.error('Failed to save achievement:', error);
+      alert('Failed to save milestone. Please try again.');
+    }
   };
 
   const getMilestoneStatus = (milestone: Milestone): 'upcoming' | 'current' | 'past' => {
@@ -88,15 +134,33 @@ export function MilestonesView() {
   const renderMilestone = (milestone: Milestone, color: string) => {
     const status = getMilestoneStatus(milestone);
     const colors = getColorClasses(color, status);
+    const achieved = isAchieved(milestone.id);
+    const achievement = getAchievement(milestone.id);
 
     return (
-      <motion.div
+      <motion.button
         key={milestone.id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${colors.bg} ${colors.border} border rounded-lg p-4 ${colors.opacity}`}
+        onClick={() => handleMilestoneClick(milestone)}
+        className={`${colors.bg} ${colors.border} border rounded-lg p-4 ${colors.opacity} w-full text-left transition-all hover:shadow-md ${
+          achieved ? 'ring-2 ring-green-500' : ''
+        }`}
       >
         <div className="flex items-start gap-3">
+          {/* Checkbox */}
+          <div className="flex-shrink-0 mt-1">
+            <div
+              className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                achieved
+                  ? 'bg-green-500 border-green-500'
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              {achieved && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+            </div>
+          </div>
+
           <div className="text-3xl flex-shrink-0" aria-hidden="true">
             {milestone.icon}
           </div>
@@ -106,18 +170,42 @@ export function MilestonesView() {
               <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${colors.badge}`}>
                 {formatAgeRange(milestone.ageRangeWeeks.start, milestone.ageRangeWeeks.end)}
               </span>
-              {status === 'current' && (
+              {status === 'current' && !achieved && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700">
                   ✨ Look out for this
                 </span>
               )}
+              {achieved && achievement && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                  ✓ Achieved {new Date(achievement.achieved_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
             </div>
 
-            <h4 className={`font-semibold ${colors.text} mb-1`}>{milestone.title}</h4>
+            <h4 className={`font-semibold ${colors.text} mb-1 ${achieved ? 'line-through' : ''}`}>
+              {milestone.title}
+            </h4>
             <p className={`text-sm ${colors.text} opacity-90`}>{milestone.description}</p>
+
+            {/* Show photo and notes if tagged */}
+            {achieved && achievement && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                {achievement.photo_id && (
+                  <span className="flex items-center gap-1 bg-white/50 px-2 py-1 rounded">
+                    <Camera className="w-3 h-3" />
+                    Photo attached
+                  </span>
+                )}
+                {achievement.notes && (
+                  <span className="bg-white/50 px-2 py-1 rounded italic">
+                    "{achievement.notes}"
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </motion.div>
+      </motion.button>
     );
   };
 
@@ -272,6 +360,112 @@ export function MilestonesView() {
           </motion.div>
         </div>
       )}
+
+      {/* Achievement Dialog */}
+      <AnimatePresence>
+        {selectedMilestone && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setSelectedMilestone(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{selectedMilestone.icon}</span>
+                  <h2 className="text-xl font-bold text-gray-900">Mark as Achieved</h2>
+                </div>
+                <button
+                  onClick={() => setSelectedMilestone(null)}
+                  className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <h3 className="font-semibold text-gray-900 mb-4">{selectedMilestone.title}</h3>
+
+              <div className="space-y-4">
+                {/* Date picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    When did this happen?
+                  </label>
+                  <input
+                    type="date"
+                    value={achievementDate}
+                    onChange={(e) => setAchievementDate(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Photo picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Camera className="w-4 h-4 inline mr-1" />
+                    Link to a photo (optional)
+                  </label>
+                  <select
+                    value={selectedPhotoId || ''}
+                    onChange={(e) => setSelectedPhotoId(e.target.value || null)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                  >
+                    <option value="">No photo</option>
+                    {photos.map((photo) => (
+                      <option key={photo.id} value={photo.id}>
+                        {new Date(photo.upload_date).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={achievementNotes}
+                    onChange={(e) => setAchievementNotes(e.target.value)}
+                    placeholder="Add any details about this milestone..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setSelectedMilestone(null)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAchievement}
+                  disabled={!achievementDate}
+                  className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
