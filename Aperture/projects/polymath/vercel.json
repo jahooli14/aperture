@@ -16,14 +16,5 @@
       "maxDuration": 60
     }
   },
-  "crons": [
-    {
-      "path": "/api/cron/weekly-synthesis",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/strengthen-nodes",
-      "schedule": "0 0 * * *"
-    }
-  ]
+  "crons": []
 }
