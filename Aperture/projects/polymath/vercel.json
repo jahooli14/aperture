@@ -1,8 +1,7 @@
 {
-  "buildCommand": "vite build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD . && exit 0 || exit 1'",
   "functions": {
     "api/*.ts": {
       "maxDuration": 60
