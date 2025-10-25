@@ -409,7 +409,7 @@ export interface Project {
   would_restart?: boolean
 }
 
-export type ProjectType = 'creative' | 'technical' | 'learning'
+export type ProjectType = 'personal' | 'technical' | 'meta'
 
 export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
 

@@ -30,7 +30,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'creative' as 'creative' | 'technical' | 'learning',
+    type: 'personal' as 'personal' | 'technical' | 'meta',
     status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
     next_step: '',
     progress: 0,
