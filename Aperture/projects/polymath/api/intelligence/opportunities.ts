@@ -102,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const interestsText = interests.slice(0, 10).join(', ')
     const projectsText = projects?.map(p => `- ${p.title} (${p.status}${p.abandoned_reason ? ', abandoned: ' + p.abandoned_reason : ''})`).join('\n') || 'No projects yet'
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
     const prompt = `You are a creative intelligence engine helping someone with a 9-5 job identify side project opportunities.
 

@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const memorySummary = memories.map(m => `- ${m.title}: ${m.body?.substring(0, 100)}`).join('\n')
     const projectSummary = projects?.map(p => `- ${p.title} (${p.status})`).join('\n') || 'No projects yet'
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
     const prompt = `You are analyzing a creative person's knowledge graph to identify VALUABLE missing context.
 

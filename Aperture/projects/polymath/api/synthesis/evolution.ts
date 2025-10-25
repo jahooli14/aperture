@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const [topic, mems] of topicGroups.entries()) {
       if (mems.length >= 3) {
         // Ask AI to analyze evolution
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
         const memoryTexts = mems
           .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
@@ -123,7 +123,7 @@ Return JSON:
         .map(p => `- ${p.title}: ${p.abandoned_reason || 'No reason given'}`)
         .join('\n')
 
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
       const patternPrompt = `Analyze project abandonment patterns:
 

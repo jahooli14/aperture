@@ -6,7 +6,8 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Mic, Check, ArrowRight, Sparkles } from 'lucide-react'
+import { Check, ArrowRight, Sparkles } from 'lucide-react'
+import { VoiceInput } from '../components/VoiceInput'
 import type { OnboardingResponse, OnboardingAnalysis } from '../types'
 
 const QUESTIONS = [
@@ -47,7 +48,6 @@ export function OnboardingPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<OnboardingResponse[]>([])
   const [currentResponse, setCurrentResponse] = useState('')
-  const [isRecording, setIsRecording] = useState(false)
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
@@ -113,9 +113,8 @@ export function OnboardingPage() {
     }
   }
 
-  const handleVoiceToggle = () => {
-    // TODO: Implement actual voice recording
-    setIsRecording(!isRecording)
+  const handleVoiceTranscript = (transcript: string) => {
+    setCurrentResponse(transcript)
   }
 
   const handleSkipOnboarding = () => {
@@ -299,16 +298,11 @@ export function OnboardingPage() {
               />
 
               {question.type === 'freeform' && (
-                <button
-                  onClick={handleVoiceToggle}
-                  className={`w-full py-4 rounded-lg border-2 flex items-center justify-center gap-3 transition-smooth
-                    ${isRecording
-                      ? 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-neutral-300 hover:border-orange-500 text-neutral-700'}`}
-                >
-                  <Mic className={`h-5 w-5 ${isRecording ? 'animate-pulse' : ''}`} />
-                  {isRecording ? 'Recording...' : 'Or use voice (30s)'}
-                </button>
+                <VoiceInput
+                  onTranscript={handleVoiceTranscript}
+                  maxDuration={30}
+                  autoSubmit={false}
+                />
               )}
             </div>
           </div>

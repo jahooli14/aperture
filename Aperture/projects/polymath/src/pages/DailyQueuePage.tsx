@@ -6,7 +6,8 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Zap, Settings, Clock, Battery, MapPin, ArrowRight, X, Sparkles, Lightbulb, Mic } from 'lucide-react'
+import { VoiceInput } from '../components/VoiceInput'
+import { Zap, Settings, Clock, Battery, MapPin, ArrowRight, X, Sparkles, Lightbulb } from 'lucide-react'
 import type { ProjectScore, UserContext, DailyQueueResponse, GapPrompt, CreativeOpportunity } from '../types'
 
 export function DailyQueuePage() {
@@ -103,6 +104,13 @@ export function DailyQueuePage() {
 
   const dismissOpportunity = (oppId: string) => {
     setCreativeOpportunities(prev => prev.filter(o => o.id !== oppId))
+  }
+
+  const handlePromptResponse = (promptId: string, transcript: string) => {
+    // TODO: Save the response to the database
+    console.log('Gap prompt response:', { promptId, transcript })
+    // For now, just dismiss the prompt
+    dismissPrompt(promptId)
   }
 
   const getCategoryIcon = (category: string) => {
@@ -248,14 +256,16 @@ export function DailyQueuePage() {
                       💡 {prompt.reasoning}
                     </p>
                   </div>
-                  <div className="flex gap-3">
-                    <Button className="btn-primary flex items-center gap-2">
-                      <Mic className="h-4 w-4" />
-                      Answer (30s)
-                    </Button>
+                  <div className="space-y-3">
+                    <VoiceInput
+                      onTranscript={(transcript) => handlePromptResponse(prompt.id, transcript)}
+                      maxDuration={30}
+                      autoSubmit={true}
+                    />
                     <Button
                       variant="outline"
                       onClick={() => dismissPrompt(prompt.id)}
+                      className="w-full"
                     >
                       Skip
                     </Button>

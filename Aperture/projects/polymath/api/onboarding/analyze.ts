@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .join('\n\n')
 
     // Use Gemini to extract capabilities, themes, patterns
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
     const prompt = `Analyze these onboarding responses from a creative person with a 9-5 job who wants to build side projects and potentially go full-time creative.
 
