@@ -4,3 +4,5 @@ dist
 .env.local
 .vercel
 .env.production
+*.tsbuildinfo
+*.tsbuildinfo
