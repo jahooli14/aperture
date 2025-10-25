@@ -1,9 +1,14 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Upload } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
 
-export function CalendarView() {
+interface CalendarViewProps {
+  onUploadClick?: () => void;
+}
+
+export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
   const { photos } = usePhotoStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -77,6 +82,7 @@ export function CalendarView() {
 
   const selectedPhoto = selectedDate ? photosByDate.get(selectedDate) : null;
   const today = new Date().toISOString().split('T')[0];
+  const hasTodayPhoto = photosByDate.has(today);
 
   return (
     <motion.div
@@ -95,6 +101,41 @@ export function CalendarView() {
           Today
         </button>
       </div>
+
+      {/* Upload Today's Photo Banner - show if no photo for today */}
+      {!hasTodayPhoto && onUploadClick && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="mb-6 bg-gradient-to-r from-primary-50 to-primary-100 border-2 border-primary-200 rounded-lg p-5"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-primary-900 mb-1">
+                📸 Today's Photo
+              </h3>
+              <p className="text-sm text-primary-700">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+            <motion.button
+              type="button"
+              onClick={onUploadClick}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-3 rounded-lg font-medium shadow-md transition-colors"
+            >
+              <Upload className="w-5 h-5" />
+              <span className="hidden sm:inline">Upload Photo</span>
+              <span className="sm:hidden">Upload</span>
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Month Navigation */}
       <div className="flex items-center justify-between mb-6">

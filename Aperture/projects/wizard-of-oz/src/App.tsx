@@ -271,7 +271,7 @@ function App() {
               </div>
             }>
               {view === 'gallery' && <PhotoGallery showToast={showToast} />}
-              {view === 'calendar' && <CalendarView />}
+              {view === 'calendar' && <CalendarView onUploadClick={() => setView('gallery')} />}
               {view === 'compare' && <ComparisonView />}
               {view === 'milestones' && <MilestonesView />}
             </Suspense>
