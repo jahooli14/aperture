@@ -179,15 +179,17 @@ export function ProjectsPage() {
           </Card>
         ) : viewMode === 'grid' ? (
           /* Grid View - Full Cards */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onEdit={() => handleEdit(project)}
-                onDelete={() => handleDelete(project)}
-              />
-            ))}
+          <div className="w-full max-w-full overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 stagger-children mt-8">
+              {projects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onEdit={() => handleEdit(project)}
+                  onDelete={() => handleDelete(project)}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           /* Compact View - Mobile-optimized list */

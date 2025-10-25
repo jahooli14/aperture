@@ -30,9 +30,8 @@ export function HomePage() {
   }, [])
 
   useEffect(() => {
-    // Check if demo data is present
-    const demoDismissed = localStorage.getItem('polymath_demo_dismissed')
-    if (!demoDismissed && memories.length > 0) {
+    // Always show banner if demo data is present (ignore dismissed state)
+    if (memories.length > 0) {
       const hasDemoMemory = memories.some(m => m.audiopen_id?.startsWith('demo-'))
       if (hasDemoMemory) {
         setShowDemoBanner(true)
@@ -101,7 +100,7 @@ export function HomePage() {
       {showDemoBanner && (
         <DemoDataBanner
           onDismiss={() => {
-            localStorage.setItem('polymath_demo_dismissed', 'true')
+            // Don't save dismissed state - always show if demo data exists
             setShowDemoBanner(false)
           }}
           onDataCleared={handleDataCleared}
