@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import { HomePage } from './pages/HomePage'
 import { MemoriesPage } from './pages/MemoriesPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
@@ -10,21 +11,31 @@ import { InsightsPage } from './pages/InsightsPage'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Menu, X } from 'lucide-react'
 import './App.css'
 
 function Navigation() {
   const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isActive = (path: string) => location.pathname === path
 
+  const navLinks = [
+    { path: '/today', label: 'Today' },
+    { path: '/memories', label: 'Memories' },
+    { path: '/projects', label: 'Projects' },
+    { path: '/timeline', label: 'Timeline' },
+    { path: '/insights', label: 'Insights' }
+  ]
+
   return (
     <nav className="sticky top-0 z-50 glass-panel border-b border-neutral-200">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link
             to="/"
             className="flex items-center gap-2.5 group transition-smooth"
+            onClick={() => setMobileMenuOpen(false)}
           >
             <Sparkles className="h-5 w-5 text-orange-600" />
             <span className="text-xl font-semibold tracking-tight text-neutral-900">
@@ -32,19 +43,14 @@ function Navigation() {
             </span>
           </Link>
 
-          <div className="flex gap-1">
-            {[
-              { path: '/today', label: 'Today' },
-              { path: '/memories', label: 'Memories' },
-              { path: '/projects', label: 'Projects' },
-              { path: '/timeline', label: 'Timeline' },
-              { path: '/insights', label: 'Insights' }
-            ].map(({ path, label }) => (
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex gap-1">
+            {navLinks.map(({ path, label }) => (
               <Link
                 key={path}
                 to={path}
                 className={cn(
-                  "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth",
+                  "relative px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap",
                   isActive(path)
                     ? "text-orange-600 bg-orange-50"
                     : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
@@ -54,7 +60,42 @@ function Navigation() {
               </Link>
             ))}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-neutral-100"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
         </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-neutral-200">
+            <div className="flex flex-col gap-2">
+              {navLinks.map(({ path, label }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "px-4 py-3 rounded-lg text-base font-medium transition-smooth",
+                    isActive(path)
+                      ? "text-orange-600 bg-orange-50"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )
