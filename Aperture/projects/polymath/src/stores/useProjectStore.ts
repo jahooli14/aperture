@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand'
+import { supabase } from '../lib/supabase'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
@@ -45,20 +46,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     try {
       const { filter } = get()
-      const params = new URLSearchParams()
+      let query = supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
 
       if (filter !== 'all') {
-        params.append('status', filter)
+        query = query.eq('status', filter)
       }
 
-      const response = await fetch(`${API_BASE}/projects?${params}`)
+      const { data, error } = await query
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch projects')
-      }
+      if (error) throw error
 
-      const data = await response.json()
-      set({ projects: data.projects || [], loading: false })
+      set({ projects: data || [], loading: false })
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -69,15 +70,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (data) => {
     try {
-      const response = await fetch(`${API_BASE}/projects`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
+      const { error } = await supabase
+        .from('projects')
+        .insert([data])
 
-      if (!response.ok) {
-        throw new Error('Failed to create project')
-      }
+      if (error) throw error
 
       // Refresh projects after creating
       await get().fetchProjects()
@@ -90,15 +87,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   updateProject: async (id, data) => {
     try {
-      const response = await fetch(`${API_BASE}/projects/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
+      const { error } = await supabase
+        .from('projects')
+        .update(data)
+        .eq('id', id)
 
-      if (!response.ok) {
-        throw new Error('Failed to update project')
-      }
+      if (error) throw error
 
       // Refresh projects after updating
       await get().fetchProjects()
@@ -112,13 +106,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   deleteProject: async (id) => {
     try {
-      const response = await fetch(`${API_BASE}/projects/${id}`, {
-        method: 'DELETE'
-      })
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id)
 
-      if (!response.ok) {
-        throw new Error('Failed to delete project')
-      }
+      if (error) throw error
 
       // Refresh projects after deleting
       await get().fetchProjects()
