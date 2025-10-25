@@ -79,9 +79,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // Refresh projects after creating
       await get().fetchProjects()
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Unknown error'
-      })
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      set({ error: errorMessage })
+      throw error // Re-throw so the dialog can catch it
     }
   },
 

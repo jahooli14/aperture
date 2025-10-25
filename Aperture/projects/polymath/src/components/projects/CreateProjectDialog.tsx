@@ -25,6 +25,7 @@ export function CreateProjectDialog() {
 
   const [formData, setFormData] = useState({
     title: '',
+    description: '',
     next_step: '',
   })
 
@@ -35,7 +36,7 @@ export function CreateProjectDialog() {
     try {
       await createProject({
         title: formData.title,
-        description: '', // Empty by default
+        description: formData.description || '',
         type: 'creative', // Default to creative
         status: 'active', // Always start as active
         metadata: {
@@ -53,6 +54,7 @@ export function CreateProjectDialog() {
       // Reset form and close dialog
       setFormData({
         title: '',
+        description: '',
         next_step: '',
       })
       setOpen(false)
@@ -80,7 +82,7 @@ export function CreateProjectDialog() {
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
             <DialogTitle className="text-lg sm:text-2xl">Start a New Project</DialogTitle>
             <DialogDescription className="text-sm sm:text-base">
-              Quick start - just give it a name and your first step
+              Quick start - name it, describe it, and define the first step
             </DialogDescription>
           </DialogHeader>
 
@@ -95,6 +97,19 @@ export function CreateProjectDialog() {
                   setFormData({ ...formData, title: e.target.value })
                 }
                 required
+                className="text-base h-11 sm:h-12"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-sm sm:text-base">Description (one-liner)</Label>
+              <Input
+                id="description"
+                placeholder="What's this project about?"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 className="text-base h-11 sm:h-12"
               />
             </div>
