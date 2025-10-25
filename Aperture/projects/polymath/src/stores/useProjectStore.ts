@@ -70,16 +70,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (data) => {
     try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        throw new Error('You must be logged in to create a project')
-      }
+      // Single-user app - use hardcoded user ID from env
+      const userId = import.meta.env.VITE_USER_ID || 'default-user'
 
       const { error } = await supabase
         .from('projects')
-        .insert([{ ...data, user_id: user.id }])
+        .insert([{ ...data, user_id: userId }])
 
       if (error) throw error
 
