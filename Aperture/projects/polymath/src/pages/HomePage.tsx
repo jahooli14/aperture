@@ -8,9 +8,12 @@ import { Link } from 'react-router-dom'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useOfflineSync } from '../hooks/useOfflineSync'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
-import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
+import { VoiceInput } from '../components/VoiceInput'
+import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus, Mic } from 'lucide-react'
 import type { ProjectSuggestion } from '../types'
 import { supabase } from '../lib/supabase'
 
@@ -18,10 +21,13 @@ export function HomePage() {
   const { suggestions, fetchSuggestions, rateSuggestion, buildSuggestion } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
   const { memories, fetchMemories } = useMemoryStore()
+  const { addOfflineCapture } = useOfflineSync()
+  const { isOnline } = useOnlineStatus()
 
   const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [showDemoBanner, setShowDemoBanner] = useState(false)
+  const [showVoiceCapture, setShowVoiceCapture] = useState(false)
 
   useEffect(() => {
     fetchSuggestions()
@@ -92,6 +98,29 @@ export function HomePage() {
   const handleBuild = async (id: string) => {
     // This would normally open build dialog, but we'll just navigate
     window.location.href = '/suggestions'
+  }
+
+  const handleVoiceCapture = async (transcript: string) => {
+    if (!transcript) return
+
+    try {
+      if (isOnline) {
+        // Online: send directly to API
+        await fetch('/api/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript })
+        })
+      } else {
+        // Offline: queue for later
+        await addOfflineCapture(transcript)
+      }
+
+      setShowVoiceCapture(false)
+      await fetchMemories()
+    } catch (error) {
+      console.error('Failed to capture:', error)
+    }
   }
 
   return (
@@ -186,6 +215,47 @@ export function HomePage() {
               </div>
             </Link>
           </div>
+        </section>
+
+        {/* Quick Voice Capture */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          {!showVoiceCapture ? (
+            <button
+              onClick={() => setShowVoiceCapture(true)}
+              className="w-full pro-card p-6 border-2 border-dashed border-orange-300 hover:border-orange-500 transition-all hover:shadow-md group"
+            >
+              <div className="flex items-center justify-center gap-3 text-orange-600 group-hover:text-orange-700">
+                <Mic className="h-6 w-6" />
+                <span className="text-lg font-medium">
+                  Quick Capture {!isOnline && '(Offline Mode)'}
+                </span>
+              </div>
+            </button>
+          ) : (
+            <div className="pro-card p-6 border-2 border-orange-300">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  Voice Capture {!isOnline && '(Offline)'}
+                </h3>
+                <button
+                  onClick={() => setShowVoiceCapture(false)}
+                  className="text-neutral-500 hover:text-neutral-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              <VoiceInput
+                onTranscript={handleVoiceCapture}
+                maxDuration={60}
+                autoSubmit={true}
+              />
+              {!isOnline && (
+                <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
+                  You're offline. This capture will sync automatically when you're back online.
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Main Content Grid */}

@@ -6,6 +6,8 @@
 import { useEffect, useState } from 'react'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
+import { useMemoryCache } from '../hooks/useMemoryCache'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
@@ -15,18 +17,21 @@ import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { useToast } from '../components/ui/toast'
-import { Brain, Mic, Zap, ArrowLeft } from 'lucide-react'
+import { Brain, Mic, Zap, ArrowLeft, CloudOff } from 'lucide-react'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
   const { memories, fetchMemories, loading, error, deleteMemory } = useMemoryStore()
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
+  const { fetchWithCache, cacheMemories } = useMemoryCache()
+  const { isOnline } = useOnlineStatus()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [showingCachedData, setShowingCachedData] = useState(false)
 
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
@@ -35,11 +40,31 @@ export function MemoriesPage() {
   const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('themes')
 
   useEffect(() => {
-    fetchMemories()
+    loadMemoriesWithCache()
     if (view === 'all') {
       fetchThemeClusters()
     }
   }, [view])
+
+  const loadMemoriesWithCache = async () => {
+    try {
+      const { memories: fetchedMemories, fromCache } = await fetchWithCache('/api/memories')
+      setShowingCachedData(fromCache)
+
+      if (fromCache) {
+        addToast({
+          title: 'Offline Mode',
+          description: `Showing ${fetchedMemories.length} cached memories`,
+          variant: 'default'
+        })
+      } else {
+        // Online: also update the store
+        await fetchMemories()
+      }
+    } catch (error) {
+      console.error('Failed to load memories:', error)
+    }
+  }
 
   const fetchThemeClusters = async () => {
     setLoadingClusters(true)
@@ -135,6 +160,12 @@ export function MemoriesPage() {
           <p className="text-lg text-neutral-600">
             Your captured thoughts and voice notes
           </p>
+          {showingCachedData && (
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+              <CloudOff className="h-4 w-4" />
+              <span className="text-sm font-medium">Showing cached data from offline mode</span>
+            </div>
+          )}
         </div>
       </div>
 
