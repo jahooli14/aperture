@@ -6,8 +6,8 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Zap, Settings, Clock, Battery, MapPin, ArrowRight, X } from 'lucide-react'
-import type { ProjectScore, UserContext, DailyQueueResponse } from '../types'
+import { Zap, Settings, Clock, Battery, MapPin, ArrowRight, X, Sparkles, Lightbulb, Mic } from 'lucide-react'
+import type { ProjectScore, UserContext, DailyQueueResponse, GapPrompt, CreativeOpportunity } from '../types'
 
 export function DailyQueuePage() {
   const [queue, setQueue] = useState<ProjectScore[]>([])
@@ -16,9 +16,15 @@ export function DailyQueuePage() {
   const [loading, setLoading] = useState(true)
   const [showContextDialog, setShowContextDialog] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [gapPrompts, setGapPrompts] = useState<GapPrompt[]>([])
+  const [creativeOpportunities, setCreativeOpportunities] = useState<CreativeOpportunity[]>([])
+  const [promptsLoading, setPromptsLoading] = useState(false)
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(false)
 
   useEffect(() => {
     fetchQueue()
+    fetchGapPrompts()
+    fetchCreativeOpportunities()
   }, [])
 
   const fetchQueue = async () => {
@@ -57,8 +63,46 @@ export function DailyQueuePage() {
     }
   }
 
+  const fetchGapPrompts = async () => {
+    setPromptsLoading(true)
+    try {
+      const response = await fetch('/api/prompts/gap-analysis')
+      if (response.ok) {
+        const data = await response.json()
+        setGapPrompts(data.prompts || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch gap prompts:', err)
+    } finally {
+      setPromptsLoading(false)
+    }
+  }
+
+  const fetchCreativeOpportunities = async () => {
+    setOpportunitiesLoading(true)
+    try {
+      const response = await fetch('/api/intelligence/opportunities')
+      if (response.ok) {
+        const data = await response.json()
+        setCreativeOpportunities(data.opportunities || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch creative opportunities:', err)
+    } finally {
+      setOpportunitiesLoading(false)
+    }
+  }
+
   const skipProject = (projectId: string) => {
     setQueue(prev => prev.filter(p => p.project_id !== projectId))
+  }
+
+  const dismissPrompt = (promptId: string) => {
+    setGapPrompts(prev => prev.filter(p => p.id !== promptId))
+  }
+
+  const dismissOpportunity = (oppId: string) => {
+    setCreativeOpportunities(prev => prev.filter(o => o.id !== oppId))
   }
 
   const getCategoryIcon = (category: string) => {
@@ -184,6 +228,111 @@ export function DailyQueuePage() {
               <p className="text-sm text-red-600">{error}</p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Gap-Filling Prompts */}
+        {gapPrompts.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
+              <Lightbulb className="h-6 w-6 text-amber-600" />
+              Quick Question
+            </h2>
+            {gapPrompts.slice(0, 1).map(prompt => (
+              <Card key={prompt.id} className="border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+                <CardContent className="pt-6">
+                  <div className="mb-4">
+                    <p className="text-lg font-medium text-neutral-900 mb-2">
+                      {prompt.prompt_text}
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      💡 {prompt.reasoning}
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button className="btn-primary flex items-center gap-2">
+                      <Mic className="h-4 w-4" />
+                      Answer (30s)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => dismissPrompt(prompt.id)}
+                    >
+                      Skip
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Creative Opportunities */}
+        {creativeOpportunities.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-purple-600" />
+              Project Opportunity
+            </h2>
+            {creativeOpportunities.slice(0, 1).map(opp => (
+              <Card key={opp.id} className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+                <CardContent className="pt-6">
+                  <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                    {opp.title}
+                  </h3>
+                  <p className="text-neutral-700 mb-4">
+                    {opp.description}
+                  </p>
+
+                  <div className="mb-4 p-4 bg-white/80 rounded-lg">
+                    <p className="text-sm font-medium text-neutral-900 mb-2">
+                      Why this fits you:
+                    </p>
+                    <ul className="space-y-1">
+                      {opp.why_you.map((reason, i) => (
+                        <li key={i} className="text-sm text-neutral-700 flex items-start gap-2">
+                          <span className="text-purple-600 mt-1">✓</span>
+                          {reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {opp.revenue_potential && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm font-medium text-green-800">
+                        💰 Revenue potential: {opp.revenue_potential}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-neutral-900 mb-2">
+                      Next steps:
+                    </p>
+                    <ol className="space-y-1">
+                      {opp.next_steps.map((step, i) => (
+                        <li key={i} className="text-sm text-neutral-700">
+                          {i + 1}. {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button className="btn-primary flex-1">
+                      Create Project
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => dismissOpportunity(opp.id)}
+                    >
+                      Not Interested
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty State */}

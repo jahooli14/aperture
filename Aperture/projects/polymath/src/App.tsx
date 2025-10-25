@@ -4,6 +4,7 @@ import { MemoriesPage } from './pages/MemoriesPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { DailyQueuePage } from './pages/DailyQueuePage'
+import { OnboardingPage } from './pages/OnboardingPage'
 import { ToastProvider } from './components/ui/toast'
 import { cn } from './lib/utils'
 import { Sparkles } from 'lucide-react'
@@ -65,6 +66,7 @@ export default function App() {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/today" element={<DailyQueuePage />} />
               <Route path="/memories" element={<MemoriesPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />

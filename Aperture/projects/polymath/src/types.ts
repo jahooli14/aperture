@@ -286,6 +286,93 @@ export interface BridgeCandidate {
   entities_shared?: string[]
   reason: string // Human-readable explanation
 }
+
+// ============================================================================
+// ONBOARDING & KILLER FEATURES
+// ============================================================================
+
+export interface OnboardingResponse {
+  transcript: string
+  question_number: number
+}
+
+export interface OnboardingAnalysis {
+  capabilities: string[]
+  themes: string[]
+  patterns: string[]
+  entities: Entities
+  first_insight: string
+  graph_preview: {
+    nodes: { id: string; label: string; type: string }[]
+    edges: { from: string; to: string; label: string }[]
+  }
+}
+
+export interface GapPrompt {
+  id: string
+  prompt_text: string
+  reasoning: string
+  category: 'transition' | 'skill' | 'project' | 'general'
+  priority: number
+  created_at: string
+}
+
+export interface CreativeOpportunity {
+  id: string
+  title: string
+  description: string
+  why_you: string[] // Array of reasons why this fits the user
+  capabilities_used: string[]
+  memories_referenced: string[]
+  revenue_potential?: string // e.g., "$500-2000/mo" if income goals mentioned
+  next_steps: string[]
+  confidence: number
+  created_at: string
+}
+
+export interface CognitivePattern {
+  type: 'thinking_time' | 'velocity' | 'emotional_continuity' | 'side_hustle_hours'
+  title: string
+  description: string
+  data: any
+  insight: string
+}
+
+export interface TimelinePattern {
+  best_thinking_times: { day: string; hour: number; count: number }[]
+  thought_velocity: { week: string; count: number }[]
+  emotional_trends: { date: string; tone: string }[]
+  side_hustle_hours: { month: string; hours: number }[]
+}
+
+export interface MemoryEvolution {
+  topic: string
+  timeline: {
+    date: string
+    memory_id: string
+    stance: string
+    quote: string
+  }[]
+  evolution_type: 'growth' | 'contradiction' | 'refinement'
+  summary: string
+}
+
+export interface ProjectPattern {
+  pattern_type: 'abandonment' | 'success' | 'cycle'
+  description: string
+  projects_affected: string[]
+  recommendation: string
+}
+
+export interface SynthesisInsight {
+  type: 'evolution' | 'pattern' | 'opportunity' | 'collision'
+  title: string
+  description: string
+  data: MemoryEvolution | ProjectPattern | any
+  actionable: boolean
+  action?: string
+}
+
 /**
  * Polymath TypeScript Type Definitions
  * Copy to: projects/memory-os/src/types.ts (append to existing types)
