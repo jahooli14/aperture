@@ -25,11 +25,7 @@ export function CreateProjectDialog() {
 
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
-    type: 'creative' as 'creative' | 'technical' | 'learning',
-    status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived',
     next_step: '',
-    progress: 0,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,12 +35,12 @@ export function CreateProjectDialog() {
     try {
       await createProject({
         title: formData.title,
-        description: formData.description,
-        type: formData.type,
-        status: formData.status,
+        description: '', // Empty by default
+        type: 'creative', // Default to creative
+        status: 'active', // Always start as active
         metadata: {
           next_step: formData.next_step || undefined,
-          progress: formData.progress > 0 ? formData.progress : undefined,
+          progress: 0,
         },
       })
 
@@ -57,11 +53,7 @@ export function CreateProjectDialog() {
       // Reset form and close dialog
       setFormData({
         title: '',
-        description: '',
-        type: 'creative',
-        status: 'active',
         next_step: '',
-        progress: 0,
       })
       setOpen(false)
     } catch (error) {
@@ -86,18 +78,18 @@ export function CreateProjectDialog() {
       <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col overflow-hidden">
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-            <DialogTitle className="text-lg sm:text-2xl">Create New Project</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl">Start a New Project</DialogTitle>
             <DialogDescription className="text-sm sm:text-base">
-              Add a new project to track your creative work and strengthen capabilities.
+              Quick start - just give it a name and your first step
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="title" className="text-sm sm:text-base">Title *</Label>
+              <Label htmlFor="title" className="text-sm sm:text-base">Project Name *</Label>
               <Input
                 id="title"
-                placeholder="My Awesome Project"
+                placeholder="My Next Big Thing"
                 value={formData.title}
                 onChange={(e) =>
                   setFormData({ ...formData, title: e.target.value })
@@ -108,71 +100,16 @@ export function CreateProjectDialog() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="What is this project about?"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                rows={4}
-                className="text-base min-h-[100px]"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="type" className="text-sm sm:text-base">Type</Label>
-              <Select
-                id="type"
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as typeof formData.type,
-                  })
-                }
-                className="text-base h-11 sm:h-12"
-              >
-                <option value="creative">🎨 Creative</option>
-                <option value="technical">⚙️ Technical</option>
-                <option value="learning">📚 Learning</option>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="status" className="text-sm sm:text-base">Status</Label>
-              <Select
-                id="status"
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    status: e.target.value as typeof formData.status,
-                  })
-                }
-                className="text-base h-11 sm:h-12"
-              >
-                <option value="active">🚀 Active</option>
-                <option value="on-hold">⏸️ On Hold</option>
-                <option value="maintaining">🔧 Maintaining</option>
-                <option value="completed">✅ Completed</option>
-                <option value="archived">📦 Archived</option>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="next-step" className="text-sm sm:text-base">Next Step (Optional)</Label>
+              <Label htmlFor="next-step" className="text-sm sm:text-base">What's the first step?</Label>
               <Input
                 id="next-step"
-                placeholder="e.g., Fix the login bug, Add color palette, Research frameworks"
+                placeholder="e.g., Research ideas, Build prototype, Write outline"
                 value={formData.next_step}
                 onChange={(e) =>
                   setFormData({ ...formData, next_step: e.target.value })
                 }
                 className="text-base h-11 sm:h-12"
               />
-              <p className="text-xs text-gray-500">What's the immediate next action?</p>
             </div>
           </div>
 

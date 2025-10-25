@@ -82,7 +82,7 @@ export function CreateMemoryDialog() {
       })
 
       addToast({
-        title: 'Memory captured!',
+        title: 'Thought captured!',
         description: 'Your thought has been saved to your knowledge graph',
         variant: 'success',
       })
@@ -91,7 +91,7 @@ export function CreateMemoryDialog() {
       setOpen(false)
     } catch (error) {
       addToast({
-        title: 'Failed to create memory',
+        title: 'Failed to create thought',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
@@ -105,7 +105,7 @@ export function CreateMemoryDialog() {
       <DialogTrigger asChild>
         <button className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          New Memory
+          New Thought
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col overflow-hidden">
@@ -259,7 +259,7 @@ export function CreateMemoryDialog() {
               ) : (
                 <>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Capture Memory
+                  Capture Thought
                 </>
               )}
             </Button>

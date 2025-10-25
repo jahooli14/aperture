@@ -1,10 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 /**
  * Unified Memories API
@@ -12,12 +15,18 @@ const supabase = createClient(
  * GET /api/memories?resurfacing=true - Get memories to resurface (spaced repetition)
  * GET /api/memories?themes=true - Get theme clusters
  * GET /api/memories?prompts=true - Get memory prompts with status
- * POST /api/memories - Mark memory as reviewed (requires id in body)
  * GET /api/memories?bridges=true&id=xxx - Get bridges for memory
+ * POST /api/memories - Mark memory as reviewed (requires id in body)
+ * POST /api/memories?capture=true - Voice capture with transcript parsing (requires transcript in body)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { resurfacing, bridges, themes, prompts, id } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture } = req.query
+
+    // POST: Voice capture
+    if (req.method === 'POST' && capture === 'true') {
+      return await handleCapture(req, res)
+    }
 
     // POST: Mark memory as reviewed
     if (req.method === 'POST') {
@@ -65,6 +74,109 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('[api/memories] Unexpected error:', error)
     return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * Handle voice capture with Gemini parsing
+ */
+async function handleCapture(req: VercelRequest, res: VercelResponse) {
+  const { transcript } = req.body
+
+  if (!transcript || typeof transcript !== 'string') {
+    return res.status(400).json({ error: 'transcript required' })
+  }
+
+  try {
+    // Parse transcript using Gemini 2.5 Flash
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest' })
+
+    const prompt = `Parse this voice transcript into a structured thought format.
+
+Extract:
+1. A clear, concise title (5-10 words)
+2. 2-5 bullet points capturing the key ideas (each bullet should be a complete sentence or thought)
+
+Transcript:
+${transcript}
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "title": "...",
+  "bullets": ["...", "...", "..."]
+}`
+
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const text = response.text()
+
+    // Extract JSON from response (handle markdown code blocks)
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No JSON found in response')
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+
+    if (!parsed.title || !parsed.bullets || !Array.isArray(parsed.bullets)) {
+      throw new Error('Invalid response format from Gemini')
+    }
+
+    // Create memory/thought in database
+    const now = new Date().toISOString()
+    const body = parsed.bullets.join('\n\n')
+
+    const newMemory = {
+      audiopen_id: `voice_${Date.now()}`,
+      title: parsed.title,
+      body,
+      orig_transcript: transcript,
+      tags: [],
+      audiopen_created_at: now,
+      memory_type: null,
+      entities: null,
+      themes: null,
+      emotional_tone: null,
+      embedding: null,
+      processed: false,
+      processed_at: null,
+      error: null,
+    }
+
+    const { data: memory, error: insertError } = await supabase
+      .from('memories')
+      .insert(newMemory)
+      .select()
+      .single()
+
+    if (insertError) throw insertError
+
+    // Trigger background processing (async, don't wait)
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:5173'
+
+    fetch(`${baseUrl}/api/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memory_id: memory.id })
+    }).catch(err => console.error('Failed to trigger processing:', err))
+
+    return res.status(201).json({
+      success: true,
+      memory,
+      parsed: {
+        title: parsed.title,
+        bullets: parsed.bullets
+      }
+    })
+
+  } catch (error) {
+    console.error('[api/memories/capture] Error:', error)
+    return res.status(500).json({
+      error: 'Failed to capture thought',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 

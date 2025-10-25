@@ -8,8 +8,10 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useMemoryCache } from '../hooks/useMemoryCache'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
+import { VoiceInput } from '../components/VoiceInput'
 import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
@@ -26,12 +28,14 @@ export function MemoriesPage() {
   const { addToast } = useToast()
   const { fetchWithCache, cacheMemories } = useMemoryCache()
   const { isOnline } = useOnlineStatus()
+  const { addOfflineCapture } = useOfflineSync()
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [showingCachedData, setShowingCachedData] = useState(false)
+  const [showVoiceCapture, setShowVoiceCapture] = useState(false)
 
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
@@ -136,6 +140,45 @@ export function MemoriesPage() {
     }
   }
 
+  const handleVoiceCapture = async (transcript: string) => {
+    if (!transcript) return
+
+    try {
+      if (isOnline) {
+        // Online: send to memories API for parsing
+        await fetch('/api/memories?capture=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript })
+        })
+
+        addToast({
+          title: 'Thought captured!',
+          description: 'Processing your voice note...',
+          variant: 'success',
+        })
+      } else {
+        // Offline: queue for later
+        await addOfflineCapture(transcript)
+        addToast({
+          title: 'Queued for sync',
+          description: 'Will process when back online',
+          variant: 'default',
+        })
+      }
+
+      setShowVoiceCapture(false)
+      await fetchMemories()
+    } catch (error) {
+      console.error('Failed to capture:', error)
+      addToast({
+        title: 'Capture failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const displayMemories = view === 'all' ? memories : resurfacing
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
@@ -144,9 +187,44 @@ export function MemoriesPage() {
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
-        {view === 'all' && (
-          <div className="flex items-center justify-end mb-6">
+        {view === 'all' && !showVoiceCapture && (
+          <div className="flex items-center justify-end gap-3 mb-6">
+            <button
+              onClick={() => setShowVoiceCapture(true)}
+              className="px-6 py-2.5 bg-white text-orange-600 border-2 border-orange-600 rounded-full font-medium hover:bg-orange-50 transition-colors shadow-sm inline-flex items-center gap-2"
+            >
+              <Mic className="h-4 w-4" />
+              Quick Capture
+            </button>
             <CreateMemoryDialog />
+          </div>
+        )}
+        {/* Voice capture interface */}
+        {view === 'all' && showVoiceCapture && (
+          <div className="mb-6">
+            <div className="pro-card p-6 border-2 border-orange-300 max-w-3xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  Voice Capture {!isOnline && '(Offline)'}
+                </h3>
+                <button
+                  onClick={() => setShowVoiceCapture(false)}
+                  className="text-neutral-500 hover:text-neutral-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              <VoiceInput
+                onTranscript={handleVoiceCapture}
+                maxDuration={60}
+                autoSubmit={true}
+              />
+              {!isOnline && (
+                <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
+                  You're offline. This capture will sync automatically when you're back online.
+                </p>
+              )}
+            </div>
           </div>
         )}
         {/* Centered header content below button */}
@@ -155,10 +233,10 @@ export function MemoriesPage() {
             <Brain className="h-12 w-12 text-orange-600" />
           </div>
           <h1 className="text-4xl font-bold mb-3 text-neutral-900">
-            Memories
+            Thoughts
           </h1>
           <p className="text-lg text-neutral-600">
-            Your captured thoughts and voice notes
+            Your captured ideas and voice notes
           </p>
           {showingCachedData && (
             <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
@@ -193,7 +271,7 @@ export function MemoriesPage() {
                 : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
             }`}
           >
-            My Memories ({memories.length})
+            My Thoughts ({memories.length})
           </Button>
           <Button
             variant={view === 'resurfacing' ? 'default' : 'outline'}
@@ -214,14 +292,14 @@ export function MemoriesPage() {
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Brain className="h-5 w-5 text-orange-600" />
-                Demo Memories - Cross-Domain Examples
+                Demo Thoughts - Cross-Domain Examples
               </h3>
               <p className="text-neutral-600 leading-relaxed mb-3">
-                These 8 memories demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
+                These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
                 Notice how they span <strong>technical skills AND hobbies</strong> - this is the key to powerful synthesis.
               </p>
               <p className="text-sm text-neutral-500">
-                💡 <strong>Tip:</strong> Real-world usage works best with 5-10 memories covering both your professional expertise and personal interests.
+                💡 <strong>Tip:</strong> Real-world usage works best with 5-10 thoughts covering both your professional expertise and personal interests.
               </p>
             </CardContent>
           </Card>
@@ -299,12 +377,12 @@ export function MemoriesPage() {
                     <div>
                       <h3 className="text-2xl font-bold mb-4 text-neutral-900">Start Capturing Your Thoughts</h3>
                       <p className="text-lg text-neutral-600 mb-8">
-                        Memories are the foundation of your personal knowledge graph. Capture your thoughts, ideas, and interests to power AI-generated project suggestions.
+                        Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
                       </p>
                     </div>
 
                     <div className="bg-neutral-50 rounded-xl p-8 border border-neutral-200">
-                      <h4 className="font-bold text-neutral-900 mb-6 text-lg">How to Capture Memories</h4>
+                      <h4 className="font-bold text-neutral-900 mb-6 text-lg">How to Capture Thoughts</h4>
                       <div className="space-y-4 text-left">
                         <div className="flex gap-4">
                           <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
@@ -321,7 +399,7 @@ export function MemoriesPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-neutral-900">Connect Audiopen</p>
-                            <p className="text-sm text-neutral-600">Link your Audiopen account to automatically capture voice notes as memories</p>
+                            <p className="text-sm text-neutral-600">Link your Audiopen account to automatically capture voice notes as thoughts</p>
                           </div>
                         </div>
                         <div className="flex gap-4">
@@ -343,7 +421,7 @@ export function MemoriesPage() {
                     </div>
 
                     <p className="text-sm text-neutral-500">
-                      Tip: The more memories you capture, the better your AI-generated suggestions will be
+                      Tip: The more thoughts you capture, the better your AI-generated suggestions will be
                     </p>
                   </>
                 ) : (
@@ -401,7 +479,7 @@ export function MemoriesPage() {
                   <span className="text-3xl">{selectedCluster.icon}</span>
                   {selectedCluster.name}
                   <span className="text-sm font-normal text-gray-600">
-                    ({selectedCluster.memory_count} memories)
+                    ({selectedCluster.memory_count} thoughts)
                   </span>
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -437,7 +515,7 @@ export function MemoriesPage() {
                   </div>
                 ) : (
                   <Card className="p-8 text-center">
-                    <p className="text-gray-600">No themes detected yet. Add more memories with diverse topics!</p>
+                    <p className="text-gray-600">No themes detected yet. Add more thoughts with diverse topics!</p>
                   </Card>
                 )}
               </>

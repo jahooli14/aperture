@@ -105,8 +105,8 @@ export function HomePage() {
 
     try {
       if (isOnline) {
-        // Online: send directly to API
-        await fetch('/api/process', {
+        // Online: send to memories API for parsing
+        await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transcript })
@@ -147,7 +147,7 @@ export function HomePage() {
         {/* Stats Grid */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Memories Stat */}
+            {/* Thoughts Stat */}
             <Link
               to="/memories"
               className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
@@ -160,7 +160,7 @@ export function HomePage() {
                 {memories.length}
               </div>
               <div className="text-sm text-neutral-600">
-                Memories
+                Thoughts
               </div>
             </Link>
 
@@ -296,8 +296,8 @@ export function HomePage() {
                     <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Ideas?</p>
                     <p className="text-sm text-neutral-600 mb-4">
                       {memories.length > 0
-                        ? "You have memories captured. Click Generate Ideas to see AI synthesis!"
-                        : "Add some memories, then generate personalized project suggestions"
+                        ? "You have thoughts captured. Click Generate Ideas to see AI synthesis!"
+                        : "Add some thoughts, then generate personalized project suggestions"
                       }
                     </p>
                     <Link
@@ -312,11 +312,11 @@ export function HomePage() {
               </div>
             </section>
 
-            {/* Recent Memories */}
+            {/* Recent Thoughts */}
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-neutral-900">
-                  Recent Memories
+                  Recent Thoughts
                 </h2>
                 <Link
                   to="/memories"
@@ -353,7 +353,7 @@ export function HomePage() {
                       className="btn-primary inline-flex items-center gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      Add Memory
+                      Add Thought
                     </Link>
                   </div>
                 )}
