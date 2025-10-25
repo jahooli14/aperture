@@ -8,6 +8,7 @@ import { OnboardingPage } from './pages/OnboardingPage'
 import { TimelinePage } from './pages/TimelinePage'
 import { InsightsPage } from './pages/InsightsPage'
 import { ToastProvider } from './components/ui/toast'
+import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
 import { Sparkles } from 'lucide-react'
 import './App.css'
@@ -64,6 +65,7 @@ export default function App() {
     <ToastProvider>
       <Router>
         <div className="min-h-screen flex flex-col">
+          <OfflineIndicator />
           <Navigation />
 
           <main className="flex-1">
