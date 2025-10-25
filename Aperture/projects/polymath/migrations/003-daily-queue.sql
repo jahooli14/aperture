@@ -49,7 +49,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER IF NOT EXISTS update_user_daily_context_updated_at
+DROP TRIGGER IF EXISTS update_user_daily_context_updated_at ON user_daily_context;
+CREATE TRIGGER update_user_daily_context_updated_at
   BEFORE UPDATE ON user_daily_context
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
