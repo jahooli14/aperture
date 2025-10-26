@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Reading API</title>
+    <style>
+        body { font-family: system-ui; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Reading API Test</h1>
+
+    <h2>Test 1: Fetch Articles</h2>
+    <button onclick="testFetchArticles()">Fetch Articles</button>
+    <div id="fetch-result"></div>
+
+    <h2>Test 2: Save Article</h2>
+    <input type="text" id="url-input" placeholder="Enter URL" style="width: 400px; padding: 8px;">
+    <button onclick="testSaveArticle()">Save Article</button>
+    <div id="save-result"></div>
+
+    <h2>Test 3: Check Dependencies</h2>
+    <button onclick="testDependencies()">Check Dependencies</button>
+    <div id="deps-result"></div>
+
+    <script>
+        async function testFetchArticles() {
+            const resultDiv = document.getElementById('fetch-result');
+            resultDiv.innerHTML = '<p>Loading...</p>';
+
+            try {
+                const response = await fetch('/api/reading');
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Success! Found ${data.articles.length} articles</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Failed: ${JSON.stringify(data)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testSaveArticle() {
+            const resultDiv = document.getElementById('save-result');
+            const url = document.getElementById('url-input').value || 'https://example.com/test';
+            resultDiv.innerHTML = '<p>Saving...</p>';
+
+            try {
+                const response = await fetch('/api/reading', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Saved! Article ID: ${data.article.id}</p>
+                        <pre>${JSON.stringify(data.article, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p class="error">❌ Failed: ${JSON.stringify(data)}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testDependencies() {
+            const resultDiv = document.getElementById('deps-result');
+            const checks = [];
+
+            // Check if Dexie is available
+            checks.push({
+                name: 'Dexie (IndexedDB)',
+                available: typeof window.indexedDB !== 'undefined',
+                value: typeof window.indexedDB
+            });
+
+            // Check if DOMPurify is available
+            checks.push({
+                name: 'DOMPurify',
+                available: typeof window.DOMPurify !== 'undefined',
+                value: typeof window.DOMPurify
+            });
+
+            // Check if React is loaded
+            checks.push({
+                name: 'React',
+                available: typeof window.React !== 'undefined',
+                value: typeof window.React
+            });
+
+            let html = '<ul>';
+            checks.forEach(check => {
+                const status = check.available ? '✅' : '❌';
+                html += `<li>${status} ${check.name}: ${check.value}</li>`;
+            });
+            html += '</ul>';
+
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
