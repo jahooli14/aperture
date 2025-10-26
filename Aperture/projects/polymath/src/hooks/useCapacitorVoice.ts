@@ -78,39 +78,40 @@ export function useCapacitorVoice({
     };
 
     recognition.onerror = (event: any) => {
-      console.error('[Voice] Speech recognition error:', event.error);
+      console.error('[Voice ERROR]', event.error, '- Will handle in onend');
+      // Don't stop on 'no-speech' or 'aborted' - let onend handle restart
       if (event.error === 'not-allowed') {
         alert('Microphone access denied. Please allow microphone access and try again.');
         isRecordingRef.current = false;
         setIsRecording(false);
-      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
-        console.error('[Voice] Stopping due to error:', event.error);
+      } else if (event.error === 'network') {
+        console.error('[Voice] Network error, stopping');
         isRecordingRef.current = false;
         setIsRecording(false);
       }
+      // For 'no-speech', 'audio-capture', 'aborted' - let onend restart
     };
 
     recognition.onend = () => {
-      console.log('[Voice] Recognition ended (onend event), isRecording:', isRecordingRef.current);
-      // Check if we should continue recording using ref (avoids stale closure)
-      setTimeout(() => {
-        if (isRecordingRef.current && recognitionRef.current) {
-          try {
-            console.log('[Voice] Restarting speech recognition...');
-            recognitionRef.current.start();
-          } catch (err: any) {
-            console.error('[Voice] Failed to restart recognition:', err);
-            // If restart fails and we're supposed to be recording, stop gracefully
-            if (err.message && !err.message.includes('already started')) {
-              isRecordingRef.current = false;
-              setIsRecording(false);
-              alert('Recording stopped unexpectedly. Please try again.');
-            }
+      console.log('[Voice ONEND] Recognition ended, isRecording:', isRecordingRef.current);
+      // Restart immediately if still recording (handles silence detection)
+      if (isRecordingRef.current && recognitionRef.current) {
+        try {
+          console.log('[Voice ONEND] Restarting immediately...');
+          recognitionRef.current.start();
+          console.log('[Voice ONEND] ✓ Restart successful');
+        } catch (err: any) {
+          console.error('[Voice ONEND] ✗ Restart failed:', err.message);
+          // If already started, that's fine - continue
+          if (!err.message || !err.message.includes('already started')) {
+            isRecordingRef.current = false;
+            setIsRecording(false);
+            alert('Recording stopped unexpectedly. Please try again.');
           }
-        } else {
-          console.log('[Voice] Not restarting (isRecording:', isRecordingRef.current, ')');
         }
-      }, 100);
+      } else {
+        console.log('[Voice ONEND] Not restarting (isRecording=' + isRecordingRef.current + ')');
+      }
     };
 
     recognitionRef.current = recognition;
