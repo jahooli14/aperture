@@ -164,19 +164,18 @@ export function useCapacitorVoice({
         const formData = new FormData();
         formData.append('audio', audioBlob, 'recording.aac');
 
-        // TODO: Replace with your actual transcription endpoint
-        // For now, using a placeholder
         console.log('Sending audio to transcription API...');
 
-        // Placeholder: In production, send to your Vercel function
-        // const response = await fetch('/api/transcribe', {
-        //   method: 'POST',
-        //   body: formData
-        // });
-        // const { text } = await response.json();
+        const response = await fetch('/api/transcribe', {
+          method: 'POST',
+          body: formData
+        });
 
-        // For development: just show a message
-        const text = '[Audio recorded - transcription requires server endpoint]';
+        if (!response.ok) {
+          throw new Error(`Transcription failed: ${response.statusText}`);
+        }
+
+        const { text } = await response.json();
 
         setTranscript(text);
         onTranscript(text);

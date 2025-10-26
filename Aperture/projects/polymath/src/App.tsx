@@ -13,6 +13,7 @@ import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
 import { Sparkles, Menu, X } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import './App.css'
@@ -32,7 +33,7 @@ function Navigation() {
   ]
 
   return (
-    <nav className="sticky top-0 z-50 glass-panel border-b border-neutral-200">
+    <nav className="sticky top-0 z-50 glass-panel border-b border-neutral-200" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link
@@ -105,6 +106,15 @@ function Navigation() {
 }
 
 export default function App() {
+  // Configure status bar for native platforms
+  useEffect(() => {
+    if (!isNative()) return
+
+    // Set status bar style to light content with transparent background
+    StatusBar.setStyle({ style: Style.Light }).catch(console.error)
+    StatusBar.setBackgroundColor({ color: '#ffffff' }).catch(console.error)
+  }, [])
+
   // Setup deep linking for Supabase OAuth on native platforms
   useEffect(() => {
     if (!isNative()) return
