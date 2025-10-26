@@ -6,9 +6,24 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { Readability } from '@mozilla/readability'
-import { JSDOM } from 'jsdom'
-import DOMPurify from 'isomorphic-dompurify'
+
+// Lazy load heavy dependencies to avoid cold start issues
+let Readability: any
+let JSDOM: any
+let DOMPurify: any
+
+async function loadDependencies() {
+  if (!Readability) {
+    const readabilityModule = await import('@mozilla/readability')
+    Readability = readabilityModule.Readability
+
+    const jsdomModule = await import('jsdom')
+    JSDOM = jsdomModule.JSDOM
+
+    const dompurifyModule = await import('isomorphic-dompurify')
+    DOMPurify = dompurifyModule.default
+  }
+}
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -93,6 +108,9 @@ function extractMetadata(doc: Document, url: string) {
  * Falls back to Jina AI if Readability fails
  */
 async function fetchArticle(url: string) {
+  // Load dependencies first
+  await loadDependencies()
+
   try {
     console.log('[Article Extraction] Fetching:', url)
 
@@ -163,6 +181,9 @@ async function fetchArticle(url: string) {
  * Fallback: Extract article content using Jina AI Reader
  */
 async function fetchArticleWithJina(url: string) {
+  // Load dependencies first (need DOMPurify)
+  await loadDependencies()
+
   try {
     const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`
 

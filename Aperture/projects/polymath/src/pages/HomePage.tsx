@@ -10,6 +10,7 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useToast } from '../components/ui/toast'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
 import { VoiceFAB } from '../components/VoiceFAB'
@@ -23,6 +24,7 @@ export function HomePage() {
   const { memories, fetchMemories } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
   const { isOnline } = useOnlineStatus()
+  const { addToast } = useToast()
 
   const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
@@ -114,27 +116,48 @@ export function HomePage() {
         if (!response.ok) {
           const contentType = response.headers.get('content-type')
           if (contentType?.includes('text/html')) {
-            throw new Error('Memories API not available. Voice capture will be queued for later.')
+            throw new Error('Memories API not available')
           }
           throw new Error(`Failed to save memory: ${response.statusText}`)
         }
 
         const data = await response.json()
         console.log('✓ Memory created:', data)
+
+        // Success! Show confirmation
+        addToast({
+          title: 'Memory saved!',
+          description: 'Your voice note has been captured.',
+          variant: 'success',
+        })
+
+        await fetchMemories()
       } else {
         // Offline: queue for later
         await addOfflineCapture(transcript)
+        addToast({
+          title: 'Queued for sync',
+          description: 'Will process when back online.',
+          variant: 'default',
+        })
       }
-
-      await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
       // Fallback to offline queue if API fails
       try {
         await addOfflineCapture(transcript)
-        console.log('✓ Queued for offline sync')
+        addToast({
+          title: 'Queued for sync',
+          description: 'Will process when API is available.',
+          variant: 'default',
+        })
       } catch (offlineError) {
         console.error('Failed to queue offline:', offlineError)
+        addToast({
+          title: 'Failed to save',
+          description: 'Please try again.',
+          variant: 'destructive',
+        })
       }
     }
   }

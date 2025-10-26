@@ -17,11 +17,16 @@ import {
   Type,
   Moon,
   Sun,
+  Download,
+  Wifi,
+  WifiOff,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article, ArticleHighlight } from '../types/reading'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useToast } from '../components/ui/toast'
+import { useOfflineArticle } from '../hooks/useOfflineArticle'
+import { useReadingProgress } from '../hooks/useReadingProgress'
 import ReactMarkdown from 'react-markdown'
 
 export function ReaderPage() {
@@ -29,6 +34,8 @@ export function ReaderPage() {
   const navigate = useNavigate()
   const { updateArticleStatus } = useReadingStore()
   const { addToast } = useToast()
+  const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
+  const { progress, restoreProgress } = useReadingProgress(id || '')
 
   const [article, setArticle] = useState<Article | null>(null)
   const [highlights, setHighlights] = useState<ArticleHighlight[]>([])
@@ -38,10 +45,13 @@ export function ReaderPage() {
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
   const [darkMode, setDarkMode] = useState(false)
+  const [isOfflineCached, setIsOfflineCached] = useState(false)
+  const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     if (!id) return
     fetchArticle()
+    checkOfflineStatus()
   }, [id])
 
   const fetchArticle = async () => {
@@ -55,6 +65,9 @@ export function ReaderPage() {
       const { article, highlights } = await response.json()
       setArticle(article)
       setHighlights(highlights || [])
+
+      // Restore reading progress
+      setTimeout(() => restoreProgress(), 100)
     } catch (error) {
       addToast({
         title: 'Error',
@@ -65,6 +78,58 @@ export function ReaderPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const checkOfflineStatus = async () => {
+    if (!id) return
+    const cached = await isCached(id)
+    setIsOfflineCached(cached)
+
+    if (cached) {
+      const images = await getCachedImages(id)
+      setCachedImageUrls(images)
+    }
+  }
+
+  const handleDownloadOffline = async () => {
+    if (!article) return
+
+    try {
+      await downloadForOffline(article)
+      setIsOfflineCached(true)
+
+      addToast({
+        title: 'Saved for offline!',
+        description: 'Article and images are now available offline',
+        variant: 'success',
+      })
+
+      // Load cached images
+      const images = await getCachedImages(article.id)
+      setCachedImageUrls(images)
+    } catch (error) {
+      addToast({
+        title: 'Download failed',
+        description: 'Failed to cache article for offline reading',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Replace image URLs with cached blob URLs
+  const getContentWithCachedImages = (content: string): string => {
+    if (cachedImageUrls.size === 0) return content
+
+    let processedContent = content
+
+    cachedImageUrls.forEach((blobUrl, originalUrl) => {
+      processedContent = processedContent.replace(
+        new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        blobUrl
+      )
+    })
+
+    return processedContent
   }
 
   const handleTextSelection = () => {
@@ -215,6 +280,14 @@ export function ReaderPage() {
             : 'bg-white/90 border-neutral-200'
         }`}
       >
+        {/* Progress bar */}
+        <div className="h-1 bg-neutral-200 dark:bg-neutral-800">
+          <div
+            className="h-full bg-orange-600 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <button
             onClick={() => navigate('/reading')}
@@ -226,6 +299,31 @@ export function ReaderPage() {
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Offline Download Button */}
+            <button
+              onClick={handleDownloadOffline}
+              disabled={caching || isOfflineCached}
+              className={`p-2 rounded-lg ${
+                isOfflineCached
+                  ? 'text-green-600'
+                  : darkMode
+                  ? 'hover:bg-neutral-800'
+                  : 'hover:bg-neutral-100'
+              } disabled:opacity-50`}
+              title={
+                isOfflineCached
+                  ? 'Available offline'
+                  : 'Download for offline reading'
+              }
+            >
+              {caching ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : isOfflineCached ? (
+                <WifiOff className="h-5 w-5" />
+              ) : (
+                <Download className="h-5 w-5" />
+              )}
+            </button>
             {/* Font Size */}
             <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
               <button
@@ -349,9 +447,10 @@ export function ReaderPage() {
           }`}
           onMouseUp={handleTextSelection}
           onTouchEnd={handleTextSelection}
-        >
-          <ReactMarkdown>{article.content || ''}</ReactMarkdown>
-        </div>
+          dangerouslySetInnerHTML={{
+            __html: article.content ? getContentWithCachedImages(article.content) : ''
+          }}
+        />
 
         {/* Highlights Section */}
         {highlights.length > 0 && (

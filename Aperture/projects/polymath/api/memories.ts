@@ -89,7 +89,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Parse transcript using Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-latest' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const prompt = `Parse this voice transcript into a structured thought format.
 

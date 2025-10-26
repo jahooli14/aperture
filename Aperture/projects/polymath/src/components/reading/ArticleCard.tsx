@@ -1,13 +1,15 @@
 /**
  * Article Card Component
- * Displays a saved article in the reading queue
+ * Displays a saved article in the reading queue with offline status
  */
 
-import { Clock, ExternalLink, Archive, Trash2, BookOpen } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
+import { readingDb } from '../../lib/readingDb'
 
 interface ArticleCardProps {
   article: Article
@@ -17,6 +19,25 @@ interface ArticleCardProps {
 export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
   const { addToast } = useToast()
+  const [isOffline, setIsOffline] = useState(false)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    checkOfflineStatus()
+    checkProgress()
+  }, [article.id])
+
+  const checkOfflineStatus = async () => {
+    const cached = await readingDb.articles.get(article.id)
+    setIsOffline(cached?.offline_available && cached?.images_cached || false)
+  }
+
+  const checkProgress = async () => {
+    const savedProgress = await readingDb.getProgress(article.id)
+    if (savedProgress) {
+      setProgress(savedProgress.scroll_percentage)
+    }
+  }
 
   const handleMarkAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -85,14 +106,38 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
           </div>
         </div>
 
-        {/* Status Badge */}
-        {article.status === 'reading' && (
-          <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            Reading
-          </div>
-        )}
+        {/* Status Badges */}
+        <div className="flex items-center gap-2">
+          {isOffline && (
+            <div className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
+              <WifiOff className="h-3 w-3" />
+              Offline
+            </div>
+          )}
+          {article.status === 'reading' && (
+            <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex items-center gap-1">
+              <BookOpen className="h-3 w-3" />
+              Reading
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Reading Progress Bar */}
+      {progress > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs text-neutral-500 mb-1">
+            <span>Reading progress</span>
+            <span>{progress}%</span>
+          </div>
+          <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-orange-600 transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Excerpt */}
       {article.excerpt && (
