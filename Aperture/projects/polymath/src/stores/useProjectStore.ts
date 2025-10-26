@@ -70,14 +70,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (data) => {
     try {
-      // Single-user app - use hardcoded user ID from env
-      const userId = import.meta.env.VITE_USER_ID || 'default-user'
+      // Use API endpoint which handles user_id server-side
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
 
-      const { error } = await supabase
-        .from('projects')
-        .insert([{ ...data, user_id: userId }])
-
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.details || errorData.error || 'Failed to create project')
+      }
 
       // Refresh projects after creating
       await get().fetchProjects()

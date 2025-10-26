@@ -30,18 +30,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST') {
     try {
+      // Single-user app: hardcode user_id
+      const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
+
+      const projectData = {
+        ...req.body,
+        user_id: USER_ID,
+        created_at: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+      }
+
       const { data, error } = await supabase
         .from('projects')
-        .insert([req.body])
+        .insert([projectData])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('[api/projects] Insert error:', error)
+        throw error
+      }
 
       return res.status(201).json(data)
     } catch (error) {
-      console.error('Failed to create project:', error)
-      return res.status(500).json({ error: 'Failed to create project' })
+      console.error('[api/projects] Failed to create project:', error)
+      return res.status(500).json({
+        error: 'Failed to create project',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 
