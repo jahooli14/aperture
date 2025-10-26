@@ -66,12 +66,23 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
       const response = await fetch(`${API_BASE}/suggestions?${params}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch suggestions')
+        const text = await response.text()
+        // Check if response is HTML (error page)
+        if (text.includes('<!doctype') || text.includes('<!DOCTYPE')) {
+          throw new Error(`API returned error page (${response.status}). Check API endpoint.`)
+        }
+        throw new Error(`Failed to fetch suggestions: ${response.status}`)
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType?.includes('application/json')) {
+        throw new Error('API did not return JSON. Check endpoint configuration.')
       }
 
       const data = await response.json()
       set({ suggestions: data.suggestions || [], loading: false })
     } catch (error) {
+      console.error('Fetch suggestions error:', error)
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
         loading: false
@@ -81,7 +92,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
 
   rateSuggestion: async (id: string, rating: number) => {
     try {
-      const response = await fetch(`${API_BASE}/suggestions/${id}/rate`, {
+      const response = await fetch(`${API_BASE}/suggestions?action=rate&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating })
@@ -106,7 +117,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     type?: 'creative' | 'technical' | 'learning'
   }) => {
     try {
-      const response = await fetch(`${API_BASE}/suggestions/${id}/build`, {
+      const response = await fetch(`${API_BASE}/suggestions?action=build&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

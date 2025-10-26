@@ -7,10 +7,12 @@ import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Rocket, LayoutGrid, List, Edit, Trash2, Clock } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { Project } from '../types'
 
 export function ProjectsPage() {
@@ -28,6 +30,7 @@ export function ProjectsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid')
   const { addToast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   useEffect(() => {
     fetchProjects()
@@ -39,7 +42,15 @@ export function ProjectsPage() {
   }
 
   const handleDelete = async (project: Project) => {
-    if (confirm(`Delete "${project.title}"? This action cannot be undone.`)) {
+    const confirmed = await confirm({
+      title: `Delete "${project.title}"?`,
+      description: 'This action cannot be undone. The project will be permanently removed.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       try {
         await deleteProject(project.id)
         addToast({
@@ -57,8 +68,13 @@ export function ProjectsPage() {
     }
   }
 
+  const handleRefresh = async () => {
+    await fetchProjects()
+  }
+
   return (
-    <div className="min-h-screen py-12">
+    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+      <div className="py-12">
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
@@ -212,7 +228,11 @@ export function ProjectsPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
-    </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog}
+      </div>
+    </PullToRefresh>
   )
 }
 

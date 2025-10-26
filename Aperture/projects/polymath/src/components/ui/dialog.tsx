@@ -93,7 +93,12 @@ const DialogOverlay = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        // Modern backdrop with smooth fade
+        "fixed inset-0 z-50",
+        "bg-black/60 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out",
+        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+        "duration-300 ease-out",
         className
       )}
       onClick={() => onOpenChange(false)}
@@ -115,9 +120,25 @@ const DialogContent = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 w-[calc(100%-2rem)] sm:w-full max-w-lg -translate-x-1/2 -translate-y-1/2 border bg-white p-6 shadow-lg duration-200 rounded-lg",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          // Modern Android-optimized modal with rounded corners and smooth animations
+          "fixed left-[50%] top-[50%] z-50",
+          // Responsive width with proper mobile padding
+          "w-[calc(100%-2rem)] sm:w-full max-w-lg",
+          // Positioning and transforms
+          "-translate-x-1/2 -translate-y-1/2",
+          // Modern styling with elevation
+          "bg-white rounded-2xl shadow-2xl border border-neutral-200/50",
+          // Padding with safe area consideration
+          "p-6 pb-8",
+          // Smooth animations
+          "duration-300 ease-out",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4",
+          // Prevent content from going under notch/navigation
+          "max-h-[calc(100vh-4rem)]",
+          "overflow-auto",
           className
         )}
         onClick={(e) => e.stopPropagation()}
@@ -126,9 +147,21 @@ const DialogContent = React.forwardRef<
         {children}
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-10"
+          className={cn(
+            // Modern close button with better touch target
+            "absolute right-4 top-4",
+            "h-10 w-10",
+            "flex items-center justify-center",
+            "rounded-full",
+            "bg-neutral-100 hover:bg-neutral-200",
+            "text-neutral-600 hover:text-neutral-900",
+            "transition-all duration-200",
+            "focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2",
+            "active:scale-95",
+            "z-10"
+          )}
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
         </button>
       </div>

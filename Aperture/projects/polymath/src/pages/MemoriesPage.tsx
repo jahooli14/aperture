@@ -11,7 +11,8 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
-import { VoiceInput } from '../components/VoiceInput'
+import { VoiceFAB } from '../components/VoiceFAB'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
@@ -19,13 +20,15 @@ import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { useToast } from '../components/ui/toast'
-import { Brain, Mic, Zap, ArrowLeft, CloudOff } from 'lucide-react'
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
+import { Brain, Zap, ArrowLeft, CloudOff } from 'lucide-react'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
   const { memories, fetchMemories, loading, error, deleteMemory } = useMemoryStore()
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const { fetchWithCache, cacheMemories } = useMemoryCache()
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
@@ -35,7 +38,6 @@ export function MemoriesPage() {
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [showingCachedData, setShowingCachedData] = useState(false)
-  const [showVoiceCapture, setShowVoiceCapture] = useState(false)
 
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
@@ -122,7 +124,15 @@ export function MemoriesPage() {
   }
 
   const handleDelete = async (memory: Memory) => {
-    if (confirm(`Delete "${memory.title}"? This action cannot be undone.`)) {
+    const confirmed = await confirm({
+      title: `Delete "${memory.title}"?`,
+      description: 'This action cannot be undone. The memory will be permanently removed.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    })
+
+    if (confirmed) {
       try {
         await deleteMemory(memory.id)
         addToast({
@@ -167,7 +177,6 @@ export function MemoriesPage() {
         })
       }
 
-      setShowVoiceCapture(false)
       await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
@@ -182,52 +191,30 @@ export function MemoriesPage() {
   const displayMemories = view === 'all' ? memories : resurfacing
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
+  const handleRefresh = async () => {
+    if (view === 'all') {
+      await Promise.all([
+        loadMemoriesWithCache(),
+        fetchThemeClusters()
+      ])
+    } else if (view === 'resurfacing') {
+      await fetchResurfacing()
+    }
+  }
+
   return (
-    <div className="min-h-screen py-12">
-      {/* Header with Action */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        {/* Button row - pushes content down */}
-        {view === 'all' && !showVoiceCapture && (
-          <div className="flex items-center justify-end gap-3 mb-6">
-            <button
-              onClick={() => setShowVoiceCapture(true)}
-              className="px-6 py-2.5 bg-white text-orange-600 border-2 border-orange-600 rounded-full font-medium hover:bg-orange-50 transition-colors shadow-sm inline-flex items-center gap-2"
-            >
-              <Mic className="h-4 w-4" />
-              Quick Capture
-            </button>
+    <>
+      <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+        <div className="py-12">
+          {/* Header with Action */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        {/* New Memory button - visible on all views */}
+        {view === 'all' && (
+          <div className="mb-6 flex items-center justify-center">
             <CreateMemoryDialog />
           </div>
         )}
-        {/* Voice capture interface */}
-        {view === 'all' && showVoiceCapture && (
-          <div className="mb-6">
-            <div className="pro-card p-6 border-2 border-orange-300 max-w-3xl mx-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-neutral-900">
-                  Voice Capture {!isOnline && '(Offline)'}
-                </h3>
-                <button
-                  onClick={() => setShowVoiceCapture(false)}
-                  className="text-neutral-500 hover:text-neutral-700"
-                >
-                  Cancel
-                </button>
-              </div>
-              <VoiceInput
-                onTranscript={handleVoiceCapture}
-                maxDuration={60}
-                autoSubmit={true}
-              />
-              {!isOnline && (
-                <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
-                  You're offline. This capture will sync automatically when you're back online.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-        {/* Centered header content below button */}
+        {/* Centered header content */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
             <Brain className="h-12 w-12 text-orange-600" />
@@ -372,7 +359,7 @@ export function MemoriesPage() {
                 {view === 'all' ? (
                   <>
                     <div className="inline-flex items-center justify-center mb-4">
-                      <Mic className="h-16 w-16 text-orange-600" />
+                      <Brain className="h-16 w-16 text-orange-600" />
                     </div>
                     <div>
                       <h3 className="text-2xl font-bold mb-4 text-neutral-900">Start Capturing Your Thoughts</h3>
@@ -566,6 +553,14 @@ export function MemoriesPage() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
-    </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog}
+        </div>
+      </PullToRefresh>
+
+      {/* Voice FAB - Mobile only */}
+      <VoiceFAB onTranscript={handleVoiceCapture} maxDuration={60} />
+    </>
   )
 }

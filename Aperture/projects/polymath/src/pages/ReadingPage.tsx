@@ -9,6 +9,7 @@ import { Plus, Loader2, BookOpen, Archive, List } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
+import { PullToRefresh } from '../components/PullToRefresh'
 import type { ArticleStatus } from '../types/reading'
 
 type FilterTab = 'all' | ArticleStatus
@@ -38,8 +39,13 @@ export function ReadingPage() {
     ? articles
     : articles.filter((a) => a.status === activeTab)
 
+  const handleRefresh = async () => {
+    await fetchArticles()
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50 pb-20">
+    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+      <div className="bg-gradient-to-br from-orange-50 via-white to-purple-50 pb-20">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -139,6 +145,7 @@ export function ReadingPage() {
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }

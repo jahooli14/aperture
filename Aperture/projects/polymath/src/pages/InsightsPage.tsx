@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { PullToRefresh } from '../components/PullToRefresh'
 import { Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react'
 import type { SynthesisInsight } from '../types'
 
@@ -52,6 +53,10 @@ export function InsightsPage() {
     }
   }
 
+  const handleRefresh = async () => {
+    await fetchInsights()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen py-12">
@@ -86,9 +91,10 @@ export function InsightsPage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
-      {/* Header */}
-      <div className="max-w-5xl mx-auto px-4 mb-12">
+    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+      <div className="py-12">
+        {/* Header */}
+        <div className="max-w-5xl mx-auto px-4 mb-12">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-neutral-900 mb-3">
             Your Synthesis Insights
@@ -200,6 +206,7 @@ export function InsightsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </PullToRefresh>
   )
 }

@@ -3,7 +3,7 @@ import { useState, useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
-import { Sparkles, Menu, X, Loader2 } from 'lucide-react'
+import { Sparkles, Home, Brain, BookOpen, Rocket, Calendar, TrendingUp, Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
@@ -33,89 +33,89 @@ function PageLoader() {
 
 function Navigation() {
   const location = useLocation()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isActive = (path: string) => location.pathname === path
 
   const navLinks = [
-    { path: '/today', label: 'Today' },
-    { path: '/memories', label: 'Memories' },
-    { path: '/reading', label: 'Reading' },
-    { path: '/projects', label: 'Projects' },
-    { path: '/timeline', label: 'Timeline' },
-    { path: '/insights', label: 'Insights' }
+    { path: '/', label: 'Home', icon: Home },
+    { path: '/memories', label: 'Memories', icon: Brain },
+    { path: '/projects', label: 'Projects', icon: Rocket },
+    { path: '/reading', label: 'Reading', icon: BookOpen },
+    { path: '/insights', label: 'Insights', icon: TrendingUp }
   ]
 
   return (
-    <nav className="sticky top-0 z-50 glass-panel border-b border-neutral-200" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link
-            to="/"
-            className="flex items-center gap-2.5 group transition-smooth"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Sparkles className="h-5 w-5 text-orange-600" />
-            <span className="text-xl font-semibold tracking-tight text-neutral-900">
-              Polymath
-            </span>
-          </Link>
+    <>
+      {/* Top bar - Desktop only, shows branding */}
+      <nav className="hidden md:block sticky top-0 z-50 glass-panel border-b border-neutral-200">
+        <div style={{ height: 'env(safe-area-inset-top)' }} className="bg-inherit" />
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex gap-1">
-            {navLinks.map(({ path, label }) => (
-              <Link
-                key={path}
-                to={path}
-                className={cn(
-                  "relative px-3 lg:px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap",
-                  isActive(path)
-                    ? "text-orange-600 bg-orange-50"
-                    : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
-                )}
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center gap-2.5 group transition-smooth">
+              <Sparkles className="h-5 w-5 text-orange-600" />
+              <span className="text-xl font-semibold tracking-tight text-neutral-900">
+                Polymath
+              </span>
+            </Link>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-neutral-600 hover:bg-neutral-100"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-neutral-200">
-            <div className="flex flex-col gap-2">
-              {navLinks.map(({ path, label }) => (
+            <div className="flex gap-1">
+              {navLinks.map(({ path, label, icon: Icon }) => (
                 <Link
                   key={path}
                   to={path}
-                  onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    "px-4 py-3 rounded-lg text-base font-medium transition-smooth",
+                    "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap flex items-center gap-2",
                     isActive(path)
                       ? "text-orange-600 bg-orange-50"
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                   )}
                 >
+                  <Icon className="h-4 w-4" />
                   {label}
                 </Link>
               ))}
             </div>
           </div>
-        )}
-      </div>
-    </nav>
+        </div>
+      </nav>
+
+      {/* Bottom navigation - Mobile only (Android pattern) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
+        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-5 px-1">
+          {navLinks.map(({ path, label, icon: Icon }) => {
+            const active = isActive(path)
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all duration-200 min-h-[64px]",
+                  "active:scale-95",
+                  active ? "text-orange-600" : "text-neutral-600"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center transition-all duration-200",
+                  active && "scale-110"
+                )}>
+                  <Icon className={cn(
+                    "h-6 w-6 transition-all",
+                    active && "stroke-[2.5]"
+                  )} />
+                </div>
+                <span className={cn(
+                  "text-xs font-medium transition-all",
+                  active ? "scale-95 font-semibold" : "scale-90"
+                )}>
+                  {label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+    </>
   )
 }
 
@@ -124,8 +124,8 @@ export default function App() {
   useEffect(() => {
     if (!isNative()) return
 
-    // Set status bar style to light content with transparent background
-    StatusBar.setStyle({ style: Style.Light }).catch(console.error)
+    // Set status bar style to dark content (dark icons on light background)
+    StatusBar.setStyle({ style: Style.Dark }).catch(console.error)
     StatusBar.setBackgroundColor({ color: '#ffffff' }).catch(console.error)
   }, [])
 
@@ -180,7 +180,10 @@ export default function App() {
           <OfflineIndicator />
           <Navigation />
 
-          <main className="flex-1">
+          {/* Safe area spacer for mobile status bar */}
+          <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
+
+          <main className="flex-1 pb-20 md:pb-0">
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
@@ -197,7 +200,7 @@ export default function App() {
             </Suspense>
           </main>
 
-          <footer className="backdrop-blur-2xl bg-white/40 border-t border-white/20 py-12">
+          <footer className="hidden md:block backdrop-blur-2xl bg-white/40 border-t border-white/20 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium gradient-text">

@@ -48,6 +48,8 @@
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.015em;
     font-feature-settings: 'cv11', 'ss01';
+    font-size: 16px; /* Android-optimized base size */
+    line-height: 1.6; /* Better readability on mobile */
   }
 
   /* Subtle ambient overlay */
@@ -105,11 +107,11 @@
     font-weight: 600;
   }
 
-  /* Primary Button - Premium */
+  /* Primary Button - Premium (Android touch target: 48px minimum) */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold;
     padding: 0 24px;
-    height: 48px;
+    min-height: 48px;
     background: linear-gradient(135deg, #e67744 0%, #ea8857 50%, #e88d61 100%);
     color: white;
     box-shadow:
@@ -117,7 +119,7 @@
       0 4px 12px rgba(230, 119, 68, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.9375rem;
+    font-size: 1rem;
     letter-spacing: -0.01em;
   }
 
@@ -131,17 +133,17 @@
   }
 
   .btn-primary:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.95);
     box-shadow:
       0 1px 2px rgba(230, 119, 68, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
-  /* Secondary Button - Premium */
+  /* Secondary Button - Premium (Android touch target: 48px minimum) */
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold;
     padding: 0 24px;
-    height: 48px;
+    min-height: 48px;
     background: white;
     color: #e67744;
     border: 2px solid #e5e5e5;
@@ -149,7 +151,7 @@
       0 1px 3px rgba(0, 0, 0, 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 0.9375rem;
+    font-size: 1rem;
     letter-spacing: -0.01em;
   }
 
@@ -164,7 +166,7 @@
   }
 
   .btn-secondary:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.95);
     box-shadow:
       0 1px 2px rgba(0, 0, 0, 0.05),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -237,6 +239,20 @@
 
   .animate-fade-in-up {
     animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Bottom sheet slide up animation */
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .stagger-children > * {

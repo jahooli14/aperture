@@ -12,8 +12,8 @@ import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
-import { VoiceInput } from '../components/VoiceInput'
-import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus, Mic } from 'lucide-react'
+import { VoiceFAB } from '../components/VoiceFAB'
+import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
 import type { ProjectSuggestion } from '../types'
 import { supabase } from '../lib/supabase'
 
@@ -27,7 +27,6 @@ export function HomePage() {
   const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [showDemoBanner, setShowDemoBanner] = useState(false)
-  const [showVoiceCapture, setShowVoiceCapture] = useState(false)
 
   useEffect(() => {
     fetchSuggestions()
@@ -116,7 +115,6 @@ export function HomePage() {
         await addOfflineCapture(transcript)
       }
 
-      setShowVoiceCapture(false)
       await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
@@ -217,46 +215,8 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Quick Voice Capture */}
-        <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-          {!showVoiceCapture ? (
-            <button
-              onClick={() => setShowVoiceCapture(true)}
-              className="w-full pro-card p-6 border-2 border-dashed border-orange-300 hover:border-orange-500 transition-all hover:shadow-md group"
-            >
-              <div className="flex items-center justify-center gap-3 text-orange-600 group-hover:text-orange-700">
-                <Mic className="h-6 w-6" />
-                <span className="text-lg font-medium">
-                  Quick Capture {!isOnline && '(Offline Mode)'}
-                </span>
-              </div>
-            </button>
-          ) : (
-            <div className="pro-card p-6 border-2 border-orange-300">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-neutral-900">
-                  Voice Capture {!isOnline && '(Offline)'}
-                </h3>
-                <button
-                  onClick={() => setShowVoiceCapture(false)}
-                  className="text-neutral-500 hover:text-neutral-700"
-                >
-                  Cancel
-                </button>
-              </div>
-              <VoiceInput
-                onTranscript={handleVoiceCapture}
-                maxDuration={60}
-                autoSubmit={true}
-              />
-              {!isOnline && (
-                <p className="mt-3 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
-                  You're offline. This capture will sync automatically when you're back online.
-                </p>
-              )}
-            </div>
-          )}
-        </section>
+        {/* Voice FAB - Mobile only */}
+        <VoiceFAB onTranscript={handleVoiceCapture} maxDuration={60} />
 
         {/* Main Content Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
