@@ -1,0 +1,256 @@
+/**
+ * Capacitor-compatible voice recording hook
+ * Supports both web (Web Speech API) and native (Capacitor Voice Recorder)
+ */
+
+import { useState, useRef } from 'react';
+import { VoiceRecorder } from 'capacitor-voice-recorder';
+import { isNative, base64ToBlob } from '../lib/platform';
+
+interface UseCapacitorVoiceOptions {
+  onTranscript: (text: string) => void;
+  maxDuration?: number; // seconds
+  autoSubmit?: boolean;
+}
+
+export function useCapacitorVoice({
+  onTranscript,
+  maxDuration = 30,
+  autoSubmit = false
+}: UseCapacitorVoiceOptions) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [timeLeft, setTimeLeft] = useState(maxDuration);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Web Speech API reference (for web platform)
+  const recognitionRef = useRef<any>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  /**
+   * Initialize Web Speech API (web only)
+   */
+  const initWebSpeech = () => {
+    if (isNative()) return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.warn('Web Speech API not supported');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptSegment = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcriptSegment + ' ';
+        } else {
+          interimTranscript += transcriptSegment;
+        }
+      }
+
+      setTranscript(finalTranscript + interimTranscript);
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      stopRecording();
+    };
+
+    recognition.onend = () => {
+      if (isRecording) {
+        recognition.start();
+      }
+    };
+
+    recognitionRef.current = recognition;
+    setHasPermission(true);
+  };
+
+  /**
+   * Check and request permission for native recording
+   */
+  const checkNativePermission = async (): Promise<boolean> => {
+    try {
+      const result = await VoiceRecorder.hasAudioRecordingPermission();
+      if (!result.value) {
+        const permResult = await VoiceRecorder.requestAudioRecordingPermission();
+        setHasPermission(permResult.value);
+        return permResult.value;
+      }
+      setHasPermission(true);
+      return true;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    }
+  };
+
+  /**
+   * Start recording
+   */
+  const startRecording = async () => {
+    if (isNative()) {
+      // Native platform: use Capacitor Voice Recorder
+      const permitted = await checkNativePermission();
+      if (!permitted) {
+        alert('Microphone permission is required for voice recording');
+        return;
+      }
+
+      try {
+        await VoiceRecorder.startRecording();
+        setIsRecording(true);
+        startTimer();
+      } catch (error) {
+        console.error('Failed to start native recording:', error);
+        alert('Failed to start recording. Please try again.');
+      }
+    } else {
+      // Web platform: use Web Speech API
+      if (!recognitionRef.current) {
+        initWebSpeech();
+      }
+
+      if (!recognitionRef.current) {
+        alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
+        return;
+      }
+
+      try {
+        setTranscript('');
+        setIsRecording(true);
+        recognitionRef.current.start();
+        startTimer();
+      } catch (error) {
+        console.error('Failed to start web speech:', error);
+        setIsRecording(false);
+      }
+    }
+  };
+
+  /**
+   * Stop recording and process
+   */
+  const stopRecording = async () => {
+    setIsRecording(false);
+    stopTimer();
+
+    if (isNative()) {
+      // Native: get audio data and transcribe via API
+      try {
+        setIsProcessing(true);
+        const result = await VoiceRecorder.stopRecording();
+
+        if (!result.value || !result.value.recordDataBase64) {
+          throw new Error('No audio data recorded');
+        }
+
+        // Convert to blob
+        const audioBlob = base64ToBlob(result.value.recordDataBase64, 'audio/aac');
+
+        // Send to transcription API
+        const formData = new FormData();
+        formData.append('audio', audioBlob, 'recording.aac');
+
+        // TODO: Replace with your actual transcription endpoint
+        // For now, using a placeholder
+        console.log('Sending audio to transcription API...');
+
+        // Placeholder: In production, send to your Vercel function
+        // const response = await fetch('/api/transcribe', {
+        //   method: 'POST',
+        //   body: formData
+        // });
+        // const { text } = await response.json();
+
+        // For development: just show a message
+        const text = '[Audio recorded - transcription requires server endpoint]';
+
+        setTranscript(text);
+        onTranscript(text);
+
+        if (autoSubmit) {
+          setTranscript('');
+        }
+      } catch (error) {
+        console.error('Failed to process recording:', error);
+        alert('Failed to process recording. Please try again.');
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      // Web: use existing Web Speech API result
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+
+      if (transcript.trim()) {
+        onTranscript(transcript.trim());
+        if (autoSubmit) {
+          setTranscript('');
+        }
+      }
+    }
+  };
+
+  /**
+   * Start countdown timer
+   */
+  const startTimer = () => {
+    setTimeLeft(maxDuration);
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          stopRecording();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  /**
+   * Stop countdown timer
+   */
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setTimeLeft(maxDuration);
+  };
+
+  /**
+   * Toggle recording on/off
+   */
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
+  return {
+    isRecording,
+    transcript,
+    timeLeft,
+    hasPermission,
+    isProcessing,
+    startRecording,
+    stopRecording,
+    toggleRecording
+  };
+}

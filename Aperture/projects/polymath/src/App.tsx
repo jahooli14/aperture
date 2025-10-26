@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HomePage } from './pages/HomePage'
 import { MemoriesPage } from './pages/MemoriesPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
@@ -12,6 +12,9 @@ import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
 import { Sparkles, Menu, X } from 'lucide-react'
+import { App as CapacitorApp } from '@capacitor/app'
+import { isNative } from './lib/platform'
+import { supabase } from './lib/supabase'
 import './App.css'
 
 function Navigation() {
@@ -102,6 +105,50 @@ function Navigation() {
 }
 
 export default function App() {
+  // Setup deep linking for Supabase OAuth on native platforms
+  useEffect(() => {
+    if (!isNative()) return
+
+    let listenerHandle: any
+
+    // Handle deep links for OAuth callbacks
+    const setupListener = async () => {
+      listenerHandle = await CapacitorApp.addListener('appUrlOpen', async (event) => {
+        try {
+          const url = new URL(event.url)
+
+          // Check if this is a Supabase auth callback
+          if (url.pathname.includes('/auth/callback') || url.hash.includes('access_token')) {
+            console.log('Handling auth callback:', url.toString())
+
+            // Extract tokens from URL hash (Supabase uses hash-based auth)
+            const hashParams = new URLSearchParams(url.hash.substring(1))
+            const access_token = hashParams.get('access_token')
+            const refresh_token = hashParams.get('refresh_token')
+
+            if (access_token && refresh_token) {
+              await supabase.auth.setSession({
+                access_token,
+                refresh_token
+              })
+              console.log('✓ Auth session set successfully')
+            }
+          }
+        } catch (error) {
+          console.error('Error handling deep link:', error)
+        }
+      })
+    }
+
+    setupListener()
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove()
+      }
+    }
+  }, [])
+
   return (
     <ToastProvider>
       <Router>
