@@ -4,7 +4,7 @@
  * Enhanced with intelligent caching strategies and performance optimizations
  */
 
-const CACHE_VERSION = 'polymath-v2'
+const CACHE_VERSION = 'polymath-v3'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
@@ -21,7 +21,6 @@ const CACHE_EXPIRATION = {
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/brain.svg',
   '/manifest.json'
 ]
 
@@ -37,9 +36,24 @@ const CACHEABLE_API_PATTERNS = [
 self.addEventListener('install', (event) => {
   console.log('[SW] Install event')
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
+    caches.open(STATIC_CACHE).then(async (cache) => {
       console.log('[SW] Caching static assets')
-      return cache.addAll(STATIC_ASSETS)
+      // Cache assets one by one, ignoring failures
+      const cachePromises = STATIC_ASSETS.map(async (url) => {
+        try {
+          const response = await fetch(url)
+          if (response.ok) {
+            await cache.put(url, response)
+            console.log('[SW] Cached:', url)
+          } else {
+            console.warn('[SW] Failed to cache (not found):', url)
+          }
+        } catch (error) {
+          console.warn('[SW] Failed to cache:', url, error)
+        }
+      })
+      await Promise.all(cachePromises)
+      console.log('[SW] Static assets cached')
     })
   )
   // Activate immediately
