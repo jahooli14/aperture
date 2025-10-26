@@ -48,7 +48,12 @@ export function useCapacitorVoice({
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
+    recognition.onstart = () => {
+      console.log('[Voice] Recognition started (onstart event)');
+    };
+
     recognition.onresult = (event: any) => {
+      console.log('[Voice] Got result:', event.results.length);
       let interimTranscript = '';
       let finalTranscript = '';
 
@@ -65,22 +70,31 @@ export function useCapacitorVoice({
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error !== 'aborted' && event.error !== 'no-speech') {
-        stopRecording();
+      console.error('[Voice] Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        alert('Microphone access denied. Please allow microphone access and try again.');
+        isRecordingRef.current = false;
+        setIsRecording(false);
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        console.error('[Voice] Stopping due to error:', event.error);
+        isRecordingRef.current = false;
+        setIsRecording(false);
       }
     };
 
     recognition.onend = () => {
+      console.log('[Voice] Recognition ended (onend event), isRecording:', isRecordingRef.current);
       // Check if we should continue recording using ref (avoids stale closure)
       setTimeout(() => {
         if (isRecordingRef.current && recognitionRef.current) {
           try {
-            console.log('Restarting speech recognition...');
+            console.log('[Voice] Restarting speech recognition...');
             recognitionRef.current.start();
           } catch (err) {
-            console.error('Failed to restart recognition:', err);
+            console.error('[Voice] Failed to restart recognition:', err);
           }
+        } else {
+          console.log('[Voice] Not restarting (isRecording:', isRecordingRef.current, ')');
         }
       }, 100);
     };
@@ -131,7 +145,10 @@ export function useCapacitorVoice({
       }
     } else {
       // Web platform: use Web Speech API
+      console.log('[Voice] Starting web speech recognition...');
+
       if (!recognitionRef.current) {
+        console.log('[Voice] Initializing Web Speech API...');
         initWebSpeech();
       }
 
@@ -144,10 +161,13 @@ export function useCapacitorVoice({
         setTranscript('');
         setIsRecording(true);
         isRecordingRef.current = true;
+        console.log('[Voice] Starting recognition.start()...');
         recognitionRef.current.start();
         startTimer();
-      } catch (error) {
-        console.error('Failed to start web speech:', error);
+        console.log('[Voice] Recognition started successfully');
+      } catch (error: any) {
+        console.error('[Voice] Failed to start web speech:', error);
+        alert(`Failed to start recording: ${error.message}`);
         setIsRecording(false);
         isRecordingRef.current = false;
       }
