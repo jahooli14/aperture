@@ -7,14 +7,7 @@
   "background_color": "#ffffff",
   "theme_color": "#ea580c",
   "orientation": "portrait-primary",
-  "icons": [
-    {
-      "src": "/brain.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ],
+  "icons": [],
   "categories": ["productivity", "utilities", "lifestyle"],
   "screenshots": [],
   "share_target": {
