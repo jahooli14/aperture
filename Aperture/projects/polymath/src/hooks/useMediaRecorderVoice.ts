@@ -56,33 +56,61 @@ export function useMediaRecorderVoice({
    * Transcribe audio using Gemini API
    */
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
-    const formData = new FormData()
-    formData.append('audio', audioBlob, 'recording.webm')
+    console.log('[Transcribe] Preparing to send audio:', audioBlob.size, 'bytes, type:', audioBlob.type)
 
-    console.log('[Transcribe] Sending audio to API...')
+    if (audioBlob.size === 0) {
+      throw new Error('Audio blob is empty - no audio was recorded')
+    }
+
+    const formData = new FormData()
+
+    // Determine file extension based on MIME type
+    let fileName = 'recording.webm'
+    if (audioBlob.type.includes('mp4')) {
+      fileName = 'recording.mp4'
+    } else if (audioBlob.type.includes('wav')) {
+      fileName = 'recording.wav'
+    } else if (audioBlob.type.includes('aac')) {
+      fileName = 'recording.aac'
+    }
+
+    formData.append('audio', audioBlob, fileName)
+
+    console.log('[Transcribe] Sending to API:', fileName)
 
     const response = await fetch('/api/transcribe', {
       method: 'POST',
       body: formData
     })
 
+    console.log('[Transcribe] Response status:', response.status)
+
     if (!response.ok) {
       const contentType = response.headers.get('content-type')
       if (contentType?.includes('text/html')) {
         throw new Error('Transcription API not available. Please check deployment.')
       }
-      const errorData = await response.json()
-      throw new Error(errorData.details || errorData.error || 'Transcription failed')
+
+      let errorMessage = 'Transcription failed'
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.details || errorData.error || errorMessage
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      }
+
+      throw new Error(errorMessage)
     }
 
-    const { text } = await response.json()
+    const result = await response.json()
+    console.log('[Transcribe] API response:', result)
 
-    if (!text || text.trim().length === 0) {
+    if (!result.text || result.text.trim().length === 0) {
       throw new Error('No transcription returned from API')
     }
 
-    console.log('[Transcribe] Success:', text)
-    return text
+    console.log('[Transcribe] Success:', result.text)
+    return result.text
   }
 
   /**
@@ -219,31 +247,48 @@ export function useMediaRecorderVoice({
     setIsRecording(false)
     stopTimer()
 
-    try {
-      // Stop MediaRecorder
+    // Stop MediaRecorder and wait for final chunks
+    const waitForStop = new Promise<void>((resolve) => {
       if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.onstop = () => {
+          console.log('[Web] MediaRecorder stopped')
+          resolve()
+        }
         mediaRecorderRef.current.stop()
+      } else {
+        resolve()
       }
+    })
+
+    try {
+      // Wait for recording to fully stop
+      await waitForStop
+
+      // Wait a bit more for any pending chunks
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Release microphone
       streamRef.current?.getTracks().forEach(track => track.stop())
 
-      // Wait a bit for final chunks
-      await new Promise(resolve => setTimeout(resolve, 100))
+      console.log('[Web] Chunks collected:', chunksRef.current.length)
 
       if (chunksRef.current.length === 0) {
-        console.warn('[Web] No audio chunks recorded')
+        console.error('[Web] No audio chunks recorded')
+        alert('No audio was recorded. Please try again and make sure to speak.')
         return
       }
 
       setIsProcessing(true)
-      console.log('[Web] Recording stopped, processing', chunksRef.current.length, 'chunks')
 
       // Combine chunks into single blob
       const mimeType = mediaRecorderRef.current?.mimeType || 'audio/webm'
       const audioBlob = new Blob(chunksRef.current, { type: mimeType })
 
-      console.log('[Web] Audio blob size:', audioBlob.size, 'bytes')
+      console.log('[Web] Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type)
+
+      if (audioBlob.size === 0) {
+        throw new Error('Audio blob is empty')
+      }
 
       // Transcribe
       const text = await transcribeAudio(audioBlob)
@@ -256,7 +301,8 @@ export function useMediaRecorderVoice({
       }
     } catch (error) {
       console.error('[Web] Failed to process recording:', error)
-      alert('Failed to process recording. Please try again.')
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to process recording: ${message}`)
     } finally {
       setIsProcessing(false)
       chunksRef.current = []
