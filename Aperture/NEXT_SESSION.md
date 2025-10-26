@@ -18,10 +18,13 @@
 | Project | Status | Evidence | Next Session File |
 |---------|--------|----------|-------------------|
 | 👁️ **Pupils** | 🟢 Production | [Live on Vercel](https://aperture-wizard-of-oz.vercel.app), renamed Oct 24, folder: `wizard-of-oz` | [`NEXT_SESSION.md`](projects/wizard-of-oz/NEXT_SESSION.md) |
-| 🎨 **Polymath** | 🟢 Production | [Live on Vercel](https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app), 23 capabilities, 10 AI suggestions, Gemini-powered | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
-| 🌱 **Baby Milestone Tracker** | 🆕 New (2025-10-22) | Extracted from Polymath, standalone project, 60+ milestones, AI-powered | [`NEXT_SESSION.md`](projects/baby-milestone-tracker/NEXT_SESSION.md) |
-| 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in](projects/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/visual-test-generator/NEXT_SESSION.md) |
+| 🎨 **Polymath** | 🟢 Production | [Live on Vercel](https://polymath-gfvgwb3qx-daniels-projects-ca7c7923.vercel.app), 23 capabilities, 10 AI suggestions, Gemini-powered, Android support | [`NEXT_SESSION.md`](projects/polymath/NEXT_SESSION.md) |
+| 🔧 **Self-Healing Tests** | 🚧 Active Development | Automated test repair system, Playwright integration | [`STATUS.md`](projects/self-healing-tests/STATUS.md) |
 | 📚 **Autonomous Docs** | 🟢 Active | [Daily cron](https://github.com/jahooli14/aperture/blob/main/.github/workflows/autodoc.yml), runs 09:00 UTC | [`NEXT_SESSION.md`](scripts/autonomous-docs/NEXT_SESSION.md) |
+
+**Experiments** (in `projects/.experiments/`):
+| 🌱 **Baby Milestone Tracker** | 🧪 Experimental | Extracted from Polymath, 60+ milestones, AI-powered (not integrated) | [`NEXT_SESSION.md`](projects/.experiments/baby-milestone-tracker/NEXT_SESSION.md) |
+| 🎬 **Visual Test Generator** | 📋 Scoped, Not Built | [Use Playwright built-in instead](projects/.experiments/visual-test-generator/), see RECOMMENDATION.md | [`NEXT_SESSION.md`](projects/.experiments/visual-test-generator/NEXT_SESSION.md) |
 
 ---
 
@@ -29,8 +32,13 @@
 
 > **Note**: This is just recent history. Next session can work on ANY project - not necessarily the last one!
 
+**Session 26** (2025-10-26): Repository Cleanup ✅
+- Major housekeeping: Removed security vulnerabilities, archived experiments
+- Enhanced README, organized documentation structure
+- Android documentation for Polymath
+
 **Session 24** (2025-10-22): Baby Milestone Tracker - EXTRACTED FROM POLYMATH ✅
-- Created standalone project with 60+ milestones
+- Created standalone project with 60+ milestones (moved to experiments)
 - Full documentation and project template system
 - Updated all Aperture documentation
 
