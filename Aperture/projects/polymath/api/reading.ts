@@ -7,19 +7,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-// Lazy load heavy dependencies to avoid cold start issues
-let Readability: any
-let JSDOM: any
+// Lazy load DOMPurify for sanitization
 let DOMPurify: any
 
 async function loadDependencies() {
-  if (!Readability) {
-    const readabilityModule = await import('@mozilla/readability')
-    Readability = readabilityModule.Readability
-
-    const jsdomModule = await import('jsdom')
-    JSDOM = jsdomModule.JSDOM
-
+  if (!DOMPurify) {
     const dompurifyModule = await import('isomorphic-dompurify')
     DOMPurify = dompurifyModule.default
   }
@@ -33,155 +25,25 @@ const supabase = createClient(
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
 
 /**
- * Extract metadata from HTML (Open Graph, Twitter Cards, Schema.org)
- */
-function extractMetadata(doc: Document, url: string) {
-  const getMetaContent = (selectors: string[]): string | null => {
-    for (const selector of selectors) {
-      const element = doc.querySelector(selector)
-      if (element) {
-        return element.getAttribute('content') || element.getAttribute('value') || element.textContent
-      }
-    }
-    return null
-  }
-
-  // Try Open Graph first, then Twitter Cards, then fallback
-  const title = getMetaContent([
-    'meta[property="og:title"]',
-    'meta[name="twitter:title"]',
-    'meta[name="title"]',
-    'title'
-  ])
-
-  const description = getMetaContent([
-    'meta[property="og:description"]',
-    'meta[name="twitter:description"]',
-    'meta[name="description"]'
-  ])
-
-  const image = getMetaContent([
-    'meta[property="og:image"]',
-    'meta[name="twitter:image"]',
-    'meta[name="image"]'
-  ])
-
-  const author = getMetaContent([
-    'meta[property="article:author"]',
-    'meta[name="author"]',
-    'meta[name="article:author"]'
-  ])
-
-  const publishedDate = getMetaContent([
-    'meta[property="article:published_time"]',
-    'meta[name="article:published_time"]',
-    'meta[property="og:published_time"]',
-    'time[datetime]'
-  ])
-
-  // Get favicon
-  const faviconLink = doc.querySelector('link[rel="icon"], link[rel="shortcut icon"]')
-  const favicon = faviconLink?.getAttribute('href')
-
-  // Make image and favicon URLs absolute
-  const makeAbsolute = (urlString: string | null) => {
-    if (!urlString) return null
-    try {
-      return new URL(urlString, url).href
-    } catch {
-      return urlString
-    }
-  }
-
-  return {
-    title,
-    description,
-    image: makeAbsolute(image),
-    author,
-    publishedDate,
-    favicon: makeAbsolute(favicon)
-  }
-}
-
-/**
- * Extract article content using Mozilla Readability
- * Falls back to Jina AI if Readability fails
+ * Extract article content using Jina AI Reader
+ * (Readability + JSDOM disabled due to ESM/CommonJS conflicts in serverless)
  */
 async function fetchArticle(url: string) {
-  // Load dependencies first
-  await loadDependencies()
-
   try {
-    console.log('[Article Extraction] Fetching:', url)
-
-    // Fetch the HTML
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; PolymathBot/1.0; +https://polymath.app)'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-
-    const html = await response.text()
-
-    // Parse with JSDOM
-    const dom = new JSDOM(html, { url })
-    const doc = dom.window.document
-
-    // Extract metadata
-    const metadata = extractMetadata(doc, url)
-
-    // Use Readability to extract article content
-    const reader = new Readability(doc, {
-      charThreshold: 500,
-      keepClasses: false
-    })
-
-    const article = reader.parse()
-
-    if (!article) {
-      console.log('[Readability] Failed to parse, falling back to Jina AI')
-      return await fetchArticleWithJina(url)
-    }
-
-    // Sanitize the content with DOMPurify
-    const sanitizedContent = DOMPurify.sanitize(article.content, {
-      ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
-        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
-      ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
-      ALLOW_DATA_ATTR: false
-    })
-
-    console.log('[Readability] Success:', article.title)
-
-    return {
-      title: article.title || metadata.title || 'Untitled',
-      content: sanitizedContent,
-      excerpt: article.excerpt || metadata.description || sanitizedContent.substring(0, 200),
-      author: metadata.author || article.byline,
-      publishedDate: metadata.publishedDate,
-      thumbnailUrl: metadata.image,
-      faviconUrl: metadata.favicon,
-      url: url
-    }
-  } catch (error) {
-    console.error('[Readability] Error:', error)
-    console.log('[Readability] Falling back to Jina AI')
+    console.log('[Article Extraction] Using Jina AI for:', url)
     return await fetchArticleWithJina(url)
+  } catch (error) {
+    console.error('[Article Extraction] Error:', error)
+    throw error
   }
 }
 
 /**
- * Fallback: Extract article content using Jina AI Reader
+ * Extract article content using Jina AI Reader API
+ * Jina AI provides clean, reader-friendly content
  */
 async function fetchArticleWithJina(url: string) {
-  // Load dependencies first (need DOMPurify)
+  // Load DOMPurify for sanitization
   await loadDependencies()
 
   try {
@@ -200,14 +62,14 @@ async function fetchArticleWithJina(url: string) {
 
     const data = await response.json()
 
-    // Sanitize Jina AI content as well
+    // Sanitize content for security (since we use dangerouslySetInnerHTML)
     const sanitizedContent = DOMPurify.sanitize(data.content || '', {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
-        'pre', 'code'
+        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
       ALLOW_DATA_ATTR: false
     })
 
