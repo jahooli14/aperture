@@ -4,7 +4,25 @@
 
 **Effect**: Enforces critical checks without user having to remember.
 
-**Communication Style**: Keep all responses concise. Short explanations, focused answers. Users value efficiency.
+---
+
+## 🎯 COMMUNICATION STYLE - READ THIS FIRST
+
+**CRITICAL: Keep all responses CONCISE.**
+
+- ✅ Short, direct explanations
+- ✅ Focused answers to the question asked
+- ✅ No unnecessary elaboration
+- ✅ Users value efficiency and brevity
+- ❌ Don't write essays
+- ❌ Don't over-explain
+- ❌ Don't add extra context unless asked
+
+**Example Good Response:**
+> "Fixed the bug in line 42. Changed `===` to `==` to handle type coercion."
+
+**Example Bad Response:**
+> "I've analyzed the issue and it appears that on line 42, there's a strict equality operator being used. In JavaScript, strict equality (===) checks both value and type, whereas loose equality (==) performs type coercion. Given the context of your application and the data types being compared, I believe switching to loose equality would resolve this issue. This is a common pattern when..."
 
 ---
 
