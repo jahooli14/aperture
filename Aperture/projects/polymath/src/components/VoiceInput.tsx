@@ -5,7 +5,7 @@
 
 import { Mic, Square, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
-import { useCapacitorVoice } from '../hooks/useCapacitorVoice'
+import { useMediaRecorderVoice } from '../hooks/useMediaRecorderVoice'
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void
@@ -20,7 +20,7 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false 
     timeLeft,
     isProcessing,
     toggleRecording
-  } = useCapacitorVoice({
+  } = useMediaRecorderVoice({
     onTranscript,
     maxDuration,
     autoSubmit
