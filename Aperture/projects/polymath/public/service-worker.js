@@ -1,11 +1,21 @@
 /**
  * Polymath Service Worker
  * Provides offline functionality via caching and background sync
+ * Enhanced with intelligent caching strategies and performance optimizations
  */
 
-const CACHE_VERSION = 'polymath-v1'
+const CACHE_VERSION = 'polymath-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
+const IMAGE_CACHE = `${CACHE_VERSION}-images`
+const API_CACHE = `${CACHE_VERSION}-api`
+
+// Cache expiration times
+const CACHE_EXPIRATION = {
+  images: 30 * 24 * 60 * 60 * 1000, // 30 days
+  api: 24 * 60 * 60 * 1000,          // 24 hours
+  runtime: 7 * 24 * 60 * 60 * 1000,  // 7 days
+}
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -13,6 +23,14 @@ const STATIC_ASSETS = [
   '/index.html',
   '/brain.svg',
   '/manifest.json'
+]
+
+// API endpoints that are safe to cache
+const CACHEABLE_API_PATTERNS = [
+  '/api/reading',
+  '/api/memories',
+  '/api/projects',
+  '/api/analytics',
 ]
 
 // Install event - cache static assets
@@ -32,24 +50,62 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activate event')
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((cacheName) => {
-            return cacheName.startsWith('polymath-') && cacheName !== STATIC_CACHE && cacheName !== RUNTIME_CACHE
-          })
-          .map((cacheName) => {
-            console.log('[SW] Deleting old cache:', cacheName)
-            return caches.delete(cacheName)
-          })
-      )
-    })
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((cacheName) => {
+              return cacheName.startsWith('polymath-') &&
+                     cacheName !== STATIC_CACHE &&
+                     cacheName !== RUNTIME_CACHE &&
+                     cacheName !== IMAGE_CACHE &&
+                     cacheName !== API_CACHE
+            })
+            .map((cacheName) => {
+              console.log('[SW] Deleting old cache:', cacheName)
+              return caches.delete(cacheName)
+            })
+        )
+      }),
+      // Clean expired entries
+      cleanExpiredCaches()
+    ])
   )
   // Take control immediately
   return self.clients.claim()
 })
 
-// Fetch event - network-first with cache fallback
+// Clean expired cache entries
+async function cleanExpiredCaches() {
+  const now = Date.now()
+
+  // Clean image cache
+  const imageCache = await caches.open(IMAGE_CACHE)
+  const imageKeys = await imageCache.keys()
+  for (const request of imageKeys) {
+    const response = await imageCache.match(request)
+    const cachedTime = new Date(response.headers.get('date')).getTime()
+    if (now - cachedTime > CACHE_EXPIRATION.images) {
+      await imageCache.delete(request)
+      console.log('[SW] Deleted expired image:', request.url)
+    }
+  }
+
+  // Clean API cache
+  const apiCache = await caches.open(API_CACHE)
+  const apiKeys = await apiCache.keys()
+  for (const request of apiKeys) {
+    const response = await apiCache.match(request)
+    const cachedTime = new Date(response.headers.get('date')).getTime()
+    if (now - cachedTime > CACHE_EXPIRATION.api) {
+      await apiCache.delete(request)
+      console.log('[SW] Deleted expired API response:', request.url)
+    }
+  }
+}
+
+// Fetch event - intelligent caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
@@ -64,12 +120,96 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // API requests: network-first, cache fallback
+  // Images: Cache-first with stale-while-revalidate
+  if (request.destination === 'image') {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        const fetchPromise = fetch(request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            caches.open(IMAGE_CACHE).then((cache) => {
+              cache.put(request, networkResponse.clone())
+            })
+          }
+          return networkResponse
+        })
+        // Return cached immediately, update in background
+        return cachedResponse || fetchPromise
+      })
+    )
+    return
+  }
+
+  // API requests: Network-first with intelligent caching
   if (url.pathname.startsWith('/api/')) {
+    const isCacheable = CACHEABLE_API_PATTERNS.some(pattern =>
+      url.pathname.startsWith(pattern)
+    )
+
+    event.respondWith(
+      fetch(request, {
+        credentials: 'same-origin',
+        headers: {
+          ...request.headers,
+          'Cache-Control': 'no-cache'
+        }
+      })
+        .then((response) => {
+          // Cache successful GET responses for cacheable endpoints
+          if (response.ok && isCacheable) {
+            const responseClone = response.clone()
+            caches.open(API_CACHE).then((cache) => {
+              cache.put(request, responseClone)
+            })
+          }
+          return response
+        })
+        .catch(() => {
+          // Fallback to cache for cacheable endpoints
+          if (isCacheable) {
+            return caches.match(request).then((cachedResponse) => {
+              if (cachedResponse) {
+                // Add stale indicator header
+                const headers = new Headers(cachedResponse.headers)
+                headers.set('X-Cache-Status', 'stale')
+                return new Response(cachedResponse.body, {
+                  status: cachedResponse.status,
+                  statusText: cachedResponse.statusText,
+                  headers
+                })
+              }
+              return offlineResponse()
+            })
+          }
+          return offlineResponse()
+        })
+    )
+    return
+  }
+
+  // JavaScript/CSS: Cache-first with network fallback and update
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        const fetchPromise = fetch(request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, networkResponse.clone())
+            })
+          }
+          return networkResponse
+        }).catch(() => cachedResponse)
+
+        return cachedResponse || fetchPromise
+      })
+    )
+    return
+  }
+
+  // HTML pages: Network-first with cache fallback
+  if (request.destination === 'document') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Cache successful GET responses
           if (response.ok) {
             const responseClone = response.clone()
             caches.open(RUNTIME_CACHE).then((cache) => {
@@ -79,26 +219,15 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() => {
-          // Fallback to cache
           return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse
-            }
-            // Return offline response for failed API calls
-            return new Response(
-              JSON.stringify({ error: 'offline', message: 'No network connection' }),
-              {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-              }
-            )
+            return cachedResponse || caches.match('/index.html')
           })
         })
     )
     return
   }
 
-  // Static assets: cache-first, network fallback
+  // Other assets: cache-first, network fallback
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -106,7 +235,6 @@ self.addEventListener('fetch', (event) => {
       }
 
       return fetch(request).then((response) => {
-        // Cache successful responses
         if (response.ok) {
           const responseClone = response.clone()
           caches.open(RUNTIME_CACHE).then((cache) => {
@@ -118,6 +246,21 @@ self.addEventListener('fetch', (event) => {
     })
   )
 })
+
+// Helper: Offline response
+function offlineResponse() {
+  return new Response(
+    JSON.stringify({
+      error: 'offline',
+      message: 'No network connection',
+      cached: false
+    }),
+    {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  )
+}
 
 // Background Sync - sync pending operations when back online
 self.addEventListener('sync', (event) => {
