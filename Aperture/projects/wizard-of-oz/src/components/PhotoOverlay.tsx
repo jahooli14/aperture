@@ -61,7 +61,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
           }
           return prevIndex + 1;
         });
-      }, 2000); // 2 seconds per photo
+      }, 1000); // 1 second per photo
     }
 
     // Cleanup on unmount or when dependencies change
@@ -318,7 +318,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                     {isPlaying ? (
                       <span className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        Auto-playing (2s per photo)
+                        Auto-playing (1s per photo)
                       </span>
                     ) : (
                       <span>Timeline scrubber</span>
