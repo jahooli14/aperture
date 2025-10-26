@@ -4,7 +4,7 @@
  * Enhanced with intelligent caching strategies and performance optimizations
  */
 
-const CACHE_VERSION = 'polymath-v3'
+const CACHE_VERSION = 'polymath-v4'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
@@ -204,16 +204,28 @@ self.addEventListener('fetch', (event) => {
   if (request.destination === 'script' || request.destination === 'style') {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
+        if (cachedResponse) {
+          // Return cached, update in background
+          fetch(request).then((networkResponse) => {
+            if (networkResponse.ok) {
+              caches.open(STATIC_CACHE).then((cache) => {
+                cache.put(request, networkResponse)
+              })
+            }
+          }).catch(() => {})
+          return cachedResponse
+        }
+
+        // No cache, fetch from network
+        return fetch(request).then((networkResponse) => {
           if (networkResponse.ok) {
+            const clone = networkResponse.clone()
             caches.open(STATIC_CACHE).then((cache) => {
-              cache.put(request, networkResponse.clone())
+              cache.put(request, clone)
             })
           }
           return networkResponse
-        }).catch(() => cachedResponse)
-
-        return cachedResponse || fetchPromise
+        })
       })
     )
     return
