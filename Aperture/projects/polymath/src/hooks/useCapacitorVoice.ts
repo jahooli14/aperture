@@ -27,6 +27,7 @@ export function useCapacitorVoice({
   // Web Speech API reference (for web platform)
   const recognitionRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isRecordingRef = useRef(false);
 
   /**
    * Initialize Web Speech API (web only)
@@ -65,13 +66,23 @@ export function useCapacitorVoice({
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
-      stopRecording();
+      if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        stopRecording();
+      }
     };
 
     recognition.onend = () => {
-      if (isRecording) {
-        recognition.start();
-      }
+      // Check if we should continue recording using ref (avoids stale closure)
+      setTimeout(() => {
+        if (isRecordingRef.current && recognitionRef.current) {
+          try {
+            console.log('Restarting speech recognition...');
+            recognitionRef.current.start();
+          } catch (err) {
+            console.error('Failed to restart recognition:', err);
+          }
+        }
+      }, 100);
     };
 
     recognitionRef.current = recognition;
@@ -112,6 +123,7 @@ export function useCapacitorVoice({
       try {
         await VoiceRecorder.startRecording();
         setIsRecording(true);
+        isRecordingRef.current = true;
         startTimer();
       } catch (error) {
         console.error('Failed to start native recording:', error);
@@ -131,11 +143,13 @@ export function useCapacitorVoice({
       try {
         setTranscript('');
         setIsRecording(true);
+        isRecordingRef.current = true;
         recognitionRef.current.start();
         startTimer();
       } catch (error) {
         console.error('Failed to start web speech:', error);
         setIsRecording(false);
+        isRecordingRef.current = false;
       }
     }
   };
@@ -145,6 +159,7 @@ export function useCapacitorVoice({
    */
   const stopRecording = async () => {
     setIsRecording(false);
+    isRecordingRef.current = false;
     stopTimer();
 
     if (isNative()) {

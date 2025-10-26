@@ -30,9 +30,9 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
         <button
           onClick={() => setIsOpen(true)}
           className={cn(
-            "md:hidden fixed z-40",
-            "bottom-24 right-4",
-            "h-14 w-14 rounded-full",
+            "fixed z-40",
+            "bottom-24 md:bottom-6 right-4 md:right-6",
+            "h-14 w-14 md:h-16 md:w-16 rounded-full",
             "bg-gradient-to-br from-orange-500 to-orange-600",
             "text-white shadow-lg hover:shadow-xl",
             "flex items-center justify-center",
@@ -48,15 +48,15 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
 
       {/* Voice Recording Modal */}
       {isOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-end">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Bottom Sheet */}
-          <div className="relative w-full bg-white rounded-t-3xl shadow-2xl animate-slide-up">
+          {/* Bottom Sheet / Modal */}
+          <div className="relative w-full md:w-[500px] bg-white rounded-t-3xl md:rounded-2xl shadow-2xl animate-slide-up">
             <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
               {/* Handle */}
               <div className="flex justify-center pt-4 pb-2">
