@@ -10,19 +10,43 @@ import { useReadingStore } from '../stores/useReadingStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { PullToRefresh } from '../components/PullToRefresh'
+import { useShareTarget } from '../hooks/useShareTarget'
+import { useToast } from '../components/ui/toast'
 import type { ArticleStatus } from '../types/reading'
 
 type FilterTab = 'all' | ArticleStatus
 
 export function ReadingPage() {
   const navigate = useNavigate()
-  const { articles, loading, fetchArticles, currentFilter, setFilter } = useReadingStore()
+  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle } = useReadingStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const { addToast } = useToast()
 
   useEffect(() => {
     fetchArticles()
   }, [fetchArticles])
+
+  // Handle shared URLs from Android Share Sheet
+  useShareTarget({
+    onShareReceived: async (url: string) => {
+      try {
+        await saveArticle({ url })
+        addToast({
+          title: 'Article saved!',
+          description: 'Added to your reading queue from share',
+          variant: 'success',
+        })
+        fetchArticles() // Refresh list
+      } catch (error) {
+        addToast({
+          title: 'Failed to save',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        })
+      }
+    }
+  })
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)

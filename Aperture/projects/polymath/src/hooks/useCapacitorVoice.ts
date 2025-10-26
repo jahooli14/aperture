@@ -172,10 +172,19 @@ export function useCapacitorVoice({
         });
 
         if (!response.ok) {
+          // Check if response is HTML (API not deployed)
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('text/html')) {
+            throw new Error('Transcription API not available. Please check deployment.');
+          }
           throw new Error(`Transcription failed: ${response.statusText}`);
         }
 
         const { text } = await response.json();
+
+        if (!text || text.trim().length === 0) {
+          throw new Error('No transcription returned from API');
+        }
 
         setTranscript(text);
         onTranscript(text);

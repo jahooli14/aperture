@@ -156,11 +156,22 @@ export function MemoriesPage() {
     try {
       if (isOnline) {
         // Online: send to memories API for parsing
-        await fetch('/api/memories?capture=true', {
+        const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transcript })
         })
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('text/html')) {
+            throw new Error('Memories API not available. Queuing for offline sync.')
+          }
+          throw new Error(`Failed to save memory: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log('✓ Memory created:', data)
 
         addToast({
           title: 'Thought captured!',
@@ -180,11 +191,23 @@ export function MemoriesPage() {
       await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
-      addToast({
-        title: 'Capture failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
+
+      // Fallback to offline queue if API fails
+      try {
+        await addOfflineCapture(transcript)
+        addToast({
+          title: 'Queued for offline sync',
+          description: 'Will process when API is available',
+          variant: 'default',
+        })
+        console.log('✓ Queued for offline sync')
+      } catch (offlineError) {
+        addToast({
+          title: 'Capture failed',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        })
+      }
     }
   }
 

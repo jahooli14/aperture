@@ -26,6 +26,7 @@
     "@capacitor/keyboard": "^7.0.3",
     "@capacitor/network": "^7.0.2",
     "@capacitor/preferences": "^7.0.2",
+    "@capacitor/share": "^7.0.2",
     "@capacitor/splash-screen": "^7.0.3",
     "@capacitor/status-bar": "^7.0.3",
     "@google/generative-ai": "^0.21.0",

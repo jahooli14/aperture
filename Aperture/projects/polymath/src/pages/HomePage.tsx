@@ -105,11 +105,22 @@ export function HomePage() {
     try {
       if (isOnline) {
         // Online: send to memories API for parsing
-        await fetch('/api/memories?capture=true', {
+        const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transcript })
         })
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('text/html')) {
+            throw new Error('Memories API not available. Voice capture will be queued for later.')
+          }
+          throw new Error(`Failed to save memory: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log('✓ Memory created:', data)
       } else {
         // Offline: queue for later
         await addOfflineCapture(transcript)
@@ -118,6 +129,13 @@ export function HomePage() {
       await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
+      // Fallback to offline queue if API fails
+      try {
+        await addOfflineCapture(transcript)
+        console.log('✓ Queued for offline sync')
+      } catch (offlineError) {
+        console.error('Failed to queue offline:', offlineError)
+      }
     }
   }
 

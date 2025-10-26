@@ -59,8 +59,18 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.details || errorData.error || 'Failed to save article')
+        // Check if response is HTML (API not deployed)
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('text/html')) {
+          throw new Error('API not available. Please check that serverless functions are deployed.')
+        }
+
+        try {
+          const errorData = await response.json()
+          throw new Error(errorData.details || errorData.error || 'Failed to save article')
+        } catch (jsonError) {
+          throw new Error(`Server error: ${response.status} ${response.statusText}`)
+        }
       }
 
       const { article } = await response.json()
@@ -75,6 +85,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage, loading: false })
+      console.error('[useReadingStore] Save article error:', error)
       throw error
     }
   },
