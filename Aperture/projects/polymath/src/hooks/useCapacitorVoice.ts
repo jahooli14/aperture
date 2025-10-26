@@ -90,8 +90,14 @@ export function useCapacitorVoice({
           try {
             console.log('[Voice] Restarting speech recognition...');
             recognitionRef.current.start();
-          } catch (err) {
+          } catch (err: any) {
             console.error('[Voice] Failed to restart recognition:', err);
+            // If restart fails and we're supposed to be recording, stop gracefully
+            if (err.message && !err.message.includes('already started')) {
+              isRecordingRef.current = false;
+              setIsRecording(false);
+              alert('Recording stopped unexpectedly. Please try again.');
+            }
           }
         } else {
           console.log('[Voice] Not restarting (isRecording:', isRecordingRef.current, ')');
@@ -159,17 +165,26 @@ export function useCapacitorVoice({
 
       try {
         setTranscript('');
-        setIsRecording(true);
-        isRecordingRef.current = true;
         console.log('[Voice] Starting recognition.start()...');
         recognitionRef.current.start();
+        // Only set recording state AFTER start() succeeds
+        setIsRecording(true);
+        isRecordingRef.current = true;
         startTimer();
         console.log('[Voice] Recognition started successfully');
       } catch (error: any) {
         console.error('[Voice] Failed to start web speech:', error);
-        alert(`Failed to start recording: ${error.message}`);
-        setIsRecording(false);
-        isRecordingRef.current = false;
+        // Check if it's an "already started" error
+        if (error.message && error.message.includes('already started')) {
+          console.log('[Voice] Recognition already started, continuing...');
+          setIsRecording(true);
+          isRecordingRef.current = true;
+          startTimer();
+        } else {
+          alert(`Failed to start recording: ${error.message}`);
+          setIsRecording(false);
+          isRecordingRef.current = false;
+        }
       }
     }
   };
@@ -236,7 +251,11 @@ export function useCapacitorVoice({
     } else {
       // Web: use existing Web Speech API result
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (error) {
+          console.error('[Voice] Error stopping recognition:', error);
+        }
       }
 
       if (transcript.trim()) {
