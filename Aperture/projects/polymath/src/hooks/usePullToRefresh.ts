@@ -44,13 +44,16 @@ export function usePullToRefresh({
 
       // Only allow pulling down
       if (distance > 0) {
-        // Prevent default scrolling when pulling
-        e.preventDefault()
-
         // Apply resistance to make it feel natural
         const resistedDistance = distance / resistance
         setPullDistance(resistedDistance)
         setIsPulling(resistedDistance > 10)
+
+        // Only prevent default scrolling if we've pulled enough to engage PTR
+        // This allows normal scrolling to work when just touching the top
+        if (resistedDistance > 10) {
+          e.preventDefault()
+        }
       }
     }
 
