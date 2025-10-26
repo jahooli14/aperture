@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { HomePage } from './pages/HomePage'
 import { MemoriesPage } from './pages/MemoriesPage'
 import { ReadingPage } from './pages/ReadingPage'
+import { ReaderPage } from './pages/ReaderPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { DailyQueuePage } from './pages/DailyQueuePage'
@@ -175,6 +176,7 @@ export default function App() {
               <Route path="/today" element={<DailyQueuePage />} />
               <Route path="/memories" element={<MemoriesPage />} />
               <Route path="/reading" element={<ReadingPage />} />
+              <Route path="/reading/:id" element={<ReaderPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/timeline" element={<TimelinePage />} />
