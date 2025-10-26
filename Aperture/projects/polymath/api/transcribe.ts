@@ -50,8 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const audioData = fs.readFileSync(file.filepath)
     const base64Audio = audioData.toString('base64')
 
-    // Use Gemini 1.5 Flash for audio transcription
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    // Use Gemini 2.5 Flash for audio transcription (1.5 models are retired)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const result = await model.generateContent([
       {
