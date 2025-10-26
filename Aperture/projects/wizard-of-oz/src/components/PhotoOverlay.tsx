@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ZoomIn } from 'lucide-react';
+import { X, ZoomIn, Play, Pause } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import type { Database } from '../types/database';
@@ -18,7 +18,9 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [showZoomHint, setShowZoomHint] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sort all photos oldest to newest for progression
   const sortedPhotos = photos
@@ -40,6 +42,43 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, [currentIndex]);
+
+  // Auto-play functionality
+  useEffect(() => {
+    // Clear any existing interval
+    if (playIntervalRef.current) {
+      clearInterval(playIntervalRef.current);
+      playIntervalRef.current = null;
+    }
+
+    // Start interval if playing and not zoomed
+    if (isPlaying && scale === 1 && isOpen) {
+      playIntervalRef.current = setInterval(() => {
+        setCurrentIndex((prevIndex) => {
+          // Loop back to start when reaching the end
+          if (prevIndex >= sortedPhotos.length - 1) {
+            return 0;
+          }
+          return prevIndex + 1;
+        });
+      }, 2000); // 2 seconds per photo
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (playIntervalRef.current) {
+        clearInterval(playIntervalRef.current);
+        playIntervalRef.current = null;
+      }
+    };
+  }, [isPlaying, scale, isOpen, sortedPhotos.length]);
+
+  // Pause when zooming
+  useEffect(() => {
+    if (scale > 1 && isPlaying) {
+      setIsPlaying(false);
+    }
+  }, [scale, isPlaying]);
 
   // Gesture handling
   const bind = useGesture(
@@ -100,6 +139,8 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
 
         // Swipe threshold (require more movement for swipe)
         if (Math.abs(mx) > 100) {
+          // Pause playback when user manually swipes
+          setIsPlaying(false);
           if (dx > 0 && currentIndex > 0) {
             setCurrentIndex(currentIndex - 1);
           } else if (dx < 0 && currentIndex < sortedPhotos.length - 1) {
@@ -140,13 +181,23 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
           onClose();
         }
       }
-      if (e.key === 'ArrowLeft') setCurrentIndex(Math.max(0, currentIndex - 1));
-      if (e.key === 'ArrowRight') setCurrentIndex(Math.min(sortedPhotos.length - 1, currentIndex + 1));
+      if (e.key === 'ArrowLeft') {
+        setIsPlaying(false);
+        setCurrentIndex(Math.max(0, currentIndex - 1));
+      }
+      if (e.key === 'ArrowRight') {
+        setIsPlaying(false);
+        setCurrentIndex(Math.min(sortedPhotos.length - 1, currentIndex + 1));
+      }
+      if (e.key === ' ') {
+        e.preventDefault();
+        setIsPlaying(!isPlaying);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentIndex, sortedPhotos.length, onClose, scale]);
+  }, [isOpen, currentIndex, sortedPhotos.length, onClose, scale, isPlaying]);
 
   if (sortedPhotos.length === 0) {
     return null;
@@ -248,12 +299,42 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
             {/* Scrubber slider - hide when zoomed */}
             {scale === 1 && (
               <div className="w-full max-w-2xl bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 shadow-xl">
+                <div className="flex items-center gap-4 mb-4">
+                  {/* Play/Pause button */}
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all hover:scale-110 min-w-[48px] min-h-[48px] flex items-center justify-center shadow-lg"
+                    aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-6 h-6 text-white" />
+                    ) : (
+                      <Play className="w-6 h-6 text-white" />
+                    )}
+                  </button>
+
+                  {/* Timeline info */}
+                  <div className="flex-1 text-sm text-white/70 font-medium">
+                    {isPlaying ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        Auto-playing (2s per photo)
+                      </span>
+                    ) : (
+                      <span>Timeline scrubber</span>
+                    )}
+                  </div>
+                </div>
+
                 <input
                   type="range"
                   min="0"
                   max={sortedPhotos.length - 1}
                   value={currentIndex}
-                  onChange={(e) => setCurrentIndex(Number(e.target.value))}
+                  onChange={(e) => {
+                    setIsPlaying(false);
+                    setCurrentIndex(Number(e.target.value));
+                  }}
                   className="w-full h-2 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-lg appearance-none cursor-pointer shadow-inner
                     [&::-webkit-slider-thumb]:appearance-none
                     [&::-webkit-slider-thumb]:w-5
@@ -290,7 +371,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
             {/* Navigation hints */}
             <div className="mt-6 text-center text-sm text-white/50 font-medium">
               {scale === 1 ? (
-                <p>Swipe or use arrow keys to navigate • ESC to close</p>
+                <p>Swipe or use arrow keys to navigate • SPACE to play/pause • ESC to close</p>
               ) : (
                 <p>Drag to pan • Pinch to zoom out • ESC to reset</p>
               )}
