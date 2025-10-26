@@ -8,7 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app

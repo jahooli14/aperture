@@ -9,7 +9,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
