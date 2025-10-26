@@ -33,23 +33,31 @@ export function useCapacitorVoice({
    * Initialize Web Speech API (web only)
    */
   const initWebSpeech = () => {
+    console.log('[Voice Init] initWebSpeech called, isNative:', isNative());
     if (isNative()) return;
 
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
+    console.log('[Voice Init] SpeechRecognition available:', !!SpeechRecognition);
+
     if (!SpeechRecognition) {
-      console.warn('Web Speech API not supported');
+      console.warn('[Voice Init] Web Speech API NOT SUPPORTED in this browser');
+      alert('Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
+
+    console.log('[Voice Init] Creating new SpeechRecognition instance...');
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
+    console.log('[Voice Init] SpeechRecognition configured, setting up event handlers...');
+
     recognition.onstart = () => {
-      console.log('[Voice] Recognition started (onstart event)');
+      console.log('[Voice EVENT] Recognition started (onstart event)');
     };
 
     recognition.onresult = (event: any) => {
@@ -107,6 +115,7 @@ export function useCapacitorVoice({
 
     recognitionRef.current = recognition;
     setHasPermission(true);
+    console.log('[Voice Init] ✓ Web Speech API initialized successfully');
   };
 
   /**
@@ -305,9 +314,12 @@ export function useCapacitorVoice({
    * Initialize Web Speech API on mount for web platform
    */
   useEffect(() => {
+    console.log('[Voice Hook] useCapacitorVoice mounted - timestamp:', Date.now());
     if (!isNative()) {
-      console.log('[Voice] Initializing Web Speech API on mount...');
+      console.log('[Voice] Platform is WEB, initializing Web Speech API...');
       initWebSpeech();
+    } else {
+      console.log('[Voice] Platform is NATIVE, skipping Web Speech API init');
     }
   }, []); // Run once on mount
 
