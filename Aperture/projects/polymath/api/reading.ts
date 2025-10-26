@@ -7,16 +7,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-// Lazy load DOMPurify for sanitization
-let DOMPurify: any
-
-async function loadDependencies() {
-  if (!DOMPurify) {
-    const dompurifyModule = await import('isomorphic-dompurify')
-    DOMPurify = dompurifyModule.default
-  }
-}
-
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -41,11 +31,9 @@ async function fetchArticle(url: string) {
 /**
  * Extract article content using Jina AI Reader API
  * Jina AI provides clean, reader-friendly content
+ * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string) {
-  // Load DOMPurify for sanitization
-  await loadDependencies()
-
   try {
     const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`
 
@@ -62,21 +50,10 @@ async function fetchArticleWithJina(url: string) {
 
     const data = await response.json()
 
-    // Sanitize content for security (since we use dangerouslySetInnerHTML)
-    const sanitizedContent = DOMPurify.sanitize(data.content || '', {
-      ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
-        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
-      ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
-      ALLOW_DATA_ATTR: false
-    })
-
     return {
       title: data.title || 'Untitled',
-      content: sanitizedContent,
-      excerpt: data.description || sanitizedContent.substring(0, 200),
+      content: data.content || '',
+      excerpt: data.description || data.content?.substring(0, 200) || '',
       author: null,
       publishedDate: null,
       thumbnailUrl: null,

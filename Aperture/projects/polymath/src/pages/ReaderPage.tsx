@@ -22,12 +22,12 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { format } from 'date-fns'
+import DOMPurify from 'dompurify'
 import type { Article, ArticleHighlight } from '../types/reading'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
-import ReactMarkdown from 'react-markdown'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -116,20 +116,30 @@ export function ReaderPage() {
     }
   }
 
-  // Replace image URLs with cached blob URLs
+  // Replace image URLs with cached blob URLs and sanitize
   const getContentWithCachedImages = (content: string): string => {
-    if (cachedImageUrls.size === 0) return content
-
     let processedContent = content
 
-    cachedImageUrls.forEach((blobUrl, originalUrl) => {
-      processedContent = processedContent.replace(
-        new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-        blobUrl
-      )
-    })
+    // Replace cached images
+    if (cachedImageUrls.size > 0) {
+      cachedImageUrls.forEach((blobUrl, originalUrl) => {
+        processedContent = processedContent.replace(
+          new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+          blobUrl
+        )
+      })
+    }
 
-    return processedContent
+    // Sanitize HTML for security
+    return DOMPurify.sanitize(processedContent, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
+        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+      ],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
+      ALLOW_DATA_ATTR: false
+    })
   }
 
   const handleTextSelection = () => {
