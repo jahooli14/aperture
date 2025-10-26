@@ -27,4 +27,38 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
+          'supabase': ['@supabase/supabase-js'],
+          'google': ['@google/generative-ai'],
+          'capacitor': [
+            '@capacitor/app',
+            '@capacitor/core',
+            '@capacitor/filesystem',
+            '@capacitor/haptics',
+            '@capacitor/keyboard',
+            '@capacitor/network',
+            '@capacitor/preferences',
+            '@capacitor/splash-screen',
+            '@capacitor/status-bar'
+          ],
+        },
+      },
+    },
+    // Increase chunk size warning limit since we're using code splitting
+    chunkSizeWarningLimit: 600,
+    // Enable minification and tree shaking
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
+      },
+    },
+  },
 })

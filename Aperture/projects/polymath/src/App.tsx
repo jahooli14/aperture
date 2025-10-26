@@ -1,24 +1,35 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { HomePage } from './pages/HomePage'
-import { MemoriesPage } from './pages/MemoriesPage'
-import { ReadingPage } from './pages/ReadingPage'
-import { ReaderPage } from './pages/ReaderPage'
-import { SuggestionsPage } from './pages/SuggestionsPage'
-import { ProjectsPage } from './pages/ProjectsPage'
-import { DailyQueuePage } from './pages/DailyQueuePage'
-import { OnboardingPage } from './pages/OnboardingPage'
-import { TimelinePage } from './pages/TimelinePage'
-import { InsightsPage } from './pages/InsightsPage'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { cn } from './lib/utils'
-import { Sparkles, Menu, X } from 'lucide-react'
+import { Sparkles, Menu, X, Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import './App.css'
+
+// Lazy load pages for better bundle splitting
+const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
+const MemoriesPage = lazy(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage })))
+const ReadingPage = lazy(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage })))
+const ReaderPage = lazy(() => import('./pages/ReaderPage').then(m => ({ default: m.ReaderPage })))
+const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage })))
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
+const DailyQueuePage = lazy(() => import('./pages/DailyQueuePage').then(m => ({ default: m.DailyQueuePage })))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
+const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
+const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
+
+// Loading fallback component
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+    </div>
+  )
+}
 
 function Navigation() {
   const location = useLocation()
@@ -170,18 +181,20 @@ export default function App() {
           <Navigation />
 
           <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
-              <Route path="/today" element={<DailyQueuePage />} />
-              <Route path="/memories" element={<MemoriesPage />} />
-              <Route path="/reading" element={<ReadingPage />} />
-              <Route path="/reading/:id" element={<ReaderPage />} />
-              <Route path="/suggestions" element={<SuggestionsPage />} />
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/timeline" element={<TimelinePage />} />
-              <Route path="/insights" element={<InsightsPage />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/today" element={<DailyQueuePage />} />
+                <Route path="/memories" element={<MemoriesPage />} />
+                <Route path="/reading" element={<ReadingPage />} />
+                <Route path="/reading/:id" element={<ReaderPage />} />
+                <Route path="/suggestions" element={<SuggestionsPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route path="/timeline" element={<TimelinePage />} />
+                <Route path="/insights" element={<InsightsPage />} />
+              </Routes>
+            </Suspense>
           </main>
 
           <footer className="backdrop-blur-2xl bg-white/40 border-t border-white/20 py-12">
