@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import { useState, useEffect } from 'react'
 import { HomePage } from './pages/HomePage'
 import { MemoriesPage } from './pages/MemoriesPage'
+import { ReadingPage } from './pages/ReadingPage'
 import { SuggestionsPage } from './pages/SuggestionsPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { DailyQueuePage } from './pages/DailyQueuePage'
@@ -27,6 +28,7 @@ function Navigation() {
   const navLinks = [
     { path: '/today', label: 'Today' },
     { path: '/memories', label: 'Memories' },
+    { path: '/reading', label: 'Reading' },
     { path: '/projects', label: 'Projects' },
     { path: '/timeline', label: 'Timeline' },
     { path: '/insights', label: 'Insights' }
@@ -172,6 +174,7 @@ export default function App() {
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/today" element={<DailyQueuePage />} />
               <Route path="/memories" element={<MemoriesPage />} />
+              <Route path="/reading" element={<ReadingPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/timeline" element={<TimelinePage />} />
