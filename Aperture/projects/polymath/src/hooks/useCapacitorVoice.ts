@@ -3,7 +3,7 @@
  * Supports both web (Web Speech API) and native (Capacitor Voice Recorder)
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { isNative, base64ToBlob } from '../lib/platform';
 
@@ -154,24 +154,20 @@ export function useCapacitorVoice({
       console.log('[Voice] Starting web speech recognition...');
 
       if (!recognitionRef.current) {
-        console.log('[Voice] Initializing Web Speech API...');
-        initWebSpeech();
-      }
-
-      if (!recognitionRef.current) {
+        console.error('[Voice] Recognition not initialized! This should not happen.');
         alert('Speech recognition is not supported in your browser. Please use Chrome, Edge, or Safari.');
         return;
       }
 
       try {
         setTranscript('');
-        console.log('[Voice] Starting recognition.start()...');
+        console.log('[Voice] Calling recognition.start()...');
         recognitionRef.current.start();
         // Only set recording state AFTER start() succeeds
         setIsRecording(true);
         isRecordingRef.current = true;
         startTimer();
-        console.log('[Voice] Recognition started successfully');
+        console.log('[Voice] Recognition.start() called successfully, waiting for onstart event...');
       } catch (error: any) {
         console.error('[Voice] Failed to start web speech:', error);
         // Check if it's an "already started" error
@@ -304,6 +300,16 @@ export function useCapacitorVoice({
       startRecording();
     }
   };
+
+  /**
+   * Initialize Web Speech API on mount for web platform
+   */
+  useEffect(() => {
+    if (!isNative()) {
+      console.log('[Voice] Initializing Web Speech API on mount...');
+      initWebSpeech();
+    }
+  }, []); // Run once on mount
 
   return {
     isRecording,
