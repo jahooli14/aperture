@@ -35,7 +35,7 @@ async function fetchArticle(url: string) {
  */
 async function fetchArticleWithJina(url: string) {
   try {
-    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`
+    const jinaUrl = `https://r.jina.ai/${url}`
 
     const response = await fetch(jinaUrl, {
       headers: {
