@@ -21,7 +21,7 @@ export function InsightsPage() {
   const fetchInsights = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/synthesis/evolution')
+      const response = await fetch('/api/analytics?resource=evolution')
       if (!response.ok) throw new Error('Failed to fetch insights')
       const data = await response.json()
       setInsights(data.insights || [])

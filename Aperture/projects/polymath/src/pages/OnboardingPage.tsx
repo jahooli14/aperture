@@ -77,7 +77,7 @@ export function OnboardingPage() {
   const analyzeResponses = async (allResponses: OnboardingResponse[]) => {
     setIsAnalyzing(true)
     try {
-      const response = await fetch('/api/onboarding/analyze', {
+      const response = await fetch('/api/onboarding?resource=analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responses: allResponses })

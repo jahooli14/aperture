@@ -49,7 +49,7 @@ export function ReaderPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/reading/${id}`)
+      const response = await fetch(`/api/reading?id=${id}`)
       if (!response.ok) throw new Error('Failed to fetch article')
 
       const { article, highlights } = await response.json()
@@ -94,7 +94,7 @@ export function ReaderPage() {
     if (!selectedText || !article) return
 
     try {
-      const response = await fetch('/api/highlights', {
+      const response = await fetch('/api/reading?resource=highlights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

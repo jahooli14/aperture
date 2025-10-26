@@ -21,7 +21,7 @@ export function TimelinePage() {
   const fetchPatterns = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/timeline/patterns')
+      const response = await fetch('/api/analytics?resource=patterns')
       if (!response.ok) throw new Error('Failed to fetch patterns')
       const data = await response.json()
       setPatterns(data.patterns || [])

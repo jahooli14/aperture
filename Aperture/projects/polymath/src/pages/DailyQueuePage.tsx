@@ -32,7 +32,7 @@ export function DailyQueuePage() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/projects/daily-queue')
+      const response = await fetch('/api/projects?resource=daily-queue')
       if (!response.ok) throw new Error('Failed to fetch queue')
       const data: DailyQueueResponse = await response.json()
       setQueue(data.queue)
@@ -48,7 +48,7 @@ export function DailyQueuePage() {
 
   const updateContext = async (newContext: Partial<UserContext>) => {
     try {
-      const response = await fetch('/api/projects/daily-context', {
+      const response = await fetch('/api/projects?resource=context', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newContext)
@@ -67,7 +67,7 @@ export function DailyQueuePage() {
   const fetchGapPrompts = async () => {
     setPromptsLoading(true)
     try {
-      const response = await fetch('/api/prompts/gap-analysis')
+      const response = await fetch('/api/onboarding?resource=gap-analysis')
       if (response.ok) {
         const data = await response.json()
         setGapPrompts(data.prompts || [])
@@ -82,7 +82,7 @@ export function DailyQueuePage() {
   const fetchCreativeOpportunities = async () => {
     setOpportunitiesLoading(true)
     try {
-      const response = await fetch('/api/intelligence/opportunities')
+      const response = await fetch('/api/analytics?resource=opportunities')
       if (response.ok) {
         const data = await response.json()
         setCreativeOpportunities(data.opportunities || [])
