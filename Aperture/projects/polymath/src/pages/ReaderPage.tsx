@@ -29,6 +29,7 @@ import { useReadingStore } from '../stores/useReadingStore'
 import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
+import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,6 +49,7 @@ export function ReaderPage() {
   const [darkMode, setDarkMode] = useState(false)
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -238,6 +240,33 @@ export function ReaderPage() {
   }
 
   const handleArchive = async () => {
+    if (!article) return
+
+    // Show completion dialog to capture thoughts
+    setShowCompletionDialog(true)
+  }
+
+  const handleCaptureThought = async (data: { text?: string; audio?: Blob }) => {
+    if (!article) return
+
+    try {
+      // TODO: Create memory with source_reference to this article
+      // For now, just archive the article
+      await handleArchiveComplete()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to capture thought',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleSkipThought = async () => {
+    await handleArchiveComplete()
+  }
+
+  const handleArchiveComplete = async () => {
     if (!article) return
 
     try {
@@ -544,6 +573,15 @@ export function ReaderPage() {
           </button>
         </div>
       )}
+
+      {/* Article Completion Dialog */}
+      <ArticleCompletionDialog
+        article={article}
+        open={showCompletionDialog}
+        onOpenChange={setShowCompletionDialog}
+        onCapture={handleCaptureThought}
+        onSkip={handleSkipThought}
+      />
     </motion.div>
   )
 }

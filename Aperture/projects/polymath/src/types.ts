@@ -19,6 +19,13 @@ export interface Entities {
   topics: string[]
 }
 
+export interface SourceReference {
+  type: 'article' | 'project' | 'suggestion'
+  id: string
+  title?: string
+  url?: string
+}
+
 export interface Memory {
   id: string
   created_at: string
@@ -36,6 +43,9 @@ export interface Memory {
   entities: Entities | null
   themes: string[] | null
   emotional_tone: string | null
+
+  // Source reference (article, project, etc.)
+  source_reference: SourceReference | null
 
   // Vector search
   embedding: number[] | null
