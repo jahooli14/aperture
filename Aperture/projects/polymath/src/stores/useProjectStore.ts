@@ -5,21 +5,9 @@
 
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import type { Project } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
-
-interface Project {
-  id: string
-  user_id: string
-  title: string
-  description: string
-  type: 'personal' | 'technical' | 'meta' // Updated to match actual DB constraint
-  status: 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
-  last_active: string
-  created_at: string
-  metadata?: any
-  source_suggestion_id?: string
-}
 
 interface ProjectState {
   projects: Project[]

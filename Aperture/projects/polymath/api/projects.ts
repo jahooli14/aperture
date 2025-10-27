@@ -328,9 +328,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // NOTES RESOURCE
+  if (resource === 'notes') {
+    if (req.method === 'POST') {
+      try {
+        const { project_id, bullets, note_type } = req.body
+
+        if (!project_id || !bullets || !Array.isArray(bullets)) {
+          return res.status(400).json({
+            error: 'project_id and bullets array required'
+          })
+        }
+
+        const { data, error } = await supabase
+          .from('project_notes')
+          .insert([{
+            project_id,
+            user_id: USER_ID,
+            bullets,
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Update project last_active
+        await supabase
+          .from('projects')
+          .update({ last_active: new Date().toISOString() })
+          .eq('id', project_id)
+
+        return res.status(201).json({
+          success: true,
+          note: { ...data, note_type }
+        })
+      } catch (error) {
+        console.error('[notes] Failed to create note:', error)
+        return res.status(500).json({ error: 'Failed to create note' })
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // PROJECTS CRUD (default)
   if (req.method === 'GET') {
     try {
+      const { id, include_notes } = req.query
+
+      // Single project with notes
+      if (id && typeof id === 'string') {
+        const { data: project, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', USER_ID)
+          .single()
+
+        if (projectError) throw projectError
+
+        if (!project) {
+          return res.status(404).json({ error: 'Project not found' })
+        }
+
+        // Fetch notes if requested
+        let notes = []
+        if (include_notes === 'true') {
+          const { data: notesData, error: notesError } = await supabase
+            .from('project_notes')
+            .select('*')
+            .eq('project_id', id)
+            .order('created_at', { ascending: false })
+
+          if (notesError) throw notesError
+          notes = notesData || []
+        }
+
+        return res.status(200).json({
+          success: true,
+          project,
+          notes
+        })
+      }
+
+      // List all projects
       const { data, error } = await supabase
         .from('projects')
         .select('*')

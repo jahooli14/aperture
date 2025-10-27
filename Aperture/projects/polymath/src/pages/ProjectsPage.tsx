@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
@@ -18,6 +19,7 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { Project } from '../types'
 
 export function ProjectsPage() {
+  const navigate = useNavigate()
   const {
     projects,
     loading,
@@ -208,6 +210,7 @@ export function ProjectsPage() {
                   project={project}
                   onEdit={() => handleEdit(project)}
                   onDelete={() => handleDelete(project)}
+                  onClick={(id) => navigate(`/projects/${id}`)}
                 />
               ))}
             </div>
@@ -221,6 +224,7 @@ export function ProjectsPage() {
                 project={project}
                 onEdit={() => handleEdit(project)}
                 onDelete={() => handleDelete(project)}
+                onClick={(id) => navigate(`/projects/${id}`)}
               />
             ))}
           </div>
@@ -246,11 +250,20 @@ function CompactProjectCard({
   project,
   onEdit,
   onDelete,
+  onClick,
 }: {
   project: Project
   onEdit: () => void
   onDelete: () => void
+  onClick?: (id: string) => void
 }) {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    onClick?.(project.id)
+  }
   const statusConfig: Record<string, { color: string; emoji: string }> = {
     active: { color: 'bg-green-100 text-green-700 border-green-300', emoji: '🚀' },
     'on-hold': { color: 'bg-gray-100 text-gray-700 border-gray-300', emoji: '⏸️' },
@@ -268,7 +281,10 @@ function CompactProjectCard({
   const relativeTime = formatRelativeTime(project.last_active)
 
   return (
-    <Card className="pro-card hover-lift border-2">
+    <Card
+      className="pro-card hover-lift border-2 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-4">
         {/* Header Row */}
         <div className="flex items-start justify-between gap-3 mb-3">

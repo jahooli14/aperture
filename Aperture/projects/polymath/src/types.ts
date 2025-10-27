@@ -744,6 +744,7 @@ export interface ProjectCardProps {
   project: Project
   onEdit?: (id: string) => void
   onDelete?: (id: string) => void
+  onClick?: (id: string) => void
   showActions?: boolean
   compact?: boolean
 }

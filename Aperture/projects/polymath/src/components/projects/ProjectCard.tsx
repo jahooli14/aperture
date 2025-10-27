@@ -14,10 +14,19 @@ export function ProjectCard({
   project,
   onEdit,
   onDelete,
+  onClick,
   showActions = true,
   compact = false
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) {
+      return
+    }
+    onClick?.(project.id)
+  }
 
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
     active: {
@@ -56,7 +65,10 @@ export function ProjectCard({
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2 }}
     >
-    <Card className="group h-full flex flex-col pro-card transition-smooth border-2">
+    <Card
+      className="group h-full flex flex-col pro-card transition-smooth border-2 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardHeader className="relative pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
           <CardTitle className="text-2xl font-bold text-neutral-900 flex-1">
