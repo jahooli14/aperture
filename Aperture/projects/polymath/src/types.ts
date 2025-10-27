@@ -709,7 +709,6 @@ export interface ProjectStore {
 
   fetchProjects: (filters?: {
     status?: ProjectStatus
-    type?: ProjectType
   }) => Promise<void>
   createProject: (input: CreateProjectInput) => Promise<Project>
   updateProject: (id: string, input: UpdateProjectInput) => Promise<Project>

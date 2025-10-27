@@ -142,7 +142,7 @@ export function ArticleCompletionDialog({
             </div>
 
             <VoiceInput
-              onCapture={handleVoiceCapture}
+              onTranscript={(text, blob) => blob && handleVoiceCapture(blob)}
               placeholder="Tap to record your thoughts..."
               disabled={loading}
             />

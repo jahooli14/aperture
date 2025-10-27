@@ -274,12 +274,6 @@ function CompactProjectCard({
     archived: { color: 'bg-neutral-100 text-neutral-700 border-neutral-300', emoji: '📦' },
   }
 
-  const typeConfig: Record<string, { emoji: string }> = {
-    creative: { emoji: '🎨' },
-    technical: { emoji: '⚙️' },
-    learning: { emoji: '📚' },
-  }
-
   const relativeTime = formatRelativeTime(project.last_active)
 
   return (
@@ -292,7 +286,7 @@ function CompactProjectCard({
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">{typeConfig[project.type]?.emoji || '📄'}</span>
+              <span className="text-lg">📄</span>
               <h3 className="font-bold text-neutral-900 truncate text-base">
                 {project.title}
               </h3>

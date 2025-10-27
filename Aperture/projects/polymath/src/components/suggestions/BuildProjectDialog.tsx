@@ -40,7 +40,7 @@ export function BuildProjectDialog({
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    description: ''
   })
 
   // Pre-fill form when suggestion changes
@@ -48,7 +48,7 @@ export function BuildProjectDialog({
     if (suggestion) {
       setFormData({
         title: suggestion.title,
-        description: suggestion.description,
+        description: suggestion.description
       })
     }
   }, [suggestion])
@@ -128,25 +128,6 @@ export function BuildProjectDialog({
                 rows={4}
                 placeholder="What is this project about?"
               />
-            </div>
-
-            {/* Type */}
-            <div className="grid gap-2">
-              <Label htmlFor="build-type">Project Type</Label>
-              <Select
-                id="build-type"
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as typeof formData.type,
-                  })
-                }
-              >
-                <option value="creative">🎨 Creative (Art, design, hobbies)</option>
-                <option value="technical">⚙️ Technical (Code, build, make)</option>
-                <option value="learning">📚 Learning (Study, courses, research)</option>
-              </Select>
             </div>
 
             {/* Capabilities Info */}
