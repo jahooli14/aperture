@@ -9,6 +9,7 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
+import { useOnboardingStore } from './stores/useOnboardingStore'
 import './App.css'
 
 // Lazy load pages for better bundle splitting
@@ -35,12 +36,23 @@ function PageLoader() {
 
 function Navigation() {
   const location = useLocation()
+  const { progress, fetchPrompts } = useOnboardingStore()
+
+  // Fetch progress on mount
+  useEffect(() => {
+    fetchPrompts()
+  }, [fetchPrompts])
 
   const isActive = (path: string) => location.pathname === path
 
+  // Check if foundational thoughts are incomplete
+  const hasIncompleteFoundational = progress
+    ? progress.completed_required < progress.total_required
+    : false
+
   const navLinks = [
     { path: '/', label: 'Home', icon: LayoutGrid },
-    { path: '/memories', label: 'Thoughts', icon: Layers },
+    { path: '/memories', label: 'Thoughts', icon: Layers, pulse: hasIncompleteFoundational },
     { path: '/projects', label: 'Projects', icon: FolderKanban },
     { path: '/reading', label: 'Reading', icon: FileText },
     { path: '/insights', label: 'Insights', icon: BarChart3 }
@@ -62,7 +74,7 @@ function Navigation() {
             </Link>
 
             <div className="flex gap-1">
-              {navLinks.map(({ path, label, icon: Icon }) => (
+              {navLinks.map(({ path, label, icon: Icon, pulse }) => (
                 <Link
                   key={path}
                   to={path}
@@ -70,7 +82,8 @@ function Navigation() {
                     "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap flex items-center gap-2",
                     isActive(path)
                       ? "text-blue-900 bg-blue-50"
-                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50",
+                    pulse && !isActive(path) && "animate-pulse-slow"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -85,7 +98,7 @@ function Navigation() {
       {/* Bottom navigation - Mobile only (Android pattern) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
         <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-5">
-          {navLinks.map(({ path, label, icon: Icon }) => {
+          {navLinks.map(({ path, label, icon: Icon, pulse }) => {
             const active = isActive(path)
             return (
               <Link
@@ -94,7 +107,8 @@ function Navigation() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1.5 py-3 px-2 transition-all duration-200 min-h-[68px]",
                   "active:scale-95 touch-manipulation select-none",
-                  active ? "text-blue-900" : "text-neutral-600"
+                  active ? "text-blue-900" : "text-neutral-600",
+                  pulse && !active && "animate-pulse-slow"
                 )}
               >
                 <Icon className={cn(

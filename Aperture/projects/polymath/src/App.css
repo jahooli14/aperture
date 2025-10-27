@@ -306,6 +306,20 @@
     animation: pulseSubtle 3s ease-in-out infinite;
   }
 
+  /* Slow pulse animation for attention */
+  @keyframes pulseSlow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulseSlow 2.5s ease-in-out infinite;
+  }
+
   /* Professional input - Premium */
   .input-pro {
     @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;
