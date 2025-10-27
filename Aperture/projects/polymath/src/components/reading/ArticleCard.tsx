@@ -184,7 +184,19 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
               <span>{article.read_time_minutes} min</span>
             </div>
           )}
-          <span>{format(new Date(article.created_at), 'MMM d')}</span>
+          {article.created_at && (
+            <span>
+              {(() => {
+                try {
+                  const date = new Date(article.created_at)
+                  if (isNaN(date.getTime())) return 'Recently'
+                  return format(date, 'MMM d')
+                } catch {
+                  return 'Recently'
+                }
+              })()}
+            </span>
+          )}
         </div>
 
         {/* Actions */}

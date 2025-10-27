@@ -439,7 +439,17 @@ export function ReaderPage() {
             )}
             {article.source && <span>{article.source}</span>}
             {article.published_date && (
-              <span>{format(new Date(article.published_date), 'MMMM d, yyyy')}</span>
+              <span>
+                {(() => {
+                  try {
+                    const date = new Date(article.published_date)
+                    if (isNaN(date.getTime())) return null
+                    return format(date, 'MMMM d, yyyy')
+                  } catch {
+                    return null
+                  }
+                })()}
+              </span>
             )}
             {article.read_time_minutes && (
               <span className="flex items-center gap-1">
