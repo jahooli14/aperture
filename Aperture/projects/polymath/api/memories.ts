@@ -163,15 +163,18 @@ Respond ONLY with valid JSON in this exact format:
     if (insertError) throw insertError
 
     // Trigger background processing (async, don't wait)
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : 'http://localhost:5173'
+    // Use request host if available, fallback to VERCEL_URL or localhost
+    const host = req.headers.host || process.env.VERCEL_URL || 'localhost:5173'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+
+    console.log('[api/memories/capture] Triggering processing for memory:', memory.id, 'at', baseUrl)
 
     fetch(`${baseUrl}/api/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ memory_id: memory.id })
-    }).catch(err => console.error('Failed to trigger processing:', err))
+    }).catch(err => console.error('[api/memories/capture] Failed to trigger processing:', err))
 
     return res.status(201).json({
       success: true,

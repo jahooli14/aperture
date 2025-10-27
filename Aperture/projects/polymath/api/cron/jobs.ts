@@ -13,6 +13,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { runSynthesis } from '../../lib/synthesis.js'
 import { strengthenNodes } from '../../lib/strengthen-nodes.js'
+import { processMemory } from '../../lib/process-memory.js'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify authorization
@@ -27,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const job = req.query.job as string
 
   if (!job) {
-    return res.status(400).json({ error: 'Missing job parameter. Use ?job=synthesis or ?job=strengthen' })
+    return res.status(400).json({ error: 'Missing job parameter. Use ?job=synthesis, ?job=strengthen, or ?job=process_stuck' })
   }
 
   console.log(`[cron/jobs] Starting ${job}...`, isManualTrigger ? '(manual trigger)' : '(scheduled cron)')
@@ -59,8 +66,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timestamp: new Date().toISOString()
       })
 
+    } else if (job === 'process_stuck') {
+      // Process any memories stuck in processing (>5 min old, not processed, no error)
+      const { data: stuckMemories, error: fetchError } = await supabase
+        .from('memories')
+        .select('id, title, created_at')
+        .eq('processed', false)
+        .is('error', null)
+        .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true })
+        .limit(10)
+
+      if (fetchError) {
+        throw new Error(`Failed to fetch stuck memories: ${fetchError.message}`)
+      }
+
+      const processed = []
+      const failed = []
+
+      for (const memory of stuckMemories || []) {
+        try {
+          console.log(`[cron/jobs] Processing stuck memory: ${memory.id} - ${memory.title}`)
+          await processMemory(memory.id)
+          processed.push(memory.id)
+        } catch (error) {
+          console.error(`[cron/jobs] Failed to process memory ${memory.id}:`, error)
+          failed.push({ id: memory.id, error: error instanceof Error ? error.message : 'Unknown error' })
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        job: 'process_stuck',
+        found: stuckMemories?.length || 0,
+        processed: processed.length,
+        failed: failed.length,
+        failures: failed,
+        timestamp: new Date().toISOString()
+      })
+
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=synthesis or ?job=strengthen` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=synthesis, ?job=strengthen, or ?job=process_stuck` })
     }
 
   } catch (error) {
@@ -85,6 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     {
       "path": "/api/cron/jobs?job=strengthen",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/jobs?job=process_stuck",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
