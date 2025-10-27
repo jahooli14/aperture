@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
@@ -10,6 +11,7 @@ import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
+import { SkeletonCard } from '../components/ui/skeleton'
 import { Rocket, LayoutGrid, List, Edit, Trash2, Clock } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -74,7 +76,13 @@ export function ProjectsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <div className="py-12">
+      <motion.div
+        className="py-12"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
@@ -169,14 +177,11 @@ export function ProjectsPage() {
 
         {/* Loading State */}
         {loading ? (
-          <Card className="pro-card">
-            <CardContent className="py-24">
-              <div className="text-center">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
-                <p className="text-lg text-neutral-600">Loading your projects...</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
         ) : projects.length === 0 ? (
           /* Empty State */
           <Card className="pro-card">
@@ -231,7 +236,7 @@ export function ProjectsPage() {
 
       {/* Confirmation Dialog */}
       {confirmDialog}
-      </div>
+      </motion.div>
     </PullToRefresh>
   )
 }
@@ -285,17 +290,19 @@ function CompactProjectCard({
               onClick={onEdit}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+              className="h-11 w-11 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50 touch-manipulation"
+              aria-label="Edit project"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-5 w-5" />
             </Button>
             <Button
               onClick={onDelete}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+              className="h-11 w-11 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+              aria-label="Delete project"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-5 w-5" />
             </Button>
           </div>
         </div>

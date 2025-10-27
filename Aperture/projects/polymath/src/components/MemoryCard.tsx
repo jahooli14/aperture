@@ -77,9 +77,10 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
                 onClick={() => onEdit(memory)}
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+                className="h-11 w-11 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50 touch-manipulation"
+                aria-label="Edit memory"
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-5 w-5" />
               </Button>
             )}
             {onDelete && (
@@ -87,9 +88,10 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
                 onClick={() => onDelete(memory)}
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                className="h-11 w-11 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+                aria-label="Delete memory"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-5 w-5" />
               </Button>
             )}
           </div>

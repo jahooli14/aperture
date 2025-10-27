@@ -83,7 +83,7 @@ function Navigation() {
 
       {/* Bottom navigation - Mobile only (Android pattern) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
-        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-5 px-1">
+        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-5">
           {navLinks.map(({ path, label, icon: Icon }) => {
             const active = isActive(path)
             return (
@@ -91,23 +91,18 @@ function Navigation() {
                 key={path}
                 to={path}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 py-2 px-1 transition-all duration-200 min-h-[64px]",
-                  "active:scale-95",
+                  "flex flex-col items-center justify-center gap-1.5 py-3 px-2 transition-all duration-200 min-h-[68px]",
+                  "active:scale-95 touch-manipulation select-none",
                   active ? "text-orange-600" : "text-neutral-600"
                 )}
               >
-                <div className={cn(
-                  "flex items-center justify-center transition-all duration-200",
-                  active && "scale-110"
-                )}>
-                  <Icon className={cn(
-                    "h-6 w-6 transition-all",
-                    active && "stroke-[2.5]"
-                  )} />
-                </div>
+                <Icon className={cn(
+                  "h-6 w-6 transition-all flex-shrink-0",
+                  active && "stroke-[2.5] scale-110"
+                )} />
                 <span className={cn(
-                  "text-xs font-medium transition-all",
-                  active ? "scale-95 font-semibold" : "scale-90"
+                  "text-xs font-medium transition-all leading-none",
+                  active ? "font-semibold" : ""
                 )}>
                   {label}
                 </span>

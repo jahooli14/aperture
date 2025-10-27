@@ -2,6 +2,12 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 
+// Import Inter font
+import '@fontsource/inter/400.css' // Regular
+import '@fontsource/inter/500.css' // Medium
+import '@fontsource/inter/600.css' // Semibold
+import '@fontsource/inter/700.css' // Bold
+
 // Service worker temporarily disabled for debugging
 console.log('[Main] Service Worker registration DISABLED for debugging')
 

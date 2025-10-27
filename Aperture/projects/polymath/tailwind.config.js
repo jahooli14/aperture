@@ -7,6 +7,19 @@ export default {
   ],
   theme: {
     extend: {
+      spacing: {
+        // 8pt grid system
+        'space-1': '8px',
+        'space-2': '16px',
+        'space-3': '24px',
+        'space-4': '32px',
+        'space-5': '40px',
+        'space-6': '48px',
+        'space-7': '56px',
+        'space-8': '64px',
+        'space-10': '80px',
+        'space-12': '96px',
+      },
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',

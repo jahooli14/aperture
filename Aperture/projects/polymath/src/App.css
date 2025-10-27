@@ -72,23 +72,47 @@
 }
 
 @layer utilities {
-  /* Professional Card - Enhanced Premium */
-  .pro-card {
+  /* Card Elevation System - Modern 3-tier approach */
+
+  /* Flat card - no elevation */
+  .card-flat {
     @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.05),
-      0 4px 12px rgba(0, 0, 0, 0.03),
-      0 12px 28px rgba(0, 0, 0, 0.02);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .pro-card:hover {
+  /* Raised card - subtle elevation (default) */
+  .pro-card, .card-raised {
+    @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.06),
+      0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .pro-card:hover, .card-raised:hover {
     box-shadow:
       0 4px 12px rgba(0, 0, 0, 0.08),
-      0 12px 32px rgba(0, 0, 0, 0.06),
-      0 24px 48px rgba(0, 0, 0, 0.04);
-    transform: translateY(-4px);
-    border-color: #f5f5f5;
+      0 8px 24px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+    border-color: #e5e5e5;
+  }
+
+  /* Floating card - prominent elevation */
+  .card-floating {
+    @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
+    box-shadow:
+      0 4px 12px rgba(0, 0, 0, 0.1),
+      0 12px 32px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s cubic-bezier(0, 0, 0.2, 1);
+  }
+
+  .card-floating:hover {
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.12),
+      0 20px 48px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px) scale(1.01);
+    border-color: #d4d4d4;
   }
 
   /* Glass Panel - Premium */

@@ -1,200 +1,285 @@
-# Next Session - Polymath
+# Next Session: Project Detail View Research & Implementation
 
 **Last updated**: 2025-10-27
 **Branch**: main
-**Status**: ✅ Major features completed!
+**Status**: ✅ Reading feature complete, moving to Projects
 
 ---
 
 ## ✅ Recently Completed (This Session)
 
-### 1. Voice Recording System Overhaul - FIXED ✅
-**Issue**: Voice recording unreliable - stopped after 0.5 seconds, never saved
-**Root causes**:
-- Web Speech API has aggressive Voice Activity Detection (stops after silence)
-- API was calling wrong endpoint (`/api/process` instead of `/api/memories?capture=true`)
-- Wrong Gemini model names (`gemini-2.5-flash-latest` doesn't exist)
-- No user feedback on success/failure
+### Reading Queue Feature - COMPLETE ✅
 
-**Solution**:
-- Replaced Web Speech API with MediaRecorder API + Gemini transcription
-- Fixed API endpoint calls in offline sync
-- Corrected Gemini model names to `gemini-2.5-flash`
-- Added success toast notifications
+A production-ready article reading system with excellent UX, comparable to Pocket/Instapaper.
 
-**Files changed**:
-- `src/hooks/useMediaRecorderVoice.ts` (new - replaces Web Speech API)
-- `src/components/VoiceInput.tsx` (uses new hook)
-- `api/transcribe.ts` (fixed model name)
-- `api/memories.ts` (fixed model name)
-- `src/pages/HomePage.tsx` (added success toasts)
-- `src/hooks/useOfflineSync.ts` (fixed API endpoint)
+**Commits (in order):**
+1. `fix(reading): simplify to use Jina AI exclusively` - Removed Readability/JSDOM for serverless
+2. `fix(reading): move sanitization to client-side` - DOMPurify in ReaderPage
+3. `fix(vercel): add client-side routing support` - Fixed 404s
+4. `fix(reading): remove incorrect URL encoding in Jina AI call` - Fixed empty content
+5. `fix(reading): add error boundary and defensive error handling` - Fixed blank screens
+6. `fix(reading): add defensive date validation to prevent crashes` - Fixed invalid dates
+7. `fix(reading): correct Jina AI response parsing to extract content` - Fixed JSON structure
+8. `feat(reading): convert Jina AI markdown to HTML for better readability` - Added marked library
+9. `feat(reading): rename 'All' to 'Queue' and exclude archived articles` - Better UX
 
-### 2. Offline Queue Management - IMPROVED ✅
-**Issue**: Persistent "3 captures waiting to sync" notification blocking UI
-**Solution**:
-- Made notification clickable with expandable menu
-- Added "Sync Now" button for manual sync attempts
-- Added "Clear Queue" button with confirmation dialog
-- Added `clearAllPendingCaptures()` to database layer
-- Fixed offline sync to use correct API endpoint
+**What Works:**
+- ✅ Save articles by URL with Jina AI extraction
+- ✅ Markdown-to-HTML conversion for clean rendering
+- ✅ Reader view with progress tracking
+- ✅ Offline caching with IndexedDB (Dexie.js)
+- ✅ Image caching for offline reading
+- ✅ Highlights and notes
+- ✅ Reading progress restoration
+- ✅ Three-tab filtering: Queue/Unread/Archived
+- ✅ Error boundaries prevent crashes
+- ✅ Defensive error handling throughout
+- ✅ Dark mode support
+- ✅ Typography controls (font size)
 
-**Files changed**:
-- `src/components/OfflineIndicator.tsx` (interactive UI)
-- `src/lib/db.ts` (added clear method)
-- `src/hooks/useOfflineSync.ts` (exposed clear function)
+**Architecture:**
+- **Extraction**: Jina AI Reader API (markdown output)
+- **Conversion**: `marked` library for markdown → HTML
+- **Sanitization**: DOMPurify client-side
+- **Storage**: Supabase (articles, highlights) + IndexedDB (offline)
+- **Components**: ReaderPage, ArticleCard, SaveArticleDialog
+- **Error Handling**: ErrorBoundary + try-catch throughout
 
-### 3. Pull-to-Refresh UX - FIXED ✅
-**Issue**: Couldn't scroll up - page would refresh instead
-**Solution**: Only prevent default scroll when PTR actively engaged (>10px pull)
-
-**Files changed**:
-- `src/hooks/usePullToRefresh.ts`
-
-### 4. Semantic Tag Normalization System - NEW FEATURE ✅
-**Problem**: Every memory gets unique tags - no consistency, can't browse by topic
-**Solution**: Hybrid approach with seed tags + automatic clustering
-
-**Features**:
-- 80 seed tags across 6 categories (Technology, Health, Business, Creative, Learning, Personal)
-- Semantic similarity matching (0.85 threshold) using Gemini embeddings
-- Automatic alias creation for fast lookups (e.g., "React" → "web development")
-- Tag usage tracking for analytics
-- Natural consolidation over time
-
-**Database schema**:
-- `canonical_tags` table with embeddings for similarity search
-- `tag_aliases` table for alternative spellings/variations
-- Helper functions: `find_similar_tag()`, `increment_tag_usage()`
-
-**Files created**:
-- `migrations/002-canonical-tags.sql` (database schema + 80 seed tags)
-- `lib/tag-normalizer.ts` (normalization logic)
-- `api/init-tags.ts` (initialization endpoint)
-- `scripts/init-seed-embeddings.ts` (setup script)
-- `CANONICAL_TAGS_SYSTEM.md` (full documentation)
-- `SETUP_TAG_SYSTEM.md` (quick setup guide)
-
-**Files modified**:
-- `lib/process-memory.ts` (integrated tag normalization at line 38)
-- `src/types.ts` (added tags field to ExtractedMetadata)
+**Quality Bar:**
+This is the standard for Polymath features - polished, thoughtful UX with proper error handling.
 
 ---
 
-## 🚀 Setup Completed
+## 🎯 Next Task: Project Detail View
 
-- ✅ pgvector extension enabled in Supabase
-- ✅ Canonical tags migration run
-- ✅ Seed embeddings generated (80 tags)
-- ✅ Tag normalization integrated into memory processing
+### Current State
 
----
+**What exists:**
+- Projects page with grid/list view
+- Create/Edit/Delete projects
+- Filtering by status
+- Project cards show: title, description, type, status
+- Rich metadata: tags, energy level, materials, next step, progress
 
-## 📋 Current State
+**What's missing:**
+- ❌ **Projects are not clickable** - no way to dive deeper
+- ❌ **No detail view** - can't see full context
+- ❌ **No activity stream** - can't see project history
+- ❌ **No notes UI** - `project_notes` table exists but unused
+- ❌ **No timeline view** - can't see how projects evolved
 
-### Working Features
-- Voice capture with MediaRecorder API (web + Android)
-- Audio transcription via Gemini 2.5 Flash
-- Offline queue with manual sync/clear options
-- Pull-to-refresh without scroll interference
-- **NEW**: Tag normalization system (ready for testing)
+### Your Task
 
-### Production-Ready But Untested
-- Tag clustering behavior (need to monitor with real data)
-- Similarity threshold tuning (may need adjustment)
+**Research + Implement a streamlined project detail view**
 
----
-
-## 🐛 Known Issues
-
-None currently! All major bugs from this session have been resolved. 🎉
+The user wants to make projects clickable, but **doesn't want ClickUp complexity**.
+Goal: Keep it streamlined but powerful, like Linear.
 
 ---
 
-## 🎯 Potential Next Steps
+## 📋 Start Here: Deep Research Prompt
 
-### High Priority - Testing
-- [ ] Test tag normalization on real voice captures
-- [ ] Monitor tag clustering (check logs for "Mapped tag to canonical form")
-- [ ] Verify normalized tags being stored correctly
-- [ ] Check if similarity threshold (0.85) needs tuning
+```
+Do deep research on best-in-class project tracking software UX, focusing on:
 
-### Medium Priority - Tag System Enhancements
-- [ ] Add tag browsing UI (view all canonical tags, usage counts)
-- [ ] Tag analytics page (popular topics, category distribution)
-- [ ] Tag-based memory search/filtering
-- [ ] Manual tag merge UI (consolidate similar tags)
+1. **Tools to Analyze:**
+   - Linear (minimal, fast, beautiful)
+   - Notion (flexible detail pages)
+   - Height (autonomous, smart)
+   - Things 3 (elegant simplicity)
+   - Asana (task-focused)
+   - ClickUp (feature-rich - what to AVOID)
 
-### Low Priority
-- [ ] Consider renaming project from "Polymath" (user mentioned it sounds egotistical)
-- [ ] Add more domain-specific seed tags if user's topics aren't covered
-- [ ] Tag hierarchies (parent/child relationships)
-- [ ] Adjust similarity threshold based on real-world usage
+2. **Research Questions:**
+   - What makes project detail views feel good to use?
+   - How do they organize information hierarchy?
+   - Where do they place quick actions?
+   - How do they handle activity streams/updates?
+   - What note-taking patterns work best?
+   - How do they visualize progress?
+   - How do they highlight "next steps"?
+
+3. **Focus Areas:**
+   - Information architecture
+   - Mobile-first design patterns
+   - Quick update patterns (low friction)
+   - Timeline/activity stream design
+   - Status transition UX
+   - Note-taking within projects
+
+4. **What to Avoid:**
+   - Feature bloat (ClickUp problem)
+   - Cognitive overload
+   - Too many nested views
+   - Complex workflows
+   - Heavy configuration
+
+5. **Design Philosophy for Polymath:**
+   - **Streamlined** - Not trying to be ClickUp
+   - **Focused** - Surface right info at right time
+   - **Fast** - Linear-like speed and elegance
+   - **Effortless** - Make updates feel easy
+   - **Mobile-first** - Touch-optimized
+
+After research, propose a design for Polymath's project detail view that:
+- Matches the quality of our reading feature
+- Follows mobile-first principles
+- Makes updating projects feel effortless
+- Maintains clean, focused aesthetic
+```
+
+---
+
+## 📊 What to Build (After Research)
+
+### Route
+`/projects/:id` - Full detail page (like `/reading/:id`)
+
+### Core Information to Display
+1. **Header**
+   - Title, description
+   - Type badge (personal/technical/meta)
+   - Status (active/on-hold/maintaining/completed)
+   - Quick actions (edit, status change, delete)
+
+2. **Timeline**
+   - Created date
+   - Last active
+   - Days since last update (if dormant)
+
+3. **Context & Requirements**
+   - Next step (prominent!)
+   - Progress bar (if tracked)
+   - Estimated time
+   - Energy level required
+   - Materials needed
+   - Context requirements (desk, tools, etc.)
+   - Tags
+
+4. **Activity Stream** (if applicable)
+   - Project notes chronologically
+   - Status changes
+   - Updates with timestamps
+
+5. **Related Data** (if applicable)
+   - Capabilities used
+   - From suggestion ID (if built from AI suggestion)
+
+### Key Features
+- Click project card → navigate to detail
+- Quick update dialog (add note without friction)
+- Inline status changes
+- Back button to projects list
+- Keyboard shortcuts
+- Error boundaries
+- Mobile-optimized
+
+### Reference Implementations
+- `src/pages/ReaderPage.tsx` - Our quality bar for detail views
+- `src/components/ErrorBoundary.tsx` - Error handling pattern
+- `src/pages/ReadingPage.tsx` - List view with good filtering
+
+---
+
+## 📁 Files to Review
+
+**Project Implementation:**
+- `src/pages/ProjectsPage.tsx` - Main list view
+- `src/components/projects/ProjectCard.tsx` - Card component
+- `src/stores/useProjectStore.ts` - State management
+- `src/types.ts` (lines 386-411) - Project interface
+
+**Database:**
+- Check `supabase/migrations/` for schema
+- `project_notes` table exists but unused
+- May need to add API endpoints for notes
+
+**Design Patterns:**
+- `src/pages/ReaderPage.tsx` - How we do detail views
+- `src/pages/ReadingPage.tsx` - How we do list→detail navigation
+- `src/components/ui/` - Existing UI components
+
+---
+
+## ✅ Acceptance Criteria
+
+After research and implementation:
+
+- ✅ Research report with insights from 3+ best-in-class tools
+- ✅ Design proposal that fits Polymath philosophy
+- ✅ Clickable project cards
+- ✅ `/projects/:id` detail page
+- ✅ All relevant project info displayed
+- ✅ Quick update functionality (low friction)
+- ✅ Activity/notes stream (if applicable)
+- ✅ Mobile-responsive design
+- ✅ Error boundaries and loading states
+- ✅ Matches quality bar set by reading feature
+- ✅ Fast and lightweight (no feature bloat)
+
+---
+
+## 💡 Design Considerations
+
+### Information Hierarchy
+- **Primary**: Next step, current status
+- **Secondary**: Progress, timeline, energy level
+- **Tertiary**: Tags, capabilities, metadata
+
+### Quick Actions
+- Add note/update (should feel effortless)
+- Change status (inline, no modal)
+- Edit details (when needed)
+- Archive/complete
+
+### Mobile-First
+- Touch targets 44px minimum
+- Thumb-friendly action placement
+- Swipe gestures (consider)
+- Compact but readable
+
+### Performance
+- Optimistic updates
+- Fast page transitions
+- Minimal API calls
+- Local state caching
+
+---
+
+## 🎨 Maintain Polymath Aesthetic
+
+Our design language:
+- Clean, spacious layouts
+- Orange accent color (#ea580c)
+- Neutral grays for text
+- Gradient backgrounds (subtle)
+- Rounded corners (corners-lg, rounded-xl)
+- Cards with hover effects
+- Smooth transitions
+- Glass-morphism effects (backdrop-blur)
+
+---
+
+## 🚀 Previous Session Achievements (Context)
+
+### Voice & Memory System
+- Voice recording with MediaRecorder API
+- Offline queue management
+- Pull-to-refresh
+- Semantic tag normalization (80 seed tags)
+
+All previous features are stable and production-ready.
 
 ---
 
 ## 📚 Key Documentation
 
-- `CANONICAL_TAGS_SYSTEM.md` - Complete system architecture and examples
-- `SETUP_TAG_SYSTEM.md` - Step-by-step setup instructions
-- `FEATURE_EXPANSION_PLAN.md` - Long-term roadmap
+- `READING_DEBUG.md` - Reading feature debugging guide
+- `CANONICAL_TAGS_SYSTEM.md` - Tag system architecture
+- `src/types.ts` - All TypeScript interfaces
 
 ---
 
-## 🔧 Recent Commits
-
-1. `fix: correct Gemini model name and add success feedback` - Fixed API model names
-2. `fix: improve pull-to-refresh scroll behavior` - Fixed scroll interference
-3. `feat: add interactive offline queue management` - Made notification actionable
-4. `fix: offline sync now uses correct API endpoint` - Fixed sync bugs
-5. `feat: implement semantic tag normalization system` - Complete tag system
-6. `feat: add pgvector extension setup migration` - Database foundation
-
----
-
-## 💡 Notes for Next Session
-
-### Tag System Monitoring
-Watch for these patterns in production:
-- Tags that should cluster but don't → Lower threshold to 0.80
-- Too much clustering (unrelated tags grouped) → Raise threshold to 0.90
-- Domain-specific tags creating many unique entries → Add seed tags
-
-### Verification Queries
-```sql
--- Check tag distribution
-SELECT category, COUNT(*) FROM canonical_tags GROUP BY category;
-
--- Most popular tags
-SELECT tag, usage_count FROM canonical_tags ORDER BY usage_count DESC LIMIT 20;
-
--- Recent aliases created
-SELECT ta.alias, ct.tag FROM tag_aliases ta
-JOIN canonical_tags ct ON ct.id = ta.canonical_tag_id
-ORDER BY ta.created_at DESC LIMIT 20;
-```
-
-### Configuration
-- Similarity threshold: `lib/tag-normalizer.ts:72` (currently 0.85)
-- Categories: `lib/tag-normalizer.ts:139`
-- Seed tags: `migrations/002-canonical-tags.sql:34`
-
----
-
-## 🎉 Session Highlights
-
-**Major Wins:**
-1. Fixed critical voice recording bug that was blocking all captures
-2. Implemented complete offline queue management
-3. Built production-ready semantic tag normalization system from scratch
-4. Created comprehensive documentation
-
-**Impact:**
-- Voice captures now work reliably on web and Android
-- Users can manage stuck offline queue items
-- Tag system will dramatically improve memory organization and project suggestions
-- Consistent vocabulary enables powerful browsing and analytics
-
----
-
-**Status**: Ready for production use and real-world testing
+**Status**: Ready to begin research and implementation of project detail view
+**Goal**: Match the polish and UX quality of our reading feature
+**Philosophy**: Streamlined, not bloated. Linear-like, not ClickUp-like.

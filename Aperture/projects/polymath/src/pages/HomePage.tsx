@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -163,7 +164,12 @@ export function HomePage() {
   }
 
   return (
-    <>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
       {/* Demo Data Banner */}
       {showDemoBanner && (
         <DemoDataBanner
@@ -423,6 +429,6 @@ export function HomePage() {
           onBuild={handleBuild}
         />
       </div>
-    </>
+    </motion.div>
   )
 }

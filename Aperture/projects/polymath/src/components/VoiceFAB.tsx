@@ -75,7 +75,8 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="h-10 w-10 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors active:scale-90"
+                  className="h-11 w-11 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors active:scale-90 touch-manipulation"
+                  aria-label="Close"
                 >
                   <X className="h-5 w-5 text-neutral-600" />
                 </button>
