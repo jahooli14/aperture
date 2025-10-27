@@ -276,6 +276,7 @@ export interface ExtractedMetadata {
   memory_type: MemoryType
   entities: Entities
   themes: string[]
+  tags?: string[]
   emotional_tone: string
 }
 

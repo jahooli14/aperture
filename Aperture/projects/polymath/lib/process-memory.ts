@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../src/types'
 import { getSupabaseConfig, getGeminiConfig } from './env.js'
 import { logger } from './logger.js'
+import { normalizeTags } from './tag-normalizer.js'
 
 const { apiKey } = getGeminiConfig()
 const genAI = new GoogleGenerativeAI(apiKey)
@@ -33,18 +34,22 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 2. Extract entities and metadata using Gemini
     const metadata = await extractMetadata(memory.title, memory.body)
 
-    // 3. Generate embedding for the memory content
+    // 3. Normalize tags using semantic clustering
+    const normalizedTags = await normalizeTags(metadata.tags || [])
+
+    // 4. Generate embedding for the memory content
     const embedding = await generateEmbedding(
       `${memory.title}\n\n${memory.body}`
     )
 
-    // 4. Update the memory with extracted metadata
+    // 5. Update the memory with extracted metadata
     const { error: updateError } = await supabase
       .from('memories')
       .update({
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,
+        tags: normalizedTags,
         emotional_tone: metadata.emotional_tone,
         embedding,
         processed: true,
@@ -102,6 +107,7 @@ Extract the following in JSON format:
     "topics": ["array of topics/interests mentioned"]
   },
   "themes": ["array of key themes"],
+  "tags": ["array of 3-7 specific tags"],
   "emotional_tone": "brief description of emotional tone"
 }
 
@@ -111,6 +117,7 @@ Rules:
 - entities.places: Specific locations mentioned
 - entities.topics: Topics, interests, concepts, technologies, activities, developmental milestones
 - themes: High-level themes (max 5) - include "child_development" if this is about a child's growth
+- tags: Specific, searchable tags (3-7 tags) - use common terminology, avoid overly specific or long phrases. Examples: "react", "machine learning", "fitness", "productivity", "parenting"
 - emotional_tone: One short phrase (e.g., "excited and curious", "reflective", "frustrated", "proud parent")
 
 **Special attention:** If this voice note mentions child development, milestones, or parenting moments, include relevant developmental topics in entities.topics (e.g., "first steps", "language development", "motor skills", "emotional regulation")
