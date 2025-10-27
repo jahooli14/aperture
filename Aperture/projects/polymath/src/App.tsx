@@ -67,9 +67,12 @@ function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2.5 group transition-smooth">
-              <Sparkles className="h-5 w-5 text-blue-900" />
-              <span className="text-xl font-semibold tracking-tight text-neutral-900">
-                Polymath
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 blur-sm opacity-60 rounded-full"></div>
+                <Sparkles className="h-5 w-5 text-purple-700 relative z-10" />
+              </div>
+              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-purple-700 via-pink-600 to-orange-500 bg-clip-text text-transparent">
+                Fragments
               </span>
             </Link>
 
