@@ -13,16 +13,8 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/jobs?job=synthesis",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/jobs?job=strengthen",
+      "path": "/api/cron/jobs?job=daily",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/jobs?job=process_stuck",
-      "schedule": "*/10 * * * *"
     }
   ]
 }

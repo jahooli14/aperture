@@ -1,13 +1,16 @@
 /**
  * Consolidated Cron Jobs Handler
  *
- * Handles both:
- * - Weekly synthesis (Mondays 09:00 UTC)
- * - Daily node strengthening (00:00 UTC)
+ * Handles:
+ * - Daily job (runs strengthen + process_stuck every day at 00:00 UTC)
+ * - Weekly synthesis (Mondays only)
+ * - Manual triggers for individual jobs
  *
  * Route with ?job= query parameter:
- * - /api/cron/jobs?job=synthesis
- * - /api/cron/jobs?job=strengthen
+ * - /api/cron/jobs?job=daily (auto-scheduled)
+ * - /api/cron/jobs?job=synthesis (manual or weekly)
+ * - /api/cron/jobs?job=strengthen (manual)
+ * - /api/cron/jobs?job=process_stuck (manual)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -34,13 +37,107 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const job = req.query.job as string
 
   if (!job) {
-    return res.status(400).json({ error: 'Missing job parameter. Use ?job=synthesis, ?job=strengthen, or ?job=process_stuck' })
+    return res.status(400).json({ error: 'Missing job parameter. Use ?job=daily, ?job=synthesis, ?job=strengthen, or ?job=process_stuck' })
   }
 
   console.log(`[cron/jobs] Starting ${job}...`, isManualTrigger ? '(manual trigger)' : '(scheduled cron)')
 
+  const now = new Date()
+
   try {
-    if (job === 'synthesis') {
+    if (job === 'daily') {
+      // Daily job: strengthen nodes + process stuck memories
+      // On Mondays, also run synthesis
+      const isMonday = now.getUTCDay() === 1
+
+      const results: any = {
+        success: true,
+        job: 'daily',
+        timestamp: new Date().toISOString(),
+        tasks: {}
+      }
+
+      // 1. Strengthen nodes
+      try {
+        const updates = await strengthenNodes(24)
+        results.tasks.strengthen = {
+          success: true,
+          nodes_strengthened: updates?.length || 0
+        }
+        console.log(`[cron/jobs/daily] Strengthened ${updates?.length || 0} nodes`)
+      } catch (error) {
+        results.tasks.strengthen = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+        console.error('[cron/jobs/daily] Strengthen failed:', error)
+      }
+
+      // 2. Process stuck memories
+      try {
+        const { data: stuckMemories, error: fetchError } = await supabase
+          .from('memories')
+          .select('id, title, created_at')
+          .eq('processed', false)
+          .is('error', null)
+          .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: true })
+          .limit(10)
+
+        if (fetchError) throw fetchError
+
+        const processed = []
+        const failed = []
+
+        for (const memory of stuckMemories || []) {
+          try {
+            console.log(`[cron/jobs/daily] Processing stuck memory: ${memory.id} - ${memory.title}`)
+            await processMemory(memory.id)
+            processed.push(memory.id)
+          } catch (error) {
+            console.error(`[cron/jobs/daily] Failed to process memory ${memory.id}:`, error)
+            failed.push({ id: memory.id, error: error instanceof Error ? error.message : 'Unknown error' })
+          }
+        }
+
+        results.tasks.process_stuck = {
+          success: true,
+          found: stuckMemories?.length || 0,
+          processed: processed.length,
+          failed: failed.length,
+          failures: failed
+        }
+        console.log(`[cron/jobs/daily] Processed ${processed.length}/${stuckMemories?.length || 0} stuck memories`)
+      } catch (error) {
+        results.tasks.process_stuck = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+        console.error('[cron/jobs/daily] Process stuck failed:', error)
+      }
+
+      // 3. Run synthesis on Mondays
+      if (isMonday) {
+        try {
+          const userId = process.env.USER_ID || 'default-user'
+          const suggestions = await runSynthesis(userId)
+          results.tasks.synthesis = {
+            success: true,
+            suggestions_generated: suggestions?.length || 0
+          }
+          console.log(`[cron/jobs/daily] Generated ${suggestions?.length || 0} suggestions (Monday synthesis)`)
+        } catch (error) {
+          results.tasks.synthesis = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+          console.error('[cron/jobs/daily] Synthesis failed:', error)
+        }
+      }
+
+      return res.status(200).json(results)
+
+    } else if (job === 'synthesis') {
       const userId = process.env.USER_ID || 'default-user'
       const suggestions = await runSynthesis(userId)
 
@@ -106,7 +203,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=synthesis, ?job=strengthen, or ?job=process_stuck` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=synthesis, ?job=strengthen, or ?job=process_stuck` })
     }
 
   } catch (error) {
@@ -120,22 +217,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Vercel cron configuration (add to vercel.json):
+// Vercel cron configuration (in vercel.json):
 /*
 {
   "crons": [
     {
-      "path": "/api/cron/jobs?job=synthesis",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/cron/jobs?job=strengthen",
+      "path": "/api/cron/jobs?job=daily",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/jobs?job=process_stuck",
-      "schedule": "*/10 * * * *"
     }
   ]
 }
+Note: Hobby accounts limited to 1 cron/day. Daily job runs:
+- Node strengthening (every day)
+- Stuck memory processing (every day)
+- Synthesis (Mondays only)
 */
