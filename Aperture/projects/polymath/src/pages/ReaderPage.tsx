@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import {
   ArrowLeft,
   ExternalLink,
@@ -275,12 +276,16 @@ export function ReaderPage() {
   }
 
   return (
-    <div
+    <motion.div
       className={`min-h-screen transition-colors ${
         darkMode
           ? 'bg-neutral-900 text-neutral-100'
           : 'bg-white text-neutral-900'
       }`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
     >
       {/* Header Bar */}
       <div
@@ -539,6 +544,6 @@ export function ReaderPage() {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useMemoryCache } from '../hooks/useMemoryCache'
@@ -228,7 +229,13 @@ export function MemoriesPage() {
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-        <div className="py-12">
+        <motion.div
+          className="py-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.2 }}
+        >
           {/* Header with Action */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* New Memory button - visible on all views */}
@@ -579,7 +586,7 @@ export function MemoriesPage() {
 
       {/* Confirmation Dialog */}
       {confirmDialog}
-        </div>
+        </motion.div>
       </PullToRefresh>
 
       {/* Voice FAB - Mobile only */}

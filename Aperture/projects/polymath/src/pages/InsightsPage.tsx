@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { PullToRefresh } from '../components/PullToRefresh'
@@ -92,7 +93,13 @@ export function InsightsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <div className="py-12">
+      <motion.div
+        className="py-12"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
         {/* Header */}
         <div className="max-w-5xl mx-auto px-4 mb-12">
         <div className="text-center">
@@ -206,7 +213,7 @@ export function InsightsPage() {
           </CardContent>
         </Card>
       </div>
-      </div>
+      </motion.div>
     </PullToRefresh>
   )
 }

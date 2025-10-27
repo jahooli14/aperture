@@ -3,6 +3,7 @@
  */
 
 import { useEffect, useState, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
@@ -139,7 +140,13 @@ export function SuggestionsPage() {
   }, [])
 
   return (
-    <div className="min-h-screen py-12">
+    <motion.div
+      className="min-h-screen py-12"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.2 }}
+    >
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
@@ -330,6 +337,6 @@ export function SuggestionsPage() {
         onOpenChange={setBuildDialogOpen}
         onConfirm={handleBuildConfirm}
       />
-    </div>
+    </motion.div>
   )
 }

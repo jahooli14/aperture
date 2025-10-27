@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { Plus, Loader2, BookOpen, Archive, List } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -69,7 +70,13 @@ export function ReadingPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <div className="bg-gradient-to-br from-orange-50 via-white to-purple-50 pb-20">
+      <motion.div
+        className="bg-gradient-to-br from-orange-50 via-white to-purple-50 pb-20"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -169,7 +176,7 @@ export function ReadingPage() {
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
       />
-      </div>
+      </motion.div>
     </PullToRefresh>
   )
 }

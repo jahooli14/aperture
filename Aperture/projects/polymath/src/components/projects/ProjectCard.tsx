@@ -3,6 +3,7 @@
  */
 
 import React from 'react'
+import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -50,7 +51,12 @@ export function ProjectCard({
   }
 
   return (
-    <Card className="group h-full flex flex-col pro-card transition-smooth hover-lift border-2">
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+    >
+    <Card className="group h-full flex flex-col pro-card transition-smooth border-2">
       <CardHeader className="relative pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
           <CardTitle className="text-2xl font-bold text-neutral-900 flex-1">
@@ -163,6 +169,7 @@ export function ProjectCard({
         )}
       </CardContent>
     </Card>
+    </motion.div>
   )
 }
 
