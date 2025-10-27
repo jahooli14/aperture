@@ -39,7 +39,7 @@ function Navigation() {
 
   const navLinks = [
     { path: '/', label: 'Home', icon: Home },
-    { path: '/memories', label: 'Memories', icon: Brain },
+    { path: '/memories', label: 'Thoughts', icon: Brain },
     { path: '/projects', label: 'Projects', icon: Rocket },
     { path: '/reading', label: 'Reading', icon: BookOpen },
     { path: '/insights', label: 'Insights', icon: TrendingUp }
@@ -205,7 +205,7 @@ export default function App() {
                   Personal knowledge graph + meta-creative synthesis
                 </p>
                 <p className="text-xs text-gray-500">
-                  Capture memories, generate projects, explore creativity
+                  Capture thoughts, generate projects, explore creativity
                 </p>
               </div>
             </div>

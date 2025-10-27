@@ -117,9 +117,9 @@ export function HomePage() {
         if (!response.ok) {
           const contentType = response.headers.get('content-type')
           if (contentType?.includes('text/html')) {
-            throw new Error('Memories API not available')
+            throw new Error('Thoughts API not available')
           }
-          throw new Error(`Failed to save memory: ${response.statusText}`)
+          throw new Error(`Failed to save thought: ${response.statusText}`)
         }
 
         const data = await response.json()
@@ -127,7 +127,7 @@ export function HomePage() {
 
         // Success! Show confirmation
         addToast({
-          title: 'Memory saved!',
+          title: 'Thought saved!',
           description: 'Your voice note has been captured.',
           variant: 'success',
         })

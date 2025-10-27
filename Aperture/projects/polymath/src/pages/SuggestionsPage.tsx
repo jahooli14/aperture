@@ -249,14 +249,14 @@ export function SuggestionsPage() {
                   </div>
                   <h3 className="text-3xl font-bold text-neutral-900 mb-4">Ready to See the Magic?</h3>
                   <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
-                    You have memories captured. Let's see what happens when AI connects them.
+                    You have thoughts captured. Let's see what happens when AI connects them.
                   </p>
 
                   {/* Highlight Generate Ideas button */}
                   <div className="inline-block bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-8 mb-8 animate-pulse-subtle">
                     <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">Click the button above ↗</p>
                     <p className="text-2xl font-bold text-neutral-900 mb-2">Generate Ideas</p>
-                    <p className="text-sm text-neutral-600">Watch AI synthesize your memories into project suggestions in real-time</p>
+                    <p className="text-sm text-neutral-600">Watch AI synthesize your thoughts into project suggestions in real-time</p>
                   </div>
                 </div>
 
@@ -266,7 +266,7 @@ export function SuggestionsPage() {
                     <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Brain className="h-6 w-6 text-white" />
                     </div>
-                    <h4 className="font-bold text-neutral-900 mb-2">1. Analyze Memories</h4>
+                    <h4 className="font-bold text-neutral-900 mb-2">1. Analyze Thoughts</h4>
                     <p className="text-sm text-neutral-600">
                       AI reads your captured interests, skills, and life insights
                     </p>

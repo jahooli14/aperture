@@ -303,7 +303,7 @@ export function MemoriesPage() {
           </Button>
         </div>
 
-        {/* Demo Data Context Banner - Only show on "My Memories" view with demo data */}
+        {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
           <Card className="mb-8 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
             <CardContent className="pt-6">
@@ -331,7 +331,7 @@ export function MemoriesPage() {
                 Time to Review
               </h3>
               <p className="text-neutral-600 leading-relaxed">
-                These memories are ready for review based on spaced repetition.
+                These thoughts are ready for review based on spaced repetition.
                 Reviewing strengthens your memory and extends the next review interval.
               </p>
             </CardContent>

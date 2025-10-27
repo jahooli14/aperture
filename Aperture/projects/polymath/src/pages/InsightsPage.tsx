@@ -82,7 +82,7 @@ export function InsightsPage() {
                 Building Your Insights
               </h2>
               <p className="text-neutral-600 mb-6">
-                Capture at least 10 memories to see evolution patterns and synthesis insights
+                Capture at least 10 thoughts to see evolution patterns and synthesis insights
               </p>
             </CardContent>
           </Card>
