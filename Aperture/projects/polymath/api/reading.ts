@@ -36,6 +36,7 @@ async function fetchArticle(url: string) {
 async function fetchArticleWithJina(url: string) {
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
+    console.log('[Jina AI] Fetching:', jinaUrl)
 
     const response = await fetch(jinaUrl, {
       headers: {
@@ -45,10 +46,20 @@ async function fetchArticleWithJina(url: string) {
     })
 
     if (!response.ok) {
+      console.error('[Jina AI] HTTP error:', response.status, response.statusText)
       throw new Error(`Jina AI returned ${response.status}`)
     }
 
-    const data = await response.json()
+    const result = await response.json()
+
+    // Jina AI wraps the article data in a 'data' property
+    const data = result.data || result
+
+    console.log('[Jina AI] Extracted article:', {
+      title: data.title,
+      contentLength: data.content?.length || 0,
+      hasDescription: !!data.description
+    })
 
     return {
       title: data.title || 'Untitled',
