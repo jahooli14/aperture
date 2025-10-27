@@ -77,14 +77,10 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     set({ submitting: true, error: null })
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      const response = await fetch('/api/memory-responses', {
+      const response = await fetch('/api/memories?submit_response=true', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(input)
       })

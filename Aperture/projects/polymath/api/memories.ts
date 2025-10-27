@@ -9,6 +9,8 @@ const supabase = createClient(
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
+const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
+
 /**
  * Unified Memories API
  * GET /api/memories - List all memories
@@ -21,7 +23,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { resurfacing, bridges, themes, prompts, id, capture } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture, submit_response } = req.query
+
+    // POST: Submit foundational thought response
+    if (req.method === 'POST' && submit_response === 'true') {
+      return await handleSubmitResponse(req, res)
+    }
 
     // POST: Voice capture
     if (req.method === 'POST' && capture === 'true') {
@@ -565,5 +572,85 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     console.error('[api/memories] Prompts error:', error)
     return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { prompt_id, custom_title, bullets } = req.body
+
+    if (!bullets || !Array.isArray(bullets) || bullets.length === 0) {
+      return res.status(400).json({ error: 'Bullets array required' })
+    }
+
+    // Create memory response
+    const { data: response, error: responseError } = await supabase
+      .from('memory_responses')
+      .insert([{
+        user_id: USER_ID,
+        prompt_id: prompt_id || null,
+        custom_title: custom_title || null,
+        bullets,
+        is_template: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    if (responseError) throw responseError
+
+    // Update user prompt status to completed
+    if (prompt_id) {
+      const { error: statusError } = await supabase
+        .from('user_prompt_status')
+        .upsert({
+          user_id: USER_ID,
+          prompt_id,
+          status: 'completed',
+          response_id: response.id,
+          completed_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        })
+
+      if (statusError) {
+        console.error('[api/memories] Status update error:', statusError)
+      }
+    }
+
+    // Calculate updated progress
+    const { data: prompts } = await supabase
+      .from('memory_prompts')
+      .select('id, is_required')
+
+    const { data: statuses } = await supabase
+      .from('user_prompt_status')
+      .select('*')
+      .eq('user_id', USER_ID)
+
+    const required = prompts?.filter(p => p.is_required) || []
+    const completedRequired = statuses?.filter(s =>
+      s.status === 'completed' &&
+      required.some(p => p.id === s.prompt_id)
+    ).length || 0
+
+    return res.status(200).json({
+      success: true,
+      response,
+      progress: {
+        completed_required: completedRequired,
+        total_required: required.length,
+        completed_total: statuses?.filter(s => s.status === 'completed').length || 0,
+        total_prompts: prompts?.length || 0,
+        completion_percentage: required.length > 0
+          ? Math.round((completedRequired / required.length) * 100)
+          : 0,
+        has_unlocked_projects: completedRequired >= required.length
+      }
+    })
+
+  } catch (error) {
+    console.error('[api/memories] Submit response error:', error)
+    return res.status(500).json({ error: 'Failed to submit response' })
   }
 }
