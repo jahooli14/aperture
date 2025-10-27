@@ -83,7 +83,7 @@ function Navigation() {
                     isActive(path)
                       ? "text-blue-900 bg-blue-50"
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50",
-                    pulse && !isActive(path) && "animate-pulse-slow"
+                    pulse && "animate-pulse-slow"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -108,7 +108,7 @@ function Navigation() {
                   "flex flex-col items-center justify-center gap-1.5 py-3 px-2 transition-all duration-200 min-h-[68px]",
                   "active:scale-95 touch-manipulation select-none",
                   active ? "text-blue-900" : "text-neutral-600",
-                  pulse && !active && "animate-pulse-slow"
+                  pulse && "animate-pulse-slow"
                 )}
               >
                 <Icon className={cn(
