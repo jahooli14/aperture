@@ -1,11 +1,12 @@
 /**
  * Consolidated Reading API
  * Handles articles, highlights, and all reading operations
- * Enhanced with Mozilla Readability + DOMPurify sanitization
+ * Uses Jina AI for content extraction with markdown-to-HTML conversion
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { marked } from 'marked'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -61,9 +62,25 @@ async function fetchArticleWithJina(url: string) {
       hasDescription: !!data.description
     })
 
+    // Convert markdown to HTML for better readability
+    let htmlContent = ''
+    if (data.content) {
+      try {
+        // Configure marked for safe HTML rendering
+        marked.setOptions({
+          breaks: true,  // Convert line breaks to <br>
+          gfm: true,     // GitHub Flavored Markdown
+        })
+        htmlContent = await marked.parse(data.content)
+      } catch (error) {
+        console.error('[Jina AI] Markdown conversion error:', error)
+        htmlContent = data.content // Fallback to raw content
+      }
+    }
+
     return {
       title: data.title || 'Untitled',
-      content: data.content || '',
+      content: htmlContent,
       excerpt: data.description || data.content?.substring(0, 200) || '',
       author: null,
       publishedDate: null,
