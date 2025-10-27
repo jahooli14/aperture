@@ -3,8 +3,9 @@
  */
 
 import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, Link2, Sparkles, User, Tag, Edit, Trash2 } from 'lucide-react'
+import { Brain, Calendar, Link2, Sparkles, User, Tag, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, Bridge } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -17,6 +18,7 @@ interface MemoryCardProps {
 
 export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const [bridges, setBridges] = useState<Bridge[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
 
   useEffect(() => {
@@ -105,9 +107,30 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
 
       <CardContent className="flex-1 space-y-4">
         {/* Body Text */}
-        <CardDescription className="line-clamp-4 text-sm leading-relaxed">
-          {memory.body}
-        </CardDescription>
+        <div>
+          <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-4' : ''}`}>
+            {memory.body}
+          </CardDescription>
+
+          {/* Show More/Less Button - only if text is long enough */}
+          {memory.body && memory.body.length > 200 && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-2 text-sm font-medium text-orange-600 hover:text-orange-700 transition-colors flex items-center gap-1 touch-manipulation"
+              aria-label={isExpanded ? 'Show less' : 'Show more'}
+            >
+              {isExpanded ? (
+                <>
+                  Show less <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Show more <ChevronDown className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Memory Type & Emotional Tone */}
         {memory.processed && (

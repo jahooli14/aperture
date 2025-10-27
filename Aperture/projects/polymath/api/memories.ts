@@ -91,11 +91,22 @@ async function handleCapture(req: VercelRequest, res: VercelResponse) {
     // Parse transcript using Gemini 2.5 Flash
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    const prompt = `Parse this voice transcript into a structured thought format.
+    const prompt = `Transform this voice transcript into a personal thought, written in my own voice.
+
+Write in FIRST PERSON as if I'm reflecting on this myself. Match this tone:
+- Introspective and reflective (like journaling)
+- Conversational and relatable (how I'd actually think)
+- Wry and philosophical when appropriate
+- Self-aware and honest
+- Appreciative of small details and moments
 
 Extract:
-1. A clear, concise title (5-10 words)
-2. 2-5 bullet points capturing the key ideas (each bullet should be a complete sentence or thought)
+1. A clear, concise title (5-10 words) - first person perspective
+2. 2-5 bullet points capturing the key ideas - each written in first person, as my own thoughts
+
+Example style:
+Instead of: "The speaker discussed their concerns about work"
+Write as: "I've been thinking about how work is pulling me in different directions"
 
 Transcript:
 ${transcript}
