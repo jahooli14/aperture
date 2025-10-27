@@ -49,14 +49,14 @@ export function useOfflineSync() {
 
       for (const capture of pending) {
         try {
-          const response = await fetch('/api/process', {
+          // Use same API as online voice captures
+          const response = await fetch('/api/memories?capture=true', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              transcript: capture.transcript,
-              created_at: new Date(capture.timestamp).toISOString()
+              transcript: capture.transcript
             })
           })
 
@@ -65,8 +65,14 @@ export function useOfflineSync() {
             successCount++
             console.log(`✓ Synced capture ${capture.id}`)
           } else {
-            failCount++
-            console.error(`✗ Failed to sync capture ${capture.id}:`, response.status)
+            const contentType = response.headers.get('content-type')
+            if (contentType?.includes('text/html')) {
+              failCount++
+              console.error(`✗ Failed to sync capture ${capture.id}: API not available`)
+            } else {
+              failCount++
+              console.error(`✗ Failed to sync capture ${capture.id}:`, response.status)
+            }
           }
         } catch (error) {
           failCount++
