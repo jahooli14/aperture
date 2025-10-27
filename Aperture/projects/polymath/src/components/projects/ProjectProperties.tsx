@@ -26,12 +26,6 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
     abandoned: { color: 'bg-red-100 text-red-700 border-red-300', label: 'Abandoned', emoji: '⚠️' },
   }
 
-  const typeConfig: Record<Project['type'], { label: string; emoji: string }> = {
-    personal: { label: 'Personal', emoji: '🏠' },
-    technical: { label: 'Technical', emoji: '⚙️' },
-    meta: { label: 'Meta', emoji: '🎯' },
-  }
-
   const energyConfig: Record<string, { label: string; emoji: string; color: string }> = {
     low: { label: 'Low Energy', emoji: '🔋', color: 'text-green-600' },
     moderate: { label: 'Moderate', emoji: '⚡', color: 'text-yellow-600' },
@@ -39,7 +33,6 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
   }
 
   const currentStatus = statusConfig[project.status]
-  const currentType = typeConfig[project.type]
   const currentEnergy = project.energy_level ? energyConfig[project.energy_level] : null
 
   return (
@@ -85,15 +78,6 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
                 </div>
               </>
             )}
-          </div>
-
-          {/* Type */}
-          <div>
-            <div className="text-xs font-semibold text-neutral-500 mb-1.5">Type</div>
-            <div className="px-3 py-2 rounded-lg bg-neutral-100 border-2 border-neutral-200 text-neutral-700 font-medium flex items-center gap-2">
-              <span>{currentType.emoji}</span>
-              <span className="text-sm">{currentType.label}</span>
-            </div>
           </div>
 
           {/* Energy Level */}

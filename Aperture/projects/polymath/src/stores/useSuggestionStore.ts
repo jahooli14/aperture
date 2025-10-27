@@ -114,7 +114,6 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
   buildSuggestion: async (id: string, projectData?: {
     title?: string
     description?: string
-    type?: 'creative' | 'technical' | 'learning'
   }) => {
     try {
       const response = await fetch(`${API_BASE}/suggestions?action=build&id=${id}`, {
@@ -123,7 +122,6 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
         body: JSON.stringify({
           project_title: projectData?.title,
           project_description: projectData?.description,
-          metadata: projectData?.type ? { type: projectData.type } : {}
         })
       })
 

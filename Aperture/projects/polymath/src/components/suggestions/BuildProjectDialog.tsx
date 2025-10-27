@@ -28,7 +28,6 @@ interface BuildProjectDialogProps {
   onConfirm: (projectData: {
     title: string
     description: string
-    type: 'creative' | 'technical' | 'learning'
   }) => Promise<void>
 }
 
@@ -42,20 +41,14 @@ export function BuildProjectDialog({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'creative' as 'creative' | 'technical' | 'learning',
   })
 
   // Pre-fill form when suggestion changes
   useEffect(() => {
     if (suggestion) {
-      // Determine type based on capabilities
-      const hasCapabilities = suggestion.capability_ids.length > 0
-      const defaultType = hasCapabilities ? 'technical' : 'creative'
-
       setFormData({
         title: suggestion.title,
         description: suggestion.description,
-        type: defaultType,
       })
     }
   }, [suggestion])

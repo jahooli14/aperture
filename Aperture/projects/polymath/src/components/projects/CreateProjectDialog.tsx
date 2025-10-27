@@ -37,7 +37,6 @@ export function CreateProjectDialog() {
       await createProject({
         title: formData.title,
         description: formData.description || '',
-        type: 'personal', // Changed from 'creative' to match DB constraint
         status: 'active', // Always start as active
         metadata: {
           next_step: formData.next_step || undefined,

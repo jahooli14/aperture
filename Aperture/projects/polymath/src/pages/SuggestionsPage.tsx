@@ -59,7 +59,7 @@ export function SuggestionsPage() {
     }
   }
 
-  const handleBuildConfirm = async (projectData: { title: string; description: string; type: 'creative' | 'technical' | 'learning' }) => {
+  const handleBuildConfirm = async (projectData: { title: string; description: string }) => {
     if (!suggestionToBuild) return
 
     try {

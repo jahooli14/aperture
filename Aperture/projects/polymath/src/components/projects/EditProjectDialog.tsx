@@ -30,7 +30,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'personal' as 'personal' | 'technical' | 'meta',
     status: 'active' as 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
     next_step: '',
     progress: 0,
@@ -42,7 +41,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
       setFormData({
         title: project.title,
         description: project.description || '',
-        type: project.type,
         status: project.status,
         next_step: project.metadata?.next_step || '',
         progress: project.metadata?.progress || 0,
@@ -60,7 +58,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
       await updateProject(project.id, {
         title: formData.title,
         description: formData.description,
-        type: formData.type,
         status: formData.status as any, // Status type updated to include 'abandoned'
         metadata: {
           ...project.metadata,
@@ -127,25 +124,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 rows={4}
                 className="text-base min-h-[100px]"
               />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-type" className="text-sm sm:text-base">Type</Label>
-              <Select
-                id="edit-type"
-                value={formData.type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    type: e.target.value as typeof formData.type,
-                  })
-                }
-                className="text-base h-11 sm:h-12"
-              >
-                <option value="creative">🎨 Creative</option>
-                <option value="technical">⚙️ Technical</option>
-                <option value="learning">📚 Learning</option>
-              </Select>
             </div>
 
             <div className="grid gap-2">

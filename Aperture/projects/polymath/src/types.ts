@@ -388,7 +388,6 @@ export interface Project {
   user_id: string
   title: string
   description: string | null
-  type: ProjectType
   status: ProjectStatus
   last_active: string // ISO 8601
   created_at: string
@@ -410,8 +409,6 @@ export interface Project {
   would_restart?: boolean
 }
 
-export type ProjectType = 'personal' | 'technical' | 'meta'
-
 export type ProjectStatus = 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
 
 export interface ProjectMetadata {
@@ -431,7 +428,6 @@ export interface ProjectMetadata {
 export interface CreateProjectInput {
   title: string
   description?: string
-  type: ProjectType
   status?: ProjectStatus
   metadata?: ProjectMetadata
 }
@@ -439,7 +435,6 @@ export interface CreateProjectInput {
 export interface UpdateProjectInput {
   title?: string
   description?: string
-  type?: ProjectType
   status?: ProjectStatus
   metadata?: ProjectMetadata
 }

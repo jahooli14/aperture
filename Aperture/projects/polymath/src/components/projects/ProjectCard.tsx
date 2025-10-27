@@ -56,13 +56,6 @@ export function ProjectCard({
     }
   }
 
-  const typeConfig: Record<string, { label: string; color: string }> = {
-    personal: { label: 'Personal', color: 'text-pink-700 bg-pink-100 border-pink-300' },
-    technical: { label: 'Technical', color: 'text-cyan-700 bg-cyan-100 border-cyan-300' },
-    meta: { label: 'Meta', color: 'text-blue-950 bg-blue-100 border-blue-300' },
-    creative: { label: 'Creative', color: 'text-purple-700 bg-purple-100 border-purple-300' },
-    learning: { label: 'Learning', color: 'text-blue-700 bg-blue-100 border-blue-300' }
-  }
 
   return (
     <motion.div
@@ -80,9 +73,6 @@ export function ProjectCard({
             {project.title}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <div className={`px-4 py-1.5 rounded-full text-sm font-semibold border-2 ${typeConfig[project.type]?.color || typeConfig.personal.color}`}>
-              {typeConfig[project.type]?.label || project.type}
-            </div>
             {showActions && onEdit && (
               <Button
                 onClick={() => onEdit(project.id)}
