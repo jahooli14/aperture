@@ -46,16 +46,19 @@ export function ArticleCompletionDialog({
     }
   }
 
-  const handleVoiceCapture = async (audioBlob: Blob) => {
+  const handleVoiceTranscript = (text: string) => {
+    // VoiceInput provides transcript - we'll capture it as text
     setLoading(true)
-    try {
-      await onCapture({ audio: audioBlob })
-      onOpenChange(false)
-    } catch (error) {
-      console.error('Failed to capture voice thought:', error)
-    } finally {
-      setLoading(false)
-    }
+    onCapture({ text })
+      .then(() => {
+        onOpenChange(false)
+      })
+      .catch((error) => {
+        console.error('Failed to capture voice thought:', error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   const handleSkip = () => {
@@ -142,9 +145,7 @@ export function ArticleCompletionDialog({
             </div>
 
             <VoiceInput
-              onTranscript={(text, blob) => blob && handleVoiceCapture(blob)}
-              placeholder="Tap to record your thoughts..."
-              disabled={loading}
+              onTranscript={handleVoiceTranscript}
             />
 
             <div className="flex justify-center">
