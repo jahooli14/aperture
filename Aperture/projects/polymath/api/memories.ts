@@ -81,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * Handle voice capture with Gemini parsing
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse) {
-  const { transcript } = req.body
+  const { transcript, source_reference } = req.body
 
   if (!transcript || typeof transcript !== 'string') {
     return res.status(400).json({ error: 'transcript required' })
@@ -148,6 +148,7 @@ Respond ONLY with valid JSON in this exact format:
       entities: null,
       themes: null,
       emotional_tone: null,
+      source_reference: source_reference || null,
       embedding: null,
       processed: false,
       processed_at: null,

@@ -250,8 +250,43 @@ export function ReaderPage() {
     if (!article) return
 
     try {
-      // TODO: Create memory with source_reference to this article
-      // For now, just archive the article
+      const source_reference = {
+        type: 'article' as const,
+        id: article.id,
+        title: article.title || undefined,
+        url: article.url
+      }
+
+      if (data.text) {
+        // Text input - create memory directly
+        const response = await fetch('/api/memories?action=capture', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transcript: data.text,
+            source_reference
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create thought')
+        }
+
+        addToast({
+          title: 'Thought captured!',
+          description: 'Linked to this article',
+          variant: 'success',
+        })
+      } else if (data.audio) {
+        // Voice input - transcribe and create memory
+        // TODO: Implement voice transcription flow with source_reference
+        addToast({
+          title: 'Voice capture',
+          description: 'Not yet implemented',
+          variant: 'default',
+        })
+      }
+
       await handleArchiveComplete()
     } catch (error) {
       addToast({
@@ -259,6 +294,7 @@ export function ReaderPage() {
         description: 'Failed to capture thought',
         variant: 'destructive',
       })
+      throw error
     }
   }
 
