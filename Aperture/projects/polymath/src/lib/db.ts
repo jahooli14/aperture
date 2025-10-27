@@ -126,6 +126,18 @@ class PolymathDB {
     })
   }
 
+  async clearAllPendingCaptures(): Promise<void> {
+    await this.init()
+    return new Promise((resolve, reject) => {
+      const tx = this.db!.transaction(['pending-captures'], 'readwrite')
+      const store = tx.objectStore('pending-captures')
+      const request = store.clear()
+
+      request.onsuccess = () => resolve()
+      request.onerror = () => reject(request.error)
+    })
+  }
+
   // Cached Memories
   async cacheMemory(memory: Omit<CachedMemory, 'cached_at'>): Promise<void> {
     await this.init()

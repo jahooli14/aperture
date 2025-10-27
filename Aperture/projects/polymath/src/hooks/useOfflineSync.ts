@@ -119,11 +119,23 @@ export function useOfflineSync() {
     }
   }
 
+  async function clearPendingCaptures() {
+    try {
+      await db.clearAllPendingCaptures()
+      await updatePendingCount()
+      console.log('✓ Cleared all pending captures')
+    } catch (error) {
+      console.error('Failed to clear pending captures:', error)
+      throw error
+    }
+  }
+
   return {
     pendingCount,
     isSyncing,
     lastSyncError,
     addOfflineCapture,
-    syncPendingCaptures
+    syncPendingCaptures,
+    clearPendingCaptures
   }
 }
