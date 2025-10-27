@@ -12,6 +12,7 @@ import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
+import { RelatedItems } from '../components/RelatedItems'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -274,6 +275,13 @@ export function ProjectDetailPage() {
               last_active: updated.last_active
             })
           }}
+        />
+
+        {/* Related Items */}
+        <RelatedItems
+          sourceId={project.id}
+          sourceType="project"
+          sourceText={`${project.title} ${project.description || ''}`}
         />
 
         {/* Activity Stream */}
