@@ -58,14 +58,19 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and push changes
+      - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH_NAME="autodoc/update-$(date +%Y%m%d-%H%M%S)"
           git config --local user.email "action@github.com"
           git config --local user.name "Autonomous Documentation Bot"
+          git checkout -b "$BRANCH_NAME"
           git add .
           git commit -m "docs: autonomous update" -m "" -m "Generated with Claude Code via Happy" -m "" -m "Co-Authored-By: Claude <noreply@anthropic.com>" -m "Co-Authored-By: Happy <yesreply@happy.engineering>"
-          git push
+          git push -u origin "$BRANCH_NAME"
+          gh pr create --title "docs: autonomous documentation update" --body "Automated documentation update from the autonomous docs system." --base main --head "$BRANCH_NAME"
 
       - name: Upload artifacts (debug)
         if: failure() || inputs.debug == 'true'
