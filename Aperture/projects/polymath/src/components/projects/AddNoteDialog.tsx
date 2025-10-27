@@ -62,7 +62,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
     setIsSaving(true)
 
     try {
-      const response = await fetch('/api/projects/notes', {
+      const response = await fetch('/api/projects?resource=notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
