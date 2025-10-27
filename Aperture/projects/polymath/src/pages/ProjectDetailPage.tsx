@@ -11,6 +11,7 @@ import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
+import { TaskList, type Task } from '../components/projects/TaskList'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -255,6 +256,23 @@ export function ProjectDetailPage() {
             const updated = { ...project, metadata: { ...project.metadata, ...metadata } }
             setProject(updated)
             updateProject(project.id, { metadata: updated.metadata })
+          }}
+        />
+
+        {/* Task Checklist */}
+        <TaskList
+          tasks={project.metadata?.tasks || []}
+          onUpdate={(tasks) => {
+            const updated = {
+              ...project,
+              metadata: { ...project.metadata, tasks },
+              last_active: new Date().toISOString()
+            }
+            setProject(updated)
+            updateProject(project.id, {
+              metadata: updated.metadata,
+              last_active: updated.last_active
+            })
           }}
         />
 
