@@ -4,7 +4,7 @@ import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { cn } from './lib/utils'
-import { Sparkles, LayoutGrid, Layers, FileText, FolderKanban, BarChart3, Loader2 } from 'lucide-react'
+import { Sparkles, LayoutGrid, Layers, FileText, FolderKanban, BarChart3, Calendar, Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
@@ -23,6 +23,7 @@ const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then(m 
 const DailyQueuePage = lazy(() => import('./pages/DailyQueuePage').then(m => ({ default: m.DailyQueuePage })))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
+const KnowledgeTimelinePage = lazy(() => import('./pages/KnowledgeTimelinePage').then(m => ({ default: m.KnowledgeTimelinePage })))
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 
 // Loading fallback component
@@ -55,6 +56,7 @@ function Navigation() {
     { path: '/memories', label: 'Thoughts', icon: Layers, pulse: hasIncompleteFoundational },
     { path: '/projects', label: 'Projects', icon: FolderKanban },
     { path: '/reading', label: 'Reading', icon: FileText },
+    { path: '/knowledge-timeline', label: 'Timeline', icon: Calendar },
     { path: '/insights', label: 'Insights', icon: BarChart3 }
   ]
 
@@ -97,7 +99,7 @@ function Navigation() {
 
       {/* Bottom navigation - Mobile only (Android pattern) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
-        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-5">
+        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-6">
           {navLinks.map(({ path, label, icon: Icon, pulse }) => {
             const active = isActive(path)
             return (
@@ -208,6 +210,7 @@ export default function App() {
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/projects/:id" element={<ProjectDetailPage />} />
                   <Route path="/timeline" element={<TimelinePage />} />
+                  <Route path="/knowledge-timeline" element={<KnowledgeTimelinePage />} />
                   <Route path="/insights" element={<InsightsPage />} />
                 </Routes>
               </Suspense>

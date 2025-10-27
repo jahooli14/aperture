@@ -384,7 +384,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (status === 'archived') {
           updates.archived_at = new Date().toISOString()
-        } else if (status === 'reading' || status === 'unread') {
+          updates.read_at = new Date().toISOString() // Log when article was read
+        } else if (status === 'reading') {
           updates.read_at = new Date().toISOString()
         }
       }
