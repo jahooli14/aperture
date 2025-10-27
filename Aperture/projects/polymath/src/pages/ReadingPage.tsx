@@ -14,12 +14,12 @@ import { useShareTarget } from '../hooks/useShareTarget'
 import { useToast } from '../components/ui/toast'
 import type { ArticleStatus } from '../types/reading'
 
-type FilterTab = 'all' | ArticleStatus
+type FilterTab = 'queue' | ArticleStatus
 
 export function ReadingPage() {
   const navigate = useNavigate()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle } = useReadingStore()
-  const [activeTab, setActiveTab] = useState<FilterTab>('all')
+  const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const { addToast } = useToast()
 
@@ -50,17 +50,17 @@ export function ReadingPage() {
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
-    setFilter(tab === 'all' ? 'all' : tab)
+    setFilter(tab === 'queue' ? 'all' : tab)
   }
 
   const tabs: { key: FilterTab; label: string; icon: any }[] = [
-    { key: 'all', label: 'All', icon: List },
+    { key: 'queue', label: 'Queue', icon: List },
     { key: 'unread', label: 'Unread', icon: BookOpen },
     { key: 'archived', label: 'Archived', icon: Archive },
   ]
 
-  const filteredArticles = activeTab === 'all'
-    ? articles
+  const filteredArticles = activeTab === 'queue'
+    ? articles.filter((a) => a.status !== 'archived')
     : articles.filter((a) => a.status === activeTab)
 
   const handleRefresh = async () => {
@@ -97,8 +97,8 @@ export function ReadingPage() {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon
-              const count = tab.key === 'all'
-                ? articles.length
+              const count = tab.key === 'queue'
+                ? articles.filter((a) => a.status !== 'archived').length
                 : articles.filter((a) => a.status === tab.key).length
 
               return (
@@ -132,16 +132,16 @@ export function ReadingPage() {
           <div className="flex flex-col items-center justify-center py-20">
             <BookOpen className="h-16 w-16 text-neutral-300 mb-4" />
             <h3 className="text-xl font-semibold text-neutral-700 mb-2">
-              {activeTab === 'all'
+              {activeTab === 'queue'
                 ? 'No articles yet'
                 : `No ${activeTab} articles`}
             </h3>
             <p className="text-neutral-500 text-center max-w-md mb-6">
-              {activeTab === 'all'
+              {activeTab === 'queue'
                 ? 'Save your first article to start building your reading queue'
                 : `You don't have any ${activeTab} articles yet`}
             </p>
-            {activeTab === 'all' && (
+            {activeTab === 'queue' && (
               <button
                 onClick={() => setShowSaveDialog(true)}
                 className="px-6 py-3 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2"
