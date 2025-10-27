@@ -29,6 +29,11 @@ export function ProjectCard({
   }
 
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+    upcoming: {
+      label: 'Upcoming',
+      color: 'text-amber-700 bg-amber-100 border-amber-200',
+      bg: 'bg-amber-50'
+    },
     active: {
       label: 'Active',
       color: 'text-green-700 bg-green-100 border-green-200',

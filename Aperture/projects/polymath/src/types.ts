@@ -412,7 +412,7 @@ export interface Project {
 
 export type ProjectType = 'personal' | 'technical' | 'meta'
 
-export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
+export type ProjectStatus = 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
 
 export interface ProjectMetadata {
   tags?: string[]

@@ -161,6 +161,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 }
                 className="text-base h-11 sm:h-12"
               >
+                <option value="upcoming">📅 Upcoming</option>
                 <option value="active">🚀 Active</option>
                 <option value="on-hold">⏸️ On Hold</option>
                 <option value="maintaining">🔧 Maintaining</option>

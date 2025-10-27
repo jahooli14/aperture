@@ -13,7 +13,7 @@ interface ProjectState {
   projects: Project[]
   loading: boolean
   error: string | null
-  filter: 'all' | 'active' | 'on-hold' | 'maintaining' | 'completed'
+  filter: 'all' | 'upcoming' | 'active' | 'dormant' | 'completed'
 
   // Actions
   fetchProjects: () => Promise<void>
@@ -39,15 +39,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         .select('*')
         .order('created_at', { ascending: false })
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter)
+      // Apply filters
+      if (filter === 'upcoming') {
+        query = query.eq('status', 'upcoming')
+      } else if (filter === 'active') {
+        query = query.eq('status', 'active')
+      } else if (filter === 'dormant') {
+        // Dormant = projects not touched in >7 days and status is active or on-hold
+        query = query.in('status', ['active', 'on-hold'])
+      } else if (filter === 'completed') {
+        query = query.eq('status', 'completed')
       }
+      // 'all' = no filter
 
       const { data, error } = await query
 
       if (error) throw error
 
-      set({ projects: data || [], loading: false })
+      // For 'dormant' filter, further filter by last_active date client-side
+      let projects = data || []
+      if (filter === 'dormant') {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        projects = projects.filter(p => new Date(p.last_active) < sevenDaysAgo)
+      }
+
+      set({ projects, loading: false })
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -17,6 +17,7 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
   const [showStatusPicker, setShowStatusPicker] = useState(false)
 
   const statusConfig: Record<Project['status'], { color: string; label: string; emoji: string }> = {
+    upcoming: { color: 'bg-amber-100 text-amber-700 border-amber-300', label: 'Upcoming', emoji: '📅' },
     active: { color: 'bg-green-100 text-green-700 border-green-300', label: 'Active', emoji: '🚀' },
     'on-hold': { color: 'bg-gray-100 text-gray-700 border-gray-300', label: 'On Hold', emoji: '⏸️' },
     maintaining: { color: 'bg-blue-100 text-blue-700 border-blue-300', label: 'Maintaining', emoji: '🔧' },

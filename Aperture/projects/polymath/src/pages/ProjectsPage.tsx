@@ -130,6 +130,7 @@ export function ProjectsPage() {
         <div className="flex flex-wrap gap-2 justify-center mb-10">
           {[
             { key: 'all', label: 'All' },
+            { key: 'upcoming', label: 'Upcoming' },
             { key: 'active', label: 'Active' },
             { key: 'dormant', label: 'Dormant' },
             { key: 'completed', label: 'Completed' }
@@ -265,6 +266,7 @@ function CompactProjectCard({
     onClick?.(project.id)
   }
   const statusConfig: Record<string, { color: string; emoji: string }> = {
+    upcoming: { color: 'bg-amber-100 text-amber-700 border-amber-300', emoji: '📅' },
     active: { color: 'bg-green-100 text-green-700 border-green-300', emoji: '🚀' },
     'on-hold': { color: 'bg-gray-100 text-gray-700 border-gray-300', emoji: '⏸️' },
     maintaining: { color: 'bg-blue-100 text-blue-700 border-blue-300', emoji: '🔧' },
