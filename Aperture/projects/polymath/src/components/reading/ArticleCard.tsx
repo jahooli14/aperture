@@ -28,14 +28,24 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   }, [article.id])
 
   const checkOfflineStatus = async () => {
-    const cached = await readingDb.articles.get(article.id)
-    setIsOffline(cached?.offline_available && cached?.images_cached || false)
+    try {
+      const cached = await readingDb.articles.get(article.id)
+      setIsOffline(cached?.offline_available && cached?.images_cached || false)
+    } catch (error) {
+      console.warn('[ArticleCard] Failed to check offline status:', error)
+      setIsOffline(false)
+    }
   }
 
   const checkProgress = async () => {
-    const savedProgress = await readingDb.getProgress(article.id)
-    if (savedProgress) {
-      setProgress(savedProgress.scroll_percentage)
+    try {
+      const savedProgress = await readingDb.getProgress(article.id)
+      if (savedProgress) {
+        setProgress(savedProgress.scroll_percentage)
+      }
+    } catch (error) {
+      console.warn('[ArticleCard] Failed to check progress:', error)
+      setProgress(0)
     }
   }
 

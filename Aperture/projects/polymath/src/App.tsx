@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { cn } from './lib/utils'
 import { Sparkles, Home, Brain, BookOpen, Rocket, Calendar, TrendingUp, Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
@@ -184,20 +185,22 @@ export default function App() {
           <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
 
           <main className="flex-1 pb-20 md:pb-0">
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/onboarding" element={<OnboardingPage />} />
-                <Route path="/today" element={<DailyQueuePage />} />
-                <Route path="/memories" element={<MemoriesPage />} />
-                <Route path="/reading" element={<ReadingPage />} />
-                <Route path="/reading/:id" element={<ReaderPage />} />
-                <Route path="/suggestions" element={<SuggestionsPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/insights" element={<InsightsPage />} />
-              </Routes>
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route path="/today" element={<DailyQueuePage />} />
+                  <Route path="/memories" element={<MemoriesPage />} />
+                  <Route path="/reading" element={<ReadingPage />} />
+                  <Route path="/reading/:id" element={<ReaderPage />} />
+                  <Route path="/suggestions" element={<SuggestionsPage />} />
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/timeline" element={<TimelinePage />} />
+                  <Route path="/insights" element={<InsightsPage />} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </main>
 
           <footer className="hidden md:block backdrop-blur-2xl bg-white/40 border-t border-white/20 py-12">

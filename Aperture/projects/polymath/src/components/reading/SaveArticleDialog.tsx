@@ -38,8 +38,10 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
     setLoading(true)
 
     try {
+      console.log('[SaveArticleDialog] Saving article:', url.trim())
       await saveArticle({ url: url.trim() })
 
+      console.log('[SaveArticleDialog] Article saved successfully')
       addToast({
         title: 'Article saved!',
         description: 'Added to your reading queue',
@@ -49,6 +51,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       setUrl('')
       onClose()
     } catch (error) {
+      console.error('[SaveArticleDialog] Failed to save article:', error)
       addToast({
         title: 'Failed to save',
         description: error instanceof Error ? error.message : 'Unknown error',
