@@ -38,7 +38,7 @@ export function TimelinePage() {
       <div className="min-h-screen py-12">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center">
-            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
             <p className="text-lg text-neutral-600">Analyzing your patterns...</p>
           </div>
         </div>
@@ -52,7 +52,7 @@ export function TimelinePage() {
         <div className="max-w-6xl mx-auto px-4">
           <Card className="pro-card">
             <CardContent className="py-16 text-center">
-              <Clock className="h-16 w-16 text-orange-400 mx-auto mb-4" />
+              <Clock className="h-16 w-16 text-blue-400 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-neutral-900 mb-2">
                 Not Enough Data Yet
               </h2>
@@ -83,11 +83,11 @@ export function TimelinePage() {
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         {/* Pattern Cards */}
         {patterns.map((pattern, index) => (
-          <Card key={index} className="pro-card border-2 border-orange-200">
+          <Card key={index} className="pro-card border-2 border-blue-200">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  {pattern.type === 'thinking_time' && <Clock className="h-8 w-8 text-orange-600" />}
+                  {pattern.type === 'thinking_time' && <Clock className="h-8 w-8 text-blue-900" />}
                   {pattern.type === 'velocity' && <TrendingUp className="h-8 w-8 text-blue-600" />}
                   {pattern.type === 'side_hustle_hours' && <Zap className="h-8 w-8 text-purple-600" />}
                   {pattern.type === 'emotional_continuity' && <Calendar className="h-8 w-8 text-green-600" />}
@@ -99,7 +99,7 @@ export function TimelinePage() {
                   <p className="text-neutral-700 mb-4">
                     {pattern.description}
                   </p>
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200">
+                  <div className="p-4 bg-gradient-to-r from-blue-50 to-amber-50 rounded-lg border border-blue-200">
                     <p className="text-sm font-medium text-neutral-900">
                       💡 {pattern.insight}
                     </p>
@@ -116,7 +116,7 @@ export function TimelinePage() {
                           <div key={i} className="flex items-center gap-3">
                             <div className="flex-1 bg-neutral-100 rounded-full h-8 relative overflow-hidden">
                               <div
-                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
+                                className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-amber-500 rounded-full"
                                 style={{ width: `${(time.count / pattern.data[0].count) * 100}%` }}
                               />
                               <div className="relative px-3 py-1 flex items-center justify-between">

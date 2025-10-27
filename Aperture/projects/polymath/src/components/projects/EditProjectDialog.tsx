@@ -186,7 +186,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
             <div className="grid gap-2">
               <Label htmlFor="edit-progress" className="text-sm sm:text-base flex items-center justify-between">
                 <span>Progress</span>
-                <span className="text-orange-600 font-bold">{formData.progress}%</span>
+                <span className="text-blue-900 font-bold">{formData.progress}%</span>
               </Label>
               <input
                 id="edit-progress"
@@ -198,11 +198,11 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 onChange={(e) =>
                   setFormData({ ...formData, progress: parseInt(e.target.value) })
                 }
-                className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-orange-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-orange-600 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+                className="w-full h-2 bg-neutral-200 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-900 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-900 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
               />
               <div className="h-2 bg-neutral-200 rounded-full overflow-hidden -mt-2 pointer-events-none">
                 <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-900 transition-all duration-300"
                   style={{ width: `${formData.progress}%` }}
                 />
               </div>

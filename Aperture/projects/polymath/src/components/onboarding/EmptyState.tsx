@@ -10,8 +10,8 @@ export function EmptyState() {
     <div className="min-h-[60vh] flex items-center justify-center py-12">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 mb-6">
-          <Brain className="h-10 w-10 text-orange-600" />
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-100 to-amber-100 mb-6">
+          <Brain className="h-10 w-10 text-blue-900" />
         </div>
 
         {/* Heading */}
@@ -27,7 +27,7 @@ export function EmptyState() {
         <div className="space-y-6 text-left mb-8">
           {/* Step 1 */}
           <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center font-bold text-orange-600">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-900">
               1
             </div>
             <div>
@@ -59,7 +59,7 @@ export function EmptyState() {
 
           {/* Step 3 */}
           <div className="flex gap-4 items-start">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center font-bold text-orange-600">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center font-bold text-blue-900">
               3
             </div>
             <div>

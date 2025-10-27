@@ -44,7 +44,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
 
         {/* Header */}
         <div className="text-center pt-12 pb-8 px-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-amber-500 mb-6">
             <Sparkles className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-neutral-900 mb-3">
@@ -60,8 +60,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           <div className="space-y-6">
             {/* Step 1 */}
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                <Brain className="h-6 w-6 text-orange-600" />
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Brain className="h-6 w-6 text-blue-900" />
               </div>
               <div>
                 <h3 className="font-semibold text-neutral-900 mb-1">
@@ -90,8 +90,8 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
 
             {/* Step 3 */}
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                <Rocket className="h-6 w-6 text-orange-600" />
+              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Rocket className="h-6 w-6 text-blue-900" />
               </div>
               <div>
                 <h3 className="font-semibold text-neutral-900 mb-1">
@@ -105,7 +105,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           </div>
 
           {/* Demo data explainer */}
-          <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
+          <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-amber-50 to-blue-50 border border-amber-200">
             <h3 className="font-semibold text-neutral-900 mb-2 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-600" />
               Try it with demo data

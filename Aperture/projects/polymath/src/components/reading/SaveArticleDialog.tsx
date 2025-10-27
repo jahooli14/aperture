@@ -68,7 +68,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <LinkIcon className="h-5 w-5 text-orange-600" />
+              <LinkIcon className="h-5 w-5 text-blue-900" />
               Save Article
             </DialogTitle>
             <DialogDescription>

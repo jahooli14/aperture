@@ -156,7 +156,7 @@ const DialogContent = React.forwardRef<
             "bg-neutral-100 hover:bg-neutral-200",
             "text-neutral-600 hover:text-neutral-900",
             "transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2",
+            "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
             "active:scale-95",
             "z-10"
           )}

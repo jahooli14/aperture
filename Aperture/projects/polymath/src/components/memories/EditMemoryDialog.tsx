@@ -119,11 +119,11 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-50" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50" />
 
         <DialogHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-orange-600 flex-shrink-0" />
+            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-blue-900 flex-shrink-0" />
             <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Edit Memory</DialogTitle>
           </div>
           <DialogDescription className="text-sm sm:text-base text-left">
@@ -144,7 +144,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
+                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
                 autoComplete="off"
               />
             </div>
@@ -160,7 +160,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                   onClick={addBullet}
                   variant="ghost"
                   size="sm"
-                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  className="text-blue-900 hover:text-blue-950 hover:bg-blue-50"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add point
@@ -177,7 +177,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                       placeholder={`Point ${index + 1}`}
                       value={bullet}
                       onChange={(e) => updateBullet(index, e.target.value)}
-                      className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
+                      className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
                       autoComplete="off"
                     />
                     {bullets.length > 1 && (
@@ -214,7 +214,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                     memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight',
                   })
                 }
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
+                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
               >
                 <option value="">Auto-detect</option>
                 <option value="foundational">Foundational - Core knowledge</option>
@@ -233,7 +233,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                 placeholder="ai, programming, health"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="border-orange-200 focus:border-orange-400 focus:ring-orange-400 text-base h-11 sm:h-12"
+                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
                 autoComplete="off"
               />
               <p className="text-xs text-gray-500">

@@ -94,7 +94,7 @@ export function ProjectsPage() {
         {/* Centered header content below button */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <Rocket className="h-12 w-12 text-orange-600" />
+            <Rocket className="h-12 w-12 text-blue-900" />
           </div>
           <h1 className="text-4xl font-bold mb-3 text-neutral-900">
             My Projects
@@ -113,7 +113,7 @@ export function ProjectsPage() {
             variant="outline"
             size="sm"
             onClick={() => setViewMode('grid')}
-            className={`h-9 w-9 p-0 ${viewMode === 'grid' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'text-gray-600'}`}
+            className={`h-9 w-9 p-0 ${viewMode === 'grid' ? 'bg-blue-100 border-blue-300 text-blue-950' : 'text-gray-600'}`}
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -121,7 +121,7 @@ export function ProjectsPage() {
             variant="outline"
             size="sm"
             onClick={() => setViewMode('compact')}
-            className={`h-9 w-9 p-0 ${viewMode === 'compact' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'text-gray-600'}`}
+            className={`h-9 w-9 p-0 ${viewMode === 'compact' ? 'bg-blue-100 border-blue-300 text-blue-950' : 'text-gray-600'}`}
           >
             <List className="h-4 w-4" />
           </Button>
@@ -140,8 +140,8 @@ export function ProjectsPage() {
               onClick={() => setFilter(key as typeof filter)}
               className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                 filter === key
-                  ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                  ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
               }`}
             >
               {label}
@@ -151,10 +151,10 @@ export function ProjectsPage() {
 
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
-          <Card className="mb-8 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+          <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50">
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Rocket className="h-5 w-5 text-orange-600" />
+                <Rocket className="h-5 w-5 text-blue-900" />
                 Demo Projects - Progress Tracking in Action
               </h3>
               <p className="text-neutral-600 leading-relaxed mb-3">
@@ -190,7 +190,7 @@ export function ProjectsPage() {
             <CardContent className="py-24">
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center justify-center">
-                  <Rocket className="h-16 w-16 text-orange-600" />
+                  <Rocket className="h-16 w-16 text-blue-900" />
                 </div>
                 <h3 className="text-2xl font-bold text-neutral-900">No projects yet</h3>
                 <p className="text-neutral-600 max-w-md mx-auto">
@@ -306,7 +306,7 @@ function CompactProjectCard({
               onClick={onEdit}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50 touch-manipulation"
+              className="h-11 w-11 p-0 text-gray-400 hover:text-blue-900 hover:bg-blue-50 touch-manipulation"
               aria-label="Edit project"
             >
               <Edit className="h-5 w-5" />
@@ -325,7 +325,7 @@ function CompactProjectCard({
 
         {/* Next Step - Compact */}
         {project.metadata?.next_step && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 mb-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-3">
             <div className="text-xs font-semibold text-orange-800 mb-1">Next</div>
             <p className="text-sm text-neutral-900 line-clamp-2 leading-snug">
               {project.metadata.next_step}
@@ -343,11 +343,11 @@ function CompactProjectCard({
             <div className="flex items-center gap-2 flex-1">
               <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600"
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-900"
                   style={{ width: `${project.metadata.progress}%` }}
                 />
               </div>
-              <span className="font-bold text-orange-600 w-8 text-right">
+              <span className="font-bold text-blue-900 w-8 text-right">
                 {project.metadata.progress}%
               </span>
             </div>

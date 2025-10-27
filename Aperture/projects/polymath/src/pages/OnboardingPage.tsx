@@ -123,9 +123,9 @@ export function OnboardingPage() {
 
   if (isAnalyzing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-600 mx-auto mb-6"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-900 mx-auto mb-6"></div>
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">
             Analyzing your responses...
           </h2>
@@ -139,11 +139,11 @@ export function OnboardingPage() {
 
   if (analysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white py-12">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white py-12">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-100 mb-6">
-              <Check className="h-8 w-8 text-orange-600" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-6">
+              <Check className="h-8 w-8 text-blue-900" />
             </div>
             <h1 className="text-4xl font-bold text-neutral-900 mb-4">
               Your First Patterns
@@ -161,7 +161,7 @@ export function OnboardingPage() {
               </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.capabilities.map((cap, i) => (
-                  <span key={i} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                  <span key={i} className="px-3 py-1 bg-blue-100 text-blue-950 rounded-full text-sm font-medium">
                     {cap}
                   </span>
                 ))}
@@ -191,7 +191,7 @@ export function OnboardingPage() {
                 <ul className="space-y-2">
                   {analysis.patterns.map((pattern, i) => (
                     <li key={i} className="text-neutral-700 flex items-start gap-2">
-                      <span className="text-orange-600 mt-1">→</span>
+                      <span className="text-blue-900 mt-1">→</span>
                       {pattern}
                     </li>
                   ))}
@@ -200,9 +200,9 @@ export function OnboardingPage() {
             )}
 
             {/* First Insight */}
-            <div className="pro-card p-6 border-2 border-orange-200 bg-orange-50">
+            <div className="pro-card p-6 border-2 border-blue-200 bg-blue-50">
               <div className="flex items-start gap-3">
-                <Sparkles className="h-6 w-6 text-orange-600 flex-shrink-0 mt-1" />
+                <Sparkles className="h-6 w-6 text-blue-900 flex-shrink-0 mt-1" />
                 <div>
                   <h3 className="font-semibold text-neutral-900 mb-2">
                     💡 First Insight
@@ -224,7 +224,7 @@ export function OnboardingPage() {
               {analysis.graph_preview.nodes.map((node, i) => (
                 <div key={node.id} className="flex flex-col items-center">
                   <div className={`w-24 h-24 rounded-full flex items-center justify-center text-sm font-medium text-center p-2
-                    ${node.type === 'capability' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                    ${node.type === 'capability' ? 'bg-blue-100 text-blue-950' : 'bg-blue-100 text-blue-700'}`}>
                     {node.label}
                   </div>
                 </div>
@@ -254,11 +254,11 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 right-0 h-1 bg-neutral-200 z-50">
         <div
-          className="h-full bg-orange-600 transition-all duration-300"
+          className="h-full bg-blue-900 transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -292,7 +292,7 @@ export function OnboardingPage() {
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
                 placeholder={question.placeholder}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows={question.type === 'freeform' ? 6 : 3}
                 autoFocus
               />

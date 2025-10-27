@@ -63,7 +63,7 @@ export function InsightsPage() {
       <div className="min-h-screen py-12">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center">
-            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
             <p className="text-lg text-neutral-600">Synthesizing insights...</p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export function InsightsPage() {
         <div className="max-w-5xl mx-auto px-4">
           <Card className="pro-card">
             <CardContent className="py-16 text-center">
-              <Sparkles className="h-16 w-16 text-orange-400 mx-auto mb-4" />
+              <Sparkles className="h-16 w-16 text-blue-400 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-neutral-900 mb-2">
                 Building Your Insights
               </h2>

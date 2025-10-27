@@ -266,7 +266,7 @@ export function ReaderPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-900" />
       </div>
     )
   }
@@ -298,7 +298,7 @@ export function ReaderPage() {
         {/* Progress bar */}
         <div className="h-1 bg-neutral-200 dark:bg-neutral-800">
           <div
-            className="h-full bg-orange-600 transition-all duration-300"
+            className="h-full bg-blue-900 transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>

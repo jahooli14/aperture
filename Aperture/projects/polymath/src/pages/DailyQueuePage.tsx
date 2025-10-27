@@ -133,8 +133,8 @@ export function DailyQueuePage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'hot_streak': return 'from-orange-500 to-red-500'
-      case 'needs_attention': return 'from-amber-500 to-orange-500'
+      case 'hot_streak': return 'from-blue-500 to-red-500'
+      case 'needs_attention': return 'from-amber-500 to-blue-500'
       case 'fresh_energy': return 'from-purple-500 to-pink-500'
       default: return 'from-gray-400 to-gray-500'
     }
@@ -160,7 +160,7 @@ export function DailyQueuePage() {
           <Card className="pro-card">
             <CardContent className="py-24">
               <div className="text-center text-neutral-600">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
                 <p className="text-lg">Loading your queue...</p>
               </div>
             </CardContent>
@@ -176,7 +176,7 @@ export function DailyQueuePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <Zap className="h-12 w-12 text-orange-600" />
+            <Zap className="h-12 w-12 text-blue-900" />
           </div>
           <h1 className="text-4xl font-bold mb-3 text-neutral-900">
             Today's Focus
@@ -190,12 +190,12 @@ export function DailyQueuePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Context Bar */}
         {context && (
-          <Card className="mb-8 border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+          <Card className="mb-8 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-orange-600" />
+                    <Clock className="h-5 w-5 text-blue-900" />
                     <span className="font-medium">
                       {context.available_time === 'quick' && 'Quick (<30 min)'}
                       {context.available_time === 'moderate' && 'Moderate (30 min - 2 hours)'}
@@ -203,13 +203,13 @@ export function DailyQueuePage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Battery className="h-5 w-5 text-orange-600" />
+                    <Battery className="h-5 w-5 text-blue-900" />
                     <span className="font-medium">
                       {formatEnergy(context.current_energy)} energy
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-orange-600" />
+                    <MapPin className="h-5 w-5 text-blue-900" />
                     <span className="font-medium">
                       {context.available_context.join(', ') || 'Desk'}
                     </span>
@@ -351,7 +351,7 @@ export function DailyQueuePage() {
             <CardContent className="py-16">
               <div className="max-w-2xl mx-auto text-center">
                 <div className="inline-flex items-center justify-center mb-4">
-                  <Zap className="h-16 w-16 text-orange-600" />
+                  <Zap className="h-16 w-16 text-blue-900" />
                 </div>
                 <h3 className="text-2xl font-bold mb-4 text-neutral-900">
                   {totalProjects === 0 ? 'No active projects yet' : 'Nothing to work on right now'}
@@ -413,7 +413,7 @@ export function DailyQueuePage() {
                     </div>
 
                     {/* Match Reason */}
-                    <div className="mb-4 p-3 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-200">
+                    <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-amber-50 rounded-lg border border-blue-200">
                       <p className="text-sm font-medium text-neutral-800">
                         {score.match_reason}
                       </p>
@@ -428,7 +428,7 @@ export function DailyQueuePage() {
                         </div>
                         <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all"
+                            className="h-full bg-gradient-to-r from-blue-500 to-amber-500 transition-all"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
@@ -437,7 +437,7 @@ export function DailyQueuePage() {
 
                     {/* Next Step */}
                     {nextStep && (
-                      <div className="mb-4 p-4 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg">
+                      <div className="mb-4 p-4 bg-gradient-to-r from-blue-500 to-amber-500 rounded-lg">
                         <p className="text-sm font-medium text-white mb-1">Next Step</p>
                         <p className="text-white font-semibold">{nextStep}</p>
                       </div>
@@ -572,8 +572,8 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                   onClick={() => setAvailableTime(option.value as any)}
                   className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                     availableTime === option.value
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 hover:border-orange-300'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
                   {option.label}
@@ -598,8 +598,8 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                   onClick={() => setCurrentEnergy(option.value as any)}
                   className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                     currentEnergy === option.value
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-gray-200 hover:border-orange-300'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
                   {option.label}
@@ -620,8 +620,8 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                   onClick={() => toggleContext(ctx)}
                   className={`p-3 rounded-lg border-2 transition-all ${
                     availableContext.includes(ctx)
-                      ? 'border-orange-500 bg-orange-50 font-medium'
-                      : 'border-gray-200 hover:border-orange-300'
+                      ? 'border-blue-500 bg-blue-50 font-medium'
+                      : 'border-gray-200 hover:border-blue-300'
                   }`}
                 >
                   {ctx.charAt(0).toUpperCase() + ctx.slice(1)}

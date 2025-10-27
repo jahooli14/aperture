@@ -154,7 +154,7 @@ export function SuggestionsPage() {
           <button
             onClick={handleSynthesize}
             disabled={synthesizing}
-            className="px-6 py-2.5 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-950 transition-colors shadow-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {synthesizing ? (
               <>
@@ -172,7 +172,7 @@ export function SuggestionsPage() {
         {/* Centered header content below button */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <Sparkles className="h-12 w-12 text-orange-600" />
+            <Sparkles className="h-12 w-12 text-blue-900" />
           </div>
           <h1 className="text-4xl font-bold mb-3 text-neutral-900">
             Project Suggestions
@@ -186,7 +186,7 @@ export function SuggestionsPage() {
           <div className="flex justify-center mt-4">
             <div className="w-[300px] h-2 bg-neutral-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500 ease-out"
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-900 transition-all duration-500 ease-out"
                 style={{ width: `${Math.min(progress, 100)}%` }}
               />
             </div>
@@ -210,8 +210,8 @@ export function SuggestionsPage() {
                 onClick={() => setFilter(key as typeof filter)}
                 className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                   filter === key
-                    ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
                 }`}
               >
                 {label}
@@ -233,7 +233,7 @@ export function SuggestionsPage() {
           <Card className="pro-card">
             <CardContent className="py-24">
               <div className="text-center">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
                 <p className="text-lg text-neutral-600">Loading suggestions...</p>
               </div>
             </CardContent>
@@ -245,7 +245,7 @@ export function SuggestionsPage() {
               <div className="max-w-3xl mx-auto">
                 <div className="text-center mb-12">
                   <div className="inline-flex items-center justify-center mb-6">
-                    <Sparkles className="h-16 w-16 text-orange-600" />
+                    <Sparkles className="h-16 w-16 text-blue-900" />
                   </div>
                   <h3 className="text-3xl font-bold text-neutral-900 mb-4">Ready to See the Magic?</h3>
                   <p className="text-lg text-neutral-600 max-w-2xl mx-auto mb-6">
@@ -253,8 +253,8 @@ export function SuggestionsPage() {
                   </p>
 
                   {/* Highlight Generate Ideas button */}
-                  <div className="inline-block bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-2xl p-8 mb-8 animate-pulse-subtle">
-                    <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide mb-3">Click the button above ↗</p>
+                  <div className="inline-block bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-200 rounded-2xl p-8 mb-8 animate-pulse-subtle">
+                    <p className="text-sm font-semibold text-blue-900 uppercase tracking-wide mb-3">Click the button above ↗</p>
                     <p className="text-2xl font-bold text-neutral-900 mb-2">Generate Ideas</p>
                     <p className="text-sm text-neutral-600">Watch AI synthesize your thoughts into project suggestions in real-time</p>
                   </div>
@@ -263,7 +263,7 @@ export function SuggestionsPage() {
                 {/* How it works */}
                 <div className="grid md:grid-cols-3 gap-6 mb-12">
                   <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Brain className="h-6 w-6 text-white" />
                     </div>
                     <h4 className="font-bold text-neutral-900 mb-2">1. Analyze Thoughts</h4>
@@ -273,7 +273,7 @@ export function SuggestionsPage() {
                   </div>
 
                   <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Sparkles className="h-6 w-6 text-white" />
                     </div>
                     <h4 className="font-bold text-neutral-900 mb-2">2. Find Connections</h4>
@@ -283,7 +283,7 @@ export function SuggestionsPage() {
                   </div>
 
                   <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-200">
-                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                       <Lightbulb className="h-6 w-6 text-white" />
                     </div>
                     <h4 className="font-bold text-neutral-900 mb-2">3. Generate Projects</h4>

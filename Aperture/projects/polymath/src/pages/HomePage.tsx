@@ -195,10 +195,10 @@ export function HomePage() {
             {/* Thoughts Stat */}
             <Link
               to="/memories"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
+              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
             >
               <div className="flex items-center justify-between mb-3">
-                <Brain className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+                <Brain className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
                 <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <div className="text-3xl font-bold text-neutral-900 mb-1">
@@ -212,10 +212,10 @@ export function HomePage() {
             {/* New Suggestions Stat */}
             <Link
               to="/suggestions"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
+              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
             >
               <div className="flex items-center justify-between mb-3">
-                <Sparkles className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+                <Sparkles className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
                 <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <div className="text-3xl font-bold text-neutral-900 mb-1">
@@ -246,10 +246,10 @@ export function HomePage() {
             {/* Active Projects Stat */}
             <Link
               to="/projects"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-orange-200"
+              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
             >
               <div className="flex items-center justify-between mb-3">
-                <Rocket className="h-8 w-8 text-orange-600" strokeWidth={1.5} />
+                <Rocket className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
                 <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <div className="text-3xl font-bold text-neutral-900 mb-1">
@@ -276,7 +276,7 @@ export function HomePage() {
                 </h2>
                 <Link
                   to="/suggestions"
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
                 >
                   View all →
                 </Link>
@@ -287,7 +287,7 @@ export function HomePage() {
                     <button
                       key={suggestion.id}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="pro-card p-4 w-full text-left hover-lift border-2 border-transparent hover:border-orange-200"
+                      className="pro-card p-4 w-full text-left hover-lift border-2 border-transparent hover:border-blue-200"
                     >
                       <h3 className="font-medium text-neutral-900 mb-1">
                         {suggestion.title}
@@ -299,7 +299,7 @@ export function HomePage() {
                   ))
                 ) : (
                   <div className="pro-card p-8 text-center">
-                    <Sparkles className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                    <Sparkles className="h-12 w-12 text-blue-400 mx-auto mb-3" />
                     <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Ideas?</p>
                     <p className="text-sm text-neutral-600 mb-4">
                       {memories.length > 0
@@ -327,7 +327,7 @@ export function HomePage() {
                 </h2>
                 <Link
                   to="/memories"
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
                 >
                   View all →
                 </Link>
@@ -338,7 +338,7 @@ export function HomePage() {
                     <Link
                       key={memory.id}
                       to="/memories"
-                      className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-orange-200"
+                      className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-blue-200"
                     >
                       <div className="text-sm text-neutral-900 line-clamp-3">
                         {memory.body || memory.title}
@@ -350,7 +350,7 @@ export function HomePage() {
                   ))
                 ) : (
                   <div className="pro-card p-8 text-center">
-                    <Brain className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                    <Brain className="h-12 w-12 text-blue-400 mx-auto mb-3" />
                     <p className="text-neutral-900 font-semibold mb-2">Start Your Knowledge Graph</p>
                     <p className="text-sm text-neutral-600 mb-4">
                       Capture your thoughts, skills, and interests via voice notes or text
@@ -375,7 +375,7 @@ export function HomePage() {
                 </h2>
                 <Link
                   to="/projects"
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
                 >
                   View all →
                 </Link>
@@ -386,13 +386,13 @@ export function HomePage() {
                     <Link
                       key={project.id}
                       to="/projects"
-                      className="pro-card p-5 hover-lift border-2 border-transparent hover:border-orange-200"
+                      className="pro-card p-5 hover-lift border-2 border-transparent hover:border-blue-200"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-neutral-900 flex-1">
                           {project.title}
                         </h3>
-                        <Rocket className="h-5 w-5 text-orange-600 flex-shrink-0 ml-2" />
+                        <Rocket className="h-5 w-5 text-blue-900 flex-shrink-0 ml-2" />
                       </div>
                       <p className="text-sm text-neutral-600 line-clamp-2">
                         {project.description}
@@ -402,7 +402,7 @@ export function HomePage() {
                 </div>
               ) : (
                 <div className="pro-card p-8 text-center">
-                  <Rocket className="h-12 w-12 text-orange-400 mx-auto mb-3" />
+                  <Rocket className="h-12 w-12 text-blue-400 mx-auto mb-3" />
                   <p className="text-neutral-900 font-semibold mb-2">Build Your First Project</p>
                   <p className="text-sm text-neutral-600 mb-4">
                     Generate ideas, find what sparks, then build with progress tracking

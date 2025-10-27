@@ -57,12 +57,12 @@ export function SuggestionDetailDialog({
         <DialogHeader>
           <div className="flex items-start gap-3 mb-2">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="px-4 py-1.5 rounded-md bg-orange-100 text-orange-700 text-sm font-semibold border border-orange-200 flex items-center gap-1">
+              <div className="px-4 py-1.5 rounded-md bg-blue-100 text-blue-950 text-sm font-semibold border border-blue-200 flex items-center gap-1">
                 <Lightbulb className="h-4 w-4" />
                 {suggestion.total_points}pts
               </div>
               {suggestion.is_wildcard && (
-                <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
+                <Badge variant="secondary" className="bg-blue-100 text-blue-950 border-blue-200">
                   <Sparkles className="h-3 w-3 mr-1" />
                   Wildcard
                 </Badge>
@@ -82,9 +82,9 @@ export function SuggestionDetailDialog({
 
         <div className="space-y-6 py-4">
           {/* Why This Project Is Good */}
-          <div className="space-y-3 bg-gradient-to-br from-orange-50 to-amber-50 p-5 rounded-xl border border-orange-200">
+          <div className="space-y-3 bg-gradient-to-br from-blue-50 to-amber-50 p-5 rounded-xl border border-blue-200">
             <h3 className="text-base font-bold text-neutral-900 flex items-center gap-2">
-              <Lightbulb className="h-5 w-5 text-orange-600" />
+              <Lightbulb className="h-5 w-5 text-blue-900" />
               Why This Project Is Good For You
             </h3>
 

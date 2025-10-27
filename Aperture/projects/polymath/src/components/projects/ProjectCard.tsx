@@ -54,7 +54,7 @@ export function ProjectCard({
   const typeConfig: Record<string, { label: string; color: string }> = {
     personal: { label: 'Personal', color: 'text-pink-700 bg-pink-100 border-pink-300' },
     technical: { label: 'Technical', color: 'text-cyan-700 bg-cyan-100 border-cyan-300' },
-    meta: { label: 'Meta', color: 'text-orange-700 bg-orange-100 border-orange-300' },
+    meta: { label: 'Meta', color: 'text-blue-950 bg-blue-100 border-blue-300' },
     creative: { label: 'Creative', color: 'text-purple-700 bg-purple-100 border-purple-300' },
     learning: { label: 'Learning', color: 'text-blue-700 bg-blue-100 border-blue-300' }
   }
@@ -83,7 +83,7 @@ export function ProjectCard({
                 onClick={() => onEdit(project.id)}
                 variant="ghost"
                 size="sm"
-                className="h-11 w-11 p-0 text-gray-400 hover:text-orange-600 hover:bg-orange-50 touch-manipulation"
+                className="h-11 w-11 p-0 text-gray-400 hover:text-blue-900 hover:bg-blue-50 touch-manipulation"
                 aria-label="Edit project"
               >
                 <Edit className="h-5 w-5" />
@@ -112,7 +112,7 @@ export function ProjectCard({
       <CardContent className="flex-1 space-y-4">
         {/* Next Step - Prominent Display */}
         {project.metadata?.next_step && (
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-xl p-4">
+          <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-200 rounded-xl p-4">
             <div className="text-xs font-semibold text-orange-800 uppercase tracking-wide mb-2">
               Next Step
             </div>
@@ -127,11 +127,11 @@ export function ProjectCard({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-gray-600 uppercase tracking-wide">Progress</span>
-              <span className="font-bold text-orange-600">{project.metadata.progress}%</span>
+              <span className="font-bold text-blue-900">{project.metadata.progress}%</span>
             </div>
             <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 transition-all duration-500"
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-900 transition-all duration-500"
                 style={{ width: `${project.metadata.progress}%` }}
               />
             </div>
@@ -139,7 +139,7 @@ export function ProjectCard({
         )}
 
         <div className="flex items-center gap-2 text-sm text-neutral-600">
-          <Clock className="h-4 w-4 text-orange-600" />
+          <Clock className="h-4 w-4 text-blue-900" />
           <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold text-neutral-900">{relativeTime}</span></span>
         </div>
 

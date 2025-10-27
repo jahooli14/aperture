@@ -33,7 +33,7 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
             "fixed z-40",
             "bottom-24 md:bottom-6 right-4 md:right-6",
             "h-14 w-14 md:h-16 md:w-16 rounded-full",
-            "bg-gradient-to-br from-orange-500 to-orange-600",
+            "bg-gradient-to-br from-blue-500 to-blue-900",
             "text-white shadow-lg hover:shadow-xl",
             "flex items-center justify-center",
             "transition-all duration-300",

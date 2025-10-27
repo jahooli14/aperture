@@ -82,8 +82,8 @@ export function BuildProjectDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Hammer className="h-5 w-5 text-orange-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Hammer className="h-5 w-5 text-blue-900" />
               </div>
               <DialogTitle>Build This Project</DialogTitle>
             </div>
@@ -104,7 +104,7 @@ export function BuildProjectDialog({
                 <span className="font-medium">{Math.round(suggestion.feasibility_score * 100)}% Doable</span>
               </div>
               <div className="flex items-center gap-1 text-sm">
-                <Sparkles className="h-4 w-4 text-orange-600" />
+                <Sparkles className="h-4 w-4 text-blue-900" />
                 <span className="font-medium">{Math.round(suggestion.interest_score * 100)}% Exciting</span>
               </div>
             </div>

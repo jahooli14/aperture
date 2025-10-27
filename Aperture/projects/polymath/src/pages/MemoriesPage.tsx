@@ -247,7 +247,7 @@ export function MemoriesPage() {
         {/* Centered header content */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <Brain className="h-12 w-12 text-orange-600" />
+            <Brain className="h-12 w-12 text-blue-900" />
           </div>
           <h1 className="text-4xl font-bold mb-3 text-neutral-900">
             Thoughts
@@ -273,8 +273,8 @@ export function MemoriesPage() {
             onClick={() => setView('foundational')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'foundational'
-                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
             }`}
           >
             Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
@@ -284,8 +284,8 @@ export function MemoriesPage() {
             onClick={() => setView('all')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'all'
-                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
             }`}
           >
             My Thoughts ({memories.length})
@@ -295,8 +295,8 @@ export function MemoriesPage() {
             onClick={() => setView('resurfacing')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'resurfacing'
-                ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
             }`}
           >
             Resurface ({resurfacing.length})
@@ -305,10 +305,10 @@ export function MemoriesPage() {
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-          <Card className="mb-8 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+          <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50">
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Brain className="h-5 w-5 text-orange-600" />
+                <Brain className="h-5 w-5 text-blue-900" />
                 Demo Thoughts - Cross-Domain Examples
               </h3>
               <p className="text-neutral-600 leading-relaxed mb-3">
@@ -360,7 +360,7 @@ export function MemoriesPage() {
               <Card className="pro-card">
                 <CardContent className="py-24">
                   <div className="text-center text-neutral-600">
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
                     <p className="text-lg">Loading memories...</p>
                   </div>
                 </CardContent>
@@ -374,7 +374,7 @@ export function MemoriesPage() {
           <Card className="pro-card">
             <CardContent className="py-24">
               <div className="text-center text-neutral-600">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
                 <p className="text-lg">Loading memories...</p>
               </div>
             </CardContent>
@@ -389,7 +389,7 @@ export function MemoriesPage() {
                 {view === 'all' ? (
                   <>
                     <div className="inline-flex items-center justify-center mb-4">
-                      <Brain className="h-16 w-16 text-orange-600" />
+                      <Brain className="h-16 w-16 text-blue-900" />
                     </div>
                     <div>
                       <h3 className="text-2xl font-bold mb-4 text-neutral-900">Start Capturing Your Thoughts</h3>
@@ -402,7 +402,7 @@ export function MemoriesPage() {
                       <h4 className="font-bold text-neutral-900 mb-6 text-lg">How to Capture Thoughts</h4>
                       <div className="space-y-4 text-left">
                         <div className="flex gap-4">
-                          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+                          <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
                             <span className="text-white font-bold text-sm">1</span>
                           </div>
                           <div>
@@ -411,7 +411,7 @@ export function MemoriesPage() {
                           </div>
                         </div>
                         <div className="flex gap-4">
-                          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+                          <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
                             <span className="text-white font-bold text-sm">2</span>
                           </div>
                           <div>
@@ -420,7 +420,7 @@ export function MemoriesPage() {
                           </div>
                         </div>
                         <div className="flex gap-4">
-                          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
+                          <div className="bg-gradient-to-r from-blue-500 to-blue-900 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1">
                             <span className="text-white font-bold text-sm">3</span>
                           </div>
                           <div>
@@ -444,7 +444,7 @@ export function MemoriesPage() {
                 ) : (
                   <>
                     <div className="inline-flex items-center justify-center mb-4">
-                      <Zap className="h-16 w-16 text-orange-600" />
+                      <Zap className="h-16 w-16 text-blue-900" />
                     </div>
                     <h3 className="text-2xl font-bold text-neutral-900">Nothing to review right now</h3>
                     <p className="text-lg text-neutral-600">
@@ -472,8 +472,8 @@ export function MemoriesPage() {
                   onClick={() => setMemoryView(key as typeof memoryView)}
                   className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                     memoryView === key
-                      ? 'bg-orange-600 text-white shadow-md hover:bg-orange-700'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                      ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
                   }`}
                 >
                   {label}
@@ -517,7 +517,7 @@ export function MemoriesPage() {
               <>
                 {loadingClusters ? (
                   <div className="text-center py-12">
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-orange-600 border-r-transparent mb-4"></div>
+                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent mb-4"></div>
                     <p className="text-lg text-gray-600">Analyzing themes...</p>
                   </div>
                 ) : clusters.length > 0 ? (

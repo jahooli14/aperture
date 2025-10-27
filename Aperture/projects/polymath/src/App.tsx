@@ -4,7 +4,7 @@ import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { cn } from './lib/utils'
-import { Sparkles, Home, Brain, BookOpen, Rocket, Calendar, TrendingUp, Loader2 } from 'lucide-react'
+import { Sparkles, LayoutGrid, Layers, FileText, FolderKanban, BarChart3, Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
@@ -28,7 +28,7 @@ const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ defa
 function PageLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+      <Loader2 className="h-8 w-8 animate-spin text-blue-900" />
     </div>
   )
 }
@@ -39,11 +39,11 @@ function Navigation() {
   const isActive = (path: string) => location.pathname === path
 
   const navLinks = [
-    { path: '/', label: 'Home', icon: Home },
-    { path: '/memories', label: 'Thoughts', icon: Brain },
-    { path: '/projects', label: 'Projects', icon: Rocket },
-    { path: '/reading', label: 'Reading', icon: BookOpen },
-    { path: '/insights', label: 'Insights', icon: TrendingUp }
+    { path: '/', label: 'Home', icon: LayoutGrid },
+    { path: '/memories', label: 'Thoughts', icon: Layers },
+    { path: '/projects', label: 'Projects', icon: FolderKanban },
+    { path: '/reading', label: 'Reading', icon: FileText },
+    { path: '/insights', label: 'Insights', icon: BarChart3 }
   ]
 
   return (
@@ -55,7 +55,7 @@ function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center gap-2.5 group transition-smooth">
-              <Sparkles className="h-5 w-5 text-orange-600" />
+              <Sparkles className="h-5 w-5 text-blue-900" />
               <span className="text-xl font-semibold tracking-tight text-neutral-900">
                 Polymath
               </span>
@@ -69,7 +69,7 @@ function Navigation() {
                   className={cn(
                     "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap flex items-center gap-2",
                     isActive(path)
-                      ? "text-orange-600 bg-orange-50"
+                      ? "text-blue-900 bg-blue-50"
                       : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50"
                   )}
                 >
@@ -94,7 +94,7 @@ function Navigation() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-1.5 py-3 px-2 transition-all duration-200 min-h-[68px]",
                   "active:scale-95 touch-manipulation select-none",
-                  active ? "text-orange-600" : "text-neutral-600"
+                  active ? "text-blue-900" : "text-neutral-600"
                 )}
               >
                 <Icon className={cn(

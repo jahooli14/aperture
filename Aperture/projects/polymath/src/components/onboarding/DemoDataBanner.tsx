@@ -67,7 +67,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
 
   if (showConfirm) {
     return (
-      <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-orange-500/95 border-b border-amber-600/20 shadow-lg">
+      <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-blue-500/95 border-b border-amber-600/20 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
@@ -84,7 +84,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
                 <button
                   onClick={handleClearDemoData}
                   disabled={isClearing}
-                  className="px-4 py-2 bg-white text-orange-600 rounded-lg font-medium hover:bg-amber-50 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-white text-blue-900 rounded-lg font-medium hover:bg-amber-50 transition-colors disabled:opacity-50"
                 >
                   {isClearing ? 'Clearing...' : 'Yes, Clear Everything'}
                 </button>
@@ -103,7 +103,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
   }
 
   return (
-    <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-orange-500/95 border-b border-amber-600/20 shadow-lg">
+    <div className="sticky top-16 z-40 backdrop-blur-xl bg-gradient-to-r from-amber-500/95 to-blue-500/95 border-b border-amber-600/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
@@ -120,7 +120,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={onDismiss}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-orange-600 rounded-lg font-medium hover:bg-amber-50 transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-lg font-medium hover:bg-amber-50 transition-colors"
               >
                 <Eye className="h-4 w-4" />
                 Keep Exploring

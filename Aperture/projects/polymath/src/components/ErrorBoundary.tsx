@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-purple-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 rounded-full">
@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={this.handleReset}
-              className="w-full px-4 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-950 transition-colors inline-flex items-center justify-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               Return to Home

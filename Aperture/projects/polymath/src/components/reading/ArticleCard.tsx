@@ -95,7 +95,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group bg-white border border-neutral-200 rounded-xl p-4 sm:p-5 hover:border-orange-300 hover:shadow-md transition-all cursor-pointer"
+      className="group bg-white border border-neutral-200 rounded-xl p-4 sm:p-5 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -142,7 +142,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
           </div>
           <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-orange-600 transition-all duration-300"
+              className="h-full bg-blue-900 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>

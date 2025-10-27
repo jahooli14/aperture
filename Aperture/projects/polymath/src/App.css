@@ -4,35 +4,35 @@
 
 @layer base {
   :root {
-    /* Sophisticated muted orange palette */
+    /* Sophisticated navy blue palette */
     --background: 0 0% 100%;
-    --foreground: 20 14% 10%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 20 14% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Muted professional orange */
-    --primary: 24 70% 50%;
+    /* Professional navy blue */
+    --primary: 222 47% 25%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 20 10% 96%;
-    --secondary-foreground: 20 14% 10%;
+    --secondary: 214 32% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 20 10% 96%;
-    --muted-foreground: 20 8% 46%;
+    --muted: 214 32% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 24 30% 95%;
-    --accent-foreground: 24 70% 50%;
+    --accent: 214 32% 95%;
+    --accent-foreground: 222 47% 25%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 20 10% 88%;
-    --input: 20 10% 88%;
-    --ring: 24 70% 50%;
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    --ring: 222 47% 25%;
 
     --radius: 0.75rem;
   }
@@ -61,7 +61,7 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    background: radial-gradient(circle at 30% 20%, rgba(237, 120, 77, 0.03) 0%, transparent 50%);
+    background: radial-gradient(circle at 30% 20%, rgba(30, 58, 138, 0.03) 0%, transparent 50%);
     z-index: 0;
   }
 
@@ -127,7 +127,7 @@
   /* Professional gradient text */
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(120deg, #e67744 0%, #e88d61 100%);
+    background-image: linear-gradient(120deg, #1e3a8a 0%, #3b82f6 100%);
     font-weight: 600;
   }
 
@@ -136,11 +136,11 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold;
     padding: 0 24px;
     min-height: 48px;
-    background: linear-gradient(135deg, #e67744 0%, #ea8857 50%, #e88d61 100%);
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
     color: white;
     box-shadow:
-      0 2px 4px rgba(230, 119, 68, 0.15),
-      0 4px 12px rgba(230, 119, 68, 0.1),
+      0 2px 4px rgba(30, 58, 138, 0.15),
+      0 4px 12px rgba(30, 58, 138, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-size: 1rem;
@@ -149,17 +149,17 @@
 
   .btn-primary:hover {
     box-shadow:
-      0 4px 12px rgba(230, 119, 68, 0.3),
-      0 8px 24px rgba(230, 119, 68, 0.15),
+      0 4px 12px rgba(30, 58, 138, 0.3),
+      0 8px 24px rgba(30, 58, 138, 0.15),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
-    background: linear-gradient(135deg, #e47039 0%, #e8834d 50%, #e68756 100%);
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
   }
 
   .btn-primary:active {
     transform: translateY(0) scale(0.95);
     box-shadow:
-      0 1px 2px rgba(230, 119, 68, 0.2),
+      0 1px 2px rgba(30, 58, 138, 0.2),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
@@ -169,7 +169,7 @@
     padding: 0 24px;
     min-height: 48px;
     background: white;
-    color: #e67744;
+    color: #1e3a8a;
     border: 2px solid #e5e5e5;
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.05),
@@ -181,10 +181,10 @@
 
   .btn-secondary:hover {
     background: #fafafa;
-    border-color: #e67744;
+    border-color: #1e3a8a;
     box-shadow:
-      0 2px 8px rgba(230, 119, 68, 0.15),
-      0 4px 16px rgba(230, 119, 68, 0.08),
+      0 2px 8px rgba(30, 58, 138, 0.15),
+      0 4px 16px rgba(30, 58, 138, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
     transform: translateY(-2px);
   }
@@ -199,16 +199,16 @@
   /* Subtle accent line */
   .accent-line {
     @apply absolute top-0 left-0 right-0 h-px;
-    background: linear-gradient(90deg, transparent 0%, #e67744 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, #1e3a8a 50%, transparent 100%);
     opacity: 0.3;
   }
 
   /* Badge */
   .badge {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
-    background: rgba(230, 119, 68, 0.08);
-    color: #e67744;
-    border: 1px solid rgba(230, 119, 68, 0.15);
+    background: rgba(30, 58, 138, 0.08);
+    color: #1e3a8a;
+    border: 1px solid rgba(30, 58, 138, 0.15);
   }
 
   /* Smooth transitions */
@@ -246,7 +246,7 @@
 
   /* Focus ring */
   .focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-900 focus-visible:ring-offset-2;
   }
 
   /* Stagger animations */
@@ -309,7 +309,7 @@
   /* Professional input - Premium */
   .input-pro {
     @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;
-    @apply focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none;
+    @apply focus:border-blue-900 focus:ring-4 focus:ring-blue-900/10 outline-none;
     @apply transition-all duration-300;
     font-size: 0.9375rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -322,7 +322,7 @@
   /* Select pro - Premium */
   .select-pro {
     @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;
-    @apply focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none;
+    @apply focus:border-blue-900 focus:ring-4 focus:ring-blue-900/10 outline-none;
     @apply transition-all duration-300;
     font-size: 0.9375rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);

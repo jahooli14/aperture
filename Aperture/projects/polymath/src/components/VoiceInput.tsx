@@ -35,7 +35,7 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false 
         className={`w-full py-4 rounded-lg border-2 flex items-center justify-center gap-3 transition-smooth ${
           isRecording
             ? 'border-red-500 bg-red-50 text-red-700 hover:bg-red-100'
-            : 'border-neutral-300 bg-white text-neutral-700 hover:border-orange-500 hover:bg-orange-50'
+            : 'border-neutral-300 bg-white text-neutral-700 hover:border-blue-500 hover:bg-blue-50'
         }`}
       >
         {isProcessing ? (

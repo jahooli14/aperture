@@ -47,12 +47,12 @@ export function PullToRefresh({
           )}
         >
           {isRefreshing ? (
-            <Loader2 className="h-5 w-5 text-orange-600 animate-spin" />
+            <Loader2 className="h-5 w-5 text-blue-900 animate-spin" />
           ) : (
             <ArrowDown
               className={cn(
                 'h-5 w-5 transition-all duration-200',
-                isTriggered ? 'text-orange-600' : 'text-neutral-400'
+                isTriggered ? 'text-blue-900' : 'text-neutral-400'
               )}
               style={{ transform: `rotate(${rotation}deg)` }}
             />

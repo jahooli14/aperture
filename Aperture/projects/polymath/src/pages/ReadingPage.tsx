@@ -71,7 +71,7 @@ export function ReadingPage() {
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       <motion.div
-        className="bg-gradient-to-br from-orange-50 via-white to-purple-50 pb-20"
+        className="bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
@@ -92,7 +92,7 @@ export function ReadingPage() {
 
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="px-4 py-2 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2"
+              className="px-4 py-2 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-950 transition-colors shadow-sm inline-flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Save Article</span>
@@ -114,7 +114,7 @@ export function ReadingPage() {
                   onClick={() => handleTabChange(tab.key)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-colors whitespace-nowrap ${
                     activeTab === tab.key
-                      ? 'bg-orange-100 text-orange-700 border-2 border-orange-300'
+                      ? 'bg-blue-100 text-blue-950 border-2 border-blue-300'
                       : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                   }`}
                 >
@@ -132,7 +132,7 @@ export function ReadingPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         {loading && articles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 text-orange-600 animate-spin mb-4" />
+            <Loader2 className="h-8 w-8 text-blue-900 animate-spin mb-4" />
             <p className="text-neutral-600">Loading articles...</p>
           </div>
         ) : filteredArticles.length === 0 ? (
@@ -151,7 +151,7 @@ export function ReadingPage() {
             {activeTab === 'queue' && (
               <button
                 onClick={() => setShowSaveDialog(true)}
-                className="px-6 py-3 bg-orange-600 text-white rounded-full font-medium hover:bg-orange-700 transition-colors shadow-sm inline-flex items-center gap-2"
+                className="px-6 py-3 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-950 transition-colors shadow-sm inline-flex items-center gap-2"
               >
                 <Plus className="h-5 w-5" />
                 Save Your First Article

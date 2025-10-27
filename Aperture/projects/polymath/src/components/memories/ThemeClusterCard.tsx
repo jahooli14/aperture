@@ -9,7 +9,7 @@ export function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
   return (
     <button
       onClick={onClick}
-      className="group relative bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-orange-400 hover:shadow-lg transition-all duration-200 text-left w-full"
+      className="group relative bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-200 text-left w-full"
     >
       {/* Icon */}
       <div
@@ -52,7 +52,7 @@ export function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
 
       {/* Hover indicator */}
       <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 text-blue-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
       </div>

@@ -53,35 +53,35 @@ export function SuggestionCard({
     <Card
       className={`group h-full flex flex-col pro-card transition-smooth hover-lift cursor-pointer ${
         suggestion.is_wildcard
-          ? 'bg-orange-50/40'
+          ? 'bg-blue-50/40'
           : ''
       }`}
       onClick={handleMore}
     >
       {/* Subtle accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent opacity-40" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
 
       {/* Wildcard indicator */}
       {suggestion.is_wildcard && (
         <div className="absolute top-4 right-4">
-          <Sparkles className="h-5 w-5 text-orange-600" />
+          <Sparkles className="h-5 w-5 text-blue-900" />
         </div>
       )}
 
       <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="px-4 py-1.5 rounded-md bg-orange-100 text-orange-700 text-sm font-semibold border border-orange-200 flex items-center gap-1">
+            <div className="px-4 py-1.5 rounded-md bg-blue-100 text-blue-950 text-sm font-semibold border border-blue-200 flex items-center gap-1">
               <Lightbulb className="h-4 w-4" />
               {suggestion.total_points}pts
             </div>
             {suggestion.is_wildcard && (
-              <div className="px-3 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-medium border border-orange-200">
+              <div className="px-3 py-1 rounded-md bg-blue-100 text-blue-950 text-xs font-medium border border-blue-200">
                 Wildcard
               </div>
             )}
             {isCreative && !suggestion.is_wildcard && (
-              <div className="px-3 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-medium border border-orange-200">
+              <div className="px-3 py-1 rounded-md bg-blue-100 text-blue-950 text-xs font-medium border border-blue-200">
                 Creative
               </div>
             )}
