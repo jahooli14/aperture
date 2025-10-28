@@ -36,6 +36,7 @@
     "@types/formidable": "^3.4.6",
     "@use-gesture/react": "^10.3.1",
     "capacitor-voice-recorder": "^7.0.6",
+    "d3-force-3d": "^3.0.6",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",

@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Play, Pause, Mic, MicOff, Sparkles, Calendar, Zap, Wand2, Eye, Target } from 'lucide-react'
 import * as THREE from 'three'
+import * as d3 from 'd3-force-3d'
 
 interface GraphNode {
   id: string
@@ -114,19 +115,7 @@ export default function ConstellationView() {
           object.userData.pulseGlow.scale.setScalar(1 + pulse * 0.2)
         }
 
-        if (object.userData.trail) {
-          // Animate comet trails
-          const positions = object.userData.trail.geometry.attributes.position.array
-          const phase = object.userData.trailPhase + time * 2
-
-          for (let i = 0; i < positions.length / 3; i++) {
-            const t = i / (positions.length / 3)
-            positions[i * 3 + 1] = Math.sin(phase + t * Math.PI * 4) * 2
-            positions[i * 3 + 2] = Math.cos(phase + t * Math.PI * 4) * 2
-          }
-
-          object.userData.trail.geometry.attributes.position.needsUpdate = true
-        }
+        // Removed comet trails - they looked cheap
       })
 
       animationFrameId = requestAnimationFrame(animate)
@@ -324,39 +313,6 @@ export default function ConstellationView() {
       ;(mesh as any).userData.pulsePhase = Math.random() * Math.PI * 2
     }
 
-    // For articles (comets), add streaming trail particles
-    if (node.type === 'article') {
-      const particleCount = 30
-      const particles = new Float32Array(particleCount * 3)
-
-      // Create trail particles behind the comet
-      for (let i = 0; i < particleCount; i++) {
-        const t = i / particleCount
-        particles[i * 3] = -t * 20 // Trail behind
-        particles[i * 3 + 1] = (Math.random() - 0.5) * 2
-        particles[i * 3 + 2] = (Math.random() - 0.5) * 2
-      }
-
-      const trailGeometry = new THREE.BufferGeometry()
-      trailGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3))
-
-      const trailMaterial = new THREE.PointsMaterial({
-        color: theme.glow,
-        size: 3,
-        transparent: true,
-        opacity: 0.6,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-      })
-
-      const trail = new THREE.Points(trailGeometry, trailMaterial)
-      mesh.add(trail)
-
-      // Store for animation
-      ;(mesh as any).userData.trail = trail
-      ;(mesh as any).userData.trailPhase = Math.random() * Math.PI * 2
-    }
-
     // For projects (planets), add orbital ring
     if (node.type === 'project') {
       const ringGeometry = new THREE.TorusGeometry(node.val / 2 * 1.5, 0.5, 8, 32)
@@ -399,6 +355,73 @@ export default function ConstellationView() {
     }
     return 0.6
   }, [demoMode])
+
+  // Custom clustering forces - make similar nodes attract
+  const customForces = useCallback(() => {
+    return {
+      // Type clustering - nodes of same type attract
+      cluster: d3.forceManyBody()
+        .strength((node: any) => {
+          // Same type nodes attract, different types repel slightly
+          return -30 // Base repulsion for all
+        })
+        .distanceMax(200),
+
+      // Category clustering - stronger attraction for same type
+      typeCluster: (alpha: number) => {
+        const nodes = graphRef.current?.graphData()?.nodes
+        if (!nodes) return
+
+        for (let i = 0; i < nodes.length; i++) {
+          const nodeA = nodes[i] as any
+          if (!nodeA.x || !nodeA.y || !nodeA.z) continue
+
+          for (let j = i + 1; j < nodes.length; j++) {
+            const nodeB = nodes[j] as any
+            if (!nodeB.x || !nodeB.y || !nodeB.z) continue
+
+            // Calculate distance
+            const dx = nodeB.x - nodeA.x
+            const dy = nodeB.y - nodeA.y
+            const dz = nodeB.z - nodeA.z
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1
+
+            // Same type = attraction, different = no force
+            if (nodeA.type === nodeB.type) {
+              const strength = alpha * 2 // Gentle attraction
+              const force = strength / distance
+
+              nodeA.vx! -= dx * force
+              nodeA.vy! -= dy * force
+              nodeA.vz! -= dz * force
+              nodeB.vx! += dx * force
+              nodeB.vy! += dy * force
+              nodeB.vz! += dz * force
+            }
+          }
+        }
+      }
+    }
+  }, [])
+
+  // Configure graph forces
+  const configureForces = useCallback((fg: any) => {
+    if (!fg) return
+
+    fg.d3Force('charge')
+      .strength(-120) // Stronger repulsion for spacing
+      .distanceMax(300)
+
+    fg.d3Force('link')
+      .distance(80) // Connected nodes stay closer
+      .strength(1.5) // Stronger links
+
+    fg.d3Force('center')
+      .strength(0.1) // Weak center pull
+
+    // Add custom type clustering force
+    fg.d3Force('typeCluster', customForces().typeCluster)
+  }, [customForces])
 
   // Voice commands
   const startVoiceControl = () => {
@@ -557,6 +580,7 @@ export default function ConstellationView() {
         showNavInfo={false}
         enableNodeDrag={true}
         enableNavigationControls={true}
+        onEngineStop={configureForces}
         onNodeClick={(node: any) => {
           // Navigate to the item
           // Use metadata which has the full object with correct ID
