@@ -307,6 +307,399 @@ Self-optimizing documentation system that updates daily with latest AI/Claude be
 
 ---
 
+## Autonomous Mode (Lazy Bear Workflow)
+
+> **Source**: Inspired by Claude Code's multi-agent swarm capabilities (2025)
+>
+> **Purpose**: Give initial prompt → step away → return when done
+
+### What Is Autonomous Mode?
+
+A workflow where you provide high-level requirements and Claude orchestrates multiple specialized agents to complete the entire feature without requiring your input until completion.
+
+**Key difference from normal mode**:
+- **Normal**: You shepherd each step, approve decisions, provide context
+- **Autonomous**: Claude spawns sub-agents, coordinates work, only surfaces when done/blocked/critical decision
+
+### When to Use Autonomous Mode
+
+**Trigger phrases**:
+- "Autonomous mode: [task]"
+- "Lazy bear: [task]"
+- "Build this without my input: [task]"
+- "Wake me when it's done: [task]"
+
+**Good candidates**:
+- Well-defined features with clear success criteria
+- Tasks following established patterns in codebase
+- Multi-step implementations (backend + frontend + tests)
+- Refactoring with existing test coverage
+- Bug fixes with clear reproduction steps
+
+**Bad candidates**:
+- Ambiguous requirements ("make it better")
+- Novel architectural decisions
+- Breaking changes requiring user judgment
+- Tasks touching production data without backups
+
+### How Autonomous Mode Works
+
+#### Phase 1: Analysis & Planning (2-5 min)
+```
+1. Spawn codebase-pattern-analyzer agent
+   → Maps all affected files
+   → Identifies dependencies
+   → Suggests parallelization strategy
+
+2. Create execution plan with:
+   → Parallel task breakdown
+   → Agent assignments
+   → Success criteria
+   → Rollback points
+   → Estimated completion time
+
+3. Present plan with approve/modify option
+```
+
+#### Phase 2: Autonomous Execution (varies)
+```
+4. Launch specialized agents in parallel:
+   → Backend implementation agent
+   → Frontend implementation agent
+   → Test creation agent
+   → Each works independently on assigned scope
+
+5. Coordinate agent handoffs:
+   → Agent A completes → outputs to Agent B
+   → Shared state via NEXT_SESSION.md
+   → Conflict resolution via git
+
+6. Iterative refinement without user input:
+   → Run tests → fix failures → re-run
+   → Build → fix errors → rebuild
+   → Lint → fix issues → re-lint
+   → Continue until all checks pass
+
+7. Integration validation:
+   → All agent outputs merged
+   → End-to-end tests run
+   → Success criteria verified
+```
+
+#### Phase 3: Completion Report
+```
+8. Surface to user with:
+   ✅ What was built
+   ✅ How it works (brief)
+   ✅ Tests passing (proof)
+   ✅ Deployment status
+   ✅ Next steps (if any)
+
+   OR
+
+   🚫 Blocked on: [specific issue]
+   🔍 Need decision: [A or B?]
+   📊 Progress so far: [what's done]
+```
+
+### Autonomous Mode Protocol
+
+**When user triggers autonomous mode:**
+
+```markdown
+### Autonomous Mode Activated
+
+**Task**: [user's request]
+
+**Phase 1: Analysis (running codebase-pattern-analyzer)**
+[2-3 min passes]
+
+**Execution Plan**:
+
+Agents to spawn:
+1. codebase-pattern-analyzer → identify affected files [2 min]
+2. general-purpose (backend) → implement API endpoints [15 min]
+3. general-purpose (frontend) → implement UI components [15 min]
+4. general-purpose (tests) → write integration tests [10 min]
+5. check-and-challenge → review everything [5 min]
+
+Parallel execution strategy:
+- Agents 2-4 run concurrently after Agent 1 completes
+- Agent 5 runs after Agents 2-4 complete
+
+Success criteria:
+- All tests passing
+- Build successful
+- Feature works end-to-end per requirements
+- No console errors
+
+Estimated time: 45-60 min
+Rollback: Current state saved to git stash
+
+[APPROVE / MODIFY / CANCEL]
+```
+
+**After approval:**
+
+```markdown
+**Phase 2: Autonomous Execution**
+
+Launching agents in parallel... (I'll work for ~45 min and report back)
+
+[Claude goes silent for 45 min, agents work autonomously]
+
+**Phase 3: Completion Report**
+
+✅ Feature complete: [name]
+
+What was built:
+- Backend: 3 new API endpoints in api/routes/[...]
+- Frontend: 2 new components in src/components/[...]
+- Tests: 12 integration tests (all passing)
+- Build: ✅ Successful
+- Deployment: ✅ Live on staging
+
+Verification:
+- npm test: ✅ 47/47 passing
+- npm run build: ✅ No errors
+- Manual testing: ✅ Feature works as specified
+
+Next steps:
+- Test on staging: [URL]
+- Deploy to production when ready: git push origin main
+```
+
+### Coordination Mechanisms
+
+#### 1. Agent Communication via NEXT_SESSION.md
+```markdown
+## Agent Coordination Log
+
+**Backend Agent** (15:23):
+- Created 3 API endpoints
+- Output contract: { data: Memory[], total: number }
+- Exports: `GET /api/memories`, `POST /api/memories`, `DELETE /api/memories/:id`
+- Next: Frontend Agent needs to call these with auth headers
+
+**Frontend Agent** (15:25):
+- Acknowledged backend contract
+- Implementing UI with auth headers
+- Progress: 2/3 components done
+- Blocked: None
+
+**Test Agent** (15:28):
+- Tests written for all 3 endpoints
+- 8/12 tests passing
+- 4 failing: auth issues
+- Coordinating with Backend Agent for fix
+```
+
+#### 2. Parallel Execution Pattern
+```typescript
+// Single message with multiple Task calls
+await Promise.all([
+  Task("Implement backend", { agent: "general-purpose", scope: "api/" }),
+  Task("Implement frontend", { agent: "general-purpose", scope: "src/components/" }),
+  Task("Write tests", { agent: "general-purpose", scope: "tests/" })
+])
+
+// Agents work concurrently, report back when done
+```
+
+#### 3. Background Process Monitoring
+```bash
+# Long-running tasks use background Bash
+npm test --watch  # Running in background (bash_id: abc123)
+
+# Claude checks periodically
+BashOutput(bash_id: "abc123")  # See latest results
+
+# Agents continue working while tests run
+```
+
+#### 4. State Checkpoints
+```bash
+# Before major changes
+git stash push -m "checkpoint: before autonomous execution"
+
+# If something goes wrong
+git stash pop  # Rollback to checkpoint
+```
+
+### Pre-Approved Operations (No User Input Needed)
+
+When in autonomous mode, these operations are **automatically approved**:
+
+1. **Testing & Fixing**
+   - Run tests → fix failures → re-run (up to 5 iterations)
+   - Build → fix errors → rebuild (up to 3 iterations)
+   - Lint → fix issues → re-lint (unlimited, automated)
+
+2. **File Operations**
+   - Create new files (following project conventions)
+   - Edit existing files (within task scope)
+   - Delete files (only if tests confirm safe)
+
+3. **Git Operations**
+   - Create checkpoints (stash before major changes)
+   - Commit completed work (with descriptive messages)
+   - **NOT approved**: Push to main (requires explicit user confirmation)
+
+4. **Agent Spawning**
+   - Launch specialized agents per execution plan
+   - Re-launch agents if initial attempt fails
+   - Max 10 total agent spawns per autonomous session
+
+5. **Iteration & Refinement**
+   - Fix failing tests (up to 5 cycles)
+   - Refactor for passing lints
+   - Optimize based on success criteria
+
+**Surface to user immediately if**:
+- Critical error (data loss risk)
+- Ambiguous requirement (multiple valid approaches)
+- External dependency missing (API key, service unavailable)
+- Success criteria can't be met (need requirement change)
+- Token budget >80% consumed
+- Time estimate exceeded by 2x
+
+### Token Budget Management
+
+**Autonomous sessions consume more tokens**. Guidelines:
+
+- **Estimate upfront**: Show expected token cost in execution plan
+- **Set limits**: Max 50K tokens per autonomous session
+- **Monitor continuously**: Alert at 40K (80%)
+- **Optimize agents**: Use targeted tools (Grep, not Read all files)
+- **Early exit**: Stop if approaching limit, report progress
+
+**Example**:
+```
+Token budget:
+- Phase 1 (Analysis): ~5K tokens
+- Phase 2 (Execution): ~35K tokens (5 agents × 7K each)
+- Phase 3 (Report): ~2K tokens
+- Buffer: ~8K tokens
+Total estimate: ~50K tokens
+
+Limit: 50K (I'll stop at 40K and report progress)
+```
+
+### Safety Guardrails
+
+**Autonomous mode includes automatic safeguards**:
+
+1. **Checkpoints before major changes** (git stash)
+2. **Test-driven validation** (must pass before proceeding)
+3. **Iteration limits** (max 5 test-fix cycles)
+4. **Time limits** (alert if 2x over estimate)
+5. **Token limits** (stop at 80% budget)
+6. **Read-only by default** (no production writes without explicit scope)
+
+### Example: Autonomous Feature Build
+
+**User input**:
+```
+Autonomous mode: Add social sharing for Polymath memories
+```
+
+**Claude response**:
+```markdown
+**Autonomous Mode Activated**
+
+**Task**: Add social sharing for Polymath memories
+
+**Phase 1: Analysis** (codebase-pattern-analyzer running...)
+
+**Execution Plan**:
+
+Agents:
+1. Pattern Analyzer → map affected files (3 min)
+2. Backend → sharing API + URL generation (12 min)
+3. Frontend → share button + modals (15 min)
+4. Tests → integration tests (8 min)
+5. Reviewer → validate everything (5 min)
+
+Strategy:
+- Agent 1 completes → Agents 2-4 run in parallel → Agent 5 reviews
+
+Success criteria:
+- Share button on memory cards
+- Generates shareable URL
+- Public view (no auth) shows memory
+- Tests pass (sharing + public view)
+- No private data leaked
+
+Files to change:
+- api/routes/memories.ts (new endpoint)
+- src/components/MemoryCard.tsx (share button)
+- src/pages/PublicMemory.tsx (new page)
+- tests/sharing.test.ts (new tests)
+
+Estimated time: 40-50 min
+Token budget: ~45K
+Rollback: git stash "checkpoint: before social sharing"
+
+[APPROVE / MODIFY / CANCEL]
+```
+
+**User**: `APPROVE`
+
+**Claude works for 45 min autonomously, then:**
+
+```markdown
+**Phase 3: Completion Report**
+
+✅ Social sharing feature complete
+
+What was built:
+- Backend: `POST /api/memories/:id/share` → generates public URL
+- Frontend: Share button on memory cards → copies URL to clipboard
+- Public view: `/share/:token` → displays memory (no auth required)
+- Tests: 11 integration tests → all passing
+
+Code changes:
+- api/routes/memories.ts:245 - New share endpoint
+- src/components/MemoryCard.tsx:67 - Share button added
+- src/pages/PublicMemory.tsx - New public view page
+- tests/sharing.test.ts - New test suite
+
+Verification:
+✅ npm test (58/58 passing)
+✅ npm run build (no errors)
+✅ Manual test: Share button works, URL accessible
+
+Security validation:
+✅ Public URLs don't expose private data
+✅ Token-based access (not guessable)
+✅ No user info leaked in public view
+
+Ready to deploy:
+git push origin main
+
+OR test on staging first:
+[staging URL will be available after push]
+```
+
+### Exiting Autonomous Mode
+
+**User can interrupt at any time**:
+- New message → Claude stops agents, reports current progress
+- Agents complete their current task, don't start new ones
+
+**Autonomous mode ends when**:
+- Success criteria met → completion report
+- Blocked on user decision → surface with options
+- Token budget at 80% → progress report + pause
+- Time exceeded 2x estimate → progress report + replan option
+
+**After autonomous session**:
+- NEXT_SESSION.md updated with full context
+- Git checkpoint available for rollback
+- All agent outputs logged for debugging
+
+---
+
 ## Tool Design Philosophy
 
 > **Source**: [Anthropic - Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)

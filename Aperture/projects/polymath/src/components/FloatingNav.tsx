@@ -1,190 +1,239 @@
 /**
- * Floating Navigation - Context-Aware Glassmorphic FAB
- * Replaces bottom navbar with modern radial menu navigation
+ * Floating Navigation - Comprehensive Multi-Layer Menu
+ * Replaces both bottom navbar and VoiceFAB
  */
 
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, FolderKanban, FileText, BarChart3, Sparkles, X } from 'lucide-react'
+import {
+  Layers,
+  FolderKanban,
+  FileText,
+  Home,
+  Mic,
+  Calendar,
+  Sparkles,
+  X
+} from 'lucide-react'
+import { VoiceInput } from './VoiceInput'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 
-// Schema colors for each pillar
-const PILLAR_COLORS = {
-  thoughts: {
-    primary: '#6366f1',
-    glow: 'rgba(99, 102, 241, 0.4)'
-  },
-  projects: {
-    primary: '#3b82f6',
-    glow: 'rgba(59, 130, 246, 0.4)'
-  },
-  reading: {
-    primary: '#10b981',
-    glow: 'rgba(16, 185, 129, 0.4)'
-  },
-  insights: {
-    primary: '#f59e0b',
-    glow: 'rgba(245, 158, 11, 0.4)'
-  }
+// Schema colors for each section
+const SCHEMA_COLORS = {
+  home: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  thoughts: { primary: '#6366f1', glow: 'rgba(99, 102, 241, 0.4)' },
+  projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  reading: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.4)' },
+  timeline: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' }
 } as const
 
-type Pillar = keyof typeof PILLAR_COLORS
-
-interface PillarOption {
-  id: Pillar
+interface NavOption {
+  id: string
   label: string
   icon: any
   path: string
-  angle: number // Degrees for radial positioning
+  color: keyof typeof SCHEMA_COLORS
 }
 
-const PILLARS: PillarOption[] = [
-  { id: 'insights', label: 'Insights', icon: BarChart3, path: '/', angle: 90 },
-  { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', angle: 180 },
-  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', angle: 270 },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', angle: 0 }
+const NAV_OPTIONS: NavOption[] = [
+  { id: 'home', label: 'Home', icon: Home, path: '/', color: 'home' },
+  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', color: 'projects' },
+  { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', color: 'reading' },
+  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', color: 'timeline' }
 ]
 
 export function FloatingNav() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isVoiceOpen, setIsVoiceOpen] = useState(false)
+  const { isOnline } = useOnlineStatus()
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Determine current pillar based on path
-  const getCurrentPillar = (): Pillar => {
+  // Determine current section
+  const getCurrentSection = (): keyof typeof SCHEMA_COLORS => {
     const path = location.pathname
     if (path.startsWith('/memories')) return 'thoughts'
     if (path.startsWith('/projects')) return 'projects'
     if (path.startsWith('/reading')) return 'reading'
-    return 'insights'
+    if (path.startsWith('/knowledge-timeline') || path.startsWith('/timeline')) return 'timeline'
+    return 'home'
   }
 
-  const currentPillar = getCurrentPillar()
-  const currentColors = PILLAR_COLORS[currentPillar]
+  const currentSection = getCurrentSection()
+  const currentColors = SCHEMA_COLORS[currentSection]
 
-  const handlePillarClick = (pillar: PillarOption) => {
-    navigate(pillar.path)
-    setIsOpen(false)
+  const handleNavClick = (option: NavOption) => {
+    navigate(option.path)
+    setIsMenuOpen(false)
   }
 
-  const handleFabClick = () => {
-    setIsOpen(!isOpen)
+  const handleVoiceTranscript = (text: string) => {
+    // Handle voice transcript (you'll need to implement this based on your needs)
+    console.log('[Voice]', text)
+    setIsVoiceOpen(false)
   }
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Voice Input Modal */}
       <AnimatePresence>
-        {isOpen && (
+        {isVoiceOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
+            onClick={() => setIsVoiceOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl backdrop-blur-xl bg-white/90 border-2 shadow-2xl p-6"
+              style={{
+                borderColor: currentColors.primary,
+                boxShadow: `0 20px 60px ${currentColors.glow}`
+              }}
+            >
+              <VoiceInput
+                onTranscript={handleVoiceTranscript}
+                maxDuration={60}
+                autoSubmit={true}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Menu Backdrop */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsMenuOpen(false)}
             className="fixed inset-0 z-40 backdrop-blur-sm bg-black/20"
           />
         )}
       </AnimatePresence>
 
-      {/* Radial Menu Options */}
+      {/* Menu List */}
       <AnimatePresence>
-        {isOpen && (
-          <>
-            {PILLARS.map((pillar, index) => {
-              const colors = PILLAR_COLORS[pillar.id]
-              const Icon = pillar.icon
-              const radius = 120 // Distance from FAB center
-              const angleRad = (pillar.angle * Math.PI) / 180
-              const x = Math.cos(angleRad) * radius
-              const y = -Math.sin(angleRad) * radius
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-28 right-6 z-50 flex flex-col gap-3"
+          >
+            {NAV_OPTIONS.map((option, index) => {
+              const Icon = option.icon
+              const colors = SCHEMA_COLORS[option.color]
+              const isActive = location.pathname === option.path
 
               return (
                 <motion.button
-                  key={pillar.id}
-                  initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                  key={option.id}
+                  initial={{ opacity: 0, x: 20 }}
                   animate={{
-                    scale: 1,
-                    x,
-                    y,
                     opacity: 1,
-                    transition: {
-                      type: 'spring',
-                      stiffness: 260,
-                      damping: 20,
-                      delay: index * 0.05
-                    }
-                  }}
-                  exit={{
-                    scale: 0,
                     x: 0,
-                    y: 0,
-                    opacity: 0,
-                    transition: { duration: 0.15 }
+                    transition: { delay: index * 0.05 }
                   }}
-                  whileHover={{ scale: 1.1 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  whileHover={{ scale: 1.05, x: -5 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => handlePillarClick(pillar)}
-                  className="fixed z-50 flex flex-col items-center gap-2"
-                  style={{
-                    bottom: 24,
-                    right: 24,
-                    transformOrigin: 'center center'
-                  }}
+                  onClick={() => handleNavClick(option)}
+                  className="flex items-center gap-3 group"
                 >
-                  {/* Glassmorphic Button */}
-                  <div
-                    className="relative w-16 h-16 rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-2xl flex items-center justify-center transition-all duration-300"
-                    style={{
-                      borderColor: colors.primary,
-                      boxShadow: `0 8px 32px ${colors.glow}`
-                    }}
-                  >
-                    <Icon className="w-7 h-7" style={{ color: colors.primary }} />
-
-                    {/* Glow effect */}
-                    <div
-                      className="absolute inset-0 rounded-2xl blur-xl opacity-50"
-                      style={{ backgroundColor: colors.glow }}
-                    />
-                  </div>
-
                   {/* Label */}
                   <div
-                    className="px-3 py-1 rounded-full backdrop-blur-xl bg-white/90 border shadow-lg"
-                    style={{ borderColor: `${colors.primary}40` }}
+                    className="px-4 py-2 rounded-xl backdrop-blur-xl bg-white/90 border shadow-lg whitespace-nowrap transition-all"
+                    style={{
+                      borderColor: isActive ? colors.primary : `${colors.primary}30`,
+                      backgroundColor: isActive ? `${colors.primary}10` : 'rgba(255,255,255,0.9)'
+                    }}
                   >
                     <span
-                      className="text-xs font-semibold whitespace-nowrap"
+                      className="text-sm font-semibold"
                       style={{ color: colors.primary }}
                     >
-                      {pillar.label}
+                      {option.label}
                     </span>
+                  </div>
+
+                  {/* Icon Button */}
+                  <div
+                    className="relative w-14 h-14 rounded-xl backdrop-blur-xl bg-white/80 border-2 shadow-xl flex items-center justify-center transition-all"
+                    style={{
+                      borderColor: isActive ? colors.primary : `${colors.primary}50`,
+                      boxShadow: isActive ? `0 8px 32px ${colors.glow}` : `0 4px 16px ${colors.glow}`
+                    }}
+                  >
+                    <Icon className="w-6 h-6" style={{ color: colors.primary }} />
+
+                    {isActive && (
+                      <div
+                        className="absolute inset-0 rounded-xl blur-lg opacity-50"
+                        style={{ backgroundColor: colors.glow }}
+                      />
+                    )}
                   </div>
                 </motion.button>
               )
             })}
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main FAB */}
+      {/* Voice FAB - Secondary Action */}
+      <AnimatePresence>
+        {!isMenuOpen && isOnline && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsVoiceOpen(true)}
+            className="fixed bottom-28 right-6 z-40 w-14 h-14 rounded-xl backdrop-blur-xl bg-white/80 border-2 shadow-xl flex items-center justify-center transition-all"
+            style={{
+              borderColor: `${currentColors.primary}50`,
+              boxShadow: `0 4px 16px ${currentColors.glow}`
+            }}
+          >
+            <Mic className="w-5 h-5" style={{ color: currentColors.primary }} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Main FAB - Menu Toggle */}
       <motion.button
-        onClick={handleFabClick}
+        onClick={() => {
+          if (isVoiceOpen) {
+            setIsVoiceOpen(false)
+          } else {
+            setIsMenuOpen(!isMenuOpen)
+          }
+        }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-2xl flex items-center justify-center transition-all duration-300"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-2xl backdrop-blur-xl bg-white/90 border-2 shadow-2xl flex items-center justify-center transition-all"
         style={{
           borderColor: currentColors.primary,
           boxShadow: `0 8px 32px ${currentColors.glow}`
         }}
       >
-        {/* Rotating icon */}
+        {/* Icon */}
         <motion.div
-          animate={{ rotate: isOpen ? 90 : 0 }}
+          animate={{ rotate: isMenuOpen ? 90 : 0 }}
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
-          {isOpen ? (
+          {isMenuOpen ? (
             <X className="w-7 h-7" style={{ color: currentColors.primary }} />
           ) : (
             <Sparkles className="w-7 h-7" style={{ color: currentColors.primary }} />
@@ -192,7 +241,7 @@ export function FloatingNav() {
         </motion.div>
 
         {/* Pulsing glow when closed */}
-        {!isOpen && (
+        {!isMenuOpen && (
           <motion.div
             animate={{
               opacity: [0.3, 0.6, 0.3],
@@ -203,7 +252,7 @@ export function FloatingNav() {
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            className="absolute inset-0 rounded-2xl blur-xl"
+            className="absolute inset-0 rounded-2xl blur-xl pointer-events-none"
             style={{ backgroundColor: currentColors.glow }}
           />
         )}
