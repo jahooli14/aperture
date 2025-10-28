@@ -9,7 +9,8 @@
     "dev": "tsx",
     "start": "node dist/index.js",
     "test": "vitest",
-    "test-setup": "tsx test-setup.ts"
+    "test-setup": "tsx test-setup.ts",
+    "demo": "tsx demo-swarm-vs-single.ts"
   },
   "keywords": ["ai", "agents", "swarm", "autonomous", "multi-provider", "anthropic", "google", "gemini", "glm"],
   "author": "",

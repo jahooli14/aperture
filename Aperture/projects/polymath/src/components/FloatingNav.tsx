@@ -53,7 +53,7 @@ export function FloatingNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const { isOnline } = useOnlineStatus()
-  const { fetchMemories } = useMemoryStore()
+  const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
   const { addToast } = useToast()
   const navigate = useNavigate()
@@ -83,6 +83,9 @@ export function FloatingNav() {
 
     setIsVoiceOpen(false)
 
+    // IMMEDIATELY show optimistic memory
+    const tempId = addOptimisticMemory(text)
+
     try {
       if (isOnline) {
         // Online: send to memories API for parsing
@@ -103,16 +106,17 @@ export function FloatingNav() {
         const data = await response.json()
         console.log('✓ Memory created:', data)
 
+        // Replace optimistic memory with real one
+        replaceOptimisticMemory(tempId, data.memory)
+
         // Success! Show confirmation
         addToast({
           title: 'Thought saved!',
           description: 'Your voice note has been captured.',
           variant: 'success',
         })
-
-        await fetchMemories()
       } else {
-        // Offline: queue for later
+        // Offline: queue for later but keep optimistic memory
         await addOfflineCapture(text)
         addToast({
           title: 'Queued for sync',
@@ -130,8 +134,11 @@ export function FloatingNav() {
           description: 'Will process when API is available.',
           variant: 'default',
         })
+        // Keep the optimistic memory visible
       } catch (offlineError) {
         console.error('Failed to queue offline:', offlineError)
+        // Remove optimistic memory if complete failure
+        removeOptimisticMemory(tempId)
         addToast({
           title: 'Failed to save',
           description: 'Please try again.',

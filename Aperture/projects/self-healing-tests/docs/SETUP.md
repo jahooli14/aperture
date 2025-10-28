@@ -83,8 +83,8 @@ MAX_HEALING_ATTEMPTS=3
 SCREENSHOT_ON_FAILURE=true
 OUTPUT_DIR=./test-results
 
-# AI model settings
-GEMINI_MODEL=gemini-2.5-pro
+# AI model settings (Computer Use model for browser automation)
+GEMINI_MODEL=gemini-2.5-computer-use-preview-10-2025
 ```
 
 ## Step 4: Build the Project
@@ -266,7 +266,7 @@ ls -la test-results
 | `OUTPUT_DIR` | No | `./test-results` | Output directory |
 | `VERBOSE` | No | `false` | Enable verbose logging |
 | `SCREENSHOT_ON_FAILURE` | No | `true` | Capture failure screenshots |
-| `GEMINI_MODEL` | No | `gemini-2.5-pro` | AI model to use |
+| `GEMINI_MODEL` | No | `gemini-2.5-computer-use-preview-10-2025` | AI Computer Use model for browser automation |
 
 ## Next Steps
 

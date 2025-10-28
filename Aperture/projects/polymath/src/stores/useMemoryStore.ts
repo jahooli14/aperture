@@ -20,6 +20,9 @@ interface MemoryStore {
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
   updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
   deleteMemory: (id: string) => Promise<void>
+  addOptimisticMemory: (transcript: string) => string
+  replaceOptimisticMemory: (tempId: string, realMemory: Memory) => void
+  removeOptimisticMemory: (tempId: string) => void
 }
 
 export const useMemoryStore = create<MemoryStore>((set) => ({
@@ -176,5 +179,53 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to delete memory')
     }
+  },
+
+  addOptimisticMemory: (transcript: string) => {
+    const tempId = `temp_${Date.now()}`
+    const now = new Date().toISOString()
+
+    const optimisticMemory = {
+      id: tempId,
+      created_at: now,
+      audiopen_id: tempId,
+      title: '⏳ Processing...',
+      body: transcript,
+      orig_transcript: transcript,
+      tags: [],
+      audiopen_created_at: now,
+      memory_type: null,
+      entities: null,
+      themes: null,
+      emotional_tone: null,
+      embedding: null,
+      processed: false,
+      processed_at: null,
+      error: null,
+      last_reviewed_at: null,
+      review_count: 0,
+      source_reference: null,
+    } as Memory
+
+    // Add to top of list immediately
+    set((state) => ({
+      memories: [optimisticMemory, ...state.memories],
+    }))
+
+    return tempId
+  },
+
+  replaceOptimisticMemory: (tempId: string, realMemory: Memory) => {
+    set((state) => ({
+      memories: state.memories.map((m) =>
+        m.id === tempId ? realMemory : m
+      ),
+    }))
+  },
+
+  removeOptimisticMemory: (tempId: string) => {
+    set((state) => ({
+      memories: state.memories.filter((m) => m.id !== tempId),
+    }))
   },
 }))

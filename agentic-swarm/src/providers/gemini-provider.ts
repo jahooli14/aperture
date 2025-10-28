@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel, FunctionDeclarationSchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import {
   BaseProvider,
   ProviderMessage,
@@ -133,7 +133,7 @@ export class GeminiProvider extends BaseProvider {
    */
   private convertSchemaToGemini(schema: any): any {
     const converted: any = {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: 'OBJECT',
       properties: {},
       required: schema.required || [],
     };
@@ -158,17 +158,17 @@ export class GeminiProvider extends BaseProvider {
   /**
    * Map JSON schema types to Gemini types
    */
-  private mapTypeToGemini(type: string): FunctionDeclarationSchemaType {
-    const typeMap: Record<string, FunctionDeclarationSchemaType> = {
-      string: FunctionDeclarationSchemaType.STRING,
-      number: FunctionDeclarationSchemaType.NUMBER,
-      integer: FunctionDeclarationSchemaType.INTEGER,
-      boolean: FunctionDeclarationSchemaType.BOOLEAN,
-      array: FunctionDeclarationSchemaType.ARRAY,
-      object: FunctionDeclarationSchemaType.OBJECT,
+  private mapTypeToGemini(type: string): string {
+    const typeMap: Record<string, string> = {
+      string: 'STRING',
+      number: 'NUMBER',
+      integer: 'INTEGER',
+      boolean: 'BOOLEAN',
+      array: 'ARRAY',
+      object: 'OBJECT',
     };
 
-    return typeMap[type.toLowerCase()] || FunctionDeclarationSchemaType.STRING;
+    return typeMap[type.toLowerCase()] || 'STRING';
   }
 
   getProviderName(): string {

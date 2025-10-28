@@ -20,6 +20,7 @@ export class GeminiAgent {
         this.model = this.genAI.getGenerativeModel({
           model: this.config.model || 'gemini-2.5-computer-use-preview-10-2025',
           tools: [{
+            // @ts-ignore - computer_use is a preview feature not yet in types
             computer_use: {
               environment: 'ENVIRONMENT_BROWSER',
             },
