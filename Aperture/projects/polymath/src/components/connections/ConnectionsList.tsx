@@ -119,8 +119,8 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted }: Conne
     const item = connection.related_item
     if (!item) return 'Unknown item'
 
-    if ('title' in item) return item.title
-    if ('body' in item) return item.body?.slice(0, 60) + '...' || 'Untitled thought'
+    if ('title' in item && typeof item.title === 'string') return item.title
+    if ('body' in item && typeof item.body === 'string') return item.body.slice(0, 60) + '...' || 'Untitled thought'
     return 'Unknown'
   }
 
