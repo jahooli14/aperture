@@ -10,7 +10,7 @@
  * - DfF-inspired depth hierarchy with glassmorphism
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { Layers, FolderKanban, FileText, Sparkles } from 'lucide-react'
@@ -57,6 +57,9 @@ export function ScrollTimelinePage() {
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: containerRef })
+
+  // Memoize scroll transforms to prevent re-render loops
+  const progressBarWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
 
   const [yearSections, setYearSections] = useState<YearSection[]>([])
   const [loading, setLoading] = useState(true)
@@ -255,7 +258,7 @@ export function ScrollTimelinePage() {
           <motion.div
             className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500"
             style={{
-              width: useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
+              width: progressBarWidth
             }}
           />
         </div>
@@ -298,8 +301,8 @@ function YearSection({ section, sectionIndex, totalSections, scrollProgress, onE
   const sectionRef = useRef<HTMLDivElement>(null)
 
   // Calculate scroll-based parallax for year marker
-  const sectionStart = sectionIndex / totalSections
-  const sectionEnd = (sectionIndex + 1) / totalSections
+  const sectionStart = useMemo(() => sectionIndex / totalSections, [sectionIndex, totalSections])
+  const sectionEnd = useMemo(() => (sectionIndex + 1) / totalSections, [sectionIndex, totalSections])
 
   const yearOpacity = useTransform(
     scrollProgress,
@@ -389,8 +392,8 @@ function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scr
   const Icon = getIconForType(event.type)
 
   // Scroll-triggered reveal animation
-  const sectionStart = sectionIndex / totalSections
-  const cardDelay = eventIndex * 0.02
+  const sectionStart = useMemo(() => sectionIndex / totalSections, [sectionIndex, totalSections])
+  const cardDelay = useMemo(() => eventIndex * 0.02, [eventIndex])
 
   const cardOpacity = useTransform(
     scrollProgress,
