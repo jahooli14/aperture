@@ -201,9 +201,14 @@ export function HomePage() {
       )}
 
       <div className="min-h-screen py-12">
-        {/* Header */}
+        {/* Header - Premium Typography */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-          <h1 className="text-4xl font-bold text-neutral-900">
+          <h1 className="premium-text-platinum" style={{
+            fontSize: 'var(--premium-text-h1)',
+            fontWeight: 700,
+            letterSpacing: 'var(--premium-tracking-tight)',
+            textShadow: '0 0 20px rgba(229, 231, 235, 0.2)'
+          }}>
             Overview
           </h1>
         </div>
