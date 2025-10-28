@@ -150,7 +150,7 @@ export function FloatingNav() {
 
   return (
     <>
-      {/* Voice Input Modal - Material You */}
+      {/* Voice Input Modal - Premium Glass */}
       <AnimatePresence>
         {isVoiceOpen && (
           <motion.div
@@ -159,8 +159,8 @@ export function FloatingNav() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.32)', // M3 scrim overlay
-              backdropFilter: 'blur(8px)'
+              backgroundColor: 'rgba(10, 14, 26, 0.6)',
+              backdropFilter: 'blur(16px)'
             }}
             onClick={() => setIsVoiceOpen(false)}
           >
@@ -169,12 +169,7 @@ export function FloatingNav() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md p-6"
-              style={{
-                backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                borderRadius: 'var(--md-sys-shape-corner-extra-large)',
-                boxShadow: 'var(--md-sys-shadow-3)',
-              }}
+              className="premium-glass-strong w-full max-w-md p-6"
             >
               <VoiceInput
                 onTranscript={handleVoiceTranscript}
@@ -186,7 +181,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Menu Backdrop - Material You Scrim */}
+      {/* Menu Backdrop - Premium Glass Scrim */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -195,15 +190,15 @@ export function FloatingNav() {
             exit={{ opacity: 0 }}
             onClick={() => setIsMenuOpen(false)}
             style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.32)',
-              backdropFilter: 'blur(4px)'
+              backgroundColor: 'rgba(10, 14, 26, 0.5)',
+              backdropFilter: 'blur(12px)'
             }}
             className="fixed inset-0 z-40"
           />
         )}
       </AnimatePresence>
 
-      {/* Menu List - Material You */}
+      {/* Menu List - Premium Glass */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -232,40 +227,16 @@ export function FloatingNav() {
                   onClick={() => handleNavClick(option)}
                   className="flex items-center gap-3 group"
                 >
-                  {/* Label - M3 Surface Container */}
-                  <div
-                    className="px-4 py-2 whitespace-nowrap transition-all font-medium"
-                    style={{
-                      backgroundColor: isActive
-                        ? 'var(--md-sys-color-secondary-container)'
-                        : 'var(--md-sys-color-surface-container-high)',
-                      color: isActive
-                        ? 'var(--md-sys-color-on-secondary-container)'
-                        : 'var(--md-sys-color-on-surface)',
-                      borderRadius: 'var(--md-sys-shape-corner-large)',
-                      boxShadow: 'var(--md-sys-shadow-2)',
-                      fontSize: 'var(--md-sys-typescale-label-large-size)',
-                      fontWeight: 'var(--md-sys-typescale-label-large-weight)',
-                    }}
-                  >
-                    {option.label}
+                  {/* Label - Premium Glass */}
+                  <div className={`px-4 py-2 whitespace-nowrap transition-all font-medium ${isActive ? 'premium-glass-strong' : 'premium-glass'}`}>
+                    <span style={{ color: 'var(--premium-platinum)' }}>
+                      {option.label}
+                    </span>
                   </div>
 
-                  {/* Icon Button - M3 FAB Mini */}
-                  <div
-                    className="relative w-14 h-14 flex items-center justify-center transition-all"
-                    style={{
-                      backgroundColor: isActive
-                        ? 'var(--md-sys-color-primary-container)'
-                        : 'var(--md-sys-color-surface-container-highest)',
-                      color: isActive
-                        ? 'var(--md-sys-color-on-primary-container)'
-                        : 'var(--md-sys-color-on-surface)',
-                      borderRadius: 'var(--md-sys-shape-corner-large)',
-                      boxShadow: isActive ? 'var(--md-sys-shadow-3)' : 'var(--md-sys-shadow-1)',
-                    }}
-                  >
-                    <Icon className="w-6 h-6" />
+                  {/* Icon Button - Premium Glass FAB */}
+                  <div className={`premium-fab w-14 h-14 flex items-center justify-center ${isActive ? '!border-white/20' : ''}`}>
+                    <Icon className="w-6 h-6" style={{ color: isActive ? colors.primary : 'var(--premium-platinum)' }} />
                   </div>
                 </motion.button>
               )

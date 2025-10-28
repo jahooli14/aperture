@@ -329,14 +329,15 @@ export default function ConstellationView() {
     return mesh
   }, [])
 
-  // Custom link rendering (lightning effect)
+  // Custom link rendering (beautiful glowing connections)
   const linkColor = useCallback((link: GraphLink) => {
     if (demoMode === 'connections') {
       // Flash connections in storm mode
       const time = Date.now() * 0.003
       const flash = Math.sin(time + Math.random() * 10) > 0.5
-      return flash ? '#60a5fa' : '#1e40af'
+      return flash ? '#60a5fa' : '#3b82f6'
     }
+    // AI suggested = purple glow, regular = blue glow
     return link.type === 'ai_suggested' ? '#a78bfa' : '#60a5fa'
   }, [demoMode])
 
@@ -344,17 +345,22 @@ export default function ConstellationView() {
     if (demoMode === 'connections') {
       const time = Date.now() * 0.003
       const pulse = Math.sin(time + Math.random() * 10) * 0.5 + 0.5
-      return 1 + pulse * 3
+      return 1.5 + pulse * 3
     }
-    return link.type === 'ai_suggested' ? 2 : 1
+    // Thicker, more visible links
+    return link.type === 'ai_suggested' ? 3 : 2
   }, [demoMode])
 
   const linkOpacity = useCallback(() => {
     if (demoMode === 'connections') {
-      return 0.9
+      return 1.0
     }
-    return 0.6
+    // More visible - was 0.6, now 0.8
+    return 0.8
   }, [demoMode])
+
+  // Add glow to links
+  const linkDirectionalParticles = useCallback(() => 4, []) // Particles flowing along links
 
   // Custom clustering forces - make similar nodes attract
   const customForces = useCallback(() => {
@@ -584,7 +590,10 @@ export default function ConstellationView() {
         linkColor={linkColor}
         linkWidth={linkWidth}
         linkOpacity={linkOpacity()}
-        backgroundColor="#0f172a"
+        linkDirectionalParticles={linkDirectionalParticles()}
+        linkDirectionalParticleSpeed={0.005}
+        linkDirectionalParticleWidth={2}
+        backgroundColor="#0f1419"
         showNavInfo={false}
         enableNodeDrag={true}
         enableNavigationControls={true}
