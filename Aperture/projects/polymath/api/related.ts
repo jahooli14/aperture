@@ -1,6 +1,7 @@
 /**
  * Related Items API
  * Finds contextually related thoughts, projects, and articles using the knowledge graph
+ * Also handles explicit connections (Sparks system) - GET, POST, DELETE
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -14,24 +15,94 @@ const supabase = createClient(
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
-    const { id, type, text } = req.query
+    // Handle DELETE - Remove a connection
+    if (req.method === 'DELETE') {
+      const { connection_id } = req.query
 
-    if (!id || !type) {
-      return res.status(400).json({ error: 'id and type required' })
+      if (!connection_id) {
+        return res.status(400).json({ error: 'connection_id required' })
+      }
+
+      const { error } = await supabase
+        .from('connections')
+        .delete()
+        .eq('id', connection_id as string)
+
+      if (error) {
+        console.error('[api/related] DELETE error:', error)
+        return res.status(500).json({ error: 'Failed to delete connection' })
+      }
+
+      return res.status(200).json({ success: true })
     }
 
-    const related = await findRelatedItems(
-      id as string,
-      type as 'thought' | 'project' | 'article',
-      text as string | undefined
-    )
+    // Handle POST - Create a connection
+    if (req.method === 'POST') {
+      const { source_type, source_id, target_type, target_id, connection_type, created_by, ai_reasoning } = req.body
 
-    return res.status(200).json({ related })
+      if (!source_type || !source_id || !target_type || !target_id) {
+        return res.status(400).json({ error: 'source_type, source_id, target_type, and target_id required' })
+      }
+
+      const { data, error } = await supabase
+        .from('connections')
+        .insert({
+          source_type,
+          source_id,
+          target_type,
+          target_id,
+          connection_type: connection_type || 'relates_to',
+          created_by: created_by || 'user',
+          ai_reasoning
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('[api/related] POST error:', error)
+        return res.status(500).json({ error: 'Failed to create connection' })
+      }
+
+      return res.status(201).json({ connection: data })
+    }
+
+    // Handle GET
+    if (req.method === 'GET') {
+      const { id, type, text, connections, thread, ai_suggested, limit } = req.query
+
+      // Case 1: Get connections for an item
+      if (connections === 'true' && id && type) {
+        const connectionsData = await getItemConnections(id as string, type as string)
+        return res.status(200).json({ connections: connectionsData })
+      }
+
+      // Case 2: Get AI-suggested sparks (homepage)
+      if (connections === 'true' && ai_suggested === 'true') {
+        const sparks = await getAISuggestedSparks(parseInt(limit as string) || 3)
+        return res.status(200).json({ connections: sparks })
+      }
+
+      // Case 3: Get thread (recursive connections)
+      if (thread === 'true' && id && type) {
+        const threadData = await getItemThread(id as string, type as string)
+        return res.status(200).json({ items: threadData })
+      }
+
+      // Case 4: Original semantic search (backward compatibility)
+      if (id && type) {
+        const related = await findRelatedItems(
+          id as string,
+          type as 'thought' | 'project' | 'article',
+          text as string | undefined
+        )
+        return res.status(200).json({ related })
+      }
+
+      return res.status(400).json({ error: 'Invalid query parameters' })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
 
   } catch (error) {
     console.error('[api/related] Error:', error)
@@ -187,4 +258,143 @@ function extractKeywords(text: string): string[] {
     .split(/\s+/)
     .filter(word => word.length > 3 && !stopWords.has(word))
     .slice(0, 10)
+}
+
+// ============================================================================
+// CONNECTIONS (SPARKS) FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all connections for a given item using the SQL function
+ */
+async function getItemConnections(itemId: string, itemType: string): Promise<any[]> {
+  const { data, error } = await supabase.rpc('get_item_connections', {
+    item_type: itemType,
+    item_id: itemId
+  })
+
+  if (error) {
+    console.error('[getItemConnections] Error:', error)
+    return []
+  }
+
+  // Fetch the actual items for each connection
+  const connections = await Promise.all(
+    (data || []).map(async (conn: any) => {
+      const relatedItem = await fetchItemByTypeAndId(conn.related_type, conn.related_id)
+      return {
+        connection_id: conn.connection_id,
+        related_type: conn.related_type,
+        related_id: conn.related_id,
+        connection_type: conn.connection_type,
+        direction: conn.direction,
+        created_by: conn.created_by,
+        created_at: conn.created_at,
+        ai_reasoning: conn.ai_reasoning,
+        related_item: relatedItem
+      }
+    })
+  )
+
+  return connections
+}
+
+/**
+ * Get thread (recursive connections) for an item
+ */
+async function getItemThread(itemId: string, itemType: string): Promise<any[]> {
+  const { data, error } = await supabase.rpc('get_item_thread', {
+    item_type: itemType,
+    item_id: itemId,
+    max_depth: 10
+  })
+
+  if (error) {
+    console.error('[getItemThread] Error:', error)
+    return []
+  }
+
+  return data || []
+}
+
+/**
+ * Get AI-suggested sparks for the homepage
+ */
+async function getAISuggestedSparks(limit: number = 3): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('connections')
+    .select('*')
+    .eq('created_by', 'ai')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('[getAISuggestedSparks] Error:', error)
+    return []
+  }
+
+  // Fetch the actual items for each connection
+  const sparks = await Promise.all(
+    (data || []).map(async (conn: any) => {
+      const sourceItem = await fetchItemByTypeAndId(conn.source_type, conn.source_id)
+      const targetItem = await fetchItemByTypeAndId(conn.target_type, conn.target_id)
+
+      return {
+        connection_id: conn.id,
+        source_type: conn.source_type,
+        source_id: conn.source_id,
+        target_type: conn.target_type,
+        target_id: conn.target_id,
+        connection_type: conn.connection_type,
+        ai_reasoning: conn.ai_reasoning,
+        created_at: conn.created_at,
+        source_item: sourceItem,
+        target_item: targetItem
+      }
+    })
+  )
+
+  return sparks
+}
+
+/**
+ * Fetch a single item by type and ID
+ */
+async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<any> {
+  let table = ''
+  let selectFields = '*'
+
+  switch (itemType) {
+    case 'project':
+      table = 'projects'
+      selectFields = 'id, title, description, status, metadata'
+      break
+    case 'thought':
+      table = 'memories'
+      selectFields = 'id, title, body, voice_file_url'
+      break
+    case 'article':
+      table = 'reading_articles'
+      selectFields = 'id, title, url, summary, author'
+      break
+    case 'suggestion':
+      table = 'project_suggestions'
+      selectFields = 'id, title, description, reasoning'
+      break
+    default:
+      return null
+  }
+
+  const { data, error } = await supabase
+    .from(table)
+    .select(selectFields)
+    .eq('id', itemId)
+    .single()
+
+  if (error) {
+    console.error(`[fetchItemByTypeAndId] Error fetching ${itemType}:`, error)
+    return null
+  }
+
+  return data
 }
