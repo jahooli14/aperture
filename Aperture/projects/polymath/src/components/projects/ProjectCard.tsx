@@ -64,10 +64,16 @@ export function ProjectCard({
       transition={{ duration: 0.2 }}
     >
     <Card
-      className="group h-full flex flex-col pro-card transition-smooth border-2 cursor-pointer"
+      className="group h-full flex flex-col relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-blue-300 hover:shadow-2xl cursor-pointer"
+      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
       onClick={handleCardClick}
     >
-      <CardHeader className="relative pb-4">
+      {/* Glow effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+      {/* Accent gradient bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+
+      <CardHeader className="relative z-10 pb-4">
         <div className="flex items-start justify-between gap-3 mb-3">
           <CardTitle className="text-2xl font-bold text-neutral-900 flex-1">
             {project.title}
@@ -104,7 +110,7 @@ export function ProjectCard({
         )}
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-4">
+      <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Next Step - Prominent Display */}
         {project.metadata?.next_step && (
           <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-200 rounded-xl p-4">

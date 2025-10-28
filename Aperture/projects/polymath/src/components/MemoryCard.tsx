@@ -59,11 +59,13 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const isManual = memory.audiopen_id?.startsWith('manual_')
 
   return (
-    <Card className="group h-full flex flex-col pro-card transition-smooth hover-lift">
-      {/* Subtle accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
+    <Card className="group h-full flex flex-col relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl" style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+      {/* Glow effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
+      {/* Accent gradient bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
 
-      <CardHeader className="relative">
+      <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
           <CardTitle className="text-lg font-semibold text-neutral-900 leading-tight flex-1">
             {memory.title}
@@ -105,7 +107,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-4">
+      <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Body Text */}
         <div>
           <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-4' : ''}`}>

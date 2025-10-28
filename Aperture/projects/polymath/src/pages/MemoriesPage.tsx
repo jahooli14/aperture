@@ -12,7 +12,6 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
-import { VoiceFAB } from '../components/VoiceFAB'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
@@ -44,7 +43,7 @@ export function MemoriesPage() {
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
   const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
   const [loadingClusters, setLoadingClusters] = useState(false)
-  const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('themes')
+  const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
 
   useEffect(() => {
     loadMemoriesWithCache()
@@ -588,9 +587,6 @@ export function MemoriesPage() {
       {confirmDialog}
         </motion.div>
       </PullToRefresh>
-
-      {/* Voice FAB - Mobile only */}
-      <VoiceFAB onTranscript={handleVoiceCapture} maxDuration={60} />
     </>
   )
 }

@@ -14,7 +14,6 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
-import { VoiceFAB } from '../components/VoiceFAB'
 import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
 import type { ProjectSuggestion } from '../types'
 import { supabase } from '../lib/supabase'
@@ -195,75 +194,92 @@ export function HomePage() {
             {/* Thoughts Stat */}
             <Link
               to="/memories"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
+              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl"
+              style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <Brain className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <Brain className="h-8 w-8 text-indigo-600" strokeWidth={1.5} />
+                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900 mb-1">
+                  {memories.length}
+                </div>
+                <div className="text-sm text-neutral-600">
+                  Thoughts
+                </div>
               </div>
-              <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {memories.length}
-              </div>
-              <div className="text-sm text-neutral-600">
-                Thoughts
-              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
             </Link>
 
             {/* New Suggestions Stat */}
             <Link
               to="/suggestions"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
+              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
+              style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <Sparkles className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <Sparkles className="h-8 w-8 text-blue-600" strokeWidth={1.5} />
+                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900 mb-1">
+                  {pendingSuggestions.length}
+                </div>
+                <div className="text-sm text-neutral-600">
+                  New Ideas
+                </div>
               </div>
-              <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {pendingSuggestions.length}
-              </div>
-              <div className="text-sm text-neutral-600">
-                New Ideas
-              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
             </Link>
 
             {/* Sparks Stat */}
             <Link
               to="/suggestions?filter=spark"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-amber-200"
+              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-amber-300 hover:shadow-2xl"
+              style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <TrendingUp className="h-8 w-8 text-amber-600" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }} />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <TrendingUp className="h-8 w-8 text-amber-600" strokeWidth={1.5} />
+                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900 mb-1">
+                  {sparkSuggestions.length}
+                </div>
+                <div className="text-sm text-neutral-600">
+                  Sparks
+                </div>
               </div>
-              <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {sparkSuggestions.length}
-              </div>
-              <div className="text-sm text-neutral-600">
-                Sparks
-              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
             </Link>
 
             {/* Active Projects Stat */}
             <Link
               to="/projects"
-              className="group pro-card hover-lift p-6 border-2 border-transparent hover:border-blue-200"
+              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
+              style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <Rocket className="h-8 w-8 text-blue-900" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <Rocket className="h-8 w-8 text-blue-600" strokeWidth={1.5} />
+                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <div className="text-3xl font-bold text-neutral-900 mb-1">
+                  {activeProjects.length}
+                </div>
+                <div className="text-sm text-neutral-600">
+                  Active
+                </div>
               </div>
-              <div className="text-3xl font-bold text-neutral-900 mb-1">
-                {activeProjects.length}
-              </div>
-              <div className="text-sm text-neutral-600">
-                Active
-              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
             </Link>
           </div>
         </section>
-
-        {/* Voice FAB - Mobile only */}
-        <VoiceFAB onTranscript={handleVoiceCapture} maxDuration={60} />
 
         {/* Main Content Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
@@ -287,18 +303,23 @@ export function HomePage() {
                     <button
                       key={suggestion.id}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="pro-card p-4 w-full text-left hover-lift border-2 border-transparent hover:border-blue-200"
+                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-4 w-full text-left transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
+                      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
                     >
-                      <h3 className="font-medium text-neutral-900 mb-1">
-                        {suggestion.title}
-                      </h3>
-                      <p className="text-sm text-neutral-600 line-clamp-2">
-                        {suggestion.description}
-                      </p>
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+                      <div className="relative z-10">
+                        <h3 className="font-medium text-neutral-900 mb-1">
+                          {suggestion.title}
+                        </h3>
+                        <p className="text-sm text-neutral-600 line-clamp-2">
+                          {suggestion.description}
+                        </p>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
                     </button>
                   ))
                 ) : (
-                  <div className="pro-card p-8 text-center">
+                  <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
                     <Sparkles className="h-12 w-12 text-blue-400 mx-auto mb-3" />
                     <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Ideas?</p>
                     <p className="text-sm text-neutral-600 mb-4">
@@ -338,19 +359,24 @@ export function HomePage() {
                     <Link
                       key={memory.id}
                       to="/memories"
-                      className="pro-card p-4 block hover-lift border-2 border-transparent hover:border-blue-200"
+                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-4 block transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl"
+                      style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}
                     >
-                      <div className="text-sm text-neutral-900 line-clamp-3">
-                        {memory.body || memory.title}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
+                      <div className="relative z-10">
+                        <div className="text-sm text-neutral-900 line-clamp-3">
+                          {memory.body || memory.title}
+                        </div>
+                        <div className="text-xs text-neutral-500 mt-2">
+                          {new Date(memory.created_at).toLocaleDateString()}
+                        </div>
                       </div>
-                      <div className="text-xs text-neutral-500 mt-2">
-                        {new Date(memory.created_at).toLocaleDateString()}
-                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
                     </Link>
                   ))
                 ) : (
-                  <div className="pro-card p-8 text-center">
-                    <Brain className="h-12 w-12 text-blue-400 mx-auto mb-3" />
+                  <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+                    <Brain className="h-12 w-12 text-indigo-400 mx-auto mb-3" />
                     <p className="text-neutral-900 font-semibold mb-2">Start Your Knowledge Graph</p>
                     <p className="text-sm text-neutral-600 mb-4">
                       Capture your thoughts, skills, and interests via voice notes or text
@@ -386,22 +412,27 @@ export function HomePage() {
                     <Link
                       key={project.id}
                       to="/projects"
-                      className="pro-card p-5 hover-lift border-2 border-transparent hover:border-blue-200"
+                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-5 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
+                      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-neutral-900 flex-1">
-                          {project.title}
-                        </h3>
-                        <Rocket className="h-5 w-5 text-blue-900 flex-shrink-0 ml-2" />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+                      <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-semibold text-neutral-900 flex-1">
+                            {project.title}
+                          </h3>
+                          <Rocket className="h-5 w-5 text-blue-600 flex-shrink-0 ml-2" />
+                        </div>
+                        <p className="text-sm text-neutral-600 line-clamp-2">
+                          {project.description}
+                        </p>
                       </div>
-                      <p className="text-sm text-neutral-600 line-clamp-2">
-                        {project.description}
-                      </p>
+                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
                     </Link>
                   ))}
                 </div>
               ) : (
-                <div className="pro-card p-8 text-center">
+                <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
                   <Rocket className="h-12 w-12 text-blue-400 mx-auto mb-3" />
                   <p className="text-neutral-900 font-semibold mb-2">Build Your First Project</p>
                   <p className="text-sm text-neutral-600 mb-4">

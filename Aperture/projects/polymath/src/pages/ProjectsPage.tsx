@@ -278,10 +278,16 @@ function CompactProjectCard({
 
   return (
     <Card
-      className="pro-card hover-lift border-2 cursor-pointer"
+      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-blue-300 hover:shadow-2xl cursor-pointer"
+      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
       onClick={handleCardClick}
     >
-      <CardContent className="p-4">
+      {/* Glow effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+      {/* Accent gradient bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+
+      <CardContent className="relative z-10 p-4">
         {/* Header Row */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">

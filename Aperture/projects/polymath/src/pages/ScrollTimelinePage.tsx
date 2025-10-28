@@ -105,10 +105,10 @@ export function ScrollTimelinePage() {
         })
       }
 
-      // Add thoughts (use updated_at for most recent activity)
+      // Add thoughts (use created_at since Memory interface doesn't have updated_at)
       if (thoughtsData.memories) {
         thoughtsData.memories.forEach((m: any) => {
-          const date = new Date(m.updated_at || m.created_at)
+          const date = new Date(m.created_at)
           events.push({
             id: m.id,
             type: 'thought',
@@ -364,8 +364,8 @@ function MonthSection({ section, sectionIndex, totalSections, scrollProgress, on
       {/* Connection Lines (SVG Overlay) */}
       {section.connections.length > 0 && (
         <svg
-          className="absolute inset-0 pointer-events-none"
-          style={{ width: '100%', height: '100%' }}
+          className="absolute inset-0 pointer-events-none overflow-visible"
+          style={{ width: '100%', height: '100%', zIndex: 5 }}
         >
           {section.connections.map((conn, idx) => (
             <ConnectionLine
@@ -375,6 +375,7 @@ function MonthSection({ section, sectionIndex, totalSections, scrollProgress, on
               index={idx}
               scrollProgress={scrollProgress}
               sectionStart={sectionStart}
+              events={section.events}
             />
           ))}
         </svg>
@@ -493,9 +494,12 @@ interface ConnectionLineProps {
   index: number
   scrollProgress: any
   sectionStart: number
+  events: TimelineEvent[]
 }
 
-function ConnectionLine({ fromId, toId, index, scrollProgress, sectionStart }: ConnectionLineProps) {
+function ConnectionLine({ fromId, toId, index, scrollProgress, sectionStart, events }: ConnectionLineProps) {
+  const lineRef = useRef<SVGPathElement>(null)
+
   // Animate line drawing on scroll
   const lineProgress = useTransform(
     scrollProgress,
@@ -503,7 +507,66 @@ function ConnectionLine({ fromId, toId, index, scrollProgress, sectionStart }: C
     [0, 1]
   )
 
-  // TODO: Calculate actual positions of cards to draw connection
-  // For now, return null - will implement proper SVG connections
-  return null
+  useEffect(() => {
+    const unsubscribe = lineProgress.on('change', (latest) => {
+      if (lineRef.current) {
+        const length = lineRef.current.getTotalLength()
+        lineRef.current.style.strokeDasharray = `${length}`
+        lineRef.current.style.strokeDashoffset = `${length * (1 - latest)}`
+      }
+    })
+    return () => unsubscribe()
+  }, [lineProgress])
+
+  // Find the event types to determine color
+  const fromEvent = events.find(e => e.id === fromId)
+  const toEvent = events.find(e => e.id === toId)
+
+  if (!fromEvent || !toEvent) return null
+
+  // Use source event color for the connection
+  const colors = SCHEMA_COLORS[fromEvent.type]
+
+  // Calculate positions (simplified - in a real implementation would use refs to get actual DOM positions)
+  const fromIndex = events.findIndex(e => e.id === fromId)
+  const toIndex = events.findIndex(e => e.id === toId)
+
+  // Simple grid-based positioning (3 columns)
+  const cols = 3
+  const fromCol = fromIndex % cols
+  const fromRow = Math.floor(fromIndex / cols)
+  const toCol = toIndex % cols
+  const toRow = Math.floor(toIndex / cols)
+
+  // Card dimensions (approximate)
+  const cardWidth = 300
+  const cardHeight = 200
+  const gap = 24
+
+  const x1 = fromCol * (cardWidth + gap) + cardWidth / 2
+  const y1 = fromRow * (cardHeight + gap) + cardHeight
+  const x2 = toCol * (cardWidth + gap) + cardWidth / 2
+  const y2 = toRow * (cardHeight + gap)
+
+  // Create bezier curve path
+  const controlY = (y1 + y2) / 2
+  const path = `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`
+
+  return (
+    <motion.path
+      ref={lineRef}
+      d={path}
+      stroke={colors.primary}
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+      opacity={0.6}
+      initial={{ pathLength: 0 }}
+      style={{
+        filter: `drop-shadow(0 0 8px ${colors.glow})`,
+        strokeDasharray: 0,
+        strokeDashoffset: 0
+      }}
+    />
+  )
 }

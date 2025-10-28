@@ -95,10 +95,16 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group bg-white border border-neutral-200 rounded-xl p-4 sm:p-5 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-4 sm:p-5 transition-all duration-300 hover:border-green-300 hover:shadow-2xl cursor-pointer"
+      style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}
     >
+      {/* Glow effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)' }} />
+      {/* Accent gradient bar */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
+
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="relative z-10 flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 line-clamp-2 mb-1">
             {article.title || 'Untitled'}
@@ -135,7 +141,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
       {/* Reading Progress Bar */}
       {progress > 0 && (
-        <div className="mb-3">
+        <div className="relative z-10 mb-3">
           <div className="flex items-center justify-between text-xs text-neutral-500 mb-1">
             <span>Reading progress</span>
             <span>{progress}%</span>
@@ -151,14 +157,14 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
       {/* Excerpt */}
       {article.excerpt && (
-        <p className="text-neutral-600 text-sm sm:text-base line-clamp-2 mb-3">
+        <p className="relative z-10 text-neutral-600 text-sm sm:text-base line-clamp-2 mb-3">
           {article.excerpt}
         </p>
       )}
 
       {/* Tags */}
       {article.tags && article.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
+        <div className="relative z-10 flex flex-wrap gap-2 mb-3">
           {article.tags.slice(0, 3).map((tag, index) => (
             <span
               key={index}
@@ -176,7 +182,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-neutral-100">
+      <div className="relative z-10 flex items-center justify-between pt-3 border-t border-neutral-100">
         <div className="flex items-center gap-4 text-xs sm:text-sm text-neutral-500">
           {article.read_time_minutes && (
             <div className="flex items-center gap-1">
