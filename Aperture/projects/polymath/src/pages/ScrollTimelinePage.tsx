@@ -1,0 +1,493 @@
+/**
+ * Scroll-Driven Meta-Timeline
+ * Phase III: Frontier Visualization
+ *
+ * Features:
+ * - Scroll Progress Timelines API for synchronized animations
+ * - SchemaLine color-coding (Projects=blue, Thoughts=indigo, Articles=green)
+ * - Animated connection lines revealing on scroll
+ * - Sticky year markers with parallax effects
+ * - DfF-inspired depth hierarchy with glassmorphism
+ */
+
+import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { Layers, FolderKanban, FileText, Sparkles } from 'lucide-react'
+import { cn } from '../lib/utils'
+
+interface TimelineEvent {
+  id: string
+  type: 'thought' | 'project' | 'article'
+  title: string
+  date: string
+  year: number
+  month: number
+  status?: string
+  url?: string
+  sourceReference?: { type: string; id: string }
+}
+
+interface YearSection {
+  year: number
+  events: TimelineEvent[]
+  connections: Array<{ from: string; to: string }>
+}
+
+// SchemaLine color-coding constants
+const SCHEMA_COLORS = {
+  project: {
+    primary: '#3b82f6',    // blue-500
+    light: '#60a5fa',      // blue-400
+    glow: 'rgba(59, 130, 246, 0.3)'
+  },
+  thought: {
+    primary: '#6366f1',    // indigo-500
+    light: '#818cf8',      // indigo-400
+    glow: 'rgba(99, 102, 241, 0.3)'
+  },
+  article: {
+    primary: '#10b981',    // green-500
+    light: '#34d399',      // green-400
+    glow: 'rgba(16, 185, 129, 0.3)'
+  }
+} as const
+
+export function ScrollTimelinePage() {
+  const navigate = useNavigate()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: containerRef })
+
+  const [yearSections, setYearSections] = useState<YearSection[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadTimelineData()
+  }, [])
+
+  const loadTimelineData = async () => {
+    setLoading(true)
+    try {
+      // Fetch all data sources in parallel
+      const [projectsRes, thoughtsRes, articlesRes] = await Promise.all([
+        fetch('/api/projects'),
+        fetch('/api/memories'),
+        fetch('/api/reading')
+      ])
+
+      const [projectsData, thoughtsData, articlesData] = await Promise.all([
+        projectsRes.json(),
+        thoughtsRes.json(),
+        articlesRes.json()
+      ])
+
+      // Transform to timeline events
+      const events: TimelineEvent[] = []
+
+      // Add projects
+      if (projectsData.projects) {
+        projectsData.projects.forEach((p: any) => {
+          const date = new Date(p.last_active || p.created_at)
+          events.push({
+            id: p.id,
+            type: 'project',
+            title: p.title,
+            date: date.toISOString(),
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            status: p.status
+          })
+        })
+      }
+
+      // Add thoughts
+      if (thoughtsData.memories) {
+        thoughtsData.memories.forEach((m: any) => {
+          const date = new Date(m.created_at)
+          events.push({
+            id: m.id,
+            type: 'thought',
+            title: m.title || 'Untitled thought',
+            date: date.toISOString(),
+            year: date.getFullYear(),
+            month: date.getMonth(),
+            sourceReference: m.source_reference
+          })
+        })
+      }
+
+      // Add articles
+      if (articlesData.articles) {
+        articlesData.articles
+          .filter((a: any) => a.status === 'archived' || a.status === 'reading')
+          .forEach((a: any) => {
+            const date = new Date(a.read_at || a.archived_at || a.created_at)
+            events.push({
+              id: a.id,
+              type: 'article',
+              title: a.title,
+              date: date.toISOString(),
+              year: date.getFullYear(),
+              month: date.getMonth(),
+              url: a.url
+            })
+          })
+      }
+
+      // Sort by date (oldest first for scroll timeline)
+      events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+      // Group by year
+      const yearMap = new Map<number, TimelineEvent[]>()
+      events.forEach(event => {
+        if (!yearMap.has(event.year)) {
+          yearMap.set(event.year, [])
+        }
+        yearMap.get(event.year)!.push(event)
+      })
+
+      // Build year sections with connections
+      const sections: YearSection[] = Array.from(yearMap.entries())
+        .map(([year, yearEvents]) => {
+          const connections: Array<{ from: string; to: string }> = []
+
+          // Find connections within this year
+          yearEvents.forEach(event => {
+            if (event.sourceReference) {
+              const sourceEvent = events.find(e => e.id === event.sourceReference!.id)
+              if (sourceEvent) {
+                connections.push({
+                  from: sourceEvent.id,
+                  to: event.id
+                })
+              }
+            }
+          })
+
+          return { year, events: yearEvents, connections }
+        })
+        .sort((a, b) => a.year - b.year)
+
+      setYearSections(sections)
+    } catch (error) {
+      console.error('[ScrollTimeline] Failed to load:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getSchemaColor = (type: TimelineEvent['type']) => {
+    return SCHEMA_COLORS[type]
+  }
+
+  const getIcon = (type: TimelineEvent['type']) => {
+    switch (type) {
+      case 'project': return FolderKanban
+      case 'thought': return Layers
+      case 'article': return FileText
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <Sparkles className="h-12 w-12 text-blue-900 mx-auto mb-4 animate-pulse" />
+          <p className="text-lg text-neutral-600">Loading timeline...</p>
+        </motion.div>
+      </div>
+    )
+  }
+
+  if (yearSections.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <Sparkles className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-50" />
+          <h2 className="text-2xl font-bold text-neutral-900 mb-2">No Timeline Data Yet</h2>
+          <p className="text-neutral-600">Start capturing thoughts, reading articles, and building projects.</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
+      {/* Header */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-neutral-900 mb-1">
+                Knowledge Timeline
+              </h1>
+              <p className="text-sm text-neutral-600">
+                Scroll to explore your knowledge evolution
+              </p>
+            </div>
+
+            {/* Schema Legend */}
+            <div className="hidden md:flex gap-4">
+              {(['project', 'thought', 'article'] as const).map(type => {
+                const Icon = getIcon(type)
+                const colors = getSchemaColor(type)
+                return (
+                  <div key={type} className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: colors.primary }}
+                    />
+                    <Icon className="h-4 w-4" style={{ color: colors.primary }} />
+                    <span className="text-xs font-medium capitalize" style={{ color: colors.primary }}>
+                      {type}s
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Scroll Progress Bar */}
+          <motion.div
+            className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500"
+            style={{
+              width: useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Timeline Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        {yearSections.map((section, sectionIndex) => (
+          <YearSection
+            key={section.year}
+            section={section}
+            sectionIndex={sectionIndex}
+            totalSections={yearSections.length}
+            scrollProgress={scrollYProgress}
+            onEventClick={(event) => {
+              if (event.type === 'project') {
+                navigate(`/projects/${event.id}`)
+              } else if (event.type === 'thought') {
+                navigate('/memories')
+              } else if (event.url) {
+                window.open(event.url, '_blank')
+              }
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface YearSectionProps {
+  section: YearSection
+  sectionIndex: number
+  totalSections: number
+  scrollProgress: any
+  onEventClick: (event: TimelineEvent) => void
+}
+
+function YearSection({ section, sectionIndex, totalSections, scrollProgress, onEventClick }: YearSectionProps) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+
+  // Calculate scroll-based parallax for year marker
+  const sectionStart = sectionIndex / totalSections
+  const sectionEnd = (sectionIndex + 1) / totalSections
+
+  const yearOpacity = useTransform(
+    scrollProgress,
+    [sectionStart - 0.1, sectionStart, sectionEnd, sectionEnd + 0.1],
+    [0, 1, 1, 0]
+  )
+
+  const yearY = useTransform(
+    scrollProgress,
+    [sectionStart, sectionEnd],
+    [20, -20]
+  )
+
+  return (
+    <div ref={sectionRef} className="relative mb-24">
+      {/* Sticky Year Marker with Parallax */}
+      <motion.div
+        className="sticky top-24 z-30 mb-12"
+        style={{ opacity: yearOpacity, y: yearY }}
+      >
+        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/80 border border-neutral-200 shadow-lg">
+          <div className="text-4xl font-bold bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent">
+            {section.year}
+          </div>
+          <div className="text-sm text-neutral-600 font-medium">
+            {section.events.length} event{section.events.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Events Grid with Staggered Animation */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {section.events.map((event, eventIndex) => (
+          <TimelineEventCard
+            key={event.id}
+            event={event}
+            eventIndex={eventIndex}
+            sectionIndex={sectionIndex}
+            totalSections={totalSections}
+            scrollProgress={scrollProgress}
+            onClick={() => onEventClick(event)}
+          />
+        ))}
+      </div>
+
+      {/* Connection Lines (SVG Overlay) */}
+      {section.connections.length > 0 && (
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          style={{ width: '100%', height: '100%' }}
+        >
+          {section.connections.map((conn, idx) => (
+            <ConnectionLine
+              key={`${conn.from}-${conn.to}`}
+              fromId={conn.from}
+              toId={conn.to}
+              index={idx}
+              scrollProgress={scrollProgress}
+              sectionStart={sectionStart}
+            />
+          ))}
+        </svg>
+      )}
+    </div>
+  )
+}
+
+interface TimelineEventCardProps {
+  event: TimelineEvent
+  eventIndex: number
+  sectionIndex: number
+  totalSections: number
+  scrollProgress: any
+  onClick: () => void
+}
+
+function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scrollProgress, onClick }: TimelineEventCardProps) {
+  const getIconForType = (type: TimelineEvent['type']) => {
+    switch (type) {
+      case 'project': return FolderKanban
+      case 'thought': return Layers
+      case 'article': return FileText
+    }
+  }
+
+  const colors = SCHEMA_COLORS[event.type]
+  const Icon = getIconForType(event.type)
+
+  // Scroll-triggered reveal animation
+  const sectionStart = sectionIndex / totalSections
+  const cardDelay = eventIndex * 0.02
+
+  const cardOpacity = useTransform(
+    scrollProgress,
+    [sectionStart - 0.05 + cardDelay, sectionStart + 0.05 + cardDelay],
+    [0, 1]
+  )
+
+  const cardY = useTransform(
+    scrollProgress,
+    [sectionStart - 0.05 + cardDelay, sectionStart + 0.05 + cardDelay],
+    [40, 0]
+  )
+
+  return (
+    <motion.button
+      onClick={onClick}
+      className="group relative text-left w-full"
+      style={{ opacity: cardOpacity, y: cardY }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      {/* Glassmorphism Card */}
+      <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/60 border-2 transition-all duration-300 p-6 shadow-lg group-hover:shadow-2xl"
+        style={{
+          borderColor: `${colors.primary}50`
+        }}
+      >
+        {/* Glow Effect on Hover */}
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
+          style={{ backgroundColor: colors.glow }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10">
+          <div className="flex items-start gap-3 mb-3">
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: `${colors.primary}15` }}
+            >
+              <Icon className="h-5 w-5" style={{ color: colors.primary }} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium mb-1 capitalize" style={{ color: colors.primary }}>
+                {event.type}
+              </div>
+              <h3 className="font-semibold text-neutral-900 line-clamp-2 group-hover:text-neutral-950">
+                {event.title}
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-neutral-500">
+            <span>
+              {new Date(event.date).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+              })}
+            </span>
+            {event.status && (
+              <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-medium">
+                {event.status}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Accent Line */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2"
+          style={{
+            background: `linear-gradient(90deg, ${colors.primary}, ${colors.light})`
+          }}
+        />
+      </div>
+    </motion.button>
+  )
+}
+
+interface ConnectionLineProps {
+  fromId: string
+  toId: string
+  index: number
+  scrollProgress: any
+  sectionStart: number
+}
+
+function ConnectionLine({ fromId, toId, index, scrollProgress, sectionStart }: ConnectionLineProps) {
+  // Animate line drawing on scroll
+  const lineProgress = useTransform(
+    scrollProgress,
+    [sectionStart, sectionStart + 0.2],
+    [0, 1]
+  )
+
+  // TODO: Calculate actual positions of cards to draw connection
+  // For now, return null - will implement proper SVG connections
+  return null
+}

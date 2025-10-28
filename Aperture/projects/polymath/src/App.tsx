@@ -24,6 +24,7 @@ const DailyQueuePage = lazy(() => import('./pages/DailyQueuePage').then(m => ({ 
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
 const KnowledgeTimelinePage = lazy(() => import('./pages/KnowledgeTimelinePage').then(m => ({ default: m.KnowledgeTimelinePage })))
+const ScrollTimelinePage = lazy(() => import('./pages/ScrollTimelinePage').then(m => ({ default: m.ScrollTimelinePage })))
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 
 // Loading fallback component
@@ -210,7 +211,7 @@ export default function App() {
                   <Route path="/projects" element={<ProjectsPage />} />
                   <Route path="/projects/:id" element={<ProjectDetailPage />} />
                   <Route path="/timeline" element={<TimelinePage />} />
-                  <Route path="/knowledge-timeline" element={<KnowledgeTimelinePage />} />
+                  <Route path="/knowledge-timeline" element={<ScrollTimelinePage />} />
                   <Route path="/insights" element={<InsightsPage />} />
                 </Routes>
               </Suspense>
