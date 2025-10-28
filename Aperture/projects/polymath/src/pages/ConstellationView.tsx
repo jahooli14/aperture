@@ -405,7 +405,8 @@ export default function ConstellationView() {
   }, [])
 
   // Configure graph forces
-  const configureForces = useCallback((fg: any) => {
+  const configureForces = useCallback(() => {
+    const fg = graphRef.current
     if (!fg) return
 
     fg.d3Force('charge')

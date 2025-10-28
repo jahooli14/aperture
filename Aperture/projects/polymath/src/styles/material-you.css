@@ -1,0 +1,424 @@
+/**
+ * Material You (Material Design 3) Design System
+ *
+ * Features:
+ * - Dynamic color system with tonal palettes
+ * - Elevated surfaces with color tints
+ * - Expressive typography scale
+ * - Generous spacing
+ * - Large, rounded shapes
+ */
+
+:root {
+  /* === Material You Color System === */
+
+  /* Primary - Main brand color (Blue) */
+  --md-sys-color-primary: #1e40af;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #dbeafe;
+  --md-sys-color-on-primary-container: #1e3a8a;
+
+  /* Secondary - Complementary (Indigo) */
+  --md-sys-color-secondary: #4f46e5;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #e0e7ff;
+  --md-sys-color-on-secondary-container: #312e81;
+
+  /* Tertiary - Accent (Amber) */
+  --md-sys-color-tertiary: #f59e0b;
+  --md-sys-color-on-tertiary: #000000;
+  --md-sys-color-tertiary-container: #fef3c7;
+  --md-sys-color-on-tertiary-container: #78350f;
+
+  /* Error */
+  --md-sys-color-error: #dc2626;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #fee2e2;
+  --md-sys-color-on-error-container: #991b1b;
+
+  /* Surface & Background */
+  --md-sys-color-surface: #fefefe;
+  --md-sys-color-on-surface: #1a1a1a;
+  --md-sys-color-surface-variant: #f3f4f6;
+  --md-sys-color-on-surface-variant: #6b7280;
+
+  --md-sys-color-background: #f9fafb;
+  --md-sys-color-on-background: #1f2937;
+
+  /* Surface tints for elevation (Material You's tonal elevation) */
+  --md-sys-color-surface-1: #f0f4ff; /* 5% primary tint */
+  --md-sys-color-surface-2: #e8eeff; /* 8% primary tint */
+  --md-sys-color-surface-3: #e0e9ff; /* 11% primary tint */
+  --md-sys-color-surface-4: #dde7ff; /* 12% primary tint */
+  --md-sys-color-surface-5: #d8e3ff; /* 14% primary tint */
+
+  /* Outline */
+  --md-sys-color-outline: #d1d5db;
+  --md-sys-color-outline-variant: #e5e7eb;
+
+  /* === Material You Typography === */
+
+  /* Display - Large, expressive headlines */
+  --md-sys-typescale-display-large-size: 57px;
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-large-line-height: 64px;
+
+  --md-sys-typescale-display-medium-size: 45px;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-medium-line-height: 52px;
+
+  --md-sys-typescale-display-small-size: 36px;
+  --md-sys-typescale-display-small-weight: 400;
+  --md-sys-typescale-display-small-line-height: 44px;
+
+  /* Headline */
+  --md-sys-typescale-headline-large-size: 32px;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-large-line-height: 40px;
+
+  --md-sys-typescale-headline-medium-size: 28px;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-medium-line-height: 36px;
+
+  --md-sys-typescale-headline-small-size: 24px;
+  --md-sys-typescale-headline-small-weight: 400;
+  --md-sys-typescale-headline-small-line-height: 32px;
+
+  /* Title */
+  --md-sys-typescale-title-large-size: 22px;
+  --md-sys-typescale-title-large-weight: 500;
+  --md-sys-typescale-title-large-line-height: 28px;
+
+  --md-sys-typescale-title-medium-size: 16px;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-medium-line-height: 24px;
+
+  --md-sys-typescale-title-small-size: 14px;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-title-small-line-height: 20px;
+
+  /* Body */
+  --md-sys-typescale-body-large-size: 16px;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-large-line-height: 24px;
+
+  --md-sys-typescale-body-medium-size: 14px;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-medium-line-height: 20px;
+
+  --md-sys-typescale-body-small-size: 12px;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-body-small-line-height: 16px;
+
+  /* Label */
+  --md-sys-typescale-label-large-size: 14px;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-large-line-height: 20px;
+
+  --md-sys-typescale-label-medium-size: 12px;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-medium-line-height: 16px;
+
+  --md-sys-typescale-label-small-size: 11px;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-label-small-line-height: 16px;
+
+  /* === Material You Shape === */
+
+  /* Rounded corners - M3 uses generous rounding */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* === Material You Elevation === */
+
+  /* M3 uses tonal elevation (color tints) instead of shadows */
+  --md-sys-elevation-level-0: 0;
+  --md-sys-elevation-level-1: 1;
+  --md-sys-elevation-level-2: 2;
+  --md-sys-elevation-level-3: 3;
+  --md-sys-elevation-level-4: 4;
+  --md-sys-elevation-level-5: 5;
+
+  /* Shadow overlays for additional depth */
+  --md-sys-shadow-1: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+  --md-sys-shadow-2: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
+  --md-sys-shadow-3: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --md-sys-shadow-4: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --md-sys-shadow-5: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* === Material You Spacing === */
+
+  --md-sys-spacing-0: 0px;
+  --md-sys-spacing-1: 4px;
+  --md-sys-spacing-2: 8px;
+  --md-sys-spacing-3: 12px;
+  --md-sys-spacing-4: 16px;
+  --md-sys-spacing-5: 20px;
+  --md-sys-spacing-6: 24px;
+  --md-sys-spacing-7: 28px;
+  --md-sys-spacing-8: 32px;
+  --md-sys-spacing-10: 40px;
+  --md-sys-spacing-12: 48px;
+  --md-sys-spacing-16: 64px;
+  --md-sys-spacing-20: 80px;
+}
+
+/* === Material You Component Classes === */
+
+/* Surface containers */
+.md-surface {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.md-surface-variant {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Elevated surfaces (tonal elevation) */
+.md-elevation-1 {
+  background-color: var(--md-sys-color-surface-1);
+  box-shadow: var(--md-sys-shadow-1);
+}
+
+.md-elevation-2 {
+  background-color: var(--md-sys-color-surface-2);
+  box-shadow: var(--md-sys-shadow-2);
+}
+
+.md-elevation-3 {
+  background-color: var(--md-sys-color-surface-3);
+  box-shadow: var(--md-sys-shadow-3);
+}
+
+.md-elevation-4 {
+  background-color: var(--md-sys-color-surface-4);
+  box-shadow: var(--md-sys-shadow-4);
+}
+
+.md-elevation-5 {
+  background-color: var(--md-sys-color-surface-5);
+  box-shadow: var(--md-sys-shadow-5);
+}
+
+/* Filled buttons */
+.md-filled-button {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: var(--md-sys-shadow-1);
+}
+
+.md-filled-button:hover {
+  box-shadow: var(--md-sys-shadow-2);
+  transform: translateY(-1px);
+}
+
+.md-filled-button:active {
+  transform: translateY(0);
+}
+
+/* Filled tonal buttons */
+.md-filled-tonal-button {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-filled-tonal-button:hover {
+  box-shadow: var(--md-sys-shadow-1);
+}
+
+/* Outlined buttons */
+.md-outlined-button {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-outlined-button:hover {
+  background-color: rgba(30, 64, 175, 0.08);
+}
+
+/* Text buttons */
+.md-text-button {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-text-button:hover {
+  background-color: rgba(30, 64, 175, 0.08);
+}
+
+/* Cards */
+.md-card {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-4);
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-card-elevated {
+  background-color: var(--md-sys-color-surface-1);
+  box-shadow: var(--md-sys-shadow-1);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-4);
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-card-filled {
+  background-color: var(--md-sys-color-surface-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-4);
+}
+
+.md-card-outlined {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-4);
+}
+
+/* Floating Action Button (FAB) */
+.md-fab {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border: none;
+  border-radius: var(--md-sys-shape-corner-large);
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--md-sys-shadow-3);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-fab:hover {
+  box-shadow: var(--md-sys-shadow-4);
+  transform: scale(1.05);
+}
+
+.md-fab-large {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+/* Typography classes */
+.md-display-large {
+  font-size: var(--md-sys-typescale-display-large-size);
+  font-weight: var(--md-sys-typescale-display-large-weight);
+  line-height: var(--md-sys-typescale-display-large-line-height);
+}
+
+.md-display-medium {
+  font-size: var(--md-sys-typescale-display-medium-size);
+  font-weight: var(--md-sys-typescale-display-medium-weight);
+  line-height: var(--md-sys-typescale-display-medium-line-height);
+}
+
+.md-headline-large {
+  font-size: var(--md-sys-typescale-headline-large-size);
+  font-weight: var(--md-sys-typescale-headline-large-weight);
+  line-height: var(--md-sys-typescale-headline-large-line-height);
+}
+
+.md-headline-medium {
+  font-size: var(--md-sys-typescale-headline-medium-size);
+  font-weight: var(--md-sys-typescale-headline-medium-weight);
+  line-height: var(--md-sys-typescale-headline-medium-line-height);
+}
+
+.md-title-large {
+  font-size: var(--md-sys-typescale-title-large-size);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+  line-height: var(--md-sys-typescale-title-large-line-height);
+}
+
+.md-title-medium {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  font-weight: var(--md-sys-typescale-title-medium-weight);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+}
+
+.md-body-large {
+  font-size: var(--md-sys-typescale-body-large-size);
+  font-weight: var(--md-sys-typescale-body-large-weight);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+
+.md-body-medium {
+  font-size: var(--md-sys-typescale-body-medium-size);
+  font-weight: var(--md-sys-typescale-body-medium-weight);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+}
+
+.md-label-large {
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+}
+
+/* State layers (hover, focus, pressed) */
+.md-state-layer {
+  position: relative;
+  overflow: hidden;
+}
+
+.md-state-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.md-state-layer:hover::before {
+  opacity: 0.08;
+}
+
+.md-state-layer:focus::before {
+  opacity: 0.12;
+}
+
+.md-state-layer:active::before {
+  opacity: 0.12;
+}

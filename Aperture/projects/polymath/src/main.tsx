@@ -8,6 +8,9 @@ import '@fontsource/inter/500.css' // Medium
 import '@fontsource/inter/600.css' // Semibold
 import '@fontsource/inter/700.css' // Bold
 
+// Import Material You design system
+import './styles/material-you.css'
+
 // Service worker temporarily disabled for debugging
 console.log('[Main] Service Worker registration DISABLED for debugging')
 

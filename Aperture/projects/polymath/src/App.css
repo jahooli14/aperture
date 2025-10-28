@@ -4,37 +4,45 @@
 
 @layer base {
   :root {
-    /* Sophisticated navy blue palette */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* Material You design tokens (from material-you.css) */
+    /* These map to M3 color system */
+    --background: 0 0% 98%;
+    --foreground: 218 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 218 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 218 15% 15%;
 
-    /* Professional navy blue */
-    --primary: 222 47% 25%;
+    /* Primary - Material You Blue */
+    --primary: 218 90% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary - Material You Indigo */
+    --secondary: 243 75% 59%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 214 32% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 214 32% 95%;
-    --accent-foreground: 222 47% 25%;
+    /* Tertiary - Material You Amber */
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 222 47% 25%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 218 90% 48%;
 
+    /* Material You shape system - generous corners */
     --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
   }
 
   * {
@@ -42,17 +50,18 @@
   }
 
   body {
-    @apply bg-neutral-50 text-foreground antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    @apply antialiased;
+    background-color: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-background);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
+    font-weight: var(--md-sys-typescale-body-large-weight);
+    line-height: var(--md-sys-typescale-body-large-line-height);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.015em;
-    font-feature-settings: 'cv11', 'ss01';
-    font-size: 16px; /* Android-optimized base size */
-    line-height: 1.6; /* Better readability on mobile */
   }
 
-  /* Subtle ambient overlay */
+  /* Material You ambient gradient overlay */
   body::before {
     content: '';
     position: fixed;
@@ -61,154 +70,231 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    background: radial-gradient(circle at 30% 20%, rgba(30, 58, 138, 0.03) 0%, transparent 50%);
+    background: radial-gradient(
+      circle at 30% 20%,
+      var(--md-sys-color-primary-container) 0%,
+      transparent 50%
+    );
+    opacity: 0.15;
     z-index: 0;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.025em;
-    font-weight: 600;
+  /* Material You typography scale */
+  h1 {
+    font-family: var(--md-sys-typescale-display-large-font);
+    font-size: var(--md-sys-typescale-display-large-size);
+    font-weight: var(--md-sys-typescale-display-large-weight);
+    line-height: var(--md-sys-typescale-display-large-line-height);
+    letter-spacing: var(--md-sys-typescale-display-large-tracking);
+  }
+
+  h2 {
+    font-family: var(--md-sys-typescale-headline-large-font);
+    font-size: var(--md-sys-typescale-headline-large-size);
+    font-weight: var(--md-sys-typescale-headline-large-weight);
+    line-height: var(--md-sys-typescale-headline-large-line-height);
+    letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+  }
+
+  h3 {
+    font-family: var(--md-sys-typescale-headline-medium-font);
+    font-size: var(--md-sys-typescale-headline-medium-size);
+    font-weight: var(--md-sys-typescale-headline-medium-weight);
+    line-height: var(--md-sys-typescale-headline-medium-line-height);
+    letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+  }
+
+  h4 {
+    font-family: var(--md-sys-typescale-title-large-font);
+    font-size: var(--md-sys-typescale-title-large-size);
+    font-weight: var(--md-sys-typescale-title-large-weight);
+    line-height: var(--md-sys-typescale-title-large-line-height);
+    letter-spacing: var(--md-sys-typescale-title-large-tracking);
+  }
+
+  h5 {
+    font-family: var(--md-sys-typescale-title-medium-font);
+    font-size: var(--md-sys-typescale-title-medium-size);
+    font-weight: var(--md-sys-typescale-title-medium-weight);
+    line-height: var(--md-sys-typescale-title-medium-line-height);
+    letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+  }
+
+  h6 {
+    font-family: var(--md-sys-typescale-title-small-font);
+    font-size: var(--md-sys-typescale-title-small-size);
+    font-weight: var(--md-sys-typescale-title-small-weight);
+    line-height: var(--md-sys-typescale-title-small-line-height);
+    letter-spacing: var(--md-sys-typescale-title-small-tracking);
   }
 }
 
 @layer utilities {
-  /* Card Elevation System - Modern 3-tier approach */
+  /* Material You Card Elevation System - Tonal Elevation */
 
-  /* Flat card - no elevation */
+  /* Flat card - no elevation (base surface) */
   .card-flat {
-    @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
-    box-shadow: none;
+    @apply relative rounded-xl overflow-hidden;
+    background-color: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: var(--md-sys-shadow-0);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Raised card - subtle elevation (default) */
+  /* Raised card - level 1 elevation (default) */
   .pro-card, .card-raised {
-    @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.06),
-      0 2px 6px rgba(0, 0, 0, 0.04);
+    @apply relative rounded-xl overflow-hidden;
+    background-color: var(--md-sys-color-surface-1);
+    color: var(--md-sys-color-on-surface);
+    border: none;
+    box-shadow: var(--md-sys-shadow-1);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .pro-card:hover, .card-raised:hover {
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.08),
-      0 8px 24px rgba(0, 0, 0, 0.06);
+    background-color: var(--md-sys-color-surface-2);
+    box-shadow: var(--md-sys-shadow-2);
     transform: translateY(-2px);
-    border-color: #e5e5e5;
   }
 
-  /* Floating card - prominent elevation */
+  /* Floating card - level 3 elevation */
   .card-floating {
-    @apply relative bg-white border border-neutral-200 rounded-xl overflow-hidden;
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.1),
-      0 12px 32px rgba(0, 0, 0, 0.08);
+    @apply relative rounded-xl overflow-hidden;
+    background-color: var(--md-sys-color-surface-3);
+    color: var(--md-sys-color-on-surface);
+    border: none;
+    box-shadow: var(--md-sys-shadow-3);
     transition: all 0.3s cubic-bezier(0, 0, 0.2, 1);
   }
 
   .card-floating:hover {
-    box-shadow:
-      0 8px 24px rgba(0, 0, 0, 0.12),
-      0 20px 48px rgba(0, 0, 0, 0.1);
+    background-color: var(--md-sys-color-surface-4);
+    box-shadow: var(--md-sys-shadow-4);
     transform: translateY(-4px) scale(1.01);
-    border-color: #d4d4d4;
   }
 
-  /* Glass Panel - Premium */
+  /* Glass Panel - Material You style */
   .glass-panel {
-    @apply backdrop-blur-md bg-white/85 border border-neutral-200/70 rounded-xl;
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.04),
-      0 4px 16px rgba(0, 0, 0, 0.02),
-      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    @apply backdrop-blur-md rounded-xl;
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    box-shadow: var(--md-sys-shadow-2);
   }
 
-  /* Professional gradient text */
+  /* Material You gradient text */
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(120deg, #1e3a8a 0%, #3b82f6 100%);
+    background-image: linear-gradient(
+      120deg,
+      var(--md-sys-color-primary) 0%,
+      var(--md-sys-color-tertiary) 100%
+    );
     font-weight: 600;
   }
 
-  /* Primary Button - Premium (Android touch target: 48px minimum) */
+  /* Material You Filled Button (Primary) */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold;
+    @apply inline-flex items-center justify-center gap-2 font-medium;
     padding: 0 24px;
-    min-height: 48px;
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
-    color: white;
-    box-shadow:
-      0 2px 4px rgba(30, 58, 138, 0.15),
-      0 4px 12px rgba(30, 58, 138, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    min-height: 40px;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-full);
+    box-shadow: var(--md-sys-shadow-1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 1rem;
-    letter-spacing: -0.01em;
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: var(--md-sys-typescale-label-large-weight);
+    letter-spacing: var(--md-sys-typescale-label-large-tracking);
   }
 
   .btn-primary:hover {
-    box-shadow:
-      0 4px 12px rgba(30, 58, 138, 0.3),
-      0 8px 24px rgba(30, 58, 138, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    box-shadow: var(--md-sys-shadow-2);
+    background-color: var(--md-sys-color-primary);
+    filter: brightness(1.1);
   }
 
-  .btn-primary:active {
-    transform: translateY(0) scale(0.95);
-    box-shadow:
-      0 1px 2px rgba(30, 58, 138, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--md-sys-color-on-primary);
+    opacity: 0;
+    transition: opacity 0.2s;
   }
 
-  /* Secondary Button - Premium (Android touch target: 48px minimum) */
+  .btn-primary:hover::before {
+    opacity: 0.08;
+  }
+
+  .btn-primary:active::before {
+    opacity: 0.12;
+  }
+
+  /* Material You Filled Tonal Button (Secondary) */
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-semibold;
+    @apply inline-flex items-center justify-center gap-2 font-medium;
     padding: 0 24px;
-    min-height: 48px;
-    background: white;
-    color: #1e3a8a;
-    border: 2px solid #e5e5e5;
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    min-height: 40px;
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    border: none;
+    border-radius: var(--md-sys-shape-corner-full);
+    box-shadow: var(--md-sys-shadow-0);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    font-size: 1rem;
-    letter-spacing: -0.01em;
+    font-family: var(--md-sys-typescale-label-large-font);
+    font-size: var(--md-sys-typescale-label-large-size);
+    font-weight: var(--md-sys-typescale-label-large-weight);
+    letter-spacing: var(--md-sys-typescale-label-large-tracking);
   }
 
   .btn-secondary:hover {
-    background: #fafafa;
-    border-color: #1e3a8a;
-    box-shadow:
-      0 2px 8px rgba(30, 58, 138, 0.15),
-      0 4px 16px rgba(30, 58, 138, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    transform: translateY(-2px);
+    box-shadow: var(--md-sys-shadow-1);
   }
 
-  .btn-secondary:active {
-    transform: translateY(0) scale(0.95);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  .btn-secondary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: var(--md-sys-color-on-secondary-container);
+    opacity: 0;
+    transition: opacity 0.2s;
   }
 
-  /* Subtle accent line */
+  .btn-secondary:hover::before {
+    opacity: 0.08;
+  }
+
+  .btn-secondary:active::before {
+    opacity: 0.12;
+  }
+
+  /* Material You accent line */
   .accent-line {
     @apply absolute top-0 left-0 right-0 h-px;
-    background: linear-gradient(90deg, transparent 0%, #1e3a8a 50%, transparent 100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--md-sys-color-primary) 50%,
+      transparent 100%
+    );
     opacity: 0.3;
   }
 
-  /* Badge */
+  /* Material You Badge */
   .badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
-    background: rgba(30, 58, 138, 0.08);
-    color: #1e3a8a;
-    border: 1px solid rgba(30, 58, 138, 0.15);
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-medium;
+    background-color: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    font-family: var(--md-sys-typescale-label-small-font);
+    font-size: var(--md-sys-typescale-label-small-size);
+    font-weight: var(--md-sys-typescale-label-small-weight);
   }
 
   /* Smooth transitions */
@@ -320,30 +406,48 @@
     animation: pulseSlow 2.5s ease-in-out infinite;
   }
 
-  /* Professional input - Premium */
+  /* Material You Text Field */
   .input-pro {
-    @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;
-    @apply focus:border-blue-900 focus:ring-4 focus:ring-blue-900/10 outline-none;
+    @apply w-full px-4 py-3 outline-none;
     @apply transition-all duration-300;
-    font-size: 0.9375rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
   }
 
   .input-pro:hover {
-    border-color: #d4d4d4;
+    border-color: var(--md-sys-color-on-surface);
   }
 
-  /* Select pro - Premium */
+  .input-pro:focus {
+    border-color: var(--md-sys-color-primary);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
+  }
+
+  /* Material You Select Field */
   .select-pro {
-    @apply w-full px-4 py-3 rounded-lg border-2 border-neutral-200 bg-white;
-    @apply focus:border-blue-900 focus:ring-4 focus:ring-blue-900/10 outline-none;
+    @apply w-full px-4 py-3 outline-none;
     @apply transition-all duration-300;
-    font-size: 0.9375rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    background-color: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: var(--md-sys-shape-corner-extra-small);
+    font-family: var(--md-sys-typescale-body-large-font);
+    font-size: var(--md-sys-typescale-body-large-size);
   }
 
   .select-pro:hover {
-    border-color: #d4d4d4;
+    border-color: var(--md-sys-color-on-surface);
+  }
+
+  .select-pro:focus {
+    border-color: var(--md-sys-color-primary);
+    border-width: 2px;
+    box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
   }
 
   /* Minimal scroll */
