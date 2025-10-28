@@ -409,6 +409,10 @@ export default function ConstellationView() {
     const fg = graphRef.current
     if (!fg) return
 
+    // KEEP THE SIMULATION RUNNING (continuous movement)
+    fg.d3AlphaDecay(0.001) // Very slow decay = keeps moving
+    fg.d3VelocityDecay(0.2) // Smooth momentum
+
     fg.d3Force('charge')
       .strength(-120) // Stronger repulsion for spacing
       .distanceMax(300)
@@ -418,10 +422,13 @@ export default function ConstellationView() {
       .strength(1.5) // Stronger links
 
     fg.d3Force('center')
-      .strength(0.1) // Weak center pull
+      .strength(0.05) // Very weak center pull for organic drift
 
     // Add custom type clustering force
     fg.d3Force('typeCluster', customForces().typeCluster)
+
+    // Restart simulation to apply forces
+    fg.d3ReheatSimulation()
   }, [customForces])
 
   // Voice commands

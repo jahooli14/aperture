@@ -208,98 +208,74 @@ export function HomePage() {
           </h1>
         </div>
 
-        {/* Stats Grid - Material You */}
+        {/* Stats Grid - Premium Dark */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Thoughts Stat */}
             <Link
               to="/memories"
-              className="group relative overflow-hidden p-6 transition-all duration-300"
-              style={{
-                backgroundColor: 'var(--md-sys-color-secondary-container)',
-                color: 'var(--md-sys-color-on-secondary-container)',
-                borderRadius: 'var(--md-sys-shape-corner-large)',
-                boxShadow: 'var(--md-sys-shadow-1)',
-              }}
+              className="premium-stat-card group"
             >
               <div className="flex items-center justify-between mb-3">
-                <Brain className="h-8 w-8" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Brain className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-indigo)' }} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
               </div>
-              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+              <div className="text-3xl font-bold mb-1 premium-text-platinum" style={{ fontSize: 'var(--premium-text-display-sm)', letterSpacing: 'var(--premium-tracking-tight)' }}>
                 {memories.length}
               </div>
-              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
-                Thoughts
+              <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
+                THOUGHTS
               </div>
             </Link>
 
             {/* New Suggestions Stat */}
             <Link
               to="/suggestions"
-              className="group relative overflow-hidden p-6 transition-all duration-300"
-              style={{
-                backgroundColor: 'var(--md-sys-color-primary-container)',
-                color: 'var(--md-sys-color-on-primary-container)',
-                borderRadius: 'var(--md-sys-shape-corner-large)',
-                boxShadow: 'var(--md-sys-shadow-1)',
-              }}
+              className="premium-stat-card group"
             >
               <div className="flex items-center justify-between mb-3">
-                <Sparkles className="h-8 w-8" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Sparkles className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-blue)' }} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
               </div>
-              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+              <div className="text-3xl font-bold mb-1 premium-text-platinum" style={{ fontSize: 'var(--premium-text-display-sm)', letterSpacing: 'var(--premium-tracking-tight)' }}>
                 {pendingSuggestions.length}
               </div>
-              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
-                New Ideas
+              <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
+                NEW IDEAS
               </div>
             </Link>
 
             {/* Sparks Stat */}
             <Link
               to="/suggestions?filter=spark"
-              className="group relative overflow-hidden p-6 transition-all duration-300"
-              style={{
-                backgroundColor: 'var(--md-sys-color-tertiary-container)',
-                color: 'var(--md-sys-color-on-tertiary-container)',
-                borderRadius: 'var(--md-sys-shape-corner-large)',
-                boxShadow: 'var(--md-sys-shadow-1)',
-              }}
+              className="premium-stat-card group"
             >
               <div className="flex items-center justify-between mb-3">
-                <TrendingUp className="h-8 w-8" strokeWidth={1.5} />
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <TrendingUp className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-amber)' }} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
               </div>
-              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+              <div className="text-3xl font-bold mb-1 premium-text-gold" style={{ fontSize: 'var(--premium-text-display-sm)', letterSpacing: 'var(--premium-tracking-tight)' }}>
                 {sparkSuggestions.length}
               </div>
-              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
-                Sparks
+              <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
+                SPARKS
               </div>
             </Link>
 
             {/* Active Projects Stat */}
             <Link
               to="/projects"
-              className="group relative overflow-hidden p-6 transition-all duration-300"
-              style={{
-                backgroundColor: 'var(--md-sys-color-surface-container-high)',
-                color: 'var(--md-sys-color-on-surface)',
-                borderRadius: 'var(--md-sys-shape-corner-large)',
-                boxShadow: 'var(--md-sys-shadow-2)',
-              }}
+              className="premium-stat-card group"
             >
               <div className="flex items-center justify-between mb-3">
-                <Rocket className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--md-sys-color-primary)' }} />
-                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Rocket className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-emerald)' }} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
               </div>
-              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+              <div className="text-3xl font-bold mb-1 premium-text-platinum" style={{ fontSize: 'var(--premium-text-display-sm)', letterSpacing: 'var(--premium-tracking-tight)' }}>
                 {activeProjects.length}
               </div>
-              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
-                Active
+              <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
+                ACTIVE
               </div>
             </Link>
           </div>

@@ -274,7 +274,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Voice FAB - Material You Secondary Action */}
+      {/* Voice FAB - Premium Dark */}
       <AnimatePresence>
         {!isMenuOpen && isOnline && (
           <motion.button
@@ -284,20 +284,14 @@ export function FloatingNav() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsVoiceOpen(true)}
-            className="fixed bottom-28 right-6 z-40 w-14 h-14 flex items-center justify-center transition-all"
-            style={{
-              backgroundColor: 'var(--md-sys-color-secondary-container)',
-              color: 'var(--md-sys-color-on-secondary-container)',
-              borderRadius: 'var(--md-sys-shape-corner-large)',
-              boxShadow: 'var(--md-sys-shadow-2)',
-            }}
+            className="premium-fab fixed bottom-28 right-6 z-40 w-14 h-14 flex items-center justify-center"
           >
-            <Mic className="w-5 h-5" />
+            <Mic className="w-5 h-5" style={{ color: 'var(--premium-platinum)' }} />
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Main FAB - Material You Primary */}
+      {/* Main FAB - Premium Dark */}
       <motion.button
         onClick={() => {
           if (isVoiceOpen) {
@@ -308,13 +302,7 @@ export function FloatingNav() {
         }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 flex items-center justify-center transition-all relative"
-        style={{
-          backgroundColor: 'var(--md-sys-color-primary-container)',
-          color: 'var(--md-sys-color-on-primary-container)',
-          borderRadius: 'var(--md-sys-shape-corner-large)',
-          boxShadow: 'var(--md-sys-shadow-3)',
-        }}
+        className="premium-fab fixed bottom-6 right-6 z-50 w-16 h-16 flex items-center justify-center relative"
       >
         {/* Icon */}
         <motion.div
@@ -322,29 +310,27 @@ export function FloatingNav() {
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
           {isMenuOpen ? (
-            <X className="w-7 h-7" />
+            <X className="w-7 h-7" style={{ color: 'var(--premium-platinum)' }} />
           ) : (
-            <Sparkles className="w-7 h-7" />
+            <Sparkles className="w-7 h-7" style={{ color: 'var(--premium-platinum)' }} />
           )}
         </motion.div>
 
-        {/* Subtle pulse when closed */}
+        {/* Premium platinum pulse when closed */}
         {!isMenuOpen && (
           <motion.div
             animate={{
-              opacity: [0.15, 0.3, 0.15],
-              scale: [1, 1.1, 1]
+              opacity: [0.1, 0.2, 0.1],
             }}
             transition={{
-              duration: 2.5,
+              duration: 3,
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none rounded-lg"
             style={{
-              backgroundColor: 'var(--md-sys-color-primary)',
-              borderRadius: 'var(--md-sys-shape-corner-large)',
-              filter: 'blur(12px)',
+              background: 'radial-gradient(circle, var(--premium-platinum) 0%, transparent 70%)',
+              filter: 'blur(8px)',
             }}
           />
         )}

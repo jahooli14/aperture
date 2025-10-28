@@ -51,17 +51,18 @@
 
   body {
     @apply antialiased;
-    background-color: var(--md-sys-color-background);
-    color: var(--md-sys-color-on-background);
-    font-family: var(--md-sys-typescale-body-large-font);
-    font-size: var(--md-sys-typescale-body-large-size);
-    font-weight: var(--md-sys-typescale-body-large-weight);
-    line-height: var(--md-sys-typescale-body-large-line-height);
+    background-color: var(--premium-surface-base);
+    color: var(--premium-text-primary);
+    font-family: var(--premium-font-body);
+    font-size: var(--premium-text-body-lg);
+    font-weight: 400;
+    line-height: 1.6;
+    letter-spacing: var(--premium-tracking-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Material You ambient gradient overlay */
+  /* Premium ambient overlay - subtle metallic gradient */
   body::before {
     content: '';
     position: fixed;
@@ -71,11 +72,15 @@
     bottom: 0;
     pointer-events: none;
     background: radial-gradient(
-      circle at 30% 20%,
-      var(--md-sys-color-primary-container) 0%,
+      circle at 20% 30%,
+      rgba(59, 130, 246, 0.03) 0%,
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(229, 231, 235, 0.02) 0%,
       transparent 50%
     );
-    opacity: 0.15;
     z-index: 0;
   }
 
