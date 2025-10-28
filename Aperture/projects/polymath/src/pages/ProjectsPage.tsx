@@ -113,7 +113,15 @@ export function ProjectsPage() {
             variant="outline"
             size="sm"
             onClick={() => setViewMode('grid')}
-            className={`h-9 w-9 p-0 ${viewMode === 'grid' ? 'bg-blue-100 border-blue-300 text-blue-950' : 'text-gray-600'}`}
+            className={`h-9 w-9 p-0 transition-all ${
+              viewMode === 'grid'
+                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
+                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
+            }`}
+            style={{
+              borderColor: viewMode === 'grid' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
+              color: viewMode === 'grid' ? '#3b82f6' : '#6b7280'
+            }}
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -121,7 +129,15 @@ export function ProjectsPage() {
             variant="outline"
             size="sm"
             onClick={() => setViewMode('compact')}
-            className={`h-9 w-9 p-0 ${viewMode === 'compact' ? 'bg-blue-100 border-blue-300 text-blue-950' : 'text-gray-600'}`}
+            className={`h-9 w-9 p-0 transition-all ${
+              viewMode === 'compact'
+                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
+                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
+            }`}
+            style={{
+              borderColor: viewMode === 'compact' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
+              color: viewMode === 'compact' ? '#3b82f6' : '#6b7280'
+            }}
           >
             <List className="h-4 w-4" />
           </Button>
@@ -141,9 +157,12 @@ export function ProjectsPage() {
               onClick={() => setFilter(key as typeof filter)}
               className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                 filter === key
-                  ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
-                  : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
+                  ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-blue-600'
+                  : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
               }`}
+              style={{
+                borderColor: filter === key ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)'
+              }}
             >
               {label}
             </Button>

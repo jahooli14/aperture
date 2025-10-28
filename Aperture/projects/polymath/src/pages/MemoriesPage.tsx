@@ -272,9 +272,12 @@ export function MemoriesPage() {
             onClick={() => setView('foundational')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'foundational'
-                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
+                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-indigo-600'
+                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
             }`}
+            style={{
+              borderColor: view === 'foundational' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'
+            }}
           >
             Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
           </Button>
@@ -283,9 +286,12 @@ export function MemoriesPage() {
             onClick={() => setView('all')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'all'
-                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
+                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-indigo-600'
+                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
             }`}
+            style={{
+              borderColor: view === 'all' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'
+            }}
           >
             My Thoughts ({memories.length})
           </Button>
@@ -294,9 +300,12 @@ export function MemoriesPage() {
             onClick={() => setView('resurfacing')}
             className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
               view === 'resurfacing'
-                ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
-                : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
+                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-indigo-600'
+                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
             }`}
+            style={{
+              borderColor: view === 'resurfacing' ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'
+            }}
           >
             Resurface ({resurfacing.length})
           </Button>
@@ -471,9 +480,12 @@ export function MemoriesPage() {
                   onClick={() => setMemoryView(key as typeof memoryView)}
                   className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                     memoryView === key
-                      ? 'bg-blue-900 text-white shadow-md hover:bg-blue-950'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:text-blue-900'
+                      ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-indigo-600'
+                      : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
                   }`}
+                  style={{
+                    borderColor: memoryView === key ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.2)'
+                  }}
                 >
                   {label}
                 </Button>

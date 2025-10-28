@@ -222,8 +222,8 @@ export function ScrollTimelinePage() {
   if (monthSections.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
-          <Sparkles className="h-16 w-16 text-blue-400 mx-auto mb-4 opacity-50" />
+        <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-16 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+          <Sparkles className="h-16 w-16 text-blue-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-neutral-900 mb-2">No Timeline Data Yet</h2>
           <p className="text-neutral-600">Start capturing thoughts, reading articles, and building projects.</p>
         </div>
@@ -234,7 +234,7 @@ export function ScrollTimelinePage() {
   return (
     <div ref={containerRef} className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
       {/* Header */}
-      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-neutral-200">
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b-2 shadow-lg" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
@@ -252,7 +252,11 @@ export function ScrollTimelinePage() {
                 const Icon = getIcon(type)
                 const colors = getSchemaColor(type)
                 return (
-                  <div key={type} className="flex items-center gap-2">
+                  <div
+                    key={type}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/80 border-2 shadow-md"
+                    style={{ borderColor: `${colors.primary}50` }}
+                  >
                     <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: colors.primary }}
@@ -336,7 +340,7 @@ function MonthSection({ section, sectionIndex, totalSections, scrollProgress, on
         className="sticky top-24 z-30 mb-12"
         style={{ opacity: monthOpacity, y: monthY }}
       >
-        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/80 border border-neutral-200 shadow-lg">
+        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
           <div className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent">
             {section.monthLabel}
           </div>

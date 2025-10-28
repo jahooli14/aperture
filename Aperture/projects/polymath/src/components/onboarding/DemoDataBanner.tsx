@@ -84,13 +84,15 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
                 <button
                   onClick={handleClearDemoData}
                   disabled={isClearing}
-                  className="px-4 py-2 bg-white text-blue-900 rounded-lg font-medium hover:bg-amber-50 transition-colors disabled:opacity-50"
+                  className="backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl disabled:opacity-50"
+                  style={{ borderColor: 'rgba(239, 68, 68, 0.5)', color: '#dc2626' }}
                 >
                   {isClearing ? 'Clearing...' : 'Yes, Clear Everything'}
                 </button>
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 bg-amber-600/20 text-white rounded-lg font-medium hover:bg-amber-600/30 transition-colors"
+                  className="backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-white"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
                 >
                   Cancel
                 </button>
@@ -120,14 +122,16 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={onDismiss}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-900 rounded-lg font-medium hover:bg-amber-50 transition-colors"
+                className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/90 border-2 shadow-xl rounded-lg px-4 py-2 font-medium transition-all hover:shadow-2xl"
+                style={{ borderColor: 'rgba(59, 130, 246, 0.5)', color: '#3b82f6' }}
               >
                 <Eye className="h-4 w-4" />
                 Keep Exploring
               </button>
               <button
                 onClick={() => setShowConfirm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600/20 text-white rounded-lg font-medium hover:bg-amber-600/30 transition-colors"
+                className="inline-flex items-center gap-2 backdrop-blur-xl bg-white/30 border-2 shadow-md rounded-lg px-4 py-2 font-medium transition-all hover:shadow-lg text-white"
+                style={{ borderColor: 'rgba(255, 255, 255, 0.3)' }}
               >
                 <Trash2 className="h-4 w-4" />
                 Clear Demo Data

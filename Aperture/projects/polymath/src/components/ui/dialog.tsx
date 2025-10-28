@@ -126,8 +126,8 @@ const DialogContent = React.forwardRef<
           "w-[calc(100%-2rem)] sm:w-full max-w-lg",
           // Positioning and transforms
           "-translate-x-1/2 -translate-y-1/2",
-          // Modern styling with elevation
-          "bg-white rounded-2xl shadow-2xl border border-neutral-200/50",
+          // Modern glassmorphism styling with elevation
+          "backdrop-blur-xl bg-white/95 rounded-2xl shadow-2xl border-2",
           // Padding with safe area consideration
           "p-6 pb-8",
           // Smooth animations
@@ -141,6 +141,9 @@ const DialogContent = React.forwardRef<
           "overflow-auto",
           className
         )}
+        style={{
+          borderColor: 'rgba(59, 130, 246, 0.3)'
+        }}
         onClick={(e) => e.stopPropagation()}
         {...props}
       >
@@ -148,18 +151,21 @@ const DialogContent = React.forwardRef<
         <button
           onClick={() => onOpenChange(false)}
           className={cn(
-            // Modern close button with better touch target
+            // Modern close button with better touch target and glassmorphism
             "absolute right-4 top-4",
             "h-10 w-10",
             "flex items-center justify-center",
             "rounded-full",
-            "bg-neutral-100 hover:bg-neutral-200",
+            "backdrop-blur-xl bg-white/80 hover:bg-white/90 border-2 shadow-md hover:shadow-lg",
             "text-neutral-600 hover:text-neutral-900",
             "transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+            "focus:outline-none focus:ring-2 focus:ring-blue-500",
             "active:scale-95",
             "z-10"
           )}
+          style={{
+            borderColor: 'rgba(59, 130, 246, 0.2)'
+          }}
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>

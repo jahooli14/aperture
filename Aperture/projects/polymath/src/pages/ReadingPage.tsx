@@ -78,7 +78,7 @@ export function ReadingPage() {
         transition={{ duration: 0.2 }}
       >
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-10">
+      <div className="backdrop-blur-xl bg-white/80 border-b-2 shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -92,7 +92,11 @@ export function ReadingPage() {
 
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="px-4 py-2 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-950 transition-colors shadow-sm inline-flex items-center gap-2"
+              className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-4 py-2 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift"
+              style={{
+                borderColor: 'rgba(16, 185, 129, 0.5)',
+                color: '#10b981'
+              }}
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Save Article</span>
@@ -112,11 +116,15 @@ export function ReadingPage() {
                 <button
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.key
-                      ? 'bg-blue-100 text-blue-950 border-2 border-blue-300'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
+                      : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
                   }`}
+                  style={{
+                    borderColor: activeTab === tab.key ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.2)',
+                    color: activeTab === tab.key ? '#10b981' : '#6b7280'
+                  }}
                 >
                   <Icon className="h-4 w-4" />
                   {tab.label}
@@ -136,27 +144,33 @@ export function ReadingPage() {
             <p className="text-neutral-600">Loading articles...</p>
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <BookOpen className="h-16 w-16 text-neutral-300 mb-4" />
-            <h3 className="text-xl font-semibold text-neutral-700 mb-2">
-              {activeTab === 'queue'
-                ? 'No articles yet'
-                : `No ${activeTab} articles`}
-            </h3>
-            <p className="text-neutral-500 text-center max-w-md mb-6">
-              {activeTab === 'queue'
-                ? 'Save your first article to start building your reading queue'
-                : `You don't have any ${activeTab} articles yet`}
-            </p>
-            {activeTab === 'queue' && (
-              <button
-                onClick={() => setShowSaveDialog(true)}
-                className="px-6 py-3 bg-blue-900 text-white rounded-full font-medium hover:bg-blue-950 transition-colors shadow-sm inline-flex items-center gap-2"
-              >
-                <Plus className="h-5 w-5" />
-                Save Your First Article
-              </button>
-            )}
+          <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-20 text-center" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            <div className="flex flex-col items-center justify-center">
+              <BookOpen className="h-16 w-16 text-green-400 mb-4" />
+              <h3 className="text-xl font-semibold text-neutral-900 mb-2">
+                {activeTab === 'queue'
+                  ? 'No articles yet'
+                  : `No ${activeTab} articles`}
+              </h3>
+              <p className="text-neutral-600 text-center max-w-md mb-6">
+                {activeTab === 'queue'
+                  ? 'Save your first article to start building your reading queue'
+                  : `You don't have any ${activeTab} articles yet`}
+              </p>
+              {activeTab === 'queue' && (
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-3 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift"
+                  style={{
+                    borderColor: 'rgba(16, 185, 129, 0.5)',
+                    color: '#10b981'
+                  }}
+                >
+                  <Plus className="h-5 w-5" />
+                  Save Your First Article
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
