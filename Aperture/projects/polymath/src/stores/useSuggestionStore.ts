@@ -145,7 +145,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     set({ synthesizing: true, error: null })
 
     try {
-      const response = await fetch(`${API_BASE}/cron/weekly-synthesis`, {
+      const response = await fetch(`${API_BASE}/cron/jobs?job=synthesis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
