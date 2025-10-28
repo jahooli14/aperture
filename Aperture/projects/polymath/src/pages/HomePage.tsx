@@ -84,8 +84,28 @@ export function HomePage() {
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
   const sparkSuggestions = suggestions.filter(s => s.status === 'spark')
   const activeProjects = projects.filter(p => p.status === 'active')
+  const priorityProjects = projects.filter(p => p.priority && p.metadata?.next_step) // NEW: Priority projects with next steps
   const recentMemories = memories.slice(0, 3)
   const recentSuggestions = pendingSuggestions.slice(0, 2)
+  const [aiSparks, setAiSparks] = useState<any[]>([]) // NEW: AI-suggested connections
+
+  // NEW: Fetch AI-generated connection suggestions (Sparks)
+  useEffect(() => {
+    const fetchAiSparks = async () => {
+      try {
+        const response = await fetch('/api/related?connections=true&ai_suggested=true&limit=3')
+        if (response.ok) {
+          const data = await response.json()
+          setAiSparks(data.connections || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI Sparks:', error)
+      }
+    }
+    if (memories.length > 0 || projects.length > 0) {
+      fetchAiSparks()
+    }
+  }, [memories.length, projects.length])
 
   const handleSuggestionClick = (suggestion: ProjectSuggestion) => {
     setSelectedSuggestion(suggestion)
@@ -283,7 +303,83 @@ export function HomePage() {
 
         {/* Main Content Grid */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          {/* NEW: Priority Project Steps - Top Module */}
+          {priorityProjects.length > 0 && (
+            <section className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
+                  <Rocket className="h-6 w-6 text-blue-600" />
+                  Active Project Steps
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {priorityProjects.map(project => (
+                  <Link
+                    key={project.id}
+                    to={`/projects`}
+                    className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-gradient-to-br from-blue-50/80 to-purple-50/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl"
+                    style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}
+                  >
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }} />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-bold text-lg text-neutral-900">{project.title}</h3>
+                        <div className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 text-xs font-bold">
+                          PRIORITY
+                        </div>
+                      </div>
+                      <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border-2 border-blue-200">
+                        <div className="text-xs font-bold text-blue-900 uppercase tracking-wide mb-2">
+                          NEXT STEP:
+                        </div>
+                        <div className="text-neutral-900 font-medium">
+                          {project.metadata?.next_step}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 h-2 transition-all duration-300 group-hover:h-3" style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }} />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* NEW: AI-Generated Sparks */}
+            {aiSparks.length > 0 && (
+              <section className="lg:col-span-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-neutral-900 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-amber-500" />
+                    AI-Generated Sparks
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {aiSparks.slice(0, 3).map((spark, index) => (
+                    <div
+                      key={index}
+                      className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-5 transition-all duration-300 hover:border-amber-300 hover:shadow-2xl"
+                      style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                    >
+                      <div className="absolute top-0 right-0 p-2">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <div className="text-sm font-medium text-amber-900 mb-2">
+                        Connection Suggestion
+                      </div>
+                      <div className="text-neutral-900 text-sm mb-3">
+                        {spark.ai_reasoning || 'AI found a potential connection between your items'}
+                      </div>
+                      <button className="text-xs text-blue-900 hover:text-blue-950 font-medium">
+                        View connection →
+                      </button>
+                      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Recent Suggestions */}
             <section>
               <div className="flex items-center justify-between mb-4">
@@ -321,10 +417,10 @@ export function HomePage() {
                 ) : (
                   <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
                     <Sparkles className="h-12 w-12 text-blue-400 mx-auto mb-3" />
-                    <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Ideas?</p>
+                    <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Sparks?</p>
                     <p className="text-sm text-neutral-600 mb-4">
                       {memories.length > 0
-                        ? "You have thoughts captured. Click Generate Ideas to see AI synthesis!"
+                        ? "You have thoughts captured. Click Generate Sparks to see AI connections!"
                         : "Add some thoughts, then generate personalized project suggestions"
                       }
                     </p>
@@ -333,7 +429,7 @@ export function HomePage() {
                       className="btn-primary inline-flex items-center gap-2"
                     >
                       <Sparkles className="h-4 w-4" />
-                      {memories.length > 0 ? "Generate Ideas" : "View Suggestions"}
+                      {memories.length > 0 ? "Generate Sparks" : "View Suggestions"}
                     </Link>
                   </div>
                 )}

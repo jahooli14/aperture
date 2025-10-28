@@ -13,6 +13,8 @@ import { ProjectActivityStream } from '../components/projects/ProjectActivityStr
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { RelatedItems } from '../components/RelatedItems'
+import { ConnectionsList } from '../components/connections/ConnectionsList' // NEW
+import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog' // NEW
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -34,6 +36,7 @@ export function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showCreateConnection, setShowCreateConnection] = useState(false) // NEW
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -284,6 +287,28 @@ export function ProjectDetailPage() {
           sourceText={`${project.title} ${project.description || ''}`}
         />
 
+        {/* NEW: Connections (Sparks) */}
+        <div className="pro-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-600" />
+              Connections
+            </h3>
+            <Button
+              onClick={() => setShowCreateConnection(true)}
+              variant="outline"
+              size="sm"
+            >
+              Link Item
+            </Button>
+          </div>
+          <ConnectionsList
+            itemType="project"
+            itemId={project.id}
+            onConnectionDeleted={loadProjectDetails}
+          />
+        </div>
+
         {/* Activity Stream */}
         <ProjectActivityStream
           notes={notes}
@@ -306,6 +331,15 @@ export function ProjectDetailPage() {
         onClose={() => setShowAddNote(false)}
         projectId={project.id}
         onNoteAdded={handleNoteAdded}
+      />
+
+      {/* Create Connection Dialog */}
+      <CreateConnectionDialog
+        open={showCreateConnection}
+        onOpenChange={setShowCreateConnection}
+        sourceType="project"
+        sourceId={project.id}
+        onConnectionCreated={loadProjectDetails}
       />
 
       {/* Confirmation Dialog */}

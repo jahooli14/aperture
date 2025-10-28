@@ -13,7 +13,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { Layers, FolderKanban, FileText, Sparkles } from 'lucide-react'
+import { Layers, FolderKanban, FileText, Sparkles, GitBranch } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 interface TimelineEvent {
@@ -64,6 +64,8 @@ export function ScrollTimelinePage() {
   const progressBarWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
 
   const [monthSections, setMonthSections] = useState<MonthSection[]>([])
+  const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]) // NEW: Store all events for thread filtering
+  const [threadFilter, setThreadFilter] = useState<{type: string, id: string} | null>(null) // NEW: Thread view filter
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -142,6 +144,8 @@ export function ScrollTimelinePage() {
       // Sort by date (oldest first for scroll timeline)
       events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
+      setAllEvents(events) // NEW: Store all events
+
       // Group by month
       const monthMap = new Map<string, TimelineEvent[]>()
       events.forEach(event => {
@@ -192,6 +196,56 @@ export function ScrollTimelinePage() {
     }
   }
 
+  // NEW: Fetch thread for a given item
+  const loadThread = async (itemType: string, itemId: string) => {
+    try {
+      const response = await fetch(`/api/related?type=${itemType}&id=${itemId}&thread=true`)
+      if (!response.ok) throw new Error('Failed to fetch thread')
+
+      const data = await response.json()
+      const threadItemIds = new Set(data.items.map((item: any) => item.item_id))
+
+      // Filter events to only show items in the thread
+      const threadEvents = allEvents.filter(event => threadItemIds.has(event.id))
+
+      // Rebuild month sections with filtered events
+      const monthMap = new Map<string, TimelineEvent[]>()
+      threadEvents.forEach(event => {
+        const monthKey = `${event.year}-${event.month.toString().padStart(2, '0')}`
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, [])
+        }
+        monthMap.get(monthKey)!.push(event)
+      })
+
+      const sections: MonthSection[] = Array.from(monthMap.entries())
+        .map(([monthKey, monthEvents]) => {
+          const year = monthEvents[0].year
+          const month = monthEvents[0].month
+          const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+          })
+          return { year, month, monthLabel, events: monthEvents, connections: [] }
+        })
+        .sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year
+          return a.month - b.month
+        })
+
+      setMonthSections(sections)
+      setThreadFilter({ type: itemType, id: itemId })
+    } catch (error) {
+      console.error('[ScrollTimeline] Failed to load thread:', error)
+    }
+  }
+
+  // NEW: Clear thread filter
+  const clearThreadFilter = () => {
+    setThreadFilter(null)
+    loadTimelineData() // Reload all data
+  }
+
   const getSchemaColor = (type: TimelineEvent['type']) => {
     return SCHEMA_COLORS[type]
   }
@@ -236,13 +290,34 @@ export function ScrollTimelinePage() {
       {/* Header */}
       <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b-2 shadow-lg" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          {/* NEW: Thread Filter Banner */}
+          {threadFilter && (
+            <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-blue-50 border-2 border-amber-300 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <GitBranch className="h-5 w-5 text-amber-700" />
+                <div>
+                  <div className="font-bold text-neutral-900">Viewing Thread</div>
+                  <div className="text-sm text-neutral-600">
+                    Showing items connected to this {threadFilter.type}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={clearThreadFilter}
+                className="px-4 py-2 rounded-lg bg-white hover:bg-neutral-50 border-2 border-neutral-200 font-medium text-neutral-900 transition-colors"
+              >
+                Show All
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-neutral-900 mb-1">
                 Knowledge Timeline
               </h1>
               <p className="text-sm text-neutral-600">
-                Scroll to explore your knowledge evolution
+                {threadFilter ? 'Viewing connected items only' : 'Scroll to explore your knowledge evolution'}
               </p>
             </div>
 
@@ -290,6 +365,7 @@ export function ScrollTimelinePage() {
             sectionIndex={sectionIndex}
             totalSections={monthSections.length}
             scrollProgress={scrollYProgress}
+            onViewThread={loadThread} // NEW: Pass thread viewer function
             onEventClick={(event) => {
               if (event.type === 'project') {
                 navigate(`/projects/${event.id}`)
@@ -311,10 +387,11 @@ interface MonthSectionProps {
   sectionIndex: number
   totalSections: number
   scrollProgress: any
+  onViewThread: (itemType: string, itemId: string) => void // NEW
   onEventClick: (event: TimelineEvent) => void
 }
 
-function MonthSection({ section, sectionIndex, totalSections, scrollProgress, onEventClick }: MonthSectionProps) {
+function MonthSection({ section, sectionIndex, totalSections, scrollProgress, onViewThread, onEventClick }: MonthSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
 
   // Calculate scroll-based parallax for month marker
@@ -360,6 +437,7 @@ function MonthSection({ section, sectionIndex, totalSections, scrollProgress, on
             sectionIndex={sectionIndex}
             totalSections={totalSections}
             scrollProgress={scrollProgress}
+            onViewThread={() => onViewThread(event.type, event.id)} // NEW
             onClick={() => onEventClick(event)}
           />
         ))}
@@ -394,10 +472,11 @@ interface TimelineEventCardProps {
   sectionIndex: number
   totalSections: number
   scrollProgress: any
+  onViewThread: () => void // NEW
   onClick: () => void
 }
 
-function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scrollProgress, onClick }: TimelineEventCardProps) {
+function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scrollProgress, onViewThread, onClick }: TimelineEventCardProps) {
   const getIconForType = (type: TimelineEvent['type']) => {
     switch (type) {
       case 'project': return FolderKanban
@@ -478,6 +557,18 @@ function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scr
               </span>
             )}
           </div>
+
+          {/* NEW: View Thread Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onViewThread()
+            }}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/60 hover:bg-white border border-neutral-200 hover:border-blue-400 text-xs font-medium text-neutral-700 hover:text-blue-900 transition-all"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            View Thread
+          </button>
         </div>
 
         {/* Accent Line */}

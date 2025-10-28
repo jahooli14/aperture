@@ -399,6 +399,7 @@ export interface Project {
   title: string
   description: string | null
   status: ProjectStatus
+  priority?: boolean // NEW: For homepage "Active Project Steps" - shows next_step when true
   last_active: string // ISO 8601
   created_at: string
   updated_at?: string
@@ -815,4 +816,93 @@ export interface DailyQueueResponse {
   context: UserContext
   total_projects: number
 }
+
+// ============================================================================
+// CONNECTIONS (SPARKS)
+// Explicit linking system between all content types
+// ============================================================================
+
+export type ConnectionSourceType = 'project' | 'thought' | 'article' | 'suggestion'
+export type ConnectionTargetType = 'project' | 'thought' | 'article' | 'suggestion'
+export type ConnectionType = 'inspired_by' | 'relates_to' | 'evolves_from' | 'ai_suggested' | 'manual' | 'reading_flow'
+export type ConnectionCreator = 'ai' | 'user' | 'system'
+
+export interface Connection {
+  id: string
+  source_type: ConnectionSourceType
+  source_id: string
+  target_type: ConnectionTargetType
+  target_id: string
+  connection_type: ConnectionType
+  ai_reasoning?: string
+  created_by: ConnectionCreator
+  created_at: string
+}
+
+export interface CreateConnectionInput {
+  source_type: ConnectionSourceType
+  source_id: string
+  target_type: ConnectionTargetType
+  target_id: string
+  connection_type?: ConnectionType
+  ai_reasoning?: string
+  created_by?: ConnectionCreator
+}
+
+export interface ConnectionWithDetails extends Connection {
+  source_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+  target_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+}
+
+export interface ItemConnection {
+  connection_id: string
+  related_type: ConnectionSourceType | ConnectionTargetType
+  related_id: string
+  connection_type: ConnectionType
+  direction: 'outbound' | 'inbound'
+  created_by: ConnectionCreator
+  created_at: string
+  ai_reasoning?: string
+  related_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+}
+
+export interface ThreadItem {
+  item_type: ConnectionSourceType | ConnectionTargetType
+  item_id: string
+  depth: number
+  item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+}
+
+export interface ConnectionsResponse {
+  connections: ItemConnection[]
+  total: number
+}
+
+export interface ThreadResponse {
+  items: ThreadItem[]
+  root_item: ThreadItem
+}
+
+// Reading Queue types (referenced in connections)
+export interface ReadingQueueItem {
+  id: string
+  user_id: string
+  url: string
+  title?: string
+  author?: string
+  content?: string
+  excerpt?: string
+  published_date?: string
+  read_time_minutes?: number
+  thumbnail_url?: string
+  favicon_url?: string
+  source?: string
+  status: 'unread' | 'reading' | 'archived'
+  created_at: string
+  read_at?: string
+  archived_at?: string
+  tags?: string[]
+  word_count?: number
+}
+
 // Build trigger
