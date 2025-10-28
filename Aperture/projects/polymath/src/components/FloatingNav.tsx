@@ -150,14 +150,18 @@ export function FloatingNav() {
 
   return (
     <>
-      {/* Voice Input Modal */}
+      {/* Voice Input Modal - Material You */}
       <AnimatePresence>
         {isVoiceOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.32)', // M3 scrim overlay
+              backdropFilter: 'blur(8px)'
+            }}
             onClick={() => setIsVoiceOpen(false)}
           >
             <motion.div
@@ -165,10 +169,11 @@ export function FloatingNav() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-2xl backdrop-blur-xl bg-white/90 border-2 shadow-2xl p-6"
+              className="w-full max-w-md p-6"
               style={{
-                borderColor: currentColors.primary,
-                boxShadow: `0 20px 60px ${currentColors.glow}`
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                borderRadius: 'var(--md-sys-shape-corner-extra-large)',
+                boxShadow: 'var(--md-sys-shadow-3)',
               }}
             >
               <VoiceInput
@@ -181,7 +186,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Menu Backdrop */}
+      {/* Menu Backdrop - Material You Scrim */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -189,12 +194,16 @@ export function FloatingNav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsMenuOpen(false)}
-            className="fixed inset-0 z-40 backdrop-blur-sm bg-black/20"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.32)',
+              backdropFilter: 'blur(4px)'
+            }}
+            className="fixed inset-0 z-40"
           />
         )}
       </AnimatePresence>
 
-      {/* Menu List */}
+      {/* Menu List - Material You */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -223,38 +232,40 @@ export function FloatingNav() {
                   onClick={() => handleNavClick(option)}
                   className="flex items-center gap-3 group"
                 >
-                  {/* Label */}
+                  {/* Label - M3 Surface Container */}
                   <div
-                    className="px-4 py-2 rounded-xl backdrop-blur-xl bg-white/90 border shadow-lg whitespace-nowrap transition-all"
+                    className="px-4 py-2 whitespace-nowrap transition-all font-medium"
                     style={{
-                      borderColor: isActive ? colors.primary : `${colors.primary}30`,
-                      backgroundColor: isActive ? `${colors.primary}10` : 'rgba(255,255,255,0.9)'
+                      backgroundColor: isActive
+                        ? 'var(--md-sys-color-secondary-container)'
+                        : 'var(--md-sys-color-surface-container-high)',
+                      color: isActive
+                        ? 'var(--md-sys-color-on-secondary-container)'
+                        : 'var(--md-sys-color-on-surface)',
+                      borderRadius: 'var(--md-sys-shape-corner-large)',
+                      boxShadow: 'var(--md-sys-shadow-2)',
+                      fontSize: 'var(--md-sys-typescale-label-large-size)',
+                      fontWeight: 'var(--md-sys-typescale-label-large-weight)',
                     }}
                   >
-                    <span
-                      className="text-sm font-semibold"
-                      style={{ color: colors.primary }}
-                    >
-                      {option.label}
-                    </span>
+                    {option.label}
                   </div>
 
-                  {/* Icon Button */}
+                  {/* Icon Button - M3 FAB Mini */}
                   <div
-                    className="relative w-14 h-14 rounded-xl backdrop-blur-xl bg-white/80 border-2 shadow-xl flex items-center justify-center transition-all"
+                    className="relative w-14 h-14 flex items-center justify-center transition-all"
                     style={{
-                      borderColor: isActive ? colors.primary : `${colors.primary}50`,
-                      boxShadow: isActive ? `0 8px 32px ${colors.glow}` : `0 4px 16px ${colors.glow}`
+                      backgroundColor: isActive
+                        ? 'var(--md-sys-color-primary-container)'
+                        : 'var(--md-sys-color-surface-container-highest)',
+                      color: isActive
+                        ? 'var(--md-sys-color-on-primary-container)'
+                        : 'var(--md-sys-color-on-surface)',
+                      borderRadius: 'var(--md-sys-shape-corner-large)',
+                      boxShadow: isActive ? 'var(--md-sys-shadow-3)' : 'var(--md-sys-shadow-1)',
                     }}
                   >
-                    <Icon className="w-6 h-6" style={{ color: colors.primary }} />
-
-                    {isActive && (
-                      <div
-                        className="absolute inset-0 rounded-xl blur-lg opacity-50"
-                        style={{ backgroundColor: colors.glow }}
-                      />
-                    )}
+                    <Icon className="w-6 h-6" />
                   </div>
                 </motion.button>
               )
@@ -263,7 +274,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Voice FAB - Secondary Action */}
+      {/* Voice FAB - Material You Secondary Action */}
       <AnimatePresence>
         {!isMenuOpen && isOnline && (
           <motion.button
@@ -273,18 +284,20 @@ export function FloatingNav() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsVoiceOpen(true)}
-            className="fixed bottom-28 right-6 z-40 w-14 h-14 rounded-xl backdrop-blur-xl bg-white/80 border-2 shadow-xl flex items-center justify-center transition-all"
+            className="fixed bottom-28 right-6 z-40 w-14 h-14 flex items-center justify-center transition-all"
             style={{
-              borderColor: `${currentColors.primary}50`,
-              boxShadow: `0 4px 16px ${currentColors.glow}`
+              backgroundColor: 'var(--md-sys-color-secondary-container)',
+              color: 'var(--md-sys-color-on-secondary-container)',
+              borderRadius: 'var(--md-sys-shape-corner-large)',
+              boxShadow: 'var(--md-sys-shadow-2)',
             }}
           >
-            <Mic className="w-5 h-5" style={{ color: currentColors.primary }} />
+            <Mic className="w-5 h-5" />
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Main FAB - Menu Toggle */}
+      {/* Main FAB - Material You Primary */}
       <motion.button
         onClick={() => {
           if (isVoiceOpen) {
@@ -295,10 +308,12 @@ export function FloatingNav() {
         }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-2xl backdrop-blur-xl bg-white/90 border-2 shadow-2xl flex items-center justify-center transition-all"
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 flex items-center justify-center transition-all relative"
         style={{
-          borderColor: currentColors.primary,
-          boxShadow: `0 8px 32px ${currentColors.glow}`
+          backgroundColor: 'var(--md-sys-color-primary-container)',
+          color: 'var(--md-sys-color-on-primary-container)',
+          borderRadius: 'var(--md-sys-shape-corner-large)',
+          boxShadow: 'var(--md-sys-shadow-3)',
         }}
       >
         {/* Icon */}
@@ -307,26 +322,30 @@ export function FloatingNav() {
           transition={{ type: 'spring', stiffness: 200, damping: 20 }}
         >
           {isMenuOpen ? (
-            <X className="w-7 h-7" style={{ color: currentColors.primary }} />
+            <X className="w-7 h-7" />
           ) : (
-            <Sparkles className="w-7 h-7" style={{ color: currentColors.primary }} />
+            <Sparkles className="w-7 h-7" />
           )}
         </motion.div>
 
-        {/* Pulsing glow when closed */}
+        {/* Subtle pulse when closed */}
         {!isMenuOpen && (
           <motion.div
             animate={{
-              opacity: [0.3, 0.6, 0.3],
-              scale: [1, 1.2, 1]
+              opacity: [0.15, 0.3, 0.15],
+              scale: [1, 1.1, 1]
             }}
             transition={{
-              duration: 2,
+              duration: 2.5,
               repeat: Infinity,
               ease: 'easeInOut'
             }}
-            className="absolute inset-0 rounded-2xl blur-xl pointer-events-none"
-            style={{ backgroundColor: currentColors.glow }}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundColor: 'var(--md-sys-color-primary)',
+              borderRadius: 'var(--md-sys-shape-corner-large)',
+              filter: 'blur(12px)',
+            }}
           />
         )}
       </motion.button>

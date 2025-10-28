@@ -208,95 +208,99 @@ export function HomePage() {
           </h1>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Material You */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Thoughts Stat */}
             <Link
               to="/memories"
-              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl"
-              style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}
+              className="group relative overflow-hidden p-6 transition-all duration-300"
+              style={{
+                backgroundColor: 'var(--md-sys-color-secondary-container)',
+                color: 'var(--md-sys-color-on-secondary-container)',
+                borderRadius: 'var(--md-sys-shape-corner-large)',
+                boxShadow: 'var(--md-sys-shadow-1)',
+              }}
             >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <Brain className="h-8 w-8 text-indigo-600" strokeWidth={1.5} />
-                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="text-3xl font-bold text-neutral-900 mb-1">
-                  {memories.length}
-                </div>
-                <div className="text-sm text-neutral-600">
-                  Thoughts
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <Brain className="h-8 w-8" strokeWidth={1.5} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
+              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+                {memories.length}
+              </div>
+              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
+                Thoughts
+              </div>
             </Link>
 
             {/* New Suggestions Stat */}
             <Link
               to="/suggestions"
-              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
-              style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+              className="group relative overflow-hidden p-6 transition-all duration-300"
+              style={{
+                backgroundColor: 'var(--md-sys-color-primary-container)',
+                color: 'var(--md-sys-color-on-primary-container)',
+                borderRadius: 'var(--md-sys-shape-corner-large)',
+                boxShadow: 'var(--md-sys-shadow-1)',
+              }}
             >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <Sparkles className="h-8 w-8 text-blue-600" strokeWidth={1.5} />
-                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="text-3xl font-bold text-neutral-900 mb-1">
-                  {pendingSuggestions.length}
-                </div>
-                <div className="text-sm text-neutral-600">
-                  New Ideas
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <Sparkles className="h-8 w-8" strokeWidth={1.5} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+                {pendingSuggestions.length}
+              </div>
+              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
+                New Ideas
+              </div>
             </Link>
 
             {/* Sparks Stat */}
             <Link
               to="/suggestions?filter=spark"
-              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-amber-300 hover:shadow-2xl"
-              style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}
+              className="group relative overflow-hidden p-6 transition-all duration-300"
+              style={{
+                backgroundColor: 'var(--md-sys-color-tertiary-container)',
+                color: 'var(--md-sys-color-on-tertiary-container)',
+                borderRadius: 'var(--md-sys-shape-corner-large)',
+                boxShadow: 'var(--md-sys-shadow-1)',
+              }}
             >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <TrendingUp className="h-8 w-8 text-amber-600" strokeWidth={1.5} />
-                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="text-3xl font-bold text-neutral-900 mb-1">
-                  {sparkSuggestions.length}
-                </div>
-                <div className="text-sm text-neutral-600">
-                  Sparks
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <TrendingUp className="h-8 w-8" strokeWidth={1.5} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
+              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+                {sparkSuggestions.length}
+              </div>
+              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
+                Sparks
+              </div>
             </Link>
 
             {/* Active Projects Stat */}
             <Link
               to="/projects"
-              className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
-              style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+              className="group relative overflow-hidden p-6 transition-all duration-300"
+              style={{
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
+                color: 'var(--md-sys-color-on-surface)',
+                borderRadius: 'var(--md-sys-shape-corner-large)',
+                boxShadow: 'var(--md-sys-shadow-2)',
+              }}
             >
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-3">
-                  <Rocket className="h-8 w-8 text-blue-600" strokeWidth={1.5} />
-                  <ArrowRight className="h-4 w-4 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <div className="text-3xl font-bold text-neutral-900 mb-1">
-                  {activeProjects.length}
-                </div>
-                <div className="text-sm text-neutral-600">
-                  Active
-                </div>
+              <div className="flex items-center justify-between mb-3">
+                <Rocket className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--md-sys-color-primary)' }} />
+                <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+              <div className="text-3xl font-bold mb-1" style={{ fontFamily: 'var(--md-sys-typescale-display-small-font)', fontSize: 'var(--md-sys-typescale-display-small-size)' }}>
+                {activeProjects.length}
+              </div>
+              <div className="text-sm" style={{ fontFamily: 'var(--md-sys-typescale-label-medium-font)', fontSize: 'var(--md-sys-typescale-label-medium-size)' }}>
+                Active
+              </div>
             </Link>
           </div>
         </section>
