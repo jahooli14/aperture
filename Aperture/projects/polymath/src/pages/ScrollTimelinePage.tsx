@@ -28,8 +28,10 @@ interface TimelineEvent {
   sourceReference?: { type: string; id: string }
 }
 
-interface YearSection {
+interface MonthSection {
   year: number
+  month: number
+  monthLabel: string
   events: TimelineEvent[]
   connections: Array<{ from: string; to: string }>
 }
@@ -61,7 +63,7 @@ export function ScrollTimelinePage() {
   // Memoize scroll transforms to prevent re-render loops
   const progressBarWidth = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
 
-  const [yearSections, setYearSections] = useState<YearSection[]>([])
+  const [monthSections, setMonthSections] = useState<MonthSection[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -103,10 +105,10 @@ export function ScrollTimelinePage() {
         })
       }
 
-      // Add thoughts
+      // Add thoughts (use updated_at for most recent activity)
       if (thoughtsData.memories) {
         thoughtsData.memories.forEach((m: any) => {
-          const date = new Date(m.created_at)
+          const date = new Date(m.updated_at || m.created_at)
           events.push({
             id: m.id,
             type: 'thought',
@@ -140,22 +142,23 @@ export function ScrollTimelinePage() {
       // Sort by date (oldest first for scroll timeline)
       events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
-      // Group by year
-      const yearMap = new Map<number, TimelineEvent[]>()
+      // Group by month
+      const monthMap = new Map<string, TimelineEvent[]>()
       events.forEach(event => {
-        if (!yearMap.has(event.year)) {
-          yearMap.set(event.year, [])
+        const monthKey = `${event.year}-${event.month.toString().padStart(2, '0')}`
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, [])
         }
-        yearMap.get(event.year)!.push(event)
+        monthMap.get(monthKey)!.push(event)
       })
 
-      // Build year sections with connections
-      const sections: YearSection[] = Array.from(yearMap.entries())
-        .map(([year, yearEvents]) => {
+      // Build month sections with connections
+      const sections: MonthSection[] = Array.from(monthMap.entries())
+        .map(([monthKey, monthEvents]) => {
           const connections: Array<{ from: string; to: string }> = []
 
-          // Find connections within this year
-          yearEvents.forEach(event => {
+          // Find connections within this month
+          monthEvents.forEach(event => {
             if (event.sourceReference) {
               const sourceEvent = events.find(e => e.id === event.sourceReference!.id)
               if (sourceEvent) {
@@ -167,11 +170,21 @@ export function ScrollTimelinePage() {
             }
           })
 
-          return { year, events: yearEvents, connections }
-        })
-        .sort((a, b) => a.year - b.year)
+          const year = monthEvents[0].year
+          const month = monthEvents[0].month
+          const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric'
+          })
 
-      setYearSections(sections)
+          return { year, month, monthLabel, events: monthEvents, connections }
+        })
+        .sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year
+          return a.month - b.month
+        })
+
+      setMonthSections(sections)
     } catch (error) {
       console.error('[ScrollTimeline] Failed to load:', error)
     } finally {
@@ -206,7 +219,7 @@ export function ScrollTimelinePage() {
     )
   }
 
-  if (yearSections.length === 0) {
+  if (monthSections.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
@@ -266,12 +279,12 @@ export function ScrollTimelinePage() {
 
       {/* Timeline Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        {yearSections.map((section, sectionIndex) => (
-          <YearSection
-            key={section.year}
+        {monthSections.map((section, sectionIndex) => (
+          <MonthSection
+            key={`${section.year}-${section.month}`}
             section={section}
             sectionIndex={sectionIndex}
-            totalSections={yearSections.length}
+            totalSections={monthSections.length}
             scrollProgress={scrollYProgress}
             onEventClick={(event) => {
               if (event.type === 'project') {
@@ -289,28 +302,28 @@ export function ScrollTimelinePage() {
   )
 }
 
-interface YearSectionProps {
-  section: YearSection
+interface MonthSectionProps {
+  section: MonthSection
   sectionIndex: number
   totalSections: number
   scrollProgress: any
   onEventClick: (event: TimelineEvent) => void
 }
 
-function YearSection({ section, sectionIndex, totalSections, scrollProgress, onEventClick }: YearSectionProps) {
+function MonthSection({ section, sectionIndex, totalSections, scrollProgress, onEventClick }: MonthSectionProps) {
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  // Calculate scroll-based parallax for year marker
+  // Calculate scroll-based parallax for month marker
   const sectionStart = useMemo(() => sectionIndex / totalSections, [sectionIndex, totalSections])
   const sectionEnd = useMemo(() => (sectionIndex + 1) / totalSections, [sectionIndex, totalSections])
 
-  const yearOpacity = useTransform(
+  const monthOpacity = useTransform(
     scrollProgress,
     [sectionStart - 0.1, sectionStart, sectionEnd, sectionEnd + 0.1],
     [0, 1, 1, 0]
   )
 
-  const yearY = useTransform(
+  const monthY = useTransform(
     scrollProgress,
     [sectionStart, sectionEnd],
     [20, -20]
@@ -318,14 +331,14 @@ function YearSection({ section, sectionIndex, totalSections, scrollProgress, onE
 
   return (
     <div ref={sectionRef} className="relative mb-24">
-      {/* Sticky Year Marker with Parallax */}
+      {/* Sticky Month Marker with Parallax */}
       <motion.div
         className="sticky top-24 z-30 mb-12"
-        style={{ opacity: yearOpacity, y: yearY }}
+        style={{ opacity: monthOpacity, y: monthY }}
       >
         <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/80 border border-neutral-200 shadow-lg">
-          <div className="text-4xl font-bold bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent">
-            {section.year}
+          <div className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent">
+            {section.monthLabel}
           </div>
           <div className="text-sm text-neutral-600 font-medium">
             {section.events.length} event{section.events.length !== 1 ? 's' : ''}
