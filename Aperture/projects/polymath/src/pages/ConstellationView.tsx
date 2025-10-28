@@ -19,7 +19,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import ForceGraph3D from 'react-force-graph-3d'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Pause, Mic, MicOff, Sparkles, Calendar, Zap } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Mic, MicOff, Sparkles, Calendar, Zap, Wand2, Eye, Target } from 'lucide-react'
 import * as THREE from 'three'
 
 interface GraphNode {
@@ -88,6 +88,58 @@ export default function ConstellationView() {
   useEffect(() => {
     fetchGraphData()
   }, [])
+
+  // Animation loop for node effects
+  useEffect(() => {
+    if (!graphRef.current) return
+
+    let animationFrameId: number
+
+    const animate = () => {
+      const graph = graphRef.current
+      if (!graph) return
+
+      const scene = graph.scene()
+      if (!scene) return
+
+      const time = Date.now() * 0.001
+
+      // Animate all node effects
+      scene.traverse((object: any) => {
+        if (object.userData.pulseGlow) {
+          // Pulsing glow for recent nodes
+          const phase = object.userData.pulsePhase + time
+          const pulse = Math.sin(phase) * 0.5 + 0.5
+          object.userData.pulseGlow.material.opacity = pulse * 0.3
+          object.userData.pulseGlow.scale.setScalar(1 + pulse * 0.2)
+        }
+
+        if (object.userData.trail) {
+          // Animate comet trails
+          const positions = object.userData.trail.geometry.attributes.position.array
+          const phase = object.userData.trailPhase + time * 2
+
+          for (let i = 0; i < positions.length / 3; i++) {
+            const t = i / (positions.length / 3)
+            positions[i * 3 + 1] = Math.sin(phase + t * Math.PI * 4) * 2
+            positions[i * 3 + 2] = Math.cos(phase + t * Math.PI * 4) * 2
+          }
+
+          object.userData.trail.geometry.attributes.position.needsUpdate = true
+        }
+      })
+
+      animationFrameId = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
+    }
+  }, [loading])
 
   const fetchGraphData = async () => {
     setLoading(true)
@@ -214,42 +266,108 @@ export default function ConstellationView() {
     return { nodes: filteredNodes, links: visibleLinks }
   }, [graphData, timeTravel, filter])
 
-  // Custom node rendering
+  // Custom node rendering with enhanced effects
   const nodeThreeObject = useCallback((node: GraphNode) => {
     const theme = NODE_THEMES[node.type]
-    const geometry = new THREE.SphereGeometry(node.val / 2, 16, 16)
 
-    // Create glowing material
+    // Calculate recency for pulsing effect
+    const nodeAge = Date.now() - new Date(node.created_at).getTime()
+    const daysSinceCreation = nodeAge / (1000 * 60 * 60 * 24)
+    const isRecent = daysSinceCreation < 7
+
+    // Main sphere with enhanced material
+    const geometry = new THREE.SphereGeometry(node.val / 2, 24, 24)
     const material = new THREE.MeshBasicMaterial({
       color: node.color,
       transparent: true,
-      opacity: 0.9
+      opacity: isRecent ? 1.0 : 0.85
     })
-
     const mesh = new THREE.Mesh(geometry, material)
 
-    // Add glow
-    const glowGeometry = new THREE.SphereGeometry(node.val / 2 * 1.5, 16, 16)
-    const glowMaterial = new THREE.MeshBasicMaterial({
+    // Multi-layer glow for depth
+    // Inner glow (bright)
+    const innerGlowGeometry = new THREE.SphereGeometry(node.val / 2 * 1.3, 16, 16)
+    const innerGlowMaterial = new THREE.MeshBasicMaterial({
       color: theme.glow,
       transparent: true,
-      opacity: 0.3,
+      opacity: isRecent ? 0.5 : 0.3,
       side: THREE.BackSide
     })
-    const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial)
-    mesh.add(glowMesh)
+    const innerGlow = new THREE.Mesh(innerGlowGeometry, innerGlowMaterial)
+    mesh.add(innerGlow)
 
-    // For articles (comets), add trailing particles
+    // Outer glow (soft)
+    const outerGlowGeometry = new THREE.SphereGeometry(node.val / 2 * 1.8, 16, 16)
+    const outerGlowMaterial = new THREE.MeshBasicMaterial({
+      color: theme.glow,
+      transparent: true,
+      opacity: isRecent ? 0.2 : 0.1,
+      side: THREE.BackSide
+    })
+    const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial)
+    mesh.add(outerGlow)
+
+    // Pulsing animation for recent nodes
+    if (isRecent) {
+      const pulseGlowGeometry = new THREE.SphereGeometry(node.val / 2 * 2.2, 16, 16)
+      const pulseGlowMaterial = new THREE.MeshBasicMaterial({
+        color: theme.glow,
+        transparent: true,
+        opacity: 0,
+        side: THREE.BackSide
+      })
+      const pulseGlow = new THREE.Mesh(pulseGlowGeometry, pulseGlowMaterial)
+      mesh.add(pulseGlow)
+
+      // Animate pulse (will be handled by animation loop if we add one)
+      ;(mesh as any).userData.pulseGlow = pulseGlow
+      ;(mesh as any).userData.pulsePhase = Math.random() * Math.PI * 2
+    }
+
+    // For articles (comets), add streaming trail particles
     if (node.type === 'article') {
+      const particleCount = 30
+      const particles = new Float32Array(particleCount * 3)
+
+      // Create trail particles behind the comet
+      for (let i = 0; i < particleCount; i++) {
+        const t = i / particleCount
+        particles[i * 3] = -t * 20 // Trail behind
+        particles[i * 3 + 1] = (Math.random() - 0.5) * 2
+        particles[i * 3 + 2] = (Math.random() - 0.5) * 2
+      }
+
       const trailGeometry = new THREE.BufferGeometry()
+      trailGeometry.setAttribute('position', new THREE.BufferAttribute(particles, 3))
+
       const trailMaterial = new THREE.PointsMaterial({
         color: theme.glow,
-        size: 2,
+        size: 3,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
       })
-      const trailPoints = new THREE.Points(trailGeometry, trailMaterial)
-      mesh.add(trailPoints)
+
+      const trail = new THREE.Points(trailGeometry, trailMaterial)
+      mesh.add(trail)
+
+      // Store for animation
+      ;(mesh as any).userData.trail = trail
+      ;(mesh as any).userData.trailPhase = Math.random() * Math.PI * 2
+    }
+
+    // For projects (planets), add orbital ring
+    if (node.type === 'project') {
+      const ringGeometry = new THREE.TorusGeometry(node.val / 2 * 1.5, 0.5, 8, 32)
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: theme.glow,
+        transparent: true,
+        opacity: 0.2
+      })
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial)
+      ring.rotation.x = Math.PI / 2
+      mesh.add(ring)
     }
 
     return mesh
@@ -257,12 +375,30 @@ export default function ConstellationView() {
 
   // Custom link rendering (lightning effect)
   const linkColor = useCallback((link: GraphLink) => {
-    return '#60a5fa'
-  }, [])
+    if (demoMode === 'connections') {
+      // Flash connections in storm mode
+      const time = Date.now() * 0.003
+      const flash = Math.sin(time + Math.random() * 10) > 0.5
+      return flash ? '#60a5fa' : '#1e40af'
+    }
+    return link.type === 'ai_suggested' ? '#a78bfa' : '#60a5fa'
+  }, [demoMode])
 
   const linkWidth = useCallback((link: GraphLink) => {
+    if (demoMode === 'connections') {
+      const time = Date.now() * 0.003
+      const pulse = Math.sin(time + Math.random() * 10) * 0.5 + 0.5
+      return 1 + pulse * 3
+    }
     return link.type === 'ai_suggested' ? 2 : 1
-  }, [])
+  }, [demoMode])
+
+  const linkOpacity = useCallback(() => {
+    if (demoMode === 'connections') {
+      return 0.9
+    }
+    return 0.6
+  }, [demoMode])
 
   // Voice commands
   const startVoiceControl = () => {
@@ -303,6 +439,25 @@ export default function ConstellationView() {
     recognition.start()
   }
 
+  // Demo mode handlers
+  const startBirthDemo = () => {
+    setTimeTravel(0)
+    setDemoMode('birth')
+    setIsPlaying(true)
+  }
+
+  const startConnectionStorm = () => {
+    setDemoMode('connections')
+    // Flash all connections in sequence
+    setTimeout(() => setDemoMode('none'), 5000)
+  }
+
+  const startThemeDiscovery = () => {
+    setDemoMode('themes')
+    // Would cluster nodes by similarity
+    setTimeout(() => setDemoMode('none'), 8000)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
@@ -338,6 +493,42 @@ export default function ConstellationView() {
         </h1>
 
         <div className="flex gap-2">
+          {/* Demo Modes Dropdown */}
+          <div className="relative group">
+            <button
+              className="p-3 rounded-xl bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors"
+            >
+              <Wand2 className="h-5 w-5" />
+            </button>
+
+            {/* Dropdown */}
+            <div className="absolute top-full right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+              <div className="rounded-xl backdrop-blur-xl bg-black/80 border border-white/20 shadow-2xl overflow-hidden">
+                <button
+                  onClick={startBirthDemo}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <Play className="h-4 w-4" />
+                  <span className="text-sm">Birth of Universe</span>
+                </button>
+                <button
+                  onClick={startConnectionStorm}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  <span className="text-sm">Connection Storm</span>
+                </button>
+                <button
+                  onClick={startThemeDiscovery}
+                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span className="text-sm">Theme Discovery</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={startVoiceControl}
             className={`p-3 rounded-xl backdrop-blur-md transition-all ${
@@ -361,7 +552,7 @@ export default function ConstellationView() {
         nodeThreeObject={nodeThreeObject}
         linkColor={linkColor}
         linkWidth={linkWidth}
-        linkOpacity={0.6}
+        linkOpacity={linkOpacity()}
         backgroundColor="#0f172a"
         showNavInfo={false}
         enableNodeDrag={true}
