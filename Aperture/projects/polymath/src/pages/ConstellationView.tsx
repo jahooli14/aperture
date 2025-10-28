@@ -368,13 +368,15 @@ export default function ConstellationView() {
         enableNavigationControls={true}
         onNodeClick={(node: any) => {
           // Navigate to the item
-          const [type, id] = node.id.split('-')
-          if (type === 'project') {
-            navigate(`/projects/${id}`)
-          } else if (type === 'thought') {
-            navigate('/memories')
-          } else if (type === 'article') {
-            navigate('/reading')
+          // Use metadata which has the full object with correct ID
+          if (node.metadata) {
+            if (node.type === 'project') {
+              navigate(`/projects/${node.metadata.id}`)
+            } else if (node.type === 'thought') {
+              navigate('/memories')
+            } else if (node.type === 'article') {
+              navigate('/reading')
+            }
           }
         }}
       />
