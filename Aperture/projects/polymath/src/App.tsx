@@ -1,15 +1,14 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { cn } from './lib/utils'
-import { Sparkles, LayoutGrid, Layers, FileText, FolderKanban, BarChart3, Calendar, Loader2 } from 'lucide-react'
+import { FloatingNav } from './components/FloatingNav'
+import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
-import { useOnboardingStore } from './stores/useOnboardingStore'
 import './App.css'
 
 // Lazy load pages for better bundle splitting
@@ -36,102 +35,7 @@ function PageLoader() {
   )
 }
 
-function Navigation() {
-  const location = useLocation()
-  const { progress, fetchPrompts } = useOnboardingStore()
-
-  // Fetch progress on mount
-  useEffect(() => {
-    fetchPrompts()
-  }, [fetchPrompts])
-
-  const isActive = (path: string) => location.pathname === path
-
-  // Check if foundational thoughts are incomplete
-  const hasIncompleteFoundational = progress
-    ? progress.completed_required < progress.total_required
-    : false
-
-  const navLinks = [
-    { path: '/', label: 'Home', icon: LayoutGrid },
-    { path: '/memories', label: 'Thoughts', icon: Layers, pulse: hasIncompleteFoundational },
-    { path: '/projects', label: 'Projects', icon: FolderKanban },
-    { path: '/reading', label: 'Reading', icon: FileText },
-    { path: '/knowledge-timeline', label: 'Timeline', icon: Calendar },
-    { path: '/insights', label: 'Insights', icon: BarChart3 }
-  ]
-
-  return (
-    <>
-      {/* Top bar - Desktop only, shows branding */}
-      <nav className="hidden md:block sticky top-0 z-50 glass-panel border-b border-neutral-200">
-        <div style={{ height: 'env(safe-area-inset-top)' }} className="bg-inherit" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center gap-2.5 group transition-smooth">
-              <Sparkles className="h-5 w-5 text-blue-900" />
-              <span className="text-xl font-semibold tracking-tight text-neutral-900">
-                Polymath
-              </span>
-            </Link>
-
-            <div className="flex gap-1">
-              {navLinks.map(({ path, label, icon: Icon, pulse }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={cn(
-                    "relative px-4 py-2 rounded-lg text-sm font-medium transition-smooth whitespace-nowrap flex items-center gap-2",
-                    isActive(path)
-                      ? "text-blue-900 bg-blue-50"
-                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50",
-                    pulse && "animate-pulse-slow"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Bottom navigation - Mobile only (Android pattern) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-neutral-200">
-        <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} className="grid grid-cols-6">
-          {navLinks.map(({ path, label, icon: Icon, pulse }) => {
-            const active = isActive(path)
-            return (
-              <Link
-                key={path}
-                to={path}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1.5 py-3 px-2 transition-all duration-200 min-h-[68px]",
-                  "active:scale-95 touch-manipulation select-none",
-                  active ? "text-blue-900" : "text-neutral-600",
-                  pulse && "animate-pulse-slow"
-                )}
-              >
-                <Icon className={cn(
-                  "h-6 w-6 transition-all flex-shrink-0",
-                  active && "stroke-[2.5] scale-110"
-                )} />
-                <span className={cn(
-                  "text-xs font-medium transition-all leading-none",
-                  active ? "font-semibold" : ""
-                )}>
-                  {label}
-                </span>
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-    </>
-  )
-}
+// Navigation component removed - replaced with FloatingNav
 
 export default function App() {
   // Configure status bar for native platforms
@@ -192,12 +96,11 @@ export default function App() {
       <Router>
         <div className="min-h-screen flex flex-col">
           <OfflineIndicator />
-          <Navigation />
 
           {/* Safe area spacer for mobile status bar */}
           <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
 
-          <main className="flex-1 pb-20 md:pb-0">
+          <main className="flex-1">
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
@@ -218,18 +121,8 @@ export default function App() {
             </ErrorBoundary>
           </main>
 
-          <footer className="hidden md:block backdrop-blur-2xl bg-white/40 border-t border-white/20 py-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium gradient-text">
-                  Personal knowledge graph + meta-creative synthesis
-                </p>
-                <p className="text-xs text-gray-500">
-                  Capture thoughts, generate projects, explore creativity
-                </p>
-              </div>
-            </div>
-          </footer>
+          {/* Floating Navigation */}
+          <FloatingNav />
         </div>
       </Router>
     </ToastProvider>
