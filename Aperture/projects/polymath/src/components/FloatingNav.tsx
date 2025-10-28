@@ -25,7 +25,8 @@ const SCHEMA_COLORS = {
   thoughts: { primary: '#6366f1', glow: 'rgba(99, 102, 241, 0.4)' },
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   reading: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.4)' },
-  timeline: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' }
+  timeline: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' },
+  constellation: { primary: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.4)' }
 } as const
 
 interface NavOption {
@@ -41,7 +42,8 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', color: 'thoughts' },
   { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', color: 'projects' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', color: 'reading' },
-  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', color: 'timeline' }
+  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', color: 'timeline' },
+  { id: 'constellation', label: 'Galaxy', icon: Sparkles, path: '/constellation', color: 'constellation' }
 ]
 
 export function FloatingNav() {
@@ -54,6 +56,7 @@ export function FloatingNav() {
   // Determine current section
   const getCurrentSection = (): keyof typeof SCHEMA_COLORS => {
     const path = location.pathname
+    if (path.startsWith('/constellation')) return 'constellation'
     if (path.startsWith('/memories')) return 'thoughts'
     if (path.startsWith('/projects')) return 'projects'
     if (path.startsWith('/reading')) return 'reading'
