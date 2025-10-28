@@ -18,6 +18,9 @@ import {
 } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { useMemoryStore } from '../stores/useMemoryStore'
+import { useOfflineSync } from '../hooks/useOfflineSync'
+import { useToast } from './ui/toast'
 
 // Schema colors for each section
 const SCHEMA_COLORS = {
@@ -50,6 +53,9 @@ export function FloatingNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const { isOnline } = useOnlineStatus()
+  const { fetchMemories } = useMemoryStore()
+  const { addOfflineCapture } = useOfflineSync()
+  const { addToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -72,10 +78,67 @@ export function FloatingNav() {
     setIsMenuOpen(false)
   }
 
-  const handleVoiceTranscript = (text: string) => {
-    // Handle voice transcript (you'll need to implement this based on your needs)
-    console.log('[Voice]', text)
+  const handleVoiceTranscript = async (text: string) => {
+    if (!text) return
+
     setIsVoiceOpen(false)
+
+    try {
+      if (isOnline) {
+        // Online: send to memories API for parsing
+        const response = await fetch('/api/memories?capture=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: text })
+        })
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type')
+          if (contentType?.includes('text/html')) {
+            throw new Error('Thoughts API not available')
+          }
+          throw new Error(`Failed to save thought: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        console.log('✓ Memory created:', data)
+
+        // Success! Show confirmation
+        addToast({
+          title: 'Thought saved!',
+          description: 'Your voice note has been captured.',
+          variant: 'success',
+        })
+
+        await fetchMemories()
+      } else {
+        // Offline: queue for later
+        await addOfflineCapture(text)
+        addToast({
+          title: 'Queued for sync',
+          description: 'Will process when back online.',
+          variant: 'default',
+        })
+      }
+    } catch (error) {
+      console.error('Failed to capture:', error)
+      // Fallback to offline queue if API fails
+      try {
+        await addOfflineCapture(text)
+        addToast({
+          title: 'Queued for sync',
+          description: 'Will process when API is available.',
+          variant: 'default',
+        })
+      } catch (offlineError) {
+        console.error('Failed to queue offline:', offlineError)
+        addToast({
+          title: 'Failed to save',
+          description: 'Please try again.',
+          variant: 'destructive',
+        })
+      }
+    }
   }
 
   return (
