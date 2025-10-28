@@ -7,9 +7,9 @@
 ## 🚀 What's Been Built
 
 ### Core Framework ✅
-- **Gemini Integration**: Full Google Gemini 2.5 Computer Use model integration
+- **Gemini Integration**: Full Google Gemini 2.5 Computer Use model (`gemini-2.5-computer-use-preview-10-2025`) integration
 - **Playwright Support**: Complete Playwright adapter with screenshot capture
-- **Healing Engine**: AI-powered test failure analysis and automatic fixing
+- **Healing Engine**: AI-powered test failure analysis with visual browser automation
 - **CLI Interface**: Full command-line interface with all features
 - **TypeScript**: Fully typed with strict TypeScript configuration
 
@@ -54,9 +54,10 @@ src/
 ## 🛠️ Technical Implementation
 
 ### Gemini Computer Use Integration
-- ✅ Full API integration with Google AI Studio
-- ✅ Screenshot analysis and visual understanding
-- ✅ Structured prompt engineering for test healing
+- ✅ Full API integration with Google AI Studio (Computer Use model)
+- ✅ Browser automation capabilities with visual understanding
+- ✅ Screenshot analysis using `gemini-2.5-computer-use-preview-10-2025`
+- ✅ Structured prompt engineering optimized for visual browser analysis
 - ✅ Response parsing and validation
 - ✅ Cost estimation and tracking
 
@@ -125,16 +126,17 @@ src/
 
 ## 💰 Cost Expectations
 
-### Development/Testing
+### Development/Testing (Computer Use Model)
 - **Simple test fix**: ~$0.001 USD
 - **Complex analysis**: ~$0.005 USD
-- **With screenshots**: +~$0.002 USD
+- **With screenshot analysis**: +~$0.002-0.003 USD
 - **Daily development**: <$0.50 USD
 
 ### Production Usage
 - **Per healing attempt**: $0.001-$0.01 USD
 - **100 tests/day**: ~$1-10 USD/month
 - **Cost controls**: Built-in limits and monitoring
+- **Visual analysis**: Optimized for browser automation tasks
 
 ## 🌟 Current Capabilities
 

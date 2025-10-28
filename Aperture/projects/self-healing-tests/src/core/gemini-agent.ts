@@ -15,15 +15,17 @@ export class GeminiAgent {
   private async initialize(): Promise<void> {
     try {
       if (this.config.geminiApiKey) {
-        // Using AI Studio API
+        // Using AI Studio API with Computer Use model
         this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
         this.model = this.genAI.getGenerativeModel({
-          model: this.config.model || 'gemini-2.5-pro',
+          model: this.config.model || 'gemini-2.5-computer-use-preview-10-2025',
           tools: [{
-            codeExecution: {},
+            computer_use: {
+              environment: 'ENVIRONMENT_BROWSER',
+            },
           }],
         });
-        logger.info('Initialized Gemini with AI Studio API');
+        logger.info('Initialized Gemini Computer Use model with AI Studio API');
       } else if (this.config.vertexProject) {
         // Using Vertex AI (requires authentication)
         logger.info('Vertex AI integration not yet implemented - use AI Studio API key');
@@ -67,7 +69,8 @@ export class GeminiAgent {
 
   private buildAnalysisPrompt(failure: TestFailure): string {
     return `
-You are an expert test automation engineer specializing in self-healing test frameworks.
+You are an expert test automation engineer with computer use capabilities specializing in self-healing test frameworks.
+You can visually analyze browser screenshots to understand UI changes and generate precise healing actions.
 Analyze this test failure and provide specific, actionable fixes.
 
 ## Test Failure Details:
@@ -122,8 +125,9 @@ Provide a JSON response with this exact structure:
   - 0.7-0.9 = Confident, minor human review
   - 0.5-0.7 = Moderate, needs human review
   - <0.5 = Low confidence, manual intervention needed
-- **Context awareness**: Use screenshot and HTML context when available
+- **Context awareness**: Visually analyze screenshots to identify UI elements, their positions, and changes
 - **Common patterns**: Look for typical UI framework patterns (React, Angular, etc.)
+- **Visual understanding**: Use your computer use capabilities to identify elements by their visual appearance
 
 Focus on practical, implementable solutions that will make the test more robust.
 `;
@@ -199,14 +203,14 @@ Focus on practical, implementable solutions that will make the test more robust.
   }
 
   async estimateCost(failure: TestFailure): Promise<{ tokens: number; usd: number }> {
-    // Rough estimation based on content size
+    // Rough estimation based on content size for Computer Use model
     const baseTokens = 1000; // Base prompt
     const errorTokens = Math.ceil(failure.error.message.length / 4);
     const contextTokens = failure.context ? 500 : 0;
-    const screenshotTokens = failure.screenshot ? 2000 : 0; // Screenshots are expensive
+    const screenshotTokens = failure.screenshot ? 2500 : 0; // Computer Use model optimized for visual analysis
 
     const totalTokens = baseTokens + errorTokens + contextTokens + screenshotTokens;
-    const usd = totalTokens * 0.0000035; // Approximate cost per token for Gemini Pro
+    const usd = totalTokens * 0.0000035; // Approximate cost per token for Gemini Computer Use
 
     return { tokens: totalTokens, usd };
   }

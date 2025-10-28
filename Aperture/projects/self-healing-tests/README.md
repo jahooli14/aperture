@@ -1,6 +1,6 @@
 # 🔄 Self-Healing Testing Framework
 
-A revolutionary testing framework powered by **Google's Gemini 2.5 Computer Use model** that automatically detects, analyzes, and fixes broken tests through AI-powered visual understanding.
+A revolutionary testing framework powered by **Google's Gemini 2.5 Computer Use model** (`gemini-2.5-computer-use-preview-10-2025`) that automatically detects, analyzes, and fixes broken tests through AI-powered visual understanding and browser automation capabilities.
 
 ## ✨ Features
 
@@ -69,9 +69,10 @@ npm run test:heal validate-config
 - Collects error messages, stack traces, and DOM state
 
 ### 2. AI Analysis
-- Sends failure data to Gemini Computer Use model
-- AI visually analyzes screenshots to understand UI changes
-- Generates specific, actionable fixing suggestions
+- Sends failure data to Gemini 2.5 Computer Use model
+- AI visually analyzes screenshots using browser automation capabilities
+- Understands UI changes through visual recognition and element positioning
+- Generates specific, actionable fixing suggestions with confidence scores
 
 ### 3. Intelligent Healing
 - Evaluates fix suggestions by confidence score
@@ -172,11 +173,11 @@ NODE_ENV=ci
 
 ## 📊 Cost Management
 
-### Estimated Costs (Google AI Studio)
+### Estimated Costs (Google AI Studio - Computer Use Model)
 
 - **Simple selector fix**: ~$0.001
 - **Complex flow analysis**: ~$0.005
-- **With screenshot**: +~$0.002
+- **With screenshot analysis**: +~$0.002-0.003
 
 ### Cost Controls
 

@@ -31,6 +31,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     title: '',
     description: '',
     status: 'active' as 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
+    priority: false,
     next_step: '',
     progress: 0,
   })
@@ -42,6 +43,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: project.title,
         description: project.description || '',
         status: project.status,
+        priority: project.priority || false,
         next_step: project.metadata?.next_step || '',
         progress: project.metadata?.progress || 0,
       })
@@ -59,6 +61,7 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: formData.title,
         description: formData.description,
         status: formData.status as any, // Status type updated to include 'abandoned'
+        priority: formData.priority,
         metadata: {
           ...project.metadata,
           next_step: formData.next_step || undefined,
@@ -146,6 +149,24 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 <option value="completed">✅ Completed</option>
                 <option value="archived">📦 Archived</option>
               </Select>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-blue-50/80 to-purple-50/80 border-2 border-blue-200">
+              <input
+                id="edit-priority"
+                type="checkbox"
+                checked={formData.priority}
+                onChange={(e) =>
+                  setFormData({ ...formData, priority: e.target.checked })
+                }
+                className="w-5 h-5 rounded border-2 border-blue-300 text-blue-900 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <div className="flex-1">
+                <Label htmlFor="edit-priority" className="text-sm sm:text-base font-bold text-blue-900 cursor-pointer">
+                  ⭐ Priority Project
+                </Label>
+                <p className="text-xs text-blue-800 mt-1">Show on home page with next step highlighted</p>
+              </div>
             </div>
 
             <div className="grid gap-2">
