@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -21,11 +21,25 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { addToast } = useToast()
   const [isOffline, setIsOffline] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [connectionCount, setConnectionCount] = useState(0)
 
   useEffect(() => {
     checkOfflineStatus()
     checkProgress()
+    fetchConnectionCount()
   }, [article.id])
+
+  const fetchConnectionCount = async () => {
+    try {
+      const response = await fetch(`/api/related?source_type=article&source_id=${article.id}&connections=true`)
+      if (response.ok) {
+        const data = await response.json()
+        setConnectionCount(data.connections?.length || 0)
+      }
+    } catch (error) {
+      console.warn('[ArticleCard] Failed to fetch connections:', error)
+    }
+  }
 
   const checkOfflineStatus = async () => {
     try {
@@ -95,21 +109,16 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   return (
     <div
       onClick={onClick}
-      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-4 sm:p-5 transition-all duration-300 hover:border-green-300 hover:shadow-2xl cursor-pointer"
-      style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}
+      className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50"
+      style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}
     >
-      {/* Glow effect on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)' }} />
-      {/* Accent gradient bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #10b981, #34d399)' }} />
-
       {/* Header */}
-      <div className="relative z-10 flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg sm:text-xl font-semibold text-neutral-900 line-clamp-2 mb-1">
+          <h3 className="text-lg sm:text-xl font-semibold line-clamp-2 mb-1" style={{ color: 'var(--premium-text-primary)' }}>
             {article.title || 'Untitled'}
           </h3>
-          <div className="flex items-center gap-2 text-sm text-neutral-500">
+          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
             {article.source && (
               <span className="font-medium">{article.source}</span>
             )}
@@ -123,17 +132,37 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         </div>
 
         {/* Status Badges */}
-        <div className="flex items-center gap-2">
-          {isOffline && (
-            <div className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full flex items-center gap-1">
-              <WifiOff className="h-3 w-3" />
-              Offline
-            </div>
-          )}
-          {article.status === 'reading' && (
-            <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex items-center gap-1">
-              <BookOpen className="h-3 w-3" />
-              Reading
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            {isOffline && (
+              <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                color: 'var(--premium-emerald)'
+              }}>
+                <WifiOff className="h-3 w-3" />
+                Offline
+              </div>
+            )}
+            {article.status === 'reading' && (
+              <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: 'var(--premium-blue)'
+              }}>
+                <BookOpen className="h-3 w-3" />
+                Reading
+              </div>
+            )}
+          </div>
+          {/* Connection Badge */}
+          {connectionCount > 0 && (
+            <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              color: 'var(--premium-blue)',
+              borderColor: 'rgba(59, 130, 246, 0.4)',
+              border: '1px solid'
+            }}>
+              <Link2 className="h-3 w-3" />
+              {connectionCount} link{connectionCount > 1 ? 's' : ''}
             </div>
           )}
         </div>
@@ -141,15 +170,18 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
       {/* Reading Progress Bar */}
       {progress > 0 && (
-        <div className="relative z-10 mb-3">
-          <div className="flex items-center justify-between text-xs text-neutral-500 mb-1">
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
             <span>Reading progress</span>
             <span>{progress}%</span>
           </div>
-          <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
             <div
-              className="h-full bg-blue-900 transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full transition-all duration-300"
+              style={{
+                width: `${progress}%`,
+                background: 'var(--premium-blue)'
+              }}
             />
           </div>
         </div>
@@ -157,24 +189,31 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
       {/* Excerpt */}
       {article.excerpt && (
-        <p className="relative z-10 text-neutral-600 text-sm sm:text-base line-clamp-2 mb-3">
+        <p className="text-sm sm:text-base line-clamp-2 mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
           {article.excerpt}
         </p>
       )}
 
       {/* Tags */}
       {article.tags && article.tags.length > 0 && (
-        <div className="relative z-10 flex flex-wrap gap-2 mb-3">
+        <div className="flex flex-wrap gap-2 mb-3">
           {article.tags.slice(0, 3).map((tag, index) => (
             <span
               key={index}
-              className="px-2 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-full"
+              className="px-2 py-1 text-xs rounded-full"
+              style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                color: 'var(--premium-emerald)'
+              }}
             >
               {tag}
             </span>
           ))}
           {article.tags.length > 3 && (
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-full">
+            <span className="px-2 py-1 text-xs rounded-full" style={{
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              color: 'var(--premium-emerald)'
+            }}>
               +{article.tags.length - 3}
             </span>
           )}
@@ -182,8 +221,8 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       )}
 
       {/* Footer */}
-      <div className="relative z-10 flex items-center justify-between pt-3 border-t border-neutral-100">
-        <div className="flex items-center gap-4 text-xs sm:text-sm text-neutral-500">
+      <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+        <div className="flex items-center gap-4 text-xs sm:text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
           {article.read_time_minutes && (
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
@@ -209,24 +248,26 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={openOriginal}
-            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--premium-text-secondary)' }}
             title="Open original"
           >
-            <ExternalLink className="h-4 w-4 text-neutral-600" />
+            <ExternalLink className="h-4 w-4" />
           </button>
           <button
             onClick={handleMarkAsRead}
-            className="p-1.5 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--premium-text-secondary)' }}
             title="Archive"
           >
-            <Archive className="h-4 w-4 text-neutral-600" />
+            <Archive className="h-4 w-4" />
           </button>
           <button
             onClick={handleDelete}
-            className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
             title="Delete"
           >
-            <Trash2 className="h-4 w-4 text-red-600" />
+            <Trash2 className="h-4 w-4" style={{ color: '#ef4444' }} />
           </button>
         </div>
       </div>

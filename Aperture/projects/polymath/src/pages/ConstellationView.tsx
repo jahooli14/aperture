@@ -122,22 +122,23 @@ export default function ConstellationView() {
     fetchGraphData()
   }, [])
 
-  // Initialize ambient starfield background
+  // Initialize ambient starfield background with enhanced visuals
   useEffect(() => {
     if (!graphRef.current || loading) return
 
     const scene = graphRef.current.scene()
     if (!scene) return
 
-    // Create starfield particles - reduced for better performance
-    const starCount = deviceCapability === 'low' ? 500 : deviceCapability === 'medium' ? 1000 : 2000
+    // Create multi-layered starfield with varying sizes and colors
+    const starCount = deviceCapability === 'low' ? 800 : deviceCapability === 'medium' ? 1500 : 3000
     const starGeometry = new THREE.BufferGeometry()
     const starPositions = new Float32Array(starCount * 3)
     const starSizes = new Float32Array(starCount)
+    const starColors = new Float32Array(starCount * 3)
 
     for (let i = 0; i < starCount; i++) {
-      // Random position in a large sphere
-      const radius = 1000 + Math.random() * 1000
+      // Random position in a large sphere with layered depth
+      const radius = 1000 + Math.random() * 2000
       const theta = Math.random() * Math.PI * 2
       const phi = Math.acos(2 * Math.random() - 1)
 
@@ -145,27 +146,60 @@ export default function ConstellationView() {
       starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta)
       starPositions[i * 3 + 2] = radius * Math.cos(phi)
 
-      starSizes[i] = Math.random() * 2 + 0.5
+      // Varying star sizes for depth - some bright, some dim
+      const sizeVariation = Math.random()
+      starSizes[i] = sizeVariation > 0.95 ? 4 + Math.random() * 3 : 1 + Math.random() * 2
+
+      // Subtle color variation - blue-white spectrum with occasional warm stars
+      const temp = Math.random()
+      if (temp > 0.98) {
+        // Rare warm star
+        starColors[i * 3] = 1.0
+        starColors[i * 3 + 1] = 0.8 + Math.random() * 0.2
+        starColors[i * 3 + 2] = 0.6 + Math.random() * 0.2
+      } else if (temp > 0.90) {
+        // Cool blue star
+        starColors[i * 3] = 0.7 + Math.random() * 0.3
+        starColors[i * 3 + 1] = 0.8 + Math.random() * 0.2
+        starColors[i * 3 + 2] = 1.0
+      } else {
+        // Standard white star with slight blue tint
+        const brightness = 0.9 + Math.random() * 0.1
+        starColors[i * 3] = brightness
+        starColors[i * 3 + 1] = brightness
+        starColors[i * 3 + 2] = brightness + 0.1
+      }
     }
 
     starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3))
     starGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1))
+    starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3))
 
     const starMaterial = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 2,
+      size: 2.5,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.8,
       sizeAttenuation: true,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
+      vertexColors: true,
+      depthWrite: false
     })
 
     const starfield = new THREE.Points(starGeometry, starMaterial)
     starfieldRef.current = starfield
     scene.add(starfield)
 
-    // Add subtle fog for depth perception
-    scene.fog = new THREE.FogExp2(0x0d1420, 0.0008)
+    // Add nebula-like fog with rich gradient
+    scene.fog = new THREE.FogExp2(0x0d1420, 0.0006)
+
+    // Add ambient light for better visibility
+    const ambientLight = new THREE.AmbientLight(0x1a2f4f, 0.3)
+    scene.add(ambientLight)
+
+    // Add directional light from top for dramatic lighting
+    const directionalLight = new THREE.DirectionalLight(0x60a5fa, 0.5)
+    directionalLight.position.set(0, 500, 0)
+    scene.add(directionalLight)
 
     return () => {
       if (starfieldRef.current) {
@@ -173,10 +207,12 @@ export default function ConstellationView() {
         starfieldRef.current.geometry.dispose()
         ;(starfieldRef.current.material as THREE.Material).dispose()
       }
+      scene.remove(ambientLight)
+      scene.remove(directionalLight)
     }
   }, [loading, deviceCapability])
 
-  // Animation loop for node effects and starfield rotation
+  // Enhanced animation loop with richer effects
   useEffect(() => {
     if (!graphRef.current) return
 
@@ -191,28 +227,46 @@ export default function ConstellationView() {
 
       const time = Date.now() * 0.001
 
-      // Slowly rotate starfield for subtle movement
+      // Multi-axis starfield rotation for depth
       if (starfieldRef.current) {
-        starfieldRef.current.rotation.y = time * 0.01
-        starfieldRef.current.rotation.x = Math.sin(time * 0.005) * 0.05
+        starfieldRef.current.rotation.y = time * 0.015
+        starfieldRef.current.rotation.x = Math.sin(time * 0.008) * 0.08
+        starfieldRef.current.rotation.z = Math.cos(time * 0.006) * 0.03
       }
 
-      // Animate all node effects
+      // Animate all node effects with enhanced variations
       scene.traverse((object: any) => {
         if (object.userData.pulseGlow) {
-          // Pulsing glow for recent nodes
+          // Multi-frequency pulsing for organic feel
           const phase = object.userData.pulsePhase + time
-          const pulse = Math.sin(phase) * 0.5 + 0.5
-          object.userData.pulseGlow.material.opacity = pulse * 0.3
-          object.userData.pulseGlow.scale.setScalar(1 + pulse * 0.2)
+          const pulse1 = Math.sin(phase * 1.2) * 0.5 + 0.5
+          const pulse2 = Math.sin(phase * 0.8) * 0.3 + 0.7
+          const combinedPulse = (pulse1 + pulse2) / 2
+
+          object.userData.pulseGlow.material.opacity = combinedPulse * 0.4
+          object.userData.pulseGlow.scale.setScalar(1 + combinedPulse * 0.3)
         }
 
-        // Lens flare effect for brightest nodes
+        // Dual-rotation lens flare for more dynamic effect
         if (object.userData.lensFlare) {
           const flare = object.userData.lensFlare
-          flare.rotation.z = time * 0.5
-          const pulse = Math.sin(time * 2) * 0.3 + 0.7
-          flare.material.opacity = pulse * 0.4
+          flare.rotation.z = time * 0.8
+          const pulse = Math.sin(time * 2.5) * 0.25 + 0.75
+          flare.material.opacity = pulse * 0.5
+
+          // Subtle scale pulsing
+          const scale = 1 + Math.sin(time * 1.5) * 0.1
+          flare.scale.setScalar(scale)
+        }
+
+        // Rotate project rings for planetary feel
+        if (object.userData.orbitRing) {
+          const ring = object.userData.orbitRing
+          ring.rotation.z = time * 0.3
+
+          // Shimmer effect on ring
+          const shimmer = Math.sin(time * 3) * 0.1 + 0.2
+          ring.material.opacity = shimmer
         }
       })
 
@@ -455,17 +509,50 @@ export default function ConstellationView() {
       ;(mesh as any).userData.lensFlare = flare
     }
 
-    // For projects (planets), add orbital ring
+    // For projects (planets), add enhanced orbital ring with particles
     if (node.type === 'project') {
-      const ringGeometry = new THREE.TorusGeometry(node.val / 2 * 1.5, 0.5, 8, 32)
+      // Main ring
+      const ringGeometry = new THREE.TorusGeometry(node.val / 2 * 1.8, 0.6, 8, 48)
       const ringMaterial = new THREE.MeshBasicMaterial({
         color: theme.glow,
         transparent: true,
-        opacity: 0.2
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending
       })
       const ring = new THREE.Mesh(ringGeometry, ringMaterial)
-      ring.rotation.x = Math.PI / 2
+      ring.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.3 // Slight random tilt
       mesh.add(ring)
+
+      // Store for animation
+      ;(mesh as any).userData.orbitRing = ring
+
+      // Add smaller inner ring for depth
+      const innerRingGeometry = new THREE.TorusGeometry(node.val / 2 * 1.3, 0.3, 6, 32)
+      const innerRingMaterial = new THREE.MeshBasicMaterial({
+        color: theme.color,
+        transparent: true,
+        opacity: 0.15,
+        blending: THREE.AdditiveBlending
+      })
+      const innerRing = new THREE.Mesh(innerRingGeometry, innerRingMaterial)
+      innerRing.rotation.x = Math.PI / 2
+      mesh.add(innerRing)
+    }
+
+    // For articles (comets), add trailing effect
+    if (node.type === 'article') {
+      const tailLength = node.val * 3
+      const tailGeometry = new THREE.ConeGeometry(node.val / 4, tailLength, 8)
+      const tailMaterial = new THREE.MeshBasicMaterial({
+        color: theme.glow,
+        transparent: true,
+        opacity: 0.2,
+        blending: THREE.AdditiveBlending
+      })
+      const tail = new THREE.Mesh(tailGeometry, tailMaterial)
+      tail.position.z = -tailLength / 2
+      tail.rotation.x = Math.PI / 2
+      mesh.add(tail)
     }
 
     // Connection count badge
@@ -503,40 +590,55 @@ export default function ConstellationView() {
     return mesh
   }, [])
 
-  // Custom link rendering (beautiful glowing connections)
+  // Enhanced link rendering with dynamic energy flows
   const linkColor = useCallback((link: GraphLink) => {
     if (demoMode === 'connections') {
-      // Flash connections in storm mode
-      const time = Date.now() * 0.003
-      const flash = Math.sin(time + Math.random() * 10) > 0.5
-      return flash ? '#60a5fa' : '#3b82f6'
+      // Lightning storm effect - dramatic flashing
+      const time = Date.now() * 0.005
+      const flash = Math.sin(time + Math.random() * 10) > 0.7
+      return flash ? '#ffffff' : '#60a5fa'
     }
-    // AI suggested = purple glow, regular = blue glow
-    return link.type === 'ai_suggested' ? '#a78bfa' : '#60a5fa'
+    // AI suggested = vibrant purple, regular = electric blue
+    return link.type === 'ai_suggested' ? '#c084fc' : '#60a5fa'
   }, [demoMode])
 
   const linkWidth = useCallback((link: GraphLink) => {
     if (demoMode === 'connections') {
-      const time = Date.now() * 0.003
-      const pulse = Math.sin(time + Math.random() * 10) * 0.5 + 0.5
-      return 1.5 + pulse * 3
+      const time = Date.now() * 0.005
+      const pulse = Math.sin(time + Math.random() * 10) * 0.6 + 0.4
+      return 2 + pulse * 4
     }
-    // Thicker, more visible links
-    return link.type === 'ai_suggested' ? 3 : 2
+    // Thicker, more dramatic links
+    return link.type === 'ai_suggested' ? 3.5 : 2.5
   }, [demoMode])
 
   const linkOpacity = useCallback(() => {
     if (demoMode === 'connections') {
       return 1.0
     }
-    // More visible - was 0.6, now 0.8
-    return 0.8
+    // Highly visible connections - the network is the star of the show
+    return 0.9
   }, [demoMode])
 
-  // Add glow to links - optimized particle count by device capability
+  // Enhanced particle flows - more particles for richer visual
   const linkDirectionalParticles = useCallback(() => {
-    return deviceCapability === 'low' ? 1 : deviceCapability === 'medium' ? 2 : 4
-  }, [deviceCapability])
+    if (demoMode === 'connections') {
+      // Extra particles in storm mode
+      return deviceCapability === 'low' ? 3 : deviceCapability === 'medium' ? 5 : 8
+    }
+    return deviceCapability === 'low' ? 2 : deviceCapability === 'medium' ? 3 : 6
+  }, [deviceCapability, demoMode])
+
+  const linkDirectionalParticleSpeed = useCallback(() => {
+    if (demoMode === 'connections') {
+      return 0.012 // Faster in storm mode
+    }
+    return 0.008 // Slightly faster than before for more dynamic feel
+  }, [demoMode])
+
+  const linkDirectionalParticleWidth = useCallback(() => {
+    return demoMode === 'connections' ? 3 : 2.5
+  }, [demoMode])
 
   // Custom clustering forces - make similar nodes attract
   const customForces = useCallback(() => {
@@ -988,8 +1090,8 @@ export default function ConstellationView() {
         linkWidth={linkWidth}
         linkOpacity={linkOpacity()}
         linkDirectionalParticles={linkDirectionalParticles()}
-        linkDirectionalParticleSpeed={0.005}
-        linkDirectionalParticleWidth={2}
+        linkDirectionalParticleSpeed={linkDirectionalParticleSpeed()}
+        linkDirectionalParticleWidth={linkDirectionalParticleWidth()}
         backgroundColor="#0f1829"
         showNavInfo={false}
         enableNodeDrag={true}

@@ -2,12 +2,12 @@
  * ProjectCard Component - Stunning Visual Design
  */
 
-import React, { memo } from 'react'
+import React, { memo, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap, Edit, Trash2 } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2, Link2 } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 
 export const ProjectCard = memo(function ProjectCard({
@@ -19,6 +19,23 @@ export const ProjectCard = memo(function ProjectCard({
   compact = false
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
+  const [connectionCount, setConnectionCount] = useState(0)
+
+  useEffect(() => {
+    fetchConnectionCount()
+  }, [project.id])
+
+  const fetchConnectionCount = async () => {
+    try {
+      const response = await fetch(`/api/related?source_type=project&source_id=${project.id}&connections=true`)
+      if (response.ok) {
+        const data = await response.json()
+        setConnectionCount(data.connections?.length || 0)
+      }
+    } catch (error) {
+      console.warn('[ProjectCard] Failed to fetch connections:', error)
+    }
+  }
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on action buttons
@@ -192,18 +209,32 @@ export const ProjectCard = memo(function ProjectCard({
           <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{relativeTime}</span></span>
         </div>
 
-        <div
-          className="px-4 py-2 rounded-xl border"
-          style={statusConfig[project.status].bgStyle}
-        >
-          <div className="flex items-center gap-2">
-            <div
-              className="px-3 py-1 rounded-md text-xs font-medium border"
-              style={statusConfig[project.status].style}
-            >
-              {statusConfig[project.status].label}
+        <div className="flex items-center gap-3">
+          <div
+            className="px-4 py-2 rounded-xl border flex-1"
+            style={statusConfig[project.status].bgStyle}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="px-3 py-1 rounded-md text-xs font-medium border"
+                style={statusConfig[project.status].style}
+              >
+                {statusConfig[project.status].label}
+              </div>
             </div>
           </div>
+
+          {/* Connection Badge */}
+          {connectionCount > 0 && (
+            <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2 border" style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              color: 'var(--premium-blue)',
+              borderColor: 'rgba(59, 130, 246, 0.3)'
+            }}>
+              <Link2 className="h-3.5 w-3.5" />
+              <span className="font-bold">{connectionCount}</span>
+            </div>
+          )}
         </div>
 
         {project.metadata?.tags && project.metadata.tags.length > 0 && (

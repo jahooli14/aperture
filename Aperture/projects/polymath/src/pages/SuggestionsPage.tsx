@@ -200,7 +200,7 @@ export function SuggestionsPage() {
                 className="h-full transition-all duration-500 ease-out"
                 style={{
                   width: `${Math.min(progress, 100)}%`,
-                  background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))',
+                  background: 'var(--premium-blue)',
                   boxShadow: 'var(--premium-glow-blue)'
                 }}
               />

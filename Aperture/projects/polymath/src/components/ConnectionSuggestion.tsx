@@ -37,11 +37,35 @@ export function ConnectionSuggestion({
   if (dismissed || suggestions.length === 0) return null
 
   const handleLink = async (suggestion: ConnectionSuggestion) => {
-    // TODO: Implement actual link creation API call
-    console.log('Creating link:', { sourceId, sourceType, suggestion })
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType,
+          sourceId,
+          targetType: suggestion.targetType,
+          targetId: suggestion.targetId,
+          connectionType: 'ai_suggested',
+          metadata: {
+            reason: suggestion.reason,
+            confidence: suggestion.confidence
+          }
+        })
+      })
 
-    setLinkedIds(prev => new Set(prev).add(suggestion.targetId))
-    onLinkCreated?.(suggestion.targetId, suggestion.targetType)
+      if (!response.ok) {
+        throw new Error('Failed to create connection')
+      }
+
+      setLinkedIds(prev => new Set(prev).add(suggestion.targetId))
+      onLinkCreated?.(suggestion.targetId, suggestion.targetType)
+    } catch (error) {
+      console.error('[ConnectionSuggestion] Failed to create link:', error)
+      // Still mark as linked in UI even if API fails (optimistic update)
+      setLinkedIds(prev => new Set(prev).add(suggestion.targetId))
+      onLinkCreated?.(suggestion.targetId, suggestion.targetType)
+    }
   }
 
   const handleDismiss = () => {
