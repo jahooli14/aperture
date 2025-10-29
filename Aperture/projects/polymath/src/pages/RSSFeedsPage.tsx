@@ -1,15 +1,17 @@
 /**
- * RSS Feeds Management Page
- * Subscribe to RSS feeds and auto-import articles to reading queue
+ * Auto-Import Management Page
+ * Subscribe to RSS feeds and forward newsletters via email
  */
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Rss, Plus, Loader2, Check, X, RefreshCw, Trash2, Power } from 'lucide-react'
+import { Rss, Plus, Loader2, Check, X, RefreshCw, Trash2, Power, Mail, Copy } from 'lucide-react'
 import { useRSSStore } from '../stores/useRSSStore'
 import { useToast } from '../components/ui/toast'
 import { PRESET_FEEDS } from '../types/rss'
 import type { RSSFeed } from '../types/rss'
+
+const EMAIL_ADDRESS = 'read@polymath.vercel.app'
 
 export function RSSFeedsPage() {
   const { feeds, loading, syncing, fetchFeeds, subscribeFeed, updateFeed, unsubscribeFeed, syncFeeds } = useRSSStore()
@@ -17,6 +19,15 @@ export function RSSFeedsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [customFeedUrl, setCustomFeedUrl] = useState('')
   const [subscribing, setSubscribing] = useState(false)
+
+  const handleCopyEmail = () => {
+    navigator.clipboard.writeText(EMAIL_ADDRESS)
+    addToast({
+      title: 'Copied!',
+      description: 'Email address copied to clipboard',
+      variant: 'success',
+    })
+  }
 
   useEffect(() => {
     fetchFeeds()
@@ -118,10 +129,10 @@ export function RSSFeedsPage() {
               <Rss className="h-8 w-8" style={{ color: 'var(--premium-amber)' }} />
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold premium-text-platinum" style={{ letterSpacing: 'var(--premium-tracking-tight)' }}>
-                  RSS Feeds
+                  Auto-Import
                 </h1>
                 <p className="text-sm sm:text-base mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                  {feeds.length} {feeds.length === 1 ? 'subscription' : 'subscriptions'}
+                  RSS feeds & email newsletters
                 </p>
               </div>
             </div>
@@ -152,6 +163,56 @@ export function RSSFeedsPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        {/* Email Forwarding Section */}
+        <div className="premium-card p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
+              <Mail className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            </div>
+            <div className="flex-1">
+              <h3 className="premium-text-platinum font-bold text-lg mb-2">
+                Forward Newsletters via Email
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                Forward any newsletter or email to this address and it'll automatically be added to your reading queue:
+              </p>
+
+              <div className="flex gap-2">
+                <div className="flex-1 premium-glass border p-3 rounded-lg" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                  <code className="premium-text-platinum font-mono text-sm">
+                    {EMAIL_ADDRESS}
+                  </code>
+                </div>
+                <button
+                  onClick={handleCopyEmail}
+                  className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+                >
+                  <Copy className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                  <span className="text-sm font-medium premium-text-platinum">Copy</span>
+                </button>
+              </div>
+
+              <div className="mt-4 p-3 rounded-lg" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                <p className="text-xs premium-text-platinum font-semibold mb-2">
+                  💡 Tip: Add this to your email contacts
+                </p>
+                <p className="text-xs" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Subscribe to newsletters from Anthropic, OpenAI, or any source, then set up an email filter to auto-forward them here. Perfect for announcements that don't have RSS feeds!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RSS Feeds Section Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="premium-text-platinum font-bold text-xl">RSS Feed Subscriptions</h2>
+          <span className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+            {feeds.length} {feeds.length === 1 ? 'feed' : 'feeds'}
+          </span>
+        </div>
+
         {loading && feeds.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-amber)' }} />

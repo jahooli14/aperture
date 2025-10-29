@@ -47,8 +47,8 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
   },
   {
     id: 'rss',
-    label: 'RSS Feeds',
-    description: 'Auto-import articles from your favorite sources',
+    label: 'Auto-Import',
+    description: 'RSS feeds & email newsletters auto-added to reading queue',
     icon: Rss,
     path: '/rss',
     color: '#f97316',
