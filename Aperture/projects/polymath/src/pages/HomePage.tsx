@@ -1,6 +1,6 @@
 /**
- * Home Page - App Dashboard
- * Quick overview and navigation to key sections
+ * Home Page - Progress Dashboard
+ * Keeps users on track with their goals and active projects
  */
 
 import { useEffect, useState } from 'react'
@@ -12,23 +12,12 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
-import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
-import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
-import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus, Layers, FileText } from 'lucide-react'
-import type { ProjectSuggestion } from '../types'
-import { supabase } from '../lib/supabase'
+import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Target, Clock } from 'lucide-react'
 
 export function HomePage() {
-  const { suggestions, fetchSuggestions, rateSuggestion, buildSuggestion } = useSuggestionStore()
+  const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
   const { memories, fetchMemories } = useMemoryStore()
-  const { addOfflineCapture } = useOfflineSync()
-  const { isOnline } = useOnlineStatus()
-  const { addToast } = useToast()
-
-  const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
-  const [showDemoBanner, setShowDemoBanner] = useState(false)
 
   useEffect(() => {
     fetchSuggestions()
@@ -36,151 +25,29 @@ export function HomePage() {
     fetchMemories()
   }, [])
 
-  useEffect(() => {
-    // Always show banner if demo data is present (ignore dismissed state)
-    if (memories.length > 0) {
-      const hasDemoMemory = memories.some(m => m.audiopen_id?.startsWith('demo-'))
-      if (hasDemoMemory) {
-        setShowDemoBanner(true)
-      }
-    }
-  }, [memories])
-
-  const handleDataCleared = async () => {
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    try {
-      // Clear user's data in order (respecting foreign keys)
-      await supabase.from('project_suggestions').delete().eq('user_id', user.id)
-      await supabase.from('projects').delete().eq('user_id', user.id)
-
-      // Clear all memories (no user_id field in memories table)
-      const demoMemoryIds = memories
-        .filter(m => m.audiopen_id?.startsWith('demo-'))
-        .map(m => m.id)
-
-      if (demoMemoryIds.length > 0) {
-        await supabase.from('memories').delete().in('id', demoMemoryIds)
-      }
-
-      // Mark demo as dismissed
-      localStorage.setItem('polymath_demo_dismissed', 'true')
-
-      // Refresh data
-      await Promise.all([
-        fetchMemories(),
-        fetchSuggestions(),
-        fetchProjects()
-      ])
-
-      setShowDemoBanner(false)
-    } catch (error) {
-      console.error('Error clearing demo data:', error)
-    }
-  }
-
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
   const sparkSuggestions = suggestions.filter(s => s.status === 'spark')
   const activeProjects = projects.filter(p => p.status === 'active')
-  const priorityProjects = projects.filter(p => p.priority && p.metadata?.next_step) // NEW: Priority projects with next steps
+  const priorityProjects = projects.filter(p => p.priority && p.metadata?.next_step)
   const recentMemories = memories.slice(0, 3)
-  const recentSuggestions = pendingSuggestions.slice(0, 2)
-  const [aiSparks, setAiSparks] = useState<any[]>([]) // NEW: AI-suggested connections
 
-  // NEW: Fetch AI-generated connection suggestions (Sparks)
-  useEffect(() => {
-    const fetchAiSparks = async () => {
-      try {
-        const response = await fetch('/api/related?connections=true&ai_suggested=true&limit=3')
-        if (response.ok) {
-          const data = await response.json()
-          setAiSparks(data.connections || [])
-        }
-      } catch (error) {
-        console.error('Failed to fetch AI Sparks:', error)
-      }
-    }
-    if (memories.length > 0 || projects.length > 0) {
-      fetchAiSparks()
-    }
-  }, [memories.length, projects.length])
+  // Get today's date and motivational message
+  const today = new Date()
+  const dateString = today.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 
-  const handleSuggestionClick = (suggestion: ProjectSuggestion) => {
-    setSelectedSuggestion(suggestion)
-    setDetailDialogOpen(true)
-  }
-
-  const handleRate = async (id: string, rating: number) => {
-    await rateSuggestion(id, rating)
-  }
-
-  const handleBuild = async (id: string) => {
-    // This would normally open build dialog, but we'll just navigate
-    window.location.href = '/suggestions'
-  }
-
-  const handleVoiceCapture = async (transcript: string) => {
-    if (!transcript) return
-
-    try {
-      if (isOnline) {
-        // Online: send to memories API for parsing
-        const response = await fetch('/api/memories?capture=true', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript })
-        })
-
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type')
-          if (contentType?.includes('text/html')) {
-            throw new Error('Thoughts API not available')
-          }
-          throw new Error(`Failed to save thought: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        console.log('✓ Memory created:', data)
-
-        // Success! Show confirmation
-        addToast({
-          title: 'Thought saved!',
-          description: 'Your voice note has been captured.',
-          variant: 'success',
-        })
-
-        await fetchMemories()
-      } else {
-        // Offline: queue for later
-        await addOfflineCapture(transcript)
-        addToast({
-          title: 'Queued for sync',
-          description: 'Will process when back online.',
-          variant: 'default',
-        })
-      }
-    } catch (error) {
-      console.error('Failed to capture:', error)
-      // Fallback to offline queue if API fails
-      try {
-        await addOfflineCapture(transcript)
-        addToast({
-          title: 'Queued for sync',
-          description: 'Will process when API is available.',
-          variant: 'default',
-        })
-      } catch (offlineError) {
-        console.error('Failed to queue offline:', offlineError)
-        addToast({
-          title: 'Failed to save',
-          description: 'Please try again.',
-          variant: 'destructive',
-        })
-      }
-    }
-  }
+  const motivationalMessages = [
+    "Let's make progress today",
+    "Every step forward counts",
+    "Your ideas deserve attention",
+    "Build something meaningful",
+    "Turn thoughts into action"
+  ]
+  const motivationalMessage = motivationalMessages[today.getDay() % motivationalMessages.length]
 
   return (
     <motion.div
@@ -189,21 +56,10 @@ export function HomePage() {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
     >
-      {/* Demo Data Banner */}
-      {showDemoBanner && (
-        <DemoDataBanner
-          onDismiss={() => {
-            // Don't save dismissed state - always show if demo data exists
-            setShowDemoBanner(false)
-          }}
-          onDataCleared={handleDataCleared}
-        />
-      )}
-
       <div className="min-h-screen py-12">
-        {/* Header - Premium Typography */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center mb-12">
-          <h1 className="premium-text-platinum mb-3" style={{
+        {/* Header Section */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <h1 className="premium-text-platinum mb-2" style={{
             fontSize: 'var(--premium-text-h1)',
             fontWeight: 700,
             letterSpacing: 'var(--premium-tracking-tight)',
@@ -211,75 +67,86 @@ export function HomePage() {
           }}>
             Welcome to Polymath
           </h1>
-          <p style={{
-            color: 'var(--premium-text-secondary)',
-            fontSize: 'var(--premium-text-body-lg)',
-            maxWidth: '600px',
-            margin: '0 auto'
-          }}>
-            Your AI-powered second brain for capturing thoughts, managing projects, and discovering connections
-          </p>
+          <div className="flex items-center justify-center gap-3 flex-wrap" style={{ color: 'var(--premium-text-secondary)' }}>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span style={{ fontSize: 'var(--premium-text-body-base)' }}>{dateString}</span>
+            </div>
+            <span>•</span>
+            <p style={{ fontSize: 'var(--premium-text-body-lg)', fontWeight: 500 }}>
+              {motivationalMessage}
+            </p>
+          </div>
         </div>
 
-        {/* Empty State - First Time User Guide */}
-        {memories.length === 0 && projects.length === 0 && (
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-            <div className="premium-card p-8 text-center">
-              <Brain className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-indigo)' }} />
-              <h2 className="premium-text-platinum mb-3" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 600 }}>
-                Get Started in 3 Steps
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: 'var(--premium-indigo-glow)' }}>
-                    <span className="premium-text-platinum font-bold">1</span>
-                  </div>
-                  <h3 className="premium-text-platinum font-semibold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>Capture Thoughts</h3>
-                  <p style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)' }}>
-                    Press the glowing Capture button to record voice notes
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: 'var(--premium-emerald-glow)' }}>
-                    <span className="premium-text-platinum font-bold">2</span>
-                  </div>
-                  <h3 className="premium-text-platinum font-semibold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>Save Articles</h3>
-                  <p style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)' }}>
-                    Add articles to your reading list for later
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: 'var(--premium-blue-glow)' }}>
-                    <span className="premium-text-platinum font-bold">3</span>
-                  </div>
-                  <h3 className="premium-text-platinum font-semibold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>Build Projects</h3>
-                  <p style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)' }}>
-                    Turn your ideas into tracked projects
-                  </p>
-                </div>
+        {/* Today's Focus Card - Top Priority */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          {priorityProjects.length > 0 ? (
+            <div className="premium-card p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Target className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
+                <h2 className="premium-text-platinum" style={{
+                  fontSize: 'var(--premium-text-h2)',
+                  fontWeight: 700
+                }}>
+                  Today's Focus
+                </h2>
               </div>
-              <div className="mt-8 flex gap-4 justify-center flex-wrap">
-                <Link to="/memories" className="premium-btn-primary inline-flex items-center gap-2">
-                  <Layers className="h-5 w-5" />
-                  Start Capturing
-                </Link>
-                <Link to="/reading" className="premium-glass border px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all">
-                  <FileText className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
-                  <span style={{ color: 'var(--premium-text-primary)' }}>Browse Reading</span>
-                </Link>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {priorityProjects.slice(0, 2).map(project => (
+                  <Link
+                    key={project.id}
+                    to="/projects"
+                    className="group premium-glass-subtle p-6 rounded-xl transition-all duration-300 hover:bg-white/10"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="premium-text-platinum font-bold text-lg flex-1">
+                        {project.title}
+                      </h3>
+                      <Rocket className="h-6 w-6 flex-shrink-0 ml-3" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
+                    <div className="premium-glass-subtle rounded-lg p-4 mb-4">
+                      <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-blue)' }}>
+                        NEXT STEP:
+                      </div>
+                      <div className="premium-text-platinum font-medium">
+                        {project.metadata?.next_step}
+                      </div>
+                    </div>
+                    <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {project.description}
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
+                      Take action <ArrowRight className="h-3 w-3" />
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="premium-card p-8 text-center">
+              <Target className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+              <h2 className="premium-text-platinum mb-3" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 600 }}>
+                No Active Projects Yet
+              </h2>
+              <p className="mb-6" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-base)', maxWidth: '500px', margin: '0 auto 24px' }}>
+                Create your first project to see your next steps here
+              </p>
+              <Link
+                to="/projects"
+                className="premium-btn-primary inline-flex items-center gap-2"
+              >
+                <Plus className="h-5 w-5" />
+                Create First Project
+              </Link>
+            </div>
+          )}
+        </section>
 
-        {/* Stats Grid - Premium Dark */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Quick Stats Grid */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Thoughts Stat */}
-            <Link
-              to="/memories"
-              className="premium-stat-card group"
-            >
+            <Link to="/memories" className="premium-stat-card group">
               <div className="flex items-center justify-between mb-3">
                 <Brain className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-indigo)' }} />
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
@@ -292,28 +159,20 @@ export function HomePage() {
               </div>
             </Link>
 
-            {/* New Suggestions Stat */}
-            <Link
-              to="/suggestions"
-              className="premium-stat-card group"
-            >
+            <Link to="/suggestions" className="premium-stat-card group">
               <div className="flex items-center justify-between mb-3">
-                <Sparkles className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-blue)' }} />
+                <TrendingUp className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-blue)' }} />
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
               </div>
               <div className="text-3xl font-bold mb-1 premium-text-platinum" style={{ fontSize: 'var(--premium-text-display-sm)', letterSpacing: 'var(--premium-tracking-tight)' }}>
                 {pendingSuggestions.length}
               </div>
               <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
-                NEW IDEAS
+                PENDING
               </div>
             </Link>
 
-            {/* Sparks Stat */}
-            <Link
-              to="/suggestions?filter=spark"
-              className="premium-stat-card group"
-            >
+            <Link to="/suggestions?filter=spark" className="premium-stat-card group">
               <div className="flex items-center justify-between mb-3">
                 <TrendingUp className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-amber)' }} />
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
@@ -326,11 +185,7 @@ export function HomePage() {
               </div>
             </Link>
 
-            {/* Active Projects Stat */}
-            <Link
-              to="/projects"
-              className="premium-stat-card group"
-            >
+            <Link to="/projects" className="premium-stat-card group">
               <div className="flex items-center justify-between mb-3">
                 <Rocket className="h-8 w-8" strokeWidth={1.5} style={{ color: 'var(--premium-emerald)' }} />
                 <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-platinum-muted)' }} />
@@ -345,255 +200,187 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Main Content Grid */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-          {/* NEW: Priority Project Steps - Top Module */}
-          {priorityProjects.length > 0 && (
-            <section className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="flex items-center gap-2 premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
-                  <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-                  Active Project Steps
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {priorityProjects.map(project => (
-                  <Link
-                    key={project.id}
-                    to={`/projects`}
-                    className="group premium-card p-6 transition-all duration-300"
-                  >
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }} />
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-bold text-lg premium-text-platinum">{project.title}</h3>
-                        <div className="px-2 py-1 rounded-lg premium-glass-subtle text-xs font-bold" style={{ color: 'var(--premium-blue)' }}>
-                          PRIORITY
-                        </div>
-                      </div>
-                      <div className="premium-glass-subtle rounded-xl p-4">
-                        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-blue)' }}>
-                          NEXT STEP:
-                        </div>
-                        <div className="premium-text-platinum font-medium">
-                          {project.metadata?.next_step}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-2 transition-all duration-300 group-hover:h-3" style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }} />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* NEW: AI-Generated Sparks */}
-            {aiSparks.length > 0 && (
-              <section className="lg:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="flex items-center gap-2 premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
-                    <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
-                    AI-Generated Sparks
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {aiSparks.slice(0, 3).map((spark, index) => (
-                    <div
-                      key={index}
-                      className="premium-card p-5 transition-all duration-300"
-                    >
-                      <div className="absolute top-0 right-0 p-2">
-                        <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
-                      </div>
-                      <div className="text-sm font-medium mb-2" style={{ color: 'var(--premium-amber)' }}>
-                        Connection Suggestion
-                      </div>
-                      <div className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                        {spark.ai_reasoning || 'AI found a potential connection between your items'}
-                      </div>
-                      <button className="text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
-                        View connection →
-                      </button>
-                      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Recent Suggestions */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
-                  Recent Suggestions
-                </h2>
-                <Link
-                  to="/suggestions"
-                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
-                >
-                  View all →
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {recentSuggestions.length > 0 ? (
-                  recentSuggestions.map(suggestion => (
-                    <button
-                      key={suggestion.id}
-                      onClick={() => handleSuggestionClick(suggestion)}
-                      className="group premium-card p-4 w-full text-left transition-all duration-300"
-                    >
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
-                      <div className="relative z-10">
-                        <h3 className="font-medium premium-text-platinum mb-1">
-                          {suggestion.title}
-                        </h3>
-                        <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                          {suggestion.description}
-                        </p>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
-                    </button>
-                  ))
-                ) : (
-                  <div className="premium-card p-8 text-center">
-                    <Sparkles className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
-                    <p className="premium-text-platinum font-semibold mb-2">Ready to Generate Sparks?</p>
-                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {memories.length > 0
-                        ? "You have thoughts captured. Click Generate Sparks to see AI connections!"
-                        : "Add some thoughts, then generate personalized project suggestions"
-                      }
-                    </p>
-                    <Link
-                      to="/suggestions"
-                      className="btn-primary inline-flex items-center gap-2"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      {memories.length > 0 ? "Generate Sparks" : "View Suggestions"}
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Recent Thoughts */}
-            <section>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
-                  Recent Thoughts
-                </h2>
-                <Link
-                  to="/memories"
-                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
-                >
-                  View all →
-                </Link>
+        {/* Recent Activity - 3 Columns */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <h2 className="premium-text-platinum mb-6" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+            Recent Activity
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Latest Thoughts */}
+            <div className="premium-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Brain className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
+                <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                  Latest Thoughts
+                </h3>
               </div>
               <div className="space-y-3">
                 {recentMemories.length > 0 ? (
-                  recentMemories.map(memory => (
-                    <Link
-                      key={memory.id}
-                      to="/memories"
-                      className="group premium-card p-4 block transition-all duration-300"
-                    >
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
-                      <div className="relative z-10">
-                        <div className="text-sm line-clamp-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <>
+                    {recentMemories.map(memory => (
+                      <Link
+                        key={memory.id}
+                        to="/memories"
+                        className="block premium-glass-subtle p-3 rounded-lg hover:bg-white/10 transition-all"
+                      >
+                        <div className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                           {memory.body || memory.title}
                         </div>
-                        <div className="text-xs mt-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          <Clock className="h-3 w-3" />
                           {new Date(memory.created_at).toLocaleDateString()}
                         </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
-                    </Link>
-                  ))
-                ) : (
-                  <div className="premium-card p-8 text-center">
-                    <Brain className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-indigo)' }} />
-                    <p className="premium-text-platinum font-semibold mb-2">Start Your Knowledge Graph</p>
-                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Capture your thoughts, skills, and interests via voice notes or text
-                    </p>
+                      </Link>
+                    ))}
                     <Link
                       to="/memories"
-                      className="btn-primary inline-flex items-center gap-2"
+                      className="block text-center text-sm font-medium pt-2" style={{ color: 'var(--premium-indigo)' }}
                     >
-                      <Plus className="h-4 w-4" />
-                      Add Thought
+                      View all thoughts →
+                    </Link>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Brain className="h-10 w-10 mx-auto mb-2 opacity-50" style={{ color: 'var(--premium-indigo)' }} />
+                    <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                      No thoughts yet
+                    </p>
+                    <Link to="/memories" className="text-sm font-medium" style={{ color: 'var(--premium-indigo)' }}>
+                      Capture your first →
                     </Link>
                   </div>
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* Active Projects */}
-            <section className="lg:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
-                  Active Projects
-                </h2>
-                <Link
-                  to="/projects"
-                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
-                >
-                  View all →
+            {/* Latest Reading */}
+            <div className="premium-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <BookOpen className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+                <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                  Latest Reading
+                </h3>
+              </div>
+              <div className="text-center py-6">
+                <BookOpen className="h-10 w-10 mx-auto mb-2 opacity-50" style={{ color: 'var(--premium-emerald)' }} />
+                <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                  No reading items yet
+                </p>
+                <Link to="/reading" className="text-sm font-medium" style={{ color: 'var(--premium-emerald)' }}>
+                  Add reading →
                 </Link>
               </div>
-              {activeProjects.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activeProjects.slice(0, 3).map(project => (
-                    <Link
-                      key={project.id}
-                      to="/projects"
-                      className="group premium-card p-5 transition-all duration-300"
-                    >
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
-                      <div className="relative z-10">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold premium-text-platinum flex-1">
-                            {project.title}
-                          </h3>
-                          <Rocket className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--premium-blue)' }} />
-                        </div>
-                        <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                          {project.description}
-                        </p>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="premium-card p-8 text-center">
-                  <Rocket className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
-                  <p className="premium-text-platinum font-semibold mb-2">Build Your First Project</p>
-                  <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                    Generate ideas, find what sparks, then build with progress tracking
-                  </p>
-                  <Link
-                    to="/suggestions"
-                    className="btn-primary inline-flex items-center gap-2"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                    View Suggestions
-                  </Link>
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
+            </div>
 
-        {/* Suggestion Detail Dialog */}
-        <SuggestionDetailDialog
-          suggestion={selectedSuggestion}
-          open={detailDialogOpen}
-          onOpenChange={setDetailDialogOpen}
-          onRate={handleRate}
-          onBuild={handleBuild}
-        />
+            {/* Active Project Progress */}
+            <div className="premium-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                  Project Progress
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {activeProjects.length > 0 ? (
+                  <>
+                    {activeProjects.slice(0, 3).map(project => (
+                      <Link
+                        key={project.id}
+                        to="/projects"
+                        className="block premium-glass-subtle p-3 rounded-lg hover:bg-white/10 transition-all"
+                      >
+                        <div className="font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                          {project.title}
+                        </div>
+                        <div className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          Status: Active
+                        </div>
+                      </Link>
+                    ))}
+                    <Link
+                      to="/projects"
+                      className="block text-center text-sm font-medium pt-2" style={{ color: 'var(--premium-blue)' }}
+                    >
+                      View all projects →
+                    </Link>
+                  </>
+                ) : (
+                  <div className="text-center py-6">
+                    <Rocket className="h-10 w-10 mx-auto mb-2 opacity-50" style={{ color: 'var(--premium-blue)' }} />
+                    <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                      No active projects
+                    </p>
+                    <Link to="/projects" className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}>
+                      Create project →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Actions - Always Visible */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="premium-text-platinum mb-6" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              to="/memories"
+              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-indigo-glow)' }}>
+                <Brain className="h-8 w-8" style={{ color: 'var(--premium-indigo)' }} />
+              </div>
+              <h3 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                Capture Thought
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                Record a voice note or write down an idea
+              </p>
+              <div className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--premium-indigo)' }}>
+                Start now <ArrowRight className="h-4 w-4" />
+              </div>
+            </Link>
+
+            <Link
+              to="/reading"
+              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-emerald-glow)' }}>
+                <BookOpen className="h-8 w-8" style={{ color: 'var(--premium-emerald)' }} />
+              </div>
+              <h3 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                Add Reading
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                Save articles and content for later
+              </p>
+              <div className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--premium-emerald)' }}>
+                Add item <ArrowRight className="h-4 w-4" />
+              </div>
+            </Link>
+
+            <Link
+              to="/projects"
+              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+            >
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-blue-glow)' }}>
+                <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
+              </div>
+              <h3 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
+                Create Project
+              </h3>
+              <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                Turn your ideas into tracked projects
+              </p>
+              <div className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--premium-blue)' }}>
+                Get started <ArrowRight className="h-4 w-4" />
+              </div>
+            </Link>
+          </div>
+        </section>
       </div>
     </motion.div>
   )

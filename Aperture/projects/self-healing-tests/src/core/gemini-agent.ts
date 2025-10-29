@@ -4,7 +4,6 @@ import { logger } from '../utils/logger.js';
 
 export class GeminiAgent {
   private genAI: GoogleGenerativeAI | null = null;
-  private model: any = null;
   private config: TestConfig;
 
   constructor(config: TestConfig) {
@@ -15,18 +14,9 @@ export class GeminiAgent {
   private async initialize(): Promise<void> {
     try {
       if (this.config.geminiApiKey) {
-        // Using AI Studio API with Computer Use model
+        // Using AI Studio API
         this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
-        this.model = this.genAI.getGenerativeModel({
-          model: this.config.model || 'gemini-2.5-computer-use-preview-10-2025',
-          tools: [{
-            // @ts-ignore - computer_use is a preview feature not yet in types
-            computer_use: {
-              environment: 'ENVIRONMENT_BROWSER',
-            },
-          }],
-        });
-        logger.info('Initialized Gemini Computer Use model with AI Studio API');
+        logger.info('Initialized Gemini with AI Studio API');
       } else if (this.config.vertexProject) {
         // Using Vertex AI (requires authentication)
         logger.info('Vertex AI integration not yet implemented - use AI Studio API key');
@@ -41,8 +31,8 @@ export class GeminiAgent {
   }
 
   async analyzeFailure(failure: TestFailure): Promise<GeminiResponse> {
-    if (!this.model) {
-      throw new Error('Gemini model not initialized');
+    if (!this.genAI) {
+      throw new Error('Gemini API not initialized');
     }
 
     logger.healing(`Analyzing test failure: ${failure.testName}`);
@@ -51,7 +41,13 @@ export class GeminiAgent {
     const imageParts = failure.screenshot ? [this.prepareScreenshot(failure.screenshot)] : [];
 
     try {
-      const result = await this.model.generateContent([
+      // Use a regular Gemini model for analysis (without computer_use tool)
+      // This allows for better text-based analysis of screenshots
+      const analysisModel = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',  // Fast model good for visual analysis
+      });
+
+      const result = await analysisModel.generateContent([
         prompt,
         ...imageParts
       ]);
@@ -64,15 +60,17 @@ export class GeminiAgent {
       return this.parseGeminiResponse(text);
     } catch (error) {
       logger.error('Failed to analyze failure with Gemini:', error);
+      logger.error('Error details:', error);
       throw new Error(`Gemini analysis failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   private buildAnalysisPrompt(failure: TestFailure): string {
     return `
-You are an expert test automation engineer with computer use capabilities specializing in self-healing test frameworks.
-You can visually analyze browser screenshots to understand UI changes and generate precise healing actions.
-Analyze this test failure and provide specific, actionable fixes.
+You are an expert test automation engineer specializing in self-healing test frameworks.
+Analyze this test failure screenshot and provide specific, actionable fixes.
+
+CRITICAL: You MUST respond with ONLY valid JSON in the exact format specified below. Do not include any text before or after the JSON.
 
 ## Test Failure Details:
 - **Test Name**: ${failure.testName}
@@ -98,13 +96,12 @@ ${failure.context ? `
 4. **Explain** your reasoning for each proposed fix
 
 ## Response Format:
-Provide a JSON response with this exact structure:
+Respond with ONLY this JSON structure (no markdown, no code blocks, just raw JSON):
 
-\`\`\`json
 {
   "healingActions": [
     {
-      "type": "selector_fix|wait_adjustment|assertion_update|flow_modification|element_alternative|timing_fix",
+      "type": "selector_fix",
       "description": "Clear description of what this fix does",
       "confidence": 0.85,
       "oldValue": "current problematic value",
@@ -116,7 +113,8 @@ Provide a JSON response with this exact structure:
   "confidence": 0.80,
   "requiresHumanReview": false
 }
-\`\`\`
+
+IMPORTANT: Your response must be PURE JSON only. Do not wrap in markdown code blocks.
 
 ## Important Guidelines:
 - **Be specific**: Provide exact selectors, values, and code changes
@@ -145,17 +143,37 @@ Focus on practical, implementable solutions that will make the test more robust.
 
   private parseGeminiResponse(text: string): GeminiResponse {
     try {
-      // Extract JSON from the response (handle markdown code blocks)
-      const jsonMatch = text.match(/```json\s*(\{[\s\S]*?\})\s*```/) || text.match(/(\{[\s\S]*\})/);
+      // Try multiple patterns to extract JSON
+      let jsonStr: string | null = null;
 
-      if (!jsonMatch) {
+      // Pattern 1: Markdown code block with json
+      const markdownMatch = text.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+      if (markdownMatch) {
+        jsonStr = markdownMatch[1];
+      }
+
+      // Pattern 2: Markdown code block without json tag
+      if (!jsonStr) {
+        const codeBlockMatch = text.match(/```\s*(\{[\s\S]*?\})\s*```/);
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1];
+        }
+      }
+
+      // Pattern 3: Raw JSON (find first { to last })
+      if (!jsonStr) {
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonStr = text.substring(firstBrace, lastBrace + 1);
+        }
+      }
+
+      if (!jsonStr) {
+        logger.error('Could not find JSON in response:', text.substring(0, 500));
         throw new Error('No valid JSON found in Gemini response');
       }
 
-      const jsonStr = jsonMatch[1];
-      if (!jsonStr) {
-        throw new Error('No JSON content found');
-      }
       const parsed = JSON.parse(jsonStr);
 
       // Validate the response structure

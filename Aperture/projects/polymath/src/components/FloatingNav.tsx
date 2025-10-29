@@ -175,7 +175,11 @@ export function FloatingNav() {
       </AnimatePresence>
 
       {/* Prominent Capture FAB - Overlays the nav */}
-      <motion.div
+      <motion.button
+        onClick={handleCaptureClick}
+        disabled={!isOnline}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{
@@ -184,22 +188,12 @@ export function FloatingNav() {
           damping: 20,
           delay: 0.2
         }}
-        className="fixed left-1/2 z-50"
+        className="fixed left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
         style={{
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
-          transform: 'translateX(-50%)',
+          opacity: !isOnline ? 0.3 : 1,
         }}
       >
-        <motion.button
-          onClick={handleCaptureClick}
-          disabled={!isOnline}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          className="relative w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
-          style={{
-            opacity: !isOnline ? 0.3 : 1,
-          }}
-        >
           {/* Pulsing Glow Effect */}
           {isOnline && (
             <motion.div
@@ -231,7 +225,7 @@ export function FloatingNav() {
 
           {/* Label below FAB */}
           <span
-            className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold whitespace-nowrap"
+            className="absolute -bottom-6 left-0 right-0 text-center text-xs font-semibold whitespace-nowrap"
             style={{
               color: 'var(--premium-platinum)',
               fontSize: 'var(--premium-text-body-xs)',
@@ -242,7 +236,6 @@ export function FloatingNav() {
             CAPTURE
           </span>
         </motion.button>
-      </motion.div>
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav

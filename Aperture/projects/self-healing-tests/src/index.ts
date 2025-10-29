@@ -142,6 +142,7 @@ export class SelfHealingTestFramework {
 export * from './types/index.js';
 export { logger } from './utils/logger.js';
 export { ScreenshotManager } from './utils/screenshot.js';
+export { ComputerUseAgent } from './core/computer-use-agent.js';
 
 // Default configuration
 export const defaultConfig: TestConfig = {
