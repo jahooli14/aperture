@@ -28,31 +28,66 @@ export const ProjectCard = memo(function ProjectCard({
     onClick?.(project.id)
   }
 
-  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  const statusConfig: Record<string, { label: string; style: React.CSSProperties; bgStyle: React.CSSProperties }> = {
     upcoming: {
       label: 'Upcoming',
-      color: 'text-amber-700 bg-amber-100 border-amber-200',
-      bg: 'bg-amber-50'
+      style: {
+        backgroundColor: 'rgba(251, 191, 36, 0.2)',
+        color: '#fbbf24',
+        borderColor: 'rgba(251, 191, 36, 0.3)'
+      },
+      bgStyle: {
+        backgroundColor: 'rgba(251, 191, 36, 0.1)',
+        borderColor: 'rgba(251, 191, 36, 0.2)'
+      }
     },
     active: {
       label: 'Active',
-      color: 'text-green-700 bg-green-100 border-green-200',
-      bg: 'bg-green-50'
+      style: {
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+        color: 'var(--premium-emerald)',
+        borderColor: 'rgba(16, 185, 129, 0.3)'
+      },
+      bgStyle: {
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderColor: 'rgba(16, 185, 129, 0.2)'
+      }
     },
     dormant: {
       label: 'Dormant',
-      color: 'text-gray-700 bg-gray-100 border-gray-200',
-      bg: 'bg-gray-50'
+      style: {
+        backgroundColor: 'rgba(156, 163, 175, 0.2)',
+        color: '#9ca3af',
+        borderColor: 'rgba(156, 163, 175, 0.3)'
+      },
+      bgStyle: {
+        backgroundColor: 'rgba(156, 163, 175, 0.1)',
+        borderColor: 'rgba(156, 163, 175, 0.2)'
+      }
     },
     completed: {
       label: 'Completed',
-      color: 'text-blue-700 bg-blue-100 border-blue-200',
-      bg: 'bg-blue-50'
+      style: {
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        color: 'var(--premium-blue)',
+        borderColor: 'rgba(59, 130, 246, 0.3)'
+      },
+      bgStyle: {
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgba(59, 130, 246, 0.2)'
+      }
     },
     archived: {
       label: 'Archived',
-      color: 'text-purple-700 bg-purple-100 border-purple-200',
-      bg: 'bg-purple-50'
+      style: {
+        backgroundColor: 'rgba(139, 92, 246, 0.2)',
+        color: 'var(--premium-indigo)',
+        borderColor: 'rgba(139, 92, 246, 0.3)'
+      },
+      bgStyle: {
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        borderColor: 'rgba(139, 92, 246, 0.2)'
+      }
     }
   }
 
@@ -64,8 +99,7 @@ export const ProjectCard = memo(function ProjectCard({
       transition={{ duration: 0.2 }}
     >
     <Card
-      className="group h-full flex flex-col relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-blue-300 hover:shadow-2xl cursor-pointer"
-      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+      className="group h-full flex flex-col premium-card cursor-pointer"
       onClick={handleCardClick}
     >
       {/* Glow effect on hover */}
@@ -84,7 +118,8 @@ export const ProjectCard = memo(function ProjectCard({
                 onClick={() => onEdit(project.id)}
                 variant="ghost"
                 size="sm"
-                className="h-11 w-11 p-0 text-gray-400 hover:text-blue-900 hover:bg-blue-50 touch-manipulation"
+                className="h-11 w-11 p-0 touch-manipulation"
+                style={{ color: 'var(--premium-text-tertiary)' }}
                 aria-label="Edit project"
               >
                 <Edit className="h-5 w-5" />
@@ -95,7 +130,8 @@ export const ProjectCard = memo(function ProjectCard({
                 onClick={() => onDelete(project.id)}
                 variant="ghost"
                 size="sm"
-                className="h-11 w-11 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+                className="h-11 w-11 p-0 touch-manipulation"
+                style={{ color: 'var(--premium-text-tertiary)' }}
                 aria-label="Delete project"
               >
                 <Trash2 className="h-5 w-5" />
@@ -113,8 +149,17 @@ export const ProjectCard = memo(function ProjectCard({
       <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Next Step - Prominent Display */}
         {project.metadata?.next_step && (
-          <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-200 rounded-xl p-4">
-            <div className="text-xs font-semibold text-orange-800 uppercase tracking-wide mb-2">
+          <div
+            className="border-2 rounded-xl p-4"
+            style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              borderColor: 'rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            <div
+              className="text-xs font-semibold uppercase tracking-wide mb-2"
+              style={{ color: 'var(--premium-amber)' }}
+            >
               Next Step
             </div>
             <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
@@ -130,10 +175,13 @@ export const ProjectCard = memo(function ProjectCard({
               <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-text-secondary)' }}>Progress</span>
               <span className="font-bold" style={{ color: 'var(--premium-blue)' }}>{project.metadata.progress}%</span>
             </div>
-            <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-900 transition-all duration-500"
-                style={{ width: `${project.metadata.progress}%` }}
+                className="h-full transition-all duration-500"
+                style={{
+                  width: `${project.metadata.progress}%`,
+                  background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
+                }}
               />
             </div>
           </div>
@@ -144,9 +192,15 @@ export const ProjectCard = memo(function ProjectCard({
           <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{relativeTime}</span></span>
         </div>
 
-        <div className={`px-4 py-2 rounded-xl ${statusConfig[project.status].bg} border border-neutral-200`}>
+        <div
+          className="px-4 py-2 rounded-xl border"
+          style={statusConfig[project.status].bgStyle}
+        >
           <div className="flex items-center gap-2">
-            <div className={`px-3 py-1 rounded-md text-xs font-medium border ${statusConfig[project.status].color}`}>
+            <div
+              className="px-3 py-1 rounded-md text-xs font-medium border"
+              style={statusConfig[project.status].style}
+            >
               {statusConfig[project.status].label}
             </div>
           </div>
@@ -157,7 +211,12 @@ export const ProjectCard = memo(function ProjectCard({
             {project.metadata.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-3 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium border border-purple-200"
+                className="px-3 py-1 rounded-md text-xs font-medium border"
+                style={{
+                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                  color: 'var(--premium-indigo)',
+                  borderColor: 'rgba(139, 92, 246, 0.3)'
+                }}
               >
                 #{tag}
               </span>
@@ -167,15 +226,30 @@ export const ProjectCard = memo(function ProjectCard({
 
         {project.metadata?.energy_level && (
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-500" />
+            <Zap className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
             <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Energy:</span>
-            <span className={`px-3 py-1 rounded-md text-xs font-medium border ${
-              project.metadata.energy_level === 'high'
-                ? 'bg-red-100 text-red-700 border-red-200'
-                : project.metadata.energy_level === 'low'
-                  ? 'bg-green-100 text-green-700 border-green-200'
-                  : 'bg-amber-100 text-amber-700 border-amber-200'
-            }`}>
+            <span
+              className="px-3 py-1 rounded-md text-xs font-medium border"
+              style={
+                project.metadata.energy_level === 'high'
+                  ? {
+                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                      color: '#ef4444',
+                      borderColor: 'rgba(239, 68, 68, 0.3)'
+                    }
+                  : project.metadata.energy_level === 'low'
+                    ? {
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        color: 'var(--premium-emerald)',
+                        borderColor: 'rgba(16, 185, 129, 0.3)'
+                      }
+                    : {
+                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                        color: 'var(--premium-amber)',
+                        borderColor: 'rgba(245, 158, 11, 0.3)'
+                      }
+              }
+            >
               {project.metadata.energy_level}
             </span>
           </div>
