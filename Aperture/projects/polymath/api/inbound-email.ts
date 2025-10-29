@@ -5,9 +5,9 @@
  *
  * Setup:
  * 1. Go to SendGrid → Settings → Inbound Parse
- * 2. Add domain: polymath-[your-id].vercel.app
- * 3. Set webhook URL: https://polymath.vercel.app/api/inbound-email
- * 4. Forward emails to: read@polymath-[your-id].vercel.app
+ * 2. Add domain: clandestined.vercel.app
+ * 3. Set webhook URL: https://clandestined.vercel.app/api/inbound-email
+ * 4. Forward emails to: read@clandestined.vercel.app
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
