@@ -1,12 +1,13 @@
 /**
  * Consolidated Reading API
- * Handles articles, highlights, and all reading operations
+ * Handles articles, highlights, RSS feeds, and all reading operations
  * Uses Jina AI for content extraction with markdown-to-HTML conversion
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { marked } from 'marked'
+import Parser from 'rss-parser'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -14,6 +15,7 @@ const supabase = createClient(
 )
 
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
+const rssParser = new Parser()
 
 /**
  * Extract article content using Jina AI Reader
@@ -434,6 +436,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       console.error('[API] Delete error:', error)
       return res.status(500).json({ error: 'Failed to delete article' })
+    }
+  }
+
+  // RSS FEEDS RESOURCE - Consolidated from api/rss.ts
+  if (resource === 'rss' || resource === 'feeds') {
+    // Sync RSS feeds
+    if (resource === 'rss' && req.query.action === 'sync' && req.method === 'POST') {
+      try {
+        const { data: feeds } = await supabase
+          .from('rss_feeds')
+          .select('*')
+          .eq('user_id', USER_ID)
+          .eq('enabled', true)
+
+        if (!feeds || feeds.length === 0) {
+          return res.status(200).json({ success: true, message: 'No enabled feeds', articlesAdded: 0 })
+        }
+
+        let totalArticlesAdded = 0
+        for (const feed of feeds) {
+          try {
+            const feedData = await rssParser.parseURL(feed.feed_url)
+            for (const item of feedData.items.slice(0, 5)) {
+              const existing = await supabase.from('reading_queue').select('id').eq('user_id', USER_ID).eq('url', item.link || '').single()
+              if (existing.data) continue
+
+              const jinaUrl = `https://r.jina.ai/${item.link}`
+              const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
+              let content = item.contentSnippet || item.description || ''
+              if (response.ok) {
+                const result = await response.json()
+                content = result.data?.content || result.content || content
+              }
+
+              await supabase.from('reading_queue').insert([{
+                user_id: USER_ID,
+                url: item.link || '',
+                title: item.title || 'Untitled',
+                author: item.creator || item.author || null,
+                content,
+                excerpt: content.substring(0, 200),
+                published_date: item.pubDate || item.isoDate || null,
+                source: new URL(item.link || '').hostname.replace('www.', ''),
+                read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
+                word_count: content.split(/\s+/).length,
+                status: 'unread',
+                tags: ['rss', 'auto-imported']
+              }])
+              totalArticlesAdded++
+            }
+            await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)
+          } catch (err) {
+            console.error('[RSS] Feed sync error:', err)
+          }
+        }
+        return res.status(200).json({ success: true, feedsSynced: feeds.length, articlesAdded: totalArticlesAdded })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to sync feeds' })
+      }
+    }
+
+    // GET feeds
+    if (req.method === 'GET') {
+      if (id) {
+        const { data } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', USER_ID).single()
+        return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
+      }
+      const { data } = await supabase.from('rss_feeds').select('*').eq('user_id', USER_ID).order('created_at', { ascending: false })
+      return res.status(200).json({ success: true, feeds: data || [] })
+    }
+
+    // POST - Subscribe
+    if (req.method === 'POST') {
+      const { feed_url } = req.body
+      if (!feed_url) return res.status(400).json({ error: 'feed_url required' })
+
+      const { data: existing } = await supabase.from('rss_feeds').select('id').eq('user_id', USER_ID).eq('feed_url', feed_url).single()
+      if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
+
+      const feedData = await rssParser.parseURL(feed_url)
+      const { data } = await supabase.from('rss_feeds').insert([{
+        user_id: USER_ID,
+        feed_url,
+        title: feedData.title || 'Untitled',
+        description: feedData.description || null,
+        site_url: feedData.link || null,
+        favicon_url: feedData.image?.url || null,
+        enabled: true
+      }]).select().single()
+
+      return res.status(201).json({ success: true, feed: data })
+    }
+
+    // PATCH - Update
+    if (req.method === 'PATCH') {
+      const { id: feedId, enabled } = req.body
+      if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
+
+      const { data } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', USER_ID).select().single()
+      return res.status(200).json({ success: true, feed: data })
+    }
+
+    // DELETE - Unsubscribe
+    if (req.method === 'DELETE' && id) {
+      await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', USER_ID)
+      return res.status(204).send('')
     }
   }
 
