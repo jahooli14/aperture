@@ -64,6 +64,11 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 5. Store individual entities in the entities table
     await storeEntities(memoryId, metadata.entities)
 
+    // 6. Trigger connection detection (async, non-blocking)
+    triggerConnectionDetection(memoryId, memory.title, memory.body).catch(err =>
+      logger.warn({ memory_id: memoryId, error: err }, 'Connection detection failed')
+    )
+
     logger.info({
       memory_id: memoryId,
       type: metadata.memory_type,
@@ -88,7 +93,7 @@ export async function processMemory(memoryId: string): Promise<void> {
 }
 
 /**
- * Extract metadata using Gemini (enhanced with milestone detection)
+ * Extract metadata using Gemini (rationalized to avoid duplication)
  */
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
@@ -102,25 +107,28 @@ Extract the following in JSON format:
 {
   "memory_type": "foundational" | "event" | "insight",
   "entities": {
-    "people": ["array of people mentioned"],
-    "places": ["array of places mentioned"],
-    "topics": ["array of topics/interests mentioned"]
+    "people": ["names of specific people mentioned"],
+    "places": ["names of specific locations"],
+    "topics": ["specific technologies, activities, or concepts - e.g. 'React', 'meditation', 'cooking']
   },
-  "themes": ["array of key themes"],
-  "tags": ["array of 3-7 specific tags"],
-  "emotional_tone": "brief description of emotional tone"
+  "themes": ["high-level life themes - max 3"],
+  "tags": ["searchable tags - 3-5 tags"],
+  "emotional_tone": "brief emotional description"
 }
 
 Rules:
 - memory_type: "foundational" = core belief/value, "event" = something that happened, "insight" = realization/idea
-- entities.people: Names of people (exclude generic terms like "my baby" but DO include child names)
-- entities.places: Specific locations mentioned
-- entities.topics: Topics, interests, concepts, technologies, activities, developmental milestones
-- themes: High-level themes (max 5) - include "child_development" if this is about a child's growth
-- tags: Specific, searchable tags (3-7 tags) - use common terminology, avoid overly specific or long phrases. Examples: "react", "machine learning", "fitness", "productivity", "parenting"
-- emotional_tone: One short phrase (e.g., "excited and curious", "reflective", "frustrated", "proud parent")
+- entities.people: Only actual names (e.g., "Sarah", "Alex"), not generic terms
+- entities.places: Only specific locations (e.g., "London", "Central Park")
+- entities.topics: Specific nouns - technologies, tools, activities, subjects (e.g., "TypeScript", "yoga", "parenting")
+- themes: Broad life categories ONLY (max 3) - e.g., "career", "health", "creativity", "relationships", "learning", "family"
+- tags: Short searchable keywords (3-5) - overlap with topics is OK but keep minimal. Use for: mood, context, or specifics not captured elsewhere
+- emotional_tone: One short phrase (e.g., "excited", "reflective and calm", "frustrated")
 
-**Special attention:** If this voice note mentions child development, milestones, or parenting moments, include relevant developmental topics in entities.topics (e.g., "first steps", "language development", "motor skills", "emotional regulation")
+**Key difference:**
+- topics = what is this about? (nouns: React, meditation, design)
+- themes = what life area? (categories: career, health, creativity)
+- tags = additional searchable context (e.g., "breakthrough", "side-project", "morning-routine")
 
 Return ONLY the JSON, no other text.`
 
@@ -180,5 +188,40 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
     // Don't throw - entity storage is non-critical
   } else {
     logger.debug({ count: allEntities.length }, 'Stored entities')
+  }
+}
+
+/**
+ * Trigger connection detection for new memory (async, non-blocking)
+ */
+async function triggerConnectionDetection(
+  memoryId: string,
+  title: string,
+  body: string
+): Promise<void> {
+  try {
+    // Get base URL from environment
+    const host = process.env.VERCEL_URL || 'localhost:5173'
+    const protocol = host.includes('localhost') ? 'http' : 'https'
+    const baseUrl = `${protocol}://${host}`
+
+    logger.debug({ memory_id: memoryId }, 'Triggering connection detection')
+
+    // Call connection detection API
+    await fetch(`${baseUrl}/api/connections/suggest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contentType: 'memory',
+        contentId: memoryId,
+        contentText: `${title}\n\n${body}`,
+        contentTitle: title
+      })
+    })
+
+    logger.debug({ memory_id: memoryId }, 'Connection detection triggered')
+  } catch (error) {
+    // Log but don't throw - connection detection is non-critical
+    logger.warn({ memory_id: memoryId, error }, 'Failed to trigger connection detection')
   }
 }
