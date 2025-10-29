@@ -6,8 +6,10 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2 } from 'lucide-react'
+import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X } from 'lucide-react'
 import type { SuggestionCardProps } from '../../types'
+
+type FeedbackReason = 'too_hard' | 'not_interesting' | 'not_relevant' | 'too_time_consuming' | 'missing_skills' | 'other'
 
 export function SuggestionCard({
   suggestion,
@@ -17,6 +19,7 @@ export function SuggestionCard({
   compact = false
 }: SuggestionCardProps) {
   const [loadingAction, setLoadingAction] = useState<'spark' | 'meh' | 'build' | null>(null)
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false)
 
   const handleSpark = async () => {
     setLoadingAction('spark')
@@ -27,10 +30,23 @@ export function SuggestionCard({
     }
   }
 
-  const handleMeh = async () => {
+  const handleMehClick = () => {
+    setShowFeedbackDialog(true)
+  }
+
+  const handleMehWithFeedback = async (reason: FeedbackReason) => {
     setLoadingAction('meh')
     try {
+      // Send feedback along with the rating
+      await fetch(`/api/suggestions/${suggestion.id}/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      })
       await onRate(suggestion.id, -1)
+      setShowFeedbackDialog(false)
+    } catch (error) {
+      console.error('Failed to submit feedback:', error)
     } finally {
       setLoadingAction(null)
     }
@@ -190,7 +206,7 @@ export function SuggestionCard({
           Spark
         </Button>
         <Button
-          onClick={handleMeh}
+          onClick={handleMehClick}
           variant="outline"
           size="sm"
           className="flex-1 btn-secondary h-11"
@@ -219,6 +235,68 @@ export function SuggestionCard({
           Build
         </Button>
       </CardFooter>
+
+      {/* Feedback Dialog */}
+      {showFeedbackDialog && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowFeedbackDialog(false)}
+        >
+          <div
+            className="premium-card p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="premium-text-platinum font-bold text-lg">
+                Why not interested?
+              </h3>
+              <button
+                onClick={() => setShowFeedbackDialog(false)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
+              </button>
+            </div>
+
+            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+              Your feedback helps improve future suggestions
+            </p>
+
+            <div className="space-y-3">
+              {[
+                { reason: 'too_hard' as FeedbackReason, label: 'Too difficult or complex' },
+                { reason: 'not_interesting' as FeedbackReason, label: 'Not interesting to me' },
+                { reason: 'not_relevant' as FeedbackReason, label: 'Not relevant to my goals' },
+                { reason: 'too_time_consuming' as FeedbackReason, label: 'Takes too much time' },
+                { reason: 'missing_skills' as FeedbackReason, label: 'Missing required skills' },
+                { reason: 'other' as FeedbackReason, label: 'Other reason' }
+              ].map(({ reason, label }) => (
+                <button
+                  key={reason}
+                  onClick={() => handleMehWithFeedback(reason)}
+                  disabled={loadingAction !== null}
+                  className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
+                >
+                  <span className="premium-text-platinum font-medium">
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowFeedbackDialog(false)}
+              className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
+              style={{
+                color: 'var(--premium-text-secondary)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
