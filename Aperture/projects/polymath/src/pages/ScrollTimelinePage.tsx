@@ -260,14 +260,14 @@ export function ScrollTimelinePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <Sparkles className="h-12 w-12 text-blue-900 mx-auto mb-4 animate-pulse" />
-          <p className="text-lg text-neutral-600">Loading timeline...</p>
+          <Sparkles className="h-12 w-12 mx-auto mb-4 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
+          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Loading timeline...</p>
         </motion.div>
       </div>
     )
@@ -275,36 +275,40 @@ export function ScrollTimelinePage() {
 
   if (monthSections.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-16 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-          <Sparkles className="h-16 w-16 text-blue-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">No Timeline Data Yet</h2>
-          <p className="text-neutral-600">Start capturing thoughts, reading articles, and building projects.</p>
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+        <div className="premium-card border-2 p-16 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+          <Sparkles className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+          <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>No Timeline Data Yet</h2>
+          <p style={{ color: 'var(--premium-text-secondary)' }}>Start capturing thoughts, reading articles, and building projects.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-b from-neutral-50 to-white">
+    <div ref={containerRef} className="min-h-screen" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Header */}
-      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b-2 shadow-lg" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+      <div className="sticky top-0 z-40 premium-glass-strong border-b shadow-lg" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          {/* NEW: Thread Filter Banner */}
+          {/* Thread Filter Banner */}
           {threadFilter && (
-            <div className="mb-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-blue-50 border-2 border-amber-300 flex items-center justify-between">
+            <div className="mb-4 p-4 rounded-xl border-2 flex items-center justify-between" style={{
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderColor: 'rgba(245, 158, 11, 0.3)'
+            }}>
               <div className="flex items-center gap-3">
-                <GitBranch className="h-5 w-5 text-amber-700" />
+                <GitBranch className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
                 <div>
-                  <div className="font-bold text-neutral-900">Viewing Thread</div>
-                  <div className="text-sm text-neutral-600">
+                  <div className="font-bold" style={{ color: 'var(--premium-text-primary)' }}>Viewing Thread</div>
+                  <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                     Showing items connected to this {threadFilter.type}
                   </div>
                 </div>
               </div>
               <button
                 onClick={clearThreadFilter}
-                className="px-4 py-2 rounded-lg bg-white hover:bg-neutral-50 border-2 border-neutral-200 font-medium text-neutral-900 transition-colors"
+                className="px-4 py-2 rounded-lg border-2 font-medium transition-colors premium-card"
+                style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-primary)' }}
               >
                 Show All
               </button>
@@ -313,10 +317,10 @@ export function ScrollTimelinePage() {
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-neutral-900 mb-1">
+              <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
                 Knowledge Timeline
               </h1>
-              <p className="text-sm text-neutral-600">
+              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                 {threadFilter ? 'Viewing connected items only' : 'Scroll to explore your knowledge evolution'}
               </p>
             </div>
@@ -329,7 +333,7 @@ export function ScrollTimelinePage() {
                 return (
                   <div
                     key={type}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/80 border-2 shadow-md"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full premium-glass border shadow-md"
                     style={{ borderColor: `${colors.primary}50` }}
                   >
                     <div
@@ -348,9 +352,10 @@ export function ScrollTimelinePage() {
 
           {/* Scroll Progress Bar */}
           <motion.div
-            className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-green-500"
+            className="absolute bottom-0 left-0 h-1"
             style={{
-              width: progressBarWidth
+              width: progressBarWidth,
+              background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo), var(--premium-emerald))'
             }}
           />
         </div>
@@ -417,11 +422,15 @@ function MonthSection({ section, sectionIndex, totalSections, scrollProgress, on
         className="sticky top-24 z-30 mb-12"
         style={{ opacity: monthOpacity, y: monthY }}
       >
-        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-          <div className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-indigo-900 bg-clip-text text-transparent">
+        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl premium-glass border-2 shadow-xl" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+          <div className="text-3xl font-bold" style={{
+            background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
             {section.monthLabel}
           </div>
-          <div className="text-sm text-neutral-600 font-medium">
+          <div className="text-sm font-medium" style={{ color: 'var(--premium-text-secondary)' }}>
             {section.events.length} event{section.events.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -513,19 +522,13 @@ function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scr
       whileTap={{ scale: 0.98 }}
     >
       {/* Glassmorphism Card */}
-      <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/60 border-2 transition-all duration-300 p-6 shadow-lg group-hover:shadow-2xl"
+      <div className="premium-card border-2 transition-all duration-300 p-6"
         style={{
           borderColor: `${colors.primary}50`
         }}
       >
-        {/* Glow Effect on Hover */}
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
-          style={{ backgroundColor: colors.glow }}
-        />
-
         {/* Content */}
-        <div className="relative z-10">
+        <div>
           <div className="flex items-start gap-3 mb-3">
             <div
               className="p-2 rounded-lg"
@@ -538,13 +541,13 @@ function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scr
               <div className="text-xs font-medium mb-1 capitalize" style={{ color: colors.primary }}>
                 {event.type}
               </div>
-              <h3 className="font-semibold text-neutral-900 line-clamp-2 group-hover:text-neutral-950">
+              <h3 className="font-semibold line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                 {event.title}
               </h3>
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-neutral-500">
+          <div className="flex items-center justify-between text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
             <span>
               {new Date(event.date).toLocaleDateString('en-US', {
                 month: 'short',
@@ -552,19 +555,26 @@ function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scr
               })}
             </span>
             {event.status && (
-              <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-medium">
+              <span className="px-2 py-0.5 rounded-full font-medium" style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-secondary)'
+              }}>
                 {event.status}
               </span>
             )}
           </div>
 
-          {/* NEW: View Thread Button */}
+          {/* View Thread Button */}
           <button
             onClick={(e) => {
               e.stopPropagation()
               onViewThread()
             }}
-            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/60 hover:bg-white border border-neutral-200 hover:border-blue-400 text-xs font-medium text-neutral-700 hover:text-blue-900 transition-all"
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all premium-glass-subtle hover:bg-white/10"
+            style={{
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'var(--premium-text-secondary)'
+            }}
           >
             <GitBranch className="h-3.5 w-3.5" />
             View Thread
