@@ -18,6 +18,7 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
 import { useReadingStore } from '../../stores/useReadingStore'
+import { useConnectionStore } from '../../stores/useConnectionStore'
 
 interface SaveArticleDialogProps {
   open: boolean
@@ -28,6 +29,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const { saveArticle } = useReadingStore()
+  const { fetchSuggestions } = useConnectionStore()
   const { addToast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,14 +41,24 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
 
     try {
       console.log('[SaveArticleDialog] Saving article:', url.trim())
-      await saveArticle({ url: url.trim() })
+      const article = await saveArticle({ url: url.trim() })
 
       console.log('[SaveArticleDialog] Article saved successfully')
       addToast({
         title: 'Article saved!',
-        description: 'Added to your reading queue',
+        description: 'Looking for connections...',
         variant: 'success',
       })
+
+      // Trigger connection detection
+      if (article.content || article.excerpt) {
+        fetchSuggestions(
+          'article',
+          article.id,
+          article.content || article.excerpt || '',
+          article.title || undefined
+        )
+      }
 
       setUrl('')
       onClose()

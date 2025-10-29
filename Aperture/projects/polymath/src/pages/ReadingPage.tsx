@@ -13,6 +13,8 @@ import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { useShareTarget } from '../hooks/useShareTarget'
 import { useToast } from '../components/ui/toast'
+import { useConnectionStore } from '../stores/useConnectionStore'
+import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import type { ArticleStatus } from '../types/reading'
 
 type FilterTab = 'queue' | ArticleStatus
@@ -20,6 +22,7 @@ type FilterTab = 'queue' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle } = useReadingStore()
+  const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const { addToast } = useToast()
@@ -182,6 +185,23 @@ export function ReadingPage() {
         open={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
       />
+
+      {/* Connection Suggestions */}
+      {suggestions.length > 0 && sourceType === 'article' && (
+        <ConnectionSuggestion
+          suggestions={suggestions}
+          sourceType={sourceType}
+          sourceId={sourceId!}
+          onLinkCreated={(targetId, targetType) => {
+            addToast({
+              title: 'Connection created!',
+              description: `Linked to ${targetType}`,
+              variant: 'success',
+            })
+          }}
+          onDismiss={clearSuggestions}
+        />
+      )}
       </motion.div>
     </PullToRefresh>
   )
