@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.aperture.app',
-  appName: 'Aperture',
+  appId: 'com.clandestined.app',
+  appName: 'Clandestined',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

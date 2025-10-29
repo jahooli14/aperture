@@ -1,6 +1,15 @@
 import { chromium, Browser, Page, BrowserContext } from 'playwright';
 import { promises as fs } from 'fs';
-import { FrameworkAdapter, TestConfig, TestResult, TestContext, HealingAction, TestFailure } from '../types/index.js';
+import {
+  FrameworkAdapter,
+  TestConfig,
+  TestResult,
+  TestContext,
+  HealingAction,
+  TestFailure,
+  ComputerUseFunctionCall,
+  FunctionCallResult
+} from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
 export class PlaywrightAdapter implements FrameworkAdapter {
@@ -12,6 +21,86 @@ export class PlaywrightAdapter implements FrameworkAdapter {
 
   constructor(config: TestConfig) {
     this.config = config;
+  }
+
+  /**
+   * Get the active Playwright page object
+   * Used by Computer Use agent for direct action execution
+   */
+  getPage(): Page | null {
+    return this.page;
+  }
+
+  /**
+   * Execute Computer Use function calls
+   * This is the client-side execution layer for the agentic control loop
+   */
+  async executeFunctionCall(functionCall: ComputerUseFunctionCall): Promise<FunctionCallResult> {
+    if (!this.page) {
+      return {
+        success: false,
+        error: 'No active page for execution'
+      };
+    }
+
+    const { action, coordinate, text, direction, milliseconds } = functionCall.args;
+
+    try {
+      switch (action) {
+        case 'click':
+          if (!coordinate || coordinate.length !== 2) {
+            throw new Error('Click requires coordinate [x, y]');
+          }
+          await this.page.mouse.click(coordinate[0], coordinate[1]);
+          break;
+
+        case 'type':
+          if (!text) {
+            throw new Error('Type requires text argument');
+          }
+          await this.page.keyboard.type(text, { delay: 50 });
+          break;
+
+        case 'scroll':
+          const scrollAmount = direction === 'up' ? -300 : 300;
+          await this.page.mouse.wheel(0, scrollAmount);
+          break;
+
+        case 'wait':
+          const duration = milliseconds || 1000;
+          await this.page.waitForTimeout(duration);
+          break;
+
+        case 'key':
+          if (!text) {
+            throw new Error('Key action requires text (key name)');
+          }
+          await this.page.keyboard.press(text);
+          break;
+
+        case 'screenshot':
+          const screenshot = await this.captureScreenshot();
+          return { success: true, screenshot, output: 'Screenshot captured' };
+
+        default:
+          throw new Error(`Unknown action: ${action}`);
+      }
+
+      // Capture new state after action
+      const screenshot = await this.captureScreenshot();
+
+      return {
+        success: true,
+        screenshot,
+        output: `${action} executed successfully`
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
   }
 
   async runTest(testPath: string, _config: TestConfig): Promise<TestResult> {

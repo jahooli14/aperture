@@ -156,4 +156,53 @@ export interface FrameworkAdapter {
   captureScreenshot(): Promise<Buffer>;
   getTestContext(): Promise<TestContext>;
   applyHealing(testPath: string, actions: HealingAction[]): Promise<boolean>;
+
+  // Computer Use specific methods
+  executeFunctionCall?(functionCall: ComputerUseFunctionCall): Promise<FunctionCallResult>;
+  getPage?(): any; // Returns the Playwright page object
+}
+
+// Computer Use Model types
+export interface ComputerUseFunctionCall {
+  name: string;
+  args: {
+    action?: 'click' | 'type' | 'scroll' | 'wait' | 'key' | 'screenshot';
+    coordinate?: [number, number];
+    text?: string;
+    direction?: 'up' | 'down';
+    milliseconds?: number;
+  };
+}
+
+export interface FunctionCallResult {
+  success: boolean;
+  screenshot?: Buffer;
+  error?: string;
+  output?: string;
+}
+
+export interface SafetyDecision {
+  allowed: boolean;
+  reasoning: string;
+  risk_level: 'low' | 'medium' | 'high';
+  requires_human_approval: boolean;
+}
+
+export interface ComputerUseResponse {
+  functionCall?: ComputerUseFunctionCall;
+  safetyDecision: SafetyDecision;
+  reasoning: string;
+  isComplete: boolean;
+  result?: string;
+}
+
+export interface AgenticLoopState {
+  conversationHistory: Array<{
+    role: 'user' | 'model';
+    parts: Array<{ text?: string; inlineData?: { data: string; mimeType: string }; functionCall?: any; functionResponse?: any }>;
+  }>;
+  currentStep: number;
+  maxSteps: number;
+  taskComplete: boolean;
+  lastScreenshot?: Buffer;
 }
