@@ -165,11 +165,12 @@ export class PlaywrightAdapter implements FrameworkAdapter {
 
     try {
       this.browser = await chromium.launch({
-        headless: !process.env.DEBUG_BROWSER,
+        headless: this.config.headless !== false, // Default to headless unless explicitly false
+        slowMo: this.config.slowMo || 0, // Slow down actions if specified
       });
 
       this.context = await this.browser.newContext({
-        viewport: { width: 1280, height: 720 },
+        viewport: { width: 1440, height: 900 },
         // Record console messages - video recording disabled by default
       });
 
@@ -187,6 +188,12 @@ export class PlaywrightAdapter implements FrameworkAdapter {
 
   private async cleanup(): Promise<void> {
     try {
+      // If in headed mode, wait a bit before closing so user can see the result
+      if (this.config.headless === false && this.page) {
+        logger.info('⏱️  Keeping browser open for 5 seconds (headed mode)...');
+        await this.page.waitForTimeout(5000);
+      }
+
       if (this.page) {
         await this.page.close();
         this.page = null;

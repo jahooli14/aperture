@@ -79,8 +79,10 @@ export class GeminiProvider extends BaseProvider {
       parameters: this.convertSchemaToGemini(tool.input_schema),
     }));
 
-    // Build system instruction
-    const systemInstruction = systemPrompt || undefined;
+    // Build system instruction - Gemini expects a structured Content object
+    const systemInstruction = systemPrompt
+      ? { role: 'user', parts: [{ text: systemPrompt }] }
+      : undefined;
 
     // Create chat with history
     const chat = this.model.startChat({

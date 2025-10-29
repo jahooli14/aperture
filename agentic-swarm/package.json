@@ -10,7 +10,14 @@
     "start": "node dist/index.js",
     "test": "vitest",
     "test-setup": "tsx test-setup.ts",
-    "demo": "tsx demo-swarm-vs-single.ts"
+    "demo": "tsx demo-swarm-vs-single.ts",
+    "overnight": "tsx overnight-mega-research.ts",
+    "overnight-pro": "tsx overnight-mega-research-gemini.ts",
+    "overnight-ultra": "tsx overnight-ultra-deep.ts",
+    "overnight-10hrs": "tsx overnight-guaranteed-10hrs.ts",
+    "overnight-free": "tsx overnight-microtask-swarm.ts",
+    "overnight-prod": "tsx overnight-production.ts",
+    "builder-test": "tsx builder-test.ts"
   },
   "keywords": ["ai", "agents", "swarm", "autonomous", "multi-provider", "anthropic", "google", "gemini", "glm"],
   "author": "",

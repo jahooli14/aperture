@@ -83,6 +83,10 @@ export interface TestConfig {
   testTimeout: number;
   retryCount: number;
 
+  // Browser settings
+  headless?: boolean;
+  slowMo?: number;
+
   // Healing settings
   enableHealing: boolean;
   autoApply: boolean;

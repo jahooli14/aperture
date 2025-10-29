@@ -5,6 +5,11 @@
  * Google's Gemini 2.5 Computer Use model.
  */
 
+import { config as dotenvConfig } from 'dotenv';
+
+// Load environment variables from .env file
+dotenvConfig();
+
 import { TestRunner } from './core/test-runner.js';
 import { HealingEngine } from './core/healing-engine.js';
 import { PlaywrightAdapter } from './adapters/playwright.js';
@@ -147,7 +152,7 @@ export const defaultConfig: TestConfig = {
   autoApply: false,
   confidenceThreshold: 0.7,
   maxHealingAttempts: 3,
-  model: 'gemini-2.5-pro',
+  model: 'gemini-2.5-computer-use-preview-10-2025',
   screenshotOnFailure: true,
   outputDir: './test-results',
   verbose: false
@@ -157,6 +162,29 @@ export const defaultConfig: TestConfig = {
  * Create a new self-healing test framework instance with default configuration
  */
 export function createFramework(config: Partial<TestConfig> = {}): SelfHealingTestFramework {
-  const fullConfig = { ...defaultConfig, ...config };
+  // Load configuration from environment variables
+  const envConfig: Partial<TestConfig> = {
+    geminiApiKey: process.env.GEMINI_API_KEY,
+    vertexProject: process.env.VERTEX_PROJECT_ID,
+    vertexLocation: process.env.VERTEX_LOCATION,
+    model: process.env.GEMINI_MODEL || defaultConfig.model,
+    enableHealing: process.env.ENABLE_HEALING === 'true' || defaultConfig.enableHealing,
+    autoApply: process.env.AUTO_APPLY === 'true' || defaultConfig.autoApply,
+    confidenceThreshold: process.env.CONFIDENCE_THRESHOLD
+      ? parseFloat(process.env.CONFIDENCE_THRESHOLD)
+      : defaultConfig.confidenceThreshold,
+    maxHealingAttempts: process.env.MAX_HEALING_ATTEMPTS
+      ? parseInt(process.env.MAX_HEALING_ATTEMPTS)
+      : defaultConfig.maxHealingAttempts,
+    outputDir: process.env.OUTPUT_DIR || defaultConfig.outputDir,
+    verbose: process.env.VERBOSE === 'true' || defaultConfig.verbose,
+    testTimeout: process.env.TEST_TIMEOUT
+      ? parseInt(process.env.TEST_TIMEOUT)
+      : defaultConfig.testTimeout,
+  };
+
+  // Merge: defaults < env vars < provided config
+  const fullConfig = { ...defaultConfig, ...envConfig, ...config };
+
   return new SelfHealingTestFramework(fullConfig);
 }

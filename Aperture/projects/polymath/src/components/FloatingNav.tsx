@@ -184,9 +184,10 @@ export function FloatingNav() {
           damping: 20,
           delay: 0.2
         }}
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50"
+        className="fixed left-1/2 z-50"
         style={{
-          bottom: 'max(calc(env(safe-area-inset-bottom) + 4.5rem), 5.5rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+          transform: 'translateX(-50%)',
         }}
       >
         <motion.button
