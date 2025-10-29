@@ -176,7 +176,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Prominent Capture FAB - Positioned well above nav */}
+      {/* Prominent Capture FAB - Bottom right above nav */}
       <motion.button
         onClick={handleCaptureClick}
         disabled={!isOnline}
@@ -190,9 +190,10 @@ export function FloatingNav() {
           damping: 20,
           delay: 0.2
         }}
-        className="fixed left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
+        className="fixed z-50 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
+          right: 'max(1rem, env(safe-area-inset-right, 1rem))',
           opacity: !isOnline ? 0.3 : 1,
         }}
       >
@@ -225,18 +226,7 @@ export function FloatingNav() {
             }}
           />
 
-          {/* Label below FAB */}
-          <span
-            className="absolute -bottom-6 left-0 right-0 text-center text-xs font-semibold whitespace-nowrap"
-            style={{
-              color: 'var(--premium-platinum)',
-              fontSize: 'var(--premium-text-body-xs)',
-              letterSpacing: 'var(--premium-tracking-wide)',
-              textShadow: '0 0 8px rgba(99, 102, 241, 0.4)'
-            }}
-          >
-            CAPTURE
-          </span>
+          {/* No label needed for bottom-right position */}
         </motion.button>
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
