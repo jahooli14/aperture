@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
+  Home,
   Layers,
   FolderKanban,
   FileText,
@@ -38,8 +39,9 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Simplified to 3 core tenets + settings
+// Core navigation: Home + 3 tenets
 const NAV_OPTIONS: NavOption[] = [
+  { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
