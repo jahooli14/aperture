@@ -12,7 +12,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
-import { Sparkles, Calendar, Brain, Lightbulb } from 'lucide-react'
+import { Sparkles, Calendar, Brain, Lightbulb, Database, Network, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
@@ -66,8 +66,8 @@ export function SuggestionsPage() {
       await buildSuggestion(suggestionToBuild.id, projectData)
 
       addToast({
-        title: '🎉 Project built!',
-        description: `"${projectData.title}" is now in your projects.`,
+        title: 'Project Created',
+        description: `"${projectData.title}" has been added to your projects.`,
         variant: 'success',
       })
 
@@ -165,7 +165,7 @@ export function SuggestionsPage() {
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Generate Ideas
+                Analyze & Generate
               </>
             )}
           </button>
@@ -186,7 +186,7 @@ export function SuggestionsPage() {
             fontSize: 'var(--premium-text-body-lg)',
             color: 'var(--premium-text-secondary)'
           }}>
-            Ideas that match what you can do with what you care about
+            AI-generated project recommendations based on your knowledge and interests
           </p>
         </div>
         {/* Progress Bar */}
@@ -270,87 +270,59 @@ export function SuggestionsPage() {
           /* Empty State */
           <Card className="premium-card">
             <CardContent className="py-16">
-              <div className="max-w-3xl mx-auto">
-                <div className="text-center mb-12">
-                  <div className="inline-flex items-center justify-center mb-6">
-                    <Sparkles className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
-                  </div>
-                  <h3 className="premium-text-platinum mb-4" style={{
-                    fontSize: 'var(--premium-text-h1)',
-                    fontWeight: 700,
-                    letterSpacing: 'var(--premium-tracking-tight)'
-                  }}>Ready to See the Magic?</h3>
-                  <p className="max-w-2xl mx-auto mb-6" style={{
-                    fontSize: 'var(--premium-text-body-lg)',
-                    color: 'var(--premium-text-secondary)'
-                  }}>
-                    You have thoughts captured. Let's see what happens when AI connects them.
-                  </p>
-
-                  {/* Highlight Generate Ideas button */}
-                  <div className="inline-block premium-glass-strong rounded-2xl p-8 mb-8 animate-pulse-subtle" style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(245, 158, 11, 0.15))',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
-                    boxShadow: '0 0 30px rgba(59, 130, 246, 0.2)'
-                  }}>
-                    <p className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--premium-blue)' }}>Click the button above ↗</p>
-                    <p className="premium-text-platinum mb-2" style={{
-                      fontSize: 'var(--premium-text-h3)',
-                      fontWeight: 700
-                    }}>Generate Ideas</p>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Watch AI synthesize your thoughts into project suggestions in real-time</p>
-                  </div>
+              <div className="max-w-2xl mx-auto text-center">
+                <div className="inline-flex items-center justify-center mb-6">
+                  <Database className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
                 </div>
+                <h3 className="premium-text-platinum mb-4" style={{
+                  fontSize: 'var(--premium-text-h1)',
+                  fontWeight: 600,
+                  letterSpacing: 'var(--premium-tracking-tight)'
+                }}>AI-Powered Project Discovery</h3>
+                <p className="max-w-xl mx-auto mb-8" style={{
+                  fontSize: 'var(--premium-text-body-lg)',
+                  color: 'var(--premium-text-secondary)',
+                  lineHeight: '1.6'
+                }}>
+                  Generate intelligent project recommendations by analyzing patterns across your captured thoughts, skills, and interests. The AI identifies viable connections between domains to suggest actionable projects.
+                </p>
 
-                {/* How it works */}
-                <div className="grid md:grid-cols-3 gap-6 mb-12">
-                  <div className="premium-glass-subtle rounded-xl p-6">
-                    <div className="rounded-full w-12 h-12 flex items-center justify-center mb-4" style={{
-                      background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                      boxShadow: 'var(--premium-glow-blue)'
-                    }}>
-                      <Brain className="h-6 w-6 text-white" />
+                {/* Feature highlights */}
+                <div className="grid md:grid-cols-3 gap-6 mb-10">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center mb-3">
+                      <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
-                    <h4 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>1. Analyze Thoughts</h4>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      AI reads your captured interests, skills, and life insights
+                    <p className="text-sm font-medium premium-text-platinum mb-1">Content Analysis</p>
+                    <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      Extracts themes and capabilities from your knowledge base
                     </p>
                   </div>
 
-                  <div className="premium-glass-subtle rounded-xl p-6">
-                    <div className="rounded-full w-12 h-12 flex items-center justify-center mb-4" style={{
-                      background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                      boxShadow: 'var(--premium-glow-blue)'
-                    }}>
-                      <Sparkles className="h-6 w-6 text-white" />
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center mb-3">
+                      <Network className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
-                    <h4 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>2. Find Connections</h4>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Discovers unexpected combinations between your work AND hobbies
+                    <p className="text-sm font-medium premium-text-platinum mb-1">Cross-Domain Synthesis</p>
+                    <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      Identifies non-obvious combinations across different areas
                     </p>
                   </div>
 
-                  <div className="premium-glass-subtle rounded-xl p-6">
-                    <div className="rounded-full w-12 h-12 flex items-center justify-center mb-4" style={{
-                      background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                      boxShadow: 'var(--premium-glow-blue)'
-                    }}>
-                      <Lightbulb className="h-6 w-6 text-white" />
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center mb-3">
+                      <Workflow className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
-                    <h4 className="premium-text-platinum font-bold mb-2" style={{ fontSize: 'var(--premium-text-body-lg)' }}>3. Generate Projects</h4>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Creates unique project ideas that bridge domains
+                    <p className="text-sm font-medium premium-text-platinum mb-1">Actionable Recommendations</p>
+                    <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      Generates concrete project proposals with implementation paths
                     </p>
                   </div>
                 </div>
 
-                {/* Demo tip */}
-                <div className="text-center">
-                  <p className="text-sm mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    💡 <strong>Demo Tip:</strong> Watch for cross-domain synthesis like "Parenting + React" or "Woodworking + Tech"
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--premium-text-muted)' }}>
-                    Synthesis takes 20-30 seconds - real AI at work, not static templates
+                <div className="premium-glass-subtle rounded-lg p-4 inline-block">
+                  <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    Click <span className="premium-text-platinum font-semibold">Analyze & Generate</span> above to begin
                   </p>
                 </div>
               </div>
