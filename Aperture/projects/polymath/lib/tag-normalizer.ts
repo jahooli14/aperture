@@ -74,21 +74,25 @@ export async function normalizeTags(rawTags: string[]): Promise<string[]> {
         .limit(1)
         .single()
 
-      if (similarTag && similarTag.tag) {
+      if (similarTag && typeof similarTag === 'object' && 'tag' in similarTag) {
         // Found similar canonical tag, use it
-        normalizedTags.push(similarTag.tag)
-        await incrementTagUsage(similarTag.tag)
+        const tag = (similarTag as any).tag
+        const id = (similarTag as any).id
+        const similarity = (similarTag as any).similarity
+
+        normalizedTags.push(tag)
+        await incrementTagUsage(tag)
 
         // Store this as an alias for future fast lookups
         await supabase
           .from('tag_aliases')
           .insert({
             alias: cleaned,
-            canonical_tag_id: similarTag.id
+            canonical_tag_id: id
           })
           .select()
 
-        logger.info({ raw: cleaned, canonical: similarTag.tag, similarity: similarTag.similarity }, 'Mapped tag to canonical form')
+        logger.info({ raw: cleaned, canonical: tag, similarity }, 'Mapped tag to canonical form')
         continue
       }
 

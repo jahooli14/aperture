@@ -1,11 +1,12 @@
 /**
  * Consolidated Analytics API
- * Handles timeline patterns, synthesis evolution, and creative opportunities
+ * Handles timeline patterns, synthesis evolution, creative opportunities, and admin utilities
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateSeedEmbeddings } from '../lib/tag-normalizer.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
@@ -589,5 +590,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(400).json({ error: 'Invalid resource. Use ?resource=patterns, ?resource=evolution, or ?resource=opportunities' })
+  // INIT TAGS (Admin utility - one-time setup)
+  if (resource === 'init-tags') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    try {
+      await generateSeedEmbeddings()
+      return res.status(200).json({
+        success: true,
+        message: 'Seed tag embeddings generated successfully'
+      })
+    } catch (error) {
+      console.error('[analytics] Init tags error:', error)
+      return res.status(500).json({
+        error: 'Failed to initialize tags',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  return res.status(400).json({ error: 'Invalid resource. Use ?resource=patterns, ?resource=evolution, ?resource=opportunities, or ?resource=init-tags' })
 }
