@@ -190,27 +190,27 @@ export function DailyQueuePage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Context Bar */}
         {context && (
-          <Card className="mb-8 border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50">
+          <Card className="mb-8 premium-card border-2" style={{ borderColor: 'var(--premium-blue)' }}>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-6 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-blue-900" />
-                    <span className="font-medium">
+                    <Clock className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    <span className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                       {context.available_time === 'quick' && 'Quick (<30 min)'}
                       {context.available_time === 'moderate' && 'Moderate (30 min - 2 hours)'}
                       {context.available_time === 'deep' && 'Deep (2+ hours)'}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Battery className="h-5 w-5 text-blue-900" />
-                    <span className="font-medium">
+                    <Battery className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    <span className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                       {formatEnergy(context.current_energy)} energy
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-blue-900" />
-                    <span className="font-medium">
+                    <MapPin className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    <span className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                       {context.available_context.join(', ') || 'Desk'}
                     </span>
                   </div>
@@ -246,7 +246,7 @@ export function DailyQueuePage() {
               Quick Question
             </h2>
             {gapPrompts.slice(0, 1).map(prompt => (
-              <Card key={prompt.id} className="border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
+              <Card key={prompt.id} className="premium-card border-2" style={{ borderColor: 'var(--premium-amber)' }}>
                 <CardContent className="pt-6">
                   <div className="mb-4">
                     <p className="text-lg font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
@@ -284,7 +284,7 @@ export function DailyQueuePage() {
               Project Opportunity
             </h2>
             {creativeOpportunities.slice(0, 1).map(opp => (
-              <Card key={opp.id} className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
+              <Card key={opp.id} className="premium-card border-2" style={{ borderColor: 'var(--premium-indigo)' }}>
                 <CardContent className="pt-6">
                   <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                     {opp.title}
@@ -293,14 +293,14 @@ export function DailyQueuePage() {
                     {opp.description}
                   </p>
 
-                  <div className="mb-4 p-4 bg-white/80 rounded-lg">
+                  <div className="mb-4 p-4 premium-glass-subtle rounded-lg">
                     <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Why this fits you:
                     </p>
                     <ul className="space-y-1">
                       {opp.why_you.map((reason, i) => (
                         <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                          <span className="text-purple-600 mt-1">✓</span>
+                          <span style={{ color: 'var(--premium-indigo)' }} className="mt-1">✓</span>
                           {reason}
                         </li>
                       ))}
@@ -308,8 +308,8 @@ export function DailyQueuePage() {
                   </div>
 
                   {opp.revenue_potential && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm font-medium text-green-800">
+                    <div className="mb-4 p-3 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-emerald)' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--premium-emerald)' }}>
                         💰 Revenue potential: {opp.revenue_potential}
                       </p>
                     </div>
@@ -413,7 +413,7 @@ export function DailyQueuePage() {
                     </div>
 
                     {/* Match Reason */}
-                    <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-amber-50 rounded-lg border border-blue-200">
+                    <div className="mb-4 p-3 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
                       <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                         {score.match_reason}
                       </p>
@@ -480,10 +480,10 @@ export function DailyQueuePage() {
 
             {/* Also Available */}
             {totalProjects > queue.length && (
-              <Card className="border-2 border-dashed border-gray-300">
+              <Card className="premium-card border-2 border-dashed" style={{ borderColor: 'var(--premium-text-tertiary)' }}>
                 <CardContent className="pt-6 text-center">
                   <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                    💡 <strong>{totalProjects - queue.length} more projects</strong> available
+                    💡 <strong style={{ color: 'var(--premium-text-primary)' }}>{totalProjects - queue.length} more projects</strong> available
                   </p>
                   <Button
                     onClick={() => window.location.href = '/projects'}
@@ -496,7 +496,7 @@ export function DailyQueuePage() {
             )}
 
             {/* Skip Day */}
-            <Card className="border-2 border-gray-200 bg-gray-50">
+            <Card className="premium-card border-2" style={{ borderColor: 'var(--premium-text-muted)' }}>
               <CardContent className="pt-6 text-center">
                 <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                   Not feeling it today? That's okay.

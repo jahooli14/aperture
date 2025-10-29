@@ -37,33 +37,42 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
 
   const memoryTypeConfig: Record<
     string,
-    { label: string; color: string; bg: string }
+    { label: string; style: React.CSSProperties }
   > = {
     foundational: {
       label: 'Foundational',
-      color: 'text-blue-700 bg-blue-100 border-blue-200',
-      bg: 'bg-blue-50',
+      style: {
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        color: 'var(--premium-blue)',
+        borderColor: 'rgba(59, 130, 246, 0.3)'
+      }
     },
     event: {
       label: 'Event',
-      color: 'text-green-700 bg-green-100 border-green-200',
-      bg: 'bg-green-50',
+      style: {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        color: 'var(--premium-emerald)',
+        borderColor: 'rgba(16, 185, 129, 0.3)'
+      }
     },
     insight: {
       label: 'Insight',
-      color: 'text-amber-700 bg-amber-100 border-amber-200',
-      bg: 'bg-amber-50',
+      style: {
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        color: 'var(--premium-amber)',
+        borderColor: 'rgba(245, 158, 11, 0.3)'
+      }
     },
   }
 
   const isManual = memory.audiopen_id?.startsWith('manual_')
 
   return (
-    <Card className="group h-full flex flex-col relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl" style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}>
+    <Card className="group h-full flex flex-col premium-card">
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
       {/* Accent gradient bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #6366f1, #818cf8)' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, var(--premium-indigo), #818cf8)' }} />
 
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -72,7 +81,11 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
           </CardTitle>
           <div className="flex items-center gap-2">
             {isManual && (
-              <div className="px-2 py-1 rounded-md bg-blue-100 text-blue-950 text-xs font-medium border border-blue-200">
+              <div className="px-2 py-1 rounded-md text-xs font-medium border" style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: 'var(--premium-blue)',
+                borderColor: 'rgba(59, 130, 246, 0.3)'
+              }}>
                 Manual
               </div>
             )}
@@ -138,12 +151,16 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
         {memory.processed && (
           <div className="flex flex-wrap gap-2">
             {memory.memory_type && (
-              <div className={`px-3 py-1 rounded-md text-xs font-medium border ${memoryTypeConfig[memory.memory_type].color}`}>
+              <div className="px-3 py-1 rounded-md text-xs font-medium border" style={memoryTypeConfig[memory.memory_type].style}>
                 {memoryTypeConfig[memory.memory_type].label}
               </div>
             )}
             {memory.emotional_tone && (
-              <div className="px-3 py-1 rounded-md bg-rose-100 text-rose-700 text-xs font-medium border border-rose-200">
+              <div className="px-3 py-1 rounded-md text-xs font-medium border" style={{
+                backgroundColor: 'rgba(236, 72, 153, 0.15)',
+                color: '#ec4899',
+                borderColor: 'rgba(236, 72, 153, 0.3)'
+              }}>
                 {memory.emotional_tone}
               </div>
             )}
@@ -156,7 +173,12 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             {memory.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-2 py-1 bg-blue-50 text-blue-950 rounded-md text-xs font-medium border border-blue-200 flex items-center gap-1"
+                className="px-2 py-1 rounded-md text-xs font-medium border flex items-center gap-1"
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  color: 'var(--premium-blue)',
+                  borderColor: 'rgba(59, 130, 246, 0.3)'
+                }}
               >
                 <Tag className="h-3 w-3" />
                 {tag}
@@ -170,12 +192,16 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
           <div className="space-y-2">
             {memory.entities.people && memory.entities.people.length > 0 && (
               <div className="flex flex-wrap gap-1.5 items-center">
-                <User className="h-3 w-3 text-blue-600" />
+                <User className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
                 <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
                 {memory.entities.people.slice(0, 3).map((person) => (
                   <span
                     key={person}
-                    className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                      color: 'var(--premium-blue)'
+                    }}
                   >
                     {person}
                   </span>
@@ -189,12 +215,16 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             )}
             {memory.entities.topics && memory.entities.topics.length > 0 && (
               <div className="flex flex-wrap gap-1.5 items-center">
-                <Brain className="h-3 w-3 text-purple-600" />
+                <Brain className="h-3 w-3" style={{ color: 'var(--premium-indigo)' }} />
                 <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
                 {memory.entities.topics.slice(0, 3).map((topic) => (
                   <span
                     key={topic}
-                    className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                      color: 'var(--premium-indigo)'
+                    }}
                   >
                     {topic}
                   </span>
@@ -213,7 +243,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
         {bridges.length > 0 && (
           <div className="pt-3 border-t border-white/20">
             <div className="flex items-center gap-2 mb-2">
-              <Link2 className="h-4 w-4 text-cyan-600" />
+              <Link2 className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
               <span className="text-sm font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
                 {bridges.length} Connection{bridges.length > 1 ? 's' : ''}
               </span>
@@ -222,12 +252,22 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
               {bridges.slice(0, 3).map((bridge) => (
                 <div
                   key={bridge.id}
-                  className="flex items-center justify-between text-xs bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg px-3 py-2 border border-cyan-100"
+                  className="flex items-center justify-between text-xs rounded-lg px-3 py-2 border"
+                  style={{
+                    backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                    borderColor: 'rgba(6, 182, 212, 0.3)'
+                  }}
                 >
-                  <span className="capitalize" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <span className="capitalize" style={{ color: 'var(--premium-text-primary)' }}>
                     {bridge.bridge_type.replace(/_/g, ' ')}
                   </span>
-                  <div className="px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-full font-bold">
+                  <div
+                    className="px-2 py-0.5 rounded-full font-bold text-xs"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.8), rgba(59, 130, 246, 0.8))',
+                      color: '#ffffff'
+                    }}
+                  >
                     {Math.round(bridge.strength * 100)}%
                   </div>
                 </div>
@@ -238,15 +278,32 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
 
         {/* Processing Status */}
         {!memory.processed && (
-          <div className="flex items-center gap-2 text-sm text-blue-900 bg-blue-50 rounded-lg px-3 py-2 border border-blue-200">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-900 border-r-transparent"></div>
+          <div
+            className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border"
+            style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              color: 'var(--premium-blue)',
+              borderColor: 'rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            <div
+              className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-r-transparent"
+              style={{ borderColor: 'var(--premium-blue)' }}
+            ></div>
             <span className="font-medium">Processing...</span>
           </div>
         )}
 
         {/* Error Status */}
         {memory.error && (
-          <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-200">
+          <div
+            className="text-sm rounded-lg px-3 py-2 border"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              borderColor: 'rgba(239, 68, 68, 0.3)'
+            }}
+          >
             <strong>Error:</strong> {memory.error}
           </div>
         )}

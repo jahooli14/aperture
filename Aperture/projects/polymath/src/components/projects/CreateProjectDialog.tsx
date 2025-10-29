@@ -116,7 +116,13 @@ export function CreateProjectDialog() {
               />
             </div>
 
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-blue-50/80 to-purple-50/80 border-2 border-blue-200">
+            <div
+              className="flex items-center gap-3 p-4 rounded-xl border-2"
+              style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                borderColor: 'rgba(59, 130, 246, 0.3)'
+              }}
+            >
               <input
                 id="priority"
                 type="checkbox"
@@ -124,13 +130,23 @@ export function CreateProjectDialog() {
                 onChange={(e) =>
                   setFormData({ ...formData, priority: e.target.checked })
                 }
-                className="w-5 h-5 rounded border-2 border-blue-300 text-blue-900 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                className="w-5 h-5 rounded border-2 focus:ring-2 cursor-pointer"
+                style={{
+                  borderColor: 'var(--premium-blue)',
+                  color: 'var(--premium-blue)'
+                }}
               />
               <div className="flex-1">
-                <Label htmlFor="priority" className="text-sm sm:text-base font-bold text-blue-900 cursor-pointer">
+                <Label
+                  htmlFor="priority"
+                  className="text-sm sm:text-base font-bold cursor-pointer"
+                  style={{ color: 'var(--premium-text-primary)' }}
+                >
                   ⭐ Priority Project
                 </Label>
-                <p className="text-xs text-blue-800 mt-1">Show on home page with next step highlighted</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Show on home page with next step highlighted
+                </p>
               </div>
             </div>
 
