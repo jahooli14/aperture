@@ -51,11 +51,7 @@ export function SuggestionCard({
 
   return (
     <Card
-      className={`group h-full flex flex-col pro-card transition-smooth hover-lift cursor-pointer ${
-        suggestion.is_wildcard
-          ? 'bg-blue-50/40'
-          : ''
-      }`}
+      className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer`}
       onClick={handleMore}
     >
       {/* Subtle accent bar */}
@@ -64,35 +60,62 @@ export function SuggestionCard({
       {/* Wildcard indicator */}
       {suggestion.is_wildcard && (
         <div className="absolute top-4 right-4">
-          <Sparkles className="h-5 w-5 text-blue-900" />
+          <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
         </div>
       )}
 
       <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="px-4 py-1.5 rounded-md bg-blue-100 text-blue-950 text-sm font-semibold border border-blue-200 flex items-center gap-1">
+            <div
+              className="px-4 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1"
+              style={{
+                background: 'rgba(59, 130, 246, 0.2)',
+                color: 'var(--premium-blue)',
+                border: '1px solid rgba(59, 130, 246, 0.3)'
+              }}
+            >
               <Lightbulb className="h-4 w-4" />
               {suggestion.total_points}pts
             </div>
             {suggestion.is_wildcard && (
-              <div className="px-3 py-1 rounded-md bg-blue-100 text-blue-950 text-xs font-medium border border-blue-200">
+              <div
+                className="px-3 py-1 rounded-md text-xs font-medium"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  color: 'var(--premium-blue)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}
+              >
                 Wildcard
               </div>
             )}
             {isCreative && !suggestion.is_wildcard && (
-              <div className="px-3 py-1 rounded-md bg-blue-100 text-blue-950 text-xs font-medium border border-blue-200">
+              <div
+                className="px-3 py-1 rounded-md text-xs font-medium"
+                style={{
+                  background: 'rgba(139, 92, 246, 0.2)',
+                  color: 'var(--premium-indigo)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)'
+                }}
+              >
                 Creative
               </div>
             )}
           </div>
         </div>
 
-        <CardTitle className="text-xl font-semibold leading-tight text-neutral-900 mb-2">
+        <CardTitle
+          className="text-xl font-semibold leading-tight premium-text-platinum mb-2"
+          style={{ fontSize: 'var(--premium-text-h3)' }}
+        >
           {suggestion.title}
         </CardTitle>
         {!compact && (
-          <CardDescription className="text-base leading-relaxed text-neutral-700">
+          <CardDescription
+            className="text-base leading-relaxed"
+            style={{ color: 'var(--premium-text-secondary)' }}
+          >
             {suggestion.description}
           </CardDescription>
         )}
@@ -102,18 +125,35 @@ export function SuggestionCard({
         <CardContent className="flex-1 space-y-4">
           {suggestion.capabilities && suggestion.capabilities.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Uses:</p>
+              <p
+                className="text-xs font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+              >
+                Uses:
+              </p>
               <div className="flex flex-wrap gap-2">
                 {suggestion.capabilities.slice(0, 3).map((cap) => (
                   <span
                     key={cap.id}
-                    className="px-3 py-1.5 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 rounded-full text-xs font-semibold border border-blue-200/50 shadow-sm hover:shadow-md transition-shadow"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm hover:shadow-md transition-shadow"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
+                      color: 'var(--premium-blue)',
+                      border: '1px solid rgba(59, 130, 246, 0.3)'
+                    }}
                   >
                     {cap.name}
                   </span>
                 ))}
                 {suggestion.capabilities.length > 3 && (
-                  <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs font-semibold border border-purple-200/50 shadow-sm">
+                  <span
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
+                      color: 'var(--premium-indigo)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)'
+                    }}
+                  >
                     +{suggestion.capabilities.length - 3} more
                   </span>
                 )}
@@ -129,7 +169,11 @@ export function SuggestionCard({
         </CardContent>
       )}
 
-      <CardFooter className="flex gap-2 border-t border-neutral-200 pt-4" onClick={(e) => e.stopPropagation()}>
+      <CardFooter
+        className="flex gap-2 border-t pt-4"
+        style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Button
           onClick={handleSpark}
           variant="outline"
@@ -182,15 +226,29 @@ export function SuggestionCard({
 function ScorePill({ label, score }: { label: string; score: number }) {
   const percentage = Math.round(score * 100)
   const gradient = score > 0.7
-    ? 'from-green-500 to-emerald-600'
+    ? 'linear-gradient(135deg, #10b981, #059669)'
     : score > 0.4
-      ? 'from-yellow-500 to-amber-600'
-      : 'from-red-500 to-rose-600'
+      ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+      : 'linear-gradient(135deg, #ef4444, #dc2626)'
 
   return (
-    <div className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-br from-white/80 to-gray-50/80 border border-white/40 shadow-inner hover:shadow-lg transition-shadow">
-      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
-      <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${gradient} text-white text-sm font-bold shadow-md`}>
+    <div
+      className="flex flex-col items-center gap-1.5 p-3 rounded-xl shadow-inner hover:shadow-lg transition-shadow"
+      style={{
+        background: 'rgba(26, 35, 50, 0.3)',
+        border: '1px solid rgba(255, 255, 255, 0.06)'
+      }}
+    >
+      <span
+        className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: 'var(--premium-text-tertiary)' }}
+      >
+        {label}
+      </span>
+      <div
+        className="px-3 py-1 rounded-full text-white text-sm font-bold shadow-md"
+        style={{ background: gradient }}
+      >
         {percentage}%
       </div>
     </div>
