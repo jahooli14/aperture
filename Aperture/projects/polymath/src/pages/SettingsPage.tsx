@@ -10,7 +10,9 @@ import {
   Sparkles,
   TrendingUp,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Lightbulb,
+  ListChecks
 } from 'lucide-react'
 
 interface SettingsOption {
@@ -24,6 +26,24 @@ interface SettingsOption {
 }
 
 const SETTINGS_OPTIONS: SettingsOption[] = [
+  {
+    id: 'suggestions',
+    label: 'Discover Projects',
+    description: 'AI-powered project recommendations from your knowledge',
+    icon: Lightbulb,
+    path: '/suggestions',
+    color: '#f59e0b',
+    glow: 'rgba(245, 158, 11, 0.4)'
+  },
+  {
+    id: 'today',
+    label: 'Daily Queue',
+    description: 'Your personalized daily tasks and priorities',
+    icon: ListChecks,
+    path: '/today',
+    color: '#3b82f6',
+    glow: 'rgba(59, 130, 246, 0.4)'
+  },
   {
     id: 'timeline',
     label: 'Timeline',

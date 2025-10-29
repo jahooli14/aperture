@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
@@ -13,7 +13,7 @@ import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton'
-import { Rocket, LayoutGrid, List, Edit, Trash2, Clock } from 'lucide-react'
+import { Rocket, LayoutGrid, List, Edit, Trash2, Clock, Sparkles } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { Project } from '../types'
@@ -88,7 +88,14 @@ export function ProjectsPage() {
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
-        <div className="flex items-center justify-end mb-6">
+        <div className="flex items-center justify-end gap-3 mb-6">
+          <Link
+            to="/suggestions"
+            className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all"
+          >
+            <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
+            <span style={{ color: 'var(--premium-text-primary)' }}>Discover Projects</span>
+          </Link>
           <CreateProjectDialog />
         </div>
         {/* Centered header content below button */}
