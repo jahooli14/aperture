@@ -444,31 +444,36 @@ Focus on resilience and adaptation - the UI may have changed significantly.`
     });
 
     // Add execution result to history
-    const resultParts: any[] = [{
-      functionResponse: {
-        name: 'computer',
-        response: {
-          success: executionResult.success,
-          output: executionResult.output || executionResult.error || 'Action completed'
-        }
-      }
-    }];
-
-    // Add new screenshot if available (critical for visual context)
-    if (executionResult.screenshot) {
-      loopState.lastScreenshot = executionResult.screenshot;
-      resultParts.push({
-        inlineData: {
-          data: executionResult.screenshot.toString('base64'),
-          mimeType: 'image/png'
-        }
-      });
-    }
-
+    // Note: functionResponse MUST be in its own message part (Gemini API requirement)
     loopState.conversationHistory.push({
       role: 'user',
-      parts: resultParts
+      parts: [{
+        functionResponse: {
+          name: 'computer',
+          response: {
+            success: executionResult.success,
+            output: executionResult.output || executionResult.error || 'Action completed'
+          }
+        }
+      }]
     });
+
+    // Add new screenshot in a separate message if available
+    // This is critical for visual context in the next iteration
+    if (executionResult.screenshot) {
+      loopState.lastScreenshot = executionResult.screenshot;
+      loopState.conversationHistory.push({
+        role: 'user',
+        parts: [{
+          text: 'Here is the new screenshot after the action was executed. Analyze it to determine the next step.'
+        }, {
+          inlineData: {
+            data: executionResult.screenshot.toString('base64'),
+            mimeType: 'image/png'
+          }
+        }]
+      });
+    }
   }
 
   /**

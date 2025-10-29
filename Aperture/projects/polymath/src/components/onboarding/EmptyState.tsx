@@ -4,6 +4,7 @@
  */
 
 import { Brain, Mic, Sparkles, ExternalLink } from 'lucide-react'
+import { BrandName } from '../BrandName'
 
 export function EmptyState() {
   return (
@@ -19,7 +20,7 @@ export function EmptyState() {
           Start Capturing Your Thoughts
         </h2>
         <p className="text-lg text-neutral-600 mb-8">
-          Polymath works by turning your voice notes into a personal knowledge graph.
+          <BrandName size="md" /> works by turning your voice notes into a personal knowledge graph.
           Here's how to get started:
         </p>
 
@@ -35,7 +36,7 @@ export function EmptyState() {
                 Connect Audiopen
               </h3>
               <p className="text-sm text-neutral-600">
-                Set up Audiopen webhook to send your voice notes to Polymath.
+                Set up Audiopen webhook to send your voice notes to <BrandName size="sm" />.
                 We'll automatically process them and extract themes, entities, and insights.
               </p>
             </div>
@@ -89,7 +90,7 @@ export function EmptyState() {
           <button
             onClick={() => {
               // Show welcome modal again to load demo
-              localStorage.removeItem('polymath_has_visited')
+              localStorage.removeItem('clandestined_has_visited')
               window.location.reload()
             }}
             className="btn-secondary inline-flex items-center justify-center gap-2"

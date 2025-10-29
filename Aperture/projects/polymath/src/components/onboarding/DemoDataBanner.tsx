@@ -51,7 +51,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       }
 
       // Mark demo as dismissed
-      localStorage.setItem('polymath_demo_dismissed', 'true')
+      localStorage.setItem('clandestined_demo_dismissed', 'true')
 
       console.log('All data cleared successfully')
       alert('Demo data cleared! Refreshing page...')

@@ -3,7 +3,7 @@
  * Stores pending captures and cached memories
  */
 
-const DB_NAME = 'polymath'
+const DB_NAME = 'clandestined'
 const DB_VERSION = 1
 
 export interface PendingCapture {
@@ -24,7 +24,7 @@ export interface CachedMemory {
   cached_at: number
 }
 
-class PolymathDB {
+class ClandestinedDB {
   private db: IDBDatabase | null = null
 
   async init(): Promise<void> {
@@ -196,4 +196,4 @@ class PolymathDB {
 }
 
 // Singleton instance
-export const db = new PolymathDB()
+export const db = new ClandestinedDB()

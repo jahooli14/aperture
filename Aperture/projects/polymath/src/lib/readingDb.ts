@@ -42,7 +42,7 @@ export class ReadingDatabase extends Dexie {
   progress!: Table<ReadingProgress, number>
 
   constructor() {
-    super('PolymathReading')
+    super('ClandestinedReading')
 
     // Define database schema
     this.version(1).stores({

@@ -1,10 +1,11 @@
 /**
  * Welcome Modal Component
- * Shown to first-time users to explain Polymath and offer demo data
+ * Shown to first-time users to explain Clandestined and offer demo data
  */
 
 import { useState } from 'react'
 import { Brain, Sparkles, Rocket, ArrowRight, X } from 'lucide-react'
+import { BrandName } from '../BrandName'
 
 interface WelcomeModalProps {
   open: boolean
@@ -48,7 +49,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
             <Sparkles className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-neutral-900 mb-3">
-            Welcome to Polymath
+            Welcome to <BrandName size="xl" />
           </h1>
           <p className="text-lg text-neutral-600 max-w-xl mx-auto">
             Turn your scattered thoughts into connected insights and creative projects
@@ -68,7 +69,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                   1. Capture Memories
                 </h3>
                 <p className="text-sm text-neutral-600">
-                  Send voice notes via Audiopen. Polymath extracts themes, entities, and insights automatically.
+                  Send voice notes via Audiopen. <BrandName size="sm" /> extracts themes, entities, and insights automatically.
                 </p>
               </div>
             </div>

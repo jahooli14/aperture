@@ -22,6 +22,7 @@ import { Card, CardContent } from '../components/ui/card'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { Brain, Zap, ArrowLeft, CloudOff } from 'lucide-react'
+import { BrandName } from '../components/BrandName'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
@@ -436,7 +437,7 @@ export function MemoriesPage() {
                           </div>
                           <div>
                             <p className="font-semibold premium-text-platinum">AI Extracts Insights</p>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Polymath automatically identifies entities, topics, and connections</p>
+                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}><BrandName size="sm" /> automatically identifies entities, topics, and connections</p>
                           </div>
                         </div>
                       </div>
