@@ -15,11 +15,11 @@
  * - Demo modes for presentations
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import ForceGraph3D from 'react-force-graph-3d'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Pause, Mic, MicOff, Sparkles, Calendar, Zap, Wand2, Eye, Target } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Mic, MicOff, Sparkles, Calendar, Zap, Wand2, Eye, Target, Search, Maximize2, Camera, X, Info } from 'lucide-react'
 import * as THREE from 'three'
 import * as d3 from 'd3-force-3d'
 
@@ -31,6 +31,12 @@ interface GraphNode {
   color: string
   created_at: string
   metadata?: any
+  x?: number
+  y?: number
+  z?: number
+  vx?: number
+  vy?: number
+  vz?: number
 }
 
 interface GraphLink {
@@ -45,37 +51,46 @@ interface GraphData {
   links: GraphLink[]
 }
 
-// Visual themes for each node type
+// Visual themes for each node type - Premium Dark Palette
 const NODE_THEMES = {
   project: {
-    color: '#3b82f6', // Blue
+    color: '#3b82f6', // Premium Blue
     glow: '#60a5fa',
+    emissive: '#3b82f6',
     size: 15,
-    label: 'Planet'
+    label: 'Planet',
+    icon: '🪐'
   },
   thought: {
-    color: '#6366f1', // Indigo
+    color: '#6366f1', // Premium Indigo
     glow: '#818cf8',
+    emissive: '#6366f1',
     size: 8,
-    label: 'Star'
+    label: 'Star',
+    icon: '⭐'
   },
   article: {
-    color: '#10b981', // Green
+    color: '#10b981', // Premium Emerald
     glow: '#34d399',
+    emissive: '#10b981',
     size: 10,
-    label: 'Comet'
+    label: 'Comet',
+    icon: '☄️'
   },
   suggestion: {
-    color: '#f59e0b', // Amber
+    color: '#f59e0b', // Premium Amber
     glow: '#fbbf24',
+    emissive: '#f59e0b',
     size: 6,
-    label: 'Spark'
+    label: 'Spark',
+    icon: '✨'
   }
 }
 
 export default function ConstellationView() {
   const navigate = useNavigate()
   const graphRef = useRef<any>()
+  const starfieldRef = useRef<THREE.Points | null>(null)
 
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] })
   const [loading, setLoading] = useState(true)
@@ -84,13 +99,83 @@ export default function ConstellationView() {
   const [isListening, setIsListening] = useState(false)
   const [demoMode, setDemoMode] = useState<'none' | 'birth' | 'themes' | 'connections'>('none')
   const [filter, setFilter] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null)
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, node: GraphNode } | null>(null)
+  const [highlightNodes, setHighlightNodes] = useState(new Set<string>())
+  const [highlightLinks, setHighlightLinks] = useState(new Set<string>())
+  const [showLegend, setShowLegend] = useState(true)
+
+  // Detect device capability for performance optimization
+  const deviceCapability = useMemo(() => {
+    const gpu = (navigator as any).gpu
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    if (isMobile) return 'low'
+    if (gpu) return 'high'
+    return 'medium'
+  }, [])
 
   // Fetch all data
   useEffect(() => {
     fetchGraphData()
   }, [])
 
-  // Animation loop for node effects
+  // Initialize ambient starfield background
+  useEffect(() => {
+    if (!graphRef.current || loading) return
+
+    const scene = graphRef.current.scene()
+    if (!scene) return
+
+    // Create starfield particles
+    const starCount = deviceCapability === 'low' ? 1000 : deviceCapability === 'medium' ? 2000 : 5000
+    const starGeometry = new THREE.BufferGeometry()
+    const starPositions = new Float32Array(starCount * 3)
+    const starSizes = new Float32Array(starCount)
+
+    for (let i = 0; i < starCount; i++) {
+      // Random position in a large sphere
+      const radius = 1000 + Math.random() * 1000
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+
+      starPositions[i * 3] = radius * Math.sin(phi) * Math.cos(theta)
+      starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta)
+      starPositions[i * 3 + 2] = radius * Math.cos(phi)
+
+      starSizes[i] = Math.random() * 2 + 0.5
+    }
+
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3))
+    starGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1))
+
+    const starMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 2,
+      transparent: true,
+      opacity: 0.6,
+      sizeAttenuation: true,
+      blending: THREE.AdditiveBlending
+    })
+
+    const starfield = new THREE.Points(starGeometry, starMaterial)
+    starfieldRef.current = starfield
+    scene.add(starfield)
+
+    // Add subtle fog for depth perception
+    scene.fog = new THREE.FogExp2(0x0d1420, 0.0008)
+
+    return () => {
+      if (starfieldRef.current) {
+        scene.remove(starfieldRef.current)
+        starfieldRef.current.geometry.dispose()
+        ;(starfieldRef.current.material as THREE.Material).dispose()
+      }
+    }
+  }, [loading, deviceCapability])
+
+  // Animation loop for node effects and starfield rotation
   useEffect(() => {
     if (!graphRef.current) return
 
@@ -105,6 +190,12 @@ export default function ConstellationView() {
 
       const time = Date.now() * 0.001
 
+      // Slowly rotate starfield for subtle movement
+      if (starfieldRef.current) {
+        starfieldRef.current.rotation.y = time * 0.01
+        starfieldRef.current.rotation.x = Math.sin(time * 0.005) * 0.05
+      }
+
       // Animate all node effects
       scene.traverse((object: any) => {
         if (object.userData.pulseGlow) {
@@ -115,7 +206,13 @@ export default function ConstellationView() {
           object.userData.pulseGlow.scale.setScalar(1 + pulse * 0.2)
         }
 
-        // Removed comet trails - they looked cheap
+        // Lens flare effect for brightest nodes
+        if (object.userData.lensFlare) {
+          const flare = object.userData.lensFlare
+          flare.rotation.z = time * 0.5
+          const pulse = Math.sin(time * 2) * 0.3 + 0.7
+          flare.material.opacity = pulse * 0.4
+        }
       })
 
       animationFrameId = requestAnimationFrame(animate)
@@ -149,46 +246,7 @@ export default function ConstellationView() {
       // Build nodes
       const nodes: GraphNode[] = []
 
-      // Add projects (Planets)
-      projects.projects?.forEach((p: any) => {
-        nodes.push({
-          id: `project-${p.id}`,
-          type: 'project',
-          name: p.title,
-          val: NODE_THEMES.project.size,
-          color: NODE_THEMES.project.color,
-          created_at: p.created_at,
-          metadata: p
-        })
-      })
-
-      // Add memories (Stars)
-      memories.memories?.forEach((m: any) => {
-        nodes.push({
-          id: `thought-${m.id}`,
-          type: 'thought',
-          name: m.title || 'Untitled thought',
-          val: NODE_THEMES.thought.size,
-          color: NODE_THEMES.thought.color,
-          created_at: m.created_at,
-          metadata: m
-        })
-      })
-
-      // Add articles (Comets)
-      articles.articles?.forEach((a: any) => {
-        nodes.push({
-          id: `article-${a.id}`,
-          type: 'article',
-          name: a.title,
-          val: NODE_THEMES.article.size,
-          color: NODE_THEMES.article.color,
-          created_at: a.created_at,
-          metadata: a
-        })
-      })
-
-      // Build links from connections
+      // Build links first to calculate connection counts
       const links: GraphLink[] = []
       connectionsData.connections?.forEach((c: any) => {
         links.push({
@@ -196,6 +254,57 @@ export default function ConstellationView() {
           target: `${c.target_type}-${c.target_id}`,
           type: c.connection_type,
           created_at: c.created_at
+        })
+      })
+
+      // Calculate connection counts per node
+      const connectionCounts = new Map<string, number>()
+      links.forEach(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id
+        const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id
+        connectionCounts.set(sourceId, (connectionCounts.get(sourceId) || 0) + 1)
+        connectionCounts.set(targetId, (connectionCounts.get(targetId) || 0) + 1)
+      })
+
+      // Add projects (Planets)
+      projects.projects?.forEach((p: any) => {
+        const id = `project-${p.id}`
+        nodes.push({
+          id,
+          type: 'project',
+          name: p.title,
+          val: NODE_THEMES.project.size,
+          color: NODE_THEMES.project.color,
+          created_at: p.created_at,
+          metadata: { ...p, connectionCount: connectionCounts.get(id) || 0 }
+        })
+      })
+
+      // Add memories (Stars)
+      memories.memories?.forEach((m: any) => {
+        const id = `thought-${m.id}`
+        nodes.push({
+          id,
+          type: 'thought',
+          name: m.title || 'Untitled thought',
+          val: NODE_THEMES.thought.size,
+          color: NODE_THEMES.thought.color,
+          created_at: m.created_at,
+          metadata: { ...m, connectionCount: connectionCounts.get(id) || 0 }
+        })
+      })
+
+      // Add articles (Comets)
+      articles.articles?.forEach((a: any) => {
+        const id = `article-${a.id}`
+        nodes.push({
+          id,
+          type: 'article',
+          name: a.title,
+          val: NODE_THEMES.article.size,
+          color: NODE_THEMES.article.color,
+          created_at: a.created_at,
+          metadata: { ...a, connectionCount: connectionCounts.get(id) || 0 }
         })
       })
 
@@ -224,18 +333,25 @@ export default function ConstellationView() {
     return () => clearInterval(interval)
   }, [isPlaying])
 
-  // Filter data based on time travel slider
+  // Filter data based on time travel slider and search query
   const getFilteredData = useCallback(() => {
-    if (timeTravel === 100 && !filter) {
-      return graphData
-    }
-
     const allNodes = [...graphData.nodes].sort((a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     )
 
+    // Time travel filter
     const cutoffIndex = Math.floor((timeTravel / 100) * allNodes.length)
-    const visibleNodes = allNodes.slice(0, cutoffIndex)
+    let visibleNodes = allNodes.slice(0, cutoffIndex)
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      visibleNodes = visibleNodes.filter(node =>
+        node.name.toLowerCase().includes(query) ||
+        node.type.toLowerCase().includes(query)
+      )
+    }
+
     const visibleNodeIds = new Set(visibleNodes.map(n => n.id))
 
     const visibleLinks = graphData.links.filter(link =>
@@ -253,7 +369,7 @@ export default function ConstellationView() {
     }
 
     return { nodes: filteredNodes, links: visibleLinks }
-  }, [graphData, timeTravel, filter])
+  }, [graphData, timeTravel, filter, searchQuery])
 
   // Custom node rendering with enhanced effects
   const nodeThreeObject = useCallback((node: GraphNode) => {
@@ -264,14 +380,22 @@ export default function ConstellationView() {
     const daysSinceCreation = nodeAge / (1000 * 60 * 60 * 24)
     const isRecent = daysSinceCreation < 7
 
-    // Main sphere with enhanced material
+    // Main sphere with enhanced emissive material
     const geometry = new THREE.SphereGeometry(node.val / 2, 24, 24)
-    const material = new THREE.MeshBasicMaterial({
+    const material = new THREE.MeshStandardMaterial({
       color: node.color,
+      emissive: theme.emissive,
+      emissiveIntensity: isRecent ? 0.8 : 0.5,
+      metalness: 0.3,
+      roughness: 0.4,
       transparent: true,
       opacity: isRecent ? 1.0 : 0.85
     })
     const mesh = new THREE.Mesh(geometry, material)
+
+    // Add point light for self-illumination
+    const light = new THREE.PointLight(theme.color, isRecent ? 2 : 1, node.val * 5)
+    mesh.add(light)
 
     // Multi-layer glow for depth
     // Inner glow (bright)
@@ -308,9 +432,26 @@ export default function ConstellationView() {
       const pulseGlow = new THREE.Mesh(pulseGlowGeometry, pulseGlowMaterial)
       mesh.add(pulseGlow)
 
-      // Animate pulse (will be handled by animation loop if we add one)
       ;(mesh as any).userData.pulseGlow = pulseGlow
       ;(mesh as any).userData.pulsePhase = Math.random() * Math.PI * 2
+    }
+
+    // Lens flare for brightest nodes (recent or high connections)
+    const connectionCount = node.metadata?.connectionCount || 0
+    if (isRecent || connectionCount > 5) {
+      const flareGeometry = new THREE.CircleGeometry(node.val * 1.8, 32)
+      const flareMaterial = new THREE.MeshBasicMaterial({
+        color: theme.glow,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      })
+      const flare = new THREE.Mesh(flareGeometry, flareMaterial)
+      flare.position.z = 0
+      mesh.add(flare)
+
+      ;(mesh as any).userData.lensFlare = flare
     }
 
     // For projects (planets), add orbital ring
@@ -324,6 +465,38 @@ export default function ConstellationView() {
       const ring = new THREE.Mesh(ringGeometry, ringMaterial)
       ring.rotation.x = Math.PI / 2
       mesh.add(ring)
+    }
+
+    // Connection count badge
+    if (connectionCount > 0) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 64
+      canvas.height = 64
+      const ctx = canvas.getContext('2d')!
+
+      // Draw badge background
+      ctx.fillStyle = theme.color
+      ctx.beginPath()
+      ctx.arc(32, 32, 28, 0, Math.PI * 2)
+      ctx.fill()
+
+      // Draw text
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 32px Inter'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(connectionCount.toString(), 32, 32)
+
+      const texture = new THREE.CanvasTexture(canvas)
+      const spriteMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9
+      })
+      const sprite = new THREE.Sprite(spriteMaterial)
+      sprite.scale.set(node.val * 0.8, node.val * 0.8, 1)
+      sprite.position.set(node.val * 0.7, node.val * 0.7, 0)
+      mesh.add(sprite)
     }
 
     return mesh
@@ -359,8 +532,10 @@ export default function ConstellationView() {
     return 0.8
   }, [demoMode])
 
-  // Add glow to links
-  const linkDirectionalParticles = useCallback(() => 4, []) // Particles flowing along links
+  // Add glow to links - optimized particle count by device capability
+  const linkDirectionalParticles = useCallback(() => {
+    return deviceCapability === 'low' ? 2 : deviceCapability === 'medium' ? 4 : 6
+  }, [deviceCapability])
 
   // Custom clustering forces - make similar nodes attract
   const customForces = useCallback(() => {
@@ -495,12 +670,141 @@ export default function ConstellationView() {
     setTimeout(() => setDemoMode('none'), 8000)
   }
 
+  // Node hover handler - highlight connected nodes
+  const handleNodeHover = useCallback((node: GraphNode | null) => {
+    setHoveredNode(node)
+
+    if (!node) {
+      setHighlightNodes(new Set())
+      setHighlightLinks(new Set())
+      return
+    }
+
+    // Find all connected nodes
+    const connectedNodes = new Set<string>([node.id])
+    const connectedLinks = new Set<string>()
+
+    graphData.links.forEach(link => {
+      const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id
+      const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id
+
+      if (sourceId === node.id || targetId === node.id) {
+        connectedNodes.add(sourceId)
+        connectedNodes.add(targetId)
+        connectedLinks.add(`${sourceId}-${targetId}`)
+      }
+    })
+
+    setHighlightNodes(connectedNodes)
+    setHighlightLinks(connectedLinks)
+  }, [graphData.links])
+
+  // Update tooltip position on mouse move
+  const handleMouseMove = useCallback((event: MouseEvent) => {
+    setTooltipPos({ x: event.clientX, y: event.clientY })
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [handleMouseMove])
+
+  // Double-click to focus on node with smooth animation
+  const handleNodeDoubleClick = useCallback((node: GraphNode) => {
+    const fg = graphRef.current
+    if (!fg || !node.x || !node.y || !node.z) return
+
+    // Calculate camera position to look at node
+    const distance = 200
+    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z)
+
+    fg.cameraPosition(
+      { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+      node,
+      2000 // 2 second animation
+    )
+  }, [])
+
+  // Right-click context menu
+  const handleNodeRightClick = useCallback((node: GraphNode, event: MouseEvent) => {
+    event.preventDefault()
+    setContextMenu({ x: event.clientX, y: event.clientY, node })
+  }, [])
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null)
+    window.addEventListener('click', handleClick)
+    return () => window.removeEventListener('click', handleClick)
+  }, [])
+
+  // Fit to view - reset camera
+  const handleFitToView = useCallback(() => {
+    const fg = graphRef.current
+    if (!fg) return
+
+    fg.zoomToFit(1000) // 1 second animation
+  }, [])
+
+  // Take screenshot
+  const handleTakeScreenshot = useCallback(() => {
+    const fg = graphRef.current
+    if (!fg) return
+
+    // Get the canvas element
+    const canvas = fg.renderer().domElement
+    const dataURL = canvas.toDataURL('image/png')
+
+    // Download image
+    const link = document.createElement('a')
+    link.download = `constellation-${Date.now()}.png`
+    link.href = dataURL
+    link.click()
+  }, [])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Space - play/pause time travel
+      if (event.code === 'Space') {
+        event.preventDefault()
+        if (isPlaying) {
+          setIsPlaying(false)
+        } else {
+          if (timeTravel === 100) setTimeTravel(0)
+          setIsPlaying(true)
+        }
+      }
+      // R - reset/fit to view
+      else if (event.code === 'KeyR') {
+        event.preventDefault()
+        handleFitToView()
+      }
+      // F - focus search
+      else if (event.code === 'KeyF' && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault()
+        const searchInput = document.querySelector<HTMLInputElement>('#constellation-search')
+        searchInput?.focus()
+      }
+      // Escape - clear filters
+      else if (event.code === 'Escape') {
+        event.preventDefault()
+        setSearchQuery('')
+        setFilter(null)
+        setContextMenu(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [isPlaying, timeTravel, handleFitToView])
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: 'linear-gradient(to bottom right, #0d1420, #0f1829, #1a2638)' }}>
         <div className="text-center">
-          <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-400 border-r-transparent mb-4"></div>
-          <p className="text-blue-200 text-lg">Mapping your universe...</p>
+          <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-400 border-r-transparent mb-4" style={{ borderColor: '#3b82f6 transparent #3b82f6 #3b82f6' }}></div>
+          <p className="text-lg" style={{ color: '#d1d5db' }}>Mapping your universe...</p>
         </div>
       </div>
     )
@@ -509,73 +813,151 @@ export default function ConstellationView() {
   const filteredData = getFilteredData()
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900">
+    <div className="relative h-screen w-screen overflow-hidden" style={{ background: 'linear-gradient(to bottom right, #0d1420, #0f1829, #1a2638)' }}>
       {/* Header */}
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent backdrop-blur-sm"
+        className="absolute top-0 left-0 right-0 z-10 p-4"
+        style={{ background: 'linear-gradient(to bottom, rgba(13, 20, 32, 0.8), transparent)' }}
       >
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          Back
-        </button>
+        <div className="flex items-center justify-between gap-4 max-w-screen-2xl mx-auto">
+          {/* Left: Back Button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all premium-glass-strong"
+            style={{ color: '#ffffff' }}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>Back</span>
+          </button>
 
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Sparkles className="h-6 w-6 text-blue-400" />
-          Constellation View
-        </h1>
+          {/* Center: Title + Search */}
+          <div className="flex-1 flex items-center gap-4 justify-center">
+            <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#ffffff' }}>
+              <Sparkles className="h-6 w-6" style={{ color: '#3b82f6' }} />
+              Constellation View
+            </h1>
 
-        <div className="flex gap-2">
-          {/* Demo Modes Dropdown */}
-          <div className="relative group">
-            <button
-              className="p-3 rounded-xl bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors"
-            >
-              <Wand2 className="h-5 w-5" />
-            </button>
-
-            {/* Dropdown */}
-            <div className="absolute top-full right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-              <div className="rounded-xl backdrop-blur-xl bg-black/80 border border-white/20 shadow-2xl overflow-hidden">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: '#9ca3af' }} />
+              <input
+                id="constellation-search"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search nodes... (Cmd+F)"
+                className="pl-10 pr-10 py-2 rounded-lg premium-input"
+                style={{
+                  width: '320px',
+                  background: 'rgba(20, 31, 50, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#ffffff'
+                }}
+              />
+              {searchQuery && (
                 <button
-                  onClick={startBirthDemo}
-                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  style={{ color: '#9ca3af' }}
                 >
-                  <Play className="h-4 w-4" />
-                  <span className="text-sm">Birth of Universe</span>
+                  <X className="h-4 w-4" />
                 </button>
-                <button
-                  onClick={startConnectionStorm}
-                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
-                >
-                  <Zap className="h-4 w-4" />
-                  <span className="text-sm">Connection Storm</span>
-                </button>
-                <button
-                  onClick={startThemeDiscovery}
-                  className="w-full px-4 py-3 text-left text-white hover:bg-white/10 transition-colors flex items-center gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span className="text-sm">Theme Discovery</span>
-                </button>
-              </div>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={startVoiceControl}
-            className={`p-3 rounded-xl backdrop-blur-md transition-all ${
-              isListening
-                ? 'bg-red-500 text-white scale-110'
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </button>
+          {/* Right: Controls */}
+          <div className="flex gap-2">
+            {/* Fit to View */}
+            <button
+              onClick={handleFitToView}
+              className="p-3 rounded-xl premium-glass transition-all"
+              style={{ color: '#ffffff' }}
+              title="Fit to View (R)"
+            >
+              <Maximize2 className="h-5 w-5" />
+            </button>
+
+            {/* Take Screenshot */}
+            <button
+              onClick={handleTakeScreenshot}
+              className="p-3 rounded-xl premium-glass transition-all"
+              style={{ color: '#ffffff' }}
+              title="Take Screenshot"
+            >
+              <Camera className="h-5 w-5" />
+            </button>
+
+            {/* Toggle Legend */}
+            <button
+              onClick={() => setShowLegend(!showLegend)}
+              className={`p-3 rounded-xl premium-glass transition-all ${showLegend ? 'ring-2 ring-blue-400' : ''}`}
+              style={{ color: '#ffffff' }}
+              title="Toggle Legend"
+            >
+              <Info className="h-5 w-5" />
+            </button>
+
+            {/* Demo Modes Dropdown */}
+            <div className="relative group">
+              <button
+                className="p-3 rounded-xl premium-glass transition-all"
+                style={{ color: '#ffffff' }}
+                title="Demo Modes"
+              >
+                <Wand2 className="h-5 w-5" />
+              </button>
+
+              {/* Dropdown */}
+              <div className="absolute top-full right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="rounded-xl premium-glass-strong overflow-hidden" style={{ border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                  <button
+                    onClick={startBirthDemo}
+                    className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
+                    style={{ color: '#ffffff' }}
+                  >
+                    <Play className="h-4 w-4" />
+                    <span className="text-sm">Birth of Universe</span>
+                  </button>
+                  <button
+                    onClick={startConnectionStorm}
+                    className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
+                    style={{ color: '#ffffff' }}
+                  >
+                    <Zap className="h-4 w-4" />
+                    <span className="text-sm">Connection Storm</span>
+                  </button>
+                  <button
+                    onClick={startThemeDiscovery}
+                    className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
+                    style={{ color: '#ffffff' }}
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="text-sm">Theme Discovery</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Voice Control */}
+            <button
+              onClick={startVoiceControl}
+              className={`p-3 rounded-xl transition-all ${
+                isListening
+                  ? 'scale-110'
+                  : 'premium-glass'
+              }`}
+              style={{
+                backgroundColor: isListening ? '#ef4444' : undefined,
+                color: '#ffffff'
+              }}
+              title="Voice Control"
+            >
+              {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -583,11 +965,25 @@ export default function ConstellationView() {
       <ForceGraph3D
         ref={graphRef}
         graphData={filteredData}
-        nodeLabel="name"
+        nodeLabel={() => ''} // Disable default tooltip
         nodeVal="val"
-        nodeColor="color"
+        nodeColor={(node: any) => {
+          // Dim non-highlighted nodes when hovering
+          if (highlightNodes.size > 0 && !highlightNodes.has(node.id)) {
+            return '#333333'
+          }
+          return node.color
+        }}
         nodeThreeObject={nodeThreeObject}
-        linkColor={linkColor}
+        linkColor={(link: any) => {
+          // Highlight connected links
+          const sourceId = typeof link.source === 'string' ? link.source : link.source.id
+          const targetId = typeof link.target === 'string' ? link.target : link.target.id
+          if (highlightLinks.size > 0 && !highlightLinks.has(`${sourceId}-${targetId}`)) {
+            return '#333333'
+          }
+          return linkColor(link)
+        }}
         linkWidth={linkWidth}
         linkOpacity={linkOpacity()}
         linkDirectionalParticles={linkDirectionalParticles()}
@@ -598,9 +994,9 @@ export default function ConstellationView() {
         enableNodeDrag={true}
         enableNavigationControls={true}
         onEngineStop={configureForces}
+        onNodeHover={handleNodeHover}
         onNodeClick={(node: any) => {
           // Navigate to the item
-          // Use metadata which has the full object with correct ID
           if (node.metadata) {
             if (node.type === 'project') {
               navigate(`/projects/${node.metadata.id}`)
@@ -611,13 +1007,204 @@ export default function ConstellationView() {
             }
           }
         }}
+        onNodeRightClick={(node: any, event: any) => handleNodeRightClick(node, event)}
       />
+
+      {/* Tooltip on Hover */}
+      <AnimatePresence>
+        {hoveredNode && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed pointer-events-none z-50 premium-glass-strong rounded-lg p-3 shadow-2xl"
+            style={{
+              left: tooltipPos.x + 15,
+              top: tooltipPos.y + 15,
+              maxWidth: '300px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">{NODE_THEMES[hoveredNode.type].icon}</span>
+              <h3 className="font-semibold text-white">{hoveredNode.name}</h3>
+            </div>
+            <div className="text-sm space-y-1" style={{ color: '#d1d5db' }}>
+              <div className="flex justify-between">
+                <span style={{ color: '#9ca3af' }}>Type:</span>
+                <span>{NODE_THEMES[hoveredNode.type].label}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: '#9ca3af' }}>Connections:</span>
+                <span>{hoveredNode.metadata?.connectionCount || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: '#9ca3af' }}>Created:</span>
+                <span>{new Date(hoveredNode.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+            <div className="mt-2 pt-2 border-t border-white/10 text-xs" style={{ color: '#9ca3af' }}>
+              Click to open • Double-click to focus • Right-click for options
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed z-50 premium-glass-strong rounded-lg overflow-hidden shadow-2xl"
+            style={{
+              left: contextMenu.x,
+              top: contextMenu.y,
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              minWidth: '180px'
+            }}
+          >
+            <button
+              onClick={() => {
+                if (contextMenu.node.metadata) {
+                  const node = contextMenu.node
+                  if (node.type === 'project') navigate(`/projects/${node.metadata.id}`)
+                  else if (node.type === 'thought') navigate('/memories')
+                  else if (node.type === 'article') navigate('/reading')
+                }
+                setContextMenu(null)
+              }}
+              className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
+              style={{ color: '#ffffff' }}
+            >
+              <Eye className="h-4 w-4" />
+              <span>View</span>
+            </button>
+            <button
+              onClick={() => {
+                handleNodeDoubleClick(contextMenu.node)
+                setContextMenu(null)
+              }}
+              className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
+              style={{ color: '#ffffff' }}
+            >
+              <Target className="h-4 w-4" />
+              <span>Focus</span>
+            </button>
+            <div className="border-t border-white/10" />
+            <div className="px-4 py-2 text-xs" style={{ color: '#9ca3af' }}>
+              {contextMenu.node.name}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Legend */}
+      <AnimatePresence>
+        {showLegend && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="fixed top-24 right-4 z-20 premium-glass-strong rounded-xl p-4 shadow-2xl"
+            style={{
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              maxWidth: '250px'
+            }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2" style={{ color: '#ffffff' }}>
+                <Info className="h-4 w-4" />
+                Legend
+              </h3>
+              <button
+                onClick={() => setShowLegend(false)}
+                style={{ color: '#9ca3af' }}
+                className="hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {Object.entries(NODE_THEMES).map(([type, theme]) => (
+                <div key={type} className="flex items-center gap-3">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{
+                      background: theme.color,
+                      boxShadow: `0 0 20px ${theme.glow}`
+                    }}
+                  >
+                    <span className="text-sm">{theme.icon}</span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium" style={{ color: '#ffffff' }}>
+                      {theme.label}s
+                    </div>
+                    <div className="text-xs" style={{ color: '#9ca3af' }}>
+                      {filteredData.nodes.filter(n => n.type === type).length} nodes
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-white/10 text-xs space-y-1" style={{ color: '#9ca3af' }}>
+              <div><kbd className="px-1 py-0.5 rounded bg-white/10">Space</kbd> Play/Pause</div>
+              <div><kbd className="px-1 py-0.5 rounded bg-white/10">R</kbd> Reset View</div>
+              <div><kbd className="px-1 py-0.5 rounded bg-white/10">⌘F</kbd> Search</div>
+              <div><kbd className="px-1 py-0.5 rounded bg-white/10">Esc</kbd> Clear Filter</div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mini-map */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="fixed bottom-24 right-4 z-20 premium-glass-strong rounded-xl p-3 shadow-2xl"
+        style={{
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          width: '200px',
+          height: '150px'
+        }}
+      >
+        <div className="text-xs font-semibold mb-2" style={{ color: '#d1d5db' }}>
+          Overview
+        </div>
+        <div className="relative w-full h-full bg-black/30 rounded-lg overflow-hidden">
+          {/* Simplified 2D representation */}
+          <svg width="100%" height="100%" viewBox="-100 -100 200 200">
+            {filteredData.nodes.map((node, i) => {
+              // Simple circular layout for mini-map
+              const angle = (i / filteredData.nodes.length) * Math.PI * 2
+              const radius = 60
+              const x = Math.cos(angle) * radius
+              const y = Math.sin(angle) * radius
+              return (
+                <circle
+                  key={node.id}
+                  cx={x}
+                  cy={y}
+                  r={node.val / 3}
+                  fill={node.color}
+                  opacity={highlightNodes.size === 0 || highlightNodes.has(node.id) ? 0.8 : 0.3}
+                />
+              )
+            })}
+          </svg>
+        </div>
+      </motion.div>
 
       {/* Time Travel Controls */}
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="absolute bottom-0 left-0 right-0 z-10 p-6 bg-gradient-to-t from-black/70 to-transparent backdrop-blur-sm"
+        className="absolute bottom-0 left-0 right-0 z-10 p-6"
+        style={{ background: 'linear-gradient(to top, rgba(13, 20, 32, 0.9), transparent)' }}
       >
         <div className="max-w-4xl mx-auto space-y-4">
           {/* Filter Pills */}
@@ -626,9 +1213,13 @@ export default function ConstellationView() {
               onClick={() => setFilter(null)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 filter === null
-                  ? 'bg-white text-slate-900'
-                  : 'bg-white/10 text-white hover:bg-white/20'
+                  ? 'premium-btn-primary'
+                  : 'premium-glass'
               }`}
+              style={{
+                color: '#ffffff',
+                background: filter === null ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : undefined
+              }}
             >
               All
             </button>
@@ -636,16 +1227,17 @@ export default function ConstellationView() {
               <button
                 key={type}
                 onClick={() => setFilter(filter === type ? null : type)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  filter === type
-                    ? 'text-white'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                  filter === type ? '' : 'premium-glass'
                 }`}
                 style={{
-                  backgroundColor: filter === type ? theme.color : undefined
+                  backgroundColor: filter === type ? theme.color : undefined,
+                  color: '#ffffff',
+                  boxShadow: filter === type ? `0 0 20px ${theme.glow}` : undefined
                 }}
               >
-                {theme.label}s
+                <span>{theme.icon}</span>
+                <span>{theme.label}s</span>
               </button>
             ))}
           </div>
@@ -661,7 +1253,13 @@ export default function ConstellationView() {
                   setIsPlaying(true)
                 }
               }}
-              className="p-3 rounded-xl bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+              className="p-3 rounded-xl transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                color: '#ffffff',
+                boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)'
+              }}
+              title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             >
               {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </button>
@@ -673,17 +1271,17 @@ export default function ConstellationView() {
                 max="100"
                 value={timeTravel}
                 onChange={(e) => setTimeTravel(parseInt(e.target.value))}
-                className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer slider"
                 style={{
                   background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${timeTravel}%, rgba(255,255,255,0.2) ${timeTravel}%, rgba(255,255,255,0.2) 100%)`
                 }}
               />
-              <div className="flex justify-between mt-2 text-xs text-blue-200">
+              <div className="flex justify-between mt-2 text-xs" style={{ color: '#d1d5db' }}>
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Day 1
                 </span>
-                <span className="text-white font-medium">
+                <span className="font-medium" style={{ color: '#ffffff' }}>
                   {Math.round((timeTravel / 100) * filteredData.nodes.length)} / {graphData.nodes.length} nodes
                 </span>
                 <span>Today</span>
@@ -693,29 +1291,37 @@ export default function ConstellationView() {
 
           {/* Stats */}
           <div className="flex gap-6 justify-center text-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400">
+            <div className="text-center premium-stat-card">
+              <div className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
                 {filteredData.nodes.filter(n => n.type === 'project').length}
               </div>
-              <div className="text-blue-200">Planets</div>
+              <div className="text-xs mt-1" style={{ color: '#d1d5db' }}>
+                {NODE_THEMES.project.icon} Planets
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-400">
+            <div className="text-center premium-stat-card">
+              <div className="text-2xl font-bold" style={{ color: '#6366f1' }}>
                 {filteredData.nodes.filter(n => n.type === 'thought').length}
               </div>
-              <div className="text-indigo-200">Stars</div>
+              <div className="text-xs mt-1" style={{ color: '#d1d5db' }}>
+                {NODE_THEMES.thought.icon} Stars
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-400">
+            <div className="text-center premium-stat-card">
+              <div className="text-2xl font-bold" style={{ color: '#10b981' }}>
                 {filteredData.nodes.filter(n => n.type === 'article').length}
               </div>
-              <div className="text-green-200">Comets</div>
+              <div className="text-xs mt-1" style={{ color: '#d1d5db' }}>
+                {NODE_THEMES.article.icon} Comets
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-amber-400">
+            <div className="text-center premium-stat-card">
+              <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>
                 {filteredData.links.length}
               </div>
-              <div className="text-amber-200">Connections</div>
+              <div className="text-xs mt-1" style={{ color: '#d1d5db' }}>
+                ⚡ Connections
+              </div>
             </div>
           </div>
         </div>
