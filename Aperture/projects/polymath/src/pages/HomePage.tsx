@@ -47,6 +47,7 @@ export function HomePage() {
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
   const sparkSuggestions = suggestions.filter(s => s.status === 'spark')
   const activeProjects = projects.filter(p => p.status === 'active')
+  const priorityProjects = projects.filter(p => p.priority && p.status === 'active')
   const recentMemories = memories.slice(0, 3)
 
   // Get today's date and motivational message
@@ -74,9 +75,9 @@ export function HomePage() {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
     >
-      <div className="min-h-screen py-12">
+      <div className="min-h-screen py-6 pb-24">
         {/* Header Section */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
           <h1 className="premium-text-platinum mb-2" style={{
             fontSize: 'var(--premium-text-h1)',
             fontWeight: 700,
@@ -97,15 +98,58 @@ export function HomePage() {
           </div>
         </div>
 
+        {/* Priority Projects - At the Top! */}
+        {priorityProjects.length > 0 && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <div className="premium-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+                <h2 className="premium-text-platinum" style={{
+                  fontSize: 'var(--premium-text-h3)',
+                  fontWeight: 700
+                }}>
+                  ⭐ Priority Projects
+                </h2>
+              </div>
+              <div className="space-y-4">
+                {priorityProjects.map(project => (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block premium-glass-subtle p-4 rounded-lg hover:bg-white/10 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h3 className="font-bold flex-1" style={{ color: 'var(--premium-text-primary)', fontSize: 'var(--premium-text-body-lg)' }}>
+                        {project.title}
+                      </h3>
+                      <ArrowRight className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-amber)' }} />
+                    </div>
+                    {project.metadata?.next_step && (
+                      <div className="premium-glass-subtle rounded-lg p-3 mt-3">
+                        <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-amber)' }}>
+                          NEXT STEP:
+                        </div>
+                        <div className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+                          {project.metadata.next_step}
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Today's Focus - Daily Queue */}
         {dailyQueue.length > 0 && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-            <div className="premium-card p-8">
-              <div className="flex items-center justify-between mb-6">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <div className="premium-card p-6">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <Zap className="h-8 w-8" style={{ color: 'var(--premium-amber)' }} />
+                  <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
                   <h2 className="premium-text-platinum" style={{
-                    fontSize: 'var(--premium-text-h2)',
+                    fontSize: 'var(--premium-text-h3)',
                     fontWeight: 700
                   }}>
                     Today's Focus
@@ -120,7 +164,7 @@ export function HomePage() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {dailyQueue.map((score) => {
                   const project = score.project
                   const nextStep = project.metadata?.next_step
@@ -155,7 +199,7 @@ export function HomePage() {
                     <Link
                       key={score.project_id}
                       to="/today"
-                      className="group premium-glass-subtle p-6 rounded-xl transition-all duration-300 hover:bg-white/10"
+                      className="group premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
                       {/* Category Badge */}
                       <div className="mb-4">
@@ -215,7 +259,7 @@ export function HomePage() {
         )}
 
         {/* Quick Stats Grid */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Link to="/memories" className="premium-stat-card group">
               <div className="flex items-center justify-between mb-3">
@@ -239,7 +283,7 @@ export function HomePage() {
                 {pendingSuggestions.length}
               </div>
               <div className="text-sm" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-sm)', letterSpacing: 'var(--premium-tracking-wide)' }}>
-                PENDING
+                SUGGESTED
               </div>
             </Link>
 
@@ -272,13 +316,13 @@ export function HomePage() {
         </section>
 
         {/* Recent Activity - 3 Columns */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <h2 className="premium-text-platinum mb-6" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+          <h2 className="premium-text-platinum mb-4" style={{ fontSize: 'var(--premium-text-h3)', fontWeight: 700 }}>
             Recent Activity
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Latest Thoughts */}
-            <div className="premium-card p-6">
+            <div className="premium-card p-4">
               <div className="flex items-center gap-3 mb-4">
                 <Brain className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
                 <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
@@ -325,7 +369,7 @@ export function HomePage() {
             </div>
 
             {/* Latest Reading */}
-            <div className="premium-card p-6">
+            <div className="premium-card p-4">
               <div className="flex items-center gap-3 mb-4">
                 <BookOpen className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
                 <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
@@ -344,7 +388,7 @@ export function HomePage() {
             </div>
 
             {/* Active Project Progress */}
-            <div className="premium-card p-6">
+            <div className="premium-card p-4">
               <div className="flex items-center gap-3 mb-4">
                 <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
                 <h3 className="premium-text-platinum font-semibold" style={{ fontSize: 'var(--premium-text-body-lg)' }}>
@@ -393,13 +437,13 @@ export function HomePage() {
 
         {/* Quick Actions - Always Visible */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="premium-text-platinum mb-6" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+          <h2 className="premium-text-platinum mb-4" style={{ fontSize: 'var(--premium-text-h3)', fontWeight: 700 }}>
             Quick Actions
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               to="/memories"
-              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+              className="premium-card p-6 text-center group hover:bg-white/5 transition-all"
             >
               <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-indigo-glow)' }}>
                 <Brain className="h-8 w-8" style={{ color: 'var(--premium-indigo)' }} />
@@ -417,7 +461,7 @@ export function HomePage() {
 
             <Link
               to="/reading"
-              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+              className="premium-card p-6 text-center group hover:bg-white/5 transition-all"
             >
               <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-emerald-glow)' }}>
                 <BookOpen className="h-8 w-8" style={{ color: 'var(--premium-emerald)' }} />
@@ -435,7 +479,7 @@ export function HomePage() {
 
             <Link
               to="/projects"
-              className="premium-card p-8 text-center group hover:bg-white/5 transition-all"
+              className="premium-card p-6 text-center group hover:bg-white/5 transition-all"
             >
               <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ background: 'var(--premium-blue-glow)' }}>
                 <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
