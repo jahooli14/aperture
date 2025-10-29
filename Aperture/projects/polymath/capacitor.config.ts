@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.polymath.app',
-  appName: 'Polymath',
+  appId: 'com.aperture.app',
+  appName: 'Aperture',
   webDir: 'dist',
   server: {
     androidScheme: 'https'

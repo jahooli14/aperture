@@ -1,6 +1,6 @@
 {
-  "name": "Polymath - Personal Knowledge Graph",
-  "short_name": "Polymath",
+  "name": "Aperture - Personal Knowledge System",
+  "short_name": "Aperture",
   "description": "Voice-first personal knowledge graph and creative project tracker",
   "start_url": "/",
   "display": "standalone",

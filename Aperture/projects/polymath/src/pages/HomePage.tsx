@@ -83,7 +83,7 @@ export function HomePage() {
             letterSpacing: 'var(--premium-tracking-tight)',
             textShadow: '0 0 20px rgba(229, 231, 235, 0.2)'
           }}>
-            Welcome to Polymath
+            Welcome to Aperture
           </h1>
           <div className="flex items-center justify-center gap-3 flex-wrap" style={{ color: 'var(--premium-text-secondary)' }}>
             <div className="flex items-center gap-2">

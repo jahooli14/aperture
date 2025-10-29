@@ -11,7 +11,7 @@ import { useToast } from '../components/ui/toast'
 import { PRESET_FEEDS } from '../types/rss'
 import type { RSSFeed } from '../types/rss'
 
-const EMAIL_ADDRESS = 'read@polymath.vercel.app'
+const EMAIL_ADDRESS = 'read@aperture.vercel.app'
 
 export function RSSFeedsPage() {
   const { feeds, loading, syncing, fetchFeeds, subscribeFeed, updateFeed, unsubscribeFeed, syncFeeds } = useRSSStore()
