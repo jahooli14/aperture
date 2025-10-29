@@ -111,8 +111,9 @@ export default function ConstellationView() {
   const deviceCapability = useMemo(() => {
     const gpu = (navigator as any).gpu
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    if (isMobile) return 'low'
-    if (gpu) return 'high'
+    const cores = navigator.hardwareConcurrency || 2
+    if (isMobile || cores < 4) return 'low'
+    if (gpu && cores >= 8) return 'high'
     return 'medium'
   }, [])
 
@@ -128,8 +129,8 @@ export default function ConstellationView() {
     const scene = graphRef.current.scene()
     if (!scene) return
 
-    // Create starfield particles
-    const starCount = deviceCapability === 'low' ? 1000 : deviceCapability === 'medium' ? 2000 : 5000
+    // Create starfield particles - reduced for better performance
+    const starCount = deviceCapability === 'low' ? 500 : deviceCapability === 'medium' ? 1000 : 2000
     const starGeometry = new THREE.BufferGeometry()
     const starPositions = new Float32Array(starCount * 3)
     const starSizes = new Float32Array(starCount)
@@ -534,7 +535,7 @@ export default function ConstellationView() {
 
   // Add glow to links - optimized particle count by device capability
   const linkDirectionalParticles = useCallback(() => {
-    return deviceCapability === 'low' ? 2 : deviceCapability === 'medium' ? 4 : 6
+    return deviceCapability === 'low' ? 1 : deviceCapability === 'medium' ? 2 : 4
   }, [deviceCapability])
 
   // Custom clustering forces - make similar nodes attract

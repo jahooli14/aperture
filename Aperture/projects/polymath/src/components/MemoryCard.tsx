@@ -2,10 +2,9 @@
  * MemoryCard Component - Stunning Visual Design
  */
 
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, memo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, Link2, Sparkles, User, Tag, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, Bridge } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -16,7 +15,7 @@ interface MemoryCardProps {
   onDelete?: (memory: Memory) => void
 }
 
-export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
+export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
@@ -310,4 +309,4 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
       </CardContent>
     </Card>
   )
-}
+})

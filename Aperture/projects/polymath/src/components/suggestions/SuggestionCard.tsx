@@ -2,7 +2,7 @@
  * SuggestionCard Component - Stunning Visual Design
  */
 
-import React, { useState } from 'react'
+import React, { useState, memo } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -11,7 +11,7 @@ import type { SuggestionCardProps } from '../../types'
 
 type FeedbackReason = 'too_hard' | 'not_interesting' | 'not_relevant' | 'too_time_consuming' | 'missing_skills' | 'other'
 
-export function SuggestionCard({
+export const SuggestionCard = memo(function SuggestionCard({
   suggestion,
   onRate,
   onBuild,
@@ -309,7 +309,7 @@ export function SuggestionCard({
       )}
     </Card>
   )
-}
+})
 
 function ScorePill({ label, score }: { label: string; score: number }) {
   const percentage = Math.round(score * 100)

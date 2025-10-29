@@ -2,7 +2,7 @@
  * ProjectCard Component - Stunning Visual Design
  */
 
-import React from 'react'
+import React, { memo } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
@@ -10,7 +10,7 @@ import { Button } from '../ui/button'
 import { Clock, Zap, Edit, Trash2 } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 
-export function ProjectCard({
+export const ProjectCard = memo(function ProjectCard({
   project,
   onEdit,
   onDelete,
@@ -184,7 +184,7 @@ export function ProjectCard({
     </Card>
     </motion.div>
   )
-}
+})
 
 function formatRelativeTime(isoString: string): string {
   const date = new Date(isoString)

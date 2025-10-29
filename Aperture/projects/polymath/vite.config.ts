@@ -47,6 +47,10 @@ export default defineConfig({
             '@capacitor/splash-screen',
             '@capacitor/status-bar'
           ],
+          // Heavy 3D visualization libraries - separate chunk
+          '3d-vendor': ['three', 'd3-force-3d', 'react-force-graph-3d'],
+          // Animation library
+          'animation-vendor': ['framer-motion'],
         },
       },
     },
