@@ -176,7 +176,7 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Prominent Capture FAB - Overlays the nav */}
+      {/* Prominent Capture FAB - Positioned well above nav */}
       <motion.button
         onClick={handleCaptureClick}
         disabled={!isOnline}
@@ -192,7 +192,7 @@ export function FloatingNav() {
         }}
         className="fixed left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
           opacity: !isOnline ? 0.3 : 1,
         }}
       >
