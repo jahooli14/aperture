@@ -593,7 +593,7 @@ export default function ConstellationView() {
         linkDirectionalParticles={linkDirectionalParticles()}
         linkDirectionalParticleSpeed={0.005}
         linkDirectionalParticleWidth={2}
-        backgroundColor="#0f1419"
+        backgroundColor="#0f1829"
         showNavInfo={false}
         enableNodeDrag={true}
         enableNavigationControls={true}

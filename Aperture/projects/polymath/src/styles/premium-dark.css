@@ -13,14 +13,14 @@
 :root {
   /* === PREMIUM COLOR SYSTEM === */
 
-  /* Midnight Blue - Sophisticated Dark Palette */
-  --premium-midnight: #0a0e1a;
-  --premium-surface-base: #0f1419;
-  --premium-surface-1: #141b26;
-  --premium-surface-2: #1a2332;
-  --premium-surface-3: #1f2a3d;
-  --premium-surface-4: #243047;
-  --premium-surface-5: #2a3752;
+  /* Midnight Blue - Rich Navy Palette (ACTUALLY BLUE) */
+  --premium-midnight: #0d1420;
+  --premium-surface-base: #0f1829;
+  --premium-surface-1: #141f32;
+  --premium-surface-2: #1a2638;
+  --premium-surface-3: #1f2d3f;
+  --premium-surface-4: #243447;
+  --premium-surface-5: #2a3b4f;
 
   /* Metallic Accents */
   --premium-platinum: #e5e7eb;
@@ -201,15 +201,15 @@
   box-shadow: var(--premium-shadow-1);
 }
 
-/* Stat Card - Premium Glass with Metallic Accent */
+/* Stat Card - Premium Glass with Softer Contrast */
 .premium-stat-card {
-  background: rgba(20, 27, 38, 0.5);
+  background: rgba(26, 35, 50, 0.4);
   backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--premium-radius-xl);
   box-shadow:
-    var(--premium-shadow-2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: var(--premium-space-6);
   position: relative;
   overflow: hidden;
@@ -223,23 +223,23 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--premium-platinum), transparent);
-  opacity: 0.4;
+  background: linear-gradient(90deg, transparent, rgba(229, 231, 235, 0.3), transparent);
+  opacity: 0.3;
 }
 
 .premium-stat-card:hover {
-  background: rgba(20, 27, 38, 0.7);
+  background: rgba(26, 35, 50, 0.6);
   backdrop-filter: blur(32px) saturate(200%);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow:
-    var(--premium-shadow-3),
-    var(--premium-glow-platinum),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(229, 231, 235, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transform: translateY(-4px);
 }
 
 .premium-stat-card:hover::before {
-  opacity: 0.8;
+  opacity: 0.5;
 }
 
 /* Premium Button - Filled */

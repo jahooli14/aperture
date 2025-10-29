@@ -1,6 +1,6 @@
 /**
- * Floating Navigation - Comprehensive Multi-Layer Menu
- * Replaces both bottom navbar and VoiceFAB
+ * Floating Navigation - Premium Glassmorphic Bottom Nav Bar
+ * Fixed navigation bar with integrated voice input
  */
 
 import { useState } from 'react'
@@ -13,8 +13,7 @@ import {
   Home,
   Mic,
   Calendar,
-  Sparkles,
-  X
+  Sparkles
 } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -36,21 +35,22 @@ interface NavOption {
   id: string
   label: string
   icon: any
-  path: string
+  path?: string
+  action?: 'voice' | 'navigate'
   color: keyof typeof SCHEMA_COLORS
 }
 
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home', label: 'Home', icon: Home, path: '/', color: 'home' },
-  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', color: 'projects' },
-  { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', color: 'reading' },
-  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', color: 'timeline' },
-  { id: 'constellation', label: 'Galaxy', icon: Sparkles, path: '/constellation', color: 'constellation' }
+  { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
+  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'voice', label: 'Capture', icon: Mic, action: 'voice', color: 'thoughts' }, // Center spotlight
+  { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
+  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', action: 'navigate', color: 'timeline' },
+  { id: 'constellation', label: 'Galaxy', icon: Sparkles, path: '/constellation', action: 'navigate', color: 'constellation' }
 ]
 
 export function FloatingNav() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
@@ -59,23 +59,17 @@ export function FloatingNav() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Determine current section
-  const getCurrentSection = (): keyof typeof SCHEMA_COLORS => {
-    const path = location.pathname
-    if (path.startsWith('/constellation')) return 'constellation'
-    if (path.startsWith('/memories')) return 'thoughts'
-    if (path.startsWith('/projects')) return 'projects'
-    if (path.startsWith('/reading')) return 'reading'
-    if (path.startsWith('/knowledge-timeline') || path.startsWith('/timeline')) return 'timeline'
-    return 'home'
+  const handleNavClick = (option: NavOption) => {
+    if (option.action === 'voice' && isOnline) {
+      setIsVoiceOpen(true)
+    } else if (option.action === 'navigate' && option.path) {
+      navigate(option.path)
+    }
   }
 
-  const currentSection = getCurrentSection()
-  const currentColors = SCHEMA_COLORS[currentSection]
-
-  const handleNavClick = (option: NavOption) => {
-    navigate(option.path)
-    setIsMenuOpen(false)
+  const isActive = (option: NavOption): boolean => {
+    if (option.action === 'voice') return false
+    return location.pathname === option.path
   }
 
   const handleVoiceTranscript = async (text: string) => {
@@ -181,131 +175,101 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
-      {/* Menu Backdrop - Premium Glass Scrim */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsMenuOpen(false)}
+      {/* Bottom Navigation Bar - Premium Glassmorphism */}
+      <motion.nav
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        className="fixed bottom-0 left-0 right-0 z-40 pb-safe"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)',
+        }}
+      >
+        <div className="mx-auto max-w-2xl px-4">
+          <div
+            className="premium-glass-strong flex items-center justify-around gap-1 px-2 py-3"
             style={{
-              backgroundColor: 'rgba(10, 14, 26, 0.5)',
-              backdropFilter: 'blur(12px)'
+              borderRadius: 'var(--premium-radius-2xl)',
             }}
-            className="fixed inset-0 z-40"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Menu List - Premium Glass */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-28 right-6 z-50 flex flex-col gap-3"
           >
-            {NAV_OPTIONS.map((option, index) => {
+            {NAV_OPTIONS.map((option) => {
               const Icon = option.icon
               const colors = SCHEMA_COLORS[option.color]
-              const isActive = location.pathname === option.path
+              const active = isActive(option)
+              const isVoiceButton = option.action === 'voice'
 
               return (
                 <motion.button
                   key={option.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{
-                    opacity: 1,
-                    x: 0,
-                    transition: { delay: index * 0.05 }
-                  }}
-                  exit={{ opacity: 0, x: 20 }}
-                  whileHover={{ scale: 1.05, x: -5 }}
-                  whileTap={{ scale: 0.95 }}
                   onClick={() => handleNavClick(option)}
-                  className="flex items-center gap-3 group"
+                  disabled={isVoiceButton && !isOnline}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all relative min-w-[64px]"
+                  style={{
+                    opacity: (isVoiceButton && !isOnline) ? 0.3 : 1,
+                  }}
                 >
-                  {/* Label - Premium Glass */}
-                  <div className={`px-4 py-2 whitespace-nowrap transition-all font-medium ${isActive ? 'premium-glass-strong' : 'premium-glass'}`}>
-                    <span style={{ color: 'var(--premium-platinum)' }}>
-                      {option.label}
-                    </span>
-                  </div>
+                  {/* Active Background Glow */}
+                  {active && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 rounded-xl"
+                      style={{
+                        background: `linear-gradient(135deg, ${colors.glow}, transparent)`,
+                        border: `1px solid ${colors.primary}40`,
+                      }}
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
 
-                  {/* Icon Button - Premium Glass FAB */}
-                  <div className={`premium-fab w-14 h-14 flex items-center justify-center ${isActive ? '!border-white/20' : ''}`}>
-                    <Icon className="w-6 h-6" style={{ color: isActive ? colors.primary : 'var(--premium-platinum)' }} />
-                  </div>
+                  {/* Voice Button Special Glow */}
+                  {isVoiceButton && isOnline && (
+                    <motion.div
+                      animate={{
+                        opacity: [0.3, 0.6, 0.3],
+                        scale: [1, 1.1, 1],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: 'easeInOut'
+                      }}
+                      className="absolute inset-0 rounded-xl pointer-events-none"
+                      style={{
+                        background: `radial-gradient(circle, ${colors.glow}, transparent 70%)`,
+                        filter: 'blur(8px)',
+                      }}
+                    />
+                  )}
+
+                  {/* Icon */}
+                  <Icon
+                    className={`relative z-10 ${isVoiceButton ? 'w-6 h-6' : 'w-5 h-5'}`}
+                    style={{
+                      color: active ? colors.primary : 'var(--premium-platinum)',
+                      transition: 'color 200ms'
+                    }}
+                  />
+
+                  {/* Label */}
+                  <span
+                    className="relative z-10 text-xs font-medium"
+                    style={{
+                      color: active ? colors.primary : 'var(--premium-text-tertiary)',
+                      fontSize: 'var(--premium-text-body-xs)',
+                      letterSpacing: 'var(--premium-tracking-wide)',
+                      transition: 'color 200ms'
+                    }}
+                  >
+                    {option.label}
+                  </span>
                 </motion.button>
               )
             })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Voice FAB - Premium Dark */}
-      <AnimatePresence>
-        {!isMenuOpen && isOnline && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsVoiceOpen(true)}
-            className="premium-fab fixed bottom-28 right-6 z-40 w-14 h-14 flex items-center justify-center"
-          >
-            <Mic className="w-5 h-5" style={{ color: 'var(--premium-platinum)' }} />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Main FAB - Premium Dark */}
-      <motion.button
-        onClick={() => {
-          if (isVoiceOpen) {
-            setIsVoiceOpen(false)
-          } else {
-            setIsMenuOpen(!isMenuOpen)
-          }
-        }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="premium-fab fixed bottom-6 right-6 z-50 w-16 h-16 flex items-center justify-center relative"
-      >
-        {/* Icon */}
-        <motion.div
-          animate={{ rotate: isMenuOpen ? 90 : 0 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        >
-          {isMenuOpen ? (
-            <X className="w-7 h-7" style={{ color: 'var(--premium-platinum)' }} />
-          ) : (
-            <Sparkles className="w-7 h-7" style={{ color: 'var(--premium-platinum)' }} />
-          )}
-        </motion.div>
-
-        {/* Premium platinum pulse when closed */}
-        {!isMenuOpen && (
-          <motion.div
-            animate={{
-              opacity: [0.1, 0.2, 0.1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-            className="absolute inset-0 pointer-events-none rounded-lg"
-            style={{
-              background: 'radial-gradient(circle, var(--premium-platinum) 0%, transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
-        )}
-      </motion.button>
+          </div>
+        </div>
+      </motion.nav>
     </>
   )
 }
