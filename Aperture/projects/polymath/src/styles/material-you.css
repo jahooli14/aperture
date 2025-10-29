@@ -10,51 +10,51 @@
  */
 
 :root {
-  /* === Material You Color System === */
+  /* === Material You Color System (Dark Mode) === */
 
-  /* Primary - Main brand color (Blue) */
-  --md-sys-color-primary: #1e40af;
-  --md-sys-color-on-primary: #ffffff;
-  --md-sys-color-primary-container: #dbeafe;
-  --md-sys-color-on-primary-container: #1e3a8a;
+  /* Primary - Main brand color (Blue) - Brighter for dark backgrounds */
+  --md-sys-color-primary: #60a5fa;
+  --md-sys-color-on-primary: #0f1829;
+  --md-sys-color-primary-container: #1e3a8a;
+  --md-sys-color-on-primary-container: #dbeafe;
 
-  /* Secondary - Complementary (Indigo) */
-  --md-sys-color-secondary: #4f46e5;
-  --md-sys-color-on-secondary: #ffffff;
-  --md-sys-color-secondary-container: #e0e7ff;
-  --md-sys-color-on-secondary-container: #312e81;
+  /* Secondary - Complementary (Indigo) - Brighter for dark backgrounds */
+  --md-sys-color-secondary: #818cf8;
+  --md-sys-color-on-secondary: #0f1829;
+  --md-sys-color-secondary-container: #312e81;
+  --md-sys-color-on-secondary-container: #e0e7ff;
 
-  /* Tertiary - Accent (Amber) */
-  --md-sys-color-tertiary: #f59e0b;
-  --md-sys-color-on-tertiary: #000000;
-  --md-sys-color-tertiary-container: #fef3c7;
-  --md-sys-color-on-tertiary-container: #78350f;
+  /* Tertiary - Accent (Amber) - Brighter for dark backgrounds */
+  --md-sys-color-tertiary: #fbbf24;
+  --md-sys-color-on-tertiary: #0f1829;
+  --md-sys-color-tertiary-container: #78350f;
+  --md-sys-color-on-tertiary-container: #fef3c7;
 
-  /* Error */
-  --md-sys-color-error: #dc2626;
-  --md-sys-color-on-error: #ffffff;
-  --md-sys-color-error-container: #fee2e2;
-  --md-sys-color-on-error-container: #991b1b;
+  /* Error - Brighter for dark backgrounds */
+  --md-sys-color-error: #f87171;
+  --md-sys-color-on-error: #0f1829;
+  --md-sys-color-error-container: #991b1b;
+  --md-sys-color-on-error-container: #fee2e2;
 
-  /* Surface & Background */
-  --md-sys-color-surface: #fefefe;
-  --md-sys-color-on-surface: #1a1a1a;
-  --md-sys-color-surface-variant: #f3f4f6;
-  --md-sys-color-on-surface-variant: #6b7280;
+  /* Surface & Background - Dark theme */
+  --md-sys-color-surface: #1a2332;
+  --md-sys-color-on-surface: #e5e7eb;
+  --md-sys-color-surface-variant: #374151;
+  --md-sys-color-on-surface-variant: #d1d5db;
 
-  --md-sys-color-background: #f9fafb;
-  --md-sys-color-on-background: #1f2937;
+  --md-sys-color-background: #0f1829;
+  --md-sys-color-on-background: #e5e7eb;
 
-  /* Surface tints for elevation (Material You's tonal elevation) */
-  --md-sys-color-surface-1: #f0f4ff; /* 5% primary tint */
-  --md-sys-color-surface-2: #e8eeff; /* 8% primary tint */
-  --md-sys-color-surface-3: #e0e9ff; /* 11% primary tint */
-  --md-sys-color-surface-4: #dde7ff; /* 12% primary tint */
-  --md-sys-color-surface-5: #d8e3ff; /* 14% primary tint */
+  /* Surface tints for elevation (Material You's tonal elevation) - Dark with blue tint */
+  --md-sys-color-surface-1: #1e2a3d; /* 5% primary tint on dark */
+  --md-sys-color-surface-2: #233046; /* 8% primary tint on dark */
+  --md-sys-color-surface-3: #28364f; /* 11% primary tint on dark */
+  --md-sys-color-surface-4: #2a3952; /* 12% primary tint on dark */
+  --md-sys-color-surface-5: #2d3d58; /* 14% primary tint on dark */
 
-  /* Outline */
-  --md-sys-color-outline: #d1d5db;
-  --md-sys-color-outline-variant: #e5e7eb;
+  /* Outline - Lighter for dark backgrounds */
+  --md-sys-color-outline: #4b5563;
+  --md-sys-color-outline-variant: #374151;
 
   /* === Material You Typography === */
 

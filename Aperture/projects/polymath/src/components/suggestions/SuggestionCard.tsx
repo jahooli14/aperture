@@ -194,7 +194,12 @@ export function SuggestionCard({
           onClick={handleSpark}
           variant="outline"
           size="sm"
-          className="flex-1 btn-secondary h-11"
+          className="flex-1 h-11"
+          style={{
+            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15))',
+            border: '1.5px solid rgba(251, 191, 36, 0.4)',
+            color: '#fbbf24'
+          }}
           title="This sparks my interest!"
           disabled={loadingAction !== null}
         >
@@ -209,7 +214,12 @@ export function SuggestionCard({
           onClick={handleMehClick}
           variant="outline"
           size="sm"
-          className="flex-1 btn-secondary h-11"
+          className="flex-1 h-11"
+          style={{
+            background: 'rgba(107, 114, 128, 0.15)',
+            border: '1.5px solid rgba(156, 163, 175, 0.3)',
+            color: '#9ca3af'
+          }}
           title="Not interested"
           disabled={loadingAction !== null}
         >
