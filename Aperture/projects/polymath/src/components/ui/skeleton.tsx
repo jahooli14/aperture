@@ -5,7 +5,8 @@ export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {}
 export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-neutral-200", className)}
+      className={cn("animate-pulse rounded-md", className)}
+      style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
       {...props}
     />
   )
@@ -14,7 +15,7 @@ export function Skeleton({ className, ...props }: SkeletonProps) {
 // Pre-built skeleton patterns
 export function SkeletonCard() {
   return (
-    <div className="pro-card p-6 space-y-4">
+    <div className="premium-card p-6 space-y-4">
       <div className="flex items-start justify-between">
         <div className="flex-1 space-y-3">
           <Skeleton className="h-6 w-3/4" />
@@ -27,6 +28,17 @@ export function SkeletonCard() {
         <Skeleton className="h-6 w-16 rounded-full" />
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
+    </div>
+  )
+}
+
+// Memory/Project grid skeleton
+export function SkeletonGrid({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonCard key={i} />
+      ))}
     </div>
   )
 }

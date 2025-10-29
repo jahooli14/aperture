@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, memo } from 'react'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from './ui/button'
@@ -18,7 +19,18 @@ interface MemoryCardProps {
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
+  const [exitX, setExitX] = useState(0)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
+
+  // Motion values for swipe gesture
+  const x = useMotionValue(0)
+  const opacity = useTransform(x, [-150, 0], [0, 1])
+  const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
+  const backgroundColor = useTransform(
+    x,
+    [-150, 0],
+    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)']
+  )
 
   useEffect(() => {
     fetchBridgesForMemory(memory.id).then(setBridges)
@@ -66,8 +78,43 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
   const isManual = memory.audiopen_id?.startsWith('manual_')
 
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+
+    // Swipe left = Delete (threshold: -100px or fast velocity)
+    if ((offset < -100 || velocity < -500) && onDelete) {
+      setExitX(-1000)
+      setTimeout(() => onDelete(memory), 200)
+    }
+  }
+
   return (
-    <Card className="group h-full flex flex-col premium-card">
+    <motion.div
+      style={{ x }}
+      drag={onDelete ? 'x' : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.1}
+      onDragEnd={handleDragEnd}
+      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="relative"
+    >
+      {/* Delete Indicator */}
+      {onDelete && (
+        <motion.div
+          style={{ opacity: deleteIndicatorOpacity }}
+          className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10"
+        >
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-6 w-6 text-red-400" />
+            <span className="text-xl font-bold text-red-400">DELETE</span>
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div style={{ backgroundColor }}>
+        <Card className="group h-full flex flex-col premium-card">
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
       {/* Accent gradient bar */}
@@ -308,5 +355,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         )}
       </CardContent>
     </Card>
+      </motion.div>
+    </motion.div>
   )
 })

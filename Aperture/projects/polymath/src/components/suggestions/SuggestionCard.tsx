@@ -3,6 +3,7 @@
  */
 
 import React, { useState, memo } from 'react'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -20,6 +21,14 @@ export const SuggestionCard = memo(function SuggestionCard({
 }: SuggestionCardProps) {
   const [loadingAction, setLoadingAction] = useState<'spark' | 'meh' | 'build' | null>(null)
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false)
+  const [exitX, setExitX] = useState(0)
+
+  // Motion values for swipe gesture
+  const x = useMotionValue(0)
+  const opacity = useTransform(x, [-200, 0, 200], [0, 1, 0])
+  const rotate = useTransform(x, [-200, 0, 200], [-20, 0, 20])
+  const sparkIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const mehIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
 
   const handleSpark = async () => {
     setLoadingAction('spark')
@@ -65,11 +74,54 @@ export const SuggestionCard = memo(function SuggestionCard({
 
   const isCreative = suggestion.capability_ids.length === 0
 
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+
+    // Swipe right = Spark (threshold: 100px or fast velocity)
+    if (offset > 100 || velocity > 500) {
+      setExitX(1000)
+      setTimeout(() => handleSpark(), 200)
+    }
+    // Swipe left = Meh (threshold: -100px or fast velocity)
+    else if (offset < -100 || velocity < -500) {
+      setExitX(-1000)
+      setTimeout(() => handleMehClick(), 200)
+    }
+  }
+
   return (
-    <Card
-      className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer`}
-      onClick={handleMore}
+    <motion.div
+      style={{ x, opacity, rotate }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={handleDragEnd}
+      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="relative"
     >
+      {/* Swipe Indicators */}
+      <motion.div
+        style={{ opacity: sparkIndicatorOpacity }}
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+      >
+        <div className="text-6xl font-bold text-amber-400 drop-shadow-lg">
+          ⚡ SPARK
+        </div>
+      </motion.div>
+      <motion.div
+        style={{ opacity: mehIndicatorOpacity }}
+        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+      >
+        <div className="text-6xl font-bold text-gray-400 drop-shadow-lg">
+          👎 MEH
+        </div>
+      </motion.div>
+
+      <Card
+        className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer`}
+        onClick={handleMore}
+      >
       {/* Subtle accent bar */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
 
@@ -308,6 +360,7 @@ export const SuggestionCard = memo(function SuggestionCard({
         </div>
       )}
     </Card>
+    </motion.div>
   )
 })
 
