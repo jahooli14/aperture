@@ -435,7 +435,7 @@ Focus on resilience and adaptation - the UI may have changed significantly.`
     response: ComputerUseResponse,
     executionResult: FunctionCallResult
   ): Promise<void> {
-    // Add model's response to history
+    // Add model's function call response to history
     loopState.conversationHistory.push({
       role: 'model',
       parts: [{
@@ -443,10 +443,9 @@ Focus on resilience and adaptation - the UI may have changed significantly.`
       }]
     });
 
-    // Add execution result to history
-    // Note: functionResponse MUST be in its own message part (Gemini API requirement)
+    // Add execution result - must use 'function' role for functionResponse
     loopState.conversationHistory.push({
-      role: 'user',
+      role: 'function' as any, // Gemini requires 'function' role for functionResponse
       parts: [{
         functionResponse: {
           name: 'computer',
@@ -458,14 +457,14 @@ Focus on resilience and adaptation - the UI may have changed significantly.`
       }]
     });
 
-    // Add new screenshot in a separate message if available
-    // This is critical for visual context in the next iteration
+    // Add new screenshot in a separate user message if available
+    // This provides visual context for the next iteration
     if (executionResult.screenshot) {
       loopState.lastScreenshot = executionResult.screenshot;
       loopState.conversationHistory.push({
         role: 'user',
         parts: [{
-          text: 'Here is the new screenshot after the action was executed. Analyze it to determine the next step.'
+          text: 'Here is the screenshot after executing the action. Analyze it and determine your next step.'
         }, {
           inlineData: {
             data: executionResult.screenshot.toString('base64'),

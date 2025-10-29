@@ -178,10 +178,10 @@ export function DailyQueuePage() {
           <div className="inline-flex items-center justify-center mb-4">
             <Zap className="h-12 w-12 text-blue-900" />
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+          <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
             Today's Focus
           </h1>
-          <p className="text-lg text-neutral-600">
+          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
           </p>
         </div>
@@ -241,7 +241,7 @@ export function DailyQueuePage() {
         {/* Gap-Filling Prompts */}
         {gapPrompts.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
               <Lightbulb className="h-6 w-6 text-amber-600" />
               Quick Question
             </h2>
@@ -249,10 +249,10 @@ export function DailyQueuePage() {
               <Card key={prompt.id} className="border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50">
                 <CardContent className="pt-6">
                   <div className="mb-4">
-                    <p className="text-lg font-medium text-neutral-900 mb-2">
+                    <p className="text-lg font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                       {prompt.prompt_text}
                     </p>
-                    <p className="text-sm text-neutral-600">
+                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       💡 {prompt.reasoning}
                     </p>
                   </div>
@@ -279,27 +279,27 @@ export function DailyQueuePage() {
         {/* Creative Opportunities */}
         {creativeOpportunities.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-neutral-900 mb-4 flex items-center gap-2">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
               <Sparkles className="h-6 w-6 text-purple-600" />
               Project Opportunity
             </h2>
             {creativeOpportunities.slice(0, 1).map(opp => (
               <Card key={opp.id} className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50">
                 <CardContent className="pt-6">
-                  <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                  <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                     {opp.title}
                   </h3>
-                  <p className="text-neutral-700 mb-4">
+                  <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                     {opp.description}
                   </p>
 
                   <div className="mb-4 p-4 bg-white/80 rounded-lg">
-                    <p className="text-sm font-medium text-neutral-900 mb-2">
+                    <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Why this fits you:
                     </p>
                     <ul className="space-y-1">
                       {opp.why_you.map((reason, i) => (
-                        <li key={i} className="text-sm text-neutral-700 flex items-start gap-2">
+                        <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
                           <span className="text-purple-600 mt-1">✓</span>
                           {reason}
                         </li>
@@ -316,12 +316,12 @@ export function DailyQueuePage() {
                   )}
 
                   <div className="mb-4">
-                    <p className="text-sm font-medium text-neutral-900 mb-2">
+                    <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Next steps:
                     </p>
                     <ol className="space-y-1">
                       {opp.next_steps.map((step, i) => (
-                        <li key={i} className="text-sm text-neutral-700">
+                        <li key={i} className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                           {i + 1}. {step}
                         </li>
                       ))}
@@ -353,10 +353,10 @@ export function DailyQueuePage() {
                 <div className="inline-flex items-center justify-center mb-4">
                   <Zap className="h-16 w-16 text-blue-900" />
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-neutral-900">
+                <h3 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
                   {totalProjects === 0 ? 'No active projects yet' : 'Nothing to work on right now'}
                 </h3>
-                <p className="text-lg text-neutral-600 mb-8">
+                <p className="text-lg mb-8" style={{ color: 'var(--premium-text-secondary)' }}>
                   {totalProjects === 0
                     ? 'Create your first project or build a suggestion to get started.'
                     : 'All your projects are either blocked or don\'t match your current context. Try changing your context or viewing all projects.'}
@@ -404,17 +404,17 @@ export function DailyQueuePage() {
 
                     {/* Project Title & Description */}
                     <div className="mb-4">
-                      <h3 className="text-2xl font-bold text-neutral-900 mb-2">
+                      <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                         {project.title}
                       </h3>
                       {project.description && (
-                        <p className="text-neutral-600">{project.description}</p>
+                        <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
                       )}
                     </div>
 
                     {/* Match Reason */}
                     <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-amber-50 rounded-lg border border-blue-200">
-                      <p className="text-sm font-medium text-neutral-800">
+                      <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                         {score.match_reason}
                       </p>
                     </div>
@@ -423,8 +423,8 @@ export function DailyQueuePage() {
                     {progress !== undefined && (
                       <div className="mb-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-neutral-700">Progress</span>
-                          <span className="text-sm font-bold text-neutral-900">{progress}%</span>
+                          <span className="text-sm font-medium" style={{ color: 'var(--premium-text-secondary)' }}>Progress</span>
+                          <span className="text-sm font-bold" style={{ color: 'var(--premium-text-primary)' }}>{progress}%</span>
                         </div>
                         <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                           <div
@@ -444,7 +444,7 @@ export function DailyQueuePage() {
                     )}
 
                     {/* Requirements */}
-                    <div className="mb-6 flex items-center gap-4 text-sm text-neutral-600">
+                    <div className="mb-6 flex items-center gap-4 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       <div className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
                         {formatTime(project.estimated_next_step_time)}
@@ -482,7 +482,7 @@ export function DailyQueuePage() {
             {totalProjects > queue.length && (
               <Card className="border-2 border-dashed border-gray-300">
                 <CardContent className="pt-6 text-center">
-                  <p className="text-neutral-600 mb-4">
+                  <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                     💡 <strong>{totalProjects - queue.length} more projects</strong> available
                   </p>
                   <Button
@@ -498,7 +498,7 @@ export function DailyQueuePage() {
             {/* Skip Day */}
             <Card className="border-2 border-gray-200 bg-gray-50">
               <CardContent className="pt-6 text-center">
-                <p className="text-neutral-600 mb-4">
+                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                   Not feeling it today? That's okay.
                 </p>
                 <Button

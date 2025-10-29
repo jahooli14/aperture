@@ -67,7 +67,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
 
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <CardTitle className="text-lg font-semibold text-neutral-900 leading-tight flex-1">
+          <CardTitle className="text-lg font-semibold leading-tight flex-1" style={{ color: 'var(--premium-text-primary)' }}>
             {memory.title}
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-neutral-500">
+        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
           <Calendar className="h-3 w-3" />
           <span>{formatDate(memory.created_at)}</span>
         </div>
@@ -171,7 +171,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             {memory.entities.people && memory.entities.people.length > 0 && (
               <div className="flex flex-wrap gap-1.5 items-center">
                 <User className="h-3 w-3 text-blue-600" />
-                <span className="text-xs font-semibold text-gray-600">People:</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
                 {memory.entities.people.slice(0, 3).map((person) => (
                   <span
                     key={person}
@@ -181,7 +181,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
                   </span>
                 ))}
                 {memory.entities.people.length > 3 && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                     +{memory.entities.people.length - 3} more
                   </span>
                 )}
@@ -190,7 +190,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
             {memory.entities.topics && memory.entities.topics.length > 0 && (
               <div className="flex flex-wrap gap-1.5 items-center">
                 <Brain className="h-3 w-3 text-purple-600" />
-                <span className="text-xs font-semibold text-gray-600">Topics:</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
                 {memory.entities.topics.slice(0, 3).map((topic) => (
                   <span
                     key={topic}
@@ -200,7 +200,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
                   </span>
                 ))}
                 {memory.entities.topics.length > 3 && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                     +{memory.entities.topics.length - 3} more
                   </span>
                 )}
@@ -214,7 +214,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
           <div className="pt-3 border-t border-white/20">
             <div className="flex items-center gap-2 mb-2">
               <Link2 className="h-4 w-4 text-cyan-600" />
-              <span className="text-sm font-semibold text-gray-700">
+              <span className="text-sm font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
                 {bridges.length} Connection{bridges.length > 1 ? 's' : ''}
               </span>
             </div>
@@ -224,7 +224,7 @@ export function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
                   key={bridge.id}
                   className="flex items-center justify-between text-xs bg-gradient-to-r from-cyan-50 to-blue-50 rounded-lg px-3 py-2 border border-cyan-100"
                 >
-                  <span className="text-gray-600 capitalize">
+                  <span className="capitalize" style={{ color: 'var(--premium-text-secondary)' }}>
                     {bridge.bridge_type.replace(/_/g, ' ')}
                   </span>
                   <div className="px-2 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-full font-bold">
