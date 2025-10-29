@@ -71,32 +71,28 @@ export function ReadingPage() {
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       <motion.div
-        className="bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-20"
+        className="min-h-screen pb-20"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
       >
       {/* Header */}
-      <div className="backdrop-blur-xl bg-white/80 border-b-2 shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+      <div className="premium-glass-strong border-b shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900">
+              <h1 className="text-2xl sm:text-3xl font-bold premium-text-platinum" style={{ letterSpacing: 'var(--premium-tracking-tight)' }}>
                 Reading Queue
               </h1>
-              <p className="text-sm sm:text-base text-neutral-600 mt-1">
+              <p className="text-sm sm:text-base mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
                 {filteredArticles.length} {filteredArticles.length === 1 ? 'article' : 'articles'}
               </p>
             </div>
 
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-4 py-2 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift"
-              style={{
-                borderColor: 'rgba(16, 185, 129, 0.5)',
-                color: '#10b981'
-              }}
+              className="premium-btn-primary rounded-full px-4 py-2 font-medium inline-flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Save Article</span>
@@ -118,12 +114,12 @@ export function ReadingPage() {
                   onClick={() => handleTabChange(tab.key)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.key
-                      ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
-                      : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
+                      ? 'premium-glass border shadow-xl'
+                      : 'premium-glass-subtle border shadow-md hover:shadow-lg'
                   }`}
                   style={{
-                    borderColor: activeTab === tab.key ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.2)',
-                    color: activeTab === tab.key ? '#10b981' : '#6b7280'
+                    borderColor: activeTab === tab.key ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.06)',
+                    color: activeTab === tab.key ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
                   }}
                 >
                   <Icon className="h-4 w-4" />
@@ -140,19 +136,19 @@ export function ReadingPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         {loading && articles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 text-blue-900 animate-spin mb-4" />
-            <p className="text-neutral-600">Loading articles...</p>
+            <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
+            <p style={{ color: 'var(--premium-text-secondary)' }}>Loading articles...</p>
           </div>
         ) : filteredArticles.length === 0 ? (
-          <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-20 text-center" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+          <div className="premium-card p-20 text-center">
             <div className="flex flex-col items-center justify-center">
-              <BookOpen className="h-16 w-16 text-green-400 mb-4" />
-              <h3 className="text-xl font-semibold text-neutral-900 mb-2">
+              <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-emerald)' }} />
+              <h3 className="text-xl font-semibold premium-text-platinum mb-2">
                 {activeTab === 'queue'
                   ? 'No articles yet'
                   : `No ${activeTab} articles`}
               </h3>
-              <p className="text-neutral-600 text-center max-w-md mb-6">
+              <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
                 {activeTab === 'queue'
                   ? 'Save your first article to start building your reading queue'
                   : `You don't have any ${activeTab} articles yet`}
@@ -160,11 +156,7 @@ export function ReadingPage() {
               {activeTab === 'queue' && (
                 <button
                   onClick={() => setShowSaveDialog(true)}
-                  className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-3 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift"
-                  style={{
-                    borderColor: 'rgba(16, 185, 129, 0.5)',
-                    color: '#10b981'
-                  }}
+                  className="premium-btn-primary rounded-full px-6 py-3 font-medium inline-flex items-center gap-2"
                 >
                   <Plus className="h-5 w-5" />
                   Save Your First Article

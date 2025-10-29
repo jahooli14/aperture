@@ -10,10 +10,8 @@ import {
   Layers,
   FolderKanban,
   FileText,
-  Home,
   Mic,
-  Calendar,
-  Sparkles
+  Settings
 } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -36,18 +34,16 @@ interface NavOption {
   label: string
   icon: any
   path?: string
-  action?: 'voice' | 'navigate'
+  action?: 'navigate'
   color: keyof typeof SCHEMA_COLORS
 }
 
+// Simplified to 3 core tenets + settings
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'voice', label: 'Capture', icon: Mic, action: 'voice', color: 'thoughts' }, // Center spotlight
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
-  { id: 'timeline', label: 'Timeline', icon: Calendar, path: '/knowledge-timeline', action: 'navigate', color: 'timeline' },
-  { id: 'constellation', label: 'Galaxy', icon: Sparkles, path: '/constellation', action: 'navigate', color: 'constellation' }
+  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'more', label: 'More', icon: Settings, path: '/settings', action: 'navigate', color: 'constellation' },
 ]
 
 export function FloatingNav() {
@@ -60,16 +56,19 @@ export function FloatingNav() {
   const location = useLocation()
 
   const handleNavClick = (option: NavOption) => {
-    if (option.action === 'voice' && isOnline) {
-      setIsVoiceOpen(true)
-    } else if (option.action === 'navigate' && option.path) {
+    if (option.action === 'navigate' && option.path) {
       navigate(option.path)
     }
   }
 
   const isActive = (option: NavOption): boolean => {
-    if (option.action === 'voice') return false
     return location.pathname === option.path
+  }
+
+  const handleCaptureClick = () => {
+    if (isOnline) {
+      setIsVoiceOpen(true)
+    }
   }
 
   const handleVoiceTranscript = async (text: string) => {
@@ -175,6 +174,75 @@ export function FloatingNav() {
         )}
       </AnimatePresence>
 
+      {/* Prominent Capture FAB - Overlays the nav */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{
+          type: 'spring',
+          stiffness: 260,
+          damping: 20,
+          delay: 0.2
+        }}
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50"
+        style={{
+          bottom: 'max(calc(env(safe-area-inset-bottom) + 4.5rem), 5.5rem)',
+        }}
+      >
+        <motion.button
+          onClick={handleCaptureClick}
+          disabled={!isOnline}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
+          style={{
+            opacity: !isOnline ? 0.3 : 1,
+          }}
+        >
+          {/* Pulsing Glow Effect */}
+          {isOnline && (
+            <motion.div
+              animate={{
+                opacity: [0.4, 0.8, 0.4],
+                scale: [1, 1.2, 1],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: 'easeInOut'
+              }}
+              className="absolute inset-0 rounded-2xl pointer-events-none"
+              style={{
+                background: `radial-gradient(circle, ${SCHEMA_COLORS.thoughts.glow}, transparent 70%)`,
+                filter: 'blur(12px)',
+              }}
+            />
+          )}
+
+          {/* Icon */}
+          <Mic
+            className="relative z-10 w-8 h-8"
+            style={{
+              color: 'var(--premium-platinum)',
+              filter: 'drop-shadow(0 0 8px rgba(99, 102, 241, 0.6))'
+            }}
+          />
+
+          {/* Label below FAB */}
+          <span
+            className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs font-semibold whitespace-nowrap"
+            style={{
+              color: 'var(--premium-platinum)',
+              fontSize: 'var(--premium-text-body-xs)',
+              letterSpacing: 'var(--premium-tracking-wide)',
+              textShadow: '0 0 8px rgba(99, 102, 241, 0.4)'
+            }}
+          >
+            CAPTURE
+          </span>
+        </motion.button>
+      </motion.div>
+
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
         initial={{ y: 100, opacity: 0 }}
@@ -187,7 +255,7 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-4">
           <div
-            className="premium-glass-strong flex items-center justify-around gap-1 px-2 py-3"
+            className="premium-glass-strong flex items-center justify-around gap-1 px-4 py-3"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
             }}
@@ -196,19 +264,14 @@ export function FloatingNav() {
               const Icon = option.icon
               const colors = SCHEMA_COLORS[option.color]
               const active = isActive(option)
-              const isVoiceButton = option.action === 'voice'
 
               return (
                 <motion.button
                   key={option.id}
                   onClick={() => handleNavClick(option)}
-                  disabled={isVoiceButton && !isOnline}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all relative min-w-[64px]"
-                  style={{
-                    opacity: (isVoiceButton && !isOnline) ? 0.3 : 1,
-                  }}
+                  className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-all relative flex-1"
                 >
                   {/* Active Background Glow */}
                   {active && (
@@ -223,29 +286,9 @@ export function FloatingNav() {
                     />
                   )}
 
-                  {/* Voice Button Special Glow */}
-                  {isVoiceButton && isOnline && (
-                    <motion.div
-                      animate={{
-                        opacity: [0.3, 0.6, 0.3],
-                        scale: [1, 1.1, 1],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: 'easeInOut'
-                      }}
-                      className="absolute inset-0 rounded-xl pointer-events-none"
-                      style={{
-                        background: `radial-gradient(circle, ${colors.glow}, transparent 70%)`,
-                        filter: 'blur(8px)',
-                      }}
-                    />
-                  )}
-
                   {/* Icon */}
                   <Icon
-                    className={`relative z-10 ${isVoiceButton ? 'w-6 h-6' : 'w-5 h-5'}`}
+                    className="relative z-10 w-6 h-6"
                     style={{
                       color: active ? colors.primary : 'var(--premium-platinum)',
                       transition: 'color 200ms'

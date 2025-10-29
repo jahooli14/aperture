@@ -292,8 +292,8 @@ export function HomePage() {
           {priorityProjects.length > 0 && (
             <section className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-                  <Rocket className="h-6 w-6 text-blue-600" />
+                <h2 className="flex items-center gap-2 premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+                  <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
                   Active Project Steps
                 </h2>
               </div>
@@ -302,22 +302,21 @@ export function HomePage() {
                   <Link
                     key={project.id}
                     to={`/projects`}
-                    className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-gradient-to-br from-blue-50/80 to-purple-50/80 border-2 shadow-xl hover-lift p-6 transition-all duration-300 hover:border-blue-400 hover:shadow-2xl"
-                    style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}
+                    className="group premium-card p-6 transition-all duration-300"
                   >
                     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }} />
                     <div className="relative z-10">
                       <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-bold text-lg text-neutral-900">{project.title}</h3>
-                        <div className="px-2 py-1 rounded-lg bg-blue-100 text-blue-900 text-xs font-bold">
+                        <h3 className="font-bold text-lg premium-text-platinum">{project.title}</h3>
+                        <div className="px-2 py-1 rounded-lg premium-glass-subtle text-xs font-bold" style={{ color: 'var(--premium-blue)' }}>
                           PRIORITY
                         </div>
                       </div>
-                      <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border-2 border-blue-200">
-                        <div className="text-xs font-bold text-blue-900 uppercase tracking-wide mb-2">
+                      <div className="premium-glass-subtle rounded-xl p-4">
+                        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-blue)' }}>
                           NEXT STEP:
                         </div>
-                        <div className="text-neutral-900 font-medium">
+                        <div className="premium-text-platinum font-medium">
                           {project.metadata?.next_step}
                         </div>
                       </div>
@@ -334,8 +333,8 @@ export function HomePage() {
             {aiSparks.length > 0 && (
               <section className="lg:col-span-2">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-neutral-900 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-amber-500" />
+                  <h2 className="flex items-center gap-2 premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
+                    <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
                     AI-Generated Sparks
                   </h2>
                 </div>
@@ -343,19 +342,18 @@ export function HomePage() {
                   {aiSparks.slice(0, 3).map((spark, index) => (
                     <div
                       key={index}
-                      className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-5 transition-all duration-300 hover:border-amber-300 hover:shadow-2xl"
-                      style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                      className="premium-card p-5 transition-all duration-300"
                     >
                       <div className="absolute top-0 right-0 p-2">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
                       </div>
-                      <div className="text-sm font-medium text-amber-900 mb-2">
+                      <div className="text-sm font-medium mb-2" style={{ color: 'var(--premium-amber)' }}>
                         Connection Suggestion
                       </div>
-                      <div className="text-neutral-900 text-sm mb-3">
+                      <div className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
                         {spark.ai_reasoning || 'AI found a potential connection between your items'}
                       </div>
-                      <button className="text-xs text-blue-900 hover:text-blue-950 font-medium">
+                      <button className="text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
                         View connection →
                       </button>
                       <div className="absolute bottom-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(90deg, #f59e0b, #fbbf24)' }} />
@@ -368,12 +366,12 @@ export function HomePage() {
             {/* Recent Suggestions */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-neutral-900">
+                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
                   Recent Suggestions
                 </h2>
                 <Link
                   to="/suggestions"
-                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
+                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
                 >
                   View all →
                 </Link>
@@ -384,15 +382,14 @@ export function HomePage() {
                     <button
                       key={suggestion.id}
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-4 w-full text-left transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
-                      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+                      className="group premium-card p-4 w-full text-left transition-all duration-300"
                     >
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
                       <div className="relative z-10">
-                        <h3 className="font-medium text-neutral-900 mb-1">
+                        <h3 className="font-medium premium-text-platinum mb-1">
                           {suggestion.title}
                         </h3>
-                        <p className="text-sm text-neutral-600 line-clamp-2">
+                        <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
                           {suggestion.description}
                         </p>
                       </div>
@@ -400,10 +397,10 @@ export function HomePage() {
                     </button>
                   ))
                 ) : (
-                  <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-                    <Sparkles className="h-12 w-12 text-blue-400 mx-auto mb-3" />
-                    <p className="text-neutral-900 font-semibold mb-2">Ready to Generate Sparks?</p>
-                    <p className="text-sm text-neutral-600 mb-4">
+                  <div className="premium-card p-8 text-center">
+                    <Sparkles className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
+                    <p className="premium-text-platinum font-semibold mb-2">Ready to Generate Sparks?</p>
+                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                       {memories.length > 0
                         ? "You have thoughts captured. Click Generate Sparks to see AI connections!"
                         : "Add some thoughts, then generate personalized project suggestions"
@@ -424,12 +421,12 @@ export function HomePage() {
             {/* Recent Thoughts */}
             <section>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-neutral-900">
+                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
                   Recent Thoughts
                 </h2>
                 <Link
                   to="/memories"
-                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
+                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
                 >
                   View all →
                 </Link>
@@ -440,15 +437,14 @@ export function HomePage() {
                     <Link
                       key={memory.id}
                       to="/memories"
-                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-4 block transition-all duration-300 hover:border-indigo-300 hover:shadow-2xl"
-                      style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}
+                      className="group premium-card p-4 block transition-all duration-300"
                     >
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
                       <div className="relative z-10">
-                        <div className="text-sm text-neutral-900 line-clamp-3">
+                        <div className="text-sm line-clamp-3" style={{ color: 'var(--premium-text-secondary)' }}>
                           {memory.body || memory.title}
                         </div>
-                        <div className="text-xs text-neutral-500 mt-2">
+                        <div className="text-xs mt-2" style={{ color: 'var(--premium-text-tertiary)' }}>
                           {new Date(memory.created_at).toLocaleDateString()}
                         </div>
                       </div>
@@ -456,10 +452,10 @@ export function HomePage() {
                     </Link>
                   ))
                 ) : (
-                  <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(99, 102, 241, 0.3)' }}>
-                    <Brain className="h-12 w-12 text-indigo-400 mx-auto mb-3" />
-                    <p className="text-neutral-900 font-semibold mb-2">Start Your Knowledge Graph</p>
-                    <p className="text-sm text-neutral-600 mb-4">
+                  <div className="premium-card p-8 text-center">
+                    <Brain className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-indigo)' }} />
+                    <p className="premium-text-platinum font-semibold mb-2">Start Your Knowledge Graph</p>
+                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                       Capture your thoughts, skills, and interests via voice notes or text
                     </p>
                     <Link
@@ -477,12 +473,12 @@ export function HomePage() {
             {/* Active Projects */}
             <section className="lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-neutral-900">
+                <h2 className="premium-text-platinum" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 700 }}>
                   Active Projects
                 </h2>
                 <Link
                   to="/projects"
-                  className="text-sm text-blue-900 hover:text-blue-950 font-medium"
+                  className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}
                 >
                   View all →
                 </Link>
@@ -493,18 +489,17 @@ export function HomePage() {
                     <Link
                       key={project.id}
                       to="/projects"
-                      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl hover-lift p-5 transition-all duration-300 hover:border-blue-300 hover:shadow-2xl"
-                      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+                      className="group premium-card p-5 transition-all duration-300"
                     >
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
                       <div className="relative z-10">
                         <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-neutral-900 flex-1">
+                          <h3 className="font-semibold premium-text-platinum flex-1">
                             {project.title}
                           </h3>
-                          <Rocket className="h-5 w-5 text-blue-600 flex-shrink-0 ml-2" />
+                          <Rocket className="h-5 w-5 flex-shrink-0 ml-2" style={{ color: 'var(--premium-blue)' }} />
                         </div>
-                        <p className="text-sm text-neutral-600 line-clamp-2">
+                        <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
                           {project.description}
                         </p>
                       </div>
@@ -513,10 +508,10 @@ export function HomePage() {
                   ))}
                 </div>
               ) : (
-                <div className="relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl p-8 text-center" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-                  <Rocket className="h-12 w-12 text-blue-400 mx-auto mb-3" />
-                  <p className="text-neutral-900 font-semibold mb-2">Build Your First Project</p>
-                  <p className="text-sm text-neutral-600 mb-4">
+                <div className="premium-card p-8 text-center">
+                  <Rocket className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
+                  <p className="premium-text-platinum font-semibold mb-2">Build Your First Project</p>
+                  <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                     Generate ideas, find what sparks, then build with progress tracking
                   </p>
                   <Link

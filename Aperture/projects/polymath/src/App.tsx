@@ -26,6 +26,7 @@ const KnowledgeTimelinePage = lazy(() => import('./pages/KnowledgeTimelinePage')
 const ScrollTimelinePage = lazy(() => import('./pages/ScrollTimelinePage').then(m => ({ default: m.ScrollTimelinePage })))
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const ConstellationView = lazy(() => import('./pages/ConstellationView'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -118,6 +119,7 @@ export default function App() {
                   <Route path="/knowledge-timeline" element={<ScrollTimelinePage />} />
                   <Route path="/insights" element={<InsightsPage />} />
                   <Route path="/constellation" element={<ConstellationView />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>

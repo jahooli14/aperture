@@ -94,12 +94,12 @@ export function ProjectsPage() {
         {/* Centered header content below button */}
         <div className="text-center">
           <div className="inline-flex items-center justify-center mb-4">
-            <Rocket className="h-12 w-12 text-blue-900" />
+            <Rocket className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-neutral-900">
+          <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
             My Projects
           </h1>
-          <p className="text-lg text-neutral-600">
+          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
             Track your creative work and strengthen capabilities
           </p>
         </div>
@@ -115,12 +115,12 @@ export function ProjectsPage() {
             onClick={() => setViewMode('grid')}
             className={`h-9 w-9 p-0 transition-all ${
               viewMode === 'grid'
-                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
-                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
+                ? 'premium-card border-2 shadow-xl'
+                : 'premium-card border-2 shadow-md hover:shadow-lg'
             }`}
             style={{
-              borderColor: viewMode === 'grid' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
-              color: viewMode === 'grid' ? '#3b82f6' : '#6b7280'
+              borderColor: viewMode === 'grid' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+              color: viewMode === 'grid' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
             }}
           >
             <LayoutGrid className="h-4 w-4" />
@@ -131,12 +131,12 @@ export function ProjectsPage() {
             onClick={() => setViewMode('compact')}
             className={`h-9 w-9 p-0 transition-all ${
               viewMode === 'compact'
-                ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl'
-                : 'backdrop-blur-xl bg-white/60 border-2 shadow-md hover:shadow-lg'
+                ? 'premium-card border-2 shadow-xl'
+                : 'premium-card border-2 shadow-md hover:shadow-lg'
             }`}
             style={{
-              borderColor: viewMode === 'compact' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
-              color: viewMode === 'compact' ? '#3b82f6' : '#6b7280'
+              borderColor: viewMode === 'compact' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+              color: viewMode === 'compact' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
             }}
           >
             <List className="h-4 w-4" />
@@ -157,11 +157,12 @@ export function ProjectsPage() {
               onClick={() => setFilter(key as typeof filter)}
               className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
                 filter === key
-                  ? 'backdrop-blur-xl bg-white/80 border-2 shadow-xl text-blue-600'
-                  : 'backdrop-blur-xl bg-white/60 border-2 shadow-md text-gray-700 hover:shadow-lg'
+                  ? 'premium-card border-2 shadow-xl'
+                  : 'premium-card border-2 shadow-md hover:shadow-lg'
               }`}
               style={{
-                borderColor: filter === key ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)'
+                borderColor: filter === key ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+                color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
               }}
             >
               {label}
@@ -171,17 +172,17 @@ export function ProjectsPage() {
 
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
-          <Card className="mb-8 border-blue-200 bg-gradient-to-r from-blue-50 to-amber-50">
+          <Card className="mb-8 premium-card" style={{ borderColor: 'var(--premium-blue)' }}>
             <CardContent className="pt-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Rocket className="h-5 w-5 text-blue-900" />
+              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
+                <Rocket className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                 Demo Projects - Progress Tracking in Action
               </h3>
-              <p className="text-neutral-600 leading-relaxed mb-3">
+              <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
                 These 4 demo projects show different stages: <strong>Completed</strong> (Standing Desk 100%), <strong>Active</strong> (Portfolio 65%, Image Classifier 80%, Meditation 40%).
                 Each has <strong>next steps</strong> and tracks capability growth as you work.
               </p>
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                 💡 <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
               </p>
             </CardContent>
@@ -206,14 +207,14 @@ export function ProjectsPage() {
           </div>
         ) : projects.length === 0 ? (
           /* Empty State */
-          <Card className="pro-card">
+          <Card className="premium-card">
             <CardContent className="py-24">
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center justify-center">
-                  <Rocket className="h-16 w-16 text-blue-900" />
+                  <Rocket className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
                 </div>
-                <h3 className="text-2xl font-bold text-neutral-900">No projects yet</h3>
-                <p className="text-neutral-600 max-w-md mx-auto">
+                <h3 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>No projects yet</h3>
+                <p className="max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
                   Build a project from a suggestion or create one manually to get started on your creative journey
                 </p>
                 <CreateProjectDialog />
@@ -297,14 +298,14 @@ function CompactProjectCard({
 
   return (
     <Card
-      className="group relative overflow-hidden rounded-2xl backdrop-blur-xl bg-white/80 border-2 shadow-xl transition-all duration-300 hover:border-blue-300 hover:shadow-2xl cursor-pointer"
-      style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}
+      className="group relative overflow-hidden rounded-2xl premium-card border-2 shadow-xl transition-all duration-300 hover:shadow-2xl cursor-pointer"
+      style={{ borderColor: 'rgba(var(--premium-blue-rgb), 0.3)' }}
       onClick={handleCardClick}
     >
       {/* Glow effect on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(var(--premium-blue-rgb), 0.15)' }} />
       {/* Accent gradient bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-accent))' }} />
 
       <CardContent className="relative z-10 p-4">
         {/* Header Row */}
@@ -312,12 +313,12 @@ function CompactProjectCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">📄</span>
-              <h3 className="font-bold text-neutral-900 truncate text-base">
+              <h3 className="font-bold truncate text-base" style={{ color: 'var(--premium-text-primary)' }}>
                 {project.title}
               </h3>
             </div>
             {project.description && (
-              <p className="text-sm text-neutral-600 line-clamp-1">
+              <p className="text-sm line-clamp-1" style={{ color: 'var(--premium-text-secondary)' }}>
                 {project.description}
               </p>
             )}
@@ -327,28 +328,30 @@ function CompactProjectCard({
               onClick={onEdit}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 text-gray-400 hover:text-blue-900 hover:bg-blue-50 touch-manipulation"
+              className="h-11 w-11 p-0 hover:bg-blue-50 touch-manipulation"
+              style={{ color: 'var(--premium-text-tertiary)' }}
               aria-label="Edit project"
             >
-              <Edit className="h-5 w-5" />
+              <Edit className="h-5 w-5" style={{ color: 'inherit' }} />
             </Button>
             <Button
               onClick={onDelete}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+              className="h-11 w-11 p-0 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+              style={{ color: 'var(--premium-text-tertiary)' }}
               aria-label="Delete project"
             >
-              <Trash2 className="h-5 w-5" />
+              <Trash2 className="h-5 w-5" style={{ color: 'inherit' }} />
             </Button>
           </div>
         </div>
 
         {/* Next Step - Compact */}
         {project.metadata?.next_step && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 mb-3">
-            <div className="text-xs font-semibold text-orange-800 mb-1">Next</div>
-            <p className="text-sm text-neutral-900 line-clamp-2 leading-snug">
+          <div className="premium-card rounded-lg px-3 py-2 mb-3" style={{ borderColor: 'var(--premium-blue)' }}>
+            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>
+            <p className="text-sm line-clamp-2 leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
               {project.metadata.next_step}
             </p>
           </div>
@@ -362,19 +365,22 @@ function CompactProjectCard({
 
           {typeof project.metadata?.progress === 'number' && (
             <div className="flex items-center gap-2 flex-1">
-              <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(var(--premium-text-tertiary-rgb), 0.2)' }}>
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-900"
-                  style={{ width: `${project.metadata.progress}%` }}
+                  className="h-full"
+                  style={{
+                    width: `${project.metadata.progress}%`,
+                    background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-accent))'
+                  }}
                 />
               </div>
-              <span className="font-bold text-blue-900 w-8 text-right">
+              <span className="font-bold w-8 text-right" style={{ color: 'var(--premium-blue)' }}>
                 {project.metadata.progress}%
               </span>
             </div>
           )}
 
-          <div className="flex items-center gap-1 text-neutral-500 ml-auto">
+          <div className="flex items-center gap-1 ml-auto" style={{ color: 'var(--premium-text-tertiary)' }}>
             <Clock className="h-3 w-3" />
             <span className="whitespace-nowrap">{relativeTime}</span>
           </div>
