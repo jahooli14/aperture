@@ -14,7 +14,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { DemoDataBanner } from '../components/onboarding/DemoDataBanner'
-import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus } from 'lucide-react'
+import { Sparkles, Brain, Rocket, TrendingUp, ArrowRight, Plus, Layers, FileText } from 'lucide-react'
 import type { ProjectSuggestion } from '../types'
 import { supabase } from '../lib/supabase'
 
