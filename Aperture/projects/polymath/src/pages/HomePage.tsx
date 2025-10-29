@@ -12,7 +12,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
-import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Target, Clock, Zap, Battery } from 'lucide-react'
+import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Clock, Zap, Battery } from 'lucide-react'
 import type { ProjectScore, DailyQueueResponse } from '../types'
 
 export function HomePage() {
@@ -47,7 +47,6 @@ export function HomePage() {
   const pendingSuggestions = suggestions.filter(s => s.status === 'pending')
   const sparkSuggestions = suggestions.filter(s => s.status === 'spark')
   const activeProjects = projects.filter(p => p.status === 'active')
-  const priorityProjects = projects.filter(p => p.priority && p.metadata?.next_step)
   const recentMemories = memories.slice(0, 3)
 
   // Get today's date and motivational message
@@ -98,7 +97,7 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Daily Queue Preview */}
+        {/* Today's Focus - Daily Queue */}
         {dailyQueue.length > 0 && (
           <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
             <div className="premium-card p-8">
@@ -109,7 +108,7 @@ export function HomePage() {
                     fontSize: 'var(--premium-text-h2)',
                     fontWeight: 700
                   }}>
-                    Daily Queue
+                    Today's Focus
                   </h2>
                 </div>
                 <Link
@@ -117,7 +116,7 @@ export function HomePage() {
                   className="text-sm font-medium inline-flex items-center gap-2 hover:gap-3 transition-all"
                   style={{ color: 'var(--premium-amber)' }}
                 >
-                  View full queue <ArrowRight className="h-4 w-4" />
+                  See all <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
 
@@ -214,70 +213,6 @@ export function HomePage() {
             </div>
           </section>
         )}
-
-        {/* Today's Focus Card - Top Priority */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          {priorityProjects.length > 0 ? (
-            <div className="premium-card p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Target className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
-                <h2 className="premium-text-platinum" style={{
-                  fontSize: 'var(--premium-text-h2)',
-                  fontWeight: 700
-                }}>
-                  Today's Focus
-                </h2>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {priorityProjects.slice(0, 2).map(project => (
-                  <Link
-                    key={project.id}
-                    to="/projects"
-                    className="group premium-glass-subtle p-6 rounded-xl transition-all duration-300 hover:bg-white/10"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <h3 className="premium-text-platinum font-bold text-lg flex-1">
-                        {project.title}
-                      </h3>
-                      <Rocket className="h-6 w-6 flex-shrink-0 ml-3" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div className="premium-glass-subtle rounded-lg p-4 mb-4">
-                      <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-blue)' }}>
-                        NEXT STEP:
-                      </div>
-                      <div className="premium-text-platinum font-medium">
-                        {project.metadata?.next_step}
-                      </div>
-                    </div>
-                    <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {project.description}
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
-                      Take action <ArrowRight className="h-3 w-3" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="premium-card p-8 text-center">
-              <Target className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-              <h2 className="premium-text-platinum mb-3" style={{ fontSize: 'var(--premium-text-h2)', fontWeight: 600 }}>
-                No Active Projects Yet
-              </h2>
-              <p className="mb-6" style={{ color: 'var(--premium-text-secondary)', fontSize: 'var(--premium-text-body-base)', maxWidth: '500px', margin: '0 auto 24px' }}>
-                Create your first project to see your next steps here
-              </p>
-              <Link
-                to="/projects"
-                className="premium-btn-primary inline-flex items-center gap-2"
-              >
-                <Plus className="h-5 w-5" />
-                Create First Project
-              </Link>
-            </div>
-          )}
-        </section>
 
         {/* Quick Stats Grid */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
