@@ -27,6 +27,7 @@ const ScrollTimelinePage = lazy(() => import('./pages/ScrollTimelinePage').then(
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const ConstellationView = lazy(() => import('./pages/ConstellationView'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 
 // Loading fallback component
 function PageLoader() {
@@ -120,6 +121,7 @@ export default function App() {
                   <Route path="/insights" element={<InsightsPage />} />
                   <Route path="/constellation" element={<ConstellationView />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/rss" element={<RSSFeedsPage />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>

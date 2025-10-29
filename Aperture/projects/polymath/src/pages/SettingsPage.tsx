@@ -12,7 +12,8 @@ import {
   Settings,
   ChevronRight,
   Lightbulb,
-  ListChecks
+  ListChecks,
+  Rss
 } from 'lucide-react'
 
 interface SettingsOption {
@@ -43,6 +44,15 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
     path: '/today',
     color: '#3b82f6',
     glow: 'rgba(59, 130, 246, 0.4)'
+  },
+  {
+    id: 'rss',
+    label: 'RSS Feeds',
+    description: 'Auto-import articles from your favorite sources',
+    icon: Rss,
+    path: '/rss',
+    color: '#f97316',
+    glow: 'rgba(249, 115, 22, 0.4)'
   },
   {
     id: 'timeline',
