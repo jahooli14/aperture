@@ -241,7 +241,7 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-4">
           <div
-            className="premium-glass-strong flex items-center justify-around gap-1 px-4 py-3"
+            className="premium-glass-strong flex items-center justify-between gap-2 px-3 py-3"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
             }}
@@ -257,7 +257,8 @@ export function FloatingNav() {
                   onClick={() => handleNavClick(option)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-all relative flex-1"
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all relative min-w-0"
+                  style={{ flex: '1 1 0px' }}
                 >
                   {/* Active Background Glow */}
                   {active && (
