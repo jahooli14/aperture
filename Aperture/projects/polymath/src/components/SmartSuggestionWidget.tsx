@@ -47,7 +47,7 @@ export function SmartSuggestionWidget() {
   const fetchSuggestion = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/smart-suggestion')
+      const response = await fetch('/api/analytics?resource=smart-suggestion')
       if (response.ok) {
         const data: SuggestionResponse = await response.json()
         setSuggestion(data.suggestion)
