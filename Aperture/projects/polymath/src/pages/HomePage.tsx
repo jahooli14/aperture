@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -12,10 +12,11 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
-import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Clock, Zap, Battery, Link2, Sparkles } from 'lucide-react'
+import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Clock, Zap, Battery, Link2, Sparkles, Search } from 'lucide-react'
 import type { ProjectScore, DailyQueueResponse } from '../types'
 
 export function HomePage() {
+  const navigate = useNavigate()
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects } = useProjectStore()
   const { memories, fetchMemories } = useMemoryStore()
@@ -58,15 +59,28 @@ export function HomePage() {
       transition={{ duration: 0.2 }}
     >
       <div className="min-h-screen py-6 pb-24">
-        {/* Simple Header */}
+        {/* Header with Search */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <h1 className="premium-text-platinum text-center" style={{
-            fontSize: 'var(--premium-text-h1)',
-            fontWeight: 700,
-            letterSpacing: 'var(--premium-tracking-tight)'
-          }}>
-            Clandestined
-          </h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="premium-text-platinum flex-1 text-center" style={{
+              fontSize: 'var(--premium-text-h1)',
+              fontWeight: 700,
+              letterSpacing: 'var(--premium-tracking-tight)'
+            }}>
+              Clandestined
+            </h1>
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(59, 130, 246, 0.2)',
+                color: 'var(--premium-blue)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Priority Projects - At the Top! */}
