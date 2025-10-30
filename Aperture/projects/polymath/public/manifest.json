@@ -1,22 +1,33 @@
 {
-  "name": "Clandestined - Personal Knowledge System",
-  "short_name": "Clandestined",
-  "description": "Voice-first personal knowledge graph and creative project tracker",
+  "name": "Polymath - Personal Knowledge Graph",
+  "short_name": "Polymath",
+  "description": "Voice-to-memory personal knowledge graph & creative project tracker",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ea580c",
+  "background_color": "#141b26",
+  "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
-  "icons": [],
-  "categories": ["productivity", "utilities", "lifestyle"],
-  "screenshots": [],
-  "share_target": {
-    "action": "/share",
-    "method": "POST",
-    "enctype": "multipart/form-data",
-    "params": {
-      "title": "title",
-      "text": "text"
+  "icons": [
+    {
+      "src": "/brain.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
-  }
+  ],
+  "categories": ["productivity", "education"],
+  "shortcuts": [
+    {
+      "name": "Capture Thought",
+      "short_name": "Capture",
+      "description": "Quickly capture a new thought",
+      "url": "/memories?action=create"
+    },
+    {
+      "name": "Today's Focus",
+      "short_name": "Today",
+      "description": "View today's prioritized projects",
+      "url": "/today"
+    }
+  ]
 }
