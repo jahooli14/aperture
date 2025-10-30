@@ -1,19 +1,20 @@
 /**
  * Error Boundary Component
- * Catches React errors and displays fallback UI instead of blank screen
+ * Catches React errors and displays a fallback UI
  */
 
-import { Component, ReactNode } from 'react'
-import { AlertCircle, RefreshCw } from 'lucide-react'
+import React, { Component, ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
 
 interface Props {
   children: ReactNode
+  fallback?: ReactNode
 }
 
 interface State {
   hasError: boolean
   error: Error | null
-  errorInfo: any
+  errorInfo: React.ErrorInfo | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -26,16 +27,16 @@ export class ErrorBoundary extends Component<Props, State> {
     }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return {
       hasError: true,
-      error,
-      errorInfo: null
+      error
     }
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
-    console.error('React Error Boundary caught:', error, errorInfo)
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[ErrorBoundary] Caught error:', error, errorInfo)
+
     this.setState({
       error,
       errorInfo
@@ -48,53 +49,93 @@ export class ErrorBoundary extends Component<Props, State> {
       error: null,
       errorInfo: null
     })
-    window.location.href = '/'
+
+    // Reload the page to reset state
+    window.location.reload()
   }
 
   render() {
     if (this.state.hasError) {
+      // Custom fallback UI if provided
+      if (this.props.fallback) {
+        return this.props.fallback
+      }
+
+      // Default fallback UI
       return (
-        <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--premium-bg-primary)' }}>
-          <div className="max-w-md w-full premium-card p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
-                <AlertCircle className="h-6 w-6" style={{ color: '#ef4444' }} />
+        <div
+          className="min-h-screen flex items-center justify-center p-4"
+          style={{ backgroundColor: 'var(--premium-surface-base)' }}
+        >
+          <div
+            className="max-w-md w-full premium-card p-8 text-center"
+            style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
+          >
+            <div className="inline-flex items-center justify-center mb-4">
+              <div
+                className="h-16 w-16 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}
+              >
+                <AlertTriangle
+                  className="h-8 w-8"
+                  style={{ color: '#ef4444' }}
+                />
               </div>
-              <h1 className="text-xl font-bold premium-text-platinum">
-                Something went wrong
-              </h1>
             </div>
 
-            <p style={{ color: 'var(--premium-text-secondary)' }}>
-              The app encountered an unexpected error. This has been logged and we'll look into it.
+            <h2
+              className="text-2xl font-bold mb-3"
+              style={{ color: 'var(--premium-text-primary)' }}
+            >
+              Something went wrong
+            </h2>
+
+            <p
+              className="mb-6 text-sm"
+              style={{ color: 'var(--premium-text-secondary)' }}
+            >
+              We've encountered an unexpected error. Please refresh the page to continue.
             </p>
 
-            {this.state.error && (
-              <details className="text-sm">
-                <summary className="cursor-pointer transition-colors" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  Error details
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="mb-6 text-left">
+                <summary
+                  className="cursor-pointer text-sm font-medium mb-2"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                >
+                  Error Details (Dev Mode)
                 </summary>
-                <pre className="mt-2 p-3 rounded overflow-auto text-xs" style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'var(--premium-text-secondary)',
-                  borderLeft: '3px solid #ef4444'
-                }}>
-                  {this.state.error.toString()}
-                  {this.state.errorInfo?.componentStack}
-                </pre>
+                <div
+                  className="p-4 rounded-lg text-xs font-mono overflow-auto max-h-48"
+                  style={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    color: '#ef4444'
+                  }}
+                >
+                  <div className="mb-2">
+                    <strong>Error:</strong> {this.state.error.message}
+                  </div>
+                  {this.state.errorInfo && (
+                    <div>
+                      <strong>Stack:</strong>
+                      <pre className="mt-1 whitespace-pre-wrap">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    </div>
+                  )}
+                </div>
               </details>
             )}
 
             <button
               onClick={this.handleReset}
-              className="w-full px-4 py-3 rounded-lg font-medium transition-all inline-flex items-center justify-center gap-2"
+              className="premium-glass border px-6 py-3 rounded-lg font-medium transition-all hover:bg-white/10"
               style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                color: 'white'
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'var(--premium-blue)'
               }}
             >
-              <RefreshCw className="h-4 w-4" />
-              Return to Home
+              Reload Page
             </button>
           </div>
         </div>

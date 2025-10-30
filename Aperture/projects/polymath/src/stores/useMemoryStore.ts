@@ -110,7 +110,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       // Add to UI immediately
       set((state) => ({
-        memories: [optimisticMemory, ...state.memories],
+        memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
       }))
 
       // Queue for sync when back online
@@ -133,7 +133,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       // Add to local state
       set((state) => ({
-        memories: [data, ...state.memories],
+        memories: [data, ...(Array.isArray(state.memories) ? state.memories : [])],
       }))
 
       // Trigger background processing
@@ -161,18 +161,20 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
     if (memoryToUpdate) {
       set((state) => ({
-        memories: state.memories.map((m) =>
-          m.id === id
-            ? {
-                ...m,
-                title: input.title,
-                body: input.body,
-                tags: input.tags || [],
-                memory_type: input.memory_type || null,
-                processed: false,
-              }
-            : m
-        ),
+        memories: Array.isArray(state.memories)
+          ? state.memories.map((m) =>
+              m.id === id
+                ? {
+                    ...m,
+                    title: input.title,
+                    body: input.body,
+                    tags: input.tags || [],
+                    memory_type: input.memory_type || null,
+                    processed: false,
+                  }
+                : m
+            )
+          : [],
       }))
     }
 
@@ -217,7 +219,9 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       // Replace with server data
       set((state) => ({
-        memories: state.memories.map((m) => (m.id === id ? data : m)),
+        memories: Array.isArray(state.memories)
+          ? state.memories.map((m) => (m.id === id ? data : m))
+          : [data],
       }))
 
       // Trigger background processing
@@ -245,7 +249,9 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
     const previousMemories = useMemoryStore.getState().memories
 
     set((state) => ({
-      memories: state.memories.filter((m) => m.id !== id),
+      memories: Array.isArray(state.memories)
+        ? state.memories.filter((m) => m.id !== id)
+        : [],
     }))
 
     const { isOnline } = useOfflineStore.getState()
@@ -299,7 +305,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
     // Add to top of list immediately
     set((state) => ({
-      memories: [optimisticMemory, ...state.memories],
+      memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
     }))
 
     return tempId
@@ -307,15 +313,17 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
   replaceOptimisticMemory: (tempId: string, realMemory: Memory) => {
     set((state) => ({
-      memories: state.memories.map((m) =>
-        m.id === tempId ? realMemory : m
-      ),
+      memories: Array.isArray(state.memories)
+        ? state.memories.map((m) => (m.id === tempId ? realMemory : m))
+        : [realMemory],
     }))
   },
 
   removeOptimisticMemory: (tempId: string) => {
     set((state) => ({
-      memories: state.memories.filter((m) => m.id !== tempId),
+      memories: Array.isArray(state.memories)
+        ? state.memories.filter((m) => m.id !== tempId)
+        : [],
     }))
   },
 }))

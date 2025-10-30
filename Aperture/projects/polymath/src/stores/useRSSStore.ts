@@ -36,12 +36,14 @@ export const useRSSStore = create<RSSState>((set, get) => ({
         throw new Error('Failed to fetch feeds')
       }
 
-      const { feeds } = await response.json()
+      const data = await response.json()
+      const feeds = Array.isArray(data.feeds) ? data.feeds : []
 
       set({ feeds, loading: false })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      set({ error: errorMessage, loading: false })
+      set({ error: errorMessage, loading: false, feeds: [] })
+      console.error('[useRSSStore] Fetch feeds error:', error)
     }
   },
 
@@ -73,7 +75,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
       // Add to feeds list
       set((state) => ({
-        feeds: [feed, ...state.feeds],
+        feeds: [feed, ...(Array.isArray(state.feeds) ? state.feeds : [])],
         loading: false,
       }))
 
@@ -102,9 +104,9 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
       // Update in local state
       set((state) => ({
-        feeds: state.feeds.map((f) =>
-          f.id === request.id ? feed : f
-        ),
+        feeds: Array.isArray(state.feeds)
+          ? state.feeds.map((f) => (f.id === request.id ? feed : f))
+          : [feed],
       }))
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -125,7 +127,9 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
       // Remove from local state
       set((state) => ({
-        feeds: state.feeds.filter((f) => f.id !== id),
+        feeds: Array.isArray(state.feeds)
+          ? state.feeds.filter((f) => f.id !== id)
+          : [],
       }))
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'

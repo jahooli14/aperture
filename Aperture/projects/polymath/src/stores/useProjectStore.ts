@@ -20,6 +20,12 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/api'
  * 3. Most recently touched
  */
 function smartSortProjects(projects: Project[]): Project[] {
+  // Safety check
+  if (!Array.isArray(projects)) {
+    console.warn('[smartSortProjects] Invalid projects array:', projects)
+    return []
+  }
+
   const now = new Date()
 
   // Status priority order
@@ -182,7 +188,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       set((state) => ({
         projects: smartSortProjects(
-          state.projects.map((p) => (p.id === id ? updatedProject : p))
+          Array.isArray(state.projects)
+            ? state.projects.map((p) => (p.id === id ? updatedProject : p))
+            : [updatedProject]
         ),
       }))
     }
@@ -224,7 +232,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const previousProjects = get().projects
 
     set((state) => ({
-      projects: state.projects.filter((p) => p.id !== id),
+      projects: Array.isArray(state.projects)
+        ? state.projects.filter((p) => p.id !== id)
+        : [],
     }))
 
     const { isOnline } = useOfflineStore.getState()
