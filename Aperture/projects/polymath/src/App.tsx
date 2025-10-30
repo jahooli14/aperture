@@ -11,7 +11,7 @@ import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import './App.css'
 
-// Lazy load pages for better bundle splitting
+// Lazy load pages for better bundle splitting (code splitting enabled for all routes)
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))
 const MemoriesPage = lazy(() => import('./pages/MemoriesPage').then(m => ({ default: m.MemoriesPage })))
 const ReadingPage = lazy(() => import('./pages/ReadingPage').then(m => ({ default: m.ReadingPage })))
@@ -22,18 +22,32 @@ const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage').then(m 
 const DailyQueuePage = lazy(() => import('./pages/DailyQueuePage').then(m => ({ default: m.DailyQueuePage })))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
-const KnowledgeTimelinePage = lazy(() => import('./pages/KnowledgeTimelinePage').then(m => ({ default: m.KnowledgeTimelinePage })))
 const ScrollTimelinePage = lazy(() => import('./pages/ScrollTimelinePage').then(m => ({ default: m.ScrollTimelinePage })))
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const ConstellationView = lazy(() => import('./pages/ConstellationView'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 
-// Loading fallback component
+// Loading fallback component with skeleton
 function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-blue-900" />
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <div className="w-full max-w-7xl px-4">
+        <div className="shimmer h-12 w-64 mx-auto rounded-lg mb-8"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="premium-card p-6 space-y-4">
+              <div className="shimmer h-6 w-3/4 rounded"></div>
+              <div className="shimmer h-4 w-full rounded"></div>
+              <div className="shimmer h-4 w-5/6 rounded"></div>
+              <div className="flex gap-2">
+                <div className="shimmer h-6 w-16 rounded-full"></div>
+                <div className="shimmer h-6 w-20 rounded-full"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
