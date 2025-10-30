@@ -263,14 +263,7 @@ export function ProjectDetailPage() {
         />
 
         {/* Next Action */}
-        <NextActionCard
-          project={project}
-          onUpdate={(metadata) => {
-            const updated = { ...project, metadata: { ...project.metadata, ...metadata } }
-            setProject(updated)
-            updateProject(project.id, { metadata: updated.metadata })
-          }}
-        />
+        <NextActionCard project={project} />
 
         {/* Task Checklist */}
         <TaskList
