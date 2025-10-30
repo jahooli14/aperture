@@ -20,11 +20,12 @@ import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { Plus, Sparkles, X } from 'lucide-react'
+import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 
 export function CreateMemoryDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { createMemory } = useMemoryStore()
+  const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
 
   const [bullets, setBullets] = useState<string[]>([''])
@@ -81,11 +82,30 @@ export function CreateMemoryDialog() {
         memory_type: formData.memory_type || undefined,
       })
 
-      addToast({
-        title: 'Thought captured!',
-        description: 'Your thought has been saved to your knowledge graph',
-        variant: 'success',
-      })
+      // Check for milestone celebrations
+      const newCount = memories.length + 1
+      const isMilestone = checkThoughtMilestone(newCount)
+      const milestoneMessage = getMilestoneMessage('thought', newCount)
+
+      if (isMilestone) {
+        // Trigger celebration animation
+        if (newCount === 1) celebrate.firstThought()
+        else if (newCount === 10) celebrate.tenthThought()
+        else if (newCount === 50) celebrate.fiftiethThought()
+        else if (newCount === 100) celebrate.hundredthThought()
+
+        addToast({
+          title: milestoneMessage || 'Thought captured!',
+          description: newCount === 1 ? 'Keep going!' : 'You\'re building an incredible knowledge base',
+          variant: 'success',
+        })
+      } else {
+        addToast({
+          title: 'Thought captured!',
+          description: 'Your thought has been saved to your knowledge graph',
+          variant: 'success',
+        })
+      }
 
       resetForm()
       setOpen(false)
