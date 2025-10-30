@@ -18,7 +18,7 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
 
   return (
     <span className={`${sizeClasses[size]} ${className}`}>
-      Clan<span style={{ color: 'var(--premium-blue)', fontWeight: 600 }}>destined</span>
+      Clan<span style={{ color: 'var(--premium-amber)', fontWeight: 600 }}>destined</span>
     </span>
   )
 }

@@ -16,6 +16,7 @@ import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { useAnalytics, trackSectionClick, type SectionId } from '../hooks/useAnalytics'
 import { useAdaptiveLayout } from '../hooks/useAdaptiveLayout'
 import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Clock, Zap, Battery, Link2, Sparkles, Search } from 'lucide-react'
+import { BrandName } from '../components/BrandName'
 import type { ProjectScore, DailyQueueResponse } from '../types'
 
 export function HomePage() {
@@ -363,7 +364,7 @@ export function HomePage() {
               fontWeight: 700,
               letterSpacing: 'var(--premium-tracking-tight)'
             }}>
-              Clandestined
+              <BrandName className="inline" />
             </h1>
             <button
               onClick={() => navigate('/search')}
