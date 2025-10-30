@@ -129,8 +129,8 @@ export default function ConstellationView() {
     const scene = graphRef.current.scene()
     if (!scene) return
 
-    // Create multi-layered starfield with varying sizes and colors
-    const starCount = deviceCapability === 'low' ? 800 : deviceCapability === 'medium' ? 1500 : 3000
+    // Create multi-layered starfield with varying sizes and colors (reduced for less crowding)
+    const starCount = deviceCapability === 'low' ? 400 : deviceCapability === 'medium' ? 800 : 1500
     const starGeometry = new THREE.BufferGeometry()
     const starPositions = new Float32Array(starCount * 3)
     const starSizes = new Float32Array(starCount)
@@ -698,12 +698,12 @@ export default function ConstellationView() {
     fg.d3VelocityDecay(0.2) // Smooth momentum
 
     fg.d3Force('charge')
-      .strength(-120) // Stronger repulsion for spacing
-      .distanceMax(300)
+      .strength(-180) // Much stronger repulsion to reduce crowding
+      .distanceMax(400) // Larger max distance for better spread
 
     fg.d3Force('link')
-      .distance(80) // Connected nodes stay closer
-      .strength(1.5) // Stronger links
+      .distance(120) // Increased distance for more breathing room
+      .strength(1.2) // Slightly weaker links to allow more spread
 
     fg.d3Force('center')
       .strength(0.05) // Very weak center pull for organic drift
