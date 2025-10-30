@@ -306,11 +306,13 @@ export function HomePage() {
 
   const ConnectionHintSection = () => {
     const analytics = useAnalytics('connection-hint')
-    const [showHint, setShowHint] = useState(() => {
-      // Only show on first visit
+    const [showHint, setShowHint] = useState(false)
+
+    useEffect(() => {
+      // Only show on first visit - check after mount to avoid hydration mismatch
       const hasSeenHint = localStorage.getItem('hasSeenConnectionHint')
-      return !hasSeenHint
-    })
+      setShowHint(!hasSeenHint)
+    }, [])
 
     if (memories.length === 0 || projects.length === 0) return null
     if (!showHint) return null
