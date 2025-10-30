@@ -1,19 +1,18 @@
 /**
  * CreateMemoryDialog - Manual Memory Creation
- * Mobile-optimized dialog for capturing thoughts manually
+ * Mobile-optimized bottom sheet for capturing thoughts manually
  */
 
 import { useState } from 'react'
 import { Button } from '../ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog'
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+} from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Select } from '../ui/select'
@@ -121,29 +120,30 @@ export function CreateMemoryDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift" style={{ borderColor: 'rgba(99, 102, 241, 0.5)', color: '#6366f1' }}>
-          <Plus className="h-4 w-4" />
-          New Thought
-        </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-w-[95vw] max-h-[90vh] sm:max-h-[85vh] p-0 flex flex-col overflow-hidden">
-        {/* Subtle accent */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50" />
+    <>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
+        style={{ borderColor: 'rgba(99, 102, 241, 0.5)', color: '#6366f1' }}
+      >
+        <Plus className="h-4 w-4" />
+        New Thought
+      </button>
 
-        <DialogHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
-          <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-blue-900 flex-shrink-0" />
-            <DialogTitle className="text-lg sm:text-2xl font-semibold text-neutral-900">Capture Memory</DialogTitle>
-          </div>
-          <DialogDescription className="text-sm sm:text-base text-left">
-            Add a thought, idea, or insight
-          </DialogDescription>
-        </DialogHeader>
+      <BottomSheet open={open} onOpenChange={setOpen}>
+        <BottomSheetContent>
+          <BottomSheetHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <BottomSheetTitle>Capture Memory</BottomSheetTitle>
+            </div>
+            <BottomSheetDescription>
+              Add a thought, idea, or insight
+            </BottomSheetDescription>
+          </BottomSheetHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title" className="font-semibold text-gray-700 text-sm sm:text-base">
@@ -251,41 +251,41 @@ export function CreateMemoryDialog() {
                 Comma-separated tags to categorize this memory
               </p>
             </div>
-          </div>
 
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t bg-white">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                resetForm()
-                setOpen(false)
-              }}
-              disabled={loading}
-              className="w-full sm:w-auto h-11 sm:h-12"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading || !formData.title || bullets.every(b => !b.trim())}
-              className="btn-primary w-full sm:w-auto h-11 sm:h-12"
-            >
-              {loading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Capture Thought
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <BottomSheetFooter>
+              <Button
+                type="submit"
+                disabled={loading || !formData.title || bullets.every(b => !b.trim())}
+                className="btn-primary w-full h-12 touch-manipulation"
+              >
+                {loading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Capture Thought
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  resetForm()
+                  setOpen(false)
+                }}
+                disabled={loading}
+                className="w-full h-12 touch-manipulation"
+              >
+                Cancel
+              </Button>
+            </BottomSheetFooter>
+          </form>
+        </BottomSheetContent>
+      </BottomSheet>
+    </>
   )
 }
