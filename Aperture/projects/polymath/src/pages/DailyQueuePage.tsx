@@ -496,17 +496,18 @@ export function DailyQueuePage() {
             )}
 
             {/* Skip Day */}
-            <Card className="premium-card border-2" style={{ borderColor: 'var(--premium-text-muted)' }}>
+            <Card className="premium-card border-2" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
               <CardContent className="pt-6 text-center">
-                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                <p className="mb-4 premium-text-platinum">
                   Not feeling it today? That's okay.
                 </p>
-                <Button
-                  variant="outline"
+                <button
                   onClick={() => setQueue([])}
+                  className="px-6 py-3 rounded-lg border-2 transition-all font-medium premium-text-platinum hover:bg-white/5"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.2)' }}
                 >
                   🚫 Take a Break
-                </Button>
+                </button>
               </CardContent>
             </Card>
           </div>
@@ -551,14 +552,14 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-lg">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-lg premium-card">
         <CardContent className="pt-6">
-          <h2 className="text-2xl font-bold mb-6">Set Today's Context</h2>
+          <h2 className="text-2xl font-bold mb-6 premium-text-platinum">Set Today's Context</h2>
 
           {/* Available Time */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-neutral-700 mb-3">
+            <label className="block text-sm font-medium mb-3 premium-text-platinum">
               How much time do you have?
             </label>
             <div className="space-y-2">
@@ -570,11 +571,11 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                 <button
                   key={option.value}
                   onClick={() => setAvailableTime(option.value as any)}
-                  className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
-                    availableTime === option.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
+                  className="w-full p-3 rounded-lg border-2 transition-all text-left premium-text-platinum"
+                  style={{
+                    borderColor: availableTime === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: availableTime === option.value ? 'rgba(59, 130, 246, 0.15)' : 'transparent'
+                  }}
                 >
                   {option.label}
                 </button>
@@ -584,7 +585,7 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
 
           {/* Energy Level */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-neutral-700 mb-3">
+            <label className="block text-sm font-medium mb-3 premium-text-platinum">
               What's your energy level?
             </label>
             <div className="space-y-2">
@@ -596,11 +597,11 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                 <button
                   key={option.value}
                   onClick={() => setCurrentEnergy(option.value as any)}
-                  className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
-                    currentEnergy === option.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
+                  className="w-full p-3 rounded-lg border-2 transition-all text-left premium-text-platinum"
+                  style={{
+                    borderColor: currentEnergy === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: currentEnergy === option.value ? 'rgba(59, 130, 246, 0.15)' : 'transparent'
+                  }}
                 >
                   {option.label}
                 </button>
@@ -610,7 +611,7 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
 
           {/* Context */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-neutral-700 mb-3">
+            <label className="block text-sm font-medium mb-3 premium-text-platinum">
               Where are you / what's available?
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -618,11 +619,12 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
                 <button
                   key={ctx}
                   onClick={() => toggleContext(ctx)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    availableContext.includes(ctx)
-                      ? 'border-blue-500 bg-blue-50 font-medium'
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
+                  className="p-3 rounded-lg border-2 transition-all premium-text-platinum"
+                  style={{
+                    borderColor: availableContext.includes(ctx) ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: availableContext.includes(ctx) ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    fontWeight: availableContext.includes(ctx) ? 600 : 400
+                  }}
                 >
                   {ctx.charAt(0).toUpperCase() + ctx.slice(1)}
                 </button>
@@ -632,12 +634,25 @@ function ContextDialog({ context, onSave, onClose }: ContextDialogProps) {
 
           {/* Actions */}
           <div className="flex gap-3">
-            <Button onClick={handleSave} className="btn-primary flex-1">
+            <button
+              onClick={handleSave}
+              className="flex-1 px-6 py-3 rounded-lg font-medium transition-all"
+              style={{
+                backgroundColor: 'var(--premium-blue)',
+                color: '#ffffff'
+              }}
+            >
               Update Queue
-            </Button>
-            <Button onClick={onClose} variant="outline">
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-3 rounded-lg font-medium border-2 transition-all premium-text-platinum hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(255, 255, 255, 0.2)'
+              }}
+            >
               Cancel
-            </Button>
+            </button>
           </div>
         </CardContent>
       </Card>
