@@ -3,12 +3,17 @@
  */
 
 import React, { memo, useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap, Edit, Trash2, Link2 } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { useToast } from '../ui/toast'
+import { haptic } from '../../utils/haptics'
+import { useLongPress } from '../../hooks/useLongPress'
+import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 
 export const ProjectCard = memo(function ProjectCard({
   project,
@@ -20,6 +25,28 @@ export const ProjectCard = memo(function ProjectCard({
 }: ProjectCardProps) {
   const relativeTime = formatRelativeTime(project.last_active)
   const [connectionCount, setConnectionCount] = useState(0)
+  const [exitX, setExitX] = useState(0)
+  const [showQuickNote, setShowQuickNote] = useState(false)
+  const [quickNote, setQuickNote] = useState('')
+  const [showContextMenu, setShowContextMenu] = useState(false)
+  const { updateProject } = useProjectStore()
+  const { addToast } = useToast()
+
+  // Motion values for swipe gesture
+  const x = useMotionValue(0)
+  const noteIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const backgroundColor = useTransform(
+    x,
+    [0, 150],
+    ['rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
+  )
+
+  // Long-press for context menu
+  const longPressHandlers = useLongPress(() => {
+    setShowContextMenu(true)
+  }, {
+    threshold: 500,
+  })
 
   useEffect(() => {
     fetchConnectionCount()
@@ -44,6 +71,128 @@ export const ProjectCard = memo(function ProjectCard({
     }
     onClick?.(project.id)
   }
+
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+
+    // Swipe right = Quick note
+    if (offset > 100 || velocity > 500) {
+      haptic.light()
+      setShowQuickNote(true)
+      // Reset position
+      x.set(0)
+    }
+  }
+
+  const handleQuickNoteSubmit = async () => {
+    if (!quickNote.trim()) return
+
+    try {
+      await updateProject(project.id, {
+        metadata: {
+          ...project.metadata,
+          next_step: quickNote.trim()
+        }
+      })
+      addToast({
+        title: 'Updated!',
+        description: 'Next step added to project',
+        variant: 'success',
+      })
+      setShowQuickNote(false)
+      setQuickNote('')
+      haptic.success()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to update project',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleCopyText = () => {
+    const textToCopy = `${project.title}\n\n${project.description || ''}\n\nNext Step: ${project.metadata?.next_step || 'Not set'}`
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      haptic.success()
+      addToast({
+        title: 'Copied!',
+        description: 'Project details copied to clipboard',
+        variant: 'success',
+      })
+    })
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: project.title,
+          text: project.description || '',
+        })
+        haptic.success()
+      } catch (error) {
+        console.warn('Share cancelled or failed:', error)
+      }
+    } else {
+      handleCopyText()
+    }
+  }
+
+  const handleMarkComplete = async () => {
+    try {
+      await updateProject(project.id, {
+        status: 'completed'
+      })
+      addToast({
+        title: 'Completed!',
+        description: 'Project marked as complete',
+        variant: 'success',
+      })
+      haptic.success()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to update project',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const contextMenuItems: ContextMenuItem[] = [
+    ...(onEdit ? [{
+      label: 'Edit',
+      icon: <Edit className="h-5 w-5" />,
+      onClick: () => onEdit(project.id),
+    }] : []),
+    {
+      label: 'Add Quick Note',
+      icon: <Pencil className="h-5 w-5" />,
+      onClick: () => setShowQuickNote(true),
+    },
+    {
+      label: 'Copy Details',
+      icon: <Copy className="h-5 w-5" />,
+      onClick: handleCopyText,
+    },
+    {
+      label: 'Share',
+      icon: <Share2 className="h-5 w-5" />,
+      onClick: handleShare,
+    },
+    ...(project.status !== 'completed' ? [{
+      label: 'Mark Complete',
+      icon: <Archive className="h-5 w-5" />,
+      onClick: handleMarkComplete,
+    }] : []),
+    ...(onDelete ? [{
+      label: 'Delete',
+      icon: <Trash2 className="h-5 w-5" />,
+      onClick: () => onDelete(project.id),
+      variant: 'destructive' as const,
+    }] : []),
+  ]
 
   const statusConfig: Record<string, { label: string; style: React.CSSProperties; bgStyle: React.CSSProperties }> = {
     upcoming: {
@@ -110,15 +259,103 @@ export const ProjectCard = memo(function ProjectCard({
 
 
   return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.01 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.2 }}
-    >
-    <Card
-      className="group h-full flex flex-col premium-card cursor-pointer"
-      onClick={handleCardClick}
-    >
+    <>
+      <ContextMenu
+        items={contextMenuItems}
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        title={project.title}
+      />
+
+      {/* Quick Note Modal */}
+      {showQuickNote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+          onClick={() => setShowQuickNote(false)}
+        >
+          <div
+            className="premium-card p-6 max-w-md w-full space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+              Quick Note for {project.title}
+            </h3>
+            <input
+              type="text"
+              value={quickNote}
+              onChange={(e) => setQuickNote(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleQuickNoteSubmit()
+                }
+              }}
+              placeholder="What's the next step?"
+              className="w-full px-4 py-3 rounded-lg border text-base"
+              style={{
+                backgroundColor: 'var(--premium-surface-elevated)',
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'var(--premium-text-primary)'
+              }}
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <Button
+                onClick={handleQuickNoteSubmit}
+                className="flex-1 btn-ripple btn-ripple-blue"
+                style={{
+                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                  color: '#ffffff'
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                onClick={() => setShowQuickNote(false)}
+                variant="ghost"
+                className="flex-1"
+                style={{ color: 'var(--premium-text-secondary)' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative"
+        {...longPressHandlers}
+      >
+        {/* Note Indicator (Swipe Right) */}
+        <motion.div
+          style={{ opacity: noteIndicatorOpacity }}
+          className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <Pencil className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <span className="text-xl font-bold" style={{ color: 'var(--premium-blue)' }}>ADD NOTE</span>
+          </div>
+        </motion.div>
+
+        <motion.div
+          style={{ backgroundColor }}
+          whileHover={{ y: -4, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-xl"
+        >
+          <Card
+            className="group h-full flex flex-col premium-card cursor-pointer"
+            onClick={handleCardClick}
+          >
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
       {/* Accent gradient bar */}
@@ -287,7 +524,9 @@ export const ProjectCard = memo(function ProjectCard({
         )}
       </CardContent>
     </Card>
-    </motion.div>
+        </motion.div>
+      </motion.div>
+    </>
   )
 })
 

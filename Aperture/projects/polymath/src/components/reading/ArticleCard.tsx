@@ -5,13 +5,15 @@
 
 import { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check, Copy, Share2 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/readingDb'
 import { haptic } from '../../utils/haptics'
+import { useLongPress } from '../../hooks/useLongPress'
+import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 
 interface ArticleCardProps {
   article: Article
@@ -25,6 +27,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const [progress, setProgress] = useState(0)
   const [connectionCount, setConnectionCount] = useState(0)
   const [exitX, setExitX] = useState(0)
+  const [showContextMenu, setShowContextMenu] = useState(false)
 
   // Motion values for swipe gesture
   const x = useMotionValue(0)
@@ -34,6 +37,13 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
     [0, 150],
     ['rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
   )
+
+  // Long-press for context menu
+  const longPressHandlers = useLongPress(() => {
+    setShowContextMenu(true)
+  }, {
+    threshold: 500,
+  })
 
   useEffect(() => {
     checkOfflineStatus()
@@ -147,17 +157,114 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
     }
   }
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(article.url).then(() => {
+      haptic.success()
+      addToast({
+        title: 'Copied!',
+        description: 'Article link copied to clipboard',
+        variant: 'success',
+      })
+    })
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article.title || 'Article',
+          text: article.excerpt || '',
+          url: article.url,
+        })
+        haptic.success()
+      } catch (error) {
+        console.warn('Share cancelled or failed:', error)
+      }
+    } else {
+      handleCopyLink()
+    }
+  }
+
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      label: 'Open Original',
+      icon: <ExternalLink className="h-5 w-5" />,
+      onClick: () => window.open(article.url, '_blank', 'noopener,noreferrer'),
+    },
+    {
+      label: 'Copy Link',
+      icon: <Copy className="h-5 w-5" />,
+      onClick: handleCopyLink,
+    },
+    {
+      label: 'Share',
+      icon: <Share2 className="h-5 w-5" />,
+      onClick: handleShare,
+    },
+    {
+      label: 'Archive',
+      icon: <Archive className="h-5 w-5" />,
+      onClick: async () => {
+        try {
+          await updateArticleStatus(article.id, 'archived')
+          addToast({
+            title: 'Archived',
+            description: 'Article moved to archive',
+            variant: 'success',
+          })
+        } catch (error) {
+          addToast({
+            title: 'Error',
+            description: 'Failed to archive article',
+            variant: 'destructive',
+          })
+        }
+      },
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 className="h-5 w-5" />,
+      onClick: async () => {
+        if (!confirm('Remove this article from your reading queue?')) return
+        try {
+          await deleteArticle(article.id)
+          addToast({
+            title: 'Deleted',
+            description: 'Article removed from queue',
+            variant: 'success',
+          })
+        } catch (error) {
+          addToast({
+            title: 'Error',
+            description: 'Failed to delete article',
+            variant: 'destructive',
+          })
+        }
+      },
+      variant: 'destructive' as const,
+    },
+  ]
+
   return (
-    <motion.div
-      style={{ x }}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.1}
-      onDragEnd={handleDragEnd}
-      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="relative"
-    >
+    <>
+      <ContextMenu
+        items={contextMenuItems}
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        title={article.title || 'Article'}
+      />
+
+      <motion.div
+        style={{ x }}
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative"
+        {...longPressHandlers}
+      >
       {/* Archive Indicator (Swipe Right) */}
       <motion.div
         style={{ opacity: archiveIndicatorOpacity }}
@@ -337,5 +444,6 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       </div>
       </motion.div>
     </motion.div>
+    </>
   )
 }

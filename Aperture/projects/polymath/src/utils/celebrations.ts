@@ -361,7 +361,7 @@ export function getMilestoneMessage(type: 'thought' | 'connection' | 'project', 
   } else if (type === 'project') {
     switch (count) {
       case 1:
-        return 'Your first project! Let's build something amazing 🎨'
+        return 'Your first project! Let\'s build something amazing 🎨'
       default:
         return null
     }

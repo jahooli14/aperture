@@ -5,11 +5,13 @@
 import { useState, useEffect, memo } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2 } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, Bridge } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { haptic } from '../utils/haptics'
+import { useLongPress } from '../hooks/useLongPress'
+import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 
 interface MemoryCardProps {
   memory: Memory
@@ -21,6 +23,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const [bridges, setBridges] = useState<Bridge[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [exitX, setExitX] = useState(0)
+  const [showContextMenu, setShowContextMenu] = useState(false)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
 
   // Motion values for swipe gesture
@@ -32,6 +35,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     [-150, 0, 150],
     ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
   )
+
+  // Long-press for context menu
+  const longPressHandlers = useLongPress(() => {
+    setShowContextMenu(true)
+  }, {
+    threshold: 500,
+  })
 
   useEffect(() => {
     fetchBridgesForMemory(memory.id).then(setBridges)
@@ -98,17 +108,75 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     }
   }
 
+  const handleCopyText = () => {
+    const textToCopy = `${memory.title}\n\n${memory.body}`
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      haptic.success()
+    })
+  }
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: memory.title,
+          text: memory.body,
+        })
+        haptic.success()
+      } catch (error) {
+        // User cancelled or error occurred
+        console.warn('Share cancelled or failed:', error)
+      }
+    } else {
+      // Fallback to copy
+      handleCopyText()
+    }
+  }
+
+  const contextMenuItems: ContextMenuItem[] = [
+    ...(onEdit ? [{
+      label: 'Edit',
+      icon: <Edit className="h-5 w-5" />,
+      onClick: () => onEdit(memory),
+    }] : []),
+    {
+      label: 'Copy Text',
+      icon: <Copy className="h-5 w-5" />,
+      onClick: handleCopyText,
+    },
+    {
+      label: 'Share',
+      icon: <Share2 className="h-5 w-5" />,
+      onClick: handleShare,
+    },
+    ...(onDelete ? [{
+      label: 'Delete',
+      icon: <Trash2 className="h-5 w-5" />,
+      onClick: () => onDelete(memory),
+      variant: 'destructive' as const,
+    }] : []),
+  ]
+
   return (
-    <motion.div
-      style={{ x }}
-      drag={(onDelete || onEdit) ? 'x' : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.1}
-      onDragEnd={handleDragEnd}
-      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="relative"
-    >
+    <>
+      <ContextMenu
+        items={contextMenuItems}
+        isOpen={showContextMenu}
+        onClose={() => setShowContextMenu(false)}
+        title={memory.title}
+      />
+
+      <motion.div
+        style={{ x }}
+        drag={(onDelete || onEdit) ? 'x' : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+        animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="relative"
+        {...longPressHandlers}
+      >
       {/* Edit Indicator (Swipe Right) */}
       {onEdit && (
         <motion.div
@@ -380,5 +448,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     </Card>
       </motion.div>
     </motion.div>
+    </>
   )
 })
