@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 import type { Project } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
+import { cacheManager, createCacheKey, CACHE_PRESETS } from '../lib/cacheManager'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
@@ -98,44 +99,50 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   filter: 'all',
 
   fetchProjects: async () => {
-    set({ loading: true, error: null })
-
     try {
       const { filter } = get()
-      let query = supabase
-        .from('projects')
-        .select('*')
+      const cacheKey = createCacheKey('projects', { filter })
 
-      // Apply filters
-      if (filter === 'upcoming') {
-        query = query.eq('status', 'upcoming')
-      } else if (filter === 'active') {
-        query = query.eq('status', 'active')
-      } else if (filter === 'dormant') {
-        // Dormant = projects not touched in >7 days and status is active or on-hold
-        query = query.in('status', ['active', 'on-hold'])
-      } else if (filter === 'completed') {
-        query = query.eq('status', 'completed')
-      }
-      // 'all' = no filter
+      const projects = await cacheManager.get(
+        cacheKey,
+        async () => {
+          let query = supabase
+            .from('projects')
+            .select('*')
 
-      const { data, error } = await query
+          // Apply filters
+          if (filter === 'upcoming') {
+            query = query.eq('status', 'upcoming')
+          } else if (filter === 'active') {
+            query = query.eq('status', 'active')
+          } else if (filter === 'dormant') {
+            // Dormant = projects not touched in >7 days and status is active or on-hold
+            query = query.in('status', ['active', 'on-hold'])
+          } else if (filter === 'completed') {
+            query = query.eq('status', 'completed')
+          }
+          // 'all' = no filter
 
-      if (error) throw error
+          const { data, error } = await query
 
-      let projects = data || []
+          if (error) throw error
 
-      // For 'dormant' filter, further filter by last_active date client-side
-      if (filter === 'dormant') {
-        const sevenDaysAgo = new Date()
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        projects = projects.filter(p => new Date(p.last_active) < sevenDaysAgo)
-      }
+          let projects = data || []
 
-      // Smart sorting: status priority + recency + resurfacing
-      projects = smartSortProjects(projects)
+          // For 'dormant' filter, further filter by last_active date client-side
+          if (filter === 'dormant') {
+            const sevenDaysAgo = new Date()
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+            projects = projects.filter(p => new Date(p.last_active) < sevenDaysAgo)
+          }
 
-      set({ projects, loading: false })
+          // Smart sorting: status priority + recency + resurfacing
+          return smartSortProjects(projects)
+        },
+        CACHE_PRESETS.normal // 30s fresh, 5min stale
+      )
+
+      set({ projects, loading: false, error: null })
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -157,6 +164,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         const errorData = await response.json()
         throw new Error(errorData.details || errorData.error || 'Failed to create project')
       }
+
+      // Invalidate all project caches
+      cacheManager.invalidatePattern('projects')
 
       // Refresh projects after creating
       await get().fetchProjects()
@@ -206,6 +216,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       if (error) throw error
 
+      // Invalidate all project caches
+      cacheManager.invalidatePattern('projects')
+
       // Refresh to get server data (including any server-side processing)
       await get().fetchProjects()
     } catch (error) {
@@ -245,6 +258,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         .eq('id', id)
 
       if (error) throw error
+
+      // Invalidate all project caches
+      cacheManager.invalidatePattern('projects')
     } catch (error) {
       // Rollback on error
       set({ projects: previousProjects })

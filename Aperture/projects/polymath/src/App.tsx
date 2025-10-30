@@ -13,6 +13,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
+import { usePrefetch } from './hooks/usePrefetch'
 import { setupAutoSync } from './lib/syncManager'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
@@ -64,6 +65,9 @@ function PageLoader() {
 export default function App() {
   // Apply theme on mount and when preferences change
   useTheme()
+
+  // Prefetch likely next pages for instant navigation
+  usePrefetch()
 
   // Setup online/offline tracking and auto-sync
   useEffect(() => {
