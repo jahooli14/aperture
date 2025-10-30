@@ -65,30 +65,33 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const totalCount = tasks.length
 
   return (
-    <Card className="pro-card">
+    <Card className="premium-card">
       <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
+            <h3 className="font-semibold premium-text-platinum flex items-center gap-2">
               <span className="text-lg">✓</span>
               Task Checklist
             </h3>
             {totalCount > 0 && (
-              <p className="text-xs text-neutral-500 mt-0.5">
+              <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-tertiary)' }}>
                 {completedCount} of {totalCount} completed
               </p>
             )}
           </div>
           {totalCount > 0 && (
             <div className="flex items-center gap-2">
-              <div className="h-2 w-24 bg-neutral-200 rounded-full overflow-hidden">
+              <div className="h-2 w-24 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300"
-                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${(completedCount / totalCount) * 100}%`,
+                    background: 'linear-gradient(90deg, #10b981, #059669)'
+                  }}
                 />
               </div>
-              <span className="text-xs font-semibold text-green-700">
+              <span className="text-xs font-semibold" style={{ color: '#10b981' }}>
                 {Math.round((completedCount / totalCount) * 100)}%
               </span>
             </div>
@@ -100,22 +103,20 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
           {sortedTasks.map((task) => (
             <div
               key={task.id}
-              className={cn(
-                "group flex items-center gap-3 p-2.5 rounded-lg border transition-all",
-                task.done
-                  ? "bg-neutral-50 border-neutral-200"
-                  : "bg-white border-neutral-200 hover:border-blue-300 hover:bg-blue-50/30"
-              )}
+              className="group flex items-center gap-3 p-2.5 rounded-lg border transition-all"
+              style={{
+                borderColor: task.done ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: task.done ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)'
+              }}
             >
               {/* Checkbox */}
               <button
                 onClick={() => handleToggleTask(task.id)}
-                className={cn(
-                  "flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all",
-                  task.done
-                    ? "bg-green-600 border-green-600"
-                    : "border-neutral-300 hover:border-blue-600 hover:bg-blue-50"
-                )}
+                className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
+                style={{
+                  borderColor: task.done ? '#10b981' : 'rgba(255, 255, 255, 0.2)',
+                  backgroundColor: task.done ? '#10b981' : 'transparent'
+                }}
               >
                 {task.done && <Check className="h-3 w-3 text-white" />}
               </button>
@@ -124,10 +125,11 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               <span
                 className={cn(
                   "flex-1 text-sm transition-all",
-                  task.done
-                    ? "text-neutral-500 line-through"
-                    : "text-neutral-900"
+                  task.done && "line-through"
                 )}
+                style={{
+                  color: task.done ? 'var(--premium-text-tertiary)' : 'var(--premium-text-primary)'
+                }}
               >
                 {task.text}
               </span>
@@ -135,7 +137,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                style={{ color: 'var(--premium-text-tertiary)' }}
                 aria-label="Delete task"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -160,31 +163,42 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               }}
               placeholder="Task description..."
               autoFocus
-              className="flex-1 px-3 py-2 text-sm border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 text-sm rounded-lg border-2 focus:outline-none focus:ring-2 premium-glass"
+              style={{
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'var(--premium-text-primary)'
+              }}
             />
-            <Button
+            <button
               onClick={handleAddTask}
               disabled={!newTaskText.trim()}
-              size="sm"
-              className="bg-blue-900 hover:bg-blue-800"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                color: 'white'
+              }}
             >
               Add
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={() => {
                 setIsAdding(false)
                 setNewTaskText('')
               }}
-              variant="outline"
-              size="sm"
+              className="px-4 py-2 text-sm font-medium rounded-lg border transition-all"
+              style={{
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'var(--premium-text-primary)'
+              }}
             >
               Cancel
-            </Button>
+            </button>
           </div>
         ) : (
           <button
             onClick={() => setIsAdding(true)}
-            className="mt-3 flex items-center gap-2 text-sm font-medium text-blue-900 hover:text-blue-700 transition-colors w-full p-2 rounded-lg hover:bg-blue-50"
+            className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-white/5"
+            style={{ color: 'var(--premium-blue)' }}
           >
             <Plus className="h-4 w-4" />
             Add task
@@ -193,7 +207,7 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
 
         {/* Empty State */}
         {tasks.length === 0 && !isAdding && (
-          <div className="text-center py-8 text-neutral-500">
+          <div className="text-center py-8" style={{ color: 'var(--premium-text-tertiary)' }}>
             <p className="text-sm">No tasks yet</p>
             <p className="text-xs mt-1">Break down your project into steps</p>
           </div>
