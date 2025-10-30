@@ -236,15 +236,13 @@ export function ProjectsPage() {
               style={{ height: '800px' }}
               totalCount={projects.length}
               itemContent={(index) => (
-                <div className="pb-6">
-                  <ProjectCard
-                    key={projects[index].id}
-                    project={projects[index]}
-                    onEdit={() => handleEdit(projects[index])}
-                    onDelete={() => handleDelete(projects[index])}
-                    onClick={(id) => navigate(`/projects/${id}`)}
-                  />
-                </div>
+                <ProjectCard
+                  key={projects[index].id}
+                  project={projects[index]}
+                  onEdit={() => handleEdit(projects[index])}
+                  onDelete={() => handleDelete(projects[index])}
+                  onClick={(id) => navigate(`/projects/${id}`)}
+                />
               )}
               components={{
                 List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
@@ -252,7 +250,7 @@ export function ProjectsPage() {
                     <div
                       ref={ref}
                       style={style}
-                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
                     >
                       {children}
                     </div>
@@ -268,16 +266,27 @@ export function ProjectsPage() {
               style={{ height: '800px' }}
               totalCount={projects.length}
               itemContent={(index) => (
-                <div className="pb-3">
-                  <CompactProjectCard
-                    key={projects[index].id}
-                    project={projects[index]}
-                    onEdit={() => handleEdit(projects[index])}
-                    onDelete={() => handleDelete(projects[index])}
-                    onClick={(id) => navigate(`/projects/${id}`)}
-                  />
-                </div>
+                <CompactProjectCard
+                  key={projects[index].id}
+                  project={projects[index]}
+                  onEdit={() => handleEdit(projects[index])}
+                  onDelete={() => handleDelete(projects[index])}
+                  onClick={(id) => navigate(`/projects/${id}`)}
+                />
               )}
+              components={{
+                List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
+                  ({ style, children }, ref) => (
+                    <div
+                      ref={ref}
+                      style={style}
+                      className="space-y-4"
+                    >
+                      {children}
+                    </div>
+                  )
+                )
+              }}
             />
           </div>
         )}
