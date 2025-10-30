@@ -92,31 +92,33 @@ async function main() {
     let articlesOpened = 0;
     const maxIterations = 15;
     const chatHistory: any[] = [];
+    let iteration = 0;
+    const visitedUrls: string[] = []; // Track what we've already clicked
+    const clickedCoordinates: Array<{ x: number; y: number; url: string }> = []; // Track WHERE we clicked
 
     const initialTask = `BROWSER IS ALREADY OPEN - Do NOT try to open a browser!
 
-You are viewing the BBC Sport Football page. I can see the page in front of you.
+You are viewing the BBC Sport Football page at https://www.bbc.com/sport/football.
 
-YOUR TASK: Click on article headlines to open them. I need you to open 5 football articles.
+YOUR SIMPLE TASK: Click on 5 different football article headlines, one at a time.
 
-WHAT TO DO:
-1. Look at the screenshot I'm showing you
-2. Find a clickable article headline (usually blue/underlined text with a headline)
-3. Use click_at with the coordinates of that headline
-4. I'll show you the result and you continue
+WORKFLOW:
+1. Look at the screenshot - find a clickable article headline about football
+2. Use click_at to click on it (articles open in the same tab)
+3. I'll go back to the main page
+4. Repeat for the next article
 
 IMPORTANT:
-- Browser is ALREADY OPEN - don't use open_web_browser
-- Use click_at with coordinates (0-999 scale, not pixels)
-- Screen is ${viewport.width}x${viewport.height} pixels
-- Articles should open in new tabs when clicked
-- Only click on article headlines, not navigation links
+- Use ONLY click_at with coordinates (0-999 scale)
+- Look for article headlines (usually prominent text with blue/underlined links)
+- Just click the article - I'll handle going back
+- Don't use open_web_browser or navigate
 
-Look at the screenshot and click on the FIRST article headline you see about football.`;
+Look at the screenshot now and click on the FIRST article headline you can see.`;
 
     console.log('📋 Task:', initialTask.substring(0, 100) + '...\n');
 
-    for (let iteration = 1; iteration <= maxIterations; iteration++) {
+    for (iteration = 1; iteration <= maxIterations; iteration++) {
       console.log(`\n${'─'.repeat(70)}`);
       console.log(`ITERATION ${iteration}`);
       console.log('─'.repeat(70));
@@ -125,9 +127,25 @@ Look at the screenshot and click on the FIRST article headline you see about foo
       console.log('📸 Capturing screenshot...');
       const screenshot = await page.screenshot({ fullPage: false });
 
-      // Build request
+      // Build request with context about what we've already done
+      let promptText = '';
+      if (iteration === 1) {
+        promptText = initialTask;
+      } else {
+        promptText = `Current state: ${articlesOpened}/5 articles opened.
+
+YOU ALREADY CLICKED AT THESE LOCATIONS (avoid these areas!):
+${clickedCoordinates.map((coord, i) => `${i + 1}. Position (${coord.x}, ${coord.y}) - already visited`).join('\n')}
+
+CRITICAL: You must click on a DIFFERENT article in a DIFFERENT position!
+- Look at the screenshot
+- Find an article headline you HAVEN'T clicked yet
+- It should be in a visually different position from the coordinates above
+- Try scrolling down if needed to find more articles`;
+      }
+
       const parts: Part[] = [
-        { text: iteration === 1 ? initialTask : `Current state after previous action. ${5 - articlesOpened} articles remaining to open. Continue the task.` },
+        { text: promptText },
         {
           inlineData: {
             data: screenshot.toString('base64'),
@@ -177,16 +195,34 @@ Look at the screenshot and click on the FIRST article headline you see about foo
             console.log(`\n   🖱️  Clicking at normalized (${x}, ${y})`);
             console.log(`       → Pixel position (${pixelX.toFixed(0)}, ${pixelY.toFixed(0)})`);
 
+            const beforeUrl = page.url();
             await page.mouse.click(pixelX, pixelY);
             await page.waitForTimeout(2000);
 
-            // Check if new tab opened
-            const tabs = context.pages();
-            if (tabs.length > articlesOpened + 1) {
-              articlesOpened++;
-              console.log(`   ✅ Article ${articlesOpened} opened! (${tabs.length} tabs total)`);
+            // Check if URL changed (article loaded)
+            const afterUrl = page.url();
+            if (afterUrl !== beforeUrl && !afterUrl.endsWith('/football')) {
+              // Check if we've already visited this article
+              if (visitedUrls.includes(afterUrl)) {
+                console.log(`   ⚠️  Already visited this article before!`);
+                console.log(`      URL: ${afterUrl.substring(0, 60)}...`);
+                console.log(`      Not counting as a new article - AI will be told to avoid this position.`);
+              } else {
+                // New article!
+                articlesOpened++;
+                visitedUrls.push(afterUrl);
+                clickedCoordinates.push({ x, y, url: afterUrl }); // Remember this position!
+                console.log(`   ✅ Article ${articlesOpened} opened!`);
+                console.log(`      URL: ${afterUrl.substring(0, 60)}...`);
+                console.log(`      AI will remember to avoid coordinates (${x}, ${y})`);
+              }
+
+              // Go back to main page
+              console.log(`   ⬅️  Going back to football page...`);
+              await page.goBack();
+              await page.waitForTimeout(1500);
             } else {
-              console.log(`   ⚠️  Click executed but no new tab (might not be a link)`);
+              console.log(`   ⚠️  URL didn't change - might have missed the link`);
             }
 
           } else if (funcCall.name === 'scroll_document') {
@@ -251,12 +287,19 @@ Look at the screenshot and click on the FIRST article headline you see about foo
     console.log('='.repeat(70));
 
     console.log(`\n📊 Statistics:`);
-    console.log(`   Articles Opened: ${articlesOpened}/5`);
-    console.log(`   Browser Tabs: ${context.pages().length}`);
+    console.log(`   Unique Articles Opened: ${articlesOpened}/5`);
+    console.log(`   Total Iterations: ${iteration}`);
+
+    if (visitedUrls.length > 0) {
+      console.log(`\n📰 Articles Visited:`);
+      visitedUrls.forEach((url, i) => {
+        console.log(`   ${i + 1}. ${url}`);
+      });
+    }
 
     if (articlesOpened >= 5) {
       console.log(`\n✅ SUCCESS!`);
-      console.log(`   Gemini Computer Use visually identified and clicked articles!`);
+      console.log(`   Gemini Computer Use visually identified and clicked 5 DIFFERENT articles!`);
       console.log(`   Pure visual understanding - no CSS selectors! 🚀`);
     } else if (articlesOpened > 0) {
       console.log(`\n⚠️  PARTIAL SUCCESS - ${articlesOpened} articles opened`);
@@ -266,7 +309,7 @@ Look at the screenshot and click on the FIRST article headline you see about foo
       console.log(`   Model may need different prompting`);
     }
 
-    console.log(`\n🎬 Check your ${context.pages().length} browser tab(s)!`);
+    console.log(`\n🎬 Check your browser - it navigated through articles!`);
     console.log(`⏱️  Keeping browser open for 30 seconds...\n`);
     await page.waitForTimeout(30000);
 

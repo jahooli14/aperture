@@ -8,6 +8,7 @@ import { Mic, X } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { haptic } from '../utils/haptics'
 
 interface VoiceFABProps {
   onTranscript: (text: string) => void
@@ -28,7 +29,10 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
       {/* FAB Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => {
+            haptic.medium()
+            setIsOpen(true)
+          }}
           className={cn(
             "fixed z-40",
             "bottom-24 md:bottom-6 right-4 md:right-6",
@@ -38,7 +42,8 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
             "flex items-center justify-center",
             "transition-all duration-300",
             "active:scale-90",
-            "hover:scale-110"
+            "hover:scale-110",
+            "btn-ripple btn-ripple-blue"
           )}
           aria-label="Voice capture"
         >
@@ -56,29 +61,32 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
           />
 
           {/* Bottom Sheet / Modal */}
-          <div className="relative w-full md:w-[500px] bg-white rounded-t-3xl md:rounded-2xl shadow-2xl animate-slide-up">
+          <div className="relative w-full md:w-[500px] premium-card rounded-t-3xl md:rounded-2xl shadow-2xl animate-slide-up" style={{ backgroundColor: 'var(--premium-surface-elevated)' }}>
             <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
               {/* Handle */}
               <div className="flex justify-center pt-4 pb-2">
-                <div className="w-12 h-1.5 bg-neutral-300 rounded-full" />
+                <div className="w-12 h-1.5 rounded-full" style={{ backgroundColor: 'var(--premium-text-tertiary)', opacity: 0.3 }} />
               </div>
 
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-neutral-900">
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
                     Voice Capture
                   </h3>
                   {!isOnline && (
-                    <p className="text-sm text-amber-600 mt-1">Offline mode</p>
+                    <p className="text-sm mt-1" style={{ color: 'var(--premium-amber)' }}>Offline mode</p>
                   )}
                 </div>
                 <button
-                  onClick={() => setIsOpen(false)}
-                  className="h-11 w-11 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors active:scale-90 touch-manipulation"
+                  onClick={() => {
+                    haptic.light()
+                    setIsOpen(false)
+                  }}
+                  className="h-11 w-11 rounded-full premium-glass-subtle flex items-center justify-center transition-all active:scale-90 touch-manipulation hover:bg-white/10 btn-ripple"
                   aria-label="Close"
                 >
-                  <X className="h-5 w-5 text-neutral-600" />
+                  <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
                 </button>
               </div>
 
@@ -90,7 +98,11 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
                   autoSubmit={true}
                 />
                 {!isOnline && (
-                  <p className="mt-4 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
+                  <p className="mt-4 text-sm p-3 rounded-lg border" style={{
+                    color: 'var(--premium-amber)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: 'rgba(245, 158, 11, 0.3)'
+                  }}>
                     You're offline. This capture will sync automatically when you're back online.
                   </p>
                 )}

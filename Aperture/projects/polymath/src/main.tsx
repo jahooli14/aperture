@@ -10,6 +10,7 @@ import '@fontsource/inter/700.css' // Bold
 
 // Import Premium Dark design system
 import './styles/premium-dark.css'
+import './styles/ripple.css'
 
 // Service worker temporarily disabled for debugging
 console.log('[Main] Service Worker registration DISABLED for debugging')

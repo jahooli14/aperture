@@ -140,10 +140,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 onClick={() => onEdit(memory)}
                 variant="ghost"
                 size="sm"
-                className="h-11 w-11 p-0 text-gray-400 hover:text-blue-900 hover:bg-blue-50 touch-manipulation"
+                className="h-11 w-11 p-0 touch-manipulation hover:bg-white/10 transition-colors"
                 aria-label="Edit memory"
               >
-                <Edit className="h-5 w-5" />
+                <Edit className="h-5 w-5 hover:opacity-80" style={{ color: 'var(--premium-blue)' }} />
               </Button>
             )}
             {onDelete && (
@@ -151,10 +151,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 onClick={() => onDelete(memory)}
                 variant="ghost"
                 size="sm"
-                className="h-11 w-11 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+                className="h-11 w-11 p-0 touch-manipulation hover:bg-white/10 transition-colors"
                 aria-label="Delete memory"
               >
-                <Trash2 className="h-5 w-5" />
+                <Trash2 className="h-5 w-5 hover:opacity-80" style={{ color: '#ef4444' }} />
               </Button>
             )}
           </div>
@@ -177,7 +177,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           {memory.body && memory.body.length > 200 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-2 text-sm font-medium text-blue-900 hover:text-blue-950 transition-colors flex items-center gap-1 touch-manipulation"
+              className="mt-2 text-sm font-medium transition-colors flex items-center gap-1 touch-manipulation hover:opacity-80"
+              style={{ color: 'var(--premium-blue)' }}
               aria-label={isExpanded ? 'Show less' : 'Show more'}
             >
               {isExpanded ? (
