@@ -54,27 +54,31 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 space-y-4">
+        <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: 'var(--premium-bg-primary)' }}>
+          <div className="max-w-md w-full premium-card p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-full">
-                <AlertCircle className="h-6 w-6 text-red-600" />
+              <div className="p-2 rounded-full" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
+                <AlertCircle className="h-6 w-6" style={{ color: '#ef4444' }} />
               </div>
-              <h1 className="text-xl font-bold text-neutral-900">
+              <h1 className="text-xl font-bold premium-text-platinum">
                 Something went wrong
               </h1>
             </div>
 
-            <p className="text-neutral-600">
+            <p style={{ color: 'var(--premium-text-secondary)' }}>
               The app encountered an unexpected error. This has been logged and we'll look into it.
             </p>
 
             {this.state.error && (
               <details className="text-sm">
-                <summary className="cursor-pointer text-neutral-500 hover:text-neutral-700">
+                <summary className="cursor-pointer transition-colors" style={{ color: 'var(--premium-text-tertiary)' }}>
                   Error details
                 </summary>
-                <pre className="mt-2 p-3 bg-neutral-100 rounded overflow-auto text-xs">
+                <pre className="mt-2 p-3 rounded overflow-auto text-xs" style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  color: 'var(--premium-text-secondary)',
+                  borderLeft: '3px solid #ef4444'
+                }}>
                   {this.state.error.toString()}
                   {this.state.errorInfo?.componentStack}
                 </pre>
@@ -83,7 +87,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={this.handleReset}
-              className="w-full px-4 py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-950 transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full px-4 py-3 rounded-lg font-medium transition-all inline-flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                color: 'white'
+              }}
             >
               <RefreshCw className="h-4 w-4" />
               Return to Home
