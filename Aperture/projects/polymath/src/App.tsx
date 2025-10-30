@@ -10,6 +10,8 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
+import { setupAutoSync } from './lib/syncManager'
+import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 
 // Lazy load pages for better bundle splitting (code splitting enabled for all routes)
@@ -58,6 +60,41 @@ function PageLoader() {
 export default function App() {
   // Apply theme on mount and when preferences change
   useTheme()
+
+  // Setup online/offline tracking and auto-sync
+  useEffect(() => {
+    const { setOnlineStatus, setSyncResult, updateQueueSize } = useOfflineStore.getState()
+
+    // Initial online status
+    setOnlineStatus(navigator.onLine)
+    updateQueueSize()
+
+    // Track online/offline status
+    const handleOnline = () => {
+      console.log('[App] Connection restored')
+      setOnlineStatus(true)
+    }
+
+    const handleOffline = () => {
+      console.log('[App] Connection lost')
+      setOnlineStatus(false)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // Setup auto-sync when connection is restored
+    setupAutoSync((result) => {
+      console.log('[App] Sync complete:', result)
+      setSyncResult(result)
+      updateQueueSize()
+    })
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // Configure status bar for native platforms
   useEffect(() => {

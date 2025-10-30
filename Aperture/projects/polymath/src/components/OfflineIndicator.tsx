@@ -4,22 +4,34 @@
  */
 
 import { WifiOff, CloudOff, Upload, CheckCircle, X, RefreshCw } from 'lucide-react'
-import { useOnlineStatus } from '../hooks/useOnlineStatus'
-import { useOfflineSync } from '../hooks/useOfflineSync'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useOfflineStore } from '../stores/useOfflineStore'
+import { syncPendingOperations } from '../lib/syncManager'
+import { clearQueue } from '../lib/offlineQueue'
 
 export function OfflineIndicator() {
-  const { isOnline, wasOffline } = useOnlineStatus()
-  const { pendingCount, isSyncing, syncPendingCaptures, clearPendingCaptures } = useOfflineSync()
+  const { isOnline, isSyncing, queueSize, lastSyncTime, setSyncing, updateQueueSize, setSyncResult } = useOfflineStore()
   const [isExpanded, setIsExpanded] = useState(false)
+  const [wasOffline, setWasOffline] = useState(false)
+
+  // Track when we come back online
+  useEffect(() => {
+    if (!isOnline) {
+      setWasOffline(true)
+    } else if (wasOffline && queueSize === 0) {
+      // Show "Back online" briefly then hide
+      const timer = setTimeout(() => setWasOffline(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [isOnline, queueSize, wasOffline])
 
   // Don't show anything if online and no pending items
-  if (isOnline && pendingCount === 0 && !wasOffline) {
+  if (isOnline && queueSize === 0 && !wasOffline) {
     return null
   }
 
   // Show "Back online" message briefly
-  if (wasOffline && isOnline && pendingCount === 0) {
+  if (wasOffline && isOnline && queueSize === 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
         <div className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg shadow-lg">
@@ -37,11 +49,11 @@ export function OfflineIndicator() {
         <div className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 text-white">
           <WifiOff className="h-4 w-4" />
           <span className="text-sm font-medium">
-            You're offline - captures will sync when reconnected
+            You're offline - changes will sync when reconnected
           </span>
-          {pendingCount > 0 && (
+          {queueSize > 0 && (
             <span className="ml-2 px-2 py-0.5 bg-amber-600 rounded-full text-xs font-bold">
-              {pendingCount} pending
+              {queueSize} pending
             </span>
           )}
         </div>
@@ -50,13 +62,13 @@ export function OfflineIndicator() {
   }
 
   // Show syncing status
-  if (isSyncing && pendingCount > 0) {
+  if (isSyncing && queueSize > 0) {
     return (
       <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
         <div className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg shadow-lg">
           <Upload className="h-5 w-5 animate-pulse" />
           <span className="font-medium">
-            Syncing {pendingCount} {pendingCount === 1 ? 'capture' : 'captures'}...
+            Syncing {queueSize} {queueSize === 1 ? 'operation' : 'operations'}...
           </span>
         </div>
       </div>
@@ -64,16 +76,24 @@ export function OfflineIndicator() {
   }
 
   // Show pending count when online but not syncing
-  if (pendingCount > 0) {
+  if (queueSize > 0) {
     const handleSyncNow = async () => {
       setIsExpanded(false)
-      await syncPendingCaptures()
+      setSyncing(true)
+      try {
+        const result = await syncPendingOperations()
+        setSyncResult(result)
+        await updateQueueSize()
+      } catch (error) {
+        console.error('[OfflineIndicator] Sync failed:', error)
+      }
     }
 
     const handleClear = async () => {
-      if (confirm(`Clear all ${pendingCount} pending captures? This cannot be undone.`)) {
+      if (confirm(`Clear all ${queueSize} pending operations? This cannot be undone.`)) {
         setIsExpanded(false)
-        await clearPendingCaptures()
+        await clearQueue()
+        await updateQueueSize()
       }
     }
 
@@ -87,7 +107,7 @@ export function OfflineIndicator() {
           >
             <CloudOff className="h-5 w-5 flex-shrink-0" />
             <span className="font-medium">
-              {pendingCount} {pendingCount === 1 ? 'capture' : 'captures'} waiting to sync
+              {queueSize} {queueSize === 1 ? 'operation' : 'operations'} waiting to sync
             </span>
             <X className="h-4 w-4 ml-auto flex-shrink-0 opacity-60" />
           </button>

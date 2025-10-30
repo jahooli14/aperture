@@ -6,6 +6,8 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { Project } from '../types'
+import { queueOperation } from '../lib/offlineQueue'
+import { useOfflineStore } from './useOfflineStore'
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
@@ -184,6 +186,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }))
     }
 
+    const { isOnline } = useOfflineStore.getState()
+
+    // If offline, queue operation
+    if (!isOnline) {
+      await queueOperation('update_project', { id, ...data })
+      await useOfflineStore.getState().updateQueueSize()
+
+      console.log('[ProjectStore] Project update queued for offline sync')
+      return
+    }
+
+    // Online flow
     try {
       const { error } = await supabase
         .from('projects')
@@ -212,6 +226,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       projects: state.projects.filter((p) => p.id !== id),
     }))
 
+    const { isOnline } = useOfflineStore.getState()
+
+    // If offline, queue operation
+    if (!isOnline) {
+      await queueOperation('delete_project', { id })
+      await useOfflineStore.getState().updateQueueSize()
+
+      console.log('[ProjectStore] Project deletion queued for offline sync')
+      return
+    }
+
+    // Online flow
     try {
       const { error } = await supabase
         .from('projects')
