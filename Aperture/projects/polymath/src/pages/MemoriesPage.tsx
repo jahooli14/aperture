@@ -3,8 +3,9 @@
  * Browse all memories, view resurfacing queue, see connections
  */
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useMemoryCache } from '../hooks/useMemoryCache'
@@ -557,18 +558,35 @@ export function MemoriesPage() {
               </>
             )}
 
-            {/* Recent memories view */}
+            {/* Recent memories view - Virtualized Grid */}
             {memoryView === 'recent' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children">
-                {memories.slice(0, 20).map((memory) => (
-                  <MemoryCard
-                    key={memory.id}
-                    memory={memory}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
+              <Virtuoso
+                style={{ height: '800px' }}
+                totalCount={memories.length}
+                itemContent={(index) => (
+                  <div className="pb-6">
+                    <MemoryCard
+                      key={memories[index].id}
+                      memory={memories[index]}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  </div>
+                )}
+                components={{
+                  List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
+                    ({ style, children }, ref) => (
+                      <div
+                        ref={ref}
+                        style={style}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                      >
+                        {children}
+                      </div>
+                    )
+                  )
+                }}
+              />
             )}
           </>
         )}

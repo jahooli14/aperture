@@ -3,9 +3,10 @@
  * Displays saved articles with filtering and save functionality
  */
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -168,15 +169,28 @@ export function ReadingPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredArticles.map((article) => (
-              <ArticleCard
-                key={article.id}
-                article={article}
-                onClick={() => navigate(`/reading/${article.id}`)}
-              />
-            ))}
-          </div>
+          <Virtuoso
+            style={{ height: '800px' }}
+            totalCount={filteredArticles.length}
+            itemContent={(index) => (
+              <div className="pb-4">
+                <ArticleCard
+                  key={filteredArticles[index].id}
+                  article={filteredArticles[index]}
+                  onClick={() => navigate(`/reading/${filteredArticles[index].id}`)}
+                />
+              </div>
+            )}
+            components={{
+              List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
+                ({ style, children }, ref) => (
+                  <div ref={ref} style={style} className="space-y-4">
+                    {children}
+                  </div>
+                )
+              )
+            }}
+          />
         )}
       </div>
 

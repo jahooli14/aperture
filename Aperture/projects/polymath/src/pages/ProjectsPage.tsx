@@ -2,9 +2,10 @@
  * Projects Page - Stunning Visual Design
  */
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Virtuoso } from 'react-virtuoso'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
@@ -229,32 +230,55 @@ export function ProjectsPage() {
             </CardContent>
           </Card>
         ) : viewMode === 'grid' ? (
-          /* Grid View - Full Cards */
-          <div className="w-full max-w-full overflow-hidden">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 stagger-children mt-8">
-              {projects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onEdit={() => handleEdit(project)}
-                  onDelete={() => handleDelete(project)}
-                  onClick={(id) => navigate(`/projects/${id}`)}
-                />
-              ))}
-            </div>
+          /* Grid View - Virtualized Full Cards */
+          <div className="w-full max-w-full overflow-hidden mt-8">
+            <Virtuoso
+              style={{ height: '800px' }}
+              totalCount={projects.length}
+              itemContent={(index) => (
+                <div className="pb-6">
+                  <ProjectCard
+                    key={projects[index].id}
+                    project={projects[index]}
+                    onEdit={() => handleEdit(projects[index])}
+                    onDelete={() => handleDelete(projects[index])}
+                    onClick={(id) => navigate(`/projects/${id}`)}
+                  />
+                </div>
+              )}
+              components={{
+                List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
+                  ({ style, children }, ref) => (
+                    <div
+                      ref={ref}
+                      style={style}
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+                    >
+                      {children}
+                    </div>
+                  )
+                )
+              }}
+            />
           </div>
         ) : (
-          /* Compact View - Mobile-optimized list */
-          <div className="space-y-3 mt-8">
-            {projects.map((project) => (
-              <CompactProjectCard
-                key={project.id}
-                project={project}
-                onEdit={() => handleEdit(project)}
-                onDelete={() => handleDelete(project)}
-                onClick={(id) => navigate(`/projects/${id}`)}
-              />
-            ))}
+          /* Compact View - Virtualized Mobile-optimized list */
+          <div className="mt-8">
+            <Virtuoso
+              style={{ height: '800px' }}
+              totalCount={projects.length}
+              itemContent={(index) => (
+                <div className="pb-3">
+                  <CompactProjectCard
+                    key={projects[index].id}
+                    project={projects[index]}
+                    onEdit={() => handleEdit(projects[index])}
+                    onDelete={() => handleDelete(projects[index])}
+                    onClick={(id) => navigate(`/projects/${id}`)}
+                  />
+                </div>
+              )}
+            />
           </div>
         )}
       </div>
