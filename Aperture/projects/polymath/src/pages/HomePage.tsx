@@ -124,10 +124,10 @@ export function HomePage() {
 
     const getCategoryColor = (category: string) => {
       switch (category) {
-        case 'hot_streak': return 'linear-gradient(135deg, #3b82f6, #ef4444)'
-        case 'needs_attention': return 'linear-gradient(135deg, #f59e0b, #3b82f6)'
-        case 'fresh_energy': return 'linear-gradient(135deg, #8b5cf6, #ec4899)'
-        default: return 'linear-gradient(135deg, #6b7280, #9ca3af)'
+        case 'hot_streak': return 'linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(239, 68, 68, 0.9))'
+        case 'needs_attention': return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(59, 130, 246, 0.9))'
+        case 'fresh_energy': return 'linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(236, 72, 153, 0.9))'
+        default: return 'linear-gradient(135deg, rgba(107, 114, 128, 0.7), rgba(156, 163, 175, 0.7))'
       }
     }
 
@@ -212,11 +212,11 @@ export function HomePage() {
                   )}
 
                   {/* Match Reason */}
-                  <div className="mb-4 p-3 rounded-lg" style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  <div className="mb-4 p-3 rounded-lg border-2" style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
                   }}>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
                       {score.match_reason}
                     </p>
                   </div>
