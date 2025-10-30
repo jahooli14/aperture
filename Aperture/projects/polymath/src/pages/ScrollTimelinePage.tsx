@@ -10,11 +10,12 @@
  * - DfF-inspired depth hierarchy with glassmorphism
  */
 
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useScroll, useTransform } from 'framer-motion'
-import { Layers, FolderKanban, FileText, Sparkles, GitBranch } from 'lucide-react'
+import { motion, useScroll, useTransform, useMotionValue, animate } from 'framer-motion'
+import { Layers, FolderKanban, FileText, Sparkles, GitBranch, ZoomIn, ZoomOut } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { haptic } from '../utils/haptics'
 
 interface TimelineEvent {
   id: string
@@ -67,6 +68,11 @@ export function ScrollTimelinePage() {
   const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]) // NEW: Store all events for thread filtering
   const [threadFilter, setThreadFilter] = useState<{type: string, id: string} | null>(null) // NEW: Thread view filter
   const [loading, setLoading] = useState(true)
+
+  // Timeline scrubbing and zoom state
+  const [zoomLevel, setZoomLevel] = useState<'day' | 'month' | 'year'>('month')
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date } | null>(null)
+  const scrubPosition = useMotionValue(0) // 0 to 1, represents position in timeline
 
   useEffect(() => {
     loadTimelineData()
@@ -145,6 +151,13 @@ export function ScrollTimelinePage() {
       events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
       setAllEvents(events) // NEW: Store all events
+
+      // Calculate date range for scrubber
+      if (events.length > 0) {
+        const startDate = new Date(events[0].date)
+        const endDate = new Date(events[events.length - 1].date)
+        setDateRange({ start: startDate, end: endDate })
+      }
 
       // Group by month
       const monthMap = new Map<string, TimelineEvent[]>()
@@ -245,6 +258,99 @@ export function ScrollTimelinePage() {
     setThreadFilter(null)
     loadTimelineData() // Reload all data
   }
+
+  // Scrubbing: Jump to a specific position in the timeline
+  const handleScrub = useCallback((position: number) => {
+    // position is 0 to 1
+    scrubPosition.set(position)
+
+    // Calculate target scroll position
+    if (containerRef.current) {
+      const scrollHeight = containerRef.current.scrollHeight - containerRef.current.clientHeight
+      const targetScroll = scrollHeight * position
+
+      // Smooth scroll to position
+      containerRef.current.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+      })
+
+      haptic.light()
+    }
+  }, [scrubPosition])
+
+  // Zoom in: Change to more detailed view
+  const handleZoomIn = useCallback(() => {
+    if (zoomLevel === 'year') {
+      setZoomLevel('month')
+      haptic.light()
+    } else if (zoomLevel === 'month') {
+      setZoomLevel('day')
+      haptic.light()
+    }
+  }, [zoomLevel])
+
+  // Zoom out: Change to less detailed view
+  const handleZoomOut = useCallback(() => {
+    if (zoomLevel === 'day') {
+      setZoomLevel('month')
+      haptic.light()
+    } else if (zoomLevel === 'month') {
+      setZoomLevel('year')
+      haptic.light()
+    }
+  }, [zoomLevel])
+
+  // Pinch-to-zoom detection
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    let lastDistance = 0
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+
+        const distance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        )
+
+        if (lastDistance > 0) {
+          const delta = distance - lastDistance
+
+          // Pinch out = zoom in
+          if (delta > 10) {
+            handleZoomIn()
+            lastDistance = 0 // Reset to prevent rapid firing
+          }
+          // Pinch in = zoom out
+          else if (delta < -10) {
+            handleZoomOut()
+            lastDistance = 0 // Reset to prevent rapid firing
+          }
+        }
+
+        lastDistance = distance
+      }
+    }
+
+    const handleTouchEnd = () => {
+      lastDistance = 0
+    }
+
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd)
+
+    return () => {
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [handleZoomIn, handleZoomOut])
 
   const getSchemaColor = (type: TimelineEvent['type']) => {
     return SCHEMA_COLORS[type]
@@ -360,6 +466,19 @@ export function ScrollTimelinePage() {
           />
         </div>
       </div>
+
+      {/* Timeline Scrubber */}
+      {dateRange && (
+        <TimelineScrubber
+          dateRange={dateRange}
+          zoomLevel={zoomLevel}
+          onScrub={handleScrub}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          canZoomIn={zoomLevel !== 'day'}
+          canZoomOut={zoomLevel !== 'year'}
+        />
+      )}
 
       {/* Timeline Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -673,5 +792,258 @@ function ConnectionLine({ fromId, toId, index, scrollProgress, sectionStart, eve
         strokeDashoffset: 0
       }}
     />
+  )
+}
+
+// ============================================================================
+// TIMELINE SCRUBBER COMPONENT
+// ============================================================================
+
+interface TimelineScrubberProps {
+  dateRange: { start: Date; end: Date }
+  zoomLevel: 'day' | 'month' | 'year'
+  onScrub: (position: number) => void
+  onZoomIn: () => void
+  onZoomOut: () => void
+  canZoomIn: boolean
+  canZoomOut: boolean
+}
+
+function TimelineScrubber({
+  dateRange,
+  zoomLevel,
+  onScrub,
+  onZoomIn,
+  onZoomOut,
+  canZoomIn,
+  canZoomOut
+}: TimelineScrubberProps) {
+  const scrubberRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [currentPosition, setCurrentPosition] = useState(0)
+
+  // Generate timeline markers based on zoom level
+  const markers = useMemo(() => {
+    const { start, end } = dateRange
+    const markers: { label: string; position: number }[] = []
+
+    const totalDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (zoomLevel === 'year') {
+      // Show years
+      const startYear = start.getFullYear()
+      const endYear = end.getFullYear()
+
+      for (let year = startYear; year <= endYear; year++) {
+        const yearStart = new Date(year, 0, 1)
+        const daysSinceStart = Math.floor((yearStart.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+        const position = daysSinceStart / totalDays
+
+        if (position >= 0 && position <= 1) {
+          markers.push({
+            label: year.toString(),
+            position
+          })
+        }
+      }
+    } else if (zoomLevel === 'month') {
+      // Show months
+      let current = new Date(start)
+      while (current <= end) {
+        const daysSinceStart = Math.floor((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+        const position = daysSinceStart / totalDays
+
+        markers.push({
+          label: current.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          position
+        })
+
+        current = new Date(current.getFullYear(), current.getMonth() + 1, 1)
+      }
+    } else {
+      // Show days (limit to 30 markers max)
+      const step = Math.max(1, Math.floor(totalDays / 30))
+
+      for (let i = 0; i <= totalDays; i += step) {
+        const date = new Date(start)
+        date.setDate(date.getDate() + i)
+
+        const position = i / totalDays
+
+        markers.push({
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          position
+        })
+      }
+    }
+
+    return markers
+  }, [dateRange, zoomLevel])
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true)
+    handlePointerMove(e)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent | PointerEvent) => {
+    if (!isDragging && e.type !== 'pointerdown') return
+    if (!scrubberRef.current) return
+
+    const rect = scrubberRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const position = Math.max(0, Math.min(1, x / rect.width))
+
+    setCurrentPosition(position)
+    onScrub(position)
+  }
+
+  const handlePointerUp = () => {
+    setIsDragging(false)
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMove = (e: PointerEvent) => handlePointerMove(e)
+    const handleUp = () => handlePointerUp()
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+    }
+  }, [isDragging])
+
+  // Format current date based on position
+  const getCurrentDate = () => {
+    const { start, end } = dateRange
+    const totalMs = end.getTime() - start.getTime()
+    const currentMs = start.getTime() + (totalMs * currentPosition)
+    const date = new Date(currentMs)
+
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
+  return (
+    <div className="sticky top-32 z-30 max-w-7xl mx-auto px-4 sm:px-6 mb-6">
+      <div className="premium-card border-2 p-4" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+        {/* Header with zoom controls */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--premium-text-secondary)' }}>
+              Timeline Scrubber
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              color: 'var(--premium-blue)'
+            }}>
+              {zoomLevel}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onZoomOut}
+              disabled={!canZoomOut}
+              className="p-2 rounded-lg transition-colors disabled:opacity-30"
+              style={{
+                backgroundColor: canZoomOut ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                color: 'var(--premium-blue)'
+              }}
+              title="Zoom out"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </button>
+            <button
+              onClick={onZoomIn}
+              disabled={!canZoomIn}
+              className="p-2 rounded-lg transition-colors disabled:opacity-30"
+              style={{
+                backgroundColor: canZoomIn ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                color: 'var(--premium-blue)'
+              }}
+              title="Zoom in"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrubber track */}
+        <div
+          ref={scrubberRef}
+          className="relative h-16 rounded-lg cursor-pointer touch-none select-none"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+          onPointerDown={handlePointerDown}
+        >
+          {/* Timeline markers */}
+          {markers.map((marker, index) => (
+            <div
+              key={index}
+              className="absolute top-0 bottom-0 flex flex-col items-center justify-center"
+              style={{ left: `${marker.position * 100}%` }}
+            >
+              <div
+                className="w-0.5 h-3 rounded-full"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.3)' }}
+              />
+              <span
+                className="text-xs mt-1"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+              >
+                {marker.label}
+              </span>
+            </div>
+          ))}
+
+          {/* Current position indicator */}
+          <motion.div
+            className="absolute top-0 bottom-0 w-1 rounded-full pointer-events-none"
+            style={{
+              left: `${currentPosition * 100}%`,
+              backgroundColor: 'var(--premium-blue)',
+              boxShadow: '0 0 12px rgba(59, 130, 246, 0.6)'
+            }}
+            initial={false}
+            animate={{ scale: isDragging ? 1.2 : 1 }}
+          >
+            {/* Current date tooltip */}
+            {isDragging && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg whitespace-nowrap premium-glass border shadow-lg"
+                style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}
+              >
+                <span className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+                  {getCurrentDate()}
+                </span>
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Progress fill */}
+          <div
+            className="absolute top-0 left-0 bottom-0 rounded-lg pointer-events-none"
+            style={{
+              width: `${currentPosition * 100}%`,
+              background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.3), rgba(99, 102, 241, 0.3))'
+            }}
+          />
+        </div>
+
+        {/* Instructions */}
+        <div className="mt-3 flex items-center justify-between text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <span>Drag to scrub • Pinch to zoom</span>
+          <span>{getCurrentDate()}</span>
+        </div>
+      </div>
+    </div>
   )
 }
