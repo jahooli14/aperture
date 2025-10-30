@@ -12,6 +12,7 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useToast } from '../components/ui/toast'
+import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { Brain, Rocket, TrendingUp, ArrowRight, Plus, BookOpen, Clock, Zap, Battery, Link2, Sparkles, Search } from 'lucide-react'
 import type { ProjectScore, DailyQueueResponse } from '../types'
 
@@ -82,6 +83,11 @@ export function HomePage() {
             </button>
           </div>
         </div>
+
+        {/* Smart Suggestion Widget - AI-powered context-aware action */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+          <SmartSuggestionWidget />
+        </section>
 
         {/* Priority Projects - At the Top! */}
         {priorityProjects.length > 0 && (
