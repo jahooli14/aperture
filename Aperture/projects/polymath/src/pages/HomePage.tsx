@@ -306,18 +306,45 @@ export function HomePage() {
 
   const ConnectionHintSection = () => {
     const analytics = useAnalytics('connection-hint')
+    const [showHint, setShowHint] = useState(() => {
+      // Only show on first visit
+      const hasSeenHint = localStorage.getItem('hasSeenConnectionHint')
+      return !hasSeenHint
+    })
 
     if (memories.length === 0 || projects.length === 0) return null
+    if (!showHint) return null
+
+    const handleClick = () => {
+      localStorage.setItem('hasSeenConnectionHint', 'true')
+      setShowHint(false)
+      analytics.trackClick()
+    }
+
+    const handleDismiss = (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      localStorage.setItem('hasSeenConnectionHint', 'true')
+      setShowHint(false)
+    }
 
     return (
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <Link
           to="/constellation"
-          onClick={() => analytics.trackClick()}
-          className="block premium-card p-4 border hover:bg-white/5 transition-all"
+          onClick={handleClick}
+          className="block premium-card p-4 border hover:bg-white/5 transition-all relative"
           style={{ borderColor: 'rgba(59, 130, 246, 0.2)' }}
         >
-          <div className="flex items-center gap-3">
+          <button
+            onClick={handleDismiss}
+            className="absolute top-2 right-2 h-6 w-6 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+            style={{ color: 'var(--premium-text-tertiary)' }}
+            aria-label="Dismiss"
+          >
+            ×
+          </button>
+          <div className="flex items-center gap-3 pr-8">
             <Link2 className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
             <div className="flex-1">
               <p className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>
