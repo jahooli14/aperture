@@ -11,6 +11,7 @@ import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
+import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { RelatedItems } from '../components/RelatedItems'
 import { ConnectionsList } from '../components/connections/ConnectionsList' // NEW
@@ -36,6 +37,7 @@ export function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false) // NEW
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -223,9 +225,9 @@ export function ProjectDetailPage() {
                     <button
                       onClick={() => {
                         setShowMenu(false)
-                        navigate(`/projects?edit=${project.id}`)
+                        setShowEditDialog(true)
                       }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors"
+                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-white/5"
                       style={{ color: 'var(--premium-text-primary)' }}
                     >
                       Edit Details
@@ -235,7 +237,7 @@ export function ProjectDetailPage() {
                         setShowMenu(false)
                         handleDelete()
                       }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors"
+                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-red-50"
                       style={{ color: '#ef4444' }}
                     >
                       Delete Project
@@ -297,17 +299,20 @@ export function ProjectDetailPage() {
         {/* NEW: Connections (Sparks) */}
         <div className="premium-card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
+            <h3 className="font-semibold flex items-center gap-2 premium-text-platinum">
               <Target className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
               Connections
             </h3>
-            <Button
+            <button
               onClick={() => setShowCreateConnection(true)}
-              variant="outline"
-              size="sm"
+              className="px-4 py-2 text-sm font-medium rounded-lg border transition-all hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                color: 'var(--premium-blue)'
+              }}
             >
               Link Item
-            </Button>
+            </button>
           </div>
           <ConnectionsList
             itemType="project"
@@ -342,6 +347,16 @@ export function ProjectDetailPage() {
         onClose={() => setShowAddNote(false)}
         projectId={project.id}
         onNoteAdded={handleNoteAdded}
+      />
+
+      {/* Edit Project Dialog */}
+      <EditProjectDialog
+        project={project}
+        open={showEditDialog}
+        onOpenChange={(open) => {
+          setShowEditDialog(open)
+          if (!open) loadProjectDetails() // Refresh after edit
+        }}
       />
 
       {/* Create Connection Dialog */}
