@@ -75,39 +75,40 @@ export function HomePage() {
 
     return (
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="premium-card p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
-            <h2 className="premium-text-platinum" style={{
-              fontSize: 'var(--premium-text-h3)',
-              fontWeight: 700
-            }}>
-              ⭐ Priority Projects
+        <div className="premium-card p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="premium-text-platinum text-sm font-bold flex items-center gap-2">
+              ⭐ Priority
             </h2>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{
+              backgroundColor: 'rgba(251, 191, 36, 0.15)',
+              color: '#fbbf24'
+            }}>
+              {priorityProjects.length}
+            </span>
           </div>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {priorityProjects.map(project => (
               <Link
                 key={project.id}
                 to={`/projects/${project.id}`}
                 onClick={() => analytics.trackClick()}
-                className="block premium-glass-subtle p-4 rounded-lg hover:bg-white/10 transition-all"
+                className="group block p-3 rounded-lg border-2 hover:bg-white/5 transition-all"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)'
+                }}
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h3 className="font-bold flex-1" style={{ color: 'var(--premium-text-primary)', fontSize: 'var(--premium-text-body-lg)' }}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-semibold text-sm flex-1 line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
                     {project.title}
                   </h3>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-amber)' }} />
+                  <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-amber)' }} />
                 </div>
                 {project.metadata?.next_step && (
-                  <div className="premium-glass-subtle rounded-lg p-3 mt-3">
-                    <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-amber)' }}>
-                      NEXT STEP:
-                    </div>
-                    <div className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
-                      {project.metadata.next_step}
-                    </div>
-                  </div>
+                  <p className="text-xs line-clamp-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    {project.metadata.next_step}
+                  </p>
                 )}
               </Link>
             ))}
