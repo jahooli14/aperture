@@ -14,6 +14,7 @@ import { readingDb } from '../../lib/readingDb'
 import { haptic } from '../../utils/haptics'
 import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
+import { Thumbnail } from '../ui/optimized-image'
 
 interface ArticleCardProps {
   article: Article
@@ -284,6 +285,18 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
+        {/* Thumbnail (if available) */}
+        {article.thumbnail_url && (
+          <div className="flex-shrink-0">
+            <Thumbnail
+              src={article.thumbnail_url}
+              alt={article.title || 'Article thumbnail'}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg"
+              aspectRatio="1/1"
+            />
+          </div>
+        )}
+
         <div className="flex-1 min-w-0">
           <h3 className="text-lg sm:text-xl font-semibold line-clamp-2 mb-1" style={{ color: 'var(--premium-text-primary)' }}>
             {article.title || 'Untitled'}
