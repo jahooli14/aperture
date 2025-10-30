@@ -1,33 +1,65 @@
 {
   "name": "Polymath - Personal Knowledge Graph",
   "short_name": "Polymath",
-  "description": "Voice-to-memory personal knowledge graph & creative project tracker",
+  "description": "Voice-to-memory personal knowledge graph & creative project tracker. Capture thoughts, track projects, and build your second brain.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#141b26",
   "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
-      "src": "/brain.svg",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23141b26'/%3E%3Cpath d='M50 25c-13.8 0-25 11.2-25 25s11.2 25 25 25 25-11.2 25-25-11.2-25-25-25zm0 8c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-12 12c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm24 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-20 12c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm8 8c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm8 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm8-8c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4z' fill='%233b82f6'/%3E%3C/svg%3E",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "education"],
+  "categories": ["productivity", "education", "lifestyle"],
   "shortcuts": [
     {
       "name": "Capture Thought",
       "short_name": "Capture",
-      "description": "Quickly capture a new thought",
-      "url": "/memories?action=create"
+      "description": "Quickly capture a new thought with voice or text",
+      "url": "/memories?action=create",
+      "icons": []
     },
     {
       "name": "Today's Focus",
       "short_name": "Today",
-      "description": "View today's prioritized projects",
-      "url": "/today"
+      "description": "View today's prioritized projects and tasks",
+      "url": "/today",
+      "icons": []
+    },
+    {
+      "name": "Search",
+      "short_name": "Search",
+      "description": "Search all your content with voice or text",
+      "url": "/search",
+      "icons": []
+    },
+    {
+      "name": "Reading Queue",
+      "short_name": "Reading",
+      "description": "Access your saved articles and reading queue",
+      "url": "/reading",
+      "icons": []
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/reading",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "display_override": ["window-controls-overlay", "standalone"],
+  "prefer_related_applications": false
 }

@@ -4,6 +4,8 @@ import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
+import { PWAInstallBanner } from './components/PWAInstallBanner'
+import { PWAUpdateNotification } from './components/PWAUpdateNotification'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -155,6 +157,8 @@ export default function App() {
       <Router>
         <div className="min-h-screen flex flex-col">
           <OfflineIndicator />
+          <PWAUpdateNotification />
+          <PWAInstallBanner />
 
           {/* Safe area spacer for mobile status bar */}
           <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
