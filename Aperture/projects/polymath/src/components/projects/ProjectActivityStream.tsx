@@ -40,17 +40,18 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
   })
 
   return (
-    <Card className="border-neutral-200">
+    <Card className="premium-card">
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-neutral-900">Recent Updates</h2>
+          <h2 className="text-lg font-bold premium-text-platinum">Recent Updates</h2>
           <button
             onClick={onRefresh}
-            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"
             aria-label="Refresh"
+            style={{ color: 'var(--premium-text-tertiary)' }}
           >
-            <RefreshCw className="h-4 w-4 text-neutral-600" />
+            <RefreshCw className="h-4 w-4" />
           </button>
         </div>
 
@@ -64,14 +65,16 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
             <button
               key={tab.key}
               onClick={() => setFilter(tab.key)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
-                filter === tab.key
-                  ? 'bg-blue-900 text-white'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-              }`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap"
+              style={{
+                background: filter === tab.key
+                  ? 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))'
+                  : 'rgba(255, 255, 255, 0.05)',
+                color: filter === tab.key ? 'white' : 'var(--premium-text-secondary)'
+              }}
             >
               {tab.label}
-              <span className={`text-xs ${filter === tab.key ? 'opacity-75' : 'opacity-50'}`}>
+              <span className="text-xs" style={{ opacity: filter === tab.key ? 0.75 : 0.5 }}>
                 ({tab.count})
               </span>
             </button>
@@ -82,12 +85,12 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
         {filteredNotes.length === 0 ? (
           <div className="text-center py-12">
             <div className="inline-flex items-center justify-center mb-3">
-              <FileText className="h-12 w-12 text-neutral-300" />
+              <FileText className="h-12 w-12" style={{ color: 'var(--premium-text-tertiary)' }} />
             </div>
-            <h3 className="text-base font-semibold text-neutral-700 mb-1">
+            <h3 className="text-base font-semibold mb-1 premium-text-platinum">
               No updates yet
             </h3>
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
               Get started by adding your first note
             </p>
           </div>
@@ -100,16 +103,19 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
               return (
                 <div
                   key={note.id}
-                  className="group relative bg-neutral-50 rounded-lg border border-neutral-200 hover:border-neutral-300 transition-colors"
+                  className="group relative rounded-lg border transition-colors"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                  }}
                 >
                   <div className="p-4">
                     {/* Header */}
                     <div className="flex items-start gap-3 mb-2">
-                      <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        note.note_type === 'voice'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-neutral-200 text-neutral-700'
-                      }`}>
+                      <div className="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0" style={{
+                        backgroundColor: note.note_type === 'voice' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                        color: note.note_type === 'voice' ? '#3b82f6' : 'var(--premium-text-secondary)'
+                      }}>
                         {note.note_type === 'voice' ? (
                           <Mic className="h-4 w-4" />
                         ) : (
@@ -119,10 +125,10 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
-                          <span className="text-sm font-medium text-neutral-900">
+                          <span className="text-sm font-medium premium-text-platinum">
                             You added {note.note_type === 'voice' ? 'a voice note' : 'a note'}
                           </span>
-                          <span className="text-xs text-neutral-500">
+                          <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                             {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
                           </span>
                         </div>
@@ -133,16 +139,16 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
                     {showPreview && (
                       <div className="ml-11">
                         {isExpanded ? (
-                          <ul className="space-y-1.5 text-sm text-neutral-700">
+                          <ul className="space-y-1.5 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                             {note.bullets.map((bullet, index) => (
                               <li key={index} className="flex gap-2">
-                                <span className="text-neutral-400 flex-shrink-0">•</span>
+                                <span className="flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
                                 <span className="leading-relaxed">{bullet}</span>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-sm text-neutral-600 line-clamp-2 leading-relaxed">
+                          <p className="text-sm line-clamp-2 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
                             {note.bullets[0]}
                           </p>
                         )}
@@ -150,7 +156,8 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
                         {note.bullets.length > 1 && (
                           <button
                             onClick={() => toggleExpanded(note.id)}
-                            className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-900 hover:text-blue-700 transition-colors"
+                            className="mt-2 flex items-center gap-1 text-xs font-medium transition-colors"
+                            style={{ color: 'var(--premium-blue)' }}
                           >
                             {isExpanded ? (
                               <>
