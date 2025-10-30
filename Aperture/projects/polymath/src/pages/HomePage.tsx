@@ -307,18 +307,28 @@ export function HomePage() {
   const ConnectionHintSection = () => {
     const analytics = useAnalytics('connection-hint')
     const [showHint, setShowHint] = useState(false)
+    const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
+      // Mark as mounted first to ensure hydration is complete
+      setMounted(true)
+
       // Only show on first visit - check after mount to avoid hydration mismatch
-      const hasSeenHint = localStorage.getItem('hasSeenConnectionHint')
-      setShowHint(!hasSeenHint)
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        const hasSeenHint = localStorage.getItem('hasSeenConnectionHint')
+        setShowHint(!hasSeenHint)
+      }
     }, [])
 
+    // Don't render anything until mounted to avoid hydration mismatch
+    if (!mounted) return null
     if (memories.length === 0 || projects.length === 0) return null
     if (!showHint) return null
 
     const handleClick = () => {
-      localStorage.setItem('hasSeenConnectionHint', 'true')
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('hasSeenConnectionHint', 'true')
+      }
       setShowHint(false)
       analytics.trackClick()
     }
@@ -326,7 +336,9 @@ export function HomePage() {
     const handleDismiss = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault()
       e.stopPropagation()
-      localStorage.setItem('hasSeenConnectionHint', 'true')
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('hasSeenConnectionHint', 'true')
+      }
       setShowHint(false)
     }
 

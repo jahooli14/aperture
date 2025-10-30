@@ -32,6 +32,11 @@ const VIEW_DURATION_THRESHOLD = 2000 // 2 seconds to count as a "view"
  * Get all section analytics from storage
  */
 export function getAnalytics(): AnalyticsStore {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return {}
+  }
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (!stored) return {}
@@ -46,6 +51,11 @@ export function getAnalytics(): AnalyticsStore {
  * Save analytics to storage
  */
 function saveAnalytics(analytics: AnalyticsStore) {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return
+  }
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(analytics))
   } catch (error) {
@@ -158,6 +168,11 @@ export function getSortedSections(): SectionId[] {
  * Reset all analytics (for testing)
  */
 export function resetAnalytics() {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return
+  }
+
   localStorage.removeItem(STORAGE_KEY)
 }
 
