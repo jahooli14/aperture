@@ -4,12 +4,14 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2 } from 'lucide-react'
+import { motion, useMotionValue, useTransform } from 'framer-motion'
+import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/readingDb'
+import { haptic } from '../../utils/haptics'
 
 interface ArticleCardProps {
   article: Article
@@ -22,6 +24,16 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const [isOffline, setIsOffline] = useState(false)
   const [progress, setProgress] = useState(0)
   const [connectionCount, setConnectionCount] = useState(0)
+  const [exitX, setExitX] = useState(0)
+
+  // Motion values for swipe gesture
+  const x = useMotionValue(0)
+  const archiveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const backgroundColor = useTransform(
+    x,
+    [0, 150],
+    ['rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
+  )
 
   useEffect(() => {
     checkOfflineStatus()
@@ -106,12 +118,63 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
     window.open(article.url, '_blank', 'noopener,noreferrer')
   }
 
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x
+    const velocity = info.velocity.x
+
+    // Swipe right = Mark as read/Archive
+    if (offset > 100 || velocity > 500) {
+      haptic.success()
+      setExitX(1000)
+      setTimeout(async () => {
+        try {
+          await updateArticleStatus(article.id, 'archived')
+          addToast({
+            title: 'Archived!',
+            description: 'Article marked as read',
+            variant: 'success',
+          })
+        } catch (error) {
+          addToast({
+            title: 'Error',
+            description: 'Failed to archive article',
+            variant: 'destructive',
+          })
+          setExitX(0)
+          x.set(0)
+        }
+      }, 200)
+    }
+  }
+
   return (
-    <div
-      onClick={onClick}
-      className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50"
-      style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}
+    <motion.div
+      style={{ x }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.1}
+      onDragEnd={handleDragEnd}
+      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="relative"
     >
+      {/* Archive Indicator (Swipe Right) */}
+      <motion.div
+        style={{ opacity: archiveIndicatorOpacity }}
+        className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
+      >
+        <div className="flex items-center gap-2">
+          <Check className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+          <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>ARCHIVE</span>
+        </div>
+      </motion.div>
+
+      <motion.div style={{ backgroundColor }} className="rounded-xl">
+        <div
+          onClick={onClick}
+          className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50"
+          style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}
+        >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
@@ -271,6 +334,8 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+      </motion.div>
+    </motion.div>
   )
 }

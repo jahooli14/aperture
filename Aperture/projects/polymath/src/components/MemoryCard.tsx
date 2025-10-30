@@ -9,6 +9,7 @@ import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp
 import { Button } from './ui/button'
 import type { Memory, Bridge } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { haptic } from '../utils/haptics'
 
 interface MemoryCardProps {
   memory: Memory
@@ -24,12 +25,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
   // Motion values for swipe gesture
   const x = useMotionValue(0)
-  const opacity = useTransform(x, [-150, 0], [0, 1])
   const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
+  const editIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
   const backgroundColor = useTransform(
     x,
-    [-150, 0],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)']
+    [-150, 0, 150],
+    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
   )
 
   useEffect(() => {
@@ -84,15 +85,23 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
     // Swipe left = Delete (threshold: -100px or fast velocity)
     if ((offset < -100 || velocity < -500) && onDelete) {
+      haptic.warning()
       setExitX(-1000)
       setTimeout(() => onDelete(memory), 200)
+    }
+    // Swipe right = Edit (threshold: 100px or fast velocity)
+    else if ((offset > 100 || velocity > 500) && onEdit) {
+      haptic.light()
+      onEdit(memory)
+      // Reset position
+      x.set(0)
     }
   }
 
   return (
     <motion.div
       style={{ x }}
-      drag={onDelete ? 'x' : false}
+      drag={(onDelete || onEdit) ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.1}
       onDragEnd={handleDragEnd}
@@ -100,7 +109,20 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="relative"
     >
-      {/* Delete Indicator */}
+      {/* Edit Indicator (Swipe Right) */}
+      {onEdit && (
+        <motion.div
+          style={{ opacity: editIndicatorOpacity }}
+          className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10"
+        >
+          <div className="flex items-center gap-2">
+            <Edit className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <span className="text-xl font-bold" style={{ color: 'var(--premium-blue)' }}>EDIT</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Delete Indicator (Swipe Left) */}
       {onDelete && (
         <motion.div
           style={{ opacity: deleteIndicatorOpacity }}
