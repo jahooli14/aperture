@@ -171,7 +171,7 @@ export function DailyQueuePage() {
   }
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen pt-12 pb-24">
       {/* Header */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="text-center">

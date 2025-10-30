@@ -234,7 +234,7 @@ export function MemoriesPage() {
     <>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
         <motion.div
-          className="py-12"
+          className="pt-12 pb-24"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}

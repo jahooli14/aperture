@@ -497,6 +497,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Fetch RSS feed items (without adding to reading queue)
+    if (resource === 'rss' && req.query.action === 'items' && req.method === 'GET') {
+      try {
+        const { feed_id } = req.query
+
+        if (!feed_id || typeof feed_id !== 'string') {
+          return res.status(400).json({ error: 'feed_id required' })
+        }
+
+        // Get the feed
+        const { data: feed } = await supabase
+          .from('rss_feeds')
+          .select('*')
+          .eq('id', feed_id)
+          .eq('user_id', USER_ID)
+          .single()
+
+        if (!feed) {
+          return res.status(404).json({ error: 'Feed not found' })
+        }
+
+        // Fetch RSS feed items
+        const feedData = await rssParser.parseURL(feed.feed_url)
+
+        // Return the latest 20 items
+        const items = feedData.items.slice(0, 20).map(item => ({
+          guid: item.guid || item.link,
+          feed_id: feed.id,
+          title: item.title || 'Untitled',
+          link: item.link || '',
+          description: item.contentSnippet || item.description || null,
+          published_at: item.pubDate || item.isoDate || null,
+          author: item.creator || item.author || null
+        }))
+
+        return res.status(200).json({
+          success: true,
+          items
+        })
+      } catch (error) {
+        console.error('[RSS] Fetch items error:', error)
+        return res.status(500).json({ error: 'Failed to fetch RSS items' })
+      }
+    }
+
     // GET feeds
     if (req.method === 'GET') {
       if (id) {

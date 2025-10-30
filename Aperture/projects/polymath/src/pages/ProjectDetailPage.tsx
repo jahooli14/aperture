@@ -169,7 +169,7 @@ export function ProjectDetailPage() {
   const progress = project.metadata?.progress || 0
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Sticky Header */}
       <div className="premium-glass-strong border-b sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
