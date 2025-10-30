@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { PWAUpdateNotification } from './components/PWAUpdateNotification'
+import { VoiceCommandButton } from './components/VoiceCommandButton'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -190,6 +191,9 @@ export default function App() {
 
           {/* Floating Navigation */}
           <FloatingNav />
+
+          {/* Voice Command Button */}
+          <VoiceCommandButton />
         </div>
       </Router>
     </ToastProvider>
