@@ -13,8 +13,12 @@ import {
   ChevronRight,
   Lightbulb,
   ListChecks,
-  Rss
+  Rss,
+  Palette,
+  Check
 } from 'lucide-react'
+import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
+import { getAvailableColors, getColorPreview } from '../lib/theme'
 
 interface SettingsOption {
   id: string
@@ -85,6 +89,19 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
+  const { accentColor, intensity, fontSize, setAccentColor, setIntensity, setFontSize } = useThemeStore()
+
+  const intensityOptions: { value: ThemeIntensity; label: string; description: string }[] = [
+    { value: 'subtle', label: 'Subtle', description: 'Muted colors' },
+    { value: 'normal', label: 'Normal', description: 'Balanced' },
+    { value: 'vibrant', label: 'Vibrant', description: 'Bold colors' },
+  ]
+
+  const fontSizeOptions: { value: FontSize; label: string }[] = [
+    { value: 'small', label: 'Small' },
+    { value: 'normal', label: 'Normal' },
+    { value: 'large', label: 'Large' },
+  ]
 
   return (
     <motion.div
@@ -193,6 +210,104 @@ export function SettingsPage() {
               </motion.button>
             )
           })}
+        </div>
+      </div>
+
+      {/* Theme Customization */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+        <div className="premium-card p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Palette className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <h2
+              className="text-2xl font-bold"
+              style={{ color: 'var(--premium-text-primary)' }}
+            >
+              Theme Customization
+            </h2>
+          </div>
+
+          {/* Accent Color */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+              Accent Color
+            </h3>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              {getAvailableColors().map((color) => {
+                const preview = getColorPreview(color)
+                const isSelected = accentColor === color
+                return (
+                  <button
+                    key={color}
+                    onClick={() => setAccentColor(color)}
+                    className="relative aspect-square rounded-xl transition-transform hover:scale-110 active:scale-95"
+                    style={{
+                      background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`,
+                      border: isSelected ? `3px solid ${preview.primary}` : '2px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    {isSelected && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Check className="h-8 w-8 text-white drop-shadow-lg" />
+                      </div>
+                    )}
+                    <div className="sr-only">{color}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Intensity */}
+          <div className="mb-8">
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+              Intensity
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {intensityOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setIntensity(option.value)}
+                  className="premium-card p-4 text-center transition-all hover:scale-105"
+                  style={{
+                    borderColor: intensity === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: intensity === option.value ? '2px' : '1px',
+                  }}
+                >
+                  <div className="font-semibold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    {option.label}
+                  </div>
+                  <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {option.description}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Font Size */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+              Font Size
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {fontSizeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setFontSize(option.value)}
+                  className="premium-card p-4 text-center transition-all hover:scale-105"
+                  style={{
+                    borderColor: fontSize === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: fontSize === option.value ? '2px' : '1px',
+                    fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px',
+                  }}
+                >
+                  <div className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                    {option.label}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

@@ -9,6 +9,7 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
+import { useTheme } from './hooks/useTheme'
 import './App.css'
 
 // Lazy load pages for better bundle splitting (code splitting enabled for all routes)
@@ -55,6 +56,9 @@ function PageLoader() {
 // Navigation component removed - replaced with FloatingNav
 
 export default function App() {
+  // Apply theme on mount and when preferences change
+  useTheme()
+
   // Configure status bar for native platforms
   useEffect(() => {
     if (!isNative()) return
