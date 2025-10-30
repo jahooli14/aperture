@@ -51,6 +51,13 @@ export function ReadingPage() {
     try {
       const allItems: RSSItem[] = []
 
+      // Safely check if feeds exist and is an array
+      if (!feeds || !Array.isArray(feeds)) {
+        setRssItems([])
+        setLoadingRSS(false)
+        return
+      }
+
       for (const feed of feeds.filter(f => f.enabled)) {
         try {
           // Fetch feed items using rss-parser via API
@@ -221,7 +228,11 @@ export function ReadingPage() {
               )}
               <button
                 onClick={() => setShowSaveDialog(true)}
-                className="premium-btn-primary rounded-full px-4 py-2 font-medium inline-flex items-center gap-2"
+                className="premium-glass rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
+                style={{
+                  borderColor: 'rgba(59, 130, 246, 0.3)',
+                  color: 'var(--premium-blue)'
+                }}
               >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Save Article</span>
@@ -270,7 +281,7 @@ export function ReadingPage() {
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading RSS updates...</p>
               </div>
-            ) : feeds.length === 0 ? (
+            ) : (!feeds || feeds.length === 0) ? (
               <div className="premium-card p-20 text-center">
                 <div className="flex flex-col items-center justify-center">
                   <Rss className="h-16 w-16 mb-4" style={{ color: 'var(--premium-emerald)' }} />
@@ -291,7 +302,12 @@ export function ReadingPage() {
                   <button
                     onClick={handleRSSSync}
                     disabled={syncing}
-                    className="premium-btn-primary rounded-full px-6 py-3 font-medium inline-flex items-center gap-2"
+                    className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
+                    style={{
+                      borderColor: 'rgba(59, 130, 246, 0.3)',
+                      color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
+                      opacity: syncing ? 0.5 : 1
+                    }}
                   >
                     <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
                     {syncing ? 'Syncing...' : 'Sync Feeds'}
@@ -337,7 +353,11 @@ export function ReadingPage() {
               {activeTab === 'queue' && (
                 <button
                   onClick={() => setShowSaveDialog(true)}
-                  className="premium-btn-primary rounded-full px-6 py-3 font-medium inline-flex items-center gap-2"
+                  className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
+                  style={{
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    color: 'var(--premium-blue)'
+                  }}
                 >
                   <Plus className="h-5 w-5" />
                   Save Your First Article

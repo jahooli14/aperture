@@ -401,8 +401,7 @@ export function HomePage() {
         {/* Header with Search */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="premium-text-platinum flex-1 text-center" style={{
-              fontSize: 'var(--premium-text-h1)',
+            <h1 className="premium-text-platinum flex-1 text-center text-4xl sm:text-5xl" style={{
               fontWeight: 700,
               letterSpacing: 'var(--premium-tracking-tight)'
             }}>

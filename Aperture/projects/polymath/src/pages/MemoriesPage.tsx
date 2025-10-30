@@ -241,10 +241,10 @@ export function MemoriesPage() {
           transition={{ duration: 0.2 }}
         >
           {/* Header with Action */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         {/* New Memory button - visible on all views */}
         {view === 'all' && (
-          <div className="mb-6 flex items-center justify-center">
+          <div className="mb-4 flex items-center justify-center">
             <CreateMemoryDialog />
           </div>
         )}
@@ -271,7 +271,7 @@ export function MemoriesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* View Toggle */}
-        <div className="flex flex-wrap gap-2 justify-center mb-10">
+        <div className="flex flex-wrap gap-2 justify-center mb-6">
           <Button
             variant={view === 'foundational' ? 'default' : 'outline'}
             onClick={() => setView('foundational')}

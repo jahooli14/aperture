@@ -39,11 +39,11 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Core navigation: Home + 3 tenets
+// Core navigation: Home + 3 tenets (Thoughts in middle)
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
-  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
+  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
   { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'more', label: 'More', icon: Settings, path: '/settings', action: 'navigate', color: 'constellation' },
 ]

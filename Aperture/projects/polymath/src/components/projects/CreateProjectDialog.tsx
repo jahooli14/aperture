@@ -74,9 +74,9 @@ export function CreateProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift" style={{ borderColor: 'rgba(59, 130, 246, 0.5)', color: '#3b82f6' }}>
+        <button className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', color: 'var(--premium-blue)' }}>
           <Plus className="h-4 w-4" />
-          New Project
+          <span style={{ color: 'var(--premium-text-primary)' }}>New Project</span>
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col overflow-hidden">
