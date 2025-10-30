@@ -5,13 +5,14 @@
 import { useState, useEffect, memo } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, Link2, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2 } from 'lucide-react'
+import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2 } from 'lucide-react'
 import { Button } from './ui/button'
-import type { Memory, Bridge } from '../types'
+import type { Memory, BridgeWithMemories } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { haptic } from '../utils/haptics'
 import { useLongPress } from '../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
+import { MemoryLinks } from './MemoryLinks'
 
 interface MemoryCardProps {
   memory: Memory
@@ -20,7 +21,7 @@ interface MemoryCardProps {
 }
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
-  const [bridges, setBridges] = useState<Bridge[]>([])
+  const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [exitX, setExitX] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
@@ -376,42 +377,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </div>
         )}
 
-        {/* Bridges/Connections */}
-        {bridges.length > 0 && (
-          <div className="pt-3 border-t border-white/20">
-            <div className="flex items-center gap-2 mb-2">
-              <Link2 className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-              <span className="text-sm font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
-                {bridges.length} Connection{bridges.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <div className="space-y-1">
-              {bridges.slice(0, 3).map((bridge) => (
-                <div
-                  key={bridge.id}
-                  className="flex items-center justify-between text-xs rounded-lg px-3 py-2 border"
-                  style={{
-                    backgroundColor: 'rgba(6, 182, 212, 0.15)',
-                    borderColor: 'rgba(6, 182, 212, 0.3)'
-                  }}
-                >
-                  <span className="capitalize" style={{ color: 'var(--premium-text-primary)' }}>
-                    {bridge.bridge_type.replace(/_/g, ' ')}
-                  </span>
-                  <div
-                    className="px-2 py-0.5 rounded-full font-bold text-xs"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.8), rgba(59, 130, 246, 0.8))',
-                      color: '#ffffff'
-                    }}
-                  >
-                    {Math.round(bridge.strength * 100)}%
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Bi-Directional Memory Links */}
+        <MemoryLinks
+          currentMemoryId={memory.id}
+          bridges={bridges}
+        />
 
         {/* Processing Status */}
         {!memory.processed && (

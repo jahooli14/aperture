@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { Memory, Bridge } from '../types'
+import type { Memory, Bridge, BridgeWithMemories } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 
@@ -18,7 +18,7 @@ interface MemoryStore {
   error: string | null
 
   fetchMemories: () => Promise<void>
-  fetchBridgesForMemory: (memoryId: string) => Promise<Bridge[]>
+  fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
   updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
   deleteMemory: (id: string) => Promise<void>

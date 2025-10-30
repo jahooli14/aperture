@@ -282,6 +282,12 @@ export interface Bridge {
   entities_shared: string[] | null
 }
 
+// Bridge with populated memory objects (from Supabase joins)
+export interface BridgeWithMemories extends Omit<Bridge, 'memory_a' | 'memory_b'> {
+  memory_a: Memory
+  memory_b: Memory
+}
+
 export interface ExtractedMetadata {
   memory_type: MemoryType
   entities: Entities
