@@ -166,6 +166,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateProject: async (id, data) => {
+    // Optimistic update - update UI immediately
+    const previousProjects = get().projects
+    const projectToUpdate = previousProjects.find((p) => p.id === id)
+
+    if (projectToUpdate) {
+      const updatedProject = {
+        ...projectToUpdate,
+        ...data,
+        last_active: new Date().toISOString(), // Update last_active timestamp
+      }
+
+      set((state) => ({
+        projects: smartSortProjects(
+          state.projects.map((p) => (p.id === id ? updatedProject : p))
+        ),
+      }))
+    }
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -174,9 +192,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       if (error) throw error
 
-      // Refresh projects after updating
+      // Refresh to get server data (including any server-side processing)
       await get().fetchProjects()
     } catch (error) {
+      // Rollback on error
+      set({ projects: previousProjects })
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
@@ -185,6 +205,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   deleteProject: async (id) => {
+    // Optimistic delete - remove from UI immediately
+    const previousProjects = get().projects
+
+    set((state) => ({
+      projects: state.projects.filter((p) => p.id !== id),
+    }))
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -192,10 +219,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         .eq('id', id)
 
       if (error) throw error
-
-      // Refresh projects after deleting
-      await get().fetchProjects()
     } catch (error) {
+      // Rollback on error
+      set({ projects: previousProjects })
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })

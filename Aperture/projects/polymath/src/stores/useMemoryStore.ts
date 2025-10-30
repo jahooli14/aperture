@@ -125,6 +125,27 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   },
 
   updateMemory: async (id: string, input: CreateMemoryInput) => {
+    // Optimistic update - update UI immediately
+    const previousMemories = useMemoryStore.getState().memories
+    const memoryToUpdate = previousMemories.find((m) => m.id === id)
+
+    if (memoryToUpdate) {
+      set((state) => ({
+        memories: state.memories.map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                title: input.title,
+                body: input.body,
+                tags: input.tags || [],
+                memory_type: input.memory_type || null,
+                processed: false,
+              }
+            : m
+        ),
+      }))
+    }
+
     try {
       const updateData = {
         title: input.title,
@@ -143,7 +164,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       if (error) throw error
 
-      // Update local state
+      // Replace with server data
       set((state) => ({
         memories: state.memories.map((m) => (m.id === id ? data : m)),
       }))
@@ -162,21 +183,27 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       return data
     } catch (error) {
+      // Rollback on error
+      set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to update memory')
     }
   },
 
   deleteMemory: async (id: string) => {
+    // Optimistic delete - remove from UI immediately
+    const previousMemories = useMemoryStore.getState().memories
+
+    set((state) => ({
+      memories: state.memories.filter((m) => m.id !== id),
+    }))
+
     try {
       const { error } = await supabase.from('memories').delete().eq('id', id)
 
       if (error) throw error
-
-      // Remove from local state
-      set((state) => ({
-        memories: state.memories.filter((m) => m.id !== id),
-      }))
     } catch (error) {
+      // Rollback on error
+      set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to delete memory')
     }
   },

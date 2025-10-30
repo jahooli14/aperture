@@ -91,6 +91,18 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   },
 
   updateArticleStatus: async (id: string, status: ArticleStatus) => {
+    // Optimistic update - update UI immediately
+    const previousArticles = get().articles
+    const articleToUpdate = previousArticles.find((a) => a.id === id)
+
+    if (articleToUpdate) {
+      set((state) => ({
+        articles: state.articles.map((a) =>
+          a.id === id ? { ...a, status } : a
+        ),
+      }))
+    }
+
     try {
       const response = await fetch('/api/reading', {
         method: 'PATCH',
@@ -104,13 +116,15 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
       const { article } = await response.json()
 
-      // Update in local state
+      // Replace with server data
       set((state) => ({
         articles: state.articles.map((a) =>
           a.id === id ? article : a
         ),
       }))
     } catch (error) {
+      // Rollback on error
+      set({ articles: previousArticles })
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage })
       throw error
@@ -118,6 +132,13 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   },
 
   deleteArticle: async (id: string) => {
+    // Optimistic delete - remove from UI immediately
+    const previousArticles = get().articles
+
+    set((state) => ({
+      articles: state.articles.filter((a) => a.id !== id),
+    }))
+
     try {
       const response = await fetch(`/api/reading?id=${id}`, {
         method: 'DELETE',
@@ -126,12 +147,9 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       if (!response.ok) {
         throw new Error('Failed to delete article')
       }
-
-      // Remove from local state
-      set((state) => ({
-        articles: state.articles.filter((a) => a.id !== id),
-      }))
     } catch (error) {
+      // Rollback on error
+      set({ articles: previousArticles })
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage })
       throw error
