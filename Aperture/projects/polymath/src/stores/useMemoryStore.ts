@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase'
 import type { Memory, Bridge, BridgeWithMemories } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
-import { cacheManager, CACHE_PRESETS } from '../lib/cacheManager'
 
 interface CreateMemoryInput {
   title: string
@@ -38,23 +37,15 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
     set({ loading: true, error: null })
 
     try {
-      const cachedData = await cacheManager.get(
-        'memories:all',
-        async () => {
-          const { data, error } = await supabase
-            .from('memories')
-            .select('*')
-            .order('created_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('memories')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-          if (error) throw error
-          return data || []
-        },
-        CACHE_PRESETS.normal // 30s fresh, 5min stale
-      )
+      if (error) throw error
 
-      set({ memories: cachedData, loading: false, error: null })
+      set({ memories: data || [], loading: false })
     } catch (error) {
-      console.error('[MemoryStore] fetchMemories error:', error)
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch memories',
         loading: false,
@@ -145,9 +136,6 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
         memories: [data, ...state.memories],
       }))
 
-      // Invalidate cache
-      cacheManager.invalidate('memories:all')
-
       // Trigger background processing
       try {
         await fetch('/api/process', {
@@ -232,9 +220,6 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
         memories: state.memories.map((m) => (m.id === id ? data : m)),
       }))
 
-      // Invalidate cache
-      cacheManager.invalidate('memories:all')
-
       // Trigger background processing
       try {
         await fetch('/api/process', {
@@ -279,9 +264,6 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
       const { error } = await supabase.from('memories').delete().eq('id', id)
 
       if (error) throw error
-
-      // Invalidate cache
-      cacheManager.invalidate('memories:all')
     } catch (error) {
       // Rollback on error
       set({ memories: previousMemories })
