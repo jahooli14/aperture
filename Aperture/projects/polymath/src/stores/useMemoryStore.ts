@@ -35,22 +35,31 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   error: null,
 
   fetchMemories: async () => {
-    // Don't show loading if we have cached data
-    const cachedData = await cacheManager.get(
-      'memories:all',
-      async () => {
-        const { data, error } = await supabase
-          .from('memories')
-          .select('*')
-          .order('created_at', { ascending: false })
+    set({ loading: true, error: null })
 
-        if (error) throw error
-        return data || []
-      },
-      CACHE_PRESETS.normal // 30s fresh, 5min stale
-    )
+    try {
+      const cachedData = await cacheManager.get(
+        'memories:all',
+        async () => {
+          const { data, error } = await supabase
+            .from('memories')
+            .select('*')
+            .order('created_at', { ascending: false })
 
-    set({ memories: cachedData, loading: false, error: null })
+          if (error) throw error
+          return data || []
+        },
+        CACHE_PRESETS.normal // 30s fresh, 5min stale
+      )
+
+      set({ memories: cachedData, loading: false, error: null })
+    } catch (error) {
+      console.error('[MemoryStore] fetchMemories error:', error)
+      set({
+        error: error instanceof Error ? error.message : 'Failed to fetch memories',
+        loading: false,
+      })
+    }
   },
 
   fetchBridgesForMemory: async (memoryId: string) => {

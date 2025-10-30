@@ -24,62 +24,78 @@ const PREFETCH_STRATEGIES: Record<string, string[]> = {
  * Prefetch functions for each data type
  */
 async function prefetchMemories() {
-  await cacheManager.prefetch(
-    'memories:all',
-    async () => {
-      const { data, error } = await supabase
-        .from('memories')
-        .select('*')
-        .order('created_at', { ascending: false })
+  try {
+    await cacheManager.prefetch(
+      'memories:all',
+      async () => {
+        const { data, error } = await supabase
+          .from('memories')
+          .select('*')
+          .order('created_at', { ascending: false })
 
-      if (error) throw error
-      return data || []
-    },
-    CACHE_PRESETS.normal
-  )
+        if (error) throw error
+        return data || []
+      },
+      CACHE_PRESETS.normal
+    )
+  } catch (error) {
+    console.error('[Prefetch] Failed to prefetch memories:', error)
+  }
 }
 
 async function prefetchProjects() {
-  await cacheManager.prefetch(
-    'projects?filter=all',
-    async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
+  try {
+    await cacheManager.prefetch(
+      'projects?filter=all',
+      async () => {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
 
-      if (error) throw error
-      return data || []
-    },
-    CACHE_PRESETS.normal
-  )
+        if (error) throw error
+        return data || []
+      },
+      CACHE_PRESETS.normal
+    )
+  } catch (error) {
+    console.error('[Prefetch] Failed to prefetch projects:', error)
+  }
 }
 
 async function prefetchSuggestions() {
-  await cacheManager.prefetch(
-    'suggestions:all',
-    async () => {
-      const { data, error } = await supabase
-        .from('suggestions')
-        .select('*')
-        .order('created_at', { ascending: false })
+  try {
+    await cacheManager.prefetch(
+      'suggestions:all',
+      async () => {
+        const { data, error } = await supabase
+          .from('suggestions')
+          .select('*')
+          .order('created_at', { ascending: false })
 
-      if (error) throw error
-      return data || []
-    },
-    CACHE_PRESETS.normal
-  )
+        if (error) throw error
+        return data || []
+      },
+      CACHE_PRESETS.normal
+    )
+  } catch (error) {
+    console.error('[Prefetch] Failed to prefetch suggestions:', error)
+  }
 }
 
 async function prefetchToday() {
-  await cacheManager.prefetch(
-    'daily-queue',
-    async () => {
-      const response = await fetch('/api/projects?resource=daily-queue')
-      if (!response.ok) throw new Error('Failed to fetch daily queue')
-      return response.json()
-    },
-    CACHE_PRESETS.normal
-  )
+  try {
+    await cacheManager.prefetch(
+      'daily-queue',
+      async () => {
+        const response = await fetch('/api/projects?resource=daily-queue')
+        if (!response.ok) throw new Error('Failed to fetch daily queue')
+        return response.json()
+      },
+      CACHE_PRESETS.normal
+    )
+  } catch (error) {
+    console.error('[Prefetch] Failed to prefetch today:', error)
+  }
 }
 
 /**

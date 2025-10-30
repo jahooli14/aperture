@@ -99,6 +99,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   filter: 'all',
 
   fetchProjects: async () => {
+    set({ loading: true, error: null })
+
     try {
       const { filter } = get()
       const cacheKey = createCacheKey('projects', { filter })
@@ -144,6 +146,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       set({ projects, loading: false, error: null })
     } catch (error) {
+      console.error('[ProjectStore] fetchProjects error:', error)
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
         loading: false
