@@ -3,7 +3,7 @@
  * Keeps users on track with their goals and active projects
  */
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
@@ -321,7 +321,7 @@ export function HomePage() {
       analytics.trackClick()
     }
 
-    const handleDismiss = (e: React.MouseEvent) => {
+    const handleDismiss = (e: React.MouseEvent<HTMLButtonElement>) => {
       e.preventDefault()
       e.stopPropagation()
       localStorage.setItem('hasSeenConnectionHint', 'true')
