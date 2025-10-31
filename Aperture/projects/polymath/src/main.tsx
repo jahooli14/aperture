@@ -25,6 +25,60 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+// Global error handlers for debugging mobile crashes
+window.addEventListener('error', (event) => {
+  console.error('[GLOBAL ERROR]', {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+    error: event.error,
+    stack: event.error?.stack
+  })
+
+  // Store error in localStorage for mobile debugging
+  try {
+    const errors = JSON.parse(localStorage.getItem('app_errors') || '[]')
+    errors.push({
+      timestamp: new Date().toISOString(),
+      type: 'error',
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+      stack: event.error?.stack
+    })
+    // Keep last 10 errors
+    localStorage.setItem('app_errors', JSON.stringify(errors.slice(-10)))
+  } catch (e) {
+    console.error('[Main] Failed to store error:', e)
+  }
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[UNHANDLED PROMISE REJECTION]', {
+    reason: event.reason,
+    promise: event.promise
+  })
+
+  // Store rejection in localStorage for mobile debugging
+  try {
+    const errors = JSON.parse(localStorage.getItem('app_errors') || '[]')
+    errors.push({
+      timestamp: new Date().toISOString(),
+      type: 'unhandledrejection',
+      reason: event.reason?.toString(),
+      stack: event.reason?.stack
+    })
+    // Keep last 10 errors
+    localStorage.setItem('app_errors', JSON.stringify(errors.slice(-10)))
+  } catch (e) {
+    console.error('[Main] Failed to store rejection:', e)
+  }
+})
+
+console.log('[Main] Global error handlers installed')
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

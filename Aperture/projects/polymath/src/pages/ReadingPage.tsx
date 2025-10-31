@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
-import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw } from 'lucide-react'
+import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -18,21 +18,27 @@ import { useShareTarget } from '../hooks/useShareTarget'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
+import { useBulkSelection } from '../hooks/useBulkSelection'
+import { BulkActionsBar } from '../components/BulkActionsBar'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
+import type { Article } from '../types/reading'
 
 type FilterTab = 'queue' | 'updates' | ArticleStatus
 
 export function ReadingPage() {
   const navigate = useNavigate()
-  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle } = useReadingStore()
+  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
   const { feeds, syncing, fetchFeeds, syncFeeds } = useRSSStore()
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [rssItems, setRssItems] = useState<RSSItem[]>([])
   const [loadingRSS, setLoadingRSS] = useState(false)
+  const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const { addToast } = useToast()
+
+  const bulkSelection = useBulkSelection<Article>()
 
   useEffect(() => {
     fetchArticles()
@@ -187,6 +193,59 @@ export function ReadingPage() {
     await fetchArticles()
   }
 
+  // Bulk actions handlers
+  const handleBulkArchive = async () => {
+    setBulkActionLoading(true)
+    try {
+      const selected = bulkSelection.getSelectedItems(filteredArticles)
+      await Promise.all(selected.map(article => updateArticleStatus(article.id, 'archived')))
+
+      addToast({
+        title: 'Archived!',
+        description: `${selected.length} article${selected.length > 1 ? 's' : ''} archived`,
+        variant: 'success',
+      })
+
+      bulkSelection.exitSelectionMode()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to archive articles',
+        variant: 'destructive',
+      })
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${bulkSelection.selectedCount} article${bulkSelection.selectedCount > 1 ? 's' : ''}?`)) {
+      return
+    }
+
+    setBulkActionLoading(true)
+    try {
+      const selected = bulkSelection.getSelectedItems(filteredArticles)
+      await Promise.all(selected.map(article => deleteArticle(article.id)))
+
+      addToast({
+        title: 'Deleted!',
+        description: `${selected.length} article${selected.length > 1 ? 's' : ''} removed`,
+        variant: 'success',
+      })
+
+      bulkSelection.exitSelectionMode()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to delete articles',
+        variant: 'destructive',
+      })
+    } finally {
+      setBulkActionLoading(false)
+    }
+  }
+
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       <motion.div
@@ -210,6 +269,20 @@ export function ReadingPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {activeTab !== 'updates' && filteredArticles.length > 0 && (
+                <button
+                  onClick={() => bulkSelection.isSelectionMode ? bulkSelection.exitSelectionMode() : bulkSelection.enterSelectionMode()}
+                  className="rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all"
+                  style={{
+                    borderColor: bulkSelection.isSelectionMode ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                    color: bulkSelection.isSelectionMode ? 'var(--premium-purple)' : 'var(--premium-text-secondary)',
+                    backgroundColor: bulkSelection.isSelectionMode ? 'rgba(168, 85, 247, 0.1)' : 'transparent'
+                  }}
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline">{bulkSelection.isSelectionMode ? 'Cancel' : 'Select'}</span>
+                </button>
+              )}
               {activeTab === 'updates' && (
                 <button
                   onClick={handleRSSSync}
@@ -368,15 +441,42 @@ export function ReadingPage() {
           <Virtuoso
             style={{ height: '800px' }}
             totalCount={filteredArticles.length}
-            itemContent={(index) => (
-              <div className="pb-4">
-                <ArticleCard
-                  key={filteredArticles[index].id}
-                  article={filteredArticles[index]}
-                  onClick={() => navigate(`/reading/${filteredArticles[index].id}`)}
-                />
-              </div>
-            )}
+            itemContent={(index) => {
+              const article = filteredArticles[index]
+              const isSelected = bulkSelection.isSelected(article.id)
+
+              return (
+                <div className="pb-4">
+                  <div
+                    className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
+                    onClick={(e) => {
+                      if (bulkSelection.isSelectionMode) {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        bulkSelection.toggleSelection(article.id)
+                      }
+                    }}
+                  >
+                    {bulkSelection.isSelectionMode && (
+                      <div
+                        className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                        style={{
+                          backgroundColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.05)',
+                          borderColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.2)'
+                        }}
+                      >
+                        {isSelected && <Check className="h-4 w-4 text-white" />}
+                      </div>
+                    )}
+                    <ArticleCard
+                      key={article.id}
+                      article={article}
+                      onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
+                    />
+                  </div>
+                </div>
+              )
+            }}
             components={{
               List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
                 ({ style, children }, ref) => (
@@ -414,6 +514,27 @@ export function ReadingPage() {
           onDismiss={clearSuggestions}
         />
       )}
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={bulkSelection.selectedCount}
+        onCancel={bulkSelection.exitSelectionMode}
+        actions={[
+          {
+            label: 'Archive',
+            icon: <Archive className="h-4 w-4" />,
+            onClick: handleBulkArchive,
+            loading: bulkActionLoading,
+          },
+          {
+            label: 'Delete',
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: handleBulkDelete,
+            variant: 'destructive' as const,
+            loading: bulkActionLoading,
+          },
+        ]}
+      />
       </motion.div>
     </PullToRefresh>
   )

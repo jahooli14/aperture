@@ -15,6 +15,7 @@ interface ReadingState {
   // Actions
   fetchArticles: (status?: ArticleStatus) => Promise<void>
   saveArticle: (request: SaveArticleRequest) => Promise<Article>
+  updateArticle: (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => Promise<void>
   updateArticleStatus: (id: string, status: ArticleStatus) => Promise<void>
   deleteArticle: (id: string) => Promise<void>
   setFilter: (filter: ArticleStatus | 'all') => void
@@ -86,6 +87,44 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage, loading: false })
       console.error('[useReadingStore] Save article error:', error)
+      throw error
+    }
+  },
+
+  updateArticle: async (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => {
+    // Optimistic update
+    const previousArticles = get().articles
+
+    set((state) => ({
+      articles: state.articles.map((a) =>
+        a.id === id ? { ...a, ...updates } : a
+      ),
+    }))
+
+    try {
+      const response = await fetch('/api/reading', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update article')
+      }
+
+      const { article } = await response.json()
+
+      // Replace with server data
+      set((state) => ({
+        articles: state.articles.map((a) =>
+          a.id === id ? article : a
+        ),
+      }))
+    } catch (error) {
+      // Rollback on error
+      set({ articles: previousArticles })
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      set({ error: errorMessage })
       throw error
     }
   },

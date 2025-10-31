@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check, Copy, Share2 } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check, Copy, Share2, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -15,6 +15,9 @@ import { haptic } from '../../utils/haptics'
 import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { Thumbnail } from '../ui/optimized-image'
+import { PinButton } from '../PinButton'
+import { SuggestionBadge } from '../SuggestionBadge'
+import { EditArticleDialog } from './EditArticleDialog'
 
 interface ArticleCardProps {
   article: Article
@@ -29,6 +32,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const [connectionCount, setConnectionCount] = useState(0)
   const [exitX, setExitX] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
   // Motion values for swipe gesture
   const x = useMotionValue(0)
@@ -188,6 +192,11 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
   const contextMenuItems: ContextMenuItem[] = [
     {
+      label: 'Edit',
+      icon: <Edit className="h-5 w-5" />,
+      onClick: () => setShowEditDialog(true),
+    },
+    {
       label: 'Open Original',
       icon: <ExternalLink className="h-5 w-5" />,
       onClick: () => window.open(article.url, '_blank', 'noopener,noreferrer'),
@@ -317,6 +326,33 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         {/* Status Badges */}
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
+            <SuggestionBadge itemId={article.id} itemType="article" />
+            <PinButton
+              type="article"
+              id={article.id}
+              title={article.title || 'Article'}
+              content={
+                <div className="p-6">
+                  <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                    {article.title}
+                  </h2>
+                  {article.excerpt && (
+                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {article.excerpt}
+                    </p>
+                  )}
+                  <a
+                    href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm"
+                    style={{ color: 'var(--premium-blue)' }}
+                  >
+                    Open original →
+                  </a>
+                </div>
+              }
+            />
             {isOffline && (
               <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
                 backgroundColor: 'rgba(16, 185, 129, 0.15)',
@@ -430,6 +466,17 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         {/* Actions */}
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowEditDialog(true)
+            }}
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: 'var(--premium-text-secondary)' }}
+            title="Edit"
+          >
+            <Edit className="h-4 w-4" />
+          </button>
+          <button
             onClick={openOriginal}
             className="p-1.5 rounded-lg transition-colors"
             style={{ color: 'var(--premium-text-secondary)' }}
@@ -457,6 +504,13 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       </div>
       </motion.div>
     </motion.div>
+
+    {/* Edit Dialog */}
+    <EditArticleDialog
+      article={article}
+      open={showEditDialog}
+      onOpenChange={setShowEditDialog}
+    />
     </>
   )
 }

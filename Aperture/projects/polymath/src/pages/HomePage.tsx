@@ -76,18 +76,31 @@ export function HomePage() {
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('[HomePage] Starting data load...')
       try {
-        await Promise.allSettled([
-          fetchSuggestions(),
-          fetchProjects(),
-          fetchMemories(),
-          fetchDailyQueue(),
-          fetchCardOfTheDay(),
-          fetchPrompts()
-        ])
+        console.log('[HomePage] Fetching suggestions...')
+        await fetchSuggestions().catch(err => console.error('[HomePage] fetchSuggestions failed:', err))
+
+        console.log('[HomePage] Fetching projects...')
+        await fetchProjects().catch(err => console.error('[HomePage] fetchProjects failed:', err))
+
+        console.log('[HomePage] Fetching memories...')
+        await fetchMemories().catch(err => console.error('[HomePage] fetchMemories failed:', err))
+
+        console.log('[HomePage] Fetching daily queue...')
+        await fetchDailyQueue().catch(err => console.error('[HomePage] fetchDailyQueue failed:', err))
+
+        console.log('[HomePage] Fetching card of the day...')
+        await fetchCardOfTheDay().catch(err => console.error('[HomePage] fetchCardOfTheDay failed:', err))
+
+        console.log('[HomePage] Fetching prompts...')
+        await fetchPrompts().catch(err => console.error('[HomePage] fetchPrompts failed:', err))
+
+        console.log('[HomePage] All data loaded successfully')
       } catch (err) {
         console.error('[HomePage] Error loading data:', err)
         setError(`Failed to load data: ${err instanceof Error ? err.message : String(err)}`)
@@ -135,14 +148,24 @@ export function HomePage() {
     }
   }
 
-  const pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
-  const activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
-  const priorityProject = Array.isArray(projects) ? projects.find(p => p.priority && p.status === 'active') : null
-  const recentProject = activeProjects.length > 0
-    ? activeProjects
-        .filter(p => !p.priority)
-        .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())[0]
-    : null
+  // Safe filtering with error handling
+  let pendingSuggestions: any[] = []
+  let activeProjects: any[] = []
+  let priorityProject: any = null
+  let recentProject: any = null
+
+  try {
+    pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
+    activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
+    priorityProject = Array.isArray(projects) ? projects.find(p => p.priority && p.status === 'active') : null
+    recentProject = activeProjects.length > 0
+      ? activeProjects
+          .filter(p => !p.priority)
+          .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())[0]
+      : null
+  } catch (err) {
+    console.error('[HomePage] Error filtering data:', err)
+  }
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -170,8 +193,19 @@ export function HomePage() {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`
   }
 
+  // Get stored errors from localStorage
+  const getStoredErrors = () => {
+    try {
+      const errors = localStorage.getItem('app_errors')
+      return errors ? JSON.parse(errors) : []
+    } catch {
+      return []
+    }
+  }
+
   // Show error if initialization failed
   if (error) {
+    const storedErrors = getStoredErrors()
     return (
       <div className="min-h-screen py-12 px-4">
         <div className="max-w-2xl mx-auto premium-card p-8">
@@ -185,6 +219,51 @@ export function HomePage() {
           }}>
             {error}
           </div>
+
+          {/* Show stored errors if any */}
+          {storedErrors.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-lg font-bold mb-2" style={{ color: '#ef4444' }}>
+                Recent Errors ({storedErrors.length}):
+              </h3>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {storedErrors.reverse().map((err: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-lg text-xs font-mono" style={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                  }}>
+                    <div className="mb-1 font-bold">{err.timestamp}</div>
+                    <div className="mb-1">Type: {err.type}</div>
+                    {err.message && <div className="mb-1">Message: {err.message}</div>}
+                    {err.reason && <div className="mb-1">Reason: {err.reason}</div>}
+                    {err.filename && <div className="mb-1">File: {err.filename}:{err.lineno}:{err.colno}</div>}
+                    {err.stack && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer hover:underline">Stack Trace</summary>
+                        <pre className="mt-1 text-xs overflow-x-auto">{err.stack}</pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('app_errors')
+                  window.location.reload()
+                }}
+                className="mt-3 px-4 py-2 rounded-lg font-medium text-sm"
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                Clear Errors & Reload
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-lg font-medium"
@@ -200,6 +279,8 @@ export function HomePage() {
     )
   }
 
+  const storedErrors = getStoredErrors()
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -207,6 +288,85 @@ export function HomePage() {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
     >
+      {/* Debug Panel Toggle - Only show if there are errors */}
+      {storedErrors.length > 0 && (
+        <button
+          onClick={() => setShowDebugPanel(!showDebugPanel)}
+          className="fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
+          style={{
+            backgroundColor: '#ef4444',
+            color: 'white'
+          }}
+          title={`${storedErrors.length} error(s) detected`}
+        >
+          <AlertCircle className="h-6 w-6" />
+        </button>
+      )}
+
+      {/* Debug Panel */}
+      <AnimatePresence>
+        {showDebugPanel && storedErrors.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-0 left-0 right-0 z-40 max-h-96 overflow-y-auto p-4"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.95)' }}
+          >
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold" style={{ color: '#ef4444' }}>
+                  Debug Info - {storedErrors.length} Error(s)
+                </h3>
+                <button
+                  onClick={() => setShowDebugPanel(false)}
+                  className="h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center"
+                  style={{ color: '#ef4444' }}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {storedErrors.reverse().map((err: any, idx: number) => (
+                  <div key={idx} className="p-3 rounded-lg text-xs font-mono" style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                  }}>
+                    <div className="mb-1 font-bold">{err.timestamp}</div>
+                    <div className="mb-1">Type: {err.type}</div>
+                    {err.message && <div className="mb-1">Message: {err.message}</div>}
+                    {err.reason && <div className="mb-1">Reason: {err.reason}</div>}
+                    {err.filename && <div className="mb-1">File: {err.filename}:{err.lineno}:{err.colno}</div>}
+                    {err.stack && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer hover:underline">Stack Trace</summary>
+                        <pre className="mt-1 text-xs overflow-x-auto whitespace-pre-wrap">{err.stack}</pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('app_errors')
+                  setShowDebugPanel(false)
+                  window.location.reload()
+                }}
+                className="mt-4 w-full px-4 py-2 rounded-lg font-medium"
+                style={{
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  color: '#ef4444',
+                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}
+              >
+                Clear All Errors & Reload
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="min-h-screen py-6 pb-24">
         {/* Header with Search */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">

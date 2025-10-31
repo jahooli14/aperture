@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { useAuth } from './AuthContext'
+import { supabase } from '../lib/supabase'
 
 interface Suggestion {
   id: string
@@ -28,13 +28,14 @@ const AutoSuggestionContext = createContext<AutoSuggestionContextType | undefine
 export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
   const [pendingSuggestions, setPendingSuggestions] = useState<PendingSuggestions>({})
   const [isLoading, setIsLoading] = useState(false)
-  const { user } = useAuth()
 
   const fetchSuggestions = useCallback(async (
     itemType: string,
     itemId: string,
     content: string
   ) => {
+    // Get current user from Supabase
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user || !content) return
 
     setIsLoading(true)
@@ -75,12 +76,14 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user])
+  }, [])
 
   const acceptSuggestion = useCallback(async (
     fromItemId: string,
     suggestion: Suggestion
   ) => {
+    // Get current user from Supabase
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
     try {
@@ -121,7 +124,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
       console.error('[AutoSuggestion] Error accepting suggestion:', error)
       return Promise.reject(error)
     }
-  }, [user, pendingSuggestions])
+  }, [pendingSuggestions])
 
   const dismissSuggestion = useCallback(async (
     fromItemId: string,
