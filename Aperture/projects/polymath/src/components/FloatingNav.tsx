@@ -232,9 +232,8 @@ export function FloatingNav() {
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
-        initial={{ y: 100, opacity: 0 }}
+        initial={false}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
         className="fixed bottom-0 left-0 right-0 z-40 pb-safe"
         style={{
           paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)',
@@ -245,6 +244,8 @@ export function FloatingNav() {
             className="premium-glass-strong flex items-center justify-between gap-2 px-3 py-3"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
+              backgroundColor: 'rgba(20, 27, 38, 0.7)',
+              backdropFilter: 'blur(32px) saturate(200%)',
             }}
           >
             {NAV_OPTIONS.map((option) => {
