@@ -461,7 +461,12 @@ export function HomePage() {
               <div className="space-y-4">
                 {dailyQueue.map((score) => {
                   const project = score.project
-                  const nextStep = project.metadata?.next_step
+                  // Get first incomplete task from the tasks array
+                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                  const nextTask = tasks
+                    .sort((a, b) => a.order - b.order)
+                    .find(task => !task.done)
+                  const nextStep = nextTask?.text || project.metadata?.next_step // Fallback to legacy field
 
                   return (
                     <Link
