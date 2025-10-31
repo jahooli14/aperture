@@ -308,6 +308,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log('[API] Fetching article:', url)
 
+      // Check for duplicates
       const { data: existing } = await supabase
         .from('reading_queue')
         .select('id')
@@ -316,6 +317,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (existing) {
+        console.log('[API] Article already exists:', existing.id)
         return res.status(200).json({
           success: true,
           article: existing,
@@ -323,8 +325,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
+      // Fetch article content
+      console.log('[API] Calling fetchArticle for:', url)
       const article = await fetchArticle(url)
+      console.log('[API] Article fetched successfully:', article.title)
 
+      // Prepare article data for database
+      console.log('[API] Preparing article data for database')
       const articleData = {
         user_id: USER_ID,
         url: article.url,
@@ -343,6 +350,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at: new Date().toISOString(),
       }
 
+      console.log('[API] Inserting article into database...')
       const { data, error } = await supabase
         .from('reading_queue')
         .insert([articleData])
@@ -350,11 +358,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (error) {
-        console.error('[API] Database error:', error)
+        console.error('[API] Database insert error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
         throw new Error(`Database error: ${error.message}`)
       }
 
-      console.log('[API] Article saved:', data.id)
+      console.log('[API] Article saved successfully:', data.id)
 
       return res.status(201).json({
         success: true,
