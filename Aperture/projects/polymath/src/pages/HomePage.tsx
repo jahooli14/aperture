@@ -87,22 +87,22 @@ export function HomePage() {
       console.log('[HomePage] Starting data load...')
       try {
         console.log('[HomePage] Fetching suggestions...')
-        await fetchSuggestions().catch(err => console.error('[HomePage] fetchSuggestions failed:', err))
+        fetchSuggestions()
 
         console.log('[HomePage] Fetching projects...')
-        await fetchProjects().catch(err => console.error('[HomePage] fetchProjects failed:', err))
+        fetchProjects()
 
         console.log('[HomePage] Fetching memories...')
-        await fetchMemories().catch(err => console.error('[HomePage] fetchMemories failed:', err))
+        fetchMemories()
 
         console.log('[HomePage] Fetching daily queue...')
-        await fetchDailyQueue().catch(err => console.error('[HomePage] fetchDailyQueue failed:', err))
+        await fetchDailyQueue()
 
         console.log('[HomePage] Fetching card of the day...')
-        await fetchCardOfTheDay().catch(err => console.error('[HomePage] fetchCardOfTheDay failed:', err))
+        await fetchCardOfTheDay()
 
         console.log('[HomePage] Fetching prompts...')
-        await fetchPrompts().catch(err => console.error('[HomePage] fetchPrompts failed:', err))
+        fetchPrompts()
 
         console.log('[HomePage] All data loaded successfully')
       } catch (err) {

@@ -39,7 +39,7 @@ export function CreateProjectDialog() {
     setLoading(true)
 
     try {
-      const newProject = await createProject({
+      await createProject({
         title: formData.title,
         description: formData.description || '',
         status: 'active', // Always start as active
@@ -50,12 +50,8 @@ export function CreateProjectDialog() {
         },
       })
 
-      // Trigger AI suggestion system
-      if (newProject?.id) {
-        setLastCreatedId(newProject.id)
-        const content = `${formData.title} ${formData.description || ''} ${formData.next_step || ''}`
-        fetchSuggestions('project', newProject.id, content)
-      }
+      // Note: AI suggestions would need the created project ID from the API response
+      // For now, we skip this until we update the store to return the created project
 
       addToast({
         title: 'Project created!',

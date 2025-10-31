@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link2, X, Sparkles, ArrowRight } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
 import { useState, useEffect } from 'react'
-import { useToast } from '../hooks/useToast'
+import { useToast } from './ui/toast'
 
 interface SuggestionToastProps {
   itemId: string
@@ -44,7 +44,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
       addToast({
         title: 'Connected!',
         description: `Linked to ${currentSuggestion.toItemTitle}`,
-        type: 'success'
+        variant: 'success'
       })
 
       // Move to next suggestion or close
@@ -57,7 +57,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
       addToast({
         title: 'Error',
         description: 'Failed to create connection',
-        type: 'error'
+        variant: 'destructive'
       })
     }
   }

@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Link2, X } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
 import { useState } from 'react'
-import { useToast } from '../hooks/useToast'
+import { useToast } from './ui/toast'
 
 interface SuggestionBadgeProps {
   itemId: string
@@ -26,7 +26,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
       addToast({
         title: 'Connected!',
         description: `Linked to ${suggestion.toItemTitle}`,
-        type: 'success'
+        variant: 'success'
       })
 
       // Close if no more suggestions
@@ -37,7 +37,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
       addToast({
         title: 'Error',
         description: 'Failed to create connection',
-        type: 'error'
+        variant: 'destructive'
       })
     }
   }
