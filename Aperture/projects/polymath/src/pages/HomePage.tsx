@@ -15,6 +15,8 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
+import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
+import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import {
   Rocket,
   ArrowRight,
@@ -75,6 +77,8 @@ export function HomePage() {
   const [queueLoading, setQueueLoading] = useState(false)
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
+  const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
 
@@ -575,7 +579,7 @@ export function HomePage() {
 
               {/* Written Thought */}
               <button
-                onClick={() => navigate('/memories')}
+                onClick={() => setCreateThoughtOpen(true)}
                 className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
               >
                 <div className="flex flex-col items-start gap-3">
@@ -617,7 +621,7 @@ export function HomePage() {
 
               {/* Project */}
               <button
-                onClick={() => navigate('/projects')}
+                onClick={() => setCreateProjectOpen(true)}
                 className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
               >
                 <div className="flex flex-col items-start gap-3">
@@ -756,6 +760,16 @@ export function HomePage() {
 
       {/* Dialogs */}
       <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
+
+      {/* Hidden trigger buttons for dialogs */}
+      <div style={{ display: 'none' }}>
+        <div ref={(el) => { if (el && createThoughtOpen) { el.querySelector('button')?.click(); setCreateThoughtOpen(false) } }}>
+          <CreateMemoryDialog />
+        </div>
+        <div ref={(el) => { if (el && createProjectOpen) { el.querySelector('button')?.click(); setCreateProjectOpen(false) } }}>
+          <CreateProjectDialog />
+        </div>
+      </div>
     </motion.div>
   )
 }
