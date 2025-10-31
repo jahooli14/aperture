@@ -461,10 +461,9 @@ export function HomePage() {
               <div className="text-center py-8">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-blue)' }}></div>
               </div>
-            ) : dailyQueue.length > 0 ? (
+            ) : (priorityProject || recentProject) ? (
               <div className="space-y-4">
-                {dailyQueue.map((score) => {
-                  const project = score.project
+                {[priorityProject, recentProject].filter(Boolean).map((project) => {
                   // Get first incomplete task from the tasks array
                   const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
                   const nextTask = tasks
@@ -474,8 +473,8 @@ export function HomePage() {
 
                   return (
                     <Link
-                      key={score.project_id}
-                      to={`/projects/${score.project_id}`}
+                      key={project.id}
+                      to={`/projects/${project.id}`}
                       className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
                       {/* Project Title with Chip */}
@@ -483,9 +482,9 @@ export function HomePage() {
                         <h3 className="premium-text-platinum font-bold text-lg flex-1">{project.title}</h3>
                         <span
                           className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white shadow-sm flex-shrink-0"
-                          style={{ background: getCategoryColor(score.category) }}
+                          style={{ background: project.priority ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(59, 130, 246, 0.9))' : 'linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(236, 72, 153, 0.9))' }}
                         >
-                          {getCategoryLabel(score.category)}
+                          {project.priority ? 'Priority' : 'Recent'}
                         </span>
                       </div>
 
@@ -508,11 +507,11 @@ export function HomePage() {
                 })}
 
                 <Link
-                  to="/today"
+                  to="/projects"
                   className="block text-center py-3 rounded-lg font-medium transition-all hover:bg-white/5"
                   style={{ color: 'var(--premium-blue)' }}
                 >
-                  View Full Daily Queue <ArrowRight className="inline h-4 w-4 ml-1" />
+                  View All Projects <ArrowRight className="inline h-4 w-4 ml-1" />
                 </Link>
               </div>
             ) : (
@@ -657,7 +656,7 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {/* Timeline */}
               <Link
-                to="/timeline"
+                to="/knowledge-timeline"
                 className="group premium-glass-subtle p-5 rounded-xl transition-all hover:bg-white/10"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -666,7 +665,7 @@ export function HomePage() {
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Timeline</h3>
                       <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        See your thinking patterns
+                        See your knowledge journey
                       </p>
                     </div>
                   </div>
