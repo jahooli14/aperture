@@ -18,7 +18,11 @@ interface PinButtonProps {
 export function PinButton({ type, id, title, content, currentId }: PinButtonProps) {
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
-  const isThisPinned = pinnedItem?.id === id || pinnedItem?.id === currentId
+  // Only consider it pinned if there's actually a pinned item AND the IDs match
+  const isThisPinned = pinnedItem !== null && (
+    (id && pinnedItem.id === id) ||
+    (currentId && pinnedItem.id === currentId)
+  )
 
   const handlePin = () => {
     if (isThisPinned) {
