@@ -167,7 +167,6 @@ export function ReadingPage() {
   const tabs: { key: FilterTab; label: string; icon: any }[] = [
     { key: 'queue', label: 'Queue', icon: List },
     { key: 'updates', label: 'Updates', icon: Rss },
-    { key: 'unread', label: 'Unread', icon: BookOpen },
     { key: 'archived', label: 'Archived', icon: Archive },
   ]
 

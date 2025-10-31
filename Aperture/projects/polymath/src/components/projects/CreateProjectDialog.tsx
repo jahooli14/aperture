@@ -164,17 +164,27 @@ export function CreateProjectDialog() {
             </div>
           </div>
 
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t bg-white">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t premium-glass-subtle">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={loading}
               className="w-full sm:w-auto h-11 sm:h-12"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !formData.title} className="w-full sm:w-auto h-11 sm:h-12 btn-primary">
+            <Button
+              type="submit"
+              disabled={loading || !formData.title}
+              className="w-full sm:w-auto h-11 sm:h-12"
+              style={{
+                backgroundColor: 'var(--premium-blue)',
+                color: 'white',
+                opacity: loading || !formData.title ? 0.5 : 1
+              }}
+            >
               {loading ? 'Creating...' : 'Create Project'}
             </Button>
           </DialogFooter>

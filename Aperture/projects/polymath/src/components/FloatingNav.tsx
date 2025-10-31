@@ -178,6 +178,7 @@ export function FloatingNav() {
 
       {/* Prominent Capture FAB - Bottom right above nav */}
       <motion.button
+        data-voice-fab
         onClick={handleCaptureClick}
         disabled={!isOnline}
         whileHover={{ scale: 1.1 }}

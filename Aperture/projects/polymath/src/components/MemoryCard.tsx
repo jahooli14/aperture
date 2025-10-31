@@ -27,15 +27,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const [showContextMenu, setShowContextMenu] = useState(false)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
 
-  // Motion values for swipe gesture
-  const x = useMotionValue(0)
-  const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
-  const editIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
-  const backgroundColor = useTransform(
-    x,
-    [-150, 0, 150],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
-  )
+  // Removed swipe gesture - deletion now requires confirmation only
 
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {
@@ -90,24 +82,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
   const isManual = memory.audiopen_id?.startsWith('manual_')
 
-  const handleDragEnd = (_: any, info: any) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-
-    // Swipe left = Delete (threshold: -100px or fast velocity)
-    if ((offset < -100 || velocity < -500) && onDelete) {
-      haptic.warning()
-      setExitX(-1000)
-      setTimeout(() => onDelete(memory), 200)
-    }
-    // Swipe right = Edit (threshold: 100px or fast velocity)
-    else if ((offset > 100 || velocity > 500) && onEdit) {
-      haptic.light()
-      onEdit(memory)
-      // Reset position
-      x.set(0)
-    }
-  }
+  // Swipe gesture removed - users must use explicit buttons
 
   const handleCopyText = () => {
     const textToCopy = `${memory.title}\n\n${memory.body}`
@@ -167,44 +142,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         title={memory.title}
       />
 
-      <motion.div
-        style={{ x }}
-        drag={(onDelete || onEdit) ? 'x' : false}
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
-        animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative"
-        {...longPressHandlers}
-      >
-      {/* Edit Indicator (Swipe Right) */}
-      {onEdit && (
-        <motion.div
-          style={{ opacity: editIndicatorOpacity }}
-          className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10"
-        >
-          <div className="flex items-center gap-2">
-            <Edit className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-            <span className="text-xl font-bold" style={{ color: 'var(--premium-blue)' }}>EDIT</span>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Delete Indicator (Swipe Left) */}
-      {onDelete && (
-        <motion.div
-          style={{ opacity: deleteIndicatorOpacity }}
-          className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10"
-        >
-          <div className="flex items-center gap-2">
-            <Trash2 className="h-6 w-6 text-red-400" />
-            <span className="text-xl font-bold text-red-400">DELETE</span>
-          </div>
-        </motion.div>
-      )}
-
-      <motion.div style={{ backgroundColor }}>
+      <div className="relative" {...longPressHandlers}>
+        <div>
         <Card className="group h-full flex flex-col premium-card">
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
@@ -416,8 +355,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         )}
       </CardContent>
     </Card>
-      </motion.div>
-    </motion.div>
+        </div>
+      </div>
     </>
   )
 })

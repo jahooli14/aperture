@@ -64,19 +64,42 @@ export function ProjectDetailPage() {
 
       // Fetch project notes from API
       const response = await fetch(`/api/projects?id=${id}&include_notes=true`)
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json()
 
       if (data.success) {
         setProject(data.project)
         setNotes(data.notes || [])
+      } else {
+        throw new Error(data.error || 'Failed to load project data')
       }
     } catch (error) {
       console.error('[ProjectDetail] Failed to load:', error)
-      addToast({
-        title: 'Failed to load project',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
+
+      // Clear corrupted localStorage if repeated failures
+      const failureKey = `project_load_failures_${id}`
+      const failures = parseInt(localStorage.getItem(failureKey) || '0') + 1
+      localStorage.setItem(failureKey, failures.toString())
+
+      if (failures >= 3) {
+        console.warn('[ProjectDetail] Multiple failures detected, clearing cache')
+        localStorage.clear()
+        addToast({
+          title: 'Cache cleared',
+          description: 'Please refresh the page to try again',
+          variant: 'default',
+        })
+      } else {
+        addToast({
+          title: 'Failed to load project',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }

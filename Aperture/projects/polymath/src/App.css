@@ -60,6 +60,15 @@
     letter-spacing: var(--premium-tracking-normal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Momentum scrolling for iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Improve touch responsiveness */
+    touch-action: manipulation;
+  }
+
+  /* Apply momentum scrolling to all scrollable elements */
+  * {
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Premium ambient overlay - subtle metallic gradient */
@@ -302,9 +311,21 @@
     font-weight: var(--md-sys-typescale-label-small-weight);
   }
 
-  /* Smooth transitions */
+  /* Smooth transitions - Faster for native feel */
   .transition-smooth {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Instant feedback transitions for buttons */
+  button, a, [role="button"] {
+    transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  button:active, a:active, [role="button"]:active {
+    transform: scale(0.98);
+    transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Subtle hover lift - Enhanced */
