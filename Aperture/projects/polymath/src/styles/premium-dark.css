@@ -407,3 +407,223 @@
   background-size: 200% 100%;
   animation: premiumShimmer 3s linear infinite;
 }
+
+/* === READER STYLES - Readwise/Omnivore Quality === */
+
+.reader-content {
+  max-width: 100%;
+}
+
+/* Paragraphs */
+.reader-content p {
+  margin-bottom: 1.5em;
+  line-height: inherit;
+  color: inherit;
+}
+
+.reader-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings */
+.reader-content h1,
+.reader-content h2,
+.reader-content h3,
+.reader-content h4,
+.reader-content h5,
+.reader-content h6 {
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 2em;
+  margin-bottom: 0.75em;
+  color: var(--premium-text-platinum);
+  letter-spacing: -0.02em;
+}
+
+.reader-content h1 { font-size: 2em; }
+.reader-content h2 { font-size: 1.75em; }
+.reader-content h3 { font-size: 1.5em; }
+.reader-content h4 { font-size: 1.25em; }
+.reader-content h5 { font-size: 1.125em; }
+.reader-content h6 { font-size: 1em; }
+
+/* Links */
+.reader-content a {
+  color: var(--premium-blue);
+  text-decoration: underline;
+  text-decoration-color: rgba(59, 130, 246, 0.4);
+  text-underline-offset: 0.2em;
+  transition: all var(--premium-transition-fast);
+}
+
+.reader-content a:hover {
+  color: var(--premium-blue);
+  text-decoration-color: var(--premium-blue);
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Lists */
+.reader-content ul,
+.reader-content ol {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+  padding-left: 2em;
+}
+
+.reader-content li {
+  margin-bottom: 0.5em;
+  line-height: inherit;
+  color: inherit;
+}
+
+.reader-content ul {
+  list-style-type: disc;
+}
+
+.reader-content ol {
+  list-style-type: decimal;
+}
+
+.reader-content li::marker {
+  color: var(--premium-text-tertiary);
+}
+
+/* Nested lists */
+.reader-content li > ul,
+.reader-content li > ol {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+/* Blockquotes */
+.reader-content blockquote {
+  margin: 2em 0;
+  padding-left: 1.5em;
+  border-left: 4px solid var(--premium-blue);
+  font-style: italic;
+  color: var(--premium-text-secondary);
+  background: rgba(59, 130, 246, 0.05);
+  padding: 1.5em;
+  padding-left: 2em;
+  border-radius: var(--premium-radius-md);
+}
+
+.reader-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Code */
+.reader-content code {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.2em 0.4em;
+  border-radius: var(--premium-radius-sm);
+  color: var(--premium-emerald);
+  font-weight: 500;
+}
+
+.reader-content pre {
+  margin: 2em 0;
+  padding: 1.5em;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--premium-radius-lg);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.reader-content pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.875em;
+  line-height: 1.6;
+  color: var(--premium-text-primary);
+}
+
+/* Images */
+.reader-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 2.5em auto;
+  border-radius: var(--premium-radius-lg);
+  box-shadow: var(--premium-shadow-2);
+}
+
+.reader-content figure {
+  margin: 2.5em 0;
+}
+
+.reader-content figcaption {
+  margin-top: 1em;
+  text-align: center;
+  font-size: 0.875em;
+  color: var(--premium-text-tertiary);
+  font-style: italic;
+}
+
+/* Tables */
+.reader-content table {
+  width: 100%;
+  margin: 2em 0;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.reader-content th,
+.reader-content td {
+  padding: 0.75em 1em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.reader-content th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  color: var(--premium-text-platinum);
+}
+
+.reader-content tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Horizontal Rule */
+.reader-content hr {
+  margin: 3em 0;
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+}
+
+/* Strong/Bold */
+.reader-content strong,
+.reader-content b {
+  font-weight: 700;
+  color: var(--premium-text-platinum);
+}
+
+/* Emphasis/Italic */
+.reader-content em,
+.reader-content i {
+  font-style: italic;
+}
+
+/* Selection */
+.reader-content ::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: var(--premium-text-primary);
+}
+
+/* Smooth text rendering */
+.reader-content {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga" 1, "calt" 1;
+}

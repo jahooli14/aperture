@@ -1,11 +1,11 @@
 /**
- * Reader View Page
- * Distraction-free article reading with highlighting
+ * Reader View Page - Premium Reading Experience
+ * Inspired by Readwise Reader and Omnivore
  */
 
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   ExternalLink,
@@ -16,10 +16,8 @@ import {
   BookmarkPlus,
   Clock,
   Type,
-  Moon,
-  Sun,
+  Check,
   Download,
-  Wifi,
   WifiOff,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -45,8 +43,7 @@ export function ReaderPage() {
   const [selectedText, setSelectedText] = useState('')
   const [showHighlightMenu, setShowHighlightMenu] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium')
-  const [darkMode, setDarkMode] = useState(false)
+  const [fontSize, setFontSize] = useState<'compact' | 'comfortable' | 'spacious'>('comfortable')
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
@@ -107,7 +104,6 @@ export function ReaderPage() {
         variant: 'success',
       })
 
-      // Load cached images
       const images = await getCachedImages(article.id)
       setCachedImageUrls(images)
     } catch (error) {
@@ -138,9 +134,10 @@ export function ReaderPage() {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
-        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr',
+        'div', 'span'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id'],
       ALLOW_DATA_ATTR: false
     })
   }
@@ -152,7 +149,6 @@ export function ReaderPage() {
     if (text && text.length > 0) {
       setSelectedText(text)
 
-      // Get selection position
       const range = selection?.getRangeAt(0)
       const rect = range?.getBoundingClientRect()
 
@@ -208,10 +204,8 @@ export function ReaderPage() {
     if (!selectedText) return
 
     try {
-      // First create highlight
       await handleHighlight('blue')
 
-      // Then create memory from the highlight
       const response = await fetch('/api/memories?capture=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -241,8 +235,6 @@ export function ReaderPage() {
 
   const handleArchive = async () => {
     if (!article) return
-
-    // Show completion dialog to capture thoughts
     setShowCompletionDialog(true)
   }
 
@@ -258,7 +250,6 @@ export function ReaderPage() {
       }
 
       if (data.text) {
-        // Text input - create memory directly
         const response = await fetch('/api/memories?action=capture', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -276,14 +267,6 @@ export function ReaderPage() {
           title: 'Thought captured!',
           description: 'Linked to this article',
           variant: 'success',
-        })
-      } else if (data.audio) {
-        // Voice input - transcribe and create memory
-        // TODO: Implement voice transcription flow with source_reference
-        addToast({
-          title: 'Voice capture',
-          description: 'Not yet implemented',
-          variant: 'default',
         })
       }
 
@@ -322,16 +305,28 @@ export function ReaderPage() {
     }
   }
 
-  const fontSizeClasses = {
-    small: 'text-base leading-relaxed',
-    medium: 'text-lg leading-loose',
-    large: 'text-xl leading-loose',
+  const fontSizeSettings = {
+    compact: {
+      article: 'text-[17px] leading-[1.6]',
+      title: 'text-3xl sm:text-4xl',
+      meta: 'text-sm'
+    },
+    comfortable: {
+      article: 'text-[19px] leading-[1.7]',
+      title: 'text-4xl sm:text-5xl',
+      meta: 'text-sm'
+    },
+    spacious: {
+      article: 'text-[21px] leading-[1.8]',
+      title: 'text-5xl sm:text-6xl',
+      meta: 'text-base'
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-900" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--premium-blue)' }} />
       </div>
     )
   }
@@ -340,61 +335,51 @@ export function ReaderPage() {
     return null
   }
 
+  const settings = fontSizeSettings[fontSize]
+
   return (
-    <motion.div
-      className={`min-h-screen transition-colors ${
-        darkMode
-          ? 'bg-neutral-900 text-neutral-100'
-          : 'bg-white text-neutral-900'
-      }`}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Header Bar */}
-      <div
-        className={`sticky top-0 z-50 backdrop-blur-md border-b ${
-          darkMode
-            ? 'bg-neutral-900/90 border-neutral-800'
-            : 'bg-white/90 border-neutral-200'
-        }`}
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      {/* Sticky Header */}
+      <motion.header
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="sticky top-0 z-50 premium-glass-strong border-b"
+        style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
       >
-        {/* Progress bar */}
-        <div className="h-1 bg-neutral-200 dark:bg-neutral-800">
-          <div
-            className="h-full bg-blue-900 transition-all duration-300"
-            style={{ width: `${progress}%` }}
+        {/* Progress Bar */}
+        <div className="h-0.5" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+          <motion.div
+            className="h-full"
+            style={{
+              width: `${progress}%`,
+              background: 'linear-gradient(90deg, var(--premium-emerald), var(--premium-blue))',
+            }}
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.3 }}
           />
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        {/* Toolbar */}
+        <div className="max-w-[800px] mx-auto px-6 py-3 flex items-center justify-between">
           <button
             onClick={() => navigate('/reading')}
-            className={`p-2 rounded-lg hover:bg-neutral-100 ${
-              darkMode ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'
-            }`}
+            className="p-2 rounded-lg hover:bg-white/5 transition-all"
+            style={{ color: 'var(--premium-text-primary)' }}
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Offline Download Button */}
+            {/* Offline Download */}
             <button
               onClick={handleDownloadOffline}
               disabled={caching || isOfflineCached}
-              className={`p-2 rounded-lg ${
-                isOfflineCached
-                  ? 'text-green-600'
-                  : darkMode
-                  ? 'hover:bg-neutral-800'
-                  : 'hover:bg-neutral-100'
-              } disabled:opacity-50`}
-              title={
-                isOfflineCached
-                  ? 'Available offline'
-                  : 'Download for offline reading'
-              }
+              className="p-2 rounded-lg hover:bg-white/5 transition-all disabled:opacity-50"
+              style={{
+                color: isOfflineCached ? 'var(--premium-emerald)' : 'var(--premium-text-secondary)'
+              }}
+              title={isOfflineCached ? 'Available offline' : 'Download for offline'}
             >
               {caching ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -404,67 +389,32 @@ export function ReaderPage() {
                 <Download className="h-5 w-5" />
               )}
             </button>
-            {/* Font Size */}
-            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-              <button
-                onClick={() => setFontSize('small')}
-                className={`p-1.5 rounded ${
-                  fontSize === 'small'
-                    ? 'bg-white dark:bg-neutral-700'
-                    : 'opacity-60'
-                }`}
-                title="Small font"
-              >
-                <Type className="h-3 w-3" />
-              </button>
-              <button
-                onClick={() => setFontSize('medium')}
-                className={`p-1.5 rounded ${
-                  fontSize === 'medium'
-                    ? 'bg-white dark:bg-neutral-700'
-                    : 'opacity-60'
-                }`}
-                title="Medium font"
-              >
-                <Type className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setFontSize('large')}
-                className={`p-1.5 rounded ${
-                  fontSize === 'large'
-                    ? 'bg-white dark:bg-neutral-700'
-                    : 'opacity-60'
-                }`}
-                title="Large font"
-              >
-                <Type className="h-5 w-5" />
-              </button>
+
+            {/* Font Size Selector */}
+            <div className="flex items-center gap-1 premium-glass-subtle rounded-lg p-1">
+              {(['compact', 'comfortable', 'spacious'] as const).map((size, index) => (
+                <button
+                  key={size}
+                  onClick={() => setFontSize(size)}
+                  className={`p-1.5 rounded transition-all ${
+                    fontSize === size ? 'bg-white/10' : 'opacity-50 hover:opacity-100'
+                  }`}
+                  title={`${size.charAt(0).toUpperCase() + size.slice(1)} text`}
+                  style={{ color: 'var(--premium-text-primary)' }}
+                >
+                  <Type className={`${index === 0 ? 'h-3.5 w-3.5' : index === 1 ? 'h-4 w-4' : 'h-4.5 w-4.5'}`} />
+                </button>
+              ))}
             </div>
 
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`p-2 rounded-lg ${
-                darkMode ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'
-              }`}
-              title="Toggle dark mode"
-            >
-              {darkMode ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
-
-            {/* Archive */}
+            {/* Archive Button */}
             <button
               onClick={handleArchive}
-              className={`p-2 rounded-lg ${
-                darkMode ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'
-              }`}
-              title="Archive article"
+              className="p-2 rounded-lg hover:bg-white/5 transition-all"
+              style={{ color: 'var(--premium-text-secondary)' }}
+              title="Finish & Archive"
             >
-              <Archive className="h-5 w-5" />
+              <Check className="h-5 w-5" />
             </button>
 
             {/* Open Original */}
@@ -472,42 +422,50 @@ export function ReaderPage() {
               href={article.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={`p-2 rounded-lg ${
-                darkMode ? 'hover:bg-neutral-800' : 'hover:bg-neutral-100'
-              }`}
+              className="p-2 rounded-lg hover:bg-white/5 transition-all"
+              style={{ color: 'var(--premium-text-secondary)' }}
               title="Open original"
             >
               <ExternalLink className="h-5 w-5" />
             </a>
           </div>
         </div>
-      </div>
+      </motion.header>
 
       {/* Article Content */}
-      <article className="max-w-3xl mx-auto px-6 sm:px-8 py-12">
-        {/* Header */}
+      <motion.article
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="max-w-[720px] mx-auto px-6 sm:px-8 md:px-12 py-12 sm:py-16 md:py-20"
+      >
+        {/* Article Header */}
         <header className="mb-12">
+          {/* Title */}
           <h1
-            className={`font-serif font-bold mb-4 ${
-              fontSize === 'small'
-                ? 'text-3xl'
-                : fontSize === 'medium'
-                ? 'text-4xl'
-                : 'text-5xl'
-            }`}
+            className={`font-serif font-bold mb-6 ${settings.title}`}
+            style={{
+              color: 'var(--premium-text-platinum)',
+              lineHeight: '1.2',
+              letterSpacing: '-0.02em'
+            }}
           >
             {article.title}
           </h1>
 
+          {/* Metadata */}
           <div
-            className={`flex flex-wrap items-center gap-4 text-sm ${
-              darkMode ? 'text-neutral-400' : 'text-neutral-600'
-            }`}
+            className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${settings.meta}`}
+            style={{ color: 'var(--premium-text-tertiary)' }}
           >
             {article.author && (
-              <span className="font-medium">{article.author}</span>
+              <span className="font-medium" style={{ color: 'var(--premium-text-secondary)' }}>
+                {article.author}
+              </span>
             )}
-            {article.source && <span>{article.source}</span>}
+            {article.source && (
+              <span>{article.source}</span>
+            )}
             {article.published_date && (
               <span>
                 {(() => {
@@ -522,47 +480,54 @@ export function ReaderPage() {
               </span>
             )}
             {article.read_time_minutes && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {article.read_time_minutes} min read
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                {article.read_time_minutes} min
               </span>
             )}
           </div>
         </header>
 
-        {/* Content */}
+        {/* Article Body */}
         <div
-          className={`prose prose-neutral max-w-none ${fontSizeClasses[fontSize]} ${
-            darkMode ? 'prose-invert' : ''
-          }`}
+          className={`reader-content ${settings.article}`}
           onMouseUp={handleTextSelection}
           onTouchEnd={handleTextSelection}
           dangerouslySetInnerHTML={{
             __html: article.content ? getContentWithCachedImages(article.content) : ''
           }}
+          style={{
+            color: 'var(--premium-text-primary)',
+            fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif'
+          }}
         />
 
         {/* Highlights Section */}
         {highlights.length > 0 && (
-          <div className="mt-16 pt-8 border-t border-neutral-200 dark:border-neutral-800">
-            <h2 className="text-2xl font-bold mb-6">Your Highlights</h2>
+          <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+            <h2 className="text-2xl font-bold mb-8" style={{ color: 'var(--premium-text-platinum)' }}>
+              Your Highlights
+            </h2>
             <div className="space-y-4">
               {highlights.map((highlight) => (
                 <div
                   key={highlight.id}
-                  className={`p-4 rounded-lg border-l-4 ${
-                    highlight.color === 'yellow'
-                      ? 'bg-yellow-50 border-yellow-400 dark:bg-yellow-900/20'
+                  className="p-5 rounded-xl border-l-4 premium-glass-subtle"
+                  style={{
+                    borderLeftColor: highlight.color === 'yellow'
+                      ? 'var(--premium-gold)'
                       : highlight.color === 'blue'
-                      ? 'bg-blue-50 border-blue-400 dark:bg-blue-900/20'
+                      ? 'var(--premium-blue)'
                       : highlight.color === 'green'
-                      ? 'bg-green-50 border-green-400 dark:bg-green-900/20'
-                      : 'bg-red-50 border-red-400 dark:bg-red-900/20'
-                  }`}
+                      ? 'var(--premium-emerald)'
+                      : 'var(--premium-red)'
+                  }}
                 >
-                  <p className="text-base italic mb-2">"{highlight.highlight_text}"</p>
+                  <p className="text-base italic mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                    "{highlight.highlight_text}"
+                  </p>
                   {highlight.notes && (
-                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                       {highlight.notes}
                     </p>
                   )}
@@ -571,46 +536,52 @@ export function ReaderPage() {
             </div>
           </div>
         )}
-      </article>
+      </motion.article>
 
       {/* Highlight Menu */}
-      {showHighlightMenu && (
-        <div
-          className="fixed z-50 bg-white dark:bg-neutral-800 rounded-lg shadow-xl border border-neutral-200 dark:border-neutral-700 p-2 flex gap-2"
-          style={{
-            left: `${menuPosition.x}px`,
-            top: `${menuPosition.y}px`,
-            transform: 'translate(-50%, -100%)',
-          }}
-        >
-          <button
-            onClick={() => handleHighlight('yellow')}
-            className="p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded-lg transition-colors"
-            title="Highlight (yellow)"
-          >
-            <Highlighter className="h-5 w-5 text-yellow-600" />
-          </button>
-          <button
-            onClick={handleSaveAsMemory}
-            className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-            title="Save as memory"
-          >
-            <BookmarkPlus className="h-5 w-5 text-blue-600" />
-          </button>
-          <button
-            onClick={() => {
-              setShowHighlightMenu(false)
-              // TODO: Add notes to highlight
+      <AnimatePresence>
+        {showHighlightMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            transition={{ duration: 0.15 }}
+            className="fixed z-50 premium-glass-strong rounded-xl shadow-2xl border p-2 flex gap-1"
+            style={{
+              left: `${menuPosition.x}px`,
+              top: `${menuPosition.y}px`,
+              transform: 'translate(-50%, -100%)',
+              borderColor: 'rgba(255, 255, 255, 0.15)',
             }}
-            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
-            title="Add note"
           >
-            <MessageSquare className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => handleHighlight('yellow')}
+              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              title="Highlight"
+            >
+              <Highlighter className="h-5 w-5" style={{ color: 'var(--premium-gold)' }} />
+            </button>
+            <button
+              onClick={handleSaveAsMemory}
+              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              title="Save as memory"
+            >
+              <BookmarkPlus className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+            </button>
+            <button
+              onClick={() => {
+                setShowHighlightMenu(false)
+              }}
+              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              title="Add note"
+            >
+              <MessageSquare className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Article Completion Dialog */}
+      {/* Completion Dialog */}
       <ArticleCompletionDialog
         article={article}
         open={showCompletionDialog}
@@ -618,6 +589,9 @@ export function ReaderPage() {
         onCapture={handleCaptureThought}
         onSkip={handleSkipThought}
       />
-    </motion.div>
+
+      {/* Bottom Safe Area */}
+      <div className="h-24" />
+    </div>
   )
 }
