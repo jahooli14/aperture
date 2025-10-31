@@ -182,9 +182,9 @@ export function HomePage() {
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case 'hot_streak': return 'Hot Streak'
-      case 'needs_attention': return 'Needs Attention'
-      case 'fresh_energy': return 'Fresh Energy'
+      case 'hot_streak': return 'Streak'
+      case 'needs_attention': return 'Attention'
+      case 'fresh_energy': return 'Fresh'
       default: return 'Available'
     }
   }
@@ -476,40 +476,33 @@ export function HomePage() {
                     <Link
                       key={score.project_id}
                       to={`/projects/${score.project_id}`}
-                      className="group block premium-glass-subtle p-5 rounded-xl transition-all duration-300 hover:bg-white/10"
+                      className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
-                      {/* Category Badge */}
-                      <div className="mb-3">
+                      {/* Project Title with Chip */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h3 className="premium-text-platinum font-bold text-lg flex-1">{project.title}</h3>
                         <span
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold text-white shadow-md"
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white shadow-sm flex-shrink-0"
                           style={{ background: getCategoryColor(score.category) }}
                         >
                           {getCategoryLabel(score.category)}
                         </span>
                       </div>
 
-                      {/* Project Title */}
-                      <h3 className="premium-text-platinum font-bold text-xl mb-3 flex items-start justify-between gap-2">
-                        <span className="flex-1">{project.title}</span>
-                        <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-amber)' }} />
-                      </h3>
-
-                      {/* Next Step */}
+                      {/* Next Step - Enhanced Visibility */}
                       {nextStep && (
-                        <div className="premium-glass-subtle rounded-lg p-4 mb-3">
-                          <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-amber)' }}>
-                            NEXT STEP:
+                        <div className="rounded-lg p-3 mb-2 border-2" style={{
+                          backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                          borderColor: 'rgba(251, 191, 36, 0.4)'
+                        }}>
+                          <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-amber)' }}>
+                            NEXT STEP
                           </div>
-                          <div className="premium-text-platinum font-medium">
+                          <div className="premium-text-platinum font-medium text-sm">
                             {nextStep}
                           </div>
                         </div>
                       )}
-
-                      {/* Match Reason */}
-                      <p className="text-sm mb-3 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                        {score.match_reason}
-                      </p>
                     </Link>
                   )
                 })}
@@ -546,98 +539,65 @@ export function HomePage() {
         {/* 2. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="premium-card p-6">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <Plus className="h-7 w-7" style={{ color: 'var(--premium-indigo)' }} />
               <h2 className="text-2xl font-bold premium-text-platinum">Add Something New</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {/* Voice Note - Opens voice modal (handled by FloatingNav FAB) */}
+            <div className="flex items-center gap-3">
+              {/* Voice Note */}
               <button
                 onClick={() => {
-                  // Trigger the floating voice button
                   const voiceFab = document.querySelector('[data-voice-fab]') as HTMLButtonElement
                   if (voiceFab) voiceFab.click()
                 }}
-                className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                style={{
+                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)'
+                }}
+                title="Voice Note"
               >
-                <div className="flex flex-col items-start gap-3">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all" style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)'
-                  }}>
-                    <Mic className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-1 premium-text-platinum">Voice Note</h3>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      Speak your thoughts
-                    </p>
-                  </div>
-                </div>
+                <Mic className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
               </button>
 
               {/* Written Thought */}
               <button
                 onClick={() => setCreateThoughtOpen(true)}
-                className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                style={{
+                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)'
+                }}
+                title="Thought"
               >
-                <div className="flex flex-col items-start gap-3">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all" style={{
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)'
-                  }}>
-                    <Brain className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-1 premium-text-platinum">Thought</h3>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      Write a memory
-                    </p>
-                  </div>
-                </div>
+                <Brain className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
               </button>
 
               {/* Article */}
               <button
                 onClick={() => setSaveArticleOpen(true)}
-                className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}
+                title="Article"
               >
-                <div className="flex flex-col items-start gap-3">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all" style={{
-                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)'
-                  }}>
-                    <FileText className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-1 premium-text-platinum">Article</h3>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      Save to read later
-                    </p>
-                  </div>
-                </div>
+                <FileText className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
               </button>
 
               {/* Project */}
               <button
                 onClick={() => setCreateProjectOpen(true)}
-                className="group premium-glass-subtle p-6 rounded-xl transition-all hover:bg-white/10 text-left"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}
+                title="Project"
               >
-                <div className="flex flex-col items-start gap-3">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center transition-all" style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
-                  }}>
-                    <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold mb-1 premium-text-platinum">Project</h3>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      Start building
-                    </p>
-                  </div>
-                </div>
+                <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
             </div>
           </div>

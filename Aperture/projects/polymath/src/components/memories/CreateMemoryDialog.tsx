@@ -134,8 +134,12 @@ export function CreateMemoryDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="backdrop-blur-xl bg-white/80 border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
-        style={{ borderColor: 'rgba(99, 102, 241, 0.5)', color: '#6366f1' }}
+        className="border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
+        style={{
+          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+          borderColor: 'rgba(99, 102, 241, 0.5)',
+          color: 'var(--premium-indigo)'
+        }}
       >
         <Plus className="h-4 w-4" />
         New Thought
@@ -156,8 +160,8 @@ export function CreateMemoryDialog() {
           <form onSubmit={handleSubmit} className="space-y-6 mt-6">
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title" className="font-semibold text-gray-700 text-sm sm:text-base">
-                Title <span className="text-red-500">*</span>
+              <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Title <span style={{ color: 'var(--premium-red)' }}>*</span>
               </Label>
               <Input
                 id="title"
@@ -165,7 +169,12 @@ export function CreateMemoryDialog() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
+                className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
                 autoComplete="off"
               />
             </div>
@@ -173,15 +182,15 @@ export function CreateMemoryDialog() {
             {/* Bullet Points */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="font-semibold text-gray-700 text-sm sm:text-base">
-                  Content <span className="text-red-500">*</span>
+                <Label className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                  Content <span style={{ color: 'var(--premium-red)' }}>*</span>
                 </Label>
                 <Button
                   type="button"
                   onClick={addBullet}
                   variant="ghost"
                   size="sm"
-                  className="text-blue-900 hover:text-blue-950 hover:bg-blue-50"
+                  style={{ color: 'var(--premium-blue)' }}
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add point
@@ -191,14 +200,19 @@ export function CreateMemoryDialog() {
               <div className="space-y-3">
                 {bullets.map((bullet, index) => (
                   <div key={index} className="flex gap-2">
-                    <div className="flex-shrink-0 w-6 h-11 sm:h-12 flex items-center justify-center text-gray-400 font-medium">
+                    <div className="flex-shrink-0 w-6 h-11 sm:h-12 flex items-center justify-center font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
                       •
                     </div>
                     <Input
                       placeholder={`Point ${index + 1}`}
                       value={bullet}
                       onChange={(e) => updateBullet(index, e.target.value)}
-                      className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
+                      className="text-base h-11 sm:h-12"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'var(--premium-text-primary)'
+                      }}
                       autoComplete="off"
                     />
                     {bullets.length > 1 && (
@@ -207,7 +221,8 @@ export function CreateMemoryDialog() {
                         onClick={() => removeBullet(index)}
                         variant="ghost"
                         size="sm"
-                        className="flex-shrink-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className="flex-shrink-0"
+                        style={{ color: 'var(--premium-text-tertiary)' }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -216,14 +231,14 @@ export function CreateMemoryDialog() {
                 ))}
               </div>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                 AI will analyze this to extract entities and themes
               </p>
             </div>
 
             {/* Memory Type */}
             <div className="space-y-2">
-              <Label htmlFor="memory_type" className="font-semibold text-gray-700 text-sm sm:text-base">
+              <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
                 Type (Optional)
               </Label>
               <Select
@@ -235,7 +250,12 @@ export function CreateMemoryDialog() {
                     memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight',
                   })
                 }
-                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
+                className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
               >
                 <option value="">Auto-detect</option>
                 <option value="foundational">Foundational - Core knowledge</option>
@@ -246,7 +266,7 @@ export function CreateMemoryDialog() {
 
             {/* Tags */}
             <div className="space-y-2 pb-4">
-              <Label htmlFor="tags" className="font-semibold text-gray-700 text-sm sm:text-base">
+              <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
                 Tags (Optional)
               </Label>
               <Input
@@ -254,10 +274,15 @@ export function CreateMemoryDialog() {
                 placeholder="ai, programming, health"
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400 text-base h-11 sm:h-12"
+                className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
                 autoComplete="off"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                 Comma-separated tags to categorize this memory
               </p>
             </div>
