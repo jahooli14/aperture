@@ -13,9 +13,8 @@ import { ProjectActivityStream } from '../components/projects/ProjectActivityStr
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
-import { RelatedItems } from '../components/RelatedItems'
-import { ConnectionsList } from '../components/connections/ConnectionsList' // NEW
-import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog' // NEW
+import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -336,14 +335,7 @@ export function ProjectDetailPage() {
           }}
         />
 
-        {/* Related Items */}
-        <RelatedItems
-          sourceId={project.id}
-          sourceType="project"
-          sourceText={`${project.title} ${project.description || ''}`}
-        />
-
-        {/* NEW: Connections (Sparks) */}
+        {/* Connections - Unified section showing both manual and AI-suggested connections */}
         <div className="premium-card p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2 premium-text-platinum">
