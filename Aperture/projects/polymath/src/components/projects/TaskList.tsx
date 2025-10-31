@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Trash2, Check } from 'lucide-react'
+import { Plus, Trash2, Check, GripVertical } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
@@ -25,6 +25,7 @@ interface TaskListProps {
 export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const [newTaskText, setNewTaskText] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
 
   const sortedTasks = [...tasks].sort((a, b) => a.order - b.order)
 
@@ -59,6 +60,37 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
       order: index
     }))
     onUpdate(reorderedTasks)
+  }
+
+  const handleDragStart = (taskId: string) => {
+    setDraggedTaskId(taskId)
+  }
+
+  const handleDragOver = (e: React.DragEvent, targetTaskId: string) => {
+    e.preventDefault()
+    if (!draggedTaskId || draggedTaskId === targetTaskId) return
+
+    const draggedIndex = sortedTasks.findIndex(t => t.id === draggedTaskId)
+    const targetIndex = sortedTasks.findIndex(t => t.id === targetTaskId)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    // Reorder tasks
+    const newTasks = [...sortedTasks]
+    const [draggedTask] = newTasks.splice(draggedIndex, 1)
+    newTasks.splice(targetIndex, 0, draggedTask)
+
+    // Update order property
+    const reorderedTasks = newTasks.map((task, index) => ({
+      ...task,
+      order: index
+    }))
+
+    onUpdate(reorderedTasks)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedTaskId(null)
   }
 
   const completedCount = tasks.filter(t => t.done).length
@@ -103,12 +135,22 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
           {sortedTasks.map((task) => (
             <div
               key={task.id}
-              className="group flex items-center gap-3 p-2.5 rounded-lg border transition-all"
+              draggable
+              onDragStart={() => handleDragStart(task.id)}
+              onDragOver={(e) => handleDragOver(e, task.id)}
+              onDragEnd={handleDragEnd}
+              className="group flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move"
               style={{
                 borderColor: task.done ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
-                backgroundColor: task.done ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)'
+                backgroundColor: task.done ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)',
+                opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
+              {/* Drag Handle */}
+              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
+                <GripVertical className="h-4 w-4" />
+              </div>
+
               {/* Checkbox */}
               <button
                 onClick={() => handleToggleTask(task.id)}

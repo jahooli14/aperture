@@ -140,11 +140,18 @@ self.addEventListener('fetch', (event) => {
       caches.match(request).then((cachedResponse) => {
         const fetchPromise = fetch(request).then((networkResponse) => {
           if (networkResponse.ok) {
+            // Clone BEFORE any other operations
+            const responseClone = networkResponse.clone()
             caches.open(IMAGE_CACHE).then((cache) => {
-              cache.put(request, networkResponse.clone())
+              cache.put(request, responseClone)
+            }).catch((err) => {
+              console.warn('[SW] Failed to cache image:', err)
             })
           }
           return networkResponse
+        }).catch((err) => {
+          console.warn('[SW] Image fetch failed:', err)
+          throw err
         })
         // Return cached immediately, update in background
         return cachedResponse || fetchPromise

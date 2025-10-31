@@ -7,6 +7,8 @@ import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { PWAUpdateNotification } from './components/PWAUpdateNotification'
 import { VoiceCommandButton } from './components/VoiceCommandButton'
+import { PinProvider } from './contexts/PinContext'
+import { PinOverlay } from './components/PinOverlay'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -154,12 +156,13 @@ export default function App() {
   }, [])
 
   return (
-    <ToastProvider>
-      <Router>
-        <div className="min-h-screen flex flex-col">
-          <OfflineIndicator />
-          <PWAUpdateNotification />
-          <PWAInstallBanner />
+    <PinProvider>
+      <ToastProvider>
+        <Router>
+          <div className="min-h-screen flex flex-col">
+            <OfflineIndicator />
+            <PWAUpdateNotification />
+            <PWAInstallBanner />
 
           {/* Safe area spacer for mobile status bar */}
           <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
@@ -194,9 +197,13 @@ export default function App() {
 
           {/* Voice Command Button */}
           <VoiceCommandButton />
+
+          {/* Pin Overlay - Split Screen */}
+          <PinOverlay />
         </div>
       </Router>
     </ToastProvider>
+    </PinProvider>
   )
 }
 // Force redeploy Wed 29 Oct 2025 13:24:27 GMT
