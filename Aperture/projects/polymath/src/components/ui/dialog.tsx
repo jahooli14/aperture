@@ -127,7 +127,7 @@ const DialogContent = React.forwardRef<
           // Positioning and transforms
           "-translate-x-1/2 -translate-y-1/2",
           // Modern glassmorphism styling with elevation
-          "backdrop-blur-xl bg-white/95 rounded-2xl shadow-2xl border-2",
+          "backdrop-blur-xl rounded-2xl shadow-2xl border-2",
           // Padding with safe area consideration
           "p-6 pb-8",
           // Smooth animations
@@ -142,7 +142,8 @@ const DialogContent = React.forwardRef<
           className
         )}
         style={{
-          borderColor: 'rgba(59, 130, 246, 0.3)'
+          backgroundColor: 'var(--premium-surface-card)',
+          borderColor: 'rgba(255, 255, 255, 0.1)'
         }}
         onClick={(e) => e.stopPropagation()}
         {...props}
@@ -156,15 +157,16 @@ const DialogContent = React.forwardRef<
             "h-10 w-10",
             "flex items-center justify-center",
             "rounded-full",
-            "backdrop-blur-xl bg-white/80 hover:bg-white/90 border-2 shadow-md hover:shadow-lg",
-            "text-neutral-600 hover:text-neutral-900",
+            "backdrop-blur-xl border-2 shadow-md hover:shadow-lg",
             "transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-blue-500",
+            "focus:outline-none focus:ring-2",
             "active:scale-95",
             "z-10"
           )}
           style={{
-            borderColor: 'rgba(59, 130, 246, 0.2)'
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            color: 'var(--premium-text-primary)'
           }}
         >
           <X className="h-5 w-5" />
@@ -214,6 +216,7 @@ const DialogTitle = React.forwardRef<
       "text-lg font-semibold leading-none tracking-tight",
       className
     )}
+    style={{ color: 'var(--premium-text-primary)' }}
     {...props}
   />
 ))
@@ -225,7 +228,8 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm", className)}
+    style={{ color: 'var(--premium-text-secondary)' }}
     {...props}
   />
 ))
