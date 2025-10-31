@@ -16,12 +16,16 @@ import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
 import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
+import { SuggestionToast } from '../SuggestionToast'
 
 export function CreateProjectDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const { createProject } = useProjectStore()
   const { addToast } = useToast()
+  const { fetchSuggestions } = useAutoSuggestion()
 
   const [formData, setFormData] = useState({
     title: '',
@@ -35,7 +39,7 @@ export function CreateProjectDialog() {
     setLoading(true)
 
     try {
-      await createProject({
+      const newProject = await createProject({
         title: formData.title,
         description: formData.description || '',
         status: 'active', // Always start as active
@@ -45,6 +49,13 @@ export function CreateProjectDialog() {
           progress: 0,
         },
       })
+
+      // Trigger AI suggestion system
+      if (newProject?.id) {
+        setLastCreatedId(newProject.id)
+        const content = `${formData.title} ${formData.description || ''} ${formData.next_step || ''}`
+        fetchSuggestions('project', newProject.id, content)
+      }
 
       addToast({
         title: 'Project created!',
@@ -190,6 +201,15 @@ export function CreateProjectDialog() {
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* AI Suggestion Toast */}
+      {lastCreatedId && (
+        <SuggestionToast
+          itemId={lastCreatedId}
+          itemType="project"
+          itemTitle={formData.title}
+        />
+      )}
     </Dialog>
   )
 }

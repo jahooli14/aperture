@@ -14,6 +14,7 @@ import { useToast } from '../ui/toast'
 import { haptic } from '../../utils/haptics'
 import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
+import { SuggestionBadge } from '../SuggestionBadge'
 
 export const ProjectCard = memo(function ProjectCard({
   project,
@@ -367,6 +368,7 @@ export const ProjectCard = memo(function ProjectCard({
             {project.title}
           </CardTitle>
           <div className="flex items-center gap-2">
+            <SuggestionBadge itemId={project.id} itemType="project" />
             {showActions && onEdit && (
               <Button
                 onClick={() => onEdit(project.id)}

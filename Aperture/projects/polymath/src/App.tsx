@@ -9,6 +9,7 @@ import { PWAUpdateNotification } from './components/PWAUpdateNotification'
 import { VoiceCommandButton } from './components/VoiceCommandButton'
 import { PinProvider } from './contexts/PinContext'
 import { PinOverlay } from './components/PinOverlay'
+import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -157,8 +158,9 @@ export default function App() {
 
   return (
     <PinProvider>
-      <ToastProvider>
-        <Router>
+      <AutoSuggestionProvider>
+        <ToastProvider>
+          <Router>
           <div className="min-h-screen flex flex-col">
             <OfflineIndicator />
             <PWAUpdateNotification />
@@ -201,8 +203,9 @@ export default function App() {
           {/* Pin Overlay - Split Screen */}
           <PinOverlay />
         </div>
-      </Router>
-    </ToastProvider>
+        </Router>
+      </ToastProvider>
+      </AutoSuggestionProvider>
     </PinProvider>
   )
 }

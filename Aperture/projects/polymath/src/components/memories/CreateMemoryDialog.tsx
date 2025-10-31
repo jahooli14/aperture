@@ -20,12 +20,16 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { Plus, Sparkles, X } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
+import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
+import { SuggestionToast } from '../SuggestionToast'
 
 export function CreateMemoryDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
+  const { fetchSuggestions } = useAutoSuggestion()
 
   const [bullets, setBullets] = useState<string[]>([''])
   const [formData, setFormData] = useState({
@@ -74,12 +78,18 @@ export function CreateMemoryDialog() {
         .filter(b => b.length > 0)
         .join('\n\n')
 
-      await createMemory({
+      const newMemory = await createMemory({
         title: formData.title,
         body,
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
       })
+
+      // Trigger AI suggestion system
+      if (newMemory?.id) {
+        setLastCreatedId(newMemory.id)
+        fetchSuggestions('thought', newMemory.id, `${formData.title} ${body}`)
+      }
 
       // Check for milestone celebrations
       const newCount = memories.length + 1
@@ -286,6 +296,15 @@ export function CreateMemoryDialog() {
           </form>
         </BottomSheetContent>
       </BottomSheet>
+
+      {/* AI Suggestion Toast */}
+      {lastCreatedId && (
+        <SuggestionToast
+          itemId={lastCreatedId}
+          itemType="thought"
+          itemTitle={formData.title}
+        />
+      )}
     </>
   )
 }

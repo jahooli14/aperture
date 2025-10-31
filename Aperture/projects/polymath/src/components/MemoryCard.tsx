@@ -14,6 +14,7 @@ import { useLongPress } from '../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { MemoryLinks } from './MemoryLinks'
 import { PinButton } from './PinButton'
+import { SuggestionBadge } from './SuggestionBadge'
 
 interface MemoryCardProps {
   memory: Memory
@@ -166,6 +167,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 Manual
               </div>
             )}
+            <SuggestionBadge itemId={memory.id} itemType="thought" />
             <PinButton
               type="thought"
               id={memory.id}
