@@ -240,45 +240,34 @@ export function MemoriesPage() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Header with Action */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        {/* New Memory button - visible on all views */}
-        {view === 'all' && (
-          <div className="mb-4 flex items-center justify-center">
-            <CreateMemoryDialog />
+          {/* Compact Header */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <h1 className="text-2xl font-bold premium-text-platinum">Thoughts</h1>
+          </div>
+          {view === 'all' && <CreateMemoryDialog />}
+        </div>
+        {showingCachedData && (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs">
+            <CloudOff className="h-3 w-3" />
+            <span className="font-medium">Offline mode</span>
           </div>
         )}
-        {/* Centered header content */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Brain className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
-          </div>
-          <h1 className="text-4xl font-bold mb-3 premium-text-platinum">
-            Thoughts
-          </h1>
-          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-            Your captured ideas and voice notes
-          </p>
-          {showingCachedData && (
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
-              <CloudOff className="h-4 w-4" />
-              <span className="text-sm font-medium">Showing cached data from offline mode</span>
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* View Toggle */}
-        <div className="flex flex-wrap gap-2 justify-center mb-6">
+        <div className="flex flex-wrap gap-2 justify-center mb-4">
           <Button
             variant={view === 'foundational' ? 'default' : 'outline'}
             onClick={() => setView('foundational')}
-            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               view === 'foundational'
-                ? 'premium-card border-2 shadow-xl'
-                : 'premium-card border-2 shadow-md hover:shadow-lg'
+                ? 'premium-card border-2 shadow-lg'
+                : 'premium-card border shadow-sm hover:shadow-md'
             }`}
             style={{
               borderColor: view === 'foundational' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
@@ -290,25 +279,25 @@ export function MemoriesPage() {
           <Button
             variant={view === 'all' ? 'default' : 'outline'}
             onClick={() => setView('all')}
-            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               view === 'all'
-                ? 'premium-card border-2 shadow-xl'
-                : 'premium-card border-2 shadow-md hover:shadow-lg'
+                ? 'premium-card border-2 shadow-lg'
+                : 'premium-card border shadow-sm hover:shadow-md'
             }`}
             style={{
               borderColor: view === 'all' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
               color: view === 'all' ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
             }}
           >
-            My Thoughts ({memories.length})
+            All ({memories.length})
           </Button>
           <Button
             variant={view === 'resurfacing' ? 'default' : 'outline'}
             onClick={() => setView('resurfacing')}
-            className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               view === 'resurfacing'
-                ? 'premium-card border-2 shadow-xl'
-                : 'premium-card border-2 shadow-md hover:shadow-lg'
+                ? 'premium-card border-2 shadow-lg'
+                : 'premium-card border shadow-sm hover:shadow-md'
             }`}
             style={{
               borderColor: view === 'resurfacing' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
@@ -477,7 +466,7 @@ export function MemoriesPage() {
         {view === 'all' && !isLoading && memories.length > 0 && (
           <>
             {/* Sub-navigation for Themes vs Recent */}
-            <div className="flex gap-2 justify-center mb-8">
+            <div className="flex gap-2 justify-center mb-4">
               {[
                 { key: 'themes', label: 'By Theme' },
                 { key: 'recent', label: 'Recent' }
@@ -486,10 +475,10 @@ export function MemoriesPage() {
                   key={key}
                   variant={memoryView === key ? 'default' : 'outline'}
                   onClick={() => setMemoryView(key as typeof memoryView)}
-                  className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                     memoryView === key
-                      ? 'premium-card border-2 shadow-xl'
-                      : 'premium-card border-2 shadow-md hover:shadow-lg'
+                      ? 'premium-card border-2 shadow-lg'
+                      : 'premium-card border shadow-sm hover:shadow-md'
                   }`}
                   style={{
                     borderColor: memoryView === key ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
