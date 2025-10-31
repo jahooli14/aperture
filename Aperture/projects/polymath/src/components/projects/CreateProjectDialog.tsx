@@ -1,19 +1,21 @@
+/**
+ * Create Project Dialog
+ * Mobile-optimized bottom sheet for creating new projects
+ */
+
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Rocket } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog'
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+} from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import { Textarea } from '../ui/textarea'
-import { Select } from '../ui/select'
 import { useToast } from '../ui/toast'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
@@ -34,6 +36,15 @@ export function CreateProjectDialog() {
     next_step: '',
   })
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      priority: false,
+      next_step: '',
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -50,22 +61,13 @@ export function CreateProjectDialog() {
         },
       })
 
-      // Note: AI suggestions would need the created project ID from the API response
-      // For now, we skip this until we update the store to return the created project
-
       addToast({
         title: 'Project created!',
         description: `"${formData.title}" has been added to your projects.`,
         variant: 'success',
       })
 
-      // Reset form and close dialog
-      setFormData({
-        title: '',
-        description: '',
-        priority: false,
-        next_step: '',
-      })
+      resetForm()
       setOpen(false)
     } catch (error) {
       addToast({
@@ -79,50 +81,76 @@ export function CreateProjectDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all" style={{ borderColor: 'rgba(59, 130, 246, 0.3)', color: 'var(--premium-blue)' }}>
-          <Plus className="h-4 w-4" />
-          <span style={{ color: 'var(--premium-text-primary)' }}>New Project</span>
-        </button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col overflow-hidden">
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-            <DialogTitle className="text-lg sm:text-2xl">Start a New Project</DialogTitle>
-            <DialogDescription className="text-sm sm:text-base">
-              Quick start - name it, describe it, and define the first step
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      {/* Trigger Button */}
+      <button
+        onClick={() => setOpen(true)}
+        className="border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
+        style={{
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          borderColor: 'rgba(59, 130, 246, 0.5)',
+          color: 'var(--premium-blue)'
+        }}
+      >
+        <Plus className="h-4 w-4" />
+        New Project
+      </button>
 
-          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title" className="text-sm sm:text-base">Project Name *</Label>
+      <BottomSheet open={open} onOpenChange={setOpen}>
+        <BottomSheetContent>
+          <BottomSheetHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <BottomSheetTitle>Start a New Project</BottomSheetTitle>
+            </div>
+            <BottomSheetDescription>
+              Quick start - name it, describe it, and define the first step
+            </BottomSheetDescription>
+          </BottomSheetHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Project Name <span style={{ color: 'var(--premium-red)' }}>*</span>
+              </Label>
               <Input
                 id="title"
                 placeholder="My Next Big Thing"
                 value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
                 className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
+                autoComplete="off"
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="description" className="text-sm sm:text-base">Description (one-liner)</Label>
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Description (Optional)
+              </Label>
               <Input
                 id="description"
                 placeholder="What's this project about?"
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
+                autoComplete="off"
               />
             </div>
 
+            {/* Priority Checkbox */}
             <div
               className="flex items-center gap-3 p-4 rounded-xl border-2"
               style={{
@@ -134,9 +162,7 @@ export function CreateProjectDialog() {
                 id="priority"
                 type="checkbox"
                 checked={formData.priority}
-                onChange={(e) =>
-                  setFormData({ ...formData, priority: e.target.checked })
-                }
+                onChange={(e) => setFormData({ ...formData, priority: e.target.checked })}
                 className="w-5 h-5 rounded border-2 focus:ring-2 cursor-pointer"
                 style={{
                   borderColor: 'var(--premium-blue)',
@@ -157,46 +183,63 @@ export function CreateProjectDialog() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="next-step" className="text-sm sm:text-base">What's the first step?</Label>
+            {/* Next Step */}
+            <div className="space-y-2 pb-4">
+              <Label htmlFor="next_step" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                First Step (Optional)
+              </Label>
               <Input
-                id="next-step"
+                id="next_step"
                 placeholder="e.g., Research ideas, Build prototype, Write outline"
                 value={formData.next_step}
-                onChange={(e) =>
-                  setFormData({ ...formData, next_step: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
                 className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
+                autoComplete="off"
               />
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                Define what to work on first
+              </p>
             </div>
-          </div>
 
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-4 border-t premium-glass-subtle">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-              className="w-full sm:w-auto h-11 sm:h-12"
-              style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'var(--premium-text-secondary)' }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading || !formData.title}
-              className="w-full sm:w-auto h-11 sm:h-12"
-              style={{
-                backgroundColor: 'var(--premium-blue)',
-                color: 'white',
-                opacity: loading || !formData.title ? 0.5 : 1
-              }}
-            >
-              {loading ? 'Creating...' : 'Create Project'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+            <BottomSheetFooter>
+              <Button
+                type="submit"
+                disabled={loading || !formData.title}
+                className="btn-primary w-full h-12 touch-manipulation"
+              >
+                {loading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Create Project
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  resetForm()
+                  setOpen(false)
+                }}
+                disabled={loading}
+                className="w-full h-12 touch-manipulation"
+              >
+                Cancel
+              </Button>
+            </BottomSheetFooter>
+          </form>
+        </BottomSheetContent>
+      </BottomSheet>
 
       {/* AI Suggestion Toast */}
       {lastCreatedId && (
@@ -206,6 +249,6 @@ export function CreateProjectDialog() {
           itemTitle={formData.title}
         />
       )}
-    </Dialog>
+    </>
   )
 }

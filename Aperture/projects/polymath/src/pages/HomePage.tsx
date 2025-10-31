@@ -165,7 +165,7 @@ export function HomePage() {
     recentProject = activeProjects.length > 0
       ? activeProjects
           .filter(p => !p.priority)
-          .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())[0]
+          .sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime())[0]
       : null
   } catch (err) {
     console.error('[HomePage] Error filtering data:', err)

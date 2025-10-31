@@ -13,7 +13,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform, useMotionValue, animate } from 'framer-motion'
-import { Layers, FolderKanban, FileText, Sparkles, GitBranch, ZoomIn, ZoomOut } from 'lucide-react'
+import { Layers, FolderKanban, FileText, Sparkles, GitBranch, ZoomIn, ZoomOut, Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { haptic } from '../utils/haptics'
 
@@ -67,6 +67,7 @@ export function ScrollTimelinePage() {
   const [monthSections, setMonthSections] = useState<MonthSection[]>([])
   const [allEvents, setAllEvents] = useState<TimelineEvent[]>([]) // NEW: Store all events for thread filtering
   const [threadFilter, setThreadFilter] = useState<{type: string, id: string} | null>(null) // NEW: Thread view filter
+  const [searchQuery, setSearchQuery] = useState('')  // NEW: Search filter
   const [loading, setLoading] = useState(true)
 
   // Timeline scrubbing and zoom state
@@ -208,6 +209,54 @@ export function ScrollTimelinePage() {
       setLoading(false)
     }
   }
+
+  // NEW: Filter events by search query
+  const filterEventsBySearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      // No search - reload all data
+      loadTimelineData()
+      return
+    }
+
+    const lowerQuery = query.toLowerCase()
+    const filteredEvents = allEvents.filter(event =>
+      event.title.toLowerCase().includes(lowerQuery) ||
+      event.type.toLowerCase().includes(lowerQuery)
+    )
+
+    // Rebuild month sections with filtered events
+    const monthMap = new Map<string, TimelineEvent[]>()
+    filteredEvents.forEach(event => {
+      const monthKey = `${event.year}-${event.month.toString().padStart(2, '0')}`
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, [])
+      }
+      monthMap.get(monthKey)!.push(event)
+    })
+
+    const sections: MonthSection[] = Array.from(monthMap.entries())
+      .map(([monthKey, monthEvents]) => {
+        const year = monthEvents[0].year
+        const month = monthEvents[0].month
+        const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
+          month: 'long',
+          year: 'numeric'
+        })
+        return { year, month, monthLabel, events: monthEvents, connections: [] }
+      })
+      .sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year
+        return a.month - b.month
+      })
+
+    setMonthSections(sections)
+  }, [allEvents])
+
+  // Apply search filter when query changes
+  useEffect(() => {
+    if (threadFilter) return // Don't search when viewing thread
+    filterEventsBySearch(searchQuery)
+  }, [searchQuery, filterEventsBySearch, threadFilter])
 
   // NEW: Fetch thread for a given item
   const loadThread = async (itemType: string, itemId: string) => {

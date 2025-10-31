@@ -1,19 +1,19 @@
 /**
  * Save Article Dialog
- * Quick dialog to save URLs to reading queue
+ * Mobile-optimized bottom sheet for saving URLs to reading queue
  */
 
 import { useState } from 'react'
-import { Loader2, Link as LinkIcon } from 'lucide-react'
+import { BookmarkPlus, Link as LinkIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog'
+  BottomSheet,
+  BottomSheetContent,
+  BottomSheetDescription,
+  BottomSheetFooter,
+  BottomSheetHeader,
+  BottomSheetTitle,
+} from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
@@ -31,6 +31,10 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
   const { saveArticle } = useReadingStore()
   const { fetchSuggestions } = useConnectionStore()
   const { addToast } = useToast()
+
+  const resetForm = () => {
+    setUrl('')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,7 +64,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
         )
       }
 
-      setUrl('')
+      resetForm()
       onClose()
     } catch (error) {
       console.error('[SaveArticleDialog] Failed to save article:', error)
@@ -75,61 +79,78 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <LinkIcon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-              Save Article
-            </DialogTitle>
-            <DialogDescription>
-              Paste a URL to save it to your reading queue
-            </DialogDescription>
-          </DialogHeader>
+    <BottomSheet open={open} onOpenChange={onClose}>
+      <BottomSheetContent>
+        <BottomSheetHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+            <BottomSheetTitle>Save Article</BottomSheetTitle>
+          </div>
+          <BottomSheetDescription>
+            Paste a URL to save it to your reading queue
+          </BottomSheetDescription>
+        </BottomSheetHeader>
 
-          <div className="py-6">
-            <div className="grid gap-2">
-              <Label htmlFor="url">Article URL</Label>
-              <Input
-                id="url"
-                type="url"
-                placeholder="https://example.com/article"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                required
-                autoFocus
-                className="h-12"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+          {/* URL Input */}
+          <div className="space-y-2 pb-4">
+            <Label htmlFor="url" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              Article URL <span style={{ color: 'var(--premium-red)' }}>*</span>
+            </Label>
+            <Input
+              id="url"
+              type="url"
+              placeholder="https://example.com/article"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+              autoFocus
+              className="text-base h-11 sm:h-12"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-primary)'
+              }}
+              autoComplete="off"
+            />
+            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              AI will extract the content and find connections
+            </p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
+          <BottomSheetFooter>
             <Button
               type="submit"
               disabled={loading || !url.trim()}
-              className="btn-primary"
+              className="btn-primary w-full h-12 touch-manipulation"
             >
               {loading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
                   Saving...
                 </>
               ) : (
-                'Save Article'
+                <>
+                  <BookmarkPlus className="mr-2 h-4 w-4" />
+                  Save Article
+                </>
               )}
             </Button>
-          </DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                resetForm()
+                onClose()
+              }}
+              disabled={loading}
+              className="w-full h-12 touch-manipulation"
+            >
+              Cancel
+            </Button>
+          </BottomSheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </BottomSheetContent>
+    </BottomSheet>
   )
 }

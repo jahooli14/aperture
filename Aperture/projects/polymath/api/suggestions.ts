@@ -16,6 +16,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
+
 // Request validation schema for rating
 const RateRequestSchema = z.object({
   rating: z.number().int().min(-1).max(2),
@@ -42,10 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * List suggestions
  */
 async function handleList(req: VercelRequest, res: VercelResponse) {
-
   try {
-    const userId = process.env.USER_ID || 'default-user'
-
     // Query parameters
     const {
       status = 'pending',
@@ -57,7 +56,7 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
     let query = supabase
       .from('project_suggestions')
       .select('*', { count: 'exact' })
-      .eq('user_id', userId)
+      .eq('user_id', USER_ID)
       .order('total_points', { ascending: false })
 
     // Filter by status
@@ -137,14 +136,13 @@ async function handleRate(req: VercelRequest, res: VercelResponse, id: string) {
     }
 
     const { rating, feedback } = parseResult.data
-    const userId = process.env.USER_ID || 'default-user'
 
     // Store rating
     const { data: ratingData, error: ratingError } = await supabase
       .from('suggestion_ratings')
       .insert({
         suggestion_id: id,
-        user_id: userId,
+        user_id: USER_ID,
         rating,
         feedback: feedback || null
       })
@@ -219,7 +217,6 @@ async function handleBuild(req: VercelRequest, res: VercelResponse, id: string) 
       return res.status(500).json({ error: fetchError.message })
     }
 
-    const userId = process.env.USER_ID || 'default-user'
     const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
     const projectType = metadata.type || (hasCapabilities ? 'technical' : 'creative')
 
@@ -227,7 +224,7 @@ async function handleBuild(req: VercelRequest, res: VercelResponse, id: string) 
     const { data: project, error: createError } = await supabase
       .from('projects')
       .insert({
-        user_id: userId,
+        user_id: USER_ID,
         title: project_title || suggestion.title,
         description: project_description || suggestion.description,
         type: projectType,
@@ -261,7 +258,7 @@ async function handleBuild(req: VercelRequest, res: VercelResponse, id: string) 
       .from('suggestion_ratings')
       .insert({
         suggestion_id: id,
-        user_id: userId,
+        user_id: USER_ID,
         rating: 2,
         feedback: 'Built this project!'
       })

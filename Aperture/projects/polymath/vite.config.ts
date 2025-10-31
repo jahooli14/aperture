@@ -22,6 +22,15 @@ export default defineConfig({
       }
     }
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://polymath-dyfmiawdk-daniels-projects-ca7c7923.vercel.app',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
