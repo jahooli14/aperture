@@ -16,6 +16,7 @@ import { TaskList, type Task } from '../components/projects/TaskList'
 import { RelatedItems } from '../components/RelatedItems'
 import { ConnectionsList } from '../components/connections/ConnectionsList' // NEW
 import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog' // NEW
+import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -228,7 +229,37 @@ export function ProjectDetailPage() {
               )}
             </div>
 
-            <div className="relative">
+            <div className="flex items-center gap-2">
+              {/* Pin Button */}
+              <PinButton
+                type="project"
+                id={project.id}
+                title={project.title}
+                currentId={id}
+                content={
+                  <div className="p-6 overflow-y-auto">
+                    <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                      {project.title}
+                    </h2>
+                    {project.description && (
+                      <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                        {project.description}
+                      </p>
+                    )}
+                    {project.metadata?.next_step && (
+                      <div className="premium-glass-subtle p-4 rounded-lg">
+                        <div className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--premium-amber)' }}>
+                          Next Step:
+                        </div>
+                        <div style={{ color: 'var(--premium-text-primary)' }}>
+                          {project.metadata.next_step}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                }
+              />
+
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="h-10 w-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"

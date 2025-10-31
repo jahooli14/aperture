@@ -105,11 +105,11 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted }: Conne
       case 'project':
         return `/projects/${id}`
       case 'thought':
-        return `/memories`
+        return `/memories?highlight=${id}`
       case 'article':
-        return `/reading`
+        return `/reading?highlight=${id}`
       case 'suggestion':
-        return `/suggestions`
+        return `/suggestions?highlight=${id}`
       default:
         return '#'
     }
@@ -119,9 +119,12 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted }: Conne
     const item = connection.related_item
     if (!item) return 'Unknown item'
 
-    if ('title' in item && typeof item.title === 'string') return item.title
-    if ('body' in item && typeof item.body === 'string') return item.body.slice(0, 60) + '...' || 'Untitled thought'
-    return 'Unknown'
+    // For thoughts/memories, use title first, then body
+    if ('title' in item && typeof item.title === 'string' && item.title) return item.title
+    if ('body' in item && typeof item.body === 'string' && item.body) {
+      return item.body.slice(0, 60) + (item.body.length > 60 ? '...' : '')
+    }
+    return 'Untitled thought'
   }
 
   if (loading) {
