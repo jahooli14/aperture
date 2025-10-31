@@ -99,34 +99,44 @@ export class ErrorBoundary extends Component<Props, State> {
               We've encountered an unexpected error. Please refresh the page to continue.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mb-6 text-left">
-                <summary
-                  className="cursor-pointer text-sm font-medium mb-2"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                >
-                  Error Details (Dev Mode)
-                </summary>
+            {/* Always show error details for debugging */}
+            {this.state.error && (
+              <div className="mb-6 text-left">
+                <h3 className="text-sm font-bold mb-2" style={{ color: '#ef4444' }}>
+                  Error Details:
+                </h3>
                 <div
-                  className="p-4 rounded-lg text-xs font-mono overflow-auto max-h-48"
+                  className="p-4 rounded-lg text-xs font-mono overflow-auto max-h-64"
                   style={{
                     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    color: '#ef4444'
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
                   }}
                 >
-                  <div className="mb-2">
-                    <strong>Error:</strong> {this.state.error.message}
+                  <div className="mb-3">
+                    <strong>Message:</strong>
+                    <div className="mt-1 whitespace-pre-wrap">{this.state.error.message}</div>
                   </div>
+
+                  {this.state.error.stack && (
+                    <div className="mb-3">
+                      <strong>Stack Trace:</strong>
+                      <pre className="mt-1 whitespace-pre-wrap text-xs overflow-x-auto">
+                        {this.state.error.stack}
+                      </pre>
+                    </div>
+                  )}
+
                   {this.state.errorInfo && (
                     <div>
-                      <strong>Stack:</strong>
-                      <pre className="mt-1 whitespace-pre-wrap">
+                      <strong>Component Stack:</strong>
+                      <pre className="mt-1 whitespace-pre-wrap text-xs overflow-x-auto">
                         {this.state.errorInfo.componentStack}
                       </pre>
                     </div>
                   )}
                 </div>
-              </details>
+              </div>
             )}
 
             <button

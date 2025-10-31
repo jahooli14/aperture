@@ -37,15 +37,45 @@ import type { ProjectScore, DailyQueueResponse, Memory } from '../types'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { suggestions, fetchSuggestions } = useSuggestionStore()
-  const { projects, fetchProjects } = useProjectStore()
-  const { memories, fetchMemories } = useMemoryStore()
-  const { progress, requiredPrompts, fetchPrompts } = useOnboardingStore()
+
+  // Wrap store hooks in try-catch for safety
+  let suggestions: any[] = []
+  let fetchSuggestions = () => {}
+  let projects: any[] = []
+  let fetchProjects = () => {}
+  let memories: any[] = []
+  let fetchMemories = () => {}
+  let progress: any = null
+  let requiredPrompts: any[] = []
+  let fetchPrompts = () => {}
+
+  try {
+    const suggestionStore = useSuggestionStore()
+    suggestions = suggestionStore.suggestions || []
+    fetchSuggestions = suggestionStore.fetchSuggestions
+
+    const projectStore = useProjectStore()
+    projects = projectStore.projects || []
+    fetchProjects = projectStore.fetchProjects
+
+    const memoryStore = useMemoryStore()
+    memories = memoryStore.memories || []
+    fetchMemories = memoryStore.fetchMemories
+
+    const onboardingStore = useOnboardingStore()
+    progress = onboardingStore.progress
+    requiredPrompts = onboardingStore.requiredPrompts || []
+    fetchPrompts = onboardingStore.fetchPrompts
+  } catch (err) {
+    console.error('[HomePage] Store initialization error:', err)
+  }
+
   const [dailyQueue, setDailyQueue] = useState<ProjectScore[]>([])
   const [cardOfTheDay, setCardOfTheDay] = useState<Memory | null>(null)
   const [queueLoading, setQueueLoading] = useState(false)
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
@@ -60,9 +90,13 @@ export function HomePage() {
         ])
       } catch (err) {
         console.error('[HomePage] Error loading data:', err)
+        setError(`Failed to load data: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
-    loadData()
+    loadData().catch(err => {
+      console.error('[HomePage] Uncaught error in loadData:', err)
+      setError(`Uncaught error: ${err instanceof Error ? err.message : String(err)}`)
+    })
   }, [])
 
   // Show onboarding banner if not completed
@@ -134,6 +168,36 @@ export function HomePage() {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`
+  }
+
+  // Show error if initialization failed
+  if (error) {
+    return (
+      <div className="min-h-screen py-12 px-4">
+        <div className="max-w-2xl mx-auto premium-card p-8">
+          <h2 className="text-2xl font-bold mb-4" style={{ color: '#ef4444' }}>
+            Initialization Error
+          </h2>
+          <div className="p-4 rounded-lg mb-4 text-sm font-mono" style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            color: '#ef4444',
+            border: '1px solid rgba(239, 68, 68, 0.3)'
+          }}>
+            {error}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-lg font-medium"
+            style={{
+              backgroundColor: 'var(--premium-blue)',
+              color: 'white'
+            }}
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
