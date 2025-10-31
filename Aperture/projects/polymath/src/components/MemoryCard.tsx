@@ -5,7 +5,7 @@
 import { useState, useEffect, memo } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2 } from 'lucide-react'
+import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2, Pin } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -13,6 +13,7 @@ import { haptic } from '../utils/haptics'
 import { useLongPress } from '../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { MemoryLinks } from './MemoryLinks'
+import { PinButton } from './PinButton'
 
 interface MemoryCardProps {
   memory: Memory
@@ -165,6 +166,38 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 Manual
               </div>
             )}
+            <PinButton
+              type="thought"
+              id={memory.id}
+              title={memory.title}
+              content={
+                <div className="p-6 overflow-y-auto">
+                  <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                    {memory.title}
+                  </h2>
+                  <div className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {memory.body}
+                  </div>
+                  {memory.tags && memory.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {memory.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 rounded-md text-xs font-medium border"
+                          style={{
+                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            color: 'var(--premium-blue)',
+                            borderColor: 'rgba(59, 130, 246, 0.3)'
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              }
+            />
             {onEdit && (
               <Button
                 onClick={() => onEdit(memory)}
