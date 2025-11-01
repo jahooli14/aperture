@@ -385,7 +385,9 @@ export function DailyQueuePage() {
           <div className="space-y-6">
             {queue.map((score) => {
               const project = score.project
-              const nextStep = project.metadata?.next_step
+              const tasks = project.metadata?.tasks || []
+              const nextTask = tasks.find(t => !t.done)
+              const nextStep = nextTask?.text
               const progress = project.metadata?.progress
 
               return (
