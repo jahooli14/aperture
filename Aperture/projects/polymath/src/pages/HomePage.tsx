@@ -469,7 +469,7 @@ export function HomePage() {
                   const nextTask = tasks
                     .sort((a, b) => a.order - b.order)
                     .find(task => !task.done)
-                  const nextStep = nextTask?.text || project.metadata?.next_step // Fallback to legacy field
+                  const nextStep = nextTask?.text
 
                   return (
                     <Link
