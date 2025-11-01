@@ -172,8 +172,8 @@ export function ReaderPage() {
       el.removeAttribute('class')
     })
 
-    // Remove data attributes
-    doc.querySelectorAll('[data-*]').forEach(el => {
+    // Remove data attributes from all elements
+    doc.querySelectorAll('*').forEach(el => {
       Array.from(el.attributes).forEach(attr => {
         if (attr.name.startsWith('data-')) {
           el.removeAttribute(attr.name)

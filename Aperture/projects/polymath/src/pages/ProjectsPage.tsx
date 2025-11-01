@@ -86,96 +86,97 @@ export function ProjectsPage() {
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
       >
-      {/* Header with Action */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        {/* Button row - pushes content down */}
-        <div className="flex items-center justify-end gap-3 mb-6">
-          <Link
-            to="/suggestions"
-            className="premium-glass border px-4 py-2 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all"
-          >
-            <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
-            <span style={{ color: 'var(--premium-text-primary)' }}>Discover Projects</span>
-          </Link>
-          <CreateProjectDialog />
-        </div>
-        {/* Centered header content below button */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Rocket className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
+      {/* Compact Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+                My Projects
+              </h1>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-            My Projects
-          </h1>
-          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-            Track your creative work and strengthen capabilities
-          </p>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/suggestions"
+              className="premium-glass border px-3 py-1.5 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all text-sm"
+            >
+              <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
+              <span style={{ color: 'var(--premium-text-primary)' }}>Discover</span>
+            </Link>
+            <CreateProjectDialog />
+          </div>
         </div>
       </div>
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* View Mode Toggle - Mobile optimized */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className={`h-9 w-9 p-0 transition-all ${
-              viewMode === 'grid'
-                ? 'premium-card border-2 shadow-xl'
-                : 'premium-card border-2 shadow-md hover:shadow-lg'
-            }`}
-            style={{
-              borderColor: viewMode === 'grid' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
-              color: viewMode === 'grid' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
-            }}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode('compact')}
-            className={`h-9 w-9 p-0 transition-all ${
-              viewMode === 'compact'
-                ? 'premium-card border-2 shadow-xl'
-                : 'premium-card border-2 shadow-md hover:shadow-lg'
-            }`}
-            style={{
-              borderColor: viewMode === 'compact' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
-              color: viewMode === 'compact' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
-            }}
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+        {/* Filters and View Mode in one compact row */}
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'upcoming', label: 'Upcoming' },
+              { key: 'active', label: 'Active' },
+              { key: 'dormant', label: 'Dormant' },
+              { key: 'completed', label: 'Completed' }
+            ].map(({ key, label }) => (
+              <Button
+                key={key}
+                variant={filter === key ? 'default' : 'outline'}
+                onClick={() => setFilter(key as typeof filter)}
+                size="sm"
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full font-medium transition-all text-sm ${
+                  filter === key
+                    ? 'premium-card border-2 shadow-xl'
+                    : 'premium-card border-2 shadow-md hover:shadow-lg'
+                }`}
+                style={{
+                  borderColor: filter === key ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+                  color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
+                }}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
 
-        <div className="flex flex-wrap gap-2 justify-center mb-10">
-          {[
-            { key: 'all', label: 'All' },
-            { key: 'upcoming', label: 'Upcoming' },
-            { key: 'active', label: 'Active' },
-            { key: 'dormant', label: 'Dormant' },
-            { key: 'completed', label: 'Completed' }
-          ].map(({ key, label }) => (
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2">
             <Button
-              key={key}
-              variant={filter === key ? 'default' : 'outline'}
-              onClick={() => setFilter(key as typeof filter)}
-              className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                filter === key
+              variant="outline"
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className={`h-8 w-8 p-0 transition-all ${
+                viewMode === 'grid'
                   ? 'premium-card border-2 shadow-xl'
                   : 'premium-card border-2 shadow-md hover:shadow-lg'
               }`}
               style={{
-                borderColor: filter === key ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
-                color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
+                borderColor: viewMode === 'grid' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+                color: viewMode === 'grid' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
               }}
             >
-              {label}
+              <LayoutGrid className="h-4 w-4" />
             </Button>
-          ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewMode('compact')}
+              className={`h-8 w-8 p-0 transition-all ${
+                viewMode === 'compact'
+                  ? 'premium-card border-2 shadow-xl'
+                  : 'premium-card border-2 shadow-md hover:shadow-lg'
+              }`}
+              style={{
+                borderColor: viewMode === 'compact' ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
+                color: viewMode === 'compact' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
+              }}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
