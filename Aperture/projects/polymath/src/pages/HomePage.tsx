@@ -37,6 +37,137 @@ import {
 import { BrandName } from '../components/BrandName'
 import type { ProjectScore, DailyQueueResponse, Memory } from '../types'
 
+interface InspirationData {
+  type: 'article' | 'thought' | 'project' | 'empty'
+  title: string
+  description: string
+  url?: string
+  reasoning: string
+}
+
+function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendingSuggestionsCount }: {
+  excludeProjectIds: string[]
+  hasPendingSuggestions: boolean
+  pendingSuggestionsCount: number
+}) {
+  const [inspiration, setInspiration] = useState<InspirationData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const fetchInspiration = async () => {
+      try {
+        const excludeParam = excludeProjectIds.length > 0 ? `&exclude=${excludeProjectIds.join(',')}` : ''
+        const response = await fetch(`/api/analytics?resource=inspiration${excludeParam}`)
+        if (response.ok) {
+          const data = await response.json()
+          setInspiration(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch inspiration:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchInspiration()
+  }, [excludeProjectIds.join(',')])
+
+  const getIconAndColor = (type: string) => {
+    switch (type) {
+      case 'article':
+        return { icon: FileText, color: 'var(--premium-emerald)' }
+      case 'thought':
+        return { icon: Brain, color: 'var(--premium-indigo)' }
+      case 'project':
+        return { icon: FolderKanban, color: 'var(--premium-blue)' }
+      default:
+        return { icon: Sparkles, color: 'var(--premium-amber)' }
+    }
+  }
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+      <div className="premium-card p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Sparkles className="h-7 w-7" style={{ color: 'var(--premium-amber)' }} />
+          <h2 className="text-2xl font-bold premium-text-platinum">Get Inspiration</h2>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-amber)' }}></div>
+          </div>
+        ) : inspiration && inspiration.type !== 'empty' ? (
+          <div className="space-y-4">
+            {inspiration.url ? (
+              <Link
+                to={inspiration.url}
+                className="group block premium-glass-subtle p-5 rounded-xl transition-all duration-300 hover:bg-white/10"
+              >
+                <div className="flex items-start gap-4">
+                  {React.createElement(getIconAndColor(inspiration.type).icon, {
+                    className: "h-12 w-12 flex-shrink-0",
+                    style: { color: getIconAndColor(inspiration.type).color }
+                  })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {inspiration.reasoning}
+                    </p>
+                    <h3 className="premium-text-platinum font-bold text-lg mb-2 line-clamp-2">
+                      {inspiration.title}
+                    </h3>
+                    <p className="text-sm line-clamp-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {inspiration.description}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-1" style={{ color: getIconAndColor(inspiration.type).color }} />
+                </div>
+              </Link>
+            ) : (
+              <div className="premium-glass-subtle p-5 rounded-xl">
+                <div className="flex items-start gap-4">
+                  {React.createElement(getIconAndColor(inspiration.type).icon, {
+                    className: "h-12 w-12 flex-shrink-0",
+                    style: { color: getIconAndColor(inspiration.type).color }
+                  })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {inspiration.reasoning}
+                    </p>
+                    <h3 className="premium-text-platinum font-bold text-lg mb-2">
+                      {inspiration.title}
+                    </h3>
+                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {inspiration.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {hasPendingSuggestions && (
+              <Link
+                to="/suggestions"
+                className="block text-center py-3 rounded-lg font-medium transition-all hover:bg-white/5"
+                style={{ color: 'var(--premium-amber)' }}
+              >
+                View Project Suggestions ({pendingSuggestionsCount}) <ArrowRight className="inline h-4 w-4 ml-1" />
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <Sparkles className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
+            <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+              No content to inspire from yet. Add thoughts, articles, or projects!
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export function HomePage() {
   const navigate = useNavigate()
 
@@ -601,47 +732,11 @@ export function HomePage() {
         </section>
 
         {/* 3. GET INSPIRATION */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="premium-card p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Sparkles className="h-7 w-7" style={{ color: 'var(--premium-amber)' }} />
-              <h2 className="text-2xl font-bold premium-text-platinum">Get Inspiration</h2>
-            </div>
-
-            {pendingSuggestions.length > 0 ? (
-              <div className="space-y-4">
-                {/* Smart Suggestion Widget */}
-                <SmartSuggestionWidget />
-
-                <Link
-                  to="/suggestions"
-                  className="block text-center py-3 rounded-lg font-medium transition-all hover:bg-white/5"
-                  style={{ color: 'var(--premium-amber)' }}
-                >
-                  View All Suggestions ({pendingSuggestions.length}) <ArrowRight className="inline h-4 w-4 ml-1" />
-                </Link>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Sparkles className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
-                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                  No suggestions yet. Complete your onboarding to get personalized project ideas!
-                </p>
-                <Link
-                  to="/suggestions"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-white/5"
-                  style={{
-                    backgroundColor: 'rgba(251, 191, 36, 0.2)',
-                    color: 'var(--premium-amber)',
-                    border: '1px solid rgba(251, 191, 36, 0.3)'
-                  }}
-                >
-                  Generate Suggestions <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            )}
-          </div>
-        </section>
+        <GetInspirationSection
+          excludeProjectIds={[priorityProject?.id, recentProject?.id].filter(Boolean) as string[]}
+          hasPendingSuggestions={pendingSuggestions.length > 0}
+          pendingSuggestionsCount={pendingSuggestions.length}
+        />
 
         {/* 4. EXPLORE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">

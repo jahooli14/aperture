@@ -848,8 +848,93 @@ async function fetchMemories() {
   }
 }
 
+/**
+ * GET INSPIRATION
+ * Shows relevant content that's DIFFERENT from Keep Momentum projects
+ * Uses Gemini to suggest: unread article, old thought, or creative prompt
+ */
+async function getInspiration(excludeProjectIds: string[]) {
+  const [projects, articles, memories] = await Promise.all([
+    fetchProjects(),
+    fetchArticles(),
+    fetchMemories()
+  ])
+
+  // Filter out the projects already shown in "Keep Momentum"
+  const otherProjects = projects.filter(p => !excludeProjectIds.includes(p.id))
+
+  const inspirationOptions = []
+
+  // Option 1: Unread article
+  const unreadArticles = articles.filter(a => a.status === 'unread')
+  if (unreadArticles.length > 0) {
+    const article = unreadArticles[Math.floor(Math.random() * Math.min(3, unreadArticles.length))]
+    inspirationOptions.push({
+      type: 'article',
+      title: article.title || 'Interesting read',
+      description: article.excerpt || 'Expand your knowledge',
+      url: `/reading/${article.id}`,
+      reasoning: '📚 A fresh perspective from your reading queue'
+    })
+  }
+
+  // Option 2: Old thought to resurface
+  if (memories.length > 5) {
+    const oldMemory = memories[Math.floor(Math.random() * Math.min(10, memories.length))]
+    inspirationOptions.push({
+      type: 'thought',
+      title: oldMemory.title || 'Past insight',
+      description: oldMemory.body?.substring(0, 150) || '',
+      url: `/memories`,
+      reasoning: '💡 A thought worth revisiting'
+    })
+  }
+
+  // Option 3: Different project (not in Keep Momentum)
+  if (otherProjects.length > 0) {
+    const project = otherProjects[Math.floor(Math.random() * Math.min(3, otherProjects.length))]
+    const nextStep = getNextStep(project)
+    inspirationOptions.push({
+      type: 'project',
+      title: project.title,
+      description: nextStep || project.description || 'Explore this idea',
+      url: `/projects/${project.id}`,
+      reasoning: '🎨 A project waiting for your attention'
+    })
+  }
+
+  // Pick one randomly
+  if (inspirationOptions.length === 0) {
+    return {
+      type: 'empty',
+      title: 'Create something new',
+      description: 'No content to inspire from yet',
+      reasoning: '✨ Time to add thoughts, articles, or projects'
+    }
+  }
+
+  return inspirationOptions[Math.floor(Math.random() * inspirationOptions.length)]
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { resource } = req.query
+
+  // GET INSPIRATION
+  if (resource === 'inspiration') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    try {
+      const { exclude } = req.query
+      const excludeIds = exclude ? String(exclude).split(',') : []
+      const result = await getInspiration(excludeIds)
+      return res.status(200).json(result)
+    } catch (error) {
+      console.error('[analytics] Get inspiration error:', error)
+      return res.status(500).json({ error: 'Inspiration failed' })
+    }
+  }
 
   // SMART SUGGESTION
   if (resource === 'smart-suggestion') {
@@ -932,5 +1017,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(400).json({ error: 'Invalid resource. Use ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, or ?resource=init-tags' })
+  return res.status(400).json({ error: 'Invalid resource. Use ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, or ?resource=init-tags' })
 }
