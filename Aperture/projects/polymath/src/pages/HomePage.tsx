@@ -488,20 +488,18 @@ export function HomePage() {
                         </span>
                       </div>
 
-                      {/* Next Step - Enhanced Visibility */}
-                      {nextStep && (
-                        <div className="rounded-lg p-3 mb-2 border-2" style={{
-                          backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                          borderColor: 'rgba(251, 191, 36, 0.4)'
-                        }}>
-                          <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-amber)' }}>
-                            NEXT STEP
-                          </div>
-                          <div className="premium-text-platinum font-medium text-sm">
-                            {nextStep}
-                          </div>
+                      {/* Next Step - Always Show */}
+                      <div className="rounded-lg p-3 mb-2 border-2" style={{
+                        backgroundColor: nextStep ? 'rgba(251, 191, 36, 0.1)' : 'rgba(107, 114, 128, 0.1)',
+                        borderColor: nextStep ? 'rgba(251, 191, 36, 0.4)' : 'rgba(107, 114, 128, 0.3)'
+                      }}>
+                        <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: nextStep ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)' }}>
+                          NEXT ACTION
                         </div>
-                      )}
+                        <div className="premium-text-platinum font-medium text-sm">
+                          {nextStep || 'No tasks yet - click to add one'}
+                        </div>
+                      </div>
                     </Link>
                   )
                 })}
