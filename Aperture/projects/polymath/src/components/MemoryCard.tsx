@@ -3,12 +3,16 @@
  */
 
 import { useState, useEffect, memo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2, Pin } from 'lucide-react'
+import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2, Pin, FolderPlus, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
+import type { Project } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
+import { useProjectStore } from '../stores/useProjectStore'
+import { useToast } from './ui/toast'
 import { haptic } from '../utils/haptics'
 import { useLongPress } from '../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
@@ -23,11 +27,18 @@ interface MemoryCardProps {
 }
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
+  const navigate = useNavigate()
   const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [exitX, setExitX] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [relatedProjects, setRelatedProjects] = useState<Project[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
+  const [linkingProject, setLinkingProject] = useState<string | null>(null)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
+  const { projects, fetchProjects } = useProjectStore()
+  const { addToast } = useToast()
 
   // Removed swipe gesture - deletion now requires confirmation only
 
@@ -108,6 +119,65 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     } else {
       // Fallback to copy
       handleCopyText()
+    }
+  }
+
+  const handleQuickAdd = async () => {
+    setShowQuickAdd(true)
+    setLoadingProjects(true)
+
+    try {
+      // Fetch related projects
+      const response = await fetch(`/api/suggestions?source_type=thought&source_id=${memory.id}&target_type=project&limit=3`)
+      if (response.ok) {
+        const data = await response.json()
+        setRelatedProjects(data.suggestions || [])
+      }
+
+      // Also load all projects if not already loaded
+      if (projects.length === 0) {
+        await fetchProjects()
+      }
+    } catch (error) {
+      console.error('Failed to fetch related projects:', error)
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
+
+  const handleLinkToProject = async (projectId: string) => {
+    setLinkingProject(projectId)
+
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_type: 'thought',
+          source_id: memory.id,
+          target_type: 'project',
+          target_id: projectId
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to link')
+
+      haptic.success()
+      addToast({
+        title: 'Linked to project!',
+        description: 'Thought added to project',
+        variant: 'success'
+      })
+
+      setShowQuickAdd(false)
+    } catch (error) {
+      addToast({
+        title: 'Failed to link',
+        description: 'Could not connect thought to project',
+        variant: 'destructive'
+      })
+    } finally {
+      setLinkingProject(null)
     }
   }
 
@@ -239,23 +309,106 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </CardDescription>
 
           {/* Show More/Less Button - only if text is long enough */}
-          {memory.body && memory.body.length > 120 && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-2 text-sm font-medium transition-colors flex items-center gap-1 touch-manipulation hover:opacity-80"
-              style={{ color: 'var(--premium-blue)' }}
-              aria-label={isExpanded ? 'Show less' : 'Show more'}
-            >
-              {isExpanded ? (
-                <>
-                  Show less <ChevronUp className="h-4 w-4" />
-                </>
+          <div className="flex items-center gap-3 mt-2">
+            {memory.body && memory.body.length > 120 && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-sm font-medium transition-colors flex items-center gap-1 touch-manipulation hover:opacity-80"
+                style={{ color: 'var(--premium-blue)' }}
+                aria-label={isExpanded ? 'Show less' : 'Show more'}
+              >
+                {isExpanded ? (
+                  <>
+                    Show less <ChevronUp className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    Show more <ChevronDown className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Quick Add to Project Button */}
+            {!showQuickAdd && (
+              <button
+                onClick={handleQuickAdd}
+                className="text-sm font-medium transition-colors flex items-center gap-1 touch-manipulation hover:opacity-80"
+                style={{ color: 'var(--premium-emerald)' }}
+                aria-label="Add to project"
+              >
+                <FolderPlus className="h-4 w-4" />
+                Add to project
+              </button>
+            )}
+          </div>
+
+          {/* Quick Add Project Selector */}
+          {showQuickAdd && (
+            <div className="mt-3 p-3 rounded-lg border" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', borderColor: 'rgba(16, 185, 129, 0.2)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald)' }}>
+                  Link to Project
+                </span>
+                <button
+                  onClick={() => setShowQuickAdd(false)}
+                  className="text-xs hover:opacity-80"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {loadingProjects ? (
+                <div className="flex items-center gap-2 py-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Finding projects...
+                </div>
               ) : (
-                <>
-                  Show more <ChevronDown className="h-4 w-4" />
-                </>
+                <div className="space-y-2">
+                  {/* Suggested projects first */}
+                  {relatedProjects.length > 0 && (
+                    <>
+                      <p className="text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Suggested:</p>
+                      {relatedProjects.map((project) => (
+                        <button
+                          key={project.id}
+                          onClick={() => handleLinkToProject(project.id)}
+                          disabled={linkingProject !== null}
+                          className="w-full text-left p-2 rounded-lg border hover:bg-white/5 transition-all disabled:opacity-50 flex items-center justify-between gap-2"
+                          style={{ borderColor: 'rgba(59, 130, 246, 0.2)' }}
+                        >
+                          <span className="text-sm truncate" style={{ color: 'var(--premium-text-primary)' }}>
+                            {project.title}
+                          </span>
+                          {linkingProject === project.id && <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />}
+                        </button>
+                      ))}
+                    </>
+                  )}
+
+                  {/* All projects */}
+                  {projects.length > 0 && (
+                    <>
+                      <p className="text-xs mt-3 mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>All projects:</p>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {projects.filter(p => !relatedProjects.find(rp => rp.id === p.id)).slice(0, 5).map((project) => (
+                          <button
+                            key={project.id}
+                            onClick={() => handleLinkToProject(project.id)}
+                            disabled={linkingProject !== null}
+                            className="w-full text-left px-2 py-1.5 rounded hover:bg-white/5 transition-all disabled:opacity-50 text-sm truncate"
+                            style={{ color: 'var(--premium-text-secondary)' }}
+                          >
+                            {project.title}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
-            </button>
+            </div>
           )}
         </div>
 
