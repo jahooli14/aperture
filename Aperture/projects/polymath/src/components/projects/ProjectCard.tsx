@@ -90,15 +90,25 @@ export const ProjectCard = memo(function ProjectCard({
     if (!quickNote.trim()) return
 
     try {
+      // Add as first incomplete task
+      const tasks = project.metadata?.tasks || []
+      const newTask = {
+        id: crypto.randomUUID(),
+        text: quickNote.trim(),
+        done: false,
+        created_at: new Date().toISOString(),
+        order: tasks.length
+      }
+
       await updateProject(project.id, {
         metadata: {
           ...project.metadata,
-          next_step: quickNote.trim()
+          tasks: [...tasks, newTask]
         }
       })
       addToast({
         title: 'Updated!',
-        description: 'Next step added to project',
+        description: 'Task added to project',
         variant: 'success',
       })
       setShowQuickNote(false)
@@ -114,7 +124,8 @@ export const ProjectCard = memo(function ProjectCard({
   }
 
   const handleCopyText = () => {
-    const textToCopy = `${project.title}\n\n${project.description || ''}\n\nNext Step: ${project.metadata?.next_step || 'Not set'}`
+    const nextTask = project.metadata?.tasks?.find(t => !t.done)
+    const textToCopy = `${project.title}\n\n${project.description || ''}\n\nNext Step: ${nextTask?.text || 'Not set'}`
     navigator.clipboard.writeText(textToCopy).then(() => {
       haptic.success()
       addToast({
@@ -403,26 +414,29 @@ export const ProjectCard = memo(function ProjectCard({
       </CardHeader>
 
       <CardContent className="relative z-10 flex-1 space-y-4">
-        {/* Next Step - Prominent Display */}
-        {project.metadata?.next_step && (
-          <div
-            className="border-2 rounded-xl p-4"
-            style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              borderColor: 'rgba(59, 130, 246, 0.3)'
-            }}
-          >
+        {/* Next Step - Prominent Display (first incomplete task) */}
+        {(() => {
+          const nextTask = project.metadata?.tasks?.find(t => !t.done)
+          return nextTask && (
             <div
-              className="text-xs font-semibold uppercase tracking-wide mb-2"
-              style={{ color: 'var(--premium-amber)' }}
+              className="border-2 rounded-xl p-4"
+              style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                borderColor: 'rgba(59, 130, 246, 0.3)'
+              }}
             >
-              Next Step
+              <div
+                className="text-xs font-semibold uppercase tracking-wide mb-2"
+                style={{ color: 'var(--premium-amber)' }}
+              >
+                Next Step
+              </div>
+              <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                {nextTask.text}
+              </p>
             </div>
-            <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.metadata.next_step}
-            </p>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Progress Bar - Optional */}
         {typeof project.metadata?.progress === 'number' && (
