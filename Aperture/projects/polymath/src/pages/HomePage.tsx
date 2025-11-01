@@ -219,7 +219,9 @@ export function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        console.log('[HomePage] Refetching projects...')
         await fetchProjects()
+        console.log('[HomePage] Projects refreshed, count:', projects.length)
         fetchSuggestions()
         fetchMemories()
         await fetchDailyQueue()
@@ -264,9 +266,13 @@ export function HomePage() {
         if (data.memories && data.memories.length > 0) {
           setCardOfTheDay(data.memories[0])
         }
+      } else {
+        // Silently fail - this is a nice-to-have feature
+        console.log('[Card of the Day] Not available')
       }
     } catch (err) {
-      console.error('Failed to fetch card of the day:', err)
+      // Silently fail - this is a nice-to-have feature
+      console.log('[Card of the Day] Not available')
     }
   }
 
@@ -580,9 +586,11 @@ export function HomePage() {
                 {[recentProject1, recentProject2].filter(Boolean).map((project) => {
                   // Get first incomplete task from the tasks array
                   const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                  console.log(`[HomePage] Project "${project.title}" tasks:`, tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
                   const nextTask = tasks
                     .sort((a, b) => a.order - b.order)
                     .find(task => !task.done)
+                  console.log(`[HomePage] Next task for "${project.title}":`, nextTask?.text)
                   const nextStep = nextTask?.text
 
                   return (

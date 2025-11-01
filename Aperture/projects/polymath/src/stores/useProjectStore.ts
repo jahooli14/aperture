@@ -132,7 +132,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       console.log('[FETCH] Raw data from Supabase:', data?.map(p => ({
         title: p.title,
         status: p.status,
-        id: p.id.substring(0, 8)
+        id: p.id.substring(0, 8),
+        tasks: (p.metadata?.tasks || []).map((t: any) => ({ text: t.text, done: t.done, order: t.order }))
       })))
 
       if (error) throw error
@@ -211,16 +212,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         last_active: new Date().toISOString()
       }
 
-      const { error } = await supabase
+      console.log('[ProjectStore.updateProject] Updating project:', id.substring(0, 8))
+      console.log('[ProjectStore.updateProject] Update data:', JSON.stringify(updateData, null, 2))
+
+      const { data: updatedData, error } = await supabase
         .from('projects')
         .update(updateData)
         .eq('id', id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('[ProjectStore.updateProject] Supabase error:', error)
+        throw error
+      }
+
+      console.log('[ProjectStore.updateProject] Update successful, response:', updatedData)
 
       // Refresh from database
+      console.log('[ProjectStore.updateProject] Refreshing projects from database...')
       await get().fetchProjects()
+      console.log('[ProjectStore.updateProject] Refresh complete')
     } catch (error) {
+      console.error('[ProjectStore.updateProject] Failed:', error)
       set({ projects: previousProjects })
       set({
         error: error instanceof Error ? error.message : 'Unknown error'

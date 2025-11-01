@@ -25,7 +25,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://polymath-dyfmiawdk-daniels-projects-ca7c7923.vercel.app',
+        target: 'https://clandestined.vercel.app',
         changeOrigin: true,
         secure: false,
       }

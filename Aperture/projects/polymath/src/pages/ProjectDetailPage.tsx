@@ -323,17 +323,43 @@ export function ProjectDetailPage() {
         <div data-task-list>
           <TaskList
             tasks={project.metadata?.tasks || []}
-            onUpdate={(tasks) => {
+            onUpdate={async (tasks) => {
+              console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
+
+              // Ensure metadata is properly structured
+              const newMetadata = {
+                ...project.metadata,
+                tasks: tasks,
+                progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
+              }
+
               const updated = {
                 ...project,
-                metadata: { ...project.metadata, tasks },
-                last_active: new Date().toISOString()
+                metadata: newMetadata,
+                last_active: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               }
+
+              console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
+
+              // Update local state
               setProject(updated)
-              updateProject(project.id, {
-                metadata: updated.metadata,
-                last_active: updated.last_active
-              })
+
+              console.log('[ProjectDetail] Calling updateProject API...')
+              try {
+                await updateProject(project.id, {
+                  metadata: newMetadata,
+                  last_active: updated.last_active,
+                  updated_at: updated.updated_at
+                })
+                console.log('[ProjectDetail] Update successful! Reloading project details...')
+                // Reload from database to ensure sync
+                await loadProjectDetails()
+              } catch (error) {
+                console.error('[ProjectDetail] Update failed:', error)
+                // Revert local state on error
+                setProject(project)
+              }
             }}
           />
         </div>
@@ -415,3 +441,6 @@ export function ProjectDetailPage() {
     </div>
   )
 }
+
+// Default export for lazy loading
+export default ProjectDetailPage
