@@ -13,7 +13,16 @@
     <title>Clandestined - Personal Knowledge System</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Emergency fallback: shows if JavaScript fails to load -->
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; color: #fff; font-family: system-ui, sans-serif; padding: 20px; text-align: center;">
+        <div>
+          <h1 style="color: #3b82f6; margin-bottom: 20px;">Loading...</h1>
+          <p style="color: #9ca3af;">If this message persists, JavaScript failed to load.</p>
+          <p style="color: #9ca3af; margin-top: 10px; font-size: 14px;">Check console (F12) for errors.</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
