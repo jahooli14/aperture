@@ -405,7 +405,6 @@ export interface Project {
   title: string
   description: string | null
   status: ProjectStatus
-  priority?: boolean // NEW: For homepage "Active Project Steps" - shows next_step when true
   last_active: string // ISO 8601
   created_at: string
   updated_at?: string

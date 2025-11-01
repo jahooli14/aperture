@@ -288,48 +288,30 @@ export function HomePage() {
   // Safe filtering with error handling
   let pendingSuggestions: any[] = []
   let activeProjects: any[] = []
-  let priorityProject: any = null
-  let recentProject: any = null
+  let recentProject1: any = null
+  let recentProject2: any = null
 
   try {
     pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
     // Get ALL active projects, not filtered by store.filter
     activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
 
-    // 1. Find THE priority project (should only be one with priority=true)
-    priorityProject = activeProjects.find(p => p.priority === true) || null
-
-    // 2. Find the most recently updated NON-priority project
-    const nonPriorityProjects = activeProjects.filter(p => !p.priority)
-    const sortedNonPriority = [...nonPriorityProjects]
+    // Find the 2 most recently updated projects
+    const sortedProjects = [...activeProjects]
       .sort((a, b) => {
         // Use updated_at if available, fallback to last_active
         const aTime = new Date(a.updated_at || a.last_active).getTime()
         const bTime = new Date(b.updated_at || b.last_active).getTime()
         return bTime - aTime
       })
-    recentProject = sortedNonPriority[0] || null
+
+    recentProject1 = sortedProjects[0] || null
+    recentProject2 = sortedProjects[1] || null
 
     // Debug logging
     console.log('[HomePage] Active projects:', activeProjects.length)
-    console.log('[HomePage] Priority project:', priorityProject?.title || 'none', priorityProject?.priority ? '⭐' : '')
-    console.log('[HomePage] Most recent non-priority:', recentProject?.title || 'none')
-    if (priorityProject) {
-      console.log('[HomePage] Priority last_active:', priorityProject.last_active)
-      console.log('[HomePage] Priority updated_at:', priorityProject.updated_at)
-      console.log('[HomePage] Priority tasks:', priorityProject.metadata?.tasks)
-    }
-    if (recentProject) {
-      console.log('[HomePage] Recent last_active:', recentProject.last_active)
-      console.log('[HomePage] Recent updated_at:', recentProject.updated_at)
-      console.log('[HomePage] Recent tasks:', recentProject.metadata?.tasks)
-    }
-    if (activeProjects.length > 0) {
-      console.log('[HomePage] All active projects:')
-      activeProjects.forEach(p => {
-        console.log(`  ${p.priority ? '⭐ PRIORITY' : '  '} ${p.title}: updated=${p.updated_at || 'none'}, last_active=${p.last_active}`)
-      })
-    }
+    console.log('[HomePage] Most recent #1:', recentProject1?.title || 'none')
+    console.log('[HomePage] Most recent #2:', recentProject2?.title || 'none')
   } catch (err) {
     console.error('[HomePage] Error filtering data:', err)
   }
@@ -624,9 +606,9 @@ export function HomePage() {
               <div className="text-center py-8">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-blue)' }}></div>
               </div>
-            ) : (priorityProject || recentProject) ? (
+            ) : (recentProject1 || recentProject2) ? (
               <div className="space-y-4">
-                {[priorityProject, recentProject].filter(Boolean).map((project) => {
+                {[recentProject1, recentProject2].filter(Boolean).map((project) => {
                   // Get first incomplete task from the tasks array
                   const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
                   const nextTask = tasks
@@ -640,10 +622,9 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
-                      {/* Project Title with Priority Star */}
+                      {/* Project Title */}
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <h3 className="premium-text-platinum font-bold text-lg flex-1">
-                          {project.priority && <span className="mr-2">⭐</span>}
                           {project.title}
                         </h3>
                       </div>
@@ -762,7 +743,7 @@ export function HomePage() {
 
         {/* 3. GET INSPIRATION */}
         <GetInspirationSection
-          excludeProjectIds={[priorityProject?.id, recentProject?.id].filter(Boolean) as string[]}
+          excludeProjectIds={[recentProject1?.id, recentProject2?.id].filter(Boolean) as string[]}
           hasPendingSuggestions={pendingSuggestions.length > 0}
           pendingSuggestionsCount={pendingSuggestions.length}
         />

@@ -94,7 +94,6 @@ interface ProjectState {
   createProject: (data: Partial<Project>) => Promise<void>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
-  setPriority: (id: string) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
 }
 
@@ -265,52 +264,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
-      throw error
-    }
-  },
-
-  setPriority: async (id) => {
-    // Call dedicated API endpoint that atomically clears all priorities and sets the new one
-    try {
-      console.log('[setPriority] Calling API with project_id:', id)
-
-      const response = await fetch('/api/projects?resource=set-priority', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project_id: id }),
-      })
-
-      console.log('[setPriority] Response status:', response.status, response.statusText)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('[setPriority] Error response:', errorText)
-
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          throw new Error(`API error (${response.status}): ${errorText}`)
-        }
-
-        throw new Error(errorData.details || errorData.error || `Failed to set priority (${response.status})`)
-      }
-
-      const data = await response.json()
-      console.log('[setPriority] Success:', data)
-
-      // Update store with the returned projects list (already sorted and updated)
-      if (data.projects) {
-        const sortedProjects = smartSortProjects(data.projects)
-        set({ projects: sortedProjects })
-      } else {
-        // Fallback: refresh from database
-        await get().fetchProjects()
-      }
-    } catch (error) {
-      console.error('[setPriority] Error:', error)
-      const errorMessage = error instanceof Error ? error.message : `Unknown error: ${JSON.stringify(error)}`
-      set({ error: errorMessage })
       throw error
     }
   },
