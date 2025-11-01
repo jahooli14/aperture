@@ -890,8 +890,8 @@ async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<a
       selectFields = 'id, title, body, voice_file_url'
       break
     case 'article':
-      table = 'reading_articles'
-      selectFields = 'id, title, url, summary, author'
+      table = 'reading_queue'
+      selectFields = 'id, title, url, author, excerpt'
       break
     case 'suggestion':
       table = 'project_suggestions'
