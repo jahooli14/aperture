@@ -4,24 +4,20 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { generateSeedEmbeddings } from '../lib/tag-normalizer.js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
 /**
  * TIMELINE PATTERNS
  * Analyzes WHEN and HOW users capture thoughts
  */
 async function getTimelinePatterns() {
+  const supabase = getSupabaseClient()
+
   // Get all user's memories with timestamps
   const { data: memories } = await supabase
     .from('memories')
@@ -174,6 +170,9 @@ async function getTimelinePatterns() {
  * Multi-memory synthesis showing evolution of thinking
  */
 async function getSynthesisEvolution() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   // Get memories and projects
   const { data: memories } = await supabase
     .from('memories')
@@ -183,7 +182,7 @@ async function getSynthesisEvolution() {
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', USER_ID)
+    .eq('user_id', userId)
 
   if (!memories || memories.length < 10) {
     return {
@@ -251,7 +250,7 @@ Return JSON:
           },
           actionable: false
         })
-      } catch (e) {
+      } catch {
         // Skip if parsing fails
       }
     }
@@ -299,7 +298,7 @@ Return JSON:
         actionable: true,
         action: pattern.recommendation
       })
-    } catch (e) {
+    } catch {
       // Skip if parsing fails
     }
   }
@@ -386,6 +385,9 @@ Return JSON:
  * Scans knowledge graph for project opportunities
  */
 async function getCreativeOpportunities() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   // Get user's memories
   const { data: memories } = await supabase
     .from('memories')
@@ -401,7 +403,7 @@ async function getCreativeOpportunities() {
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
-    .eq('user_id', USER_ID)
+    .eq('user_id', userId)
 
   // Extract capabilities from memories
   const capabilities = new Map<string, { count: number; lastMentioned: string; memories: string[] }>()
@@ -527,8 +529,7 @@ Return JSON array (2-3 opportunities max):
   try {
     const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/)
     opportunities = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
-  } catch (e) {
-    console.error('Failed to parse opportunities:', e)
+  } catch {
     opportunities = []
   }
 
@@ -550,14 +551,6 @@ function getNextStep(project: any): string | null {
   const nextTask = tasks
     .sort((a: any, b: any) => a.order - b.order)
     .find((task: any) => !task.done)
-
-  console.log(`[getNextStep] Project: ${project.title}`, {
-    hasTasks: tasks.length > 0,
-    totalTasks: tasks.length,
-    nextTaskFound: !!nextTask,
-    nextTaskText: nextTask?.text,
-    oldNextStep: project.metadata?.next_step
-  })
 
   return nextTask?.text || null
 }
@@ -796,54 +789,60 @@ function shouldSuggestCapture(memories: any[]): boolean {
 }
 
 async function fetchProjects() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   try {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .in('status', ['active', 'upcoming'])
       .order('created_at', { ascending: false })
       .limit(20)
 
     if (error) throw error
     return data || []
-  } catch (error) {
-    console.error('Failed to fetch projects:', error)
+  } catch {
     return []
   }
 }
 
 async function fetchArticles() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   try {
     const { data, error } = await supabase
       .from('articles')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .in('status', ['unread', 'reading'])
       .order('created_at', { ascending: false })
       .limit(20)
 
     if (error) throw error
     return data || []
-  } catch (error) {
-    console.error('Failed to fetch articles:', error)
+  } catch {
     return []
   }
 }
 
 async function fetchMemories() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   try {
     const { data, error } = await supabase
       .from('memories')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(10)
 
     if (error) throw error
     return data || []
-  } catch (error) {
-    console.error('Failed to fetch memories:', error)
+  } catch {
     return []
   }
 }
@@ -930,8 +929,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const excludeIds = exclude ? String(exclude).split(',') : []
       const result = await getInspiration(excludeIds)
       return res.status(200).json(result)
-    } catch (error) {
-      console.error('[analytics] Get inspiration error:', error)
+    } catch {
       return res.status(500).json({ error: 'Inspiration failed' })
     }
   }
@@ -945,8 +943,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const result = await getSmartSuggestion()
       return res.status(200).json(result)
-    } catch (error) {
-      console.error('[analytics] Smart suggestion error:', error)
+    } catch {
       return res.status(500).json({ error: 'Suggestion failed' })
     }
   }
@@ -960,8 +957,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const result = await getTimelinePatterns()
       return res.status(200).json(result)
-    } catch (error) {
-      console.error('[analytics] Timeline patterns error:', error)
+    } catch {
       return res.status(500).json({ error: 'Analysis failed' })
     }
   }
@@ -975,8 +971,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const result = await getSynthesisEvolution()
       return res.status(200).json(result)
-    } catch (error) {
-      console.error('[analytics] Synthesis evolution error:', error)
+    } catch {
       return res.status(500).json({ error: 'Analysis failed' })
     }
   }
@@ -990,8 +985,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const result = await getCreativeOpportunities()
       return res.status(200).json(result)
-    } catch (error) {
-      console.error('[analytics] Creative intelligence error:', error)
+    } catch {
       return res.status(500).json({ error: 'Analysis failed' })
     }
   }
@@ -1009,7 +1003,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: 'Seed tag embeddings generated successfully'
       })
     } catch (error) {
-      console.error('[analytics] Init tags error:', error)
       return res.status(500).json({
         error: 'Failed to initialize tags',
         details: error instanceof Error ? error.message : 'Unknown error'

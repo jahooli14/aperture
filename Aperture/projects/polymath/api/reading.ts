@@ -5,16 +5,13 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
 const rssParser = new Parser()
 
 /**
@@ -23,10 +20,8 @@ const rssParser = new Parser()
  */
 async function fetchArticle(url: string) {
   try {
-    console.log('[Article Extraction] Fetching with Jina AI:', url)
     return await fetchArticleWithJina(url)
   } catch (error) {
-    console.error('[Article Extraction] Failed:', error)
     throw new Error('Failed to extract article content')
   }
 }
@@ -39,7 +34,6 @@ async function fetchArticle(url: string) {
 async function fetchArticleWithJina(url: string) {
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
-    console.log('[Jina AI] Fetching:', jinaUrl)
 
     const response = await fetch(jinaUrl, {
       headers: {
@@ -49,7 +43,6 @@ async function fetchArticleWithJina(url: string) {
     })
 
     if (!response.ok) {
-      console.error('[Jina AI] HTTP error:', response.status, response.statusText)
       throw new Error(`Jina AI returned ${response.status}`)
     }
 
@@ -58,7 +51,6 @@ async function fetchArticleWithJina(url: string) {
     // Jina AI wraps the article data in a 'data' property
     const data = result.data || result
 
-    console.log('[Jina AI] Extracted article:', {
       title: data.title,
       contentLength: data.content?.length || 0,
       hasDescription: !!data.description
@@ -78,7 +70,6 @@ async function fetchArticleWithJina(url: string) {
         })
         htmlContent = await marked.parse(cleanedContent)
       } catch (error) {
-        console.error('[Jina AI] Markdown conversion error:', error)
         htmlContent = cleanedContent // Fallback to raw content
       }
     }
@@ -94,7 +85,6 @@ async function fetchArticleWithJina(url: string) {
       url: data.url || url
     }
   } catch (error) {
-    console.error('[Jina AI] Fetch error:', error)
     throw new Error('Failed to fetch article content')
   }
 }
@@ -204,6 +194,8 @@ function countWords(content: string): number {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   const { resource, id } = req.query
 
   // HIGHLIGHTS RESOURCE
@@ -240,7 +232,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           highlight: data
         })
       } catch (error) {
-        console.error('[API] Create highlight error:', error)
         return res.status(500).json({ error: 'Failed to create highlight' })
       }
     }
@@ -272,7 +263,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           highlight: data
         })
       } catch (error) {
-        console.error('[API] Update highlight error:', error)
         return res.status(500).json({ error: 'Failed to update highlight' })
       }
     }
@@ -295,7 +285,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(204).send('')
       } catch (error) {
-        console.error('[API] Delete highlight error:', error)
         return res.status(500).json({ error: 'Failed to delete highlight' })
       }
     }
@@ -312,7 +301,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('reading_queue')
           .select('*')
           .eq('id', id)
-          .eq('user_id', USER_ID)
+          .eq('user_id', userId)
           .single()
 
         if (articleError) throw articleError
@@ -333,7 +322,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .from('reading_queue')
             .update({ status: 'reading', read_at: new Date().toISOString() })
             .eq('id', id)
-            .eq('user_id', USER_ID)
+            .eq('user_id', userId)
 
           article.status = 'reading'
           article.read_at = new Date().toISOString()
@@ -345,7 +334,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           highlights: highlights || []
         })
       } catch (error) {
-        console.error('[API] Fetch article error:', error)
         return res.status(500).json({ error: 'Failed to fetch article' })
       }
     }
@@ -357,7 +345,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let query = supabase
         .from('reading_queue')
         .select('*')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(Number(limit))
 
@@ -374,7 +362,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         articles: data || []
       })
     } catch (error) {
-      console.error('[API] Fetch error:', error)
       return res.status(500).json({ error: 'Failed to fetch articles' })
     }
   }
@@ -394,18 +381,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Invalid URL format' })
       }
 
-      console.log('[API] Fetching article:', url)
 
       // Check for duplicates
       const { data: existing } = await supabase
         .from('reading_queue')
         .select('id')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .eq('url', url)
         .single()
 
       if (existing) {
-        console.log('[API] Article already exists:', existing.id)
         return res.status(200).json({
           success: true,
           article: existing,
@@ -414,14 +399,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Fetch article content
-      console.log('[API] Calling fetchArticle for:', url)
       const article = await fetchArticle(url)
-      console.log('[API] Article fetched successfully:', article.title)
 
       // Prepare article data for database
-      console.log('[API] Preparing article data for database')
       const articleData = {
-        user_id: USER_ID,
+        user_id: userId,
         url: article.url,
         title: article.title,
         author: article.author || null,
@@ -438,7 +420,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at: new Date().toISOString(),
       }
 
-      console.log('[API] Inserting article into database...')
       const { data, error } = await supabase
         .from('reading_queue')
         .insert([articleData])
@@ -446,7 +427,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (error) {
-        console.error('[API] Database insert error:', {
           code: error.code,
           message: error.message,
           details: error.details,
@@ -455,7 +435,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw new Error(`Database error: ${error.message}`)
       }
 
-      console.log('[API] Article saved successfully:', data.id)
 
       return res.status(201).json({
         success: true,
@@ -463,7 +442,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } catch (error) {
-      console.error('[API] Error saving article:', error)
       return res.status(500).json({
         error: 'Failed to save article',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -500,7 +478,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('reading_queue')
         .update(updates)
         .eq('id', articleId)
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .select()
         .single()
 
@@ -511,7 +489,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         article: data
       })
     } catch (error) {
-      console.error('[API] Update error:', error)
       return res.status(500).json({ error: 'Failed to update article' })
     }
   }
@@ -529,13 +506,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('reading_queue')
         .delete()
         .eq('id', articleId)
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
 
       if (error) throw error
 
       return res.status(204).send('')
     } catch (error) {
-      console.error('[API] Delete error:', error)
       return res.status(500).json({ error: 'Failed to delete article' })
     }
   }
@@ -548,7 +524,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { data: feeds } = await supabase
           .from('rss_feeds')
           .select('*')
-          .eq('user_id', USER_ID)
+          .eq('user_id', userId)
           .eq('enabled', true)
 
         if (!feeds || feeds.length === 0) {
@@ -560,7 +536,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           try {
             const feedData = await rssParser.parseURL(feed.feed_url)
             for (const item of feedData.items.slice(0, 5)) {
-              const existing = await supabase.from('reading_queue').select('id').eq('user_id', USER_ID).eq('url', item.link || '').single()
+              const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
               if (existing.data) continue
 
               const jinaUrl = `https://r.jina.ai/${item.link}`
@@ -574,7 +550,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               }
 
               await supabase.from('reading_queue').insert([{
-                user_id: USER_ID,
+                user_id: userId,
                 url: item.link || '',
                 title: item.title || 'Untitled',
                 author: item.creator || item.author || null,
@@ -591,7 +567,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)
           } catch (err) {
-            console.error('[RSS] Feed sync error:', err)
           }
         }
         return res.status(200).json({ success: true, feedsSynced: feeds.length, articlesAdded: totalArticlesAdded })
@@ -614,7 +589,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('rss_feeds')
           .select('*')
           .eq('id', feed_id)
-          .eq('user_id', USER_ID)
+          .eq('user_id', userId)
           .single()
 
         if (!feed) {
@@ -640,7 +615,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           items
         })
       } catch (error) {
-        console.error('[RSS] Fetch items error:', error)
         return res.status(500).json({ error: 'Failed to fetch RSS items' })
       }
     }
@@ -649,15 +623,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       try {
         if (id) {
-          const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', USER_ID).single()
+          const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', userId).single()
           if (error) throw error
           return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
         }
-        const { data, error } = await supabase.from('rss_feeds').select('*').eq('user_id', USER_ID).order('created_at', { ascending: false })
+        const { data, error } = await supabase.from('rss_feeds').select('*').eq('user_id', userId).order('created_at', { ascending: false })
         if (error) throw error
         return res.status(200).json({ success: true, feeds: data || [] })
       } catch (error) {
-        console.error('[API] Fetch feeds error:', error)
         return res.status(500).json({ error: 'Failed to fetch feeds' })
       }
     }
@@ -668,13 +641,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { feed_url } = req.body
         if (!feed_url) return res.status(400).json({ error: 'feed_url required' })
 
-        const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', USER_ID).eq('feed_url', feed_url).single()
+        const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
         if (existingError && existingError.code !== 'PGRST116') throw existingError
         if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
 
         const feedData = await rssParser.parseURL(feed_url)
         const { data, error } = await supabase.from('rss_feeds').insert([{
-          user_id: USER_ID,
+          user_id: userId,
           feed_url,
           title: feedData.title || 'Untitled',
           description: feedData.description || null,
@@ -686,7 +659,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error) throw error
         return res.status(201).json({ success: true, feed: data })
       } catch (error) {
-        console.error('[API] Subscribe feed error:', error)
         return res.status(500).json({ error: 'Failed to subscribe to feed' })
       }
     }
@@ -697,11 +669,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { id: feedId, enabled } = req.body
         if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
 
-        const { data, error } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', USER_ID).select().single()
+        const { data, error } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', userId).select().single()
         if (error) throw error
         return res.status(200).json({ success: true, feed: data })
       } catch (error) {
-        console.error('[API] Update feed error:', error)
         return res.status(500).json({ error: 'Failed to update feed' })
       }
     }
@@ -709,11 +680,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // DELETE - Unsubscribe
     if (req.method === 'DELETE' && id) {
       try {
-        const { error } = await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', USER_ID)
+        const { error } = await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', userId)
         if (error) throw error
         return res.status(204).send('')
       } catch (error) {
-        console.error('[API] Delete feed error:', error)
         return res.status(500).json({ error: 'Failed to delete feed' })
       }
     }

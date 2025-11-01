@@ -8,15 +8,12 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { z } from 'zod'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
 
 // Request validation schema for rating
 const RateRequestSchema = z.object({
@@ -25,6 +22,8 @@ const RateRequestSchema = z.object({
 })
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   const action = req.query.action as string
   const id = req.query.id as string
 
@@ -56,7 +55,7 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
     let query = supabase
       .from('project_suggestions')
       .select('*', { count: 'exact' })
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .order('total_points', { ascending: false })
 
     // Filter by status
@@ -79,7 +78,6 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
     const { data, error, count } = await query
 
     if (error) {
-      console.error('[api/suggestions] Error fetching suggestions:', error)
       return res.status(500).json({ error: error.message })
     }
 
@@ -112,7 +110,6 @@ async function handleList(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/suggestions] Unexpected error:', error)
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -142,7 +139,7 @@ async function handleRate(req: VercelRequest, res: VercelResponse, id: string) {
       .from('suggestion_ratings')
       .insert({
         suggestion_id: id,
-        user_id: USER_ID,
+        user_id: userId,
         rating,
         feedback: feedback || null
       })
@@ -224,7 +221,7 @@ async function handleBuild(req: VercelRequest, res: VercelResponse, id: string) 
     const { data: project, error: createError } = await supabase
       .from('projects')
       .insert({
-        user_id: USER_ID,
+        user_id: userId,
         title: project_title || suggestion.title,
         description: project_description || suggestion.description,
         type: projectType,
@@ -258,7 +255,7 @@ async function handleBuild(req: VercelRequest, res: VercelResponse, id: string) 
       .from('suggestion_ratings')
       .insert({
         suggestion_id: id,
-        user_id: USER_ID,
+        user_id: userId,
         rating: 2,
         feedback: 'Built this project!'
       })

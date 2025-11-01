@@ -408,6 +408,7 @@ export interface Project {
   last_active: string // ISO 8601
   created_at: string
   updated_at?: string
+  is_priority?: boolean // Only one project can be priority at a time
   metadata?: ProjectMetadata
   embedding?: number[] // Vector embedding (1536 dims)
 

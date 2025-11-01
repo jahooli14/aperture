@@ -9,14 +9,18 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 /**
  * Generate a single embedding using Gemini
- * Model: text-embedding-gem-001 (3072 dimensions, supports MRL for scaling)
+ * Model: text-embedding-004 (768 dimensions, latest model)
  * Cost: FREE (up to 1M requests/day)
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-gem-001' })
-
-  const result = await model.embedContent(text)
-  return result.embedding.values
+  try {
+    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
+    const result = await model.embedContent(text)
+    return result.embedding.values
+  } catch (error) {
+    console.error('Gemini embedding error:', error)
+    throw error
+  }
 }
 
 /**
@@ -24,14 +28,19 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  * More efficient than individual calls
  */
 export async function batchGenerateEmbeddings(texts: string[]): Promise<number[][]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-gem-001' })
+  try {
+    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
 
-  // Process in parallel (Gemini is fast)
-  const embeddings = await Promise.all(
-    texts.map(text => model.embedContent(text))
-  )
+    // Process in parallel (Gemini is fast)
+    const embeddings = await Promise.all(
+      texts.map(text => model.embedContent(text))
+    )
 
-  return embeddings.map(e => e.embedding.values)
+    return embeddings.map(e => e.embedding.values)
+  } catch (error) {
+    console.error('Gemini batch embedding error:', error)
+    throw error
+  }
 }
 
 /**

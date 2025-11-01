@@ -14,17 +14,18 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { runSynthesis } from '../../lib/synthesis.js'
 import { strengthenNodes } from '../../lib/strengthen-nodes.js'
 import { processMemory } from '../../lib/process-memory.js'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   // Verify authorization
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
@@ -119,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 3. Run synthesis on Mondays
       if (isMonday) {
         try {
-          const userId = process.env.USER_ID || 'default-user'
+          const userId = process.env.userId || 'default-user'
           const suggestions = await runSynthesis(userId)
           results.tasks.synthesis = {
             success: true,
@@ -138,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json(results)
 
     } else if (job === 'synthesis') {
-      const userId = process.env.USER_ID || 'default-user'
+      const userId = process.env.userId || 'default-user'
       const suggestions = await runSynthesis(userId)
 
       console.log(`[cron/jobs] Generated ${suggestions?.length || 0} suggestions`)

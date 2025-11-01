@@ -4,14 +4,8 @@
  */
 
 import type { VercelRequest, VercelResponse} from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -196,7 +190,46 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   const { resource } = req.query
+
+  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects/:id/priority)
+  if (req.method === 'PATCH' && req.url?.includes('/priority')) {
+    try {
+      // Extract ID from URL path like /api/projects/abc-123/priority
+      const match = req.url.match(/\/projects\/([^\/]+)\/priority/)
+      if (!match) {
+        return res.status(400).json({ error: 'Invalid priority endpoint format' })
+      }
+
+      const projectId = match[1]
+
+      // Set this project as priority (database trigger will unset others)
+      const { data, error } = await supabase
+        .from('projects')
+        .update({ is_priority: true, last_active: new Date().toISOString() })
+        .eq('id', projectId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) {
+        return res.status(500).json({ error: 'Failed to set priority', details: error.message })
+      }
+
+      if (!data) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+
+      return res.status(200).json(data)
+    } catch (error: any) {
+      return res.status(500).json({
+        error: 'Failed to set priority',
+        details: error?.message || 'Unknown error'
+      })
+    }
+  }
 
   // SET-PRIORITY RESOURCE - Atomically set one project as priority
   if (resource === 'set-priority') {
@@ -205,22 +238,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-      console.log('[set-priority] Step 1: Parsing request body')
       const { project_id } = req.body
-      console.log('[set-priority] Received project_id:', project_id)
 
       if (!project_id) {
-        console.error('[set-priority] Missing project_id')
         return res.status(400).json({ error: 'project_id is required' })
       }
 
-      console.log('[set-priority] Step 2: Verifying project exists')
       // Verify project exists and belongs to user
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .select('id, title, priority')
         .eq('id', project_id)
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .single()
 
       console.log('[set-priority] Project lookup result:', { project, projectError })
@@ -239,12 +268,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'Project not found' })
       }
 
-      console.log('[set-priority] Step 3: Clearing all priorities for user:', USER_ID)
+      console.log('[set-priority] Step 3: Clearing all priorities for user:', userId)
       // Atomic operation: clear all priorities, then set the one
       const { data: clearedData, error: clearError } = await supabase
         .from('projects')
         .update({ priority: false })
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .select('id, title, priority')
 
       console.log('[set-priority] Clear result:', { clearedData, clearError })
@@ -265,7 +294,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('projects')
         .update({ priority: true })
         .eq('id', project_id)
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .select()
         .single()
 
@@ -286,7 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: allProjects, error: fetchError } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -320,7 +349,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { data, error } = await supabase
           .from('user_daily_context')
           .select('*')
-          .eq('user_id', USER_ID)
+          .eq('user_id', userId)
           .single()
 
         if (error && error.code !== 'PGRST116') {
@@ -366,7 +395,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { data, error } = await supabase
           .from('user_daily_context')
           .upsert({
-            user_id: USER_ID,
+            user_id: userId,
             available_time: available_time || 'moderate',
             current_energy: current_energy || 'moderate',
             available_context: available_context || ['desk', 'computer'],
@@ -400,7 +429,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: contextData } = await supabase
         .from('user_daily_context')
         .select('*')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .single()
 
       const context: UserContext = contextData || {
@@ -412,7 +441,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: projects, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .eq('status', 'active')
         .order('last_active', { ascending: false })
 
@@ -459,7 +488,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('project_notes')
           .insert([{
             project_id,
-            user_id: USER_ID,
+            user_id: userId,
             bullets,
             created_at: new Date().toISOString()
           }])
@@ -498,7 +527,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from('projects')
           .select('*')
           .eq('id', id)
-          .eq('user_id', USER_ID)
+          .eq('user_id', userId)
           .single()
 
         if (projectError) throw projectError
@@ -546,7 +575,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const projectData = {
         ...req.body,
-        user_id: USER_ID,
+        user_id: userId,
         created_at: new Date().toISOString(),
         last_active: new Date().toISOString(),
       }

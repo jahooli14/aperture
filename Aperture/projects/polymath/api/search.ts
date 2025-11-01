@@ -5,14 +5,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article'
@@ -28,6 +25,8 @@ interface SearchResult {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -71,7 +70,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/search] Error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -84,12 +82,11 @@ async function searchMemories(query: string): Promise<SearchResult[]> {
     const { data, error } = await supabase
       .from('memories')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,body.ilike.%${query}%`)
       .limit(20)
 
     if (error) {
-      console.error('Memory search error:', error)
       return []
     }
 
@@ -104,7 +101,6 @@ async function searchMemories(query: string): Promise<SearchResult[]> {
       tags: memory.tags
     }))
   } catch (error) {
-    console.error('Memory search failed:', error)
     return []
   }
 }
@@ -117,12 +113,11 @@ async function searchProjects(query: string): Promise<SearchResult[]> {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .limit(20)
 
     if (error) {
-      console.error('Project search error:', error)
       return []
     }
 
@@ -136,7 +131,6 @@ async function searchProjects(query: string): Promise<SearchResult[]> {
       tags: project.tags
     }))
   } catch (error) {
-    console.error('Project search failed:', error)
     return []
   }
 }
@@ -149,12 +143,11 @@ async function searchArticles(query: string): Promise<SearchResult[]> {
     const { data, error} = await supabase
       .from('reading_queue')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
       .limit(20)
 
     if (error) {
-      console.error('Article search error:', error)
       return []
     }
 
@@ -169,7 +162,6 @@ async function searchArticles(query: string): Promise<SearchResult[]> {
       tags: article.tags
     }))
   } catch (error) {
-    console.error('Article search failed:', error)
     return []
   }
 }

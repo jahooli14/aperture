@@ -17,7 +17,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 
 // Lazy-load Gemini imports only when needed (they require GEMINI_API_KEY env var)
 let generateEmbedding: any
@@ -38,18 +39,10 @@ async function ensureGeminiImports() {
   }
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { action, id, type, connection_id, limit } = req.query
 
   try {
-    console.log('[api/connections] Request:', { method: req.method, action, id, type })
 
     // ============================================================================
     // AI SUGGESTIONS
@@ -81,7 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // List connections for an item
     if (req.method === 'GET' && action === 'list-sparks' && id && type) {
-      console.log('[api/connections] Calling handleListSparks with:', { id, type })
       return await handleListSparks(req, res, id as string, type as string)
     }
 
@@ -107,13 +99,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(400).json({ error: 'Invalid action or method' })
   } catch (error: any) {
-    console.error('[api/connections] Unhandled error:', {
-      message: error?.message,
-      code: error?.code,
-      status: error?.status,
-      stack: error?.stack,
-      toString: error?.toString()
-    })
     return res.status(500).json({
       error: 'Internal server error',
       details: error?.message || error?.toString() || 'Unknown error'
@@ -142,6 +127,7 @@ interface SuggestionCandidate {
 }
 
 async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
   const body: AutoSuggestRequest = req.body
   const { itemType, itemId, content, userId, existingConnectionIds = [] } = body
 
@@ -152,8 +138,7 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
   // Ensure Gemini imports are loaded
   try {
     await ensureGeminiImports()
-  } catch (error) {
-    console.error('[handleAutoSuggest] Failed to load Gemini imports:', error)
+  } catch {
     return res.status(500).json({ error: 'AI suggestion service not available' })
   }
 
@@ -309,6 +294,7 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
 // ============================================================================
 
 async function handleUpdateSuggestion(req: VercelRequest, res: VercelResponse, suggestionId: string) {
+  const supabase = getSupabaseClient()
   const { status } = req.body
 
   if (!status || !['accepted', 'dismissed'].includes(status)) {
@@ -344,6 +330,7 @@ interface ConnectionRequest {
 }
 
 async function handleBridgeSuggest(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
   const { contentType, contentId, contentText, contentTitle }: ConnectionRequest = req.body
 
   if (!contentType || !contentId) {
@@ -397,7 +384,7 @@ async function handleBridgeSuggest(req: VercelRequest, res: VercelResponse) {
       .select()
 
     if (insertError) {
-      console.error('[api/connections] Insert error:', insertError)
+      return res.status(500).json({ error: 'Failed to insert bridges' })
     }
 
     return res.status(200).json({
@@ -418,6 +405,7 @@ async function handleBridgeSuggest(req: VercelRequest, res: VercelResponse) {
  * Strategy 1: Find memories with shared entities
  */
 async function detectEntityMatches(sourceMemory: any): Promise<any[]> {
+  const supabase = getSupabaseClient()
   const bridges: any[] = []
   const sourceEntities = sourceMemory.entities
 
@@ -482,6 +470,7 @@ async function detectEntityMatches(sourceMemory: any): Promise<any[]> {
  * Strategy 2: Find semantically similar memories using embeddings
  */
 async function detectSemanticSimilarity(sourceMemory: any): Promise<any[]> {
+  const supabase = getSupabaseClient()
   const bridges: any[] = []
 
   const { data: matches, error } = await supabase.rpc('match_memories', {
@@ -491,7 +480,6 @@ async function detectSemanticSimilarity(sourceMemory: any): Promise<any[]> {
   })
 
   if (error || !matches) {
-    console.warn('[detectSemanticSimilarity] Error:', error)
     return bridges
   }
 
@@ -515,6 +503,7 @@ async function detectSemanticSimilarity(sourceMemory: any): Promise<any[]> {
  * Strategy 3: Find memories created around the same time
  */
 async function detectTemporalProximity(sourceMemory: any): Promise<any[]> {
+  const supabase = getSupabaseClient()
   const bridges: any[] = []
   const sourceDate = new Date(sourceMemory.created_at)
 
@@ -604,6 +593,8 @@ async function findRelatedItems(
   sourceType: 'thought' | 'project' | 'article',
   sourceText?: string
 ): Promise<any[]> {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
   const related: any[] = []
 
   // Strategy 1: Find items linked via source_reference
@@ -674,7 +665,7 @@ async function findRelatedItems(
       const { data: articles } = await supabase
         .from('reading_articles')
         .select('id, title, url, summary')
-        .eq('user_id', USER_ID)
+        .eq('user_id', userId)
         .neq('status', 'archived')
         .limit(10)
 
@@ -708,7 +699,7 @@ async function findRelatedItems(
     const { data: recentProjects } = await supabase
       .from('projects')
       .select('id, title, description')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
       .eq('status', 'active')
       .neq('id', sourceId)
       .order('last_active', { ascending: false })
@@ -756,16 +747,13 @@ async function handleListSparks(
   itemId: string,
   itemType: string
 ): Promise<VercelResponse> {
-  try {
-    console.log('[handleListSparks] Starting - fetching connections for:', { itemType, itemId })
+  const supabase = getSupabaseClient()
 
+  try {
     // Validate inputs
     if (!itemId || !itemType) {
-      console.error('[handleListSparks] Missing itemId or itemType')
       return res.status(200).json({ connections: [] })
     }
-
-    console.log('[handleListSparks] Querying outbound connections from table...')
 
     // Test if connections table exists by doing a simple query
     const { error: tableCheckError } = await supabase
@@ -774,7 +762,6 @@ async function handleListSparks(
       .limit(1)
 
     if (tableCheckError?.code === 'PGRST116' || tableCheckError?.message?.includes('does not exist')) {
-      console.error('[handleListSparks] CRITICAL: connections table does not exist in Supabase database')
       return res.status(200).json({
         connections: [],
         error: 'Connections table not initialized',
@@ -790,12 +777,6 @@ async function handleListSparks(
       .eq('source_id', itemId)
 
     if (outboundError) {
-      console.error('[handleListSparks] Outbound query error:', {
-        code: outboundError.code,
-        message: outboundError.message,
-        details: outboundError.details
-      })
-      // Return empty array instead of error
       return res.status(200).json({
         connections: [],
         note: 'Could not fetch connections (outbound)'
@@ -810,19 +791,11 @@ async function handleListSparks(
       .eq('target_id', itemId)
 
     if (inboundError) {
-      console.error('[handleListSparks] Inbound query error:', {
-        code: inboundError.code,
-        message: inboundError.message,
-        details: inboundError.details
-      })
-      // Return empty array instead of error
       return res.status(200).json({
         connections: [],
         note: 'Could not fetch connections (inbound)'
       })
     }
-
-    console.log('[handleListSparks] Combining results - outbound:', outbound?.length || 0, 'inbound:', inbound?.length || 0)
 
     // Combine results and normalize format
     const allConnections = [
@@ -848,8 +821,6 @@ async function handleListSparks(
       }))
     ]
 
-    console.log('[handleListSparks] Found', allConnections.length, 'total connections')
-
     // Fetch the actual items for each connection
     const connections = await Promise.all(
       allConnections.map(async (conn: any) => {
@@ -868,16 +839,8 @@ async function handleListSparks(
       })
     )
 
-    console.log('[handleListSparks] Successfully returning', connections.length, 'connections')
     return res.status(200).json({ connections })
   } catch (error: any) {
-    console.error('[handleListSparks] Unexpected error:', {
-      message: error?.message,
-      code: error?.code,
-      stack: error?.stack,
-      toString: error?.toString()
-    })
-    // Return empty array to prevent breaking the page
     return res.status(200).json({
       connections: [],
       error: 'Could not fetch connections',
@@ -894,6 +857,8 @@ async function handleAISparks(
   res: VercelResponse,
   limit: number
 ): Promise<VercelResponse> {
+  const supabase = getSupabaseClient()
+
   const { data, error } = await supabase
     .from('connections')
     .select('*')
@@ -902,7 +867,6 @@ async function handleAISparks(
     .limit(limit)
 
   if (error) {
-    console.error('[handleAISparks] Error:', error)
     return res.status(500).json({ error: 'Failed to fetch AI sparks' })
   }
 
@@ -939,6 +903,8 @@ async function handleThread(
   itemId: string,
   itemType: string
 ): Promise<VercelResponse> {
+  const supabase = getSupabaseClient()
+
   const { data, error } = await supabase.rpc('get_item_thread', {
     item_type: itemType,
     item_id: itemId,
@@ -946,7 +912,6 @@ async function handleThread(
   })
 
   if (error) {
-    console.error('[handleThread] Error:', error)
     return res.status(500).json({ error: 'Failed to fetch thread' })
   }
 
@@ -960,6 +925,7 @@ async function handleCreateSpark(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<VercelResponse> {
+  const supabase = getSupabaseClient()
   const { source_type, source_id, target_type, target_id, connection_type, created_by, ai_reasoning } = req.body
 
   if (!source_type || !source_id || !target_type || !target_id) {
@@ -981,7 +947,6 @@ async function handleCreateSpark(
     .single()
 
   if (error) {
-    console.error('[handleCreateSpark] Error:', error)
     return res.status(500).json({ error: 'Failed to create connection' })
   }
 
@@ -996,13 +961,14 @@ async function handleDeleteSpark(
   res: VercelResponse,
   connectionId: string
 ): Promise<VercelResponse> {
+  const supabase = getSupabaseClient()
+
   const { error } = await supabase
     .from('connections')
     .delete()
     .eq('id', connectionId)
 
   if (error) {
-    console.error('[handleDeleteSpark] Error:', error)
     return res.status(500).json({ error: 'Failed to delete connection' })
   }
 
@@ -1013,6 +979,7 @@ async function handleDeleteSpark(
  * Fetch a single item by type and ID
  */
 async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<any> {
+  const supabase = getSupabaseClient()
   let table = ''
   let selectFields = '*'
 
@@ -1044,7 +1011,6 @@ async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<a
     .single()
 
   if (error) {
-    console.error(`[fetchItemByTypeAndId] Error fetching ${itemType}:`, error)
     return null
   }
 

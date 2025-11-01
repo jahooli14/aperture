@@ -35,7 +35,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
-import type { ProjectScore, DailyQueueResponse, Memory } from '../types'
+import type { ProjectScore, DailyQueueResponse, Memory, Project } from '../types'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -280,16 +280,20 @@ export function HomePage() {
   const pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
   const activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
 
-  // Find the 2 most recently updated projects
-  const sortedProjects = [...activeProjects]
+  // Find priority project and most recent project
+  const priorityProject = activeProjects.find(p => p.is_priority) || null
+
+  // Most recently updated (excluding priority if it exists)
+  const recentProject = activeProjects
+    .filter(p => p.id !== priorityProject?.id)
     .sort((a, b) => {
       const aTime = new Date(a.updated_at || a.last_active).getTime()
-      const bTime = new Date(b.updated_at || b.last_active).getTime()
+      const bTime = new Date(b.updated_at || a.last_active).getTime()
       return bTime - aTime
-    })
+    })[0] || null
 
-  const recentProject1 = sortedProjects[0] || null
-  const recentProject2 = sortedProjects[1] || null
+  // Projects to show in "Keep Momentum" section
+  const projectsToShow = [priorityProject, recentProject].filter(Boolean) as Project[]
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -581,9 +585,9 @@ export function HomePage() {
               <div className="text-center py-8">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-blue)' }}></div>
               </div>
-            ) : (recentProject1 || recentProject2) ? (
+            ) : projectsToShow.length > 0 ? (
               <div className="space-y-4">
-                {[recentProject1, recentProject2].filter(Boolean).map((project) => {
+                {projectsToShow.map((project) => {
                   // Get first incomplete task from the tasks array
                   const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
                   console.log(`[HomePage] Project "${project.title}" tasks:`, tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
@@ -604,6 +608,15 @@ export function HomePage() {
                         <h3 className="premium-text-platinum font-bold text-lg flex-1">
                           {project.title}
                         </h3>
+                        {project.is_priority && (
+                          <div className="px-2 py-1 rounded-md text-xs font-bold" style={{
+                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
+                            color: 'var(--premium-amber)',
+                            border: '1px solid rgba(251, 191, 36, 0.4)'
+                          }}>
+                            ⭐ PRIORITY
+                          </div>
+                        )}
                       </div>
 
                       {/* Next Step - Always Show */}
@@ -720,7 +733,7 @@ export function HomePage() {
 
         {/* 3. GET INSPIRATION */}
         <GetInspirationSection
-          excludeProjectIds={[recentProject1?.id, recentProject2?.id].filter(Boolean) as string[]}
+          excludeProjectIds={projectsToShow.map(p => p.id)}
           hasPendingSuggestions={pendingSuggestions.length > 0}
           pendingSuggestionsCount={pendingSuggestions.length}
         />

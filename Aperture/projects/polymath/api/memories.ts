@@ -1,15 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
-const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
 
 /**
  * Unified Memories API
@@ -22,6 +19,9 @@ const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
  * POST /api/memories?capture=true - Voice capture with transcript parsing (requires transcript in body)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response } = req.query
 
@@ -69,7 +69,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('[api/memories] Fetch error:', error)
         return res.status(500).json({ error: 'Failed to fetch memories' })
       }
 
@@ -79,7 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
 
   } catch (error) {
-    console.error('[api/memories] Unexpected error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -176,13 +174,11 @@ Respond ONLY with valid JSON in this exact format:
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const baseUrl = `${protocol}://${host}`
 
-    console.log('[api/memories/capture] Triggering processing for memory:', memory.id, 'at', baseUrl)
 
     fetch(`${baseUrl}/api/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ memory_id: memory.id })
-    }).catch(err => console.error('[api/memories/capture] Failed to trigger processing:', err))
 
     return res.status(201).json({
       success: true,
@@ -194,7 +190,6 @@ Respond ONLY with valid JSON in this exact format:
     })
 
   } catch (error) {
-    console.error('[api/memories/capture] Error:', error)
     return res.status(500).json({
       error: 'Failed to capture thought',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -230,7 +225,6 @@ async function handleReview(memoryId: string, res: VercelResponse) {
       .single()
 
     if (error) {
-      console.error('[api/memories/review] Update error:', error)
       return res.status(500).json({ error: 'Failed to mark as reviewed' })
     }
 
@@ -239,7 +233,6 @@ async function handleReview(memoryId: string, res: VercelResponse) {
       memory
     })
   } catch (error) {
-    console.error('[api/memories/review] Unexpected error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -262,7 +255,6 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse) 
         .order('strength', { ascending: false })
 
       if (error) {
-        console.error('[api/bridges] Fetch error:', error)
         return res.status(500).json({ error: 'Failed to fetch bridges' })
       }
 
@@ -281,13 +273,11 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse) 
       .limit(100)
 
     if (error) {
-      console.error('[api/bridges] Fetch error:', error)
       return res.status(500).json({ error: 'Failed to fetch bridges' })
     }
 
     return res.status(200).json({ bridges })
   } catch (error) {
-    console.error('[api/bridges] Unexpected error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -353,7 +343,6 @@ async function handleResurfacing(res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/memories] Resurfacing error:', error)
     return res.status(500).json({ error: 'Failed to fetch resurfacing memories' })
   }
 }
@@ -466,7 +455,6 @@ async function handleThemes(res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/memories] Theme clustering error:', error)
     return res.status(500).json({
       error: 'Failed to cluster themes',
       clusters: [],
@@ -490,7 +478,6 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse) {
       .order('priority_order', { ascending: true })
 
     if (promptsError) {
-      console.error('[api/memories] Prompts fetch error:', promptsError)
       return res.status(500).json({ error: 'Failed to fetch prompts' })
     }
 
@@ -524,7 +511,6 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse) {
       .eq('user_id', userId)
 
     if (statusError) {
-      console.error('[api/memories] Status fetch error:', statusError)
     }
 
     // Create status map
@@ -570,7 +556,6 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/memories] Prompts error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
@@ -587,7 +572,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
     const { data: response, error: responseError } = await supabase
       .from('memory_responses')
       .insert([{
-        user_id: USER_ID,
+        user_id: userId,
         prompt_id: prompt_id || null,
         custom_title: custom_title || null,
         bullets,
@@ -605,7 +590,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
       const { error: statusError } = await supabase
         .from('user_prompt_status')
         .upsert({
-          user_id: USER_ID,
+          user_id: userId,
           prompt_id,
           status: 'completed',
           response_id: response.id,
@@ -614,7 +599,6 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
         })
 
       if (statusError) {
-        console.error('[api/memories] Status update error:', statusError)
       }
     }
 
@@ -626,7 +610,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
     const { data: statuses } = await supabase
       .from('user_prompt_status')
       .select('*')
-      .eq('user_id', USER_ID)
+      .eq('user_id', userId)
 
     const required = prompts?.filter(p => p.is_required) || []
     const completedRequired = statuses?.filter(s =>
@@ -650,7 +634,6 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
     })
 
   } catch (error) {
-    console.error('[api/memories] Submit response error:', error)
     return res.status(500).json({ error: 'Failed to submit response' })
   }
 }
