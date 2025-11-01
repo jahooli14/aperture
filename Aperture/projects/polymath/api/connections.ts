@@ -200,7 +200,7 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
           confidence: candidate.similarity,
           user_id: userId,
           status: 'pending',
-          model_version: 'gemini-1.5-flash-002'
+          model_version: 'gemini-2.5-flash'
         })
         .select()
         .single()

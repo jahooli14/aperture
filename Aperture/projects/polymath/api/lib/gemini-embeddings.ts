@@ -1,6 +1,6 @@
 /**
  * Gemini Embedding Service
- * Free embeddings using Google's text-embedding-004 model
+ * Free embeddings using Google's text-embedding-gem-001 model
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -9,11 +9,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
 /**
  * Generate a single embedding using Gemini
- * Model: text-embedding-004 (768 dimensions)
+ * Model: text-embedding-gem-001 (3072 dimensions, supports MRL for scaling)
  * Cost: FREE (up to 1M requests/day)
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
+  const model = genAI.getGenerativeModel({ model: 'text-embedding-gem-001' })
 
   const result = await model.embedContent(text)
   return result.embedding.values
@@ -24,7 +24,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
  * More efficient than individual calls
  */
 export async function batchGenerateEmbeddings(texts: string[]): Promise<number[][]> {
-  const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
+  const model = genAI.getGenerativeModel({ model: 'text-embedding-gem-001' })
 
   // Process in parallel (Gemini is fast)
   const embeddings = await Promise.all(
