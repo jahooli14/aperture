@@ -64,26 +64,29 @@ async function fetchArticleWithJina(url: string) {
       hasDescription: !!data.description
     })
 
+    // Clean the content before converting to HTML
+    const cleanedContent = data.content ? cleanArticleContent(data.content) : ''
+
     // Convert markdown to HTML for better readability
     let htmlContent = ''
-    if (data.content) {
+    if (cleanedContent) {
       try {
         // Configure marked for safe HTML rendering
         marked.setOptions({
           breaks: true,  // Convert line breaks to <br>
           gfm: true,     // GitHub Flavored Markdown
         })
-        htmlContent = await marked.parse(data.content)
+        htmlContent = await marked.parse(cleanedContent)
       } catch (error) {
         console.error('[Jina AI] Markdown conversion error:', error)
-        htmlContent = data.content // Fallback to raw content
+        htmlContent = cleanedContent // Fallback to raw content
       }
     }
 
     return {
       title: data.title || 'Untitled',
       content: htmlContent,
-      excerpt: data.description || data.content?.substring(0, 200) || '',
+      excerpt: data.description || cleanedContent.substring(0, 200) || '',
       author: null,
       publishedDate: null,
       thumbnailUrl: null,
@@ -94,6 +97,91 @@ async function fetchArticleWithJina(url: string) {
     console.error('[Jina AI] Fetch error:', error)
     throw new Error('Failed to fetch article content')
   }
+}
+
+/**
+ * Clean article content by removing common webpage boilerplate
+ * Removes navigation, footers, ads, cookie notices, etc.
+ */
+function cleanArticleContent(content: string): string {
+  if (!content) return ''
+
+  // Split into lines for processing
+  let lines = content.split('\n')
+
+  // Patterns to remove (case-insensitive)
+  const removePatterns = [
+    // Navigation and UI elements
+    /^(skip to|jump to|go to|navigate to|menu|navigation)/i,
+    /^(search|sign in|log in|subscribe|register|create account)/i,
+    /^(home|about|contact|privacy|terms|cookies?|legal)/i,
+
+    // Social media and sharing
+    /^(share on|follow us|connect with|like us)/i,
+    /^(facebook|twitter|instagram|linkedin|youtube|tiktok)/i,
+
+    // Newsletter and subscription
+    /^(newsletter|email|subscribe|sign up for)/i,
+    /^(get our|receive|join our)/i,
+
+    // Cookie notices
+    /^(we use cookies|this (site|website) uses cookies)/i,
+    /^(by (using|continuing)|accept (all )?cookies)/i,
+
+    // Advertising
+    /^(advertisement|sponsored|partner content)/i,
+    /^(ad choices|why (am i|this ad))/i,
+
+    // Comments sections
+    /^(comments?|leave a comment|post a comment)/i,
+    /^(show comments|hide comments|load more)/i,
+
+    // Related content
+    /^(related:?|you may also|recommended|more from)/i,
+    /^(read (more|next)|continue reading)/i,
+
+    // Footer content
+    /^(copyright|©|all rights reserved)/i,
+    /^(powered by|built with|designed by)/i,
+  ]
+
+  // Filter out lines matching removal patterns
+  lines = lines.filter(line => {
+    const trimmed = line.trim()
+
+    // Keep empty lines for paragraph breaks
+    if (trimmed === '') return true
+
+    // Remove if matches any pattern
+    if (removePatterns.some(pattern => pattern.test(trimmed))) {
+      return false
+    }
+
+    // Keep lines that seem like content (have punctuation, reasonable length)
+    return true
+  })
+
+  // Join lines back together
+  let cleaned = lines.join('\n')
+
+  // Remove excessive whitespace
+  cleaned = cleaned
+    .replace(/\n{4,}/g, '\n\n\n')  // Max 3 newlines
+    .replace(/[ \t]{2,}/g, ' ')     // Max 1 space
+    .trim()
+
+  // Remove common phrases that sneak through
+  const phrasePatterns = [
+    /\b(click here|read more|learn more|find out more)\b/gi,
+    /\b(subscribe to|sign up for|get notified)\b/gi,
+    /\b(cookie policy|privacy policy|terms of service)\b/gi,
+  ]
+
+  phrasePatterns.forEach(pattern => {
+    cleaned = cleaned.replace(pattern, '')
+  })
+
+  return cleaned
 }
 
 function extractDomain(url: string): string {
@@ -480,7 +568,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               let content = item.contentSnippet || item.description || ''
               if (response.ok) {
                 const result = await response.json()
-                content = result.data?.content || result.content || content
+                const rawContent = result.data?.content || result.content || content
+                // Clean the content before storing
+                content = cleanArticleContent(rawContent)
               }
 
               await supabase.from('reading_queue').insert([{
