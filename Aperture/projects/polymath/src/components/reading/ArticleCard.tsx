@@ -53,7 +53,8 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   useEffect(() => {
     checkOfflineStatus()
     checkProgress()
-    fetchConnectionCount()
+    // TODO: Re-enable connection count when API endpoint is fixed
+    // fetchConnectionCount()
   }, [article.id])
 
   const fetchConnectionCount = async () => {
