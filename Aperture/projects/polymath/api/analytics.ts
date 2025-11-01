@@ -543,17 +543,6 @@ Return JSON array (2-3 opportunities max):
 }
 
 /**
- * Helper function to get first incomplete task from project
- */
-function getNextStep(project: any): string | null {
-  const tasks = project.metadata?.tasks || []
-  const nextTask = tasks
-    .sort((a: any, b: any) => a.order - b.order)
-    .find((task: any) => !task.done)
-  return nextTask?.text || null
-}
-
-/**
  * SMART SUGGESTION
  * Context-aware AI system that suggests the best next action
  */
@@ -582,11 +571,10 @@ async function getSmartSuggestion() {
   )
   if (hotStreakProjects.length > 0) {
     const project = hotStreakProjects[0]
-    const nextStep = getNextStep(project)
     suggestions.push({
       type: 'project',
       title: `Continue "${project.title}"`,
-      description: nextStep || 'Make progress on your priority project',
+      description: project.metadata?.next_step || 'Make progress on your priority project',
       reasoning: '🔥 Hot streak! Keep the momentum going on your priority project',
       item: project,
       estimatedTime: project.estimated_next_step_time || 30,
@@ -604,11 +592,10 @@ async function getSmartSuggestion() {
     )
     if (freshProjects.length > 0) {
       const project = freshProjects[0]
-      const nextStep = getNextStep(project)
       suggestions.push({
         type: 'project',
         title: `Start fresh: "${project.title}"`,
-        description: nextStep || 'Make progress while energy is high',
+        description: project.metadata?.next_step || 'Make progress while energy is high',
         reasoning: '☀️ Morning is perfect for focused work on important projects',
         item: project,
         estimatedTime: project.estimated_next_step_time || 45,
@@ -648,11 +635,10 @@ async function getSmartSuggestion() {
     )
     if (quickProjects.length > 0) {
       const project = quickProjects[0]
-      const nextStep = getNextStep(project)
       suggestions.push({
         type: 'project',
         title: `Quick win: "${project.title}"`,
-        description: nextStep || 'Complete a small task',
+        description: project.metadata?.next_step || 'Complete a small task',
         reasoning: '🌙 Evening is perfect for quick, low-energy wins',
         item: project,
         estimatedTime: project.estimated_next_step_time,
@@ -671,11 +657,10 @@ async function getSmartSuggestion() {
     )
     if (creativeProjects.length > 0) {
       const project = creativeProjects[0]
-      const nextStep = getNextStep(project)
       suggestions.push({
         type: 'project',
         title: `Explore: "${project.title}"`,
-        description: nextStep || 'Work on your creative project',
+        description: project.metadata?.next_step || 'Work on your creative project',
         reasoning: '🎨 Weekend time for creative exploration',
         item: project,
         estimatedTime: project.estimated_next_step_time || 60,
@@ -717,11 +702,10 @@ async function getSmartSuggestion() {
     const activeProjects = projects.filter(p => p.status === 'active')
     if (activeProjects.length > 0) {
       const project = activeProjects[0]
-      const nextStep = getNextStep(project)
       suggestions.push({
         type: 'project',
         title: `Continue "${project.title}"`,
-        description: nextStep || 'Make progress on this project',
+        description: project.metadata?.next_step || 'Make progress on this project',
         reasoning: '⚡ Keep momentum on your active projects',
         item: project,
         estimatedTime: project.estimated_next_step_time || 30,

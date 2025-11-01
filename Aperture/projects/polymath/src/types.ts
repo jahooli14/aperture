@@ -428,14 +428,6 @@ export interface Project {
 
 export type ProjectStatus = 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned'
 
-export interface Task {
-  id: string
-  text: string
-  done: boolean
-  created_at: string
-  order: number
-}
-
 export interface ProjectMetadata {
   tags?: string[]
   energy_level?: 'low' | 'medium' | 'high'

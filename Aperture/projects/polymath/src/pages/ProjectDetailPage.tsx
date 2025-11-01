@@ -191,7 +191,7 @@ export function ProjectDetailPage() {
 
   const progress = project.metadata?.progress || 0
 
-  // Get first incomplete task for PinButton content
+  // Get first incomplete task as next step
   const tasks = project.metadata?.tasks || []
   const nextTask = tasks.find(t => !t.done)
 
@@ -315,6 +315,44 @@ export function ProjectDetailPage() {
             <p className="text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
               {project.description}
             </p>
+          </div>
+        )}
+
+        {/* Next Step (from first incomplete task) - Most Prominent */}
+        {nextTask && (
+          <div
+            className="premium-card p-6 border-l-4"
+            style={{
+              borderLeftColor: 'var(--premium-emerald)',
+              backgroundColor: 'rgba(16, 185, 129, 0.05)'
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--premium-emerald), #059669)' }}>
+                <Target className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--premium-emerald)' }}>
+                  Next Step
+                </h3>
+                <p className="text-lg font-semibold mb-3 premium-text-platinum leading-relaxed">
+                  {nextTask.text}
+                </p>
+                <button
+                  className="px-6 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg touch-manipulation"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--premium-emerald), #059669)',
+                    color: '#ffffff'
+                  }}
+                  onClick={() => {
+                    // Scroll to task list
+                    document.querySelector('[data-task-list]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                >
+                  Start This Now
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
