@@ -437,9 +437,10 @@ export interface ProjectMetadata {
   from_suggestion?: string // Suggestion ID if built from suggestion
   capabilities?: string[] // Capability IDs used
   original_points?: number // Points from suggestion
-  next_step?: string // Next action to take on this project
+  tasks?: Task[] // Project checklist - first incomplete task is the next step
   progress?: number // 0-100 percentage complete
   [key: string]: any // Allow arbitrary metadata
+  // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }
 
 export interface CreateProjectInput {
