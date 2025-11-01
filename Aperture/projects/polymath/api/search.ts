@@ -146,11 +146,11 @@ async function searchProjects(query: string): Promise<SearchResult[]> {
  */
 async function searchArticles(query: string): Promise<SearchResult[]> {
   try {
-    const { data, error } = await supabase
-      .from('articles')
+    const { data, error} = await supabase
+      .from('reading_queue')
       .select('*')
       .eq('user_id', USER_ID)
-      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
+      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
       .limit(20)
 
     if (error) {
@@ -164,7 +164,7 @@ async function searchArticles(query: string): Promise<SearchResult[]> {
       title: article.title || 'Untitled',
       body: article.excerpt,
       url: article.url,
-      score: calculateTextScore(query, article.title, article.excerpt, article.content),
+      score: calculateTextScore(query, article.title, article.excerpt),
       created_at: article.created_at,
       tags: article.tags
     }))
