@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Layers, FolderKanban, FileText, Filter, Calendar } from 'lucide-react'
-import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 
 interface TimelineItem {
@@ -182,10 +181,10 @@ export function KnowledgeTimelinePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
         <div className="text-center">
-          <Calendar className="h-12 w-12 text-blue-900 animate-pulse mx-auto mb-4" />
-          <p className="text-neutral-600">Loading timeline...</p>
+          <Calendar className="h-12 w-12 animate-pulse mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+          <p style={{ color: 'var(--premium-text-secondary)' }}>Loading timeline...</p>
         </div>
       </div>
     )
@@ -193,21 +192,22 @@ export function KnowledgeTimelinePage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-20"
+      className="min-h-screen pb-20"
+      style={{ backgroundColor: 'var(--premium-surface-base)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-neutral-200 sticky top-0 z-10">
+      <div className="premium-glass-strong border-b sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <Calendar className="h-6 w-6 text-blue-900" />
-              <h1 className="text-2xl font-bold text-neutral-900">Knowledge Timeline</h1>
+              <Calendar className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <h1 className="text-2xl font-bold premium-text-platinum">Knowledge Timeline</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-neutral-600">{items.length} events</span>
+              <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>{items.length} events</span>
             </div>
           </div>
 
@@ -231,8 +231,8 @@ export function KnowledgeTimelinePage() {
           </div>
 
           {/* Date Range Filter */}
-          <div className="flex gap-2 overflow-x-auto pb-2 mt-2 pt-2 border-t border-neutral-200">
-            <span className="text-xs text-neutral-600 flex items-center px-2">Time:</span>
+          <div className="flex gap-2 overflow-x-auto pb-2 mt-2 pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+            <span className="text-xs flex items-center px-2" style={{ color: 'var(--premium-text-tertiary)' }}>Time:</span>
             {([
               { key: 'all', label: 'All Time' },
               { key: '7d', label: 'Last 7 Days' },
@@ -295,12 +295,10 @@ export function KnowledgeTimelinePage() {
         </div>
 
         {filteredItems.length === 0 && (
-          <Card className="pro-card">
-            <CardContent className="py-16 text-center">
-              <Calendar className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-              <p className="text-neutral-600">No events in timeline</p>
-            </CardContent>
-          </Card>
+          <div className="premium-card p-16 text-center">
+            <Calendar className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+            <p style={{ color: 'var(--premium-text-secondary)' }}>No events in timeline</p>
+          </div>
         )}
       </div>
     </motion.div>
@@ -324,22 +322,21 @@ function TimelineTrack({ title, icon: Icon, items, connections, color, onItemCli
     return { outgoing, incoming }
   }
   return (
-    <Card className="pro-card overflow-hidden">
-      <CardContent className="p-0">
-        {/* Track Header */}
-        <div className="bg-blue-50 border-b border-blue-100 px-5 py-3">
-          <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-blue-700" />
-            <h3 className="font-semibold text-blue-900">{title}</h3>
-            <span className="text-xs text-neutral-500">({items.length})</span>
-          </div>
+    <div className="premium-card overflow-hidden">
+      {/* Track Header */}
+      <div className="premium-glass-subtle border-b px-5 py-3" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+          <h3 className="font-semibold premium-text-platinum">{title}</h3>
+          <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>({items.length})</span>
         </div>
+      </div>
 
-        {/* Timeline Items */}
-        <div className="p-5">
-          <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-blue-200" />
+      {/* Timeline Items */}
+      <div className="p-5">
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-3 top-0 bottom-0 w-0.5" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }} />
 
             {/* Items */}
             <div className="space-y-4">
@@ -367,10 +364,10 @@ function TimelineTrack({ title, icon: Icon, items, connections, color, onItemCli
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-neutral-900 group-hover:text-blue-900 transition-colors line-clamp-2">
+                          <h4 className="font-medium premium-text-platinum group-hover:opacity-80 transition-opacity line-clamp-2">
                             {item.title}
                           </h4>
-                          <p className="text-xs text-neutral-500 mt-1">
+                          <p className="text-xs mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                             {formatDate(item.date)}
                             {item.status && ` • ${item.status}`}
                           </p>
@@ -379,12 +376,18 @@ function TimelineTrack({ title, icon: Icon, items, connections, color, onItemCli
                           {hasConnections && (
                             <div className="mt-2 flex gap-2 text-xs">
                               {incoming.length > 0 && (
-                                <span className="text-orange-700 bg-orange-50 px-2 py-0.5 rounded">
+                                <span className="px-2 py-0.5 rounded" style={{
+                                  color: 'var(--premium-amber)',
+                                  backgroundColor: 'rgba(245, 158, 11, 0.1)'
+                                }}>
                                   ← {incoming.length} source{incoming.length !== 1 ? 's' : ''}
                                 </span>
                               )}
                               {outgoing.length > 0 && (
-                                <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                                <span className="px-2 py-0.5 rounded" style={{
+                                  color: 'var(--premium-blue)',
+                                  backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                                }}>
                                   → {outgoing.length} inspired
                                 </span>
                               )}
@@ -399,8 +402,7 @@ function TimelineTrack({ title, icon: Icon, items, connections, color, onItemCli
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 
