@@ -719,35 +719,56 @@ async function handleListSparks(
   itemId: string,
   itemType: string
 ): Promise<VercelResponse> {
-  const { data, error } = await supabase.rpc('get_item_connections', {
-    item_type: itemType,
-    item_id: itemId
-  })
+  try {
+    console.log('[handleListSparks] Fetching connections for:', { itemType, itemId })
 
-  if (error) {
-    console.error('[handleListSparks] Error:', error)
-    return res.status(500).json({ error: 'Failed to fetch connections' })
-  }
-
-  // Fetch the actual items for each connection
-  const connections = await Promise.all(
-    (data || []).map(async (conn: any) => {
-      const relatedItem = await fetchItemByTypeAndId(conn.related_type, conn.related_id)
-      return {
-        connection_id: conn.connection_id,
-        related_type: conn.related_type,
-        related_id: conn.related_id,
-        connection_type: conn.connection_type,
-        direction: conn.direction,
-        created_by: conn.created_by,
-        created_at: conn.created_at,
-        ai_reasoning: conn.ai_reasoning,
-        related_item: relatedItem
-      }
+    const { data, error } = await supabase.rpc('get_item_connections', {
+      item_type: itemType,
+      item_id: itemId
     })
-  )
 
-  return res.status(200).json({ connections })
+    if (error) {
+      console.error('[handleListSparks] RPC error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      })
+      return res.status(500).json({
+        error: 'Failed to fetch connections',
+        details: error.message
+      })
+    }
+
+    console.log('[handleListSparks] RPC returned', (data || []).length, 'connections')
+
+    // Fetch the actual items for each connection
+    const connections = await Promise.all(
+      (data || []).map(async (conn: any) => {
+        const relatedItem = await fetchItemByTypeAndId(conn.related_type, conn.related_id)
+        return {
+          connection_id: conn.connection_id,
+          related_type: conn.related_type,
+          related_id: conn.related_id,
+          connection_type: conn.connection_type,
+          direction: conn.direction,
+          created_by: conn.created_by,
+          created_at: conn.created_at,
+          ai_reasoning: conn.ai_reasoning,
+          related_item: relatedItem
+        }
+      })
+    )
+
+    console.log('[handleListSparks] Successfully returned', connections.length, 'connections')
+    return res.status(200).json({ connections })
+  } catch (error: any) {
+    console.error('[handleListSparks] Unexpected error:', error)
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error?.message || 'Unknown error'
+    })
+  }
 }
 
 /**
