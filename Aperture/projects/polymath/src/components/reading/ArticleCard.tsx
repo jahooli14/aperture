@@ -64,9 +64,12 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         setConnectionCount(data.connections?.length || 0)
       } else {
         // Get error details from response
-        const errorData = await response.json().catch(() => ({}))
+        const text = await response.text()
+        const errorData = text.startsWith('{') ? JSON.parse(text) : {}
         console.error('[ArticleCard] Failed to fetch connections:', {
           status: response.status,
+          contentType: response.headers.get('content-type'),
+          responseBody: text.substring(0, 500),
           error: errorData.error,
           details: errorData.details
         })
