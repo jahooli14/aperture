@@ -213,15 +213,16 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
 
+  // Always refetch data when homepage mounts to ensure fresh data
   useEffect(() => {
     const loadData = async () => {
       console.log('[HomePage] Starting data load...')
       try {
+        console.log('[HomePage] Fetching projects (fresh)...')
+        await fetchProjects() // Force await to ensure fresh data
+
         console.log('[HomePage] Fetching suggestions...')
         fetchSuggestions()
-
-        console.log('[HomePage] Fetching projects...')
-        fetchProjects()
 
         console.log('[HomePage] Fetching memories...')
         fetchMemories()
@@ -245,7 +246,8 @@ export function HomePage() {
       console.error('[HomePage] Uncaught error in loadData:', err)
       setError(`Uncaught error: ${err instanceof Error ? err.message : String(err)}`)
     })
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty deps - always refetch on mount
 
   // Show onboarding banner if not completed
   useEffect(() => {
@@ -291,13 +293,43 @@ export function HomePage() {
 
   try {
     pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
+    // Get ALL active projects, not filtered by store.filter
     activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
-    priorityProject = Array.isArray(projects) ? projects.find(p => p.priority && p.status === 'active') : null
-    recentProject = activeProjects.length > 0
-      ? activeProjects
-          .filter(p => !p.priority)
-          .sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime())[0]
-      : null
+
+    // 1. Find THE priority project (should only be one with priority=true)
+    priorityProject = activeProjects.find(p => p.priority === true) || null
+
+    // 2. Find the most recently updated NON-priority project
+    const nonPriorityProjects = activeProjects.filter(p => !p.priority)
+    const sortedNonPriority = [...nonPriorityProjects]
+      .sort((a, b) => {
+        // Use updated_at if available, fallback to last_active
+        const aTime = new Date(a.updated_at || a.last_active).getTime()
+        const bTime = new Date(b.updated_at || b.last_active).getTime()
+        return bTime - aTime
+      })
+    recentProject = sortedNonPriority[0] || null
+
+    // Debug logging
+    console.log('[HomePage] Active projects:', activeProjects.length)
+    console.log('[HomePage] Priority project:', priorityProject?.title || 'none', priorityProject?.priority ? '⭐' : '')
+    console.log('[HomePage] Most recent non-priority:', recentProject?.title || 'none')
+    if (priorityProject) {
+      console.log('[HomePage] Priority last_active:', priorityProject.last_active)
+      console.log('[HomePage] Priority updated_at:', priorityProject.updated_at)
+      console.log('[HomePage] Priority tasks:', priorityProject.metadata?.tasks)
+    }
+    if (recentProject) {
+      console.log('[HomePage] Recent last_active:', recentProject.last_active)
+      console.log('[HomePage] Recent updated_at:', recentProject.updated_at)
+      console.log('[HomePage] Recent tasks:', recentProject.metadata?.tasks)
+    }
+    if (activeProjects.length > 0) {
+      console.log('[HomePage] All active projects:')
+      activeProjects.forEach(p => {
+        console.log(`  ${p.priority ? '⭐ PRIORITY' : '  '} ${p.title}: updated=${p.updated_at || 'none'}, last_active=${p.last_active}`)
+      })
+    }
   } catch (err) {
     console.error('[HomePage] Error filtering data:', err)
   }
@@ -608,15 +640,12 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
-                      {/* Project Title with Chip */}
+                      {/* Project Title with Priority Star */}
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <h3 className="premium-text-platinum font-bold text-lg flex-1">{project.title}</h3>
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white shadow-sm flex-shrink-0"
-                          style={{ background: project.priority ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(59, 130, 246, 0.9))' : 'linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(236, 72, 153, 0.9))' }}
-                        >
-                          {project.priority ? 'Priority' : 'Recent'}
-                        </span>
+                        <h3 className="premium-text-platinum font-bold text-lg flex-1">
+                          {project.priority && <span className="mr-2">⭐</span>}
+                          {project.title}
+                        </h3>
                       </div>
 
                       {/* Next Step - Always Show */}
