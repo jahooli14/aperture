@@ -224,16 +224,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Atomic operation: clear all priorities, then set the one
-      // Step 1: Clear all priorities for this user
+      // Step 1: First set ALL to false (to avoid unique constraint violations)
       const { error: clearError } = await supabase
         .from('projects')
         .update({ priority: false })
         .eq('user_id', USER_ID)
-        .eq('priority', true)
 
       if (clearError) {
         console.error('[set-priority] Failed to clear priorities:', clearError)
-        throw clearError
+        return res.status(500).json({
+          error: 'Failed to clear priorities',
+          details: clearError.message
+        })
       }
 
       // Step 2: Set priority on the specified project
@@ -247,7 +249,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (setError) {
         console.error('[set-priority] Failed to set priority:', setError)
-        throw setError
+        return res.status(500).json({
+          error: 'Failed to set priority',
+          details: setError.message
+        })
       }
 
       // Return all projects so the client can refresh

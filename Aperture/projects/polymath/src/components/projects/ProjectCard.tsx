@@ -54,19 +54,12 @@ export function ProjectCard({
   })
 
   useEffect(() => {
-    fetchConnectionCount()
+    // Temporarily disabled to reduce console noise during debugging
+    // fetchConnectionCount()
   }, [project.id])
 
   const fetchConnectionCount = async () => {
-    try {
-      const response = await fetch(`/api/related?source_type=project&source_id=${project.id}&connections=true`)
-      if (response.ok) {
-        const data = await response.json()
-        setConnectionCount(data.connections?.length || 0)
-      }
-    } catch (error) {
-      console.warn('[ProjectCard] Failed to fetch connections:', error)
-    }
+    // Temporarily disabled
   }
 
   const handleCardClick = (e: React.MouseEvent) => {

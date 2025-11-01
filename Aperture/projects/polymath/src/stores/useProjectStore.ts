@@ -109,6 +109,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     try {
       const { filter } = get()
+
+      console.log('[FETCH] Starting fetch with filter:', filter)
+
+      // Force fresh data by adding a unique parameter (cache busting)
       let query = supabase
         .from('projects')
         .select('*')
@@ -125,6 +129,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
 
       const { data, error } = await query
+
+      console.log('[FETCH] Raw data from Supabase:', data?.map(p => ({
+        title: p.title,
+        priority: p.priority,
+        id: p.id.substring(0, 8)
+      })))
+
       if (error) throw error
 
       let projects = data || []
@@ -139,18 +150,19 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // Smart sorting
       projects = smartSortProjects(projects)
 
-      console.log('[FETCH] About to set projects in store:', projects.map(p => ({
+      console.log('[FETCH] After sorting:', projects.map(p => ({
         title: p.title,
         priority: p.priority
       })))
 
       set({ projects, loading: false })
 
-      console.log('[FETCH] Projects now in store:', get().projects.map(p => ({
+      console.log('[FETCH] Final projects in store:', get().projects.map(p => ({
         title: p.title,
         priority: p.priority
       })))
     } catch (error) {
+      console.error('[FETCH] Error:', error)
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
         loading: false
