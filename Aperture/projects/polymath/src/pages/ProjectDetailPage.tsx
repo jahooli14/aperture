@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Target } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
