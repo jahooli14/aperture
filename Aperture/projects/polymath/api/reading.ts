@@ -143,9 +143,6 @@ function cleanArticleContent(content: string): string {
     // Footer content
     /^(copyright|©|all rights reserved)/i,
     /^(powered by|built with|designed by)/i,
-
-    // Short lines that are likely navigation
-    /^[\w\s]{1,15}$/,  // Very short lines (1-3 words)
   ]
 
   // Filter out lines matching removal patterns
