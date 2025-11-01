@@ -232,14 +232,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       </CardHeader>
 
       <CardContent className="relative z-10 flex-1 space-y-4">
-        {/* Body Text */}
+        {/* Body Text - Compact Preview */}
         <div>
-          <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-4' : ''}`}>
+          <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
             {memory.body}
           </CardDescription>
 
           {/* Show More/Less Button - only if text is long enough */}
-          {memory.body && memory.body.length > 200 && (
+          {memory.body && memory.body.length > 120 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="mt-2 text-sm font-medium transition-colors flex items-center gap-1 touch-manipulation hover:opacity-80"
@@ -259,96 +259,101 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           )}
         </div>
 
-        {/* Memory Type & Emotional Tone */}
-        {memory.processed && (
-          <div className="flex flex-wrap gap-2">
-            {memory.memory_type && (
-              <div className="px-3 py-1 rounded-md text-xs font-medium border" style={memoryTypeConfig[memory.memory_type].style}>
-                {memoryTypeConfig[memory.memory_type].label}
-              </div>
-            )}
-            {memory.emotional_tone && (
-              <div className="px-3 py-1 rounded-md text-xs font-medium border" style={{
-                backgroundColor: 'rgba(236, 72, 153, 0.15)',
-                color: '#ec4899',
-                borderColor: 'rgba(236, 72, 153, 0.3)'
-              }}>
-                {memory.emotional_tone}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tags */}
-        {memory.tags && memory.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {memory.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-1 rounded-md text-xs font-medium border flex items-center gap-1"
-                style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  color: 'var(--premium-blue)',
-                  borderColor: 'rgba(59, 130, 246, 0.3)'
-                }}
-              >
-                <Tag className="h-3 w-3" />
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Entities */}
-        {memory.entities && (
-          <div className="space-y-2">
-            {memory.entities.people && memory.entities.people.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 items-center">
-                <User className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
-                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
-                {memory.entities.people.slice(0, 3).map((person) => (
-                  <span
-                    key={person}
-                    className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      color: 'var(--premium-blue)'
-                    }}
-                  >
-                    {person}
-                  </span>
-                ))}
-                {memory.entities.people.length > 3 && (
-                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    +{memory.entities.people.length - 3} more
-                  </span>
+        {/* Metadata - Only show when expanded */}
+        {isExpanded && (
+          <>
+            {/* Memory Type & Emotional Tone */}
+            {memory.processed && (
+              <div className="flex flex-wrap gap-2">
+                {memory.memory_type && (
+                  <div className="px-3 py-1 rounded-md text-xs font-medium border" style={memoryTypeConfig[memory.memory_type].style}>
+                    {memoryTypeConfig[memory.memory_type].label}
+                  </div>
+                )}
+                {memory.emotional_tone && (
+                  <div className="px-3 py-1 rounded-md text-xs font-medium border" style={{
+                    backgroundColor: 'rgba(236, 72, 153, 0.15)',
+                    color: '#ec4899',
+                    borderColor: 'rgba(236, 72, 153, 0.3)'
+                  }}>
+                    {memory.emotional_tone}
+                  </div>
                 )}
               </div>
             )}
-            {memory.entities.topics && memory.entities.topics.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 items-center">
-                <Brain className="h-3 w-3" style={{ color: 'var(--premium-indigo)' }} />
-                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
-                {memory.entities.topics.slice(0, 3).map((topic) => (
+
+            {/* Tags */}
+            {memory.tags && memory.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {memory.tags.map((tag) => (
                   <span
-                    key={topic}
-                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    key={tag}
+                    className="px-2 py-1 rounded-md text-xs font-medium border flex items-center gap-1"
                     style={{
-                      backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                      color: 'var(--premium-indigo)'
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      color: 'var(--premium-blue)',
+                      borderColor: 'rgba(59, 130, 246, 0.3)'
                     }}
                   >
-                    {topic}
+                    <Tag className="h-3 w-3" />
+                    {tag}
                   </span>
                 ))}
-                {memory.entities.topics.length > 3 && (
-                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    +{memory.entities.topics.length - 3} more
-                  </span>
+              </div>
+            )}
+
+            {/* Entities */}
+            {memory.entities && (
+              <div className="space-y-2">
+                {memory.entities.people && memory.entities.people.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <User className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
+                    {memory.entities.people.slice(0, 3).map((person) => (
+                      <span
+                        key={person}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{
+                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                          color: 'var(--premium-blue)'
+                        }}
+                      >
+                        {person}
+                      </span>
+                    ))}
+                    {memory.entities.people.length > 3 && (
+                      <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        +{memory.entities.people.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                )}
+                {memory.entities.topics && memory.entities.topics.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <Brain className="h-3 w-3" style={{ color: 'var(--premium-indigo)' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
+                    {memory.entities.topics.slice(0, 3).map((topic) => (
+                      <span
+                        key={topic}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{
+                          backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                          color: 'var(--premium-indigo)'
+                        }}
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                    {memory.entities.topics.length > 3 && (
+                      <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        +{memory.entities.topics.length - 3} more
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Bi-Directional Memory Links */}
