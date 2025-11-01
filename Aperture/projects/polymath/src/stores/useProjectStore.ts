@@ -94,6 +94,7 @@ interface ProjectState {
   createProject: (data: Partial<Project>) => Promise<void>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
+  setPriority: (id: string) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
 }
 
@@ -118,15 +119,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       } else if (filter === 'active') {
         query = query.eq('status', 'active')
       } else if (filter === 'dormant') {
-        // Dormant = projects not touched in >7 days and status is active or on-hold
         query = query.in('status', ['active', 'on-hold'])
       } else if (filter === 'completed') {
         query = query.eq('status', 'completed')
       }
-      // 'all' = no filter
 
       const { data, error } = await query
-
       if (error) throw error
 
       let projects = data || []
@@ -138,12 +136,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects = projects.filter(p => new Date(p.last_active) < sevenDaysAgo)
       }
 
-      // Smart sorting: status priority + recency + resurfacing
+      // Smart sorting
       projects = smartSortProjects(projects)
 
+      console.log('[FETCH] About to set projects in store:', projects.map(p => ({
+        title: p.title,
+        priority: p.priority
+      })))
+
       set({ projects, loading: false })
+
+      console.log('[FETCH] Projects now in store:', get().projects.map(p => ({
+        title: p.title,
+        priority: p.priority
+      })))
     } catch (error) {
-      console.error('[ProjectStore] fetchProjects error:', error)
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
         loading: false
@@ -175,25 +182,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   updateProject: async (id, data) => {
-    // Optimistic update - update UI immediately
     const previousProjects = get().projects
-    const projectToUpdate = previousProjects.find((p) => p.id === id)
-
-    if (projectToUpdate) {
-      const updatedProject = {
-        ...projectToUpdate,
-        ...data,
-        last_active: new Date().toISOString(), // Update last_active timestamp
-      }
-
-      set((state) => ({
-        projects: smartSortProjects(
-          Array.isArray(state.projects)
-            ? state.projects.map((p) => (p.id === id ? updatedProject : p))
-            : [updatedProject]
-        ),
-      }))
-    }
 
     const { isOnline } = useOfflineStore.getState()
 
@@ -201,24 +190,26 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     if (!isOnline) {
       await queueOperation('update_project', { id, ...data })
       await useOfflineStore.getState().updateQueueSize()
-
-      console.log('[ProjectStore] Project update queued for offline sync')
       return
     }
 
-    // Online flow
+    // Online flow - NO optimistic update, just write and refresh
     try {
+      const updateData = {
+        ...data,
+        last_active: new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from('projects')
-        .update(data)
+        .update(updateData)
         .eq('id', id)
 
       if (error) throw error
 
-      // Refresh to get server data (including any server-side processing)
+      // Refresh from database
       await get().fetchProjects()
     } catch (error) {
-      // Rollback on error
       set({ projects: previousProjects })
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -262,6 +253,37 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      throw error
+    }
+  },
+
+  setPriority: async (id) => {
+    // Call dedicated API endpoint that atomically clears all priorities and sets the new one
+    try {
+      const response = await fetch('/api/projects?resource=set-priority', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: id }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.details || errorData.error || 'Failed to set priority')
+      }
+
+      const data = await response.json()
+
+      // Update store with the returned projects list (already sorted and updated)
+      if (data.projects) {
+        const sortedProjects = smartSortProjects(data.projects)
+        set({ projects: sortedProjects })
+      } else {
+        // Fallback: refresh from database
+        await get().fetchProjects()
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      set({ error: errorMessage })
       throw error
     }
   },

@@ -198,6 +198,84 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { resource } = req.query
 
+  // SET-PRIORITY RESOURCE - Atomically set one project as priority
+  if (resource === 'set-priority') {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    try {
+      const { project_id } = req.body
+
+      if (!project_id) {
+        return res.status(400).json({ error: 'project_id is required' })
+      }
+
+      // Verify project exists and belongs to user
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', project_id)
+        .eq('user_id', USER_ID)
+        .single()
+
+      if (projectError || !project) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+
+      // Atomic operation: clear all priorities, then set the one
+      // Step 1: Clear all priorities for this user
+      const { error: clearError } = await supabase
+        .from('projects')
+        .update({ priority: false })
+        .eq('user_id', USER_ID)
+        .eq('priority', true)
+
+      if (clearError) {
+        console.error('[set-priority] Failed to clear priorities:', clearError)
+        throw clearError
+      }
+
+      // Step 2: Set priority on the specified project
+      const { data: updatedProject, error: setError } = await supabase
+        .from('projects')
+        .update({ priority: true })
+        .eq('id', project_id)
+        .eq('user_id', USER_ID)
+        .select()
+        .single()
+
+      if (setError) {
+        console.error('[set-priority] Failed to set priority:', setError)
+        throw setError
+      }
+
+      // Return all projects so the client can refresh
+      const { data: allProjects, error: fetchError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', USER_ID)
+        .order('created_at', { ascending: false })
+
+      if (fetchError) {
+        console.error('[set-priority] Failed to fetch projects:', fetchError)
+        throw fetchError
+      }
+
+      return res.status(200).json({
+        success: true,
+        updated_project: updatedProject,
+        projects: allProjects || []
+      })
+    } catch (error) {
+      console.error('[set-priority] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to set priority',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
   // CONTEXT RESOURCE
   if (resource === 'context') {
     if (req.method === 'GET') {
