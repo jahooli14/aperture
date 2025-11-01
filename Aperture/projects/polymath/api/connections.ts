@@ -722,29 +722,65 @@ async function handleListSparks(
   try {
     console.log('[handleListSparks] Fetching connections for:', { itemType, itemId })
 
-    const { data, error } = await supabase.rpc('get_item_connections', {
-      item_type: itemType,
-      item_id: itemId
-    })
+    // Query outbound connections (this item is the source)
+    const { data: outbound, error: outboundError } = await supabase
+      .from('connections')
+      .select('id, target_type, target_id, connection_type, created_by, created_at, ai_reasoning')
+      .eq('source_type', itemType)
+      .eq('source_id', itemId)
 
-    if (error) {
-      console.error('[handleListSparks] RPC error:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      })
+    if (outboundError) {
+      console.error('[handleListSparks] Outbound query error:', outboundError)
       return res.status(500).json({
         error: 'Failed to fetch connections',
-        details: error.message
+        details: outboundError.message
       })
     }
 
-    console.log('[handleListSparks] RPC returned', (data || []).length, 'connections')
+    // Query inbound connections (this item is the target)
+    const { data: inbound, error: inboundError } = await supabase
+      .from('connections')
+      .select('id, source_type, source_id, connection_type, created_by, created_at, ai_reasoning')
+      .eq('target_type', itemType)
+      .eq('target_id', itemId)
+
+    if (inboundError) {
+      console.error('[handleListSparks] Inbound query error:', inboundError)
+      return res.status(500).json({
+        error: 'Failed to fetch connections',
+        details: inboundError.message
+      })
+    }
+
+    // Combine results and normalize format
+    const allConnections = [
+      ...(outbound || []).map((conn: any) => ({
+        connection_id: conn.id,
+        related_type: conn.target_type,
+        related_id: conn.target_id,
+        connection_type: conn.connection_type,
+        direction: 'outbound',
+        created_by: conn.created_by,
+        created_at: conn.created_at,
+        ai_reasoning: conn.ai_reasoning
+      })),
+      ...(inbound || []).map((conn: any) => ({
+        connection_id: conn.id,
+        related_type: conn.source_type,
+        related_id: conn.source_id,
+        connection_type: conn.connection_type,
+        direction: 'inbound',
+        created_by: conn.created_by,
+        created_at: conn.created_at,
+        ai_reasoning: conn.ai_reasoning
+      }))
+    ]
+
+    console.log('[handleListSparks] Found', allConnections.length, 'total connections')
 
     // Fetch the actual items for each connection
     const connections = await Promise.all(
-      (data || []).map(async (conn: any) => {
+      allConnections.map(async (conn: any) => {
         const relatedItem = await fetchItemByTypeAndId(conn.related_type, conn.related_id)
         return {
           connection_id: conn.connection_id,
