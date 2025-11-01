@@ -854,49 +854,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET feeds
     if (req.method === 'GET') {
-      if (id) {
-        const { data } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', USER_ID).single()
-        return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
+      try {
+        if (id) {
+          const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', USER_ID).single()
+          if (error) throw error
+          return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
+        }
+        const { data, error } = await supabase.from('rss_feeds').select('*').eq('user_id', USER_ID).order('created_at', { ascending: false })
+        if (error) throw error
+        return res.status(200).json({ success: true, feeds: data || [] })
+      } catch (error) {
+        console.error('[API] Fetch feeds error:', error)
+        return res.status(500).json({ error: 'Failed to fetch feeds' })
       }
-      const { data } = await supabase.from('rss_feeds').select('*').eq('user_id', USER_ID).order('created_at', { ascending: false })
-      return res.status(200).json({ success: true, feeds: data || [] })
     }
 
     // POST - Subscribe
     if (req.method === 'POST') {
-      const { feed_url } = req.body
-      if (!feed_url) return res.status(400).json({ error: 'feed_url required' })
+      try {
+        const { feed_url } = req.body
+        if (!feed_url) return res.status(400).json({ error: 'feed_url required' })
 
-      const { data: existing } = await supabase.from('rss_feeds').select('id').eq('user_id', USER_ID).eq('feed_url', feed_url).single()
-      if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
+        const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', USER_ID).eq('feed_url', feed_url).single()
+        if (existingError && existingError.code !== 'PGRST116') throw existingError
+        if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
 
-      const feedData = await rssParser.parseURL(feed_url)
-      const { data } = await supabase.from('rss_feeds').insert([{
-        user_id: USER_ID,
-        feed_url,
-        title: feedData.title || 'Untitled',
-        description: feedData.description || null,
-        site_url: feedData.link || null,
-        favicon_url: feedData.image?.url || null,
-        enabled: true
-      }]).select().single()
+        const feedData = await rssParser.parseURL(feed_url)
+        const { data, error } = await supabase.from('rss_feeds').insert([{
+          user_id: USER_ID,
+          feed_url,
+          title: feedData.title || 'Untitled',
+          description: feedData.description || null,
+          site_url: feedData.link || null,
+          favicon_url: feedData.image?.url || null,
+          enabled: true
+        }]).select().single()
 
-      return res.status(201).json({ success: true, feed: data })
+        if (error) throw error
+        return res.status(201).json({ success: true, feed: data })
+      } catch (error) {
+        console.error('[API] Subscribe feed error:', error)
+        return res.status(500).json({ error: 'Failed to subscribe to feed' })
+      }
     }
 
     // PATCH - Update
     if (req.method === 'PATCH') {
-      const { id: feedId, enabled } = req.body
-      if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
+      try {
+        const { id: feedId, enabled } = req.body
+        if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
 
-      const { data } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', USER_ID).select().single()
-      return res.status(200).json({ success: true, feed: data })
+        const { data, error } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', USER_ID).select().single()
+        if (error) throw error
+        return res.status(200).json({ success: true, feed: data })
+      } catch (error) {
+        console.error('[API] Update feed error:', error)
+        return res.status(500).json({ error: 'Failed to update feed' })
+      }
     }
 
     // DELETE - Unsubscribe
     if (req.method === 'DELETE' && id) {
-      await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', USER_ID)
-      return res.status(204).send('')
+      try {
+        const { error } = await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', USER_ID)
+        if (error) throw error
+        return res.status(204).send('')
+      } catch (error) {
+        console.error('[API] Delete feed error:', error)
+        return res.status(500).json({ error: 'Failed to delete feed' })
+      }
     }
   }
 
