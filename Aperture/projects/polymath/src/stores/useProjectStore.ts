@@ -140,7 +140,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // Find Clandestined project and log all its tasks
       const clandestinedProject = data?.find(p => p.title.toLowerCase().includes('clandestined'))
       if (clandestinedProject) {
-        console.log('[FETCH] Clandestined project full tasks:', clandestinedProject.metadata?.tasks?.map((t: any) => ({ text: t.text, done: t.done, order: t.order })))
+        const tasks = clandestinedProject.metadata?.tasks || []
+        console.log('[FETCH] Clandestined project full tasks:', tasks.map((t: any) => ({ text: t.text, done: t.done, order: t.order })))
+        console.log('[FETCH] Clandestined project ID:', clandestinedProject.id)
+        console.log('[FETCH] Task orders present:', tasks.map((t: any) => t.order).sort((a: number, b: number) => a - b))
       }
 
       if (error) throw error
@@ -219,28 +222,52 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         last_active: new Date().toISOString()
       }
 
-      console.log('[ProjectStore.updateProject] Updating project:', id.substring(0, 8))
-      console.log('[ProjectStore.updateProject] Update data:', JSON.stringify(updateData, null, 2))
+      console.log('[ProjectStore.updateProject] ====== UPDATE START ======')
+      console.log('[ProjectStore.updateProject] Project ID:', id)
+      console.log('[ProjectStore.updateProject] Tasks being sent:', updateData.metadata?.tasks?.length || 0)
+      console.log('[ProjectStore.updateProject] Task orders being sent:', (updateData.metadata?.tasks || []).map((t: any) => t.order).sort((a: number, b: number) => a - b))
+      console.log('[ProjectStore.updateProject] Full tasks array:', JSON.stringify(updateData.metadata?.tasks || [], null, 2))
 
+      // SIMPLIFIED: Just use direct Supabase update - no RPC
       const { data: updatedData, error } = await supabase
         .from('projects')
         .update(updateData)
         .eq('id', id)
         .select()
+        .single()
 
       if (error) {
         console.error('[ProjectStore.updateProject] Supabase error:', error)
         throw error
       }
 
-      console.log('[ProjectStore.updateProject] Update successful, response:', updatedData)
-      console.log('[ProjectStore.updateProject] Response tasks count:', updatedData?.[0]?.metadata?.tasks?.length || 0)
-      console.log('[ProjectStore.updateProject] Response tasks:', updatedData?.[0]?.metadata?.tasks?.map((t: any) => ({ text: t.text, done: t.done, order: t.order })))
+      console.log('[ProjectStore.updateProject] Response received')
+      console.log('[ProjectStore.updateProject] Tasks in response:', updatedData?.metadata?.tasks?.length || 0)
+      console.log('[ProjectStore.updateProject] Task orders in response:', (updatedData?.metadata?.tasks || []).map((t: any) => t.order).sort((a: number, b: number) => a - b))
 
-      // Refresh from database
-      console.log('[ProjectStore.updateProject] Refreshing projects from database...')
-      await get().fetchProjects()
-      console.log('[ProjectStore.updateProject] Refresh complete')
+      // Now immediately query the database to verify what was actually stored
+      console.log('[ProjectStore.updateProject] Verifying database storage...')
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('projects')
+        .select('metadata')
+        .eq('id', id)
+        .single()
+
+      if (verifyError) {
+        console.error('[ProjectStore.updateProject] Verification error:', verifyError)
+      } else {
+        console.log('[ProjectStore.updateProject] VERIFICATION: Tasks actually in DB:', verifyData?.metadata?.tasks?.length || 0)
+        console.log('[ProjectStore.updateProject] VERIFICATION: Task orders in DB:', (verifyData?.metadata?.tasks || []).map((t: any) => t.order).sort((a: number, b: number) => a - b))
+      }
+
+      // Update local state with response
+      const currentProjects = get().projects
+      const updatedProjects = currentProjects.map(p =>
+        p.id === id ? updatedData : p
+      )
+      set({ projects: updatedProjects })
+
+      console.log('[ProjectStore.updateProject] ====== UPDATE END ======')
     } catch (error) {
       console.error('[ProjectStore.updateProject] Failed:', error)
       set({ projects: previousProjects })

@@ -18,8 +18,25 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { generateEmbedding, batchGenerateEmbeddings, cosineSimilarity } from './lib/gemini-embeddings'
-import { generateBatchReasoning } from './lib/gemini-chat'
+
+// Lazy-load Gemini imports only when needed (they require GEMINI_API_KEY env var)
+let generateEmbedding: any
+let batchGenerateEmbeddings: any
+let cosineSimilarity: any
+let generateBatchReasoning: any
+
+async function ensureGeminiImports() {
+  if (!generateEmbedding) {
+    const embeddings = await import('./lib/gemini-embeddings')
+    generateEmbedding = embeddings.generateEmbedding
+    batchGenerateEmbeddings = embeddings.batchGenerateEmbeddings
+    cosineSimilarity = embeddings.cosineSimilarity
+  }
+  if (!generateBatchReasoning) {
+    const chat = await import('./lib/gemini-chat')
+    generateBatchReasoning = chat.generateBatchReasoning
+  }
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -130,6 +147,14 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
 
   if (!itemType || !itemId || !content || !userId) {
     return res.status(400).json({ error: 'Missing required fields' })
+  }
+
+  // Ensure Gemini imports are loaded
+  try {
+    await ensureGeminiImports()
+  } catch (error) {
+    console.error('[handleAutoSuggest] Failed to load Gemini imports:', error)
+    return res.status(500).json({ error: 'AI suggestion service not available' })
   }
 
   // Step 1: Generate embedding for the input content using Gemini (FREE!)
@@ -740,7 +765,22 @@ async function handleListSparks(
       return res.status(200).json({ connections: [] })
     }
 
-    console.log('[handleListSparks] Querying outbound connections...')
+    console.log('[handleListSparks] Querying outbound connections from table...')
+
+    // Test if connections table exists by doing a simple query
+    const { error: tableCheckError } = await supabase
+      .from('connections')
+      .select('id')
+      .limit(1)
+
+    if (tableCheckError?.code === 'PGRST116' || tableCheckError?.message?.includes('does not exist')) {
+      console.error('[handleListSparks] CRITICAL: connections table does not exist in Supabase database')
+      return res.status(200).json({
+        connections: [],
+        error: 'Connections table not initialized',
+        details: 'The connections table has not been created in the database. Run migrations first.'
+      })
+    }
 
     // Query outbound connections (this item is the source)
     const { data: outbound, error: outboundError } = await supabase

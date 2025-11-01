@@ -352,9 +352,8 @@ export function ProjectDetailPage() {
                   last_active: updated.last_active,
                   updated_at: updated.updated_at
                 })
-                console.log('[ProjectDetail] Update successful! Reloading project details...')
-                // Reload from database to ensure sync
-                await loadProjectDetails()
+                console.log('[ProjectDetail] Update successful!')
+                // Don't reload - local state is already correct and reloading causes stale data
               } catch (error) {
                 console.error('[ProjectDetail] Update failed:', error)
                 // Revert local state on error
