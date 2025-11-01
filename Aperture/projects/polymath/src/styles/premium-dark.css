@@ -627,3 +627,92 @@
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "liga" 1, "calt" 1;
 }
+
+/* === READER LIGHT THEME OVERRIDES === */
+/* These styles apply to reader content on the light book-page background */
+
+/* Override heading colors for light background */
+.reader-content h1,
+.reader-content h2,
+.reader-content h3,
+.reader-content h4,
+.reader-content h5,
+.reader-content h6 {
+  color: #1a1a1a;
+}
+
+/* Links on light background */
+.reader-content a {
+  color: #2563eb;
+  text-decoration-color: rgba(37, 99, 235, 0.4);
+}
+
+.reader-content a:hover {
+  color: #1d4ed8;
+  text-decoration-color: #1d4ed8;
+  text-shadow: none;
+}
+
+/* List markers on light background */
+.reader-content li::marker {
+  color: #6b6b6b;
+}
+
+/* Blockquotes on light background */
+.reader-content blockquote {
+  border-left: 4px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+  color: #4a4a4a;
+}
+
+/* Code on light background */
+.reader-content code {
+  background: rgba(0, 0, 0, 0.06);
+  color: #059669;
+}
+
+.reader-content pre {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.reader-content pre code {
+  color: #2a2a2a;
+}
+
+/* Tables on light background */
+.reader-content th,
+.reader-content td {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.reader-content th {
+  background: rgba(0, 0, 0, 0.03);
+  color: #1a1a1a;
+}
+
+.reader-content tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Horizontal rule on light background */
+.reader-content hr {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.15),
+    transparent
+  );
+}
+
+/* Strong/Bold on light background */
+.reader-content strong,
+.reader-content b {
+  color: #1a1a1a;
+}
+
+/* Selection on light background */
+.reader-content ::selection {
+  background: rgba(59, 130, 246, 0.25);
+  color: #1a1a1a;
+}

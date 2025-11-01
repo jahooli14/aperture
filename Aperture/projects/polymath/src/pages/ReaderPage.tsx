@@ -129,6 +129,60 @@ export function ReaderPage() {
       })
     }
 
+    // Create a temporary DOM to clean content
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(processedContent, 'text/html')
+
+    // Remove ads and navigation elements
+    const selectorsToRemove = [
+      // Navigation
+      'nav', '[role="navigation"]', '.navigation', '.nav', '.navbar', '.menu',
+      // Ads and promotional content
+      '[class*="ad-"]', '[class*="ads"]', '[id*="ad-"]', '[id*="ads"]',
+      '.advertisement', '.sponsored', '.promo', '.promotion',
+      // Social sharing buttons
+      '[class*="share"]', '[class*="social"]', '.whatsapp-share', '.facebook-share',
+      // App download prompts
+      '[class*="download"]', '[class*="app-banner"]', '.install-app',
+      // Footers and headers (often contain navigation)
+      'header:not(article header)', 'footer',
+      // Cookie banners and popups
+      '[class*="cookie"]', '[class*="popup"]', '[class*="modal"]',
+      // Comments sections
+      '[class*="comment"]', '[id*="comment"]',
+      // Related articles (often promotional)
+      '[class*="related"]', '[class*="recommended"]', '.sidebar',
+      // Newsletter signup
+      '[class*="newsletter"]', '[class*="subscribe"]',
+      // Author bio boxes (often have links)
+      '.author-bio', '[class*="author-box"]'
+    ]
+
+    selectorsToRemove.forEach(selector => {
+      doc.querySelectorAll(selector).forEach(el => el.remove())
+    })
+
+    // Remove all inline styles (including color formatting)
+    doc.querySelectorAll('[style]').forEach(el => {
+      el.removeAttribute('style')
+    })
+
+    // Remove color/style classes
+    doc.querySelectorAll('[class]').forEach(el => {
+      el.removeAttribute('class')
+    })
+
+    // Remove data attributes
+    doc.querySelectorAll('[data-*]').forEach(el => {
+      Array.from(el.attributes).forEach(attr => {
+        if (attr.name.startsWith('data-')) {
+          el.removeAttribute(attr.name)
+        }
+      })
+    })
+
+    processedContent = doc.body.innerHTML
+
     // Sanitize HTML for security
     return DOMPurify.sanitize(processedContent, {
       ALLOWED_TAGS: [
@@ -137,8 +191,10 @@ export function ReaderPage() {
         'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr',
         'div', 'span'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'id'],
-      ALLOW_DATA_ATTR: false
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title'],
+      ALLOW_DATA_ATTR: false,
+      // Ensure no style attributes survive
+      FORBID_ATTR: ['style', 'class', 'id']
     })
   }
 
@@ -338,7 +394,7 @@ export function ReaderPage() {
   const settings = fontSizeSettings[fontSize]
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+    <div className="min-h-screen" style={{ backgroundColor: '#1a1f2e' }}>
       {/* Sticky Header */}
       <motion.header
         initial={{ y: -100 }}
@@ -438,6 +494,11 @@ export function ReaderPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1 }}
         className="max-w-[720px] mx-auto px-6 sm:px-8 md:px-12 py-12 sm:py-16 md:py-20"
+        style={{
+          backgroundColor: '#f8f6f1',
+          minHeight: '100vh',
+          boxShadow: '0 0 60px rgba(0, 0, 0, 0.3)'
+        }}
       >
         {/* Article Header */}
         <header className="mb-12">
@@ -445,7 +506,7 @@ export function ReaderPage() {
           <h1
             className={`font-serif font-bold mb-6 ${settings.title}`}
             style={{
-              color: 'var(--premium-text-platinum)',
+              color: '#1a1a1a',
               lineHeight: '1.2',
               letterSpacing: '-0.02em'
             }}
@@ -456,10 +517,10 @@ export function ReaderPage() {
           {/* Metadata */}
           <div
             className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${settings.meta}`}
-            style={{ color: 'var(--premium-text-tertiary)' }}
+            style={{ color: '#6b6b6b' }}
           >
             {article.author && (
-              <span className="font-medium" style={{ color: 'var(--premium-text-secondary)' }}>
+              <span className="font-medium" style={{ color: '#4a4a4a' }}>
                 {article.author}
               </span>
             )}
@@ -497,37 +558,38 @@ export function ReaderPage() {
             __html: article.content ? getContentWithCachedImages(article.content) : ''
           }}
           style={{
-            color: 'var(--premium-text-primary)',
+            color: '#2a2a2a',
             fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif'
           }}
         />
 
         {/* Highlights Section */}
         {highlights.length > 0 && (
-          <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-            <h2 className="text-2xl font-bold mb-8" style={{ color: 'var(--premium-text-platinum)' }}>
+          <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(0, 0, 0, 0.1)' }}>
+            <h2 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>
               Your Highlights
             </h2>
             <div className="space-y-4">
               {highlights.map((highlight) => (
                 <div
                   key={highlight.id}
-                  className="p-5 rounded-xl border-l-4 premium-glass-subtle"
+                  className="p-5 rounded-xl border-l-4"
                   style={{
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
                     borderLeftColor: highlight.color === 'yellow'
-                      ? 'var(--premium-gold)'
+                      ? '#f59e0b'
                       : highlight.color === 'blue'
-                      ? 'var(--premium-blue)'
+                      ? '#3b82f6'
                       : highlight.color === 'green'
-                      ? 'var(--premium-emerald)'
-                      : 'var(--premium-red)'
+                      ? '#10b981'
+                      : '#ef4444'
                   }}
                 >
-                  <p className="text-base italic mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                  <p className="text-base italic mb-2" style={{ color: '#2a2a2a' }}>
                     "{highlight.highlight_text}"
                   </p>
                   {highlight.notes && (
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <p className="text-sm" style={{ color: '#6b6b6b' }}>
                       {highlight.notes}
                     </p>
                   )}
