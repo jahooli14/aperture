@@ -8,16 +8,13 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import OpenAI from 'openai'
+import { generateEmbedding, batchGenerateEmbeddings, cosineSimilarity } from './lib/gemini-embeddings'
+import { generateBatchReasoning } from './lib/gemini-chat'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!
-})
 
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
@@ -75,17 +72,13 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
-  // Step 1: Generate embedding for the input content
-  const embeddingResponse = await openai.embeddings.create({
-    model: 'text-embedding-3-small',
-    input: content
-  })
-  const embedding = embeddingResponse.data[0].embedding
+  // Step 1: Generate embedding for the input content using Gemini (FREE!)
+  const embedding = await generateEmbedding(content)
 
-  // Step 2: Find similar items across all content types
-  const candidates: SuggestionCandidate[] = []
+  // Step 2: Collect all items to compare
+  const allItems: Array<{ type: string; id: string; title: string; content: string }> = []
 
-  // Search projects
+  // Fetch projects
   if (itemType !== 'project') {
     const { data: projects } = await supabase
       .from('projects')
@@ -94,31 +87,20 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
       .limit(50)
 
     if (projects) {
-      for (const project of projects) {
-        if (existingConnectionIds.includes(project.id)) continue
-
-        const projectContent = `${project.title} ${project.description || ''}`
-        const projectEmbedding = await openai.embeddings.create({
-          model: 'text-embedding-3-small',
-          input: projectContent
-        })
-
-        const similarity = cosineSimilarity(embedding, projectEmbedding.data[0].embedding)
-
-        if (similarity > 0.7) {
-          candidates.push({
+      projects.forEach(project => {
+        if (!existingConnectionIds.includes(project.id)) {
+          allItems.push({
             type: 'project',
             id: project.id,
             title: project.title,
-            content: projectContent,
-            similarity
+            content: `${project.title} ${project.description || ''}`
           })
         }
-      }
+      })
     }
   }
 
-  // Search thoughts/memories
+  // Fetch thoughts/memories
   if (itemType !== 'thought') {
     const { data: thoughts } = await supabase
       .from('memories')
@@ -127,31 +109,20 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
       .limit(50)
 
     if (thoughts) {
-      for (const thought of thoughts) {
-        if (existingConnectionIds.includes(thought.id)) continue
-
-        const thoughtContent = `${thought.title || ''} ${thought.body}`
-        const thoughtEmbedding = await openai.embeddings.create({
-          model: 'text-embedding-3-small',
-          input: thoughtContent
-        })
-
-        const similarity = cosineSimilarity(embedding, thoughtEmbedding.data[0].embedding)
-
-        if (similarity > 0.7) {
-          candidates.push({
+      thoughts.forEach(thought => {
+        if (!existingConnectionIds.includes(thought.id)) {
+          allItems.push({
             type: 'thought',
             id: thought.id,
             title: thought.title || thought.body.slice(0, 60) + '...',
-            content: thoughtContent,
-            similarity
+            content: `${thought.title || ''} ${thought.body}`
           })
         }
-      }
+      })
     }
   }
 
-  // Search articles
+  // Fetch articles
   if (itemType !== 'article') {
     const { data: articles } = await supabase
       .from('articles')
@@ -160,56 +131,64 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
       .limit(50)
 
     if (articles) {
-      for (const article of articles) {
-        if (existingConnectionIds.includes(article.id)) continue
-
-        const articleContent = `${article.title} ${article.summary || ''}`
-        const articleEmbedding = await openai.embeddings.create({
-          model: 'text-embedding-3-small',
-          input: articleContent
-        })
-
-        const similarity = cosineSimilarity(embedding, articleEmbedding.data[0].embedding)
-
-        if (similarity > 0.7) {
-          candidates.push({
+      articles.forEach(article => {
+        if (!existingConnectionIds.includes(article.id)) {
+          allItems.push({
             type: 'article',
             id: article.id,
             title: article.title,
-            content: articleContent,
-            similarity
+            content: `${article.title} ${article.summary || ''}`
           })
         }
-      }
+      })
     }
   }
 
-  // Step 3: Sort by similarity and take top 5
+  // Step 3: Generate embeddings for all items in batch (MUCH faster!)
+  const itemContents = allItems.map(item => item.content)
+  const itemEmbeddings = await batchGenerateEmbeddings(itemContents)
+
+  // Step 4: Calculate similarities and filter candidates
+  const candidates: SuggestionCandidate[] = []
+  allItems.forEach((item, index) => {
+    const similarity = cosineSimilarity(embedding, itemEmbeddings[index])
+
+    if (similarity > 0.7) {
+      candidates.push({
+        type: item.type as 'project' | 'thought' | 'article',
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        similarity
+      })
+    }
+  })
+
+  // Step 5: Sort by similarity and take top 5
   const topCandidates = candidates
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 5)
 
-  // Step 4: Use AI to generate reasoning for each suggestion
+  if (topCandidates.length === 0) {
+    return res.status(200).json({ suggestions: [] })
+  }
+
+  // Step 6: Generate reasoning for all candidates in ONE batch call
+  const reasonings = await generateBatchReasoning(
+    content,
+    itemType,
+    topCandidates.map(c => ({
+      title: c.title,
+      type: c.type,
+      similarity: c.similarity
+    }))
+  )
+
+  // Step 7: Store suggestions in database
   const suggestions = await Promise.all(
-    topCandidates.map(async (candidate) => {
-      const reasoningPrompt = `You are analyzing connections between content items. Explain in one concise sentence why these two items are related:
+    topCandidates.map(async (candidate, idx) => {
+      const reasoning = reasonings[idx]?.reasoning || 'Related content'
 
-Item 1 (${itemType}): ${content.slice(0, 200)}
-
-Item 2 (${candidate.type}): ${candidate.content.slice(0, 200)}
-
-Focus on the key theme or concept that connects them. Be specific and insightful.`
-
-      const reasoningResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: reasoningPrompt }],
-        max_tokens: 60,
-        temperature: 0.7
-      })
-
-      const reasoning = reasoningResponse.choices[0].message.content?.trim() || 'Related content'
-
-      // Store suggestion in database
       const { data: suggestion } = await supabase
         .from('connection_suggestions')
         .insert({
@@ -220,7 +199,8 @@ Focus on the key theme or concept that connects them. Be specific and insightful
           reasoning,
           confidence: candidate.similarity,
           user_id: userId,
-          status: 'pending'
+          status: 'pending',
+          model_version: 'gemini-1.5-flash-002'
         })
         .select()
         .single()
@@ -237,14 +217,6 @@ Focus on the key theme or concept that connects them. Be specific and insightful
   )
 
   return res.status(200).json({ suggestions })
-}
-
-// Calculate cosine similarity between two embeddings
-function cosineSimilarity(a: number[], b: number[]): number {
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0)
-  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0))
-  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0))
-  return dotProduct / (magnitudeA * magnitudeB)
 }
 
 // ============================================================================
