@@ -388,15 +388,18 @@ function CompactProjectCard({
           </div>
         </div>
 
-        {/* Next Step - Compact */}
-        {project.metadata?.next_step && (
-          <div className="premium-card rounded-lg px-3 py-2 mb-3" style={{ borderColor: 'var(--premium-blue)' }}>
-            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>
-            <p className="text-sm line-clamp-2 leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.metadata.next_step}
-            </p>
-          </div>
-        )}
+        {/* Next Step - Compact (first incomplete task) */}
+        {(() => {
+          const nextTask = project.metadata?.tasks?.find(t => !t.done)
+          return nextTask && (
+            <div className="premium-card rounded-lg px-3 py-2 mb-3" style={{ borderColor: 'var(--premium-blue)' }}>
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>
+              <p className="text-sm line-clamp-2 leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
+                {nextTask.text}
+              </p>
+            </div>
+          )
+        })()}
 
         {/* Bottom Row - Status, Progress, Last Active */}
         <div className="flex items-center gap-3 text-xs">
