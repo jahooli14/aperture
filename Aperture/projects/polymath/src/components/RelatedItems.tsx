@@ -35,7 +35,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
   const loadRelatedItems = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/related?id=${sourceId}&type=${sourceType}${sourceText ? `&text=${encodeURIComponent(sourceText)}` : ''}`)
+      const response = await fetch(`/api/connections?action=find-related&id=${sourceId}&type=${sourceType}`)
       const data = await response.json()
 
       if (data.related) {

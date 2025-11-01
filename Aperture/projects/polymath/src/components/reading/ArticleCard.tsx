@@ -58,7 +58,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
 
   const fetchConnectionCount = async () => {
     try {
-      const response = await fetch(`/api/related?source_type=article&source_id=${article.id}&connections=true`)
+      const response = await fetch(`/api/connections?action=list-sparks&id=${article.id}&type=article`)
       if (response.ok) {
         const data = await response.json()
         setConnectionCount(data.connections?.length || 0)

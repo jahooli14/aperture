@@ -65,8 +65,8 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted }: Conne
     setLoading(true)
     setError(null)
     try {
-      // Use extended /api/related endpoint with connections flag
-      const response = await fetch(`/api/related?type=${itemType}&id=${itemId}&connections=true`)
+      // Use /api/connections with action=list-sparks
+      const response = await fetch(`/api/connections?action=list-sparks&id=${itemId}&type=${itemType}`)
       if (!response.ok) {
         throw new Error('Failed to fetch connections')
       }
@@ -84,7 +84,7 @@ export function ConnectionsList({ itemType, itemId, onConnectionDeleted }: Conne
     if (!confirm('Remove this connection?')) return
 
     try {
-      const response = await fetch(`/api/related?connection_id=${connectionId}`, {
+      const response = await fetch(`/api/connections?action=delete-spark&connection_id=${connectionId}`, {
         method: 'DELETE'
       })
       if (!response.ok) {

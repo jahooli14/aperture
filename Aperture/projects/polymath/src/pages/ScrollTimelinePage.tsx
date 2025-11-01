@@ -261,7 +261,7 @@ export function ScrollTimelinePage() {
   // NEW: Fetch thread for a given item
   const loadThread = async (itemType: string, itemId: string) => {
     try {
-      const response = await fetch(`/api/related?type=${itemType}&id=${itemId}&thread=true`)
+      const response = await fetch(`/api/connections?action=thread&id=${itemId}&type=${itemType}`)
       if (!response.ok) throw new Error('Failed to fetch thread')
 
       const data = await response.json()

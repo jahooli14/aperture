@@ -133,8 +133,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         title: p.title,
         status: p.status,
         id: p.id.substring(0, 8),
-        tasks: (p.metadata?.tasks || []).map((t: any) => ({ text: t.text, done: t.done, order: t.order }))
+        taskCount: p.metadata?.tasks?.length || 0,
+        tasks: (p.metadata?.tasks || []).slice(0, 5).map((t: any) => ({ text: t.text, done: t.done, order: t.order }))
       })))
+
+      // Find Clandestined project and log all its tasks
+      const clandestinedProject = data?.find(p => p.title.toLowerCase().includes('clandestined'))
+      if (clandestinedProject) {
+        console.log('[FETCH] Clandestined project full tasks:', clandestinedProject.metadata?.tasks?.map((t: any) => ({ text: t.text, done: t.done, order: t.order })))
+      }
 
       if (error) throw error
 
@@ -227,6 +234,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }
 
       console.log('[ProjectStore.updateProject] Update successful, response:', updatedData)
+      console.log('[ProjectStore.updateProject] Response tasks count:', updatedData?.[0]?.metadata?.tasks?.length || 0)
+      console.log('[ProjectStore.updateProject] Response tasks:', updatedData?.[0]?.metadata?.tasks?.map((t: any) => ({ text: t.text, done: t.done, order: t.order })))
 
       // Refresh from database
       console.log('[ProjectStore.updateProject] Refreshing projects from database...')

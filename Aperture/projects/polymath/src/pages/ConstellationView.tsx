@@ -286,17 +286,19 @@ export default function ConstellationView() {
     setLoading(true)
     try {
       // Fetch all content types in parallel
-      const [projectsRes, memoriesRes, articlesRes, connectionsRes] = await Promise.all([
+      const [projectsRes, memoriesRes, articlesRes] = await Promise.all([
         fetch('/api/projects'),
         fetch('/api/memories'),
         fetch('/api/reading'),
-        fetch('/api/related?connections=true&ai_suggested=false&limit=1000')
       ])
 
       const projects = await projectsRes.json()
       const memories = await memoriesRes.json()
       const articles = await articlesRes.json()
-      const connectionsData = await connectionsRes.json()
+
+      // TODO: Implement /api/connections endpoint for fetching all connections
+      // For now, use empty connections to avoid breaking the visualization
+      const connectionsData = { connections: [] }
 
       // Build nodes
       const nodes: GraphNode[] = []
