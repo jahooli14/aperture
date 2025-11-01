@@ -62,9 +62,15 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       if (response.ok) {
         const data = await response.json()
         setConnectionCount(data.connections?.length || 0)
+      } else {
+        // Silently fail - connection count is optional
+        console.debug('[ArticleCard] Connection count unavailable (HTTP', response.status + ')')
+        setConnectionCount(0)
       }
     } catch (error) {
-      console.warn('[ArticleCard] Failed to fetch connections:', error)
+      // Silently fail - connection count is optional feature
+      console.debug('[ArticleCard] Connection count fetch failed:', error)
+      setConnectionCount(0)
     }
   }
 
