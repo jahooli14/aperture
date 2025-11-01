@@ -32,6 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { action, id, type, connection_id, limit } = req.query
 
   try {
+    console.log('[api/connections] Request:', { method: req.method, action, id, type })
+
     // ============================================================================
     // AI SUGGESTIONS
     // ============================================================================
@@ -62,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // List connections for an item
     if (req.method === 'GET' && action === 'list-sparks' && id && type) {
+      console.log('[api/connections] Calling handleListSparks with:', { id, type })
       return await handleListSparks(req, res, id as string, type as string)
     }
 
@@ -87,8 +90,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(400).json({ error: 'Invalid action or method' })
   } catch (error: any) {
-    console.error('[api/connections] Error:', error)
-    return res.status(500).json({ error: error.message || 'Internal server error' })
+    console.error('[api/connections] Unhandled error:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+      stack: error?.stack,
+      toString: error?.toString()
+    })
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error?.message || error?.toString() || 'Unknown error'
+    })
   }
 }
 
@@ -720,7 +732,15 @@ async function handleListSparks(
   itemType: string
 ): Promise<VercelResponse> {
   try {
-    console.log('[handleListSparks] Fetching connections for:', { itemType, itemId })
+    console.log('[handleListSparks] Starting - fetching connections for:', { itemType, itemId })
+
+    // Validate inputs
+    if (!itemId || !itemType) {
+      console.error('[handleListSparks] Missing itemId or itemType')
+      return res.status(200).json({ connections: [] })
+    }
+
+    console.log('[handleListSparks] Querying outbound connections...')
 
     // Query outbound connections (this item is the source)
     const { data: outbound, error: outboundError } = await supabase
@@ -730,10 +750,15 @@ async function handleListSparks(
       .eq('source_id', itemId)
 
     if (outboundError) {
-      console.error('[handleListSparks] Outbound query error:', outboundError)
-      return res.status(500).json({
-        error: 'Failed to fetch connections',
-        details: outboundError.message
+      console.error('[handleListSparks] Outbound query error:', {
+        code: outboundError.code,
+        message: outboundError.message,
+        details: outboundError.details
+      })
+      // Return empty array instead of error
+      return res.status(200).json({
+        connections: [],
+        note: 'Could not fetch connections (outbound)'
       })
     }
 
@@ -745,12 +770,19 @@ async function handleListSparks(
       .eq('target_id', itemId)
 
     if (inboundError) {
-      console.error('[handleListSparks] Inbound query error:', inboundError)
-      return res.status(500).json({
-        error: 'Failed to fetch connections',
-        details: inboundError.message
+      console.error('[handleListSparks] Inbound query error:', {
+        code: inboundError.code,
+        message: inboundError.message,
+        details: inboundError.details
+      })
+      // Return empty array instead of error
+      return res.status(200).json({
+        connections: [],
+        note: 'Could not fetch connections (inbound)'
       })
     }
+
+    console.log('[handleListSparks] Combining results - outbound:', outbound?.length || 0, 'inbound:', inbound?.length || 0)
 
     // Combine results and normalize format
     const allConnections = [
@@ -796,13 +828,20 @@ async function handleListSparks(
       })
     )
 
-    console.log('[handleListSparks] Successfully returned', connections.length, 'connections')
+    console.log('[handleListSparks] Successfully returning', connections.length, 'connections')
     return res.status(200).json({ connections })
   } catch (error: any) {
-    console.error('[handleListSparks] Unexpected error:', error)
-    return res.status(500).json({
-      error: 'Internal server error',
-      details: error?.message || 'Unknown error'
+    console.error('[handleListSparks] Unexpected error:', {
+      message: error?.message,
+      code: error?.code,
+      stack: error?.stack,
+      toString: error?.toString()
+    })
+    // Return empty array to prevent breaking the page
+    return res.status(200).json({
+      connections: [],
+      error: 'Could not fetch connections',
+      details: error?.message || error?.toString()
     })
   }
 }
