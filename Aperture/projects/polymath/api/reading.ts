@@ -1,16 +1,13 @@
 /**
  * Consolidated Reading API
  * Handles articles, highlights, RSS feeds, and all reading operations
- * Uses Mozilla Readability (Firefox Reader View) for clean article extraction
- * Falls back to Jina AI if Readability fails
+ * Uses Jina AI Reader API for clean article extraction
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
-import { Readability } from '@mozilla/readability'
-import { JSDOM } from 'jsdom'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -21,83 +18,16 @@ const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb' // Single-user app
 const rssParser = new Parser()
 
 /**
- * Extract article content using Mozilla Readability
- * Falls back to Jina AI if Readability fails
+ * Extract article content using Jina AI Reader API
+ * Jina AI provides clean, reader-friendly content extraction
  */
 async function fetchArticle(url: string) {
   try {
-    console.log('[Article Extraction] Attempting Readability for:', url)
-    return await fetchArticleWithReadability(url)
-  } catch (readabilityError) {
-    console.warn('[Article Extraction] Readability failed, falling back to Jina AI:', readabilityError)
-    try {
-      return await fetchArticleWithJina(url)
-    } catch (jinaError) {
-      console.error('[Article Extraction] Both methods failed:', { readabilityError, jinaError })
-      throw new Error('Failed to extract article content')
-    }
-  }
-}
-
-/**
- * Extract article content using Mozilla Readability
- * This is the industry-standard method used by Firefox Reader View
- */
-async function fetchArticleWithReadability(url: string) {
-  try {
-    console.log('[Readability] Fetching:', url)
-
-    // Fetch the HTML content
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ArticleReader/1.0)'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`)
-    }
-
-    const html = await response.text()
-
-    // Parse with JSDOM
-    const dom = new JSDOM(html, { url })
-    const document = dom.window.document
-
-    // Use Readability to extract article content
-    const reader = new Readability(document, {
-      charThreshold: 250,  // More lenient than default 500
-      keepClasses: false   // Remove all classes for cleaner output
-    })
-
-    const article = reader.parse()
-
-    if (!article) {
-      throw new Error('Readability could not parse article')
-    }
-
-    console.log('[Readability] Successfully extracted:', {
-      title: article.title,
-      contentLength: article.content?.length || 0,
-      textLength: article.textContent?.length || 0
-    })
-
-    // Apply additional content cleaning
-    const cleanedContent = enhancedCleanContent(article.content || '')
-
-    return {
-      title: article.title || 'Untitled',
-      content: cleanedContent,
-      excerpt: article.excerpt || article.textContent?.substring(0, 200) || '',
-      author: article.byline || null,
-      publishedDate: null, // Readability doesn't extract dates
-      thumbnailUrl: null,
-      faviconUrl: null,
-      url: url
-    }
+    console.log('[Article Extraction] Fetching with Jina AI:', url)
+    return await fetchArticleWithJina(url)
   } catch (error) {
-    console.error('[Readability] Error:', error)
-    throw error
+    console.error('[Article Extraction] Failed:', error)
+    throw new Error('Failed to extract article content')
   }
 }
 
@@ -166,143 +96,6 @@ async function fetchArticleWithJina(url: string) {
   } catch (error) {
     console.error('[Jina AI] Fetch error:', error)
     throw new Error('Failed to fetch article content')
-  }
-}
-
-/**
- * Enhanced content cleaning for HTML output from Readability
- * Removes any remaining navigation, ads, social widgets, and boilerplate
- */
-function enhancedCleanContent(htmlContent: string): string {
-  if (!htmlContent) return ''
-
-  try {
-    // Parse the HTML
-    const dom = new JSDOM(htmlContent)
-    const document = dom.window.document
-
-    // Remove elements by selector (common patterns that Readability might miss)
-    const selectorsToRemove = [
-      // Navigation and menus
-      'nav', '[role="navigation"]', '.navigation', '.nav', '.menu',
-      '.sidebar', '.side-bar', '#sidebar', '#side-bar',
-      '.breadcrumb', '.breadcrumbs',
-
-      // Headers and footers
-      'header:not(article header)', 'footer',
-      '.header', '.footer', '.site-header', '.site-footer',
-
-      // Ads and sponsored content
-      '.ad', '.ads', '.advertisement', '.sponsored', '.sponsor',
-      '[class*="ad-"]', '[id*="ad-"]', '[class*="sponsor"]',
-
-      // Social widgets
-      '.social', '.social-share', '.share-buttons', '.sharing',
-      '.social-media', '.social-links',
-
-      // Newsletter and subscription
-      '.newsletter', '.subscription', '.subscribe', '.signup',
-      '[class*="newsletter"]', '[class*="subscribe"]',
-
-      // Comments
-      '.comments', '.comment-section', '#comments', '.comment-list',
-
-      // Related content
-      '.related', '.recommended', '.more-from', '.you-may-like',
-      '[class*="related"]', '[class*="recommend"]',
-
-      // Popups and modals
-      '.modal', '.popup', '.overlay', '.lightbox',
-
-      // Cookie notices
-      '.cookie', '.cookie-notice', '.cookie-banner',
-      '[class*="cookie"]', '[class*="gdpr"]',
-
-      // Other common cruft
-      '.widget', '.promo', '.promotional', '.banner',
-      '.tags-section', '.tag-list', '.author-bio', '.author-profile',
-      '.print-only', '.hidden', '[hidden]',
-    ]
-
-    selectorsToRemove.forEach(selector => {
-      try {
-        const elements = document.querySelectorAll(selector)
-        elements.forEach(el => el.remove())
-      } catch (e) {
-        // Ignore selector errors
-      }
-    })
-
-    // Remove elements by text content (navigation links)
-    const textPatternsToRemove = [
-      /^(skip to|jump to|menu|navigation|breadcrumb)/i,
-      /^(home|about|contact|privacy|terms|legal|cookie policy)/i,
-      /^(share|tweet|facebook|twitter|instagram|linkedin)/i,
-      /^(subscribe|newsletter|sign up|get updates)/i,
-      /^(advertisement|sponsored|ad)/i,
-      /^(related articles|you may also|recommended)/i,
-      /^(leave a comment|post comment|show comments)/i,
-      /^copyright\s+©/i,
-      /^(powered by|built with|designed by)/i,
-    ]
-
-    // Check all links for navigation patterns
-    const links = document.querySelectorAll('a')
-    links.forEach(link => {
-      const text = link.textContent?.trim() || ''
-      const isNav = textPatternsToRemove.some(pattern => pattern.test(text))
-      if (isNav && text.length < 50) {
-        link.remove()
-      }
-    })
-
-    // Remove elements with high link density (likely navigation)
-    const allElements = document.querySelectorAll('div, section, aside')
-    allElements.forEach(el => {
-      const text = el.textContent?.trim() || ''
-      const links = el.querySelectorAll('a')
-      const linkText = Array.from(links).map(a => a.textContent?.trim() || '').join(' ')
-
-      // If more than 80% of text is links, it's probably navigation
-      if (text.length > 0 && linkText.length / text.length > 0.8) {
-        el.remove()
-      }
-    })
-
-    // Remove empty paragraphs and excessive whitespace
-    const paragraphs = document.querySelectorAll('p, div')
-    paragraphs.forEach(p => {
-      const text = p.textContent?.trim() || ''
-      if (text.length === 0 || text === '\n') {
-        p.remove()
-      }
-    })
-
-    // Get cleaned HTML
-    let cleaned = document.body.innerHTML
-
-    // Final text-based cleaning
-    const phrasePatterns = [
-      /\b(click here|tap here|learn more)\b/gi,
-      /\b(sign up|subscribe now|get notified)\b/gi,
-      /\b(terms of service|privacy policy)\b/gi,
-      /\[\s*\]/g, // Empty brackets
-    ]
-
-    phrasePatterns.forEach(pattern => {
-      cleaned = cleaned.replace(pattern, '')
-    })
-
-    // Remove excessive whitespace
-    cleaned = cleaned
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/\s{2,}/g, ' ')
-      .trim()
-
-    return cleaned
-  } catch (error) {
-    console.error('[Content Cleaning] Error:', error)
-    return htmlContent // Return original if cleaning fails
   }
 }
 
