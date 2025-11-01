@@ -191,6 +191,10 @@ export function ProjectDetailPage() {
 
   const progress = project.metadata?.progress || 0
 
+  // Get first incomplete task as next step
+  const tasks = project.metadata?.tasks || []
+  const nextTask = tasks.find(t => !t.done)
+
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Sticky Header */}
@@ -245,13 +249,13 @@ export function ProjectDetailPage() {
                         {project.description}
                       </p>
                     )}
-                    {project.metadata?.next_step && (
+                    {nextTask && (
                       <div className="premium-glass-subtle p-4 rounded-lg">
                         <div className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--premium-amber)' }}>
                           Next Step:
                         </div>
                         <div style={{ color: 'var(--premium-text-primary)' }}>
-                          {project.metadata.next_step}
+                          {nextTask.text}
                         </div>
                       </div>
                     )}
@@ -314,8 +318,8 @@ export function ProjectDetailPage() {
           </div>
         )}
 
-        {/* Next Step (from metadata.next_step) - Most Prominent */}
-        {project.metadata?.next_step && (
+        {/* Next Step (from first incomplete task) - Most Prominent */}
+        {nextTask && (
           <div
             className="premium-card p-6 border-l-4"
             style={{
@@ -332,7 +336,7 @@ export function ProjectDetailPage() {
                   Next Step
                 </h3>
                 <p className="text-lg font-semibold mb-3 premium-text-platinum leading-relaxed">
-                  {project.metadata.next_step}
+                  {nextTask.text}
                 </p>
                 <button
                   className="px-6 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg touch-manipulation"
