@@ -31,7 +31,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     title: '',
     description: '',
     status: 'active' as 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
-    priority: false,
     next_step: '',
     progress: 0,
   })
@@ -43,7 +42,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: project.title,
         description: project.description || '',
         status: project.status,
-        priority: project.priority || false,
         next_step: project.metadata?.next_step || '',
         progress: project.metadata?.progress || 0,
       })
@@ -61,7 +59,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: formData.title,
         description: formData.description,
         status: formData.status as any, // Status type updated to include 'abandoned'
-        priority: formData.priority,
         metadata: {
           ...project.metadata,
           next_step: formData.next_step || undefined,
@@ -149,40 +146,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 <option value="completed">✅ Completed</option>
                 <option value="archived">📦 Archived</option>
               </Select>
-            </div>
-
-            <div
-              className="flex items-center gap-3 p-4 rounded-xl border-2"
-              style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.3)'
-              }}
-            >
-              <input
-                id="edit-priority"
-                type="checkbox"
-                checked={formData.priority}
-                onChange={(e) =>
-                  setFormData({ ...formData, priority: e.target.checked })
-                }
-                className="w-5 h-5 rounded border-2 focus:ring-2 cursor-pointer"
-                style={{
-                  borderColor: 'var(--premium-blue)',
-                  color: 'var(--premium-blue)'
-                }}
-              />
-              <div className="flex-1">
-                <Label
-                  htmlFor="edit-priority"
-                  className="text-sm sm:text-base font-bold cursor-pointer"
-                  style={{ color: 'var(--premium-text-primary)' }}
-                >
-                  ⭐ Priority Project
-                </Label>
-                <p className="text-xs mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Show on home page with next step highlighted
-                </p>
-              </div>
             </div>
 
             <div className="grid gap-2">

@@ -309,15 +309,6 @@ export function ProjectDetailPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Project Description */}
-        {project.description && (
-          <div className="premium-card p-6">
-            <p className="text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-              {project.description}
-            </p>
-          </div>
-        )}
-
         {/* Properties */}
         <ProjectProperties
           project={project}

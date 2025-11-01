@@ -123,7 +123,7 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 # AI APIs (if using)
-GEMINI_API_KEY=your-gemini-api-key
+GEMINI_API_KEY=AIzaSyCoQUpjvtgtO_B--iqcAVj8O5cgrgJ2TXo
 # OPENAI_API_KEY=your-openai-api-key
 
 # Logging

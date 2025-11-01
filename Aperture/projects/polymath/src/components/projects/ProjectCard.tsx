@@ -121,7 +121,10 @@ export function ProjectCard({
   }
 
   const handleCopyText = () => {
-    const nextTask = project.metadata?.tasks?.find(t => !t.done)
+    const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+    const nextTask = tasks
+      .sort((a, b) => a.order - b.order)
+      .find(t => !t.done)
     const textToCopy = `${project.title}\n\n${project.description || ''}\n\nNext Step: ${nextTask?.text || 'Not set'}`
     navigator.clipboard.writeText(textToCopy).then(() => {
       haptic.success()
@@ -413,7 +416,10 @@ export function ProjectCard({
       <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Next Step - Prominent Display (first incomplete task) */}
         {(() => {
-          const nextTask = project.metadata?.tasks?.find(t => !t.done)
+          const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+          const nextTask = tasks
+            .sort((a, b) => a.order - b.order)
+            .find(t => !t.done)
           return nextTask && (
             <div
               className="border-2 rounded-xl p-4"

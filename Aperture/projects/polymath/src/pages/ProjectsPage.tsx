@@ -238,7 +238,7 @@ export function ProjectsPage() {
               totalCount={projects.length}
               itemContent={(index) => (
                 <ProjectCard
-                  key={projects[index].id}
+                  key={`${projects[index].id}-${projects[index].updated_at || projects[index].created_at}`}
                   project={projects[index]}
                   onEdit={() => handleEdit(projects[index])}
                   onDelete={() => handleDelete(projects[index])}
@@ -268,7 +268,7 @@ export function ProjectsPage() {
               totalCount={projects.length}
               itemContent={(index) => (
                 <CompactProjectCard
-                  key={projects[index].id}
+                  key={`${projects[index].id}-${projects[index].updated_at || projects[index].created_at}`}
                   project={projects[index]}
                   onEdit={() => handleEdit(projects[index])}
                   onDelete={() => handleDelete(projects[index])}
@@ -390,7 +390,10 @@ function CompactProjectCard({
 
         {/* Next Step - Compact (first incomplete task) */}
         {(() => {
-          const nextTask = project.metadata?.tasks?.find(t => !t.done)
+          const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+          const nextTask = tasks
+            .sort((a, b) => a.order - b.order)
+            .find(t => !t.done)
           return nextTask && (
             <div className="premium-card rounded-lg px-3 py-2 mb-3" style={{ borderColor: 'var(--premium-blue)' }}>
               <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>

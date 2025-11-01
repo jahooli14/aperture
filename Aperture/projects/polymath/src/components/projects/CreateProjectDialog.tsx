@@ -32,7 +32,6 @@ export function CreateProjectDialog() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    priority: false,
     next_step: '',
   })
 
@@ -40,7 +39,6 @@ export function CreateProjectDialog() {
     setFormData({
       title: '',
       description: '',
-      priority: false,
       next_step: '',
     })
   }
@@ -54,7 +52,6 @@ export function CreateProjectDialog() {
         title: formData.title,
         description: formData.description || '',
         status: 'active', // Always start as active
-        priority: formData.priority,
         metadata: {
           next_step: formData.next_step || undefined,
           progress: 0,
@@ -148,39 +145,6 @@ export function CreateProjectDialog() {
                 }}
                 autoComplete="off"
               />
-            </div>
-
-            {/* Priority Checkbox */}
-            <div
-              className="flex items-center gap-3 p-4 rounded-xl border-2"
-              style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.3)'
-              }}
-            >
-              <input
-                id="priority"
-                type="checkbox"
-                checked={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.checked })}
-                className="w-5 h-5 rounded border-2 focus:ring-2 cursor-pointer"
-                style={{
-                  borderColor: 'var(--premium-blue)',
-                  color: 'var(--premium-blue)'
-                }}
-              />
-              <div className="flex-1">
-                <Label
-                  htmlFor="priority"
-                  className="text-sm sm:text-base font-bold cursor-pointer"
-                  style={{ color: 'var(--premium-text-primary)' }}
-                >
-                  ⭐ Priority Project
-                </Label>
-                <p className="text-xs mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Show on home page with next step highlighted
-                </p>
-              </div>
             </div>
 
             {/* Next Step */}

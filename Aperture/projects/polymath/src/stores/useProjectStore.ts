@@ -131,7 +131,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       console.log('[FETCH] Raw data from Supabase:', data?.map(p => ({
         title: p.title,
-        priority: p.priority,
+        status: p.status,
         id: p.id.substring(0, 8)
       })))
 
@@ -151,14 +151,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
       console.log('[FETCH] After sorting:', projects.map(p => ({
         title: p.title,
-        priority: p.priority
+        status: p.status
       })))
 
       set({ projects, loading: false })
 
       console.log('[FETCH] Final projects in store:', get().projects.map(p => ({
         title: p.title,
-        priority: p.priority
+        status: p.status
       })))
     } catch (error) {
       console.error('[FETCH] Error:', error)

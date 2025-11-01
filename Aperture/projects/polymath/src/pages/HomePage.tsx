@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -170,6 +170,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
 
 export function HomePage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   // Wrap store hooks in try-catch for safety
   let suggestions: any[] = []
@@ -212,42 +213,26 @@ export function HomePage() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // Always refetch data when homepage mounts to ensure fresh data
+  // Refetch data whenever user navigates to this page
   useEffect(() => {
     const loadData = async () => {
-      console.log('[HomePage] Starting data load...')
       try {
-        console.log('[HomePage] Fetching projects (fresh)...')
-        await fetchProjects() // Force await to ensure fresh data
-
-        console.log('[HomePage] Fetching suggestions...')
+        await fetchProjects()
         fetchSuggestions()
-
-        console.log('[HomePage] Fetching memories...')
         fetchMemories()
-
-        console.log('[HomePage] Fetching daily queue...')
         await fetchDailyQueue()
-
-        console.log('[HomePage] Fetching card of the day...')
         await fetchCardOfTheDay()
-
-        console.log('[HomePage] Fetching prompts...')
         fetchPrompts()
-
-        console.log('[HomePage] All data loaded successfully')
+        setRefreshKey(k => k + 1)
       } catch (err) {
-        console.error('[HomePage] Error loading data:', err)
         setError(`Failed to load data: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
-    loadData().catch(err => {
-      console.error('[HomePage] Uncaught error in loadData:', err)
-      setError(`Uncaught error: ${err instanceof Error ? err.message : String(err)}`)
-    })
+    loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Empty deps - always refetch on mount
+  }, [location.key])
 
   // Show onboarding banner if not completed
   useEffect(() => {
@@ -285,36 +270,20 @@ export function HomePage() {
     }
   }
 
-  // Safe filtering with error handling
-  let pendingSuggestions: any[] = []
-  let activeProjects: any[] = []
-  let recentProject1: any = null
-  let recentProject2: any = null
+  // Safe filtering with error handling - compute during render so it updates when store changes
+  const pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
+  const activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
 
-  try {
-    pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
-    // Get ALL active projects, not filtered by store.filter
-    activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
+  // Find the 2 most recently updated projects
+  const sortedProjects = [...activeProjects]
+    .sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.last_active).getTime()
+      const bTime = new Date(b.updated_at || b.last_active).getTime()
+      return bTime - aTime
+    })
 
-    // Find the 2 most recently updated projects
-    const sortedProjects = [...activeProjects]
-      .sort((a, b) => {
-        // Use updated_at if available, fallback to last_active
-        const aTime = new Date(a.updated_at || a.last_active).getTime()
-        const bTime = new Date(b.updated_at || b.last_active).getTime()
-        return bTime - aTime
-      })
-
-    recentProject1 = sortedProjects[0] || null
-    recentProject2 = sortedProjects[1] || null
-
-    // Debug logging
-    console.log('[HomePage] Active projects:', activeProjects.length)
-    console.log('[HomePage] Most recent #1:', recentProject1?.title || 'none')
-    console.log('[HomePage] Most recent #2:', recentProject2?.title || 'none')
-  } catch (err) {
-    console.error('[HomePage] Error filtering data:', err)
-  }
+  const recentProject1 = sortedProjects[0] || null
+  const recentProject2 = sortedProjects[1] || null
 
   const getCategoryColor = (category: string) => {
     switch (category) {
