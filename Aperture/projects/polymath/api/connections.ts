@@ -1,9 +1,19 @@
 /**
  * Unified Connections API
  * Handles all connection-related endpoints:
+ *
+ * AI SUGGESTIONS:
  * - Auto-suggest connections (POST /api/connections?action=auto-suggest)
  * - Update suggestion status (PATCH /api/connections?action=update-suggestion&id=...)
  * - Legacy bridge creation (POST /api/connections?action=suggest)
+ *
+ * MANUAL CONNECTIONS (SPARKS):
+ * - Find related items (GET /api/connections?action=find-related&id=X&type=Y)
+ * - List connections (GET /api/connections?action=list-sparks&id=X&type=Y)
+ * - AI-suggested sparks (GET /api/connections?action=ai-sparks&limit=3)
+ * - Thread (recursive) (GET /api/connections?action=thread&id=X&type=Y)
+ * - Create connection (POST /api/connections?action=create-spark)
+ * - Delete connection (DELETE /api/connections?action=delete-spark&connection_id=X)
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -19,9 +29,13 @@ const supabase = createClient(
 const USER_ID = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { action, id } = req.query
+  const { action, id, type, connection_id, limit } = req.query
 
   try {
+    // ============================================================================
+    // AI SUGGESTIONS
+    // ============================================================================
+
     // Auto-suggest connections endpoint
     if (req.method === 'POST' && action === 'auto-suggest') {
       return await handleAutoSuggest(req, res)
@@ -35,6 +49,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Legacy bridge suggestion endpoint
     if (req.method === 'POST' && action === 'suggest') {
       return await handleBridgeSuggest(req, res)
+    }
+
+    // ============================================================================
+    // MANUAL CONNECTIONS (SPARKS) - Merged from api/related.ts
+    // ============================================================================
+
+    // Find related items (semantic search)
+    if (req.method === 'GET' && action === 'find-related' && id && type) {
+      return await handleFindRelated(req, res, id as string, type as string)
+    }
+
+    // List connections for an item
+    if (req.method === 'GET' && action === 'list-sparks' && id && type) {
+      return await handleListSparks(req, res, id as string, type as string)
+    }
+
+    // Get AI-suggested sparks for homepage
+    if (req.method === 'GET' && action === 'ai-sparks') {
+      return await handleAISparks(req, res, parseInt(limit as string) || 3)
+    }
+
+    // Get thread (recursive connections)
+    if (req.method === 'GET' && action === 'thread' && id && type) {
+      return await handleThread(req, res, id as string, type as string)
+    }
+
+    // Create manual connection (Spark)
+    if (req.method === 'POST' && action === 'create-spark') {
+      return await handleCreateSpark(req, res)
+    }
+
+    // Delete connection
+    if (req.method === 'DELETE' && action === 'delete-spark' && connection_id) {
+      return await handleDeleteSpark(req, res, connection_id as string)
     }
 
     return res.status(400).json({ error: 'Invalid action or method' })
@@ -490,4 +538,379 @@ function deduplicateBridges(bridges: any[]): any[] {
   }
 
   return unique
+}
+
+// ============================================================================
+// MANUAL CONNECTIONS (SPARKS) - Merged from api/related.ts
+// ============================================================================
+
+/**
+ * Find related items using semantic search and knowledge graph
+ */
+async function handleFindRelated(
+  req: VercelRequest,
+  res: VercelResponse,
+  sourceId: string,
+  sourceType: string
+): Promise<VercelResponse> {
+  const { text } = req.query
+  const related = await findRelatedItems(
+    sourceId,
+    sourceType as 'thought' | 'project' | 'article',
+    text as string | undefined
+  )
+  return res.status(200).json({ related })
+}
+
+async function findRelatedItems(
+  sourceId: string,
+  sourceType: 'thought' | 'project' | 'article',
+  sourceText?: string
+): Promise<any[]> {
+  const related: any[] = []
+
+  // Strategy 1: Find items linked via source_reference
+  if (sourceType === 'article') {
+    const { data: linkedThoughts } = await supabase
+      .from('memories')
+      .select('id, title, body')
+      .contains('source_reference', { type: 'article', id: sourceId })
+      .limit(5)
+
+    if (linkedThoughts) {
+      related.push(...linkedThoughts.map(t => ({
+        id: t.id,
+        type: 'thought',
+        title: t.title || 'Untitled thought',
+        snippet: t.body?.substring(0, 100),
+        relevance: 1.0
+      })))
+    }
+  }
+
+  // Strategy 2: Find projects with matching capabilities
+  if (sourceType === 'thought' || sourceType === 'project') {
+    const { data: sourceProject } = await supabase
+      .from('projects')
+      .select('metadata')
+      .eq('id', sourceType === 'project' ? sourceId : null)
+      .single()
+
+    const capabilities = sourceProject?.metadata?.capabilities || []
+
+    if (capabilities.length > 0) {
+      const { data: relatedProjects } = await supabase
+        .from('projects')
+        .select('id, title, description, metadata')
+        .neq('id', sourceId)
+        .limit(10)
+
+      const scored = relatedProjects
+        ?.map(p => {
+          const projectCaps = p.metadata?.capabilities || []
+          const overlap = capabilities.filter((c: string) => projectCaps.includes(c)).length
+          const relevance = overlap / Math.max(capabilities.length, projectCaps.length, 1)
+
+          return {
+            id: p.id,
+            type: 'project',
+            title: p.title,
+            snippet: p.description,
+            relevance
+          }
+        })
+        .filter(p => p.relevance > 0.2)
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 3)
+
+      if (scored) {
+        related.push(...scored)
+      }
+    }
+  }
+
+  // Strategy 3: Find articles with matching tags/themes
+  if (sourceText && sourceType !== 'article') {
+    const keywords = extractKeywords(sourceText)
+
+    if (keywords.length > 0) {
+      const { data: articles } = await supabase
+        .from('reading_articles')
+        .select('id, title, url, summary')
+        .eq('user_id', USER_ID)
+        .neq('status', 'archived')
+        .limit(10)
+
+      const scored = articles
+        ?.map(a => {
+          const articleText = `${a.title} ${a.summary || ''}`.toLowerCase()
+          const matches = keywords.filter(k => articleText.includes(k.toLowerCase())).length
+          const relevance = matches / keywords.length
+
+          return {
+            id: a.id,
+            type: 'article',
+            title: a.title,
+            snippet: a.summary?.substring(0, 100),
+            url: a.url,
+            relevance
+          }
+        })
+        .filter(a => a.relevance > 0.3)
+        .sort((a, b) => b.relevance - a.relevance)
+        .slice(0, 3)
+
+      if (scored) {
+        related.push(...scored)
+      }
+    }
+  }
+
+  // Strategy 4: Recent activity (fallback)
+  if (related.length < 3) {
+    const { data: recentProjects } = await supabase
+      .from('projects')
+      .select('id, title, description')
+      .eq('user_id', USER_ID)
+      .eq('status', 'active')
+      .neq('id', sourceId)
+      .order('last_active', { ascending: false })
+      .limit(3)
+
+    if (recentProjects) {
+      related.push(...recentProjects.map(p => ({
+        id: p.id,
+        type: 'project',
+        title: p.title,
+        snippet: p.description,
+        relevance: 0.5
+      })))
+    }
+  }
+
+  // Deduplicate and limit
+  const seen = new Set()
+  return related
+    .filter(item => {
+      const key = `${item.type}:${item.id}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 5)
+}
+
+function extractKeywords(text: string): string[] {
+  const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'is', 'was', 'are'])
+
+  return text
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !stopWords.has(word))
+    .slice(0, 10)
+}
+
+/**
+ * List all connections (Sparks) for a given item
+ */
+async function handleListSparks(
+  req: VercelRequest,
+  res: VercelResponse,
+  itemId: string,
+  itemType: string
+): Promise<VercelResponse> {
+  const { data, error } = await supabase.rpc('get_item_connections', {
+    item_type: itemType,
+    item_id: itemId
+  })
+
+  if (error) {
+    console.error('[handleListSparks] Error:', error)
+    return res.status(500).json({ error: 'Failed to fetch connections' })
+  }
+
+  // Fetch the actual items for each connection
+  const connections = await Promise.all(
+    (data || []).map(async (conn: any) => {
+      const relatedItem = await fetchItemByTypeAndId(conn.related_type, conn.related_id)
+      return {
+        connection_id: conn.connection_id,
+        related_type: conn.related_type,
+        related_id: conn.related_id,
+        connection_type: conn.connection_type,
+        direction: conn.direction,
+        created_by: conn.created_by,
+        created_at: conn.created_at,
+        ai_reasoning: conn.ai_reasoning,
+        related_item: relatedItem
+      }
+    })
+  )
+
+  return res.status(200).json({ connections })
+}
+
+/**
+ * Get AI-suggested sparks for the homepage
+ */
+async function handleAISparks(
+  req: VercelRequest,
+  res: VercelResponse,
+  limit: number
+): Promise<VercelResponse> {
+  const { data, error } = await supabase
+    .from('connections')
+    .select('*')
+    .eq('created_by', 'ai')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('[handleAISparks] Error:', error)
+    return res.status(500).json({ error: 'Failed to fetch AI sparks' })
+  }
+
+  // Fetch the actual items for each connection
+  const sparks = await Promise.all(
+    (data || []).map(async (conn: any) => {
+      const sourceItem = await fetchItemByTypeAndId(conn.source_type, conn.source_id)
+      const targetItem = await fetchItemByTypeAndId(conn.target_type, conn.target_id)
+
+      return {
+        connection_id: conn.id,
+        source_type: conn.source_type,
+        source_id: conn.source_id,
+        target_type: conn.target_type,
+        target_id: conn.target_id,
+        connection_type: conn.connection_type,
+        ai_reasoning: conn.ai_reasoning,
+        created_at: conn.created_at,
+        source_item: sourceItem,
+        target_item: targetItem
+      }
+    })
+  )
+
+  return res.status(200).json({ connections: sparks })
+}
+
+/**
+ * Get thread (recursive connections) for an item
+ */
+async function handleThread(
+  req: VercelRequest,
+  res: VercelResponse,
+  itemId: string,
+  itemType: string
+): Promise<VercelResponse> {
+  const { data, error } = await supabase.rpc('get_item_thread', {
+    item_type: itemType,
+    item_id: itemId,
+    max_depth: 10
+  })
+
+  if (error) {
+    console.error('[handleThread] Error:', error)
+    return res.status(500).json({ error: 'Failed to fetch thread' })
+  }
+
+  return res.status(200).json({ items: data || [] })
+}
+
+/**
+ * Create a manual connection (Spark)
+ */
+async function handleCreateSpark(
+  req: VercelRequest,
+  res: VercelResponse
+): Promise<VercelResponse> {
+  const { source_type, source_id, target_type, target_id, connection_type, created_by, ai_reasoning } = req.body
+
+  if (!source_type || !source_id || !target_type || !target_id) {
+    return res.status(400).json({ error: 'source_type, source_id, target_type, and target_id required' })
+  }
+
+  const { data, error } = await supabase
+    .from('connections')
+    .insert({
+      source_type,
+      source_id,
+      target_type,
+      target_id,
+      connection_type: connection_type || 'relates_to',
+      created_by: created_by || 'user',
+      ai_reasoning
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('[handleCreateSpark] Error:', error)
+    return res.status(500).json({ error: 'Failed to create connection' })
+  }
+
+  return res.status(201).json({ connection: data })
+}
+
+/**
+ * Delete a connection
+ */
+async function handleDeleteSpark(
+  req: VercelRequest,
+  res: VercelResponse,
+  connectionId: string
+): Promise<VercelResponse> {
+  const { error } = await supabase
+    .from('connections')
+    .delete()
+    .eq('id', connectionId)
+
+  if (error) {
+    console.error('[handleDeleteSpark] Error:', error)
+    return res.status(500).json({ error: 'Failed to delete connection' })
+  }
+
+  return res.status(200).json({ success: true })
+}
+
+/**
+ * Fetch a single item by type and ID
+ */
+async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<any> {
+  let table = ''
+  let selectFields = '*'
+
+  switch (itemType) {
+    case 'project':
+      table = 'projects'
+      selectFields = 'id, title, description, status, metadata'
+      break
+    case 'thought':
+      table = 'memories'
+      selectFields = 'id, title, body, voice_file_url'
+      break
+    case 'article':
+      table = 'reading_articles'
+      selectFields = 'id, title, url, summary, author'
+      break
+    case 'suggestion':
+      table = 'project_suggestions'
+      selectFields = 'id, title, description, reasoning'
+      break
+    default:
+      return null
+  }
+
+  const { data, error } = await supabase
+    .from(table)
+    .select(selectFields)
+    .eq('id', itemId)
+    .single()
+
+  if (error) {
+    console.error(`[fetchItemByTypeAndId] Error fetching ${itemType}:`, error)
+    return null
+  }
+
+  return data
 }

@@ -138,7 +138,7 @@ export function CreateConnectionDialog({
   const handleCreateConnection = async (targetType: ConnectionSourceType, targetId: string) => {
     setCreating(true)
     try {
-      const response = await fetch('/api/related', {
+      const response = await fetch('/api/connections?action=create-spark', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
