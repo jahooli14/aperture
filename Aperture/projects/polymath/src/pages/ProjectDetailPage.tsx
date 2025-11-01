@@ -318,9 +318,6 @@ export function ProjectDetailPage() {
           </div>
         )}
 
-        {/* Next Action (from first uncompleted task) */}
-        <NextActionCard project={project} />
-
         {/* Properties */}
         <ProjectProperties
           project={project}

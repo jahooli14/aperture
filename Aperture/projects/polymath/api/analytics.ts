@@ -550,6 +550,15 @@ function getNextStep(project: any): string | null {
   const nextTask = tasks
     .sort((a: any, b: any) => a.order - b.order)
     .find((task: any) => !task.done)
+
+  console.log(`[getNextStep] Project: ${project.title}`, {
+    hasTasks: tasks.length > 0,
+    totalTasks: tasks.length,
+    nextTaskFound: !!nextTask,
+    nextTaskText: nextTask?.text,
+    oldNextStep: project.metadata?.next_step
+  })
+
   return nextTask?.text || null
 }
 
