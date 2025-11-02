@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive, Star } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -34,7 +34,7 @@ export function ProjectCard({
   const [showQuickNote, setShowQuickNote] = useState(false)
   const [quickNote, setQuickNote] = useState('')
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const { updateProject } = useProjectStore()
+  const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
   // Motion values for swipe gesture
@@ -167,6 +167,28 @@ export function ProjectCard({
       addToast({
         title: 'Error',
         description: 'Failed to update project',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleTogglePriority = async (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+
+    try {
+      await setPriority(project.id)
+      haptic.success()
+      addToast({
+        title: project.is_priority ? 'Priority Removed' : 'Priority Set!',
+        description: project.is_priority
+          ? 'Project is no longer priority'
+          : 'This project is now your priority',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to set priority',
         variant: 'destructive',
       })
     }
@@ -380,6 +402,24 @@ export function ProjectCard({
           </CardTitle>
           <div className="flex items-center gap-2">
             <SuggestionBadge itemId={project.id} itemType="project" />
+            {showActions && (
+              <Button
+                onClick={handleTogglePriority}
+                variant="ghost"
+                size="sm"
+                className="h-11 w-11 p-0 touch-manipulation"
+                style={{
+                  color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)'
+                }}
+                aria-label={project.is_priority ? "Remove priority" : "Set as priority"}
+                title={project.is_priority ? "Remove priority" : "Set as priority"}
+              >
+                <Star
+                  className="h-5 w-5"
+                  fill={project.is_priority ? 'currentColor' : 'none'}
+                />
+              </Button>
+            )}
             {showActions && onEdit && (
               <Button
                 onClick={() => onEdit(project.id)}
