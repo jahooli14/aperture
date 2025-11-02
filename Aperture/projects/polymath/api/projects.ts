@@ -633,16 +633,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'PUT' || req.method === 'PATCH') {
     try {
-      const { id, ...updates } = req.body
+      // Extract ID from URL path (e.g., /api/projects/abc-123) or from body
+      let projectId = req.query.id as string
+
+      if (!projectId && req.url) {
+        const match = req.url.match(/\/projects\/([^?\/]+)/)
+        if (match) {
+          projectId = match[1]
+        }
+      }
+
+      // Fallback to body if not in URL
+      if (!projectId) {
+        projectId = req.body.id
+      }
+
+      if (!projectId) {
+        return res.status(400).json({ error: 'Project ID required' })
+      }
+
+      // Remove id from updates if present in body
+      const { id: _bodyId, ...updates } = req.body
 
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
-        .eq('id', id)
+        .eq('id', projectId)
+        .eq('user_id', userId)
         .select()
         .single()
 
       if (error) throw error
+
+      if (!data) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
 
       return res.status(200).json(data)
     } catch (error) {
