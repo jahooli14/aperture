@@ -50,8 +50,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   })
 
   useEffect(() => {
+    // Skip fetching bridges for temporary/optimistic memories
+    if (memory.id.startsWith('temp_')) {
+      setBridges([])
+      return
+    }
     fetchBridgesForMemory(memory.id).then(setBridges)
-  }, [memory.id])
+  }, [memory.id, fetchBridgesForMemory])
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {

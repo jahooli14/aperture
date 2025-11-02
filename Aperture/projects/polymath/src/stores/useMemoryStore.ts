@@ -54,6 +54,11 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   },
 
   fetchBridgesForMemory: async (memoryId: string) => {
+    // Skip fetching for temporary/optimistic memory IDs
+    if (memoryId.startsWith('temp_')) {
+      return []
+    }
+
     try {
       const { data, error } = await supabase
         .from('bridges')
