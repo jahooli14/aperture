@@ -141,16 +141,51 @@ Return ONLY JSON:
     const result = await model.generateContent(prompt)
     const text = result.response.text()
     console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
+    console.log('[handleCapture] Raw response:', text)
 
-    // Parse Gemini response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No JSON found in Gemini response')
+    // Parse Gemini response - try multiple strategies
+    let parsed: any = null
+
+    // Strategy 1: Extract from markdown code block (```json ... ```)
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
+    if (codeBlockMatch) {
+      try {
+        parsed = JSON.parse(codeBlockMatch[1].trim())
+        console.log('[handleCapture] Parsed from markdown code block')
+      } catch (e) {
+        console.log('[handleCapture] Code block parse failed:', e)
+      }
     }
 
-    const parsed = JSON.parse(jsonMatch[0])
+    // Strategy 2: Extract raw JSON object
+    if (!parsed) {
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          parsed = JSON.parse(jsonMatch[0])
+          console.log('[handleCapture] Parsed from raw JSON')
+        } catch (e) {
+          console.log('[handleCapture] Raw JSON parse failed:', e)
+        }
+      }
+    }
+
+    // Strategy 3: Try parsing the entire response as JSON
+    if (!parsed) {
+      try {
+        parsed = JSON.parse(text.trim())
+        console.log('[handleCapture] Parsed entire response as JSON')
+      } catch (e) {
+        console.log('[handleCapture] Full text parse failed:', e)
+      }
+    }
+
+    if (!parsed) {
+      throw new Error(`No valid JSON found in Gemini response. Raw response: ${text}`)
+    }
+
     if (!parsed.title || !parsed.bullets) {
-      throw new Error('Invalid Gemini response format')
+      throw new Error(`Invalid Gemini response format. Expected {title, bullets}, got: ${JSON.stringify(parsed)}`)
     }
 
     // Create memory with parsed content
