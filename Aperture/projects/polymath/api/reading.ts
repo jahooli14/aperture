@@ -433,7 +433,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Check for duplicates
       const { data: existing } = await supabase
         .from('reading_queue')
-        .select('id')
+        .select('*')
         .eq('user_id', userId)
         .eq('url', url)
         .single()
