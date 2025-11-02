@@ -46,12 +46,13 @@ export const SuggestionCard = memo(function SuggestionCard({
   const handleMehWithFeedback = async (reason: FeedbackReason) => {
     setLoadingAction('meh')
     try {
-      // Send feedback along with the rating
-      await fetch(`/api/suggestions/${suggestion.id}/feedback`, {
+      // Send rating with feedback to consolidated endpoint
+      await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
+        body: JSON.stringify({ rating: -1, feedback: reason })
       })
+      // Trigger re-fetch by calling onRate (which will refresh the list)
       await onRate(suggestion.id, -1)
       setShowFeedbackDialog(false)
     } catch (error) {

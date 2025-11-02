@@ -72,7 +72,7 @@ export function CreateConnectionDialog({
         fetch('/api/projects'),
         fetch('/api/memories'),
         fetch('/api/reading'),
-        fetch('/api/suggestions')
+        fetch('/api/projects?resource=suggestions')
       ])
 
       const [projectsData, thoughtsData, articlesData, suggestionsData] = await Promise.all([

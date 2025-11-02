@@ -49,7 +49,7 @@ export function ArticleCompletionDialog({
 
     setLoadingProjects(true)
     try {
-      const response = await fetch(`/api/suggestions?source_type=article&source_id=${article.id}&target_type=project&limit=3`)
+      const response = await fetch(`/api/projects?resource=suggestions&source_type=article&source_id=${article.id}&target_type=project&limit=3`)
       if (response.ok) {
         const data = await response.json()
         setRelatedProjects(data.suggestions || [])
