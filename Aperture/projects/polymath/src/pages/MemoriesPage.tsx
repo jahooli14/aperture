@@ -158,7 +158,12 @@ export function MemoriesPage() {
   }
 
   const handleVoiceCapture = async (transcript: string) => {
-    if (!transcript) return
+    if (!transcript) {
+      console.warn('[handleVoiceCapture] No transcript provided')
+      return
+    }
+
+    console.log('[handleVoiceCapture] Starting voice capture, transcript length:', transcript.length)
 
     // Set processing state
     setProcessingVoiceNote(true)
@@ -166,14 +171,18 @@ export function MemoriesPage() {
 
     // Switch to "All" view and "Recent" to show the new thought
     if (view !== 'all') {
+      console.log('[handleVoiceCapture] Switching to "all" view')
       setView('all')
     }
     if (memoryView !== 'recent') {
+      console.log('[handleVoiceCapture] Switching to "recent" memoryView')
       setMemoryView('recent')
     }
 
     try {
       if (isOnline) {
+        console.log('[handleVoiceCapture] Online - sending to API')
+
         // Show persistent toast during processing
         addToast({
           title: 'Processing voice note...',
@@ -188,25 +197,40 @@ export function MemoriesPage() {
           body: JSON.stringify({ transcript })
         })
 
+        console.log('[handleVoiceCapture] API response status:', response.status, response.statusText)
+
         if (!response.ok) {
           const contentType = response.headers.get('content-type')
+          let errorDetails = `Status: ${response.status}`
+
+          try {
+            const errorText = await response.text()
+            errorDetails += `, Response: ${errorText.substring(0, 200)}`
+          } catch (e) {
+            errorDetails += ', Could not read error response'
+          }
+
+          console.error('[handleVoiceCapture] API error:', errorDetails)
+
           if (contentType?.includes('text/html')) {
             throw new Error('Memories API not available. Queuing for offline sync.')
           }
-          throw new Error(`Failed to save memory: ${response.statusText}`)
+          throw new Error(`Failed to save memory: ${response.statusText}. ${errorDetails}`)
         }
 
         const data = await response.json()
         const createdMemory = data.memory
-        console.log('✓ Memory created:', createdMemory)
+        console.log('[handleVoiceCapture] ✓ Memory created:', createdMemory)
 
         // Store the ID of the newly created memory
         if (createdMemory?.id) {
           setNewlyCreatedMemoryId(createdMemory.id)
         }
 
+        console.log('[handleVoiceCapture] Fetching memories list')
         // Refresh memories list
         await fetchMemories()
+        console.log('[handleVoiceCapture] Memories fetched successfully')
 
         // Show success toast with the title
         addToast({
@@ -221,6 +245,7 @@ export function MemoriesPage() {
         }, 5000)
 
       } else {
+        console.log('[handleVoiceCapture] Offline - queueing for sync')
         // Offline: queue for later
         await addOfflineCapture(transcript)
         addToast({
@@ -234,26 +259,40 @@ export function MemoriesPage() {
       }
 
     } catch (error) {
-      console.error('Failed to capture:', error)
+      console.error('[handleVoiceCapture] ❌ ERROR:', error)
+      console.error('[handleVoiceCapture] Error details:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      })
+
+      // Show prominent error toast
+      addToast({
+        title: '❌ Voice capture failed',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      })
 
       // Fallback to offline queue if API fails
       try {
+        console.log('[handleVoiceCapture] Attempting offline queue fallback')
         await addOfflineCapture(transcript)
         addToast({
           title: 'Queued for offline sync',
           description: 'Will process when API is available',
           variant: 'default',
         })
-        console.log('✓ Queued for offline sync')
+        console.log('[handleVoiceCapture] ✓ Queued for offline sync')
         await fetchMemories()
       } catch (offlineError) {
+        console.error('[handleVoiceCapture] ❌ Offline queue also failed:', offlineError)
         addToast({
-          title: 'Capture failed',
-          description: error instanceof Error ? error.message : 'Unknown error',
+          title: '❌ Complete failure',
+          description: 'Could not save or queue your voice note. Please try again.',
           variant: 'destructive',
         })
       }
     } finally {
+      console.log('[handleVoiceCapture] Cleaning up, setting processingVoiceNote to false')
       setProcessingVoiceNote(false)
     }
   }
