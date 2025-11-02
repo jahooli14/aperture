@@ -165,19 +165,10 @@ export function MemoriesPage() {
 
     console.log('[handleVoiceCapture] Starting voice capture, transcript length:', transcript.length)
 
-    // Set processing state
+    // Set processing state - but DON'T force view changes
+    // User should be free to navigate while processing happens in background
     setProcessingVoiceNote(true)
     setNewlyCreatedMemoryId(null)
-
-    // Switch to "All" view and "Recent" to show the new thought
-    if (view !== 'all') {
-      console.log('[handleVoiceCapture] Switching to "all" view')
-      setView('all')
-    }
-    if (memoryView !== 'recent') {
-      console.log('[handleVoiceCapture] Switching to "recent" memoryView')
-      setMemoryView('recent')
-    }
 
     try {
       if (isOnline) {
@@ -228,21 +219,22 @@ export function MemoriesPage() {
         }
 
         console.log('[handleVoiceCapture] Fetching memories list')
-        // Refresh memories list
+        // Refresh memories list (user can navigate away, this just updates the data)
         await fetchMemories()
         console.log('[handleVoiceCapture] Memories fetched successfully')
 
-        // Show success toast with the title
+        // Show success toast with the title - they can click to go to memories if they want
         addToast({
           title: '✓ Thought captured!',
           description: createdMemory?.title || 'Your voice note is ready',
           variant: 'success',
         })
 
-        // Clear the highlight after 5 seconds
+        // Store the ID for highlighting (will only show if user is on memories page)
+        // Clear the highlight after 8 seconds
         setTimeout(() => {
           setNewlyCreatedMemoryId(null)
-        }, 5000)
+        }, 8000)
 
       } else {
         console.log('[handleVoiceCapture] Offline - queueing for sync')
