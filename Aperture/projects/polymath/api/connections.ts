@@ -17,8 +17,8 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from './lib/supabase'
-import { getUserId } from './lib/auth'
+import { getSupabaseClient } from './lib/supabase.js'
+import { getUserId } from './lib/auth.js'
 
 // Lazy-load Gemini imports only when needed (they require GEMINI_API_KEY env var)
 let generateEmbedding: any

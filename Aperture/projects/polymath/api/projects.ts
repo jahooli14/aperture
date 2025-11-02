@@ -4,8 +4,8 @@
  */
 
 import type { VercelRequest, VercelResponse} from '@vercel/node'
-import { getSupabaseClient } from './lib/supabase'
-import { getUserId } from './lib/auth'
+import { getSupabaseClient } from './lib/supabase.js'
+import { getUserId } from './lib/auth.js'
 import { z } from 'zod'
 
 // Daily Queue Scoring Logic

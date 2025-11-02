@@ -6,8 +6,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { generateSeedEmbeddings } from '../lib/tag-normalizer.js'
-import { getSupabaseClient } from './lib/supabase'
-import { getUserId } from './lib/auth'
+import { getSupabaseClient } from './lib/supabase.js'
+import { getUserId } from './lib/auth.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
