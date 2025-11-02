@@ -183,11 +183,11 @@ export function MemoriesPage() {
       if (isOnline) {
         console.log('[handleVoiceCapture] Online - sending to API')
 
-        // Show persistent toast during processing
+        // Show reassuring toast that data is saved
         addToast({
-          title: 'Processing voice note...',
-          description: 'Creating your thought',
-          variant: 'default',
+          title: '✓ Voice note saved',
+          description: 'AI is processing your transcript (may take up to 30s)...',
+          variant: 'success',
         })
 
         // Online: send to memories API for parsing
@@ -443,17 +443,27 @@ export function MemoriesPage() {
 
             {/* Voice Note Processing Banner */}
             {processingVoiceNote && (
-              <Card className="premium-card mb-6 border-2" style={{ borderColor: 'var(--premium-blue)' }}>
+              <Card className="premium-card mb-6 border-2 animate-pulse" style={{ borderColor: 'var(--premium-blue)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <div>
-                      <h3 className="font-semibold text-lg premium-text-platinum">
-                        Processing your voice note...
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg premium-text-platinum flex items-center gap-2">
+                        <span>✓</span> Voice note saved - AI processing...
                       </h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                        AI is transcribing and creating your thought
+                      <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
+                        Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
                       </p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                          <div className="h-full rounded-full animate-pulse" style={{
+                            backgroundColor: 'var(--premium-blue)',
+                            width: '60%',
+                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                          }}></div>
+                        </div>
+                        <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>Processing...</span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
