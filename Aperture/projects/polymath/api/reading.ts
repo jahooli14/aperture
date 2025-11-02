@@ -96,37 +96,63 @@ function cleanArticleContent(content: string): string {
   // Patterns to remove (case-insensitive)
   const removePatterns = [
     // Navigation and UI elements
-    /^(skip to|jump to|go to|navigate to|menu|navigation)/i,
-    /^(search|sign in|log in|subscribe|register|create account)/i,
-    /^(home|about|contact|privacy|terms|cookies?|legal)/i,
+    /^(skip to|jump to|go to|navigate to|menu|navigation|breadcrumb)/i,
+    /^(search|sign in|log in|subscribe|register|create account|my account)/i,
+    /^(home|about|contact|privacy|terms|cookies?|legal|help|support)/i,
+    /^(view all|see all|show all|browse|explore)/i,
+    /^(back to|return to|previous|next page)/i,
 
     // Social media and sharing
-    /^(share on|follow us|connect with|like us)/i,
-    /^(facebook|twitter|instagram|linkedin|youtube|tiktok)/i,
+    /^(share|share on|follow us|connect with|like us|follow|tweet|pin)/i,
+    /^(facebook|twitter|instagram|linkedin|youtube|tiktok|whatsapp|reddit)/i,
+    /^(social media|social|connect|join us)/i,
 
     // Newsletter and subscription
-    /^(newsletter|email|subscribe|sign up for)/i,
-    /^(get our|receive|join our)/i,
+    /^(newsletter|email|subscribe|sign up|get updates|stay updated)/i,
+    /^(get our|receive|join our|be the first)/i,
+    /^(enter your email|your email address)/i,
 
-    // Cookie notices
-    /^(we use cookies|this (site|website) uses cookies)/i,
-    /^(by (using|continuing)|accept (all )?cookies)/i,
+    // Cookie notices and consent
+    /^(we use cookies|this (site|website) uses cookies|cookie (notice|policy))/i,
+    /^(by (using|continuing)|accept (all )?cookies|manage cookies)/i,
+    /^(consent|privacy settings|your privacy|we value your privacy)/i,
 
-    // Advertising
-    /^(advertisement|sponsored|partner content)/i,
-    /^(ad choices|why (am i|this ad))/i,
+    // Advertising and sponsorship
+    /^(advertisement|sponsored|partner content|affiliate)/i,
+    /^(ad choices|why (am i|this ad)|opt out)/i,
+    /^(promoted|featured|special offer)/i,
 
-    // Comments sections
-    /^(comments?|leave a comment|post a comment)/i,
-    /^(show comments|hide comments|load more)/i,
+    // Comments and engagement
+    /^(comments?|leave a comment|post a comment|add a comment)/i,
+    /^(show comments|hide comments|load more|view replies)/i,
+    /^(join the (discussion|conversation)|what do you think)/i,
 
-    // Related content
-    /^(related:?|you may also|recommended|more from)/i,
-    /^(read (more|next)|continue reading)/i,
+    // Related content and CTAs
+    /^(related:?|you may also|you might like|recommended|more from)/i,
+    /^(read (more|next)|continue reading|keep reading)/i,
+    /^(check out|discover|explore more|learn more)/i,
+    /^(popular|trending|latest|recent articles)/i,
 
-    // Footer content
-    /^(copyright|©|all rights reserved)/i,
-    /^(powered by|built with|designed by)/i,
+    // Footer and metadata
+    /^(copyright|©|all rights reserved|\(c\))/i,
+    /^(powered by|built with|designed by|created by)/i,
+    /^(last updated|published|posted|updated on)/i,
+    /^(tags?:|categories:|filed under|topics?:)/i,
+
+    // App promotions
+    /^(download (our )?app|get (the|our) app|available on|app store)/i,
+    /^(open in app|use app|switch to app)/i,
+
+    // Accessibility and UI controls
+    /^(toggle|expand|collapse|show|hide|more|less)/i,
+    /^(loading|please wait|redirecting)/i,
+
+    // List/link dumps (common pattern: just a link text with no context)
+    /^[\[\(]?https?:\/\//i,  // Lines starting with URLs
+    /^(source|via|link|url):/i,
+
+    // Short non-content lines (likely UI elements)
+    /^[\w\s]{1,3}$/,  // 1-3 character lines (buttons like "OK", "Yes", etc)
   ]
 
   // Filter out lines matching removal patterns
@@ -141,6 +167,17 @@ function cleanArticleContent(content: string): string {
       return false
     }
 
+    // Remove lines that are just markdown links without context
+    // Pattern: [text](url) with nothing else
+    if (/^\[.+?\]\(.+?\)$/.test(trimmed) && trimmed.length < 100) {
+      return false
+    }
+
+    // Remove lines that are just image references
+    if (/^!\[.*?\]\(.*?\)$/.test(trimmed)) {
+      return false
+    }
+
     // Keep lines that seem like content (have punctuation, reasonable length)
     return true
   })
@@ -148,24 +185,41 @@ function cleanArticleContent(content: string): string {
   // Join lines back together
   let cleaned = lines.join('\n')
 
-  // Remove excessive whitespace
-  cleaned = cleaned
-    .replace(/\n{4,}/g, '\n\n\n')  // Max 3 newlines
-    .replace(/[ \t]{2,}/g, ' ')     // Max 1 space
-    .trim()
-
-  // Remove common phrases that sneak through
+  // Remove common inline phrases that sneak through
   const phrasePatterns = [
-    /\b(click here|read more|learn more|find out more)\b/gi,
-    /\b(subscribe to|sign up for|get notified)\b/gi,
-    /\b(cookie policy|privacy policy|terms of service)\b/gi,
+    /\b(click here|tap here|read more|learn more|find out more)\b/gi,
+    /\b(subscribe to|sign up for|get notified|stay informed)\b/gi,
+    /\b(cookie policy|privacy policy|terms of service|terms and conditions)\b/gi,
+    /\b(view (all|more)|see (all|more)|show (all|more))\b/gi,
+    /\b(download (the |our )?app|get (the |our )?app)\b/gi,
+    /\[\d+\]/g,  // Remove citation numbers like [1], [2], etc.
   ]
 
   phrasePatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '')
   })
 
-  return cleaned
+  // Remove excessive whitespace
+  cleaned = cleaned
+    .replace(/\n{4,}/g, '\n\n\n')  // Max 3 newlines
+    .replace(/[ \t]{2,}/g, ' ')     // Max 1 space
+    .replace(/\n\s+\n/g, '\n\n')    // Clean empty lines with whitespace
+    .trim()
+
+  // Final pass: remove any remaining single-word lines that are likely UI elements
+  lines = cleaned.split('\n')
+  lines = lines.filter(line => {
+    const trimmed = line.trim()
+    if (trimmed === '') return true
+
+    // Keep lines with multiple words or punctuation (likely real content)
+    const wordCount = trimmed.split(/\s+/).length
+    const hasPunctuation = /[.!?,;:]/.test(trimmed)
+
+    return wordCount > 2 || hasPunctuation
+  })
+
+  return lines.join('\n').trim()
 }
 
 function extractDomain(url: string): string {
