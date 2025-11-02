@@ -201,16 +201,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId()
   const { resource } = req.query
 
-  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects/:id/priority)
+  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects?id={id}/priority)
   if (req.method === 'PATCH' && req.url?.includes('/priority')) {
     try {
-      // Extract ID from URL path like /api/projects/abc-123/priority
-      const match = req.url.match(/\/projects\/([^\/]+)\/priority/)
-      if (!match) {
-        return res.status(400).json({ error: 'Invalid priority endpoint format' })
+      // Extract ID from query parameter (converted from path by apiClient)
+      // Frontend sends: PATCH projects/{id}/priority
+      // apiClient converts to: PATCH /api/projects?id={id}/priority
+      const queryId = req.query.id as string
+
+      if (!queryId) {
+        return res.status(400).json({ error: 'Project ID required in query parameter' })
       }
 
-      const projectId = match[1]
+      // Remove "/priority" suffix if present in the ID
+      const projectId = queryId.replace(/\/priority$/, '')
 
       // Set this project as priority (database trigger will unset others)
       const { data, error } = await supabase
@@ -222,6 +226,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (error) {
+        console.error('[priority] Update error:', error)
         return res.status(500).json({ error: 'Failed to set priority', details: error.message })
       }
 
@@ -231,6 +236,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json(data)
     } catch (error: any) {
+      console.error('[priority] Unexpected error:', error)
       return res.status(500).json({
         error: 'Failed to set priority',
         details: error?.message || 'Unknown error'
