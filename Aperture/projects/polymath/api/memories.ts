@@ -83,7 +83,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: memories, error } = await supabase
         .from('memories')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -713,7 +712,6 @@ async function searchMemories(query: string, supabase: any, userId: string): Pro
     const { data, error } = await supabase
       .from('memories')
       .select('*')
-      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,body.ilike.%${query}%`)
       .limit(20)
 
@@ -746,7 +744,6 @@ async function searchProjects(query: string, supabase: any, userId: string): Pro
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .limit(20)
 
@@ -778,7 +775,6 @@ async function searchArticles(query: string, supabase: any, userId: string): Pro
     const { data, error} = await supabase
       .from('reading_queue')
       .select('*')
-      .eq('user_id', userId)
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
       .limit(20)
 
