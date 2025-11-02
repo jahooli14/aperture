@@ -102,13 +102,13 @@ export function MemoriesPage() {
     if (view === 'all') {
       fetchThemeClusters()
     }
-  }, [view, loadMemoriesWithCache, fetchThemeClusters])
+  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (view === 'resurfacing') {
       fetchResurfacing()
     }
-  }, [view, fetchResurfacing])
+  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleReview = async (memoryId: string) => {
     try {
