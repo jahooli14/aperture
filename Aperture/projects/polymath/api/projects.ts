@@ -201,11 +201,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId()
   const { resource } = req.query
 
-  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects/priority?id={id})
-  if (req.method === 'PATCH' && req.url?.includes('/priority')) {
+  // PRIORITY RESOURCE - Set project as priority (PATCH /api/projects?resource=priority&id={id})
+  if (resource === 'priority' && req.method === 'PATCH') {
     try {
       // Frontend sends: PATCH projects/{id}/priority
-      // apiClient converts to: PATCH /api/projects/priority?id={id}
+      // apiClient converts to: PATCH /api/projects?resource=priority&id={id}
       const projectId = req.query.id as string
 
       if (!projectId) {

@@ -83,10 +83,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { data: memories, error } = await supabase
         .from('memories')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {
-        return res.status(500).json({ error: 'Failed to fetch memories' })
+        console.error('[memories] GET error:', error)
+        return res.status(500).json({
+          error: 'Failed to fetch memories',
+          details: error.message
+        })
       }
 
       return res.status(200).json({ memories })

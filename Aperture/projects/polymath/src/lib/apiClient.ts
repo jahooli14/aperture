@@ -39,15 +39,15 @@ export const api = {
 
   patch: async (endpoint: string, data?: any) => {
     // For Vercel serverless routing, convert path-based IDs to query params
-    // Special handling for priority endpoint: "projects/{id}/priority"
+    // Special handling for priority endpoint: "projects/{id}/priority" → "projects?resource=priority&id={id}"
     let finalEndpoint = endpoint
 
     if (endpoint.includes('/priority')) {
-      // Extract ID and add as query param, keep /priority in path
+      // Extract ID and convert to resource-based route
       const priorityMatch = endpoint.match(/^([^\/]+)\/([^\/]+)\/priority$/)
       if (priorityMatch) {
         const [, base, id] = priorityMatch
-        finalEndpoint = `${base}/priority?id=${id}`
+        finalEndpoint = `${base}?resource=priority&id=${id}`
       }
     } else {
       // Regular path conversion: "projects/abc-123" → "projects?id=abc-123"

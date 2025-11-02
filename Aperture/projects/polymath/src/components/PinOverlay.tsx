@@ -21,7 +21,7 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-40 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-30 premium-glass-strong border-t"
         style={{
           top: isMaximized ? 0 : '50%',
           borderColor: 'rgba(255, 255, 255, 0.1)',
