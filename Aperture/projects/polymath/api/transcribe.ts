@@ -61,8 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       base64Length: base64Audio.length
     })
 
-    // Use Gemini 1.5 Flash for audio transcription (has proven audio support)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    // Use Gemini 2.5 Flash for audio transcription
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     console.log('[transcribe] Sending to Gemini with mimetype:', file.mimetype || 'audio/aac')
 

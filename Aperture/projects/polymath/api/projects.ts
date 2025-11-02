@@ -201,22 +201,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId()
   const { resource } = req.query
 
-  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects?id={id}/priority)
+  // PRIORITY ENDPOINT - Set project as priority (PATCH /api/projects/priority?id={id})
   if (req.method === 'PATCH' && req.url?.includes('/priority')) {
     try {
-      // Extract ID from query parameter (converted from path by apiClient)
       // Frontend sends: PATCH projects/{id}/priority
-      // apiClient converts to: PATCH /api/projects?id={id}/priority
-      const queryId = req.query.id as string
+      // apiClient converts to: PATCH /api/projects/priority?id={id}
+      const projectId = req.query.id as string
 
-      if (!queryId) {
+      if (!projectId) {
         return res.status(400).json({ error: 'Project ID required in query parameter' })
       }
 
-      // Remove "/priority" suffix if present in the ID
-      const projectId = queryId.replace(/\/priority$/, '')
+      console.log('[priority] Setting priority for project:', projectId)
 
-      // Set this project as priority (database trigger will unset others)
+      // Set this project as priority
       const { data, error } = await supabase
         .from('projects')
         .update({ is_priority: true, last_active: new Date().toISOString() })
@@ -231,9 +229,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!data) {
+        console.error('[priority] Project not found:', projectId)
         return res.status(404).json({ error: 'Project not found' })
       }
 
+      console.log('[priority] Successfully set priority')
       return res.status(200).json(data)
     } catch (error: any) {
       console.error('[priority] Unexpected error:', error)
