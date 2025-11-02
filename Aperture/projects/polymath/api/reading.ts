@@ -50,11 +50,6 @@ async function fetchArticleWithJina(url: string) {
     // Jina AI wraps the article data in a 'data' property
     const data = result.data || result
 
-      title: data.title,
-      contentLength: data.content?.length || 0,
-      hasDescription: !!data.description
-    })
-
     // Clean the content before converting to HTML
     const cleanedContent = data.content ? cleanArticleContent(data.content) : ''
 
@@ -426,6 +421,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .single()
 
       if (error) {
+        console.error('Database insert error:', {
           code: error.code,
           message: error.message,
           details: error.details,
