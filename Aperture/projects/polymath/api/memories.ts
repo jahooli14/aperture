@@ -117,74 +117,18 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   console.log('[handleCapture] Starting voice capture processing')
 
   try {
-    // Parse transcript using Gemini 2.5 Flash with timeout
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      }
-    })
+    // **NEW APPROACH**: Save immediately with transcript, then process async
+    // This prevents timeouts and gives immediate user feedback
 
-    const prompt = `Transform this voice transcript into a personal thought, written in my own voice.
-
-Write in FIRST PERSON as if I'm reflecting on this myself. Match this tone:
-- Introspective and reflective (like journaling)
-- Conversational and relatable (how I'd actually think)
-- Wry and philosophical when appropriate
-- Self-aware and honest
-- Appreciative of small details and moments
-
-Extract:
-1. A clear, concise title (5-10 words) - first person perspective
-2. 2-5 bullet points capturing the key ideas - each written in first person, as my own thoughts
-
-Example style:
-Instead of: "The speaker discussed their concerns about work"
-Write as: "I've been thinking about how work is pulling me in different directions"
-
-Transcript:
-${transcript}
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "title": "...",
-  "bullets": ["...", "...", "..."]
-}`
-
-    // Add timeout to Gemini API call (30 seconds max)
-    const geminiPromise = model.generateContent(prompt)
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini API timeout after 30s')), 30000)
-    )
-
-    const result = await Promise.race([geminiPromise, timeoutPromise]) as any
-    const response = await result.response
-    const text = response.text()
-    console.log(`[handleCapture] Gemini processing took ${Date.now() - startTime}ms`)
-
-    // Extract JSON from response (handle markdown code blocks)
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response')
-    }
-
-    const parsed = JSON.parse(jsonMatch[0])
-
-    if (!parsed.title || !parsed.bullets || !Array.isArray(parsed.bullets)) {
-      throw new Error('Invalid response format from Gemini')
-    }
-
-    // Create memory/thought in database
     const now = new Date().toISOString()
-    const body = parsed.bullets.join('\n\n')
 
-    const newMemory = {
+    // Create a placeholder memory immediately with the transcript
+    const placeholderMemory = {
       audiopen_id: `voice_${Date.now()}`,
-      title: parsed.title,
-      body,
+      title: `Voice note from ${new Date().toLocaleTimeString()}`,
+      body: transcript, // Store raw transcript initially
       orig_transcript: transcript,
-      tags: [],
+      tags: ['voice-note'],
       audiopen_created_at: now,
       memory_type: null,
       entities: null,
@@ -192,27 +136,30 @@ Respond ONLY with valid JSON in this exact format:
       emotional_tone: null,
       source_reference: source_reference || null,
       embedding: null,
-      processed: false,
+      processed: false, // Mark as unprocessed
       processed_at: null,
       error: null,
     }
 
     const { data: memory, error: insertError } = await supabase
       .from('memories')
-      .insert(newMemory)
+      .insert(placeholderMemory)
       .select()
       .single()
 
-    if (insertError) throw insertError
-    console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
+    if (insertError) {
+      console.error('[handleCapture] Database insert error:', insertError)
+      throw insertError
+    }
 
-    // Trigger background processing (async, don't wait)
-    // Use request host if available, fallback to VERCEL_URL or localhost
+    console.log(`[handleCapture] Memory created immediately, total time: ${Date.now() - startTime}ms`)
+
+    // Trigger Gemini processing in background (fire and forget)
     const host = req.headers.host || process.env.VERCEL_URL || 'localhost:5173'
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const baseUrl = `${protocol}://${host}`
 
-    // Fire and forget - don't await
+    // Process with Gemini in background - this will update the memory with parsed content
     fetch(`${baseUrl}/api/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -221,16 +168,15 @@ Respond ONLY with valid JSON in this exact format:
 
     console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
 
+    // Return immediately with the placeholder memory
     return res.status(201).json({
       success: true,
       memory,
-      parsed: {
-        title: parsed.title,
-        bullets: parsed.bullets
-      }
+      message: 'Voice note saved! AI is processing your transcript...'
     })
 
   } catch (error) {
+    console.error('[handleCapture] Error:', error)
     return res.status(500).json({
       error: 'Failed to capture thought',
       details: error instanceof Error ? error.message : 'Unknown error'
