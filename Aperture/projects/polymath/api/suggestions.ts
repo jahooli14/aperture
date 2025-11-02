@@ -12,7 +12,6 @@ import { getSupabaseClient } from './lib/supabase'
 import { getUserId } from './lib/auth'
 import { z } from 'zod'
 
-)
 
 
 // Request validation schema for rating

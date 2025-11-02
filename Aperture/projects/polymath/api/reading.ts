@@ -10,7 +10,6 @@ import { getUserId } from './lib/auth'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 
-)
 
 const rssParser = new Parser()
 

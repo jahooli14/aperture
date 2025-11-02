@@ -3,7 +3,6 @@ import { getSupabaseClient } from './lib/supabase'
 import { getUserId } from './lib/auth'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-)
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
