@@ -6,10 +6,23 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
+interface SearchResult {
+  type: 'memory' | 'project' | 'article'
+  id: string
+  title: string
+  body?: string
+  description?: string
+  url?: string
+  score: number
+  created_at: string
+  entities?: any
+  tags?: string[]
+}
 
 /**
  * Unified Memories API
  * GET /api/memories - List all memories
+ * GET /api/memories?q=xxx - Universal search across memories, projects, and articles
  * GET /api/memories?resurfacing=true - Get memories to resurface (spaced repetition)
  * GET /api/memories?themes=true - Get theme clusters
  * GET /api/memories?prompts=true - Get memory prompts with status
@@ -22,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId()
 
   try {
-    const { resurfacing, bridges, themes, prompts, id, capture, submit_response } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q } = req.query
 
     // POST: Submit foundational thought response
     if (req.method === 'POST' && submit_response === 'true') {
@@ -38,6 +51,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
       const memoryId = req.body.id || id
       return await handleReview(memoryId as string, res)
+    }
+
+    // GET: Search (merged from search.ts)
+    if (req.method === 'GET' && q) {
+      return await handleSearch(q as string, supabase, userId, res)
     }
 
     // GET: Memory prompts
@@ -178,6 +196,7 @@ Respond ONLY with valid JSON in this exact format:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ memory_id: memory.id })
+    }).catch(err => console.error('[capture] Background processing trigger failed:', err))
 
     return res.status(201).json({
       success: true,
@@ -635,4 +654,184 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     return res.status(500).json({ error: 'Failed to submit response' })
   }
+}
+
+/**
+ * Universal search handler (merged from search.ts)
+ * Searches across memories, projects, and articles
+ */
+async function handleSearch(query: string, supabase: any, userId: string, res: VercelResponse) {
+  try {
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Query parameter "q" is required' })
+    }
+
+    const searchTerm = query.toLowerCase().trim()
+
+    if (searchTerm.length < 2) {
+      return res.status(400).json({ error: 'Query must be at least 2 characters' })
+    }
+
+    // Search across all content types in parallel
+    const [memoriesResults, projectsResults, articlesResults] = await Promise.all([
+      searchMemories(searchTerm, supabase, userId),
+      searchProjects(searchTerm, supabase, userId),
+      searchArticles(searchTerm, supabase, userId)
+    ])
+
+    // Combine and sort results by score
+    const allResults: SearchResult[] = [
+      ...memoriesResults,
+      ...projectsResults,
+      ...articlesResults
+    ].sort((a, b) => b.score - a.score)
+
+    return res.status(200).json({
+      query: searchTerm,
+      total: allResults.length,
+      results: allResults,
+      breakdown: {
+        memories: memoriesResults.length,
+        projects: projectsResults.length,
+        articles: articlesResults.length
+      }
+    })
+
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * Search memories using text search on title and body
+ */
+async function searchMemories(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+  try {
+    const { data, error } = await supabase
+      .from('memories')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`title.ilike.%${query}%,body.ilike.%${query}%`)
+      .limit(20)
+
+    if (error) {
+      return []
+    }
+
+    return (data || []).map(memory => ({
+      type: 'memory',
+      id: memory.id,
+      title: memory.title,
+      body: memory.body,
+      score: calculateTextScore(query, memory.title, memory.body),
+      created_at: memory.created_at,
+      entities: memory.entities,
+      tags: memory.tags
+    }))
+  } catch (error) {
+    return []
+  }
+}
+
+/**
+ * Search projects using text search on title and description
+ */
+async function searchProjects(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      .limit(20)
+
+    if (error) {
+      return []
+    }
+
+    return (data || []).map(project => ({
+      type: 'project',
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      score: calculateTextScore(query, project.title, project.description),
+      created_at: project.created_at,
+      tags: project.tags
+    }))
+  } catch (error) {
+    return []
+  }
+}
+
+/**
+ * Search articles using text search on title, excerpt, and content
+ */
+async function searchArticles(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+  try {
+    const { data, error} = await supabase
+      .from('reading_queue')
+      .select('*')
+      .eq('user_id', userId)
+      .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
+      .limit(20)
+
+    if (error) {
+      return []
+    }
+
+    return (data || []).map(article => ({
+      type: 'article',
+      id: article.id,
+      title: article.title || 'Untitled',
+      body: article.excerpt,
+      url: article.url,
+      score: calculateTextScore(query, article.title, article.excerpt),
+      created_at: article.created_at,
+      tags: article.tags
+    }))
+  } catch (error) {
+    return []
+  }
+}
+
+/**
+ * Calculate relevance score based on text matching
+ * Higher score = better match
+ */
+function calculateTextScore(query: string, ...fields: (string | null | undefined)[]): number {
+  let score = 0
+  const queryLower = query.toLowerCase()
+
+  for (const field of fields) {
+    if (!field) continue
+
+    const fieldLower = field.toLowerCase()
+
+    // Exact match in title = highest score
+    if (fields[0] && fieldLower === queryLower) {
+      score += 100
+    }
+
+    // Query appears at start = high score
+    if (fieldLower.startsWith(queryLower)) {
+      score += 50
+    }
+
+    // Query appears as whole word = medium score
+    const words = fieldLower.split(/\s+/)
+    if (words.includes(queryLower)) {
+      score += 30
+    }
+
+    // Query appears anywhere = base score
+    if (fieldLower.includes(queryLower)) {
+      score += 10
+    }
+
+    // Count occurrences
+    const occurrences = (fieldLower.match(new RegExp(queryLower, 'g')) || []).length
+    score += occurrences * 5
+  }
+
+  return score
 }

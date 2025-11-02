@@ -63,7 +63,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
         params.append('status', filter)
       }
 
-      const response = await fetch(`${API_BASE}/suggestions?${params}`)
+      const response = await fetch(`${API_BASE}/projects?resource=suggestions&${params}`)
 
       if (!response.ok) {
         const text = await response.text()
@@ -92,7 +92,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
 
   rateSuggestion: async (id: string, rating: number) => {
     try {
-      const response = await fetch(`${API_BASE}/suggestions?action=rate&id=${id}`, {
+      const response = await fetch(`${API_BASE}/projects?resource=suggestions&action=rate&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating })
@@ -116,7 +116,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     description?: string
   }) => {
     try {
-      const response = await fetch(`${API_BASE}/suggestions?action=build&id=${id}`, {
+      const response = await fetch(`${API_BASE}/projects?resource=suggestions&action=build&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

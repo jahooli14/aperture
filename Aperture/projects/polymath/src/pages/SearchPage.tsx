@@ -66,7 +66,7 @@ export function SearchPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
       if (!response.ok) {
         throw new Error('Search failed')
       }
