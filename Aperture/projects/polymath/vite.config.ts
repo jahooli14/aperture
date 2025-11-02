@@ -44,7 +44,7 @@ export default defineConfig({
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
           'supabase': ['@supabase/supabase-js'],
-          'google': ['@google/generative-ai'],
+          // Note: @google/generative-ai is only used server-side in API routes, not in frontend
           'capacitor': [
             '@capacitor/app',
             '@capacitor/core',
@@ -69,7 +69,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.logs in production
+        // Remove console.log/info/debug but keep console.error/warn for production debugging
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
         drop_debugger: true,
       },
     },

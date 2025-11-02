@@ -254,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Verify project exists and belongs to user
       const { data: project, error: projectError } = await supabase
         .from('projects')
-        .select('id, title, priority')
+        .select('id, title, is_priority')
         .eq('id', project_id)
         .eq('user_id', userId)
         .single()
@@ -279,9 +279,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Atomic operation: clear all priorities, then set the one
       const { data: clearedData, error: clearError } = await supabase
         .from('projects')
-        .update({ priority: false })
+        .update({ is_priority: false })
         .eq('user_id', userId)
-        .select('id, title, priority')
+        .select('id, title, is_priority')
 
       console.log('[set-priority] Clear result:', { clearedData, clearError })
 
@@ -299,7 +299,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Step 2: Set priority on the specified project
       const { data: updatedProject, error: setError } = await supabase
         .from('projects')
-        .update({ priority: true })
+        .update({ is_priority: true })
         .eq('id', project_id)
         .eq('user_id', userId)
         .select()

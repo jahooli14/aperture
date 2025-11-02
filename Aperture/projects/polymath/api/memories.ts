@@ -713,6 +713,7 @@ async function searchMemories(query: string, supabase: any, userId: string): Pro
       .limit(20)
 
     if (error) {
+      console.error('[searchMemories] Database error:', error)
       return []
     }
 
@@ -727,6 +728,7 @@ async function searchMemories(query: string, supabase: any, userId: string): Pro
       tags: memory.tags
     }))
   } catch (error) {
+    console.error('[searchMemories] Unexpected error:', error)
     return []
   }
 }
@@ -744,6 +746,7 @@ async function searchProjects(query: string, supabase: any, userId: string): Pro
       .limit(20)
 
     if (error) {
+      console.error('[searchProjects] Database error:', error)
       return []
     }
 
@@ -757,6 +760,7 @@ async function searchProjects(query: string, supabase: any, userId: string): Pro
       tags: project.tags
     }))
   } catch (error) {
+    console.error('[searchProjects] Unexpected error:', error)
     return []
   }
 }
@@ -774,6 +778,7 @@ async function searchArticles(query: string, supabase: any, userId: string): Pro
       .limit(20)
 
     if (error) {
+      console.error('[searchArticles] Database error:', error)
       return []
     }
 
@@ -788,6 +793,7 @@ async function searchArticles(query: string, supabase: any, userId: string): Pro
       tags: article.tags
     }))
   } catch (error) {
+    console.error('[searchArticles] Unexpected error:', error)
     return []
   }
 }
