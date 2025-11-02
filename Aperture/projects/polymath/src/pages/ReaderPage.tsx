@@ -306,11 +306,11 @@ export function ReaderPage() {
       }
 
       if (data.text) {
-        const response = await fetch('/api/memories?action=capture', {
+        const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            transcript: data.text,
+            body: data.text,
             source_reference
           })
         })

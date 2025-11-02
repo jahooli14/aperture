@@ -611,6 +611,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const projectData = {
         ...req.body,
+        type: req.body.type || 'creative', // Default to creative if not provided
         user_id: userId,
         created_at: new Date().toISOString(),
         last_active: new Date().toISOString(),

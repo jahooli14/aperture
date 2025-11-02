@@ -28,6 +28,14 @@ export function DailyQueuePage() {
     try {
       const response = await fetch('/api/projects?resource=daily-queue')
       if (!response.ok) throw new Error('Failed to fetch queue')
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        throw new Error(`Expected JSON but got: ${contentType || 'unknown'}. Response: ${text.substring(0, 100)}`)
+      }
+
       const data: DailyQueueResponse = await response.json()
       setQueue(data.queue)
       setContext(data.context)
@@ -48,6 +56,13 @@ export function DailyQueuePage() {
         body: JSON.stringify(newContext)
       })
       if (!response.ok) throw new Error('Failed to update context')
+
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON but got: ${contentType || 'unknown'}`)
+      }
+
       const data = await response.json()
       setContext(data.context)
       setShowContextDialog(false)
@@ -63,8 +78,14 @@ export function DailyQueuePage() {
     try {
       const response = await fetch('/api/onboarding?resource=gap-analysis')
       if (response.ok) {
-        const data = await response.json()
-        setGapPrompts(data.prompts || [])
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json()
+          setGapPrompts(data.prompts || [])
+        } else {
+          console.warn('Gap analysis endpoint returned non-JSON response')
+        }
       }
     } catch (err) {
       console.error('Failed to fetch gap prompts:', err)
@@ -78,8 +99,14 @@ export function DailyQueuePage() {
     try {
       const response = await fetch('/api/analytics?resource=opportunities')
       if (response.ok) {
-        const data = await response.json()
-        setCreativeOpportunities(data.opportunities || [])
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json()
+          setCreativeOpportunities(data.opportunities || [])
+        } else {
+          console.warn('Opportunities endpoint returned non-JSON response')
+        }
       }
     } catch (err) {
       console.error('Failed to fetch creative opportunities:', err)

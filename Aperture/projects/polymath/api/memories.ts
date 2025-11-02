@@ -35,15 +35,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const userId = getUserId()
 
   try {
-    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q } = req.query
+    const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query
 
     // POST: Submit foundational thought response
     if (req.method === 'POST' && submit_response === 'true') {
       return await handleSubmitResponse(req, res, supabase, userId)
     }
 
-    // POST: Voice capture
-    if (req.method === 'POST' && capture === 'true') {
+    // POST: Voice capture (supports both capture=true and action=capture)
+    if (req.method === 'POST' && (capture === 'true' || action === 'capture')) {
       return await handleCapture(req, res, supabase)
     }
 
@@ -108,13 +108,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
   const startTime = Date.now()
-  const { transcript, source_reference } = req.body
+  const { transcript, body, source_reference } = req.body
 
-  if (!transcript || typeof transcript !== 'string') {
-    return res.status(400).json({ error: 'transcript required' })
+  // Accept both 'transcript' (voice) and 'body' (manual text) field names
+  const text = transcript || body
+
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'transcript or body field required' })
   }
 
-  console.log('[handleCapture] Starting voice capture processing')
+  console.log('[handleCapture] Starting capture processing')
 
   try {
     // Parse transcript with Gemini FIRST (should be <5 seconds)
@@ -126,28 +129,28 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       }
     })
 
-    const prompt = `Transform this voice transcript into a clear, first-person thought.
+    const prompt = `Transform this text into a clear, first-person thought.
 
 Extract:
 1. Title (5-10 words, first person)
 2. 2-4 bullet points (first person, capturing key ideas)
 
-Transcript: ${transcript}
+Text: ${text}
 
 Return ONLY JSON:
 {"title": "...", "bullets": ["...", "..."]}`
 
     console.log('[handleCapture] Calling Gemini...')
     const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const geminiResponse = result.response.text()
     console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
-    console.log('[handleCapture] Raw response:', text)
+    console.log('[handleCapture] Raw response:', geminiResponse)
 
     // Parse Gemini response - try multiple strategies
     let parsed: any = null
 
     // Strategy 1: Extract from markdown code block (```json ... ```)
-    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
+    const codeBlockMatch = geminiResponse.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
     if (codeBlockMatch) {
       try {
         parsed = JSON.parse(codeBlockMatch[1].trim())
@@ -159,7 +162,7 @@ Return ONLY JSON:
 
     // Strategy 2: Extract raw JSON object
     if (!parsed) {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         try {
           parsed = JSON.parse(jsonMatch[0])
@@ -173,7 +176,7 @@ Return ONLY JSON:
     // Strategy 3: Try parsing the entire response as JSON
     if (!parsed) {
       try {
-        parsed = JSON.parse(text.trim())
+        parsed = JSON.parse(geminiResponse.trim())
         console.log('[handleCapture] Parsed entire response as JSON')
       } catch (e) {
         console.log('[handleCapture] Full text parse failed:', e)
@@ -181,7 +184,7 @@ Return ONLY JSON:
     }
 
     if (!parsed) {
-      throw new Error(`No valid JSON found in Gemini response. Raw response: ${text}`)
+      throw new Error(`No valid JSON found in Gemini response. Raw response: ${geminiResponse}`)
     }
 
     if (!parsed.title || !parsed.bullets) {
@@ -196,7 +199,7 @@ Return ONLY JSON:
       audiopen_id: `voice_${Date.now()}`,
       title: parsed.title,
       body,
-      orig_transcript: transcript,
+      orig_transcript: text,
       tags: ['voice-note'],
       audiopen_created_at: now,
       memory_type: null,

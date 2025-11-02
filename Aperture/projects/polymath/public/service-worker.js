@@ -309,6 +309,13 @@ async function syncPendingCaptures() {
   try {
     // Open IndexedDB to get pending captures
     const db = await openIndexedDB()
+
+    // Verify object store exists before creating transaction
+    if (!db.objectStoreNames.contains('pending-captures')) {
+      console.log('[SW] pending-captures object store not found, skipping sync')
+      return
+    }
+
     const tx = db.transaction(['pending-captures'], 'readonly')
     const store = tx.objectStore('pending-captures')
     const pending = await getAllFromStore(store)
@@ -348,6 +355,16 @@ async function syncPendingCaptures() {
 function openIndexedDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('polymath', 1)
+
+    // Create object stores if they don't exist
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result
+      if (!db.objectStoreNames.contains('pending-captures')) {
+        db.createObjectStore('pending-captures', { keyPath: 'id', autoIncrement: true })
+        console.log('[SW] Created pending-captures object store')
+      }
+    }
+
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })

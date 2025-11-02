@@ -30,7 +30,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
-      const response = await fetch('/api/reading?resource=feeds')
+      const response = await fetch('/api/reading?resource=rss')
 
       if (!response.ok) {
         throw new Error('Failed to fetch feeds')
@@ -51,7 +51,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
-      const response = await fetch('/api/reading?resource=feeds', {
+      const response = await fetch('/api/reading?resource=rss', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -90,7 +90,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
   updateFeed: async (request: UpdateFeedRequest) => {
     try {
-      const response = await fetch('/api/reading?resource=feeds', {
+      const response = await fetch('/api/reading?resource=rss', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request),
@@ -117,7 +117,7 @@ export const useRSSStore = create<RSSState>((set, get) => ({
 
   unsubscribeFeed: async (id: string) => {
     try {
-      const response = await fetch(`/api/reading?resource=feeds&id=${id}`, {
+      const response = await fetch(`/api/reading?resource=rss&id=${id}`, {
         method: 'DELETE',
       })
 
