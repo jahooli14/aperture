@@ -43,6 +43,8 @@ export function MemoriesPage() {
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [showingCachedData, setShowingCachedData] = useState(false)
+  const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
+  const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
 
   // Theme clustering state
   const [clusters, setClusters] = useState<ThemeCluster[]>([])
@@ -158,8 +160,27 @@ export function MemoriesPage() {
   const handleVoiceCapture = async (transcript: string) => {
     if (!transcript) return
 
+    // Set processing state
+    setProcessingVoiceNote(true)
+    setNewlyCreatedMemoryId(null)
+
+    // Switch to "All" view and "Recent" to show the new thought
+    if (view !== 'all') {
+      setView('all')
+    }
+    if (memoryView !== 'recent') {
+      setMemoryView('recent')
+    }
+
     try {
       if (isOnline) {
+        // Show persistent toast during processing
+        addToast({
+          title: 'Processing voice note...',
+          description: 'Creating your thought',
+          variant: 'default',
+        })
+
         // Online: send to memories API for parsing
         const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
@@ -176,13 +197,29 @@ export function MemoriesPage() {
         }
 
         const data = await response.json()
-        console.log('✓ Memory created:', data)
+        const createdMemory = data.memory
+        console.log('✓ Memory created:', createdMemory)
 
+        // Store the ID of the newly created memory
+        if (createdMemory?.id) {
+          setNewlyCreatedMemoryId(createdMemory.id)
+        }
+
+        // Refresh memories list
+        await fetchMemories()
+
+        // Show success toast with the title
         addToast({
-          title: 'Thought captured!',
-          description: 'Processing your voice note...',
+          title: '✓ Thought captured!',
+          description: createdMemory?.title || 'Your voice note is ready',
           variant: 'success',
         })
+
+        // Clear the highlight after 5 seconds
+        setTimeout(() => {
+          setNewlyCreatedMemoryId(null)
+        }, 5000)
+
       } else {
         // Offline: queue for later
         await addOfflineCapture(transcript)
@@ -191,9 +228,11 @@ export function MemoriesPage() {
           description: 'Will process when back online',
           variant: 'default',
         })
+
+        // Still refresh to show queued items
+        await fetchMemories()
       }
 
-      await fetchMemories()
     } catch (error) {
       console.error('Failed to capture:', error)
 
@@ -206,6 +245,7 @@ export function MemoriesPage() {
           variant: 'default',
         })
         console.log('✓ Queued for offline sync')
+        await fetchMemories()
       } catch (offlineError) {
         addToast({
           title: 'Capture failed',
@@ -213,6 +253,8 @@ export function MemoriesPage() {
           variant: 'destructive',
         })
       }
+    } finally {
+      setProcessingVoiceNote(false)
     }
   }
 
@@ -359,6 +401,25 @@ export function MemoriesPage() {
         {view === 'all' && (
           <>
             <SuggestedPrompts />
+
+            {/* Voice Note Processing Banner */}
+            {processingVoiceNote && (
+              <Card className="premium-card mb-6 border-2" style={{ borderColor: 'var(--premium-blue)' }}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
+                    <div>
+                      <h3 className="font-semibold text-lg premium-text-platinum">
+                        Processing your voice note...
+                      </h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                        AI is transcribing and creating your thought
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Loading State */}
             {isLoading && (
@@ -552,16 +613,23 @@ export function MemoriesPage() {
               <Virtuoso
                 style={{ height: '800px' }}
                 totalCount={memories.length}
-                itemContent={(index) => (
-                  <div className="pb-6">
-                    <MemoryCard
-                      key={memories[index].id}
-                      memory={memories[index]}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  </div>
-                )}
+                itemContent={(index) => {
+                  const memory = memories[index]
+                  const isNewlyCreated = memory.id === newlyCreatedMemoryId
+
+                  return (
+                    <div className="pb-6">
+                      <div className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}>
+                        <MemoryCard
+                          key={memory.id}
+                          memory={memory}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      </div>
+                    </div>
+                  )
+                }}
                 components={{
                   List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
                     ({ style, children }, ref) => (
