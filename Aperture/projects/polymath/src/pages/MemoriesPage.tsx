@@ -220,7 +220,7 @@ export function MemoriesPage() {
 
         console.log('[handleVoiceCapture] Fetching memories list')
         // Refresh memories list (user can navigate away, this just updates the data)
-        await fetchMemories()
+        await loadMemoriesWithCache()
         console.log('[handleVoiceCapture] Memories fetched successfully')
 
         // Show success toast with the title - they can click to go to memories if they want
@@ -247,7 +247,7 @@ export function MemoriesPage() {
         })
 
         // Still refresh to show queued items
-        await fetchMemories()
+        await loadMemoriesWithCache()
       }
 
     } catch (error) {
@@ -274,7 +274,7 @@ export function MemoriesPage() {
           variant: 'default',
         })
         console.log('[handleVoiceCapture] ✓ Queued for offline sync')
-        await fetchMemories()
+        await loadMemoriesWithCache()
       } catch (offlineError) {
         console.error('[handleVoiceCapture] ❌ Offline queue also failed:', offlineError)
         addToast({
