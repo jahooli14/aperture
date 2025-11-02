@@ -107,15 +107,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  * Handle voice capture with Gemini parsing
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
+  const startTime = Date.now()
   const { transcript, source_reference } = req.body
 
   if (!transcript || typeof transcript !== 'string') {
     return res.status(400).json({ error: 'transcript required' })
   }
 
+  console.log('[handleCapture] Starting voice capture processing')
+
   try {
-    // Parse transcript using Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    // Parse transcript using Gemini 2.5 Flash with timeout
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 500,
+      }
+    })
 
     const prompt = `Transform this voice transcript into a personal thought, written in my own voice.
 
@@ -143,9 +152,16 @@ Respond ONLY with valid JSON in this exact format:
   "bullets": ["...", "...", "..."]
 }`
 
-    const result = await model.generateContent(prompt)
+    // Add timeout to Gemini API call (30 seconds max)
+    const geminiPromise = model.generateContent(prompt)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini API timeout after 30s')), 30000)
+    )
+
+    const result = await Promise.race([geminiPromise, timeoutPromise]) as any
     const response = await result.response
     const text = response.text()
+    console.log(`[handleCapture] Gemini processing took ${Date.now() - startTime}ms`)
 
     // Extract JSON from response (handle markdown code blocks)
     const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -188,6 +204,7 @@ Respond ONLY with valid JSON in this exact format:
       .single()
 
     if (insertError) throw insertError
+    console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
 
     // Trigger background processing (async, don't wait)
     // Use request host if available, fallback to VERCEL_URL or localhost
@@ -195,12 +212,14 @@ Respond ONLY with valid JSON in this exact format:
     const protocol = host.includes('localhost') ? 'http' : 'https'
     const baseUrl = `${protocol}://${host}`
 
-
+    // Fire and forget - don't await
     fetch(`${baseUrl}/api/process`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ memory_id: memory.id })
     }).catch(err => console.error('[capture] Background processing trigger failed:', err))
+
+    console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
 
     return res.status(201).json({
       success: true,
