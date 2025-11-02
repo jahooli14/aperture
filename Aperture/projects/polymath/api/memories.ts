@@ -117,16 +117,50 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   console.log('[handleCapture] Starting voice capture processing')
 
   try {
-    // **NEW APPROACH**: Save immediately with transcript, then process async
-    // This prevents timeouts and gives immediate user feedback
+    // Parse transcript with Gemini FIRST (should be <5 seconds)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash-exp',
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 300,
+      }
+    })
 
+    const prompt = `Transform this voice transcript into a clear, first-person thought.
+
+Extract:
+1. Title (5-10 words, first person)
+2. 2-4 bullet points (first person, capturing key ideas)
+
+Transcript: ${transcript}
+
+Return ONLY JSON:
+{"title": "...", "bullets": ["...", "..."]}`
+
+    console.log('[handleCapture] Calling Gemini...')
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
+
+    // Parse Gemini response
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No JSON found in Gemini response')
+    }
+
+    const parsed = JSON.parse(jsonMatch[0])
+    if (!parsed.title || !parsed.bullets) {
+      throw new Error('Invalid Gemini response format')
+    }
+
+    // Create memory with parsed content
     const now = new Date().toISOString()
+    const body = parsed.bullets.join('\n\n')
 
-    // Create a placeholder memory immediately with the transcript
-    const placeholderMemory = {
+    const newMemory = {
       audiopen_id: `voice_${Date.now()}`,
-      title: `Voice note from ${new Date().toLocaleTimeString()}`,
-      body: transcript, // Store raw transcript initially
+      title: parsed.title,
+      body,
       orig_transcript: transcript,
       tags: ['voice-note'],
       audiopen_created_at: now,
@@ -136,14 +170,14 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       emotional_tone: null,
       source_reference: source_reference || null,
       embedding: null,
-      processed: false, // Mark as unprocessed
+      processed: false, // Will be fully processed in background
       processed_at: null,
       error: null,
     }
 
     const { data: memory, error: insertError } = await supabase
       .from('memories')
-      .insert(placeholderMemory)
+      .insert(newMemory)
       .select()
       .single()
 
@@ -152,7 +186,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       throw insertError
     }
 
-    console.log(`[handleCapture] Memory created immediately, total time: ${Date.now() - startTime}ms`)
+    console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
 
     // Trigger Gemini processing in background (fire and forget)
     const host = req.headers.host || process.env.VERCEL_URL || 'localhost:5173'
