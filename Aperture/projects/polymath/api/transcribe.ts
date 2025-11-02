@@ -46,28 +46,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const file = audioFile as FormidableFile
 
+    console.log('[transcribe] File received:', {
+      originalFilename: file.originalFilename,
+      mimetype: file.mimetype,
+      size: file.size
+    })
+
     // Read audio file as base64
     const audioData = fs.readFileSync(file.filepath)
     const base64Audio = audioData.toString('base64')
 
-    // Use Gemini 2.5 Flash for audio transcription (1.5 models are retired)
+    console.log('[transcribe] Audio data:', {
+      size: audioData.length,
+      base64Length: base64Audio.length
+    })
+
+    // Use Gemini 2.5 Flash for audio transcription
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+    console.log('[transcribe] Sending to Gemini with mimetype:', file.mimetype || 'audio/aac')
 
     const result = await model.generateContent([
       {
         inlineData: {
-          mimeType: file.mimetype || 'audio/aac',
+          mimeType: file.mimetype || 'audio/webm',
           data: base64Audio
         }
       },
-      'Transcribe this audio recording. Return only the transcribed text, nothing else.'
+      'Listen to this audio recording and transcribe exactly what is said. Return only the transcribed text, with no additional commentary or formatting.'
     ])
 
     const response = await result.response
     const text = response.text().trim()
 
+    console.log('[transcribe] Gemini response:', {
+      textLength: text.length,
+      text: text.slice(0, 200) // First 200 chars for logging
+    })
+
     // Clean up temp file
     fs.unlinkSync(file.filepath)
+
+    if (!text || text.length === 0) {
+      console.error('[transcribe] Empty transcription returned')
+      return res.status(500).json({
+        error: 'No transcription returned',
+        details: 'Gemini returned an empty response'
+      })
+    }
 
     return res.status(200).json({
       success: true,
