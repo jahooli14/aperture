@@ -633,23 +633,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'PUT' || req.method === 'PATCH') {
     try {
-      // Extract ID from URL path (e.g., /api/projects/abc-123) or from body
-      let projectId = req.query.id as string
-
-      if (!projectId && req.url) {
-        const match = req.url.match(/\/projects\/([^?\/]+)/)
-        if (match) {
-          projectId = match[1]
-        }
-      }
-
-      // Fallback to body if not in URL
-      if (!projectId) {
-        projectId = req.body.id
-      }
+      const projectId = req.query.id as string
 
       if (!projectId) {
-        return res.status(400).json({ error: 'Project ID required' })
+        return res.status(400).json({ error: 'Project ID required in query parameter' })
       }
 
       // Remove id from updates if present in body

@@ -38,7 +38,16 @@ export const api = {
   },
 
   patch: async (endpoint: string, data?: any) => {
-    const response = await fetch(`/api/${endpoint}`, {
+    // For Vercel serverless routing, convert path-based IDs to query params
+    // e.g., "projects/abc-123" → "projects?id=abc-123"
+    let finalEndpoint = endpoint
+    const pathMatch = endpoint.match(/^([^\/]+)\/([^\/\?]+)(.*)$/)
+    if (pathMatch) {
+      const [, base, id, rest] = pathMatch
+      finalEndpoint = `${base}?id=${id}${rest}`
+    }
+
+    const response = await fetch(`/api/${finalEndpoint}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: data ? JSON.stringify(data) : undefined
@@ -47,7 +56,16 @@ export const api = {
   },
 
   delete: async (endpoint: string) => {
-    const response = await fetch(`/api/${endpoint}`, {
+    // For Vercel serverless routing, convert path-based IDs to query params
+    // e.g., "projects/abc-123" → "projects?id=abc-123"
+    let finalEndpoint = endpoint
+    const pathMatch = endpoint.match(/^([^\/]+)\/([^\/\?]+)(.*)$/)
+    if (pathMatch) {
+      const [, base, id, rest] = pathMatch
+      finalEndpoint = `${base}?id=${id}${rest}`
+    }
+
+    const response = await fetch(`/api/${finalEndpoint}`, {
       method: 'DELETE'
     })
     return handleResponse(response)
