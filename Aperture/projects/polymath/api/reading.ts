@@ -36,8 +36,11 @@ async function fetchArticleWithJina(url: string) {
 
     const response = await fetch(jinaUrl, {
       headers: {
-        'Accept': 'application/json',
-        'X-Return-Format': 'json'
+        'Accept': 'text/plain',
+        'X-Return-Format': 'text',
+        'X-With-Generated-Alt': 'false',
+        'X-With-Links-Summary': 'false',
+        'X-With-Images-Summary': 'false'
       }
     })
 
@@ -45,38 +48,46 @@ async function fetchArticleWithJina(url: string) {
       throw new Error(`Jina AI returned ${response.status}`)
     }
 
-    const result = await response.json()
+    const rawText = await response.text()
 
-    // Jina AI wraps the article data in a 'data' property
-    const data = result.data || result
+    // Extract title from first line if it looks like a title (before first paragraph)
+    const lines = rawText.split('\n')
+    let title = 'Untitled'
+    let contentStartIndex = 0
 
-    // Clean the content before converting to HTML
-    const cleanedContent = data.content ? cleanArticleContent(data.content) : ''
-
-    // Convert markdown to HTML for better readability
-    let htmlContent = ''
-    if (cleanedContent) {
-      try {
-        // Configure marked for safe HTML rendering
-        marked.setOptions({
-          breaks: true,  // Convert line breaks to <br>
-          gfm: true,     // GitHub Flavored Markdown
-        })
-        htmlContent = await marked.parse(cleanedContent)
-      } catch (error) {
-        htmlContent = cleanedContent // Fallback to raw content
+    // Look for title in first few lines
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      const line = lines[i].trim()
+      if (line.length > 0 && line.length < 200 && !line.match(/^https?:\/\//)) {
+        title = line
+        contentStartIndex = i + 1
+        break
       }
     }
 
+    // Get content after title
+    const contentLines = lines.slice(contentStartIndex)
+    const rawContent = contentLines.join('\n')
+
+    // Clean the content aggressively
+    const cleanedContent = cleanArticleContent(rawContent)
+
+    // Convert to simple HTML with paragraphs
+    const htmlContent = cleanedContent
+      .split('\n\n')
+      .filter(para => para.trim().length > 0)
+      .map(para => `<p>${para.trim()}</p>`)
+      .join('\n')
+
     return {
-      title: data.title || 'Untitled',
+      title: title || 'Untitled',
       content: htmlContent,
-      excerpt: data.description || cleanedContent.substring(0, 200) || '',
+      excerpt: cleanedContent.substring(0, 200) || '',
       author: null,
       publishedDate: null,
       thumbnailUrl: null,
       faviconUrl: null,
-      url: data.url || url
+      url
     }
   } catch (error) {
     throw new Error('Failed to fetch article content')
@@ -84,8 +95,8 @@ async function fetchArticleWithJina(url: string) {
 }
 
 /**
- * Clean markdown article content (for Jina AI output)
- * Removes navigation, footers, ads, cookie notices, etc.
+ * Clean article content (for Jina AI plain text output)
+ * Removes navigation, footers, ads, cookie notices, UI elements, etc.
  */
 function cleanArticleContent(content: string): string {
   if (!content) return ''
