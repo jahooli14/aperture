@@ -45,10 +45,16 @@ async function fetchArticleWithJina(url: string) {
     })
 
     if (!response.ok) {
-      throw new Error(`Jina AI returned ${response.status}`)
+      const errorText = await response.text()
+      console.error('[Jina AI Error]', response.status, errorText)
+      throw new Error(`Jina AI returned ${response.status}: ${errorText.substring(0, 200)}`)
     }
 
     const rawText = await response.text()
+
+    if (!rawText || rawText.trim().length === 0) {
+      throw new Error('Jina AI returned empty content')
+    }
 
     // Extract title from first line if it looks like a title (before first paragraph)
     const lines = rawText.split('\n')
@@ -90,7 +96,8 @@ async function fetchArticleWithJina(url: string) {
       url
     }
   } catch (error) {
-    throw new Error('Failed to fetch article content')
+    console.error('[fetchArticleWithJina] Error:', error)
+    throw new Error(error instanceof Error ? error.message : 'Failed to fetch article content')
   }
 }
 
