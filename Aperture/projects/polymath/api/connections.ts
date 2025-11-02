@@ -928,29 +928,57 @@ async function handleCreateSpark(
   const supabase = getSupabaseClient()
   const { source_type, source_id, target_type, target_id, connection_type, created_by, ai_reasoning } = req.body
 
-  if (!source_type || !source_id || !target_type || !target_id) {
-    return res.status(400).json({ error: 'source_type, source_id, target_type, and target_id required' })
-  }
+  // Validate required fields with detailed error message
+  const missing = []
+  if (!source_type) missing.push('source_type')
+  if (!source_id) missing.push('source_id')
+  if (!target_type) missing.push('target_type')
+  if (!target_id) missing.push('target_id')
 
-  const { data, error } = await supabase
-    .from('connections')
-    .insert({
-      source_type,
-      source_id,
-      target_type,
-      target_id,
-      connection_type: connection_type || 'relates_to',
-      created_by: created_by || 'user',
-      ai_reasoning
+  if (missing.length > 0) {
+    return res.status(400).json({
+      error: 'Missing required fields',
+      missing,
+      received: {
+        source_type: source_type || null,
+        source_id: source_id || null,
+        target_type: target_type || null,
+        target_id: target_id || null
+      }
     })
-    .select()
-    .single()
-
-  if (error) {
-    return res.status(500).json({ error: 'Failed to create connection' })
   }
 
-  return res.status(201).json({ connection: data })
+  try {
+    const { data, error } = await supabase
+      .from('connections')
+      .insert({
+        source_type,
+        source_id,
+        target_type,
+        target_id,
+        connection_type: connection_type || 'relates_to',
+        created_by: created_by || 'user',
+        ai_reasoning
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[connections] Create error:', error)
+      return res.status(500).json({
+        error: 'Failed to create connection',
+        details: error.message
+      })
+    }
+
+    return res.status(201).json({ connection: data })
+  } catch (error) {
+    console.error('[connections] Unexpected error:', error)
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
 }
 
 /**
