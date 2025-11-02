@@ -39,18 +39,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Submit foundational thought response
     if (req.method === 'POST' && submit_response === 'true') {
-      return await handleSubmitResponse(req, res)
+      return await handleSubmitResponse(req, res, supabase, userId)
     }
 
     // POST: Voice capture
     if (req.method === 'POST' && capture === 'true') {
-      return await handleCapture(req, res)
+      return await handleCapture(req, res, supabase)
     }
 
     // POST: Mark memory as reviewed
     if (req.method === 'POST') {
       const memoryId = req.body.id || id
-      return await handleReview(memoryId as string, res)
+      return await handleReview(memoryId as string, res, supabase)
     }
 
     // GET: Search (merged from search.ts)
@@ -60,22 +60,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Memory prompts
     if (req.method === 'GET' && prompts === 'true') {
-      return await handlePrompts(req, res)
+      return await handlePrompts(req, res, supabase, userId)
     }
 
     // GET: Theme clusters
     if (req.method === 'GET' && themes === 'true') {
-      return await handleThemes(res)
+      return await handleThemes(res, supabase)
     }
 
     // GET: Bridges for memory
     if (req.method === 'GET' && bridges === 'true') {
-      return await handleBridges(id as string | undefined, res)
+      return await handleBridges(id as string | undefined, res, supabase)
     }
 
     // GET: Resurfacing queue
     if (req.method === 'GET' && resurfacing === 'true') {
-      return await handleResurfacing(res)
+      return await handleResurfacing(res, supabase)
     }
 
     // GET: List all memories (default)
@@ -102,7 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 /**
  * Handle voice capture with Gemini parsing
  */
-async function handleCapture(req: VercelRequest, res: VercelResponse) {
+async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
   const { transcript, source_reference } = req.body
 
   if (!transcript || typeof transcript !== 'string') {
@@ -218,7 +218,7 @@ Respond ONLY with valid JSON in this exact format:
 /**
  * Mark memory as reviewed
  */
-async function handleReview(memoryId: string, res: VercelResponse) {
+async function handleReview(memoryId: string, res: VercelResponse, supabase: any) {
   if (!memoryId) {
     return res.status(400).json({ error: 'Memory ID required' })
   }
@@ -258,7 +258,7 @@ async function handleReview(memoryId: string, res: VercelResponse) {
 /**
  * Get bridges for memory
  */
-async function handleBridges(memoryId: string | undefined, res: VercelResponse) {
+async function handleBridges(memoryId: string | undefined, res: VercelResponse, supabase: any) {
   try {
     if (memoryId) {
       // Get bridges for specific memory
@@ -303,7 +303,7 @@ async function handleBridges(memoryId: string | undefined, res: VercelResponse) 
 /**
  * Resurfacing algorithm: Spaced repetition
  */
-async function handleResurfacing(res: VercelResponse) {
+async function handleResurfacing(res: VercelResponse, supabase: any) {
   try {
     // Get all memories with metadata
     const { data: memories, error } = await supabase
@@ -368,7 +368,7 @@ async function handleResurfacing(res: VercelResponse) {
 /**
  * Theme clustering: Group memories by AI-extracted themes
  */
-async function handleThemes(res: VercelResponse) {
+async function handleThemes(res: VercelResponse, supabase: any) {
   try {
     const { data: memories, error: memoriesError } = await supabase
       .from('memories')
@@ -485,10 +485,8 @@ async function handleThemes(res: VercelResponse) {
 /**
  * Handle memory prompts request (consolidated from memory-prompts.ts)
  */
-async function handlePrompts(req: VercelRequest, res: VercelResponse) {
+async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   try {
-    const userId = req.headers['x-user-id'] as string | undefined
-
     // Fetch all prompts
     const { data: prompts, error: promptsError } = await supabase
       .from('memory_prompts')
@@ -578,7 +576,7 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-async function handleSubmitResponse(req: VercelRequest, res: VercelResponse) {
+async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   try {
     const { prompt_id, custom_title, bullets } = req.body
 
