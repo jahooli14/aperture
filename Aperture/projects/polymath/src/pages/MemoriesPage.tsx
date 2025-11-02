@@ -30,6 +30,7 @@ import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
   const { memories, fetchMemories, loading, error, deleteMemory } = useMemoryStore()
+  const setMemories = useMemoryStore((state: any) => state.setMemories)
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -57,20 +58,20 @@ export function MemoriesPage() {
       const { memories: fetchedMemories, fromCache } = await fetchWithCache('/api/memories')
       setShowingCachedData(fromCache)
 
+      // Update the store with fetched memories (whether from cache or API)
+      setMemories(fetchedMemories)
+
       if (fromCache) {
         addToast({
           title: 'Offline Mode',
           description: `Showing ${fetchedMemories.length} cached memories`,
           variant: 'default'
         })
-      } else {
-        // Online: also update the store
-        await fetchMemories()
       }
     } catch (error) {
       console.error('Failed to load memories:', error)
     }
-  }, [fetchWithCache, addToast, fetchMemories])
+  }, [fetchWithCache, addToast, setMemories])
 
   const fetchThemeClusters = useCallback(async () => {
     setLoadingClusters(true)
