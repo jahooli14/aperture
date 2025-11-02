@@ -39,7 +39,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects()
-  }, [])
+  }, [fetchProjects])
 
   const handleEdit = (project: Project) => {
     setSelectedProject(project)

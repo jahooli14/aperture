@@ -4,7 +4,7 @@
  * Shows thinking patterns, velocity, side-hustle hours
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent } from '../components/ui/card'
 import { Clock, TrendingUp, Calendar, Zap } from 'lucide-react'
 import type { CognitivePattern, TimelinePattern } from '../types'
@@ -14,11 +14,7 @@ export function TimelinePage() {
   const [timeline, setTimeline] = useState<TimelinePattern | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchPatterns()
-  }, [])
-
-  const fetchPatterns = async () => {
+  const fetchPatterns = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch('/api/analytics?resource=patterns')
@@ -31,7 +27,11 @@ export function TimelinePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchPatterns()
+  }, [fetchPatterns])
 
   if (loading) {
     return (

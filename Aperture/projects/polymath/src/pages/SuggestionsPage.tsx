@@ -45,7 +45,7 @@ export function SuggestionsPage() {
 
   useEffect(() => {
     fetchSuggestions()
-  }, [])
+  }, [fetchSuggestions])
 
   const handleRate = async (id: string, rating: number) => {
     await rateSuggestion(id, rating)

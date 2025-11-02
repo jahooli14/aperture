@@ -3,7 +3,7 @@
  * Shows max 3 projects for today based on context
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { VoiceInput } from '../components/VoiceInput'
@@ -22,13 +22,7 @@ export function DailyQueuePage() {
   const [promptsLoading, setPromptsLoading] = useState(false)
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(false)
 
-  useEffect(() => {
-    fetchQueue()
-    fetchGapPrompts()
-    fetchCreativeOpportunities()
-  }, [])
-
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
@@ -44,7 +38,7 @@ export function DailyQueuePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const updateContext = async (newContext: Partial<UserContext>) => {
     try {
@@ -64,7 +58,7 @@ export function DailyQueuePage() {
     }
   }
 
-  const fetchGapPrompts = async () => {
+  const fetchGapPrompts = useCallback(async () => {
     setPromptsLoading(true)
     try {
       const response = await fetch('/api/onboarding?resource=gap-analysis')
@@ -77,9 +71,9 @@ export function DailyQueuePage() {
     } finally {
       setPromptsLoading(false)
     }
-  }
+  }, [])
 
-  const fetchCreativeOpportunities = async () => {
+  const fetchCreativeOpportunities = useCallback(async () => {
     setOpportunitiesLoading(true)
     try {
       const response = await fetch('/api/analytics?resource=opportunities')
@@ -92,7 +86,13 @@ export function DailyQueuePage() {
     } finally {
       setOpportunitiesLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchQueue()
+    fetchGapPrompts()
+    fetchCreativeOpportunities()
+  }, [fetchQueue, fetchGapPrompts, fetchCreativeOpportunities])
 
   const skipProject = (projectId: string) => {
     setQueue(prev => prev.filter(p => p.project_id !== projectId))

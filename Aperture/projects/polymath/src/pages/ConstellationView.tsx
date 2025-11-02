@@ -118,9 +118,100 @@ export default function ConstellationView() {
   }, [])
 
   // Fetch all data
+  const fetchGraphData = useCallback(async () => {
+    setLoading(true)
+    try {
+      // Fetch all content types in parallel
+      const [projectsRes, memoriesRes, articlesRes] = await Promise.all([
+        fetch('/api/projects'),
+        fetch('/api/memories'),
+        fetch('/api/reading'),
+      ])
+
+      const projects = await projectsRes.json()
+      const memories = await memoriesRes.json()
+      const articles = await articlesRes.json()
+
+      // TODO: Implement /api/connections endpoint for fetching all connections
+      // For now, use empty connections to avoid breaking the visualization
+      const connectionsData = { connections: [] }
+
+      // Build nodes
+      const nodes: GraphNode[] = []
+
+      // Build links first to calculate connection counts
+      const links: GraphLink[] = []
+      connectionsData.connections?.forEach((c: any) => {
+        links.push({
+          source: `${c.source_type}-${c.source_id}`,
+          target: `${c.target_type}-${c.target_id}`,
+          type: c.connection_type,
+          created_at: c.created_at
+        })
+      })
+
+      // Calculate connection counts per node
+      const connectionCounts = new Map<string, number>()
+      links.forEach(link => {
+        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id
+        const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id
+        connectionCounts.set(sourceId, (connectionCounts.get(sourceId) || 0) + 1)
+        connectionCounts.set(targetId, (connectionCounts.get(targetId) || 0) + 1)
+      })
+
+      // Add projects (Planets)
+      projects.projects?.forEach((p: any) => {
+        const id = `project-${p.id}`
+        nodes.push({
+          id,
+          type: 'project',
+          name: p.title,
+          val: NODE_THEMES.project.size,
+          color: NODE_THEMES.project.color,
+          created_at: p.created_at,
+          metadata: { ...p, connectionCount: connectionCounts.get(id) || 0 }
+        })
+      })
+
+      // Add memories (Stars)
+      memories.memories?.forEach((m: any) => {
+        const id = `thought-${m.id}`
+        nodes.push({
+          id,
+          type: 'thought',
+          name: m.title || 'Untitled thought',
+          val: NODE_THEMES.thought.size,
+          color: NODE_THEMES.thought.color,
+          created_at: m.created_at,
+          metadata: { ...m, connectionCount: connectionCounts.get(id) || 0 }
+        })
+      })
+
+      // Add articles (Comets)
+      articles.articles?.forEach((a: any) => {
+        const id = `article-${a.id}`
+        nodes.push({
+          id,
+          type: 'article',
+          name: a.title,
+          val: NODE_THEMES.article.size,
+          color: NODE_THEMES.article.color,
+          created_at: a.created_at,
+          metadata: { ...a, connectionCount: connectionCounts.get(id) || 0 }
+        })
+      })
+
+      setGraphData({ nodes, links })
+    } catch (error) {
+      console.error('Error fetching graph data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchGraphData()
-  }, [])
+  }, [fetchGraphData])
 
   // Initialize ambient starfield background with enhanced visuals
   useEffect(() => {
@@ -281,97 +372,6 @@ export default function ConstellationView() {
       }
     }
   }, [loading])
-
-  const fetchGraphData = async () => {
-    setLoading(true)
-    try {
-      // Fetch all content types in parallel
-      const [projectsRes, memoriesRes, articlesRes] = await Promise.all([
-        fetch('/api/projects'),
-        fetch('/api/memories'),
-        fetch('/api/reading'),
-      ])
-
-      const projects = await projectsRes.json()
-      const memories = await memoriesRes.json()
-      const articles = await articlesRes.json()
-
-      // TODO: Implement /api/connections endpoint for fetching all connections
-      // For now, use empty connections to avoid breaking the visualization
-      const connectionsData = { connections: [] }
-
-      // Build nodes
-      const nodes: GraphNode[] = []
-
-      // Build links first to calculate connection counts
-      const links: GraphLink[] = []
-      connectionsData.connections?.forEach((c: any) => {
-        links.push({
-          source: `${c.source_type}-${c.source_id}`,
-          target: `${c.target_type}-${c.target_id}`,
-          type: c.connection_type,
-          created_at: c.created_at
-        })
-      })
-
-      // Calculate connection counts per node
-      const connectionCounts = new Map<string, number>()
-      links.forEach(link => {
-        const sourceId = typeof link.source === 'string' ? link.source : (link.source as any).id
-        const targetId = typeof link.target === 'string' ? link.target : (link.target as any).id
-        connectionCounts.set(sourceId, (connectionCounts.get(sourceId) || 0) + 1)
-        connectionCounts.set(targetId, (connectionCounts.get(targetId) || 0) + 1)
-      })
-
-      // Add projects (Planets)
-      projects.projects?.forEach((p: any) => {
-        const id = `project-${p.id}`
-        nodes.push({
-          id,
-          type: 'project',
-          name: p.title,
-          val: NODE_THEMES.project.size,
-          color: NODE_THEMES.project.color,
-          created_at: p.created_at,
-          metadata: { ...p, connectionCount: connectionCounts.get(id) || 0 }
-        })
-      })
-
-      // Add memories (Stars)
-      memories.memories?.forEach((m: any) => {
-        const id = `thought-${m.id}`
-        nodes.push({
-          id,
-          type: 'thought',
-          name: m.title || 'Untitled thought',
-          val: NODE_THEMES.thought.size,
-          color: NODE_THEMES.thought.color,
-          created_at: m.created_at,
-          metadata: { ...m, connectionCount: connectionCounts.get(id) || 0 }
-        })
-      })
-
-      // Add articles (Comets)
-      articles.articles?.forEach((a: any) => {
-        const id = `article-${a.id}`
-        nodes.push({
-          id,
-          type: 'article',
-          name: a.title,
-          val: NODE_THEMES.article.size,
-          color: NODE_THEMES.article.color,
-          created_at: a.created_at,
-          metadata: { ...a, connectionCount: connectionCounts.get(id) || 0 }
-        })
-      })
-
-      setGraphData({ nodes, links })
-    } catch (error) {
-      console.error('Error fetching graph data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Time travel animation
   useEffect(() => {

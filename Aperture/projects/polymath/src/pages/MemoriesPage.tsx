@@ -3,7 +3,7 @@
  * Browse all memories, view resurfacing queue, see connections
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -50,14 +50,7 @@ export function MemoriesPage() {
   const [loadingClusters, setLoadingClusters] = useState(false)
   const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
 
-  useEffect(() => {
-    loadMemoriesWithCache()
-    if (view === 'all') {
-      fetchThemeClusters()
-    }
-  }, [view])
-
-  const loadMemoriesWithCache = async () => {
+  const loadMemoriesWithCache = useCallback(async () => {
     try {
       const { memories: fetchedMemories, fromCache } = await fetchWithCache('/api/memories')
       setShowingCachedData(fromCache)
@@ -75,9 +68,9 @@ export function MemoriesPage() {
     } catch (error) {
       console.error('Failed to load memories:', error)
     }
-  }
+  }, [fetchWithCache, addToast, fetchMemories])
 
-  const fetchThemeClusters = async () => {
+  const fetchThemeClusters = useCallback(async () => {
     setLoadingClusters(true)
     try {
       const response = await fetch('/api/memories?themes=true')
@@ -89,9 +82,9 @@ export function MemoriesPage() {
     } finally {
       setLoadingClusters(false)
     }
-  }
+  }, [])
 
-  const fetchResurfacing = async () => {
+  const fetchResurfacing = useCallback(async () => {
     setLoadingResurfacing(true)
     try {
       const response = await fetch('/api/memories?resurfacing=true')
@@ -102,13 +95,20 @@ export function MemoriesPage() {
     } finally {
       setLoadingResurfacing(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadMemoriesWithCache()
+    if (view === 'all') {
+      fetchThemeClusters()
+    }
+  }, [view, loadMemoriesWithCache, fetchThemeClusters])
 
   useEffect(() => {
     if (view === 'resurfacing') {
       fetchResurfacing()
     }
-  }, [view])
+  }, [view, fetchResurfacing])
 
   const handleReview = async (memoryId: string) => {
     try {

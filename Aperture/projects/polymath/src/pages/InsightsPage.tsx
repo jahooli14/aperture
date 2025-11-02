@@ -4,7 +4,7 @@
  * Shows how thinking evolved and project patterns
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -16,11 +16,7 @@ export function InsightsPage() {
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchInsights()
-  }, [])
-
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     setLoading(true)
     try {
       const response = await fetch('/api/analytics?resource=evolution')
@@ -32,7 +28,11 @@ export function InsightsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchInsights()
+  }, [fetchInsights])
 
   const getInsightIcon = (type: string) => {
     const iconStyle = { color: 'var(--premium-blue)' }
