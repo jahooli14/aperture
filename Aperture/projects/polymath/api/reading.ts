@@ -737,8 +737,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // POST - Subscribe
     if (req.method === 'POST') {
       try {
+        console.log('[RSS Subscribe] Request body:', JSON.stringify(req.body, null, 2))
         const { feed_url } = req.body
-        if (!feed_url) return res.status(400).json({ error: 'feed_url required' })
+        if (!feed_url) {
+          console.log('[RSS Subscribe] Missing feed_url in body:', req.body)
+          return res.status(400).json({ error: 'feed_url required' })
+        }
 
         const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
         if (existingError && existingError.code !== 'PGRST116') throw existingError
