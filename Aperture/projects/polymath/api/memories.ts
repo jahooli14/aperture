@@ -103,11 +103,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-/**
+/* UNUSED - kept for reference
  * Attempt to repair incomplete JSON from Gemini
  * Handles cases like: {"title": "something
  */
-function repairIncompleteJSON(jsonStr: string): string {
+/* function repairIncompleteJSON(jsonStr: string): string {
   let repaired = jsonStr.trim()
 
   // Count braces to see if incomplete
@@ -145,10 +145,10 @@ function repairIncompleteJSON(jsonStr: string): string {
   }
 
   return repaired
-}
+} */
 
 /**
- * Handle voice capture with Gemini parsing
+ * Handle voice capture - uses raw transcript, then full AI processing enriches it
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
   const startTime = Date.now()
@@ -163,12 +163,15 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
   console.log('[handleCapture] Starting capture processing')
 
-  // Default fallback values
-  let parsedTitle = text.substring(0, 50) + (text.length > 50 ? '...' : '')
-  let parsedBullets = [text]
+  // Use raw transcript - full AI processing will add all enrichment
+  // Initial Gemini call for title/bullets is unreliable (returns empty), so skip it
+  const parsedTitle = text.substring(0, 100) + (text.length > 100 ? '...' : '')
+  const parsedBullets = [text]
+  console.log('[handleCapture] Using raw transcript - full processing will handle AI enrichment')
 
+  /* DISABLED: Initial Gemini call returns empty responses
   try {
-    // Parse transcript with Gemini FIRST (should be <5 seconds)
+    // Parse transcript with Gemini FIRST (should be < 5 seconds)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
@@ -286,8 +289,9 @@ Return ONLY JSON:
     // Gemini failed - log but continue with fallback
     console.error('[handleCapture] Gemini error, using fallback:', geminiError)
   }
+  */
 
-  // Always create memory (either with Gemini parsing or fallback)
+  // Always create memory with raw transcript
   try {
     const now = new Date().toISOString()
     const body = Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text
