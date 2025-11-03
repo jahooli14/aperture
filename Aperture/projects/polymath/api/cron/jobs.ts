@@ -164,14 +164,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timestamp: new Date().toISOString()
       })
 
-    } else if (job === 'process_stuck') {
-      // Process any memories stuck in processing (>5 min old, not processed, no error)
+    } else if (job === 'process_stuck' || job === 'process-memories') {
+      // Process any memories stuck in processing
+      // process_stuck: >5 min old (backward compat)
+      // process-memories: >30 seconds old (runs every 5 min)
+      const ageThreshold = job === 'process-memories'
+        ? 30 * 1000  // 30 seconds
+        : 5 * 60 * 1000  // 5 minutes
+
       const { data: stuckMemories, error: fetchError } = await supabase
         .from('memories')
         .select('id, title, created_at')
         .eq('processed', false)
         .is('error', null)
-        .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
+        .lt('created_at', new Date(Date.now() - ageThreshold).toISOString())
         .order('created_at', { ascending: true })
         .limit(10)
 
@@ -184,7 +190,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       for (const memory of stuckMemories || []) {
         try {
-          console.log(`[cron/jobs] Processing stuck memory: ${memory.id} - ${memory.title}`)
+          console.log(`[cron/jobs] Processing memory: ${memory.id} - ${memory.title}`)
           await processMemory(memory.id)
           processed.push(memory.id)
         } catch (error) {
@@ -195,7 +201,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       return res.status(200).json({
         success: true,
-        job: 'process_stuck',
+        job,
         found: stuckMemories?.length || 0,
         processed: processed.length,
         failed: failed.length,
@@ -204,7 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else {
-      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=synthesis, ?job=strengthen, or ?job=process_stuck` })
+      return res.status(400).json({ error: `Unknown job: ${job}. Use ?job=daily, ?job=synthesis, ?job=strengthen, ?job=process_stuck, or ?job=process-memories` })
     }
 
   } catch (error) {
