@@ -38,13 +38,12 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
   return (
     <Card className="premium-card">
       <CardContent className="p-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-wrap items-start gap-3">
           {/* Status */}
-          <div className="relative">
-            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Status</div>
+          <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowStatusPicker(!showStatusPicker)}
-              className="w-full px-2 py-1.5 rounded-lg font-medium border transition-all hover:shadow-sm touch-manipulation text-left flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg font-medium border transition-all hover:shadow-sm touch-manipulation flex items-center gap-1.5"
               style={{
                 backgroundColor: currentStatus.bg,
                 color: currentStatus.text,
@@ -61,7 +60,7 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
                   className="fixed inset-0 z-10"
                   onClick={() => setShowStatusPicker(false)}
                 />
-                <div className="absolute top-full left-0 right-0 mt-2 premium-card rounded-lg shadow-lg py-1 z-20 max-h-64 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-2 premium-card rounded-lg shadow-lg py-1 z-20 max-h-64 overflow-y-auto min-w-[160px]">
                   {(Object.keys(statusConfig) as Project['status'][]).map((status) => {
                     const config = statusConfig[status]
                     return (
@@ -89,9 +88,8 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
 
           {/* Energy Level */}
           {currentEnergy && (
-            <div>
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Energy</div>
-              <div className="px-2 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
+            <div className="flex-shrink-0">
+              <div className="px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: currentEnergy.color
@@ -104,9 +102,8 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
 
           {/* Estimated Time */}
           {project.estimated_next_step_time && (
-            <div>
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Time</div>
-              <div className="px-2 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
+            <div className="flex-shrink-0">
+              <div className="px-3 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: 'var(--premium-text-primary)'
@@ -116,17 +113,14 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
               </div>
             </div>
           )}
-        </div>
 
-        {/* Context Requirements */}
-        {project.context_requirements && project.context_requirements.length > 0 && (
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <div className="text-xs font-semibold mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>Required Context</div>
-            <div className="flex flex-wrap gap-2">
+          {/* Context Requirements */}
+          {project.context_requirements && project.context_requirements.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
               {project.context_requirements.map((req, index) => (
                 <span
                   key={index}
-                  className="px-2 py-1 text-xs rounded-md border"
+                  className="px-2 py-1 text-xs rounded-md border flex-shrink-0"
                   style={{
                     backgroundColor: 'rgba(59, 130, 246, 0.15)',
                     color: '#3b82f6',
@@ -137,8 +131,8 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   )

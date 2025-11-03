@@ -81,13 +81,20 @@ export function FloatingNav() {
     // IMMEDIATELY show optimistic memory
     const tempId = addOptimisticMemory(text)
 
+    // Detect if we're on a project page
+    const projectMatch = location.pathname.match(/^\/projects\/([^/]+)$/)
+    const projectId = projectMatch ? projectMatch[1] : null
+
     try {
       if (isOnline) {
         // Online: send to memories API for parsing
         const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: text })
+          body: JSON.stringify({
+            transcript: text,
+            source_reference: projectId ? `project:${projectId}` : null
+          })
         })
 
         if (!response.ok) {
@@ -104,10 +111,35 @@ export function FloatingNav() {
         // Replace optimistic memory with real one
         replaceOptimisticMemory(tempId, data.memory)
 
+        // If we're on a project page, create a connection
+        if (projectId && data.memory?.id) {
+          try {
+            const connectionResponse = await fetch('/api/connections', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source_type: 'project',
+                source_id: projectId,
+                target_type: 'memory',
+                target_id: data.memory.id,
+                connection_type: 'project_voice_note',
+                reasoning: 'Voice note captured while viewing this project'
+              })
+            })
+
+            if (connectionResponse.ok) {
+              console.log('✓ Auto-linked to project:', projectId)
+            }
+          } catch (linkError) {
+            console.warn('Failed to auto-link to project:', linkError)
+            // Don't fail the whole operation if linking fails
+          }
+        }
+
         // Success! Show confirmation
         addToast({
-          title: 'Thought saved!',
-          description: 'Your voice note has been captured.',
+          title: projectId ? 'Thought saved & linked!' : 'Thought saved!',
+          description: projectId ? 'Auto-linked to this project.' : 'Your voice note has been captured.',
           variant: 'success',
         })
       } else {
