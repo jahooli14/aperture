@@ -89,7 +89,7 @@ const BottomSheetContent = React.forwardRef<
 >(({ className, children }, ref) => {
   const { onOpenChange } = React.useContext(BottomSheetContext)
   const y = useMotionValue(0)
-  const opacity = useTransform(y, [0, 300], [1, 0.5])
+  const opacity = useTransform(y, [0, 300], [1, 0.5], { clamp: true })
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     // Dismiss if dragged down more than 100px or with fast velocity

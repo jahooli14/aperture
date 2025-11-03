@@ -50,15 +50,15 @@ export function ArticleCompletionDialog({
 
     setLoadingRelated(true)
     try {
-      // Fetch related projects
-      const projectsResponse = await fetch(`/api/projects?resource=suggestions&source_type=article&source_id=${article.id}&target_type=project&limit=3`)
+      // Fetch related projects (from connection_suggestions table via connections API)
+      const projectsResponse = await fetch(`/api/connections?action=suggestions&id=${article.id}&type=article&target_type=project&limit=3`)
       if (projectsResponse.ok) {
         const projectsData = await projectsResponse.json()
         setRelatedProjects(projectsData.suggestions || [])
       }
 
-      // Fetch related thoughts
-      const thoughtsResponse = await fetch(`/api/projects?resource=suggestions&source_type=article&source_id=${article.id}&target_type=thought&limit=3`)
+      // Fetch related thoughts (from connection_suggestions table via connections API)
+      const thoughtsResponse = await fetch(`/api/connections?action=suggestions&id=${article.id}&type=article&target_type=memory&limit=3`)
       if (thoughtsResponse.ok) {
         const thoughtsData = await thoughtsResponse.json()
         setRelatedThoughts(thoughtsData.suggestions || [])

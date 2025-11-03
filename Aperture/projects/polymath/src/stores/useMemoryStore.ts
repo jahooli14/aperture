@@ -19,6 +19,7 @@ interface MemoryStore {
 
   fetchMemories: () => Promise<void>
   setMemories: (memories: Memory[]) => void
+  clearError: () => void
   fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
   createMemory: (input: CreateMemoryInput) => Promise<Memory>
   updateMemory: (id: string, input: CreateMemoryInput) => Promise<Memory>
@@ -55,7 +56,11 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   },
 
   setMemories: (memories: Memory[]) => {
-    set({ memories })
+    set({ memories, error: null })
+  },
+
+  clearError: () => {
+    set({ error: null })
   },
 
   fetchBridgesForMemory: async (memoryId: string) => {

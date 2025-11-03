@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
@@ -248,13 +247,7 @@ export function ReadingPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <motion.div
-        className="min-h-screen pb-24"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-      >
+      <div className="min-h-screen pb-24">
       {/* Header */}
       <div className="premium-glass-strong border-b shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -535,7 +528,7 @@ export function ReadingPage() {
           },
         ]}
       />
-      </motion.div>
+      </div>
     </PullToRefresh>
   )
 }

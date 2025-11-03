@@ -1,5 +1,5 @@
 /**
- * SuggestionCard Component - Stunning Visual Design
+ * SuggestionCard Component - Polished Design matching Daily Queue
  */
 
 import React, { useState, memo } from 'react'
@@ -7,11 +7,12 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X } from 'lucide-react'
+import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X, Star } from 'lucide-react'
 import type { SuggestionCardProps } from '../../types'
 
-type FeedbackReason = 'too_hard' | 'not_interesting' | 'not_relevant' | 'too_time_consuming' | 'missing_skills' | 'other'
-type SparkFeedback = 'innovative' | 'fills_gap' | 'matches_goals' | 'exciting_challenge' | 'perfect_timing' | 'other'
+type InterestRating = 1 | 2 | 3
+type FeedbackReason = 'not_aligned' | 'too_complex' | 'no_time' | 'missing_resources' | 'will_revisit' | 'other'
+type InterestFeedback = 'perfect_fit' | 'good_timing' | 'fills_gap' | 'exciting_challenge' | 'growth_opportunity' | 'other'
 
 export const SuggestionCard = memo(function SuggestionCard({
   suggestion,
@@ -20,58 +21,35 @@ export const SuggestionCard = memo(function SuggestionCard({
   onViewDetail,
   compact = false
 }: SuggestionCardProps) {
-  const [loadingAction, setLoadingAction] = useState<'spark' | 'meh' | 'build' | null>(null)
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState<'spark' | 'meh' | null>(null)
+  const [loadingAction, setLoadingAction] = useState<'rate' | 'build' | null>(null)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
+  const [selectedRating, setSelectedRating] = useState<InterestRating | null>(null)
   const [exitX, setExitX] = useState(0)
 
-  // Motion values for swipe gesture
-  const x = useMotionValue(0)
-  const opacity = useTransform(x, [-200, 0, 200], [0, 1, 0])
-  const rotate = useTransform(x, [-200, 0, 200], [-20, 0, 20])
-  const sparkIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
-  const mehIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
-
-  const handleSparkClick = () => {
-    setShowFeedbackDialog('spark')
+  const handleRateClick = (rating: InterestRating) => {
+    setSelectedRating(rating)
+    setShowRatingDialog(true)
   }
 
-  const handleSparkWithFeedback = async (reason: SparkFeedback) => {
-    setLoadingAction('spark')
+  const handleRateWithFeedback = async (reason: FeedbackReason | InterestFeedback) => {
+    if (!selectedRating) return
+
+    setLoadingAction('rate')
     try {
-      // Send rating with feedback to consolidated endpoint
+      // Map 1-3 scale to backend (-1, 0, 1 for now)
+      const backendRating = selectedRating === 1 ? -1 : selectedRating === 3 ? 1 : 0
+
       await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: 1, feedback: reason })
+        body: JSON.stringify({ rating: backendRating, feedback: reason, interest_level: selectedRating })
       })
-      // Trigger re-fetch by calling onRate (which will refresh the list)
-      await onRate(suggestion.id, 1)
-      setShowFeedbackDialog(null)
-    } catch (error) {
-      console.error('Failed to submit spark feedback:', error)
-    } finally {
-      setLoadingAction(null)
-    }
-  }
 
-  const handleMehClick = () => {
-    setShowFeedbackDialog('meh')
-  }
-
-  const handleMehWithFeedback = async (reason: FeedbackReason) => {
-    setLoadingAction('meh')
-    try {
-      // Send rating with feedback to consolidated endpoint
-      await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating: -1, feedback: reason })
-      })
-      // Trigger re-fetch by calling onRate (which will refresh the list)
-      await onRate(suggestion.id, -1)
-      setShowFeedbackDialog(null)
+      await onRate(suggestion.id, backendRating)
+      setShowRatingDialog(false)
+      setSelectedRating(null)
     } catch (error) {
-      console.error('Failed to submit meh feedback:', error)
+      console.error('Failed to submit rating:', error)
     } finally {
       setLoadingAction(null)
     }
@@ -90,50 +68,22 @@ export const SuggestionCard = memo(function SuggestionCard({
 
   const isCreative = suggestion.capability_ids.length === 0
 
-  const handleDragEnd = (_: any, info: any) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-
-    // Swipe right = Spark (threshold: 100px or fast velocity)
-    if (offset > 100 || velocity > 500) {
-      setExitX(1000)
-      setTimeout(() => handleSparkClick(), 200)
+  // Get rating label and color
+  const getRatingConfig = (rating: InterestRating) => {
+    const configs = {
+      1: { label: 'Not Interested', color: 'from-gray-500 to-gray-600', emoji: '👎' },
+      2: { label: 'Somewhat Interesting', color: 'from-amber-500 to-orange-500', emoji: '🤔' },
+      3: { label: 'Very Interesting', color: 'from-emerald-500 to-blue-500', emoji: '⭐' }
     }
-    // Swipe left = Meh (threshold: -100px or fast velocity)
-    else if (offset < -100 || velocity < -500) {
-      setExitX(-1000)
-      setTimeout(() => handleMehClick(), 200)
-    }
+    return configs[rating]
   }
 
   return (
     <motion.div
-      style={{ x, opacity, rotate }}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={handleDragEnd}
       animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="relative"
     >
-      {/* Swipe Indicators */}
-      <motion.div
-        style={{ opacity: sparkIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
-      >
-        <div className="text-6xl font-bold text-amber-400 drop-shadow-lg">
-          ⚡ SPARK
-        </div>
-      </motion.div>
-      <motion.div
-        style={{ opacity: mehIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
-      >
-        <div className="text-6xl font-bold text-gray-400 drop-shadow-lg">
-          👎 MEH
-        </div>
-      </motion.div>
-
       <Card
         className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer`}
         onClick={handleMore}
@@ -149,59 +99,47 @@ export const SuggestionCard = memo(function SuggestionCard({
       )}
 
       <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-2 mb-3">
+        {/* Type badges */}
+        <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="px-4 py-1.5 rounded-md text-sm font-semibold flex items-center gap-1"
-              style={{
-                background: 'rgba(59, 130, 246, 0.2)',
-                color: 'var(--premium-blue)',
-                border: '1px solid rgba(59, 130, 246, 0.3)'
-              }}
-            >
+            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${
+              isCreative ? 'from-purple-500 to-pink-500' :
+              suggestion.is_wildcard ? 'from-blue-500 to-cyan-500' :
+              'from-emerald-500 to-teal-500'
+            }`}>
               <Lightbulb className="h-4 w-4" />
               {suggestion.total_points}pts
-            </div>
-            {suggestion.is_wildcard && (
-              <div
-                className="px-3 py-1 rounded-md text-xs font-medium"
-                style={{
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  color: 'var(--premium-blue)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)'
-                }}
-              >
-                Wildcard
-              </div>
-            )}
-            {isCreative && !suggestion.is_wildcard && (
-              <div
-                className="px-3 py-1 rounded-md text-xs font-medium"
-                style={{
-                  background: 'rgba(139, 92, 246, 0.2)',
-                  color: 'var(--premium-indigo)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)'
-                }}
-              >
-                Creative
-              </div>
-            )}
+              {isCreative && ' · Creative'}
+              {suggestion.is_wildcard && ' · Wildcard'}
+            </span>
           </div>
         </div>
 
         <CardTitle
-          className="text-xl font-semibold leading-tight premium-text-platinum mb-2"
-          style={{ fontSize: 'var(--premium-text-h3)' }}
+          className="text-2xl font-bold leading-tight premium-text-platinum mb-3"
         >
           {suggestion.title}
         </CardTitle>
+
         {!compact && (
           <CardDescription
-            className="text-base leading-relaxed"
+            className="text-base leading-relaxed mb-4"
             style={{ color: 'var(--premium-text-secondary)' }}
           >
             {suggestion.description}
           </CardDescription>
+        )}
+
+        {/* Why this suggestion box - matches daily queue style */}
+        {suggestion.reasoning && !compact && (
+          <div className="mb-4 p-4 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
+            <p className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+              Why this suggestion:
+            </p>
+            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+              {suggestion.reasoning}
+            </p>
+          </div>
         )}
       </CardHeader>
 
@@ -219,7 +157,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                 {suggestion.capabilities.slice(0, 3).map((cap) => (
                   <span
                     key={cap.id}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm hover:shadow-md transition-shadow"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
                     style={{
                       background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
                       color: 'var(--premium-blue)',
@@ -231,7 +169,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                 ))}
                 {suggestion.capabilities.length > 3 && (
                   <span
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={{
                       background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
                       color: 'var(--premium-indigo)',
@@ -258,28 +196,9 @@ export const SuggestionCard = memo(function SuggestionCard({
         style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Rate 1-3 buttons */}
         <Button
-          onClick={handleSparkClick}
-          variant="outline"
-          size="sm"
-          className="flex-1 h-11"
-          style={{
-            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.15))',
-            border: '1.5px solid rgba(251, 191, 36, 0.4)',
-            color: '#fbbf24'
-          }}
-          title="This sparks my interest!"
-          disabled={loadingAction !== null}
-        >
-          {loadingAction === 'spark' ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4 mr-1" />
-          )}
-          Spark
-        </Button>
-        <Button
-          onClick={handleMehClick}
+          onClick={() => handleRateClick(1)}
           variant="outline"
           size="sm"
           className="flex-1 h-11"
@@ -291,12 +210,37 @@ export const SuggestionCard = memo(function SuggestionCard({
           title="Not interested"
           disabled={loadingAction !== null}
         >
-          {loadingAction === 'meh' ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <ThumbsDown className="h-4 w-4 mr-1" />
-          )}
-          Meh
+          1
+        </Button>
+        <Button
+          onClick={() => handleRateClick(2)}
+          variant="outline"
+          size="sm"
+          className="flex-1 h-11"
+          style={{
+            background: 'rgba(251, 191, 36, 0.15)',
+            border: '1.5px solid rgba(251, 191, 36, 0.4)',
+            color: '#f59e0b'
+          }}
+          title="Somewhat interesting"
+          disabled={loadingAction !== null}
+        >
+          2
+        </Button>
+        <Button
+          onClick={() => handleRateClick(3)}
+          variant="outline"
+          size="sm"
+          className="flex-1 h-11"
+          style={{
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1.5px solid rgba(16, 185, 129, 0.4)',
+            color: '#10b981'
+          }}
+          title="Very interesting"
+          disabled={loadingAction !== null}
+        >
+          3
         </Button>
         <Button
           onClick={handleBuild}
@@ -314,11 +258,11 @@ export const SuggestionCard = memo(function SuggestionCard({
         </Button>
       </CardFooter>
 
-      {/* Spark Feedback Dialog */}
-      {showFeedbackDialog === 'spark' && (
+      {/* Rating Feedback Dialog */}
+      {showRatingDialog && selectedRating && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowFeedbackDialog(null)}
+          onClick={() => setShowRatingDialog(false)}
         >
           <div
             className="premium-card p-6 max-w-md w-full"
@@ -326,11 +270,12 @@ export const SuggestionCard = memo(function SuggestionCard({
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="premium-text-platinum font-bold text-lg flex items-center gap-2">
-                <Sparkles className="h-5 w-5" style={{ color: '#fbbf24' }} />
-                What excites you?
+                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${getRatingConfig(selectedRating).color}`}>
+                  {getRatingConfig(selectedRating).emoji} {getRatingConfig(selectedRating).label}
+                </span>
               </h3>
               <button
-                onClick={() => setShowFeedbackDialog(null)}
+                onClick={() => setShowRatingDialog(false)}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
@@ -338,21 +283,23 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
 
             <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-              Your feedback helps us learn what you love
+              {selectedRating === 3 && "Great! What excites you about this?"}
+              {selectedRating === 2 && "Interesting but not quite right? Tell us why"}
+              {selectedRating === 1 && "Why isn't this a good fit?"}
             </p>
 
             <div className="space-y-3">
-              {[
-                { reason: 'innovative' as SparkFeedback, label: 'Innovative and unique' },
-                { reason: 'fills_gap' as SparkFeedback, label: 'Fills a gap I have' },
-                { reason: 'matches_goals' as SparkFeedback, label: 'Aligns with my goals' },
-                { reason: 'exciting_challenge' as SparkFeedback, label: 'Exciting challenge' },
-                { reason: 'perfect_timing' as SparkFeedback, label: 'Perfect timing' },
-                { reason: 'other' as SparkFeedback, label: 'Other reason' }
+              {selectedRating === 3 && [
+                { reason: 'perfect_fit' as InterestFeedback, label: 'Perfect fit for my goals' },
+                { reason: 'good_timing' as InterestFeedback, label: 'Great timing for this' },
+                { reason: 'fills_gap' as InterestFeedback, label: 'Fills a gap I have' },
+                { reason: 'exciting_challenge' as InterestFeedback, label: 'Exciting challenge' },
+                { reason: 'growth_opportunity' as InterestFeedback, label: 'Good growth opportunity' },
+                { reason: 'other' as InterestFeedback, label: 'Other reason' }
               ].map(({ reason, label }) => (
                 <button
                   key={reason}
-                  onClick={() => handleSparkWithFeedback(reason)}
+                  onClick={() => handleRateWithFeedback(reason)}
                   disabled={loadingAction !== null}
                   className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
                 >
@@ -361,60 +308,18 @@ export const SuggestionCard = memo(function SuggestionCard({
                   </span>
                 </button>
               ))}
-            </div>
 
-            <button
-              onClick={() => setShowFeedbackDialog(null)}
-              className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
-              style={{
-                color: 'var(--premium-text-secondary)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Meh Feedback Dialog */}
-      {showFeedbackDialog === 'meh' && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowFeedbackDialog(null)}
-        >
-          <div
-            className="premium-card p-6 max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="premium-text-platinum font-bold text-lg">
-                Why not interested?
-              </h3>
-              <button
-                onClick={() => setShowFeedbackDialog(null)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
-              </button>
-            </div>
-
-            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-              Your feedback helps improve future suggestions
-            </p>
-
-            <div className="space-y-3">
-              {[
-                { reason: 'too_hard' as FeedbackReason, label: 'Too difficult or complex' },
-                { reason: 'not_interesting' as FeedbackReason, label: 'Not interesting to me' },
-                { reason: 'not_relevant' as FeedbackReason, label: 'Not relevant to my goals' },
-                { reason: 'too_time_consuming' as FeedbackReason, label: 'Takes too much time' },
-                { reason: 'missing_skills' as FeedbackReason, label: 'Missing required skills' },
+              {(selectedRating === 2 || selectedRating === 1) && [
+                { reason: 'not_aligned' as FeedbackReason, label: 'Not aligned with my goals' },
+                { reason: 'too_complex' as FeedbackReason, label: 'Too complex or difficult' },
+                { reason: 'no_time' as FeedbackReason, label: 'Don\'t have time right now' },
+                { reason: 'missing_resources' as FeedbackReason, label: 'Missing skills or resources' },
+                { reason: 'will_revisit' as FeedbackReason, label: 'Maybe later, will revisit' },
                 { reason: 'other' as FeedbackReason, label: 'Other reason' }
               ].map(({ reason, label }) => (
                 <button
                   key={reason}
-                  onClick={() => handleMehWithFeedback(reason)}
+                  onClick={() => handleRateWithFeedback(reason)}
                   disabled={loadingAction !== null}
                   className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
                 >
@@ -426,7 +331,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
 
             <button
-              onClick={() => setShowFeedbackDialog(null)}
+              onClick={() => setShowRatingDialog(false)}
               className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 color: 'var(--premium-text-secondary)',
@@ -473,11 +378,4 @@ function ScorePill({ label, score }: { label: string; score: number }) {
       </div>
     </div>
   )
-}
-
-function formatCapabilityName(capId: string): string {
-  return capId
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
 }

@@ -82,6 +82,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleAISparks(req, res, parseInt(limit as string) || 3)
     }
 
+    // Get connection suggestions for an item (from connection_suggestions table)
+    if (req.method === 'GET' && action === 'suggestions' && id && type) {
+      return await handleGetSuggestions(req, res, id as string, type as string)
+    }
+
     // Get thread (recursive connections)
     if (req.method === 'GET' && action === 'thread' && id && type) {
       return await handleThread(req, res, id as string, type as string)
@@ -951,6 +956,64 @@ async function handleAISparks(
   )
 
   return res.status(200).json({ connections: sparks })
+}
+
+/**
+ * Get connection suggestions for an item (from connection_suggestions table)
+ */
+async function handleGetSuggestions(
+  req: VercelRequest,
+  res: VercelResponse,
+  itemId: string,
+  itemType: string
+): Promise<VercelResponse> {
+  const supabase = getSupabaseClient()
+  const { target_type, limit = '10' } = req.query
+
+  try {
+    // Query connection_suggestions table
+    let query = supabase
+      .from('connection_suggestions')
+      .select('*')
+      .eq('from_item_type', itemType)
+      .eq('from_item_id', itemId)
+      .eq('status', 'pending')
+      .order('similarity_score', { ascending: false })
+      .limit(parseInt(limit as string))
+
+    // Filter by target type if specified
+    if (target_type) {
+      query = query.eq('to_item_type', target_type)
+    }
+
+    const { data: suggestions, error } = await query
+
+    if (error) {
+      console.error('[handleGetSuggestions] Query error:', error)
+      return res.status(500).json({ error: 'Failed to fetch suggestions' })
+    }
+
+    // Fetch the actual items for each suggestion
+    const enrichedSuggestions = await Promise.all(
+      (suggestions || []).map(async (sugg: any) => {
+        const item = await fetchItemByTypeAndId(sugg.to_item_type, sugg.to_item_id)
+        return {
+          ...item,
+          suggestion_id: sugg.id,
+          similarity_score: sugg.similarity_score,
+          ai_reasoning: sugg.ai_reasoning
+        }
+      })
+    )
+
+    // Filter out null items (deleted items)
+    const validSuggestions = enrichedSuggestions.filter(s => s && !s._missing)
+
+    return res.status(200).json({ suggestions: validSuggestions })
+  } catch (error) {
+    console.error('[handleGetSuggestions] Error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
 }
 
 /**

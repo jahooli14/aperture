@@ -29,7 +29,7 @@ import { BrandName } from '../components/BrandName'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
-  const { memories, fetchMemories, loading, error, deleteMemory } = useMemoryStore()
+  const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
   const setMemories = useMemoryStore((state: any) => state.setMemories)
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
@@ -101,6 +101,8 @@ export function MemoriesPage() {
   }, [])
 
   useEffect(() => {
+    // Clear any stale errors when navigating to this page
+    clearError()
     loadMemoriesWithCache()
     if (view === 'all') {
       fetchThemeClusters()
@@ -386,17 +388,23 @@ export function MemoriesPage() {
           <Button
             variant={view === 'resurfacing' ? 'default' : 'outline'}
             onClick={() => setView('resurfacing')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+            className={`relative whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
               view === 'resurfacing'
                 ? 'premium-card border-2 shadow-lg'
                 : 'premium-card border shadow-sm hover:shadow-md'
-            }`}
+            } ${resurfacing.length > 0 && view !== 'resurfacing' ? 'animate-pulse' : ''}`}
             style={{
-              borderColor: view === 'resurfacing' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
-              color: view === 'resurfacing' ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
+              borderColor: view === 'resurfacing' || resurfacing.length > 0 ? 'var(--premium-amber)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
+              color: view === 'resurfacing' || resurfacing.length > 0 ? 'var(--premium-amber)' : 'var(--premium-text-secondary)'
             }}
           >
-            Resurface ({resurfacing.length})
+            {resurfacing.length > 0 && view !== 'resurfacing' && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full animate-ping" style={{ backgroundColor: 'var(--premium-amber)' }} />
+            )}
+            {resurfacing.length > 0 && view !== 'resurfacing' && (
+              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--premium-amber)' }} />
+            )}
+            ⏰ Resurface ({resurfacing.length})
           </Button>
         </div>
 

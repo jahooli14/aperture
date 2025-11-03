@@ -5,7 +5,7 @@
 
 import { Pin, PinOff } from 'lucide-react'
 import { usePin } from '../contexts/PinContext'
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
 interface PinButtonProps {
   type: 'project' | 'thought' | 'article' | 'page'
@@ -13,9 +13,10 @@ interface PinButtonProps {
   title: string
   content: ReactNode
   currentId?: string
+  contentVersion?: string | number  // Optional version to force updates
 }
 
-export function PinButton({ type, id, title, content, currentId }: PinButtonProps) {
+export function PinButton({ type, id, title, content, currentId, contentVersion }: PinButtonProps) {
   const { pinnedItem, pinItem, unpinItem } = usePin()
 
   // Only consider it pinned if there's actually a pinned item AND the IDs match
@@ -23,6 +24,14 @@ export function PinButton({ type, id, title, content, currentId }: PinButtonProp
     (id && pinnedItem.id === id) ||
     (currentId && pinnedItem.id === currentId)
   )
+
+  // Update pinned content when it changes (if this item is currently pinned)
+  useEffect(() => {
+    if (isThisPinned) {
+      console.log('[PinButton] Updating pinned content, version:', contentVersion)
+      pinItem({ type, id, title, content })
+    }
+  }, [content, contentVersion, isThisPinned, type, id, title])
 
   const handlePin = () => {
     if (isThisPinned) {

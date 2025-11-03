@@ -3,7 +3,7 @@
  * Full detail view for individual projects
  */
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
@@ -41,8 +41,10 @@ export function ProjectDetailPage() {
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  const [newPinnedTaskText, setNewPinnedTaskText] = useState('')
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
+  const pinnedTaskInputRef = useRef<HTMLInputElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -208,6 +210,82 @@ export function ProjectDetailPage() {
     setEditingDescription(false)
   }
 
+  const addPinnedTask = useCallback(async () => {
+    console.log('[addPinnedTask] Called with text:', newPinnedTaskText)
+
+    if (!project) {
+      console.log('[addPinnedTask] No project')
+      return
+    }
+
+    if (!newPinnedTaskText.trim()) {
+      console.log('[addPinnedTask] Empty text')
+      return
+    }
+
+    const tasks = (project.metadata?.tasks || []) as Task[]
+    const newTask = {
+      id: crypto.randomUUID(),
+      text: newPinnedTaskText.trim(),
+      done: false,
+      created_at: new Date().toISOString(),
+      order: tasks.length
+    }
+    const updatedTasks = [...tasks, newTask]
+    const newMetadata = {
+      ...project.metadata,
+      tasks: updatedTasks
+    }
+
+    console.log('[addPinnedTask] Adding task:', newTask)
+
+    try {
+      await updateProject(project.id, { metadata: newMetadata })
+      console.log('[addPinnedTask] Task saved to backend')
+      await loadProjectDetails()
+      console.log('[addPinnedTask] Project details reloaded')
+      setNewPinnedTaskText('')
+      console.log('[addPinnedTask] Input cleared')
+      // Force a small delay to ensure state updates propagate
+      setTimeout(() => {
+        console.log('[addPinnedTask] Task added successfully - input should be clear now')
+      }, 50)
+    } catch (error) {
+      console.error('[addPinnedTask] Failed to add task:', error)
+      addToast({
+        title: 'Failed to add task',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }, [project, newPinnedTaskText, updateProject, loadProjectDetails, addToast])
+
+  const togglePinnedTask = useCallback(async (taskId: string) => {
+    if (!project) return
+
+    const tasks = (project.metadata?.tasks || []) as Task[]
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, done: true } : t
+    )
+    const newMetadata = {
+      ...project.metadata,
+      tasks: updatedTasks,
+      progress: Math.round((updatedTasks.filter(t => t.done).length / updatedTasks.length) * 100) || 0
+    }
+
+    try {
+      await updateProject(project.id, { metadata: newMetadata })
+      await loadProjectDetails()
+    } catch (error) {
+      console.error('Failed to update task:', error)
+      addToast({
+        title: 'Failed to update task',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }, [project, updateProject, loadProjectDetails, addToast])
+
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
 
@@ -238,6 +316,156 @@ export function ProjectDetailPage() {
     loadProjectDetails() // Refresh to get updated last_active
   }
 
+  // Calculate these before ANY early returns to avoid hooks order violation
+  const progress = project?.metadata?.progress || 0
+  const tasks = project?.metadata?.tasks || []
+  const nextTask = tasks.find(t => !t.done)
+
+  // Memoize pinned content to prevent unnecessary re-renders
+  // MUST be called before ALL early returns (loading, !project, etc)
+  const pinnedContent = useMemo(() => {
+    if (!project) return null
+
+    return (
+    <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
+      {/* Status */}
+      <div className="flex items-center gap-2">
+        <div className="px-3 py-1.5 rounded-lg border flex items-center gap-1.5" style={{
+          backgroundColor: {
+            active: 'rgba(16, 185, 129, 0.15)',
+            upcoming: 'rgba(251, 191, 36, 0.15)',
+            'on-hold': 'rgba(156, 163, 175, 0.15)',
+            maintaining: 'rgba(59, 130, 246, 0.15)',
+            completed: 'rgba(168, 85, 247, 0.15)',
+            archived: 'rgba(156, 163, 175, 0.15)',
+            abandoned: 'rgba(239, 68, 68, 0.15)'
+          }[project.status],
+          borderColor: {
+            active: 'rgba(16, 185, 129, 0.3)',
+            upcoming: 'rgba(251, 191, 36, 0.3)',
+            'on-hold': 'rgba(156, 163, 175, 0.3)',
+            maintaining: 'rgba(59, 130, 246, 0.3)',
+            completed: 'rgba(168, 85, 247, 0.3)',
+            archived: 'rgba(156, 163, 175, 0.3)',
+            abandoned: 'rgba(239, 68, 68, 0.3)'
+          }[project.status],
+          color: {
+            active: '#10b981',
+            upcoming: '#fbbf24',
+            'on-hold': '#9ca3af',
+            maintaining: '#3b82f6',
+            completed: '#a855f7',
+            archived: '#9ca3af',
+            abandoned: '#ef4444'
+          }[project.status]
+        }}>
+          <span className="text-sm">
+            {{ active: '🚀', upcoming: '📅', 'on-hold': '⏸️', maintaining: '🔧', completed: '✅', archived: '📦', abandoned: '⚠️' }[project.status]}
+          </span>
+          <span className="text-xs font-medium">
+            {{ active: 'Active', upcoming: 'Upcoming', 'on-hold': 'On Hold', maintaining: 'Maintaining', completed: 'Completed', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
+          </span>
+        </div>
+        {progress > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+              <div className="h-full" style={{
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
+              }} />
+            </div>
+            <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
+              {progress}%
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Active Tasks Only - Mobile Optimized */}
+      <div>
+        <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
+        </h4>
+        <div className="space-y-1.5 max-h-64 overflow-y-auto">
+          {/* Incomplete tasks only */}
+          {tasks.filter(t => !t.done).map((task, index) => {
+            const isNextTask = index === 0
+            return (
+              <button
+                key={task.id}
+                onClick={() => togglePinnedTask(task.id)}
+                className={`w-full flex items-center gap-2 text-sm p-1.5 rounded transition-colors text-left ${
+                  isNextTask ? 'premium-glass-subtle' : 'hover:bg-white/5'
+                }`}
+                style={isNextTask ? {
+                  borderColor: 'var(--premium-amber)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid'
+                } : {}}
+              >
+                <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
+                  borderColor: isNextTask ? 'var(--premium-amber)' : 'rgba(255, 255, 255, 0.2)'
+                }}>
+                </div>
+                <span style={{
+                  color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                  fontWeight: isNextTask ? 600 : 400
+                }}>
+                  {task.text}
+                </span>
+              </button>
+            )
+          })}
+
+          {/* Add task row with + button */}
+          <div className="flex items-center gap-2 p-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                console.log('[+ Button] Clicked')
+                addPinnedTask()
+              }}
+              className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
+              style={{
+                borderColor: 'var(--premium-emerald)',
+                color: 'var(--premium-emerald)'
+              }}
+              aria-label="Add task"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
+            <input
+              ref={pinnedTaskInputRef}
+              type="text"
+              placeholder="Add a task..."
+              value={newPinnedTaskText}
+              onChange={(e) => {
+                console.log('[Pinned Input] onChange:', e.target.value)
+                setNewPinnedTaskText(e.target.value)
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                pinnedTaskInputRef.current?.focus()
+              }}
+              onKeyDown={(e) => {
+                console.log('[Pinned Input] onKeyDown:', e.key)
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addPinnedTask()
+                }
+              }}
+              className="flex-1 text-sm bg-transparent outline-none"
+              style={{
+                color: 'var(--premium-text-primary)'
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    )
+  }, [tasks.length, project?.status, progress, togglePinnedTask, addPinnedTask, project])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
@@ -261,12 +489,6 @@ export function ProjectDetailPage() {
       </div>
     )
   }
-
-  const progress = project.metadata?.progress || 0
-
-  // Get first incomplete task for PinButton content
-  const tasks = project.metadata?.tasks || []
-  const nextTask = tasks.find(t => !t.done)
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
@@ -343,116 +565,8 @@ export function ProjectDetailPage() {
                 id={project.id}
                 title={project.title}
                 currentId={id}
-                content={
-                  <div className="p-6 space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                        {project.title}
-                      </h2>
-                      {project.description && (
-                        <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                          {project.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex items-center gap-2">
-                      <div className="px-3 py-1.5 rounded-lg border flex items-center gap-1.5" style={{
-                        backgroundColor: {
-                          active: 'rgba(16, 185, 129, 0.15)',
-                          upcoming: 'rgba(251, 191, 36, 0.15)',
-                          'on-hold': 'rgba(156, 163, 175, 0.15)',
-                          maintaining: 'rgba(59, 130, 246, 0.15)',
-                          completed: 'rgba(168, 85, 247, 0.15)',
-                          archived: 'rgba(156, 163, 175, 0.15)',
-                          abandoned: 'rgba(239, 68, 68, 0.15)'
-                        }[project.status],
-                        borderColor: {
-                          active: 'rgba(16, 185, 129, 0.3)',
-                          upcoming: 'rgba(251, 191, 36, 0.3)',
-                          'on-hold': 'rgba(156, 163, 175, 0.3)',
-                          maintaining: 'rgba(59, 130, 246, 0.3)',
-                          completed: 'rgba(168, 85, 247, 0.3)',
-                          archived: 'rgba(156, 163, 175, 0.3)',
-                          abandoned: 'rgba(239, 68, 68, 0.3)'
-                        }[project.status],
-                        color: {
-                          active: '#10b981',
-                          upcoming: '#fbbf24',
-                          'on-hold': '#9ca3af',
-                          maintaining: '#3b82f6',
-                          completed: '#a855f7',
-                          archived: '#9ca3af',
-                          abandoned: '#ef4444'
-                        }[project.status]
-                      }}>
-                        <span className="text-sm">
-                          {{ active: '🚀', upcoming: '📅', 'on-hold': '⏸️', maintaining: '🔧', completed: '✅', archived: '📦', abandoned: '⚠️' }[project.status]}
-                        </span>
-                        <span className="text-xs font-medium">
-                          {{ active: 'Active', upcoming: 'Upcoming', 'on-hold': 'On Hold', maintaining: 'Maintaining', completed: 'Completed', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
-                        </span>
-                      </div>
-                      {progress > 0 && (
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                            <div className="h-full" style={{
-                              width: `${progress}%`,
-                              background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
-                            }} />
-                          </div>
-                          <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
-                            {progress}%
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Next Step */}
-                    {nextTask && (
-                      <div className="premium-glass-subtle p-4 rounded-lg">
-                        <div className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--premium-amber)' }}>
-                          Next Step:
-                        </div>
-                        <div className="text-sm" style={{ color: 'var(--premium-text-primary)' }}>
-                          {nextTask.text}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* All Tasks */}
-                    {tasks.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
-                        </h4>
-                        <div className="space-y-1.5">
-                          {tasks.slice(0, 5).map(task => (
-                            <div key={task.id} className="flex items-center gap-2 text-sm">
-                              <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
-                                backgroundColor: task.done ? '#10b981' : 'transparent',
-                                borderColor: task.done ? '#10b981' : 'rgba(255, 255, 255, 0.2)'
-                              }}>
-                                {task.done && <Check className="h-3 w-3 text-white" />}
-                              </div>
-                              <span className={task.done ? 'line-through' : ''} style={{
-                                color: task.done ? 'var(--premium-text-tertiary)' : 'var(--premium-text-secondary)'
-                              }}>
-                                {task.text}
-                              </span>
-                            </div>
-                          ))}
-                          {tasks.length > 5 && (
-                            <p className="text-xs mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
-                              +{tasks.length - 5} more tasks
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                }
+                contentVersion={tasks.length}
+                content={pinnedContent}
               />
 
               <button

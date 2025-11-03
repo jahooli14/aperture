@@ -328,8 +328,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             {memory.body}
           </CardDescription>
 
-          {/* Show More/Less Button - only if text is long enough */}
+          {/* Show More/Less Button and Quick Actions */}
           <div className="flex items-center gap-3 mt-2">
+            {/* Show More/Less Button - only if text is long enough */}
             {memory.body && memory.body.length > 120 && (
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -349,7 +350,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               </button>
             )}
 
-            {/* Quick Add to Project Button */}
+            {/* Quick Add to Project Button - Always available */}
             {!showQuickAdd && (
               <button
                 onClick={handleQuickAdd}
