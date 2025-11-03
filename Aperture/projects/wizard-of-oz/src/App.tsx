@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings } from 'lucide-react';
 import { useAuthStore } from './stores/useAuthStore';
@@ -40,7 +40,13 @@ function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
+  const loadingRef = useRef(loading);
   const { toast, showToast, hideToast } = useToast();
+
+  // Keep ref in sync with loading state
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   // Check for passcode on mount
   useEffect(() => {
@@ -102,17 +108,39 @@ function App() {
   }, [showToast]);
 
   useEffect(() => {
+    console.log('[App] Initializing auth - Version 2.0 with loading fix');
     initialize();
+  }, [initialize]);
 
-    // Safety timeout - if loading takes more than 15 seconds, show recovery option
+  // Separate effect for safety timeout - only runs once on mount
+  useEffect(() => {
+    // Safety timeout - if loading takes more than 8 seconds, show recovery option
     const safetyTimer = setTimeout(() => {
-      if (loading) {
+      if (loadingRef.current) {
         setLoadingTooLong(true);
       }
-    }, 15000);
+    }, 8000);
 
-    return () => clearTimeout(safetyTimer);
-  }, [initialize, loading]);
+    // Nuclear option - if still loading after 30 seconds, force clear and reload
+    const nuclearTimer = setTimeout(() => {
+      if (loadingRef.current) {
+        console.error('Force reloading after 30 seconds of loading');
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (e) {
+          console.error('Failed to clear storage:', e);
+        }
+        window.location.reload();
+      }
+    }, 30000);
+
+    return () => {
+      clearTimeout(safetyTimer);
+      clearTimeout(nuclearTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   if (loading) {
     const handleClearCache = () => {
