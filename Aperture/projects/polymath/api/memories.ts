@@ -313,16 +313,30 @@ Return ONLY JSON:
     console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
 
     // Trigger Gemini processing in background (fire and forget)
-    const host = req.headers.host || process.env.VERCEL_URL || 'localhost:5173'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}`
+    const host = req.headers.host || process.env.VERCEL_URL
+    if (host) {
+      const protocol = host.includes('localhost') ? 'http' : 'https'
+      const baseUrl = `${protocol}://${host}`
 
-    // Process with Gemini in background - this will update the memory with parsed content
-    fetch(`${baseUrl}/api/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memory_id: memory.id })
-    }).catch(err => console.error('[capture] Background processing trigger failed:', err))
+      console.log(`[handleCapture] Triggering background processing at ${baseUrl}/api/process`)
+
+      // Process with Gemini in background - this will update the memory with parsed content
+      fetch(`${baseUrl}/api/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memory_id: memory.id })
+      })
+        .then(response => {
+          if (!response.ok) {
+            console.error(`[capture] Background processing failed: ${response.status} ${response.statusText}`)
+          } else {
+            console.log('[capture] Background processing triggered successfully')
+          }
+        })
+        .catch(err => console.error('[capture] Background processing trigger failed:', err))
+    } else {
+      console.warn('[capture] No host found, skipping background processing (will be handled by cron)')
+    }
 
     console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
 

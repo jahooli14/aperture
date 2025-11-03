@@ -115,12 +115,16 @@ export function MemoriesPage() {
 
   // Poll for updates when there are unprocessed memories
   useEffect(() => {
-    const hasUnprocessed = memories.some(m => !m.processed)
+    const unprocessed = memories.filter(m => !m.processed)
+    const hasUnprocessed = unprocessed.length > 0
 
     if (!hasUnprocessed) return
 
-    console.log('🔄 Polling for memory updates (unprocessed memories detected)')
+    console.log(`🔄 Polling for memory updates (${unprocessed.length} unprocessed)`)
+    console.log('Unprocessed memory IDs:', unprocessed.map(m => ({ id: m.id, title: m.title })))
+
     const pollInterval = setInterval(() => {
+      console.log('⏰ Polling tick - fetching fresh data...')
       loadMemoriesWithCache()
     }, 10000) // Poll every 10 seconds
 

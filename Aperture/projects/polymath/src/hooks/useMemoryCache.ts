@@ -85,6 +85,13 @@ export function useMemoryCache() {
       const data = await response.json()
       const memories = data.memories || []
 
+      // Debug: log processing status
+      const unprocessedCount = memories.filter((m: Memory) => !m.processed).length
+      if (unprocessedCount > 0) {
+        console.log(`⚠️ API returned ${unprocessedCount} unprocessed memories`)
+        console.log('Sample unprocessed:', memories.find((m: Memory) => !m.processed))
+      }
+
       // Cache the fetched memories
       if (memories.length > 0) {
         await cacheMemories(memories)
