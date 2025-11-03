@@ -737,12 +737,14 @@ export function HomePage() {
                         </h3>
 
                         {project.is_priority && (
-                          <div className="px-2 py-1 rounded-md text-xs font-bold flex-shrink-0" style={{
-                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
-                            color: 'var(--premium-amber)',
-                            border: '1px solid rgba(251, 191, 36, 0.4)'
-                          }}>
-                            ⭐ PRIORITY
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <div className="h-2 w-2 rounded-full" style={{
+                              backgroundColor: 'var(--premium-amber)',
+                              boxShadow: '0 0 8px rgba(251, 191, 36, 0.5)'
+                            }} />
+                            <span className="text-xs font-medium" style={{ color: 'var(--premium-amber)' }}>
+                              Priority
+                            </span>
                           </div>
                         )}
                       </div>

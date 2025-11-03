@@ -9,7 +9,6 @@ import { Virtuoso } from 'react-virtuoso'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
@@ -31,8 +30,6 @@ export function ProjectsPage() {
     setFilter
   } = useProjectStore()
 
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid')
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
@@ -40,11 +37,6 @@ export function ProjectsPage() {
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
-
-  const handleEdit = (project: Project) => {
-    setSelectedProject(project)
-    setEditDialogOpen(true)
-  }
 
   const handleDelete = async (project: Project) => {
     const confirmed = await confirm({
@@ -240,7 +232,6 @@ export function ProjectsPage() {
                 <ProjectCard
                   key={`${projects[index].id}-${projects[index].updated_at || projects[index].created_at}`}
                   project={projects[index]}
-                  onEdit={() => handleEdit(projects[index])}
                   onDelete={() => handleDelete(projects[index])}
                   onClick={(id) => navigate(`/projects/${id}`)}
                 />
@@ -270,7 +261,6 @@ export function ProjectsPage() {
                 <CompactProjectCard
                   key={`${projects[index].id}-${projects[index].updated_at || projects[index].created_at}`}
                   project={projects[index]}
-                  onEdit={() => handleEdit(projects[index])}
                   onDelete={() => handleDelete(projects[index])}
                   onClick={(id) => navigate(`/projects/${id}`)}
                 />
@@ -293,13 +283,6 @@ export function ProjectsPage() {
         )}
       </div>
 
-      {/* Edit Dialog */}
-      <EditProjectDialog
-        project={selectedProject}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-      />
-
       {/* Confirmation Dialog */}
       {confirmDialog}
       </motion.div>
@@ -310,12 +293,10 @@ export function ProjectsPage() {
 /* Compact Project Card - Mobile-optimized for seeing many projects at once */
 function CompactProjectCard({
   project,
-  onEdit,
   onDelete,
   onClick,
 }: {
   project: Project
-  onEdit: () => void
   onDelete: () => void
   onClick?: (id: string) => void
 }) {
@@ -365,16 +346,6 @@ function CompactProjectCard({
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              onClick={onEdit}
-              variant="ghost"
-              size="sm"
-              className="h-11 w-11 p-0 hover:bg-blue-50 touch-manipulation"
-              style={{ color: 'var(--premium-text-tertiary)' }}
-              aria-label="Edit project"
-            >
-              <Edit className="h-5 w-5" style={{ color: 'inherit' }} />
-            </Button>
             <Button
               onClick={onDelete}
               variant="ghost"

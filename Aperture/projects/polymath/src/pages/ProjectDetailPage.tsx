@@ -3,15 +3,14 @@
  * Full detail view for individual projects
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Target } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
-import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog'
@@ -37,8 +36,13 @@ export function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showCreateConnection, setShowCreateConnection] = useState(false) // NEW
+  const [showCreateConnection, setShowCreateConnection] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [editingDescription, setEditingDescription] = useState(false)
+  const [tempTitle, setTempTitle] = useState('')
+  const [tempDescription, setTempDescription] = useState('')
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -135,6 +139,75 @@ export function ProjectDetailPage() {
     }
   }
 
+  const startEditTitle = () => {
+    setTempTitle(project?.title || '')
+    setEditingTitle(true)
+    setTimeout(() => titleInputRef.current?.select(), 0)
+  }
+
+  const startEditDescription = () => {
+    setTempDescription(project?.description || '')
+    setEditingDescription(true)
+    setTimeout(() => descriptionInputRef.current?.select(), 0)
+  }
+
+  const saveTitle = async () => {
+    if (!project || !tempTitle.trim()) {
+      setEditingTitle(false)
+      return
+    }
+
+    const oldTitle = project.title
+    setProject({ ...project, title: tempTitle.trim() })
+    setEditingTitle(false)
+
+    try {
+      await updateProject(project.id, { title: tempTitle.trim() })
+      addToast({
+        title: 'Title updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      setProject({ ...project, title: oldTitle })
+      addToast({
+        title: 'Failed to update title',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const saveDescription = async () => {
+    if (!project) {
+      setEditingDescription(false)
+      return
+    }
+
+    const oldDescription = project.description
+    setProject({ ...project, description: tempDescription.trim() })
+    setEditingDescription(false)
+
+    try {
+      await updateProject(project.id, { description: tempDescription.trim() })
+      addToast({
+        title: 'Description updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      setProject({ ...project, description: oldDescription })
+      addToast({
+        title: 'Failed to update description',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const cancelEdit = () => {
+    setEditingTitle(false)
+    setEditingDescription(false)
+  }
+
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
 
@@ -211,9 +284,40 @@ export function ProjectDetailPage() {
             </button>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold truncate" style={{ color: 'var(--premium-text-primary)' }}>
-                {project.title}
-              </h1>
+              {editingTitle ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={titleInputRef}
+                    type="text"
+                    value={tempTitle}
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveTitle()
+                      if (e.key === 'Escape') cancelEdit()
+                    }}
+                    className="flex-1 text-xl font-bold bg-transparent border-b-2 outline-none"
+                    style={{
+                      color: 'var(--premium-text-primary)',
+                      borderColor: 'var(--premium-blue)'
+                    }}
+                  />
+                  <button onClick={saveTitle} className="p-1 rounded hover:bg-white/10">
+                    <Check className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
+                  </button>
+                  <button onClick={cancelEdit} className="p-1 rounded hover:bg-white/10">
+                    <X className="h-5 w-5" style={{ color: '#ef4444' }} />
+                  </button>
+                </div>
+              ) : (
+                <h1
+                  className="text-xl font-bold truncate cursor-pointer hover:opacity-70 transition-opacity"
+                  style={{ color: 'var(--premium-text-primary)' }}
+                  onClick={startEditTitle}
+                  title="Click to edit"
+                >
+                  {project.title}
+                </h1>
+              )}
               {progress > 0 && (
                 <div className="mt-1 flex items-center gap-2">
                   <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[200px]" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
@@ -282,16 +386,6 @@ export function ProjectDetailPage() {
                     <button
                       onClick={() => {
                         setShowMenu(false)
-                        setShowEditDialog(true)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-white/5"
-                      style={{ color: 'var(--premium-text-primary)' }}
-                    >
-                      Edit Details
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMenu(false)
                         handleDelete()
                       }}
                       className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-red-50"
@@ -309,6 +403,49 @@ export function ProjectDetailPage() {
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Description */}
+        <div className="premium-card p-4">
+          {editingDescription ? (
+            <div className="space-y-2">
+              <textarea
+                ref={descriptionInputRef}
+                value={tempDescription}
+                onChange={(e) => setTempDescription(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') cancelEdit()
+                }}
+                rows={3}
+                placeholder="Add a description..."
+                className="w-full bg-transparent border-2 rounded-lg p-2 outline-none resize-none"
+                style={{
+                  color: 'var(--premium-text-primary)',
+                  borderColor: 'var(--premium-blue)'
+                }}
+              />
+              <div className="flex gap-2 justify-end">
+                <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Cancel
+                </button>
+                <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
+              onClick={startEditDescription}
+              title="Click to edit"
+            >
+              {project.description ? (
+                <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+              ) : (
+                <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Properties */}
         <ProjectProperties
           project={project}
@@ -416,16 +553,6 @@ export function ProjectDetailPage() {
         onClose={() => setShowAddNote(false)}
         projectId={project.id}
         onNoteAdded={handleNoteAdded}
-      />
-
-      {/* Edit Project Dialog */}
-      <EditProjectDialog
-        project={project}
-        open={showEditDialog}
-        onOpenChange={(open) => {
-          setShowEditDialog(open)
-          if (!open) loadProjectDetails() // Refresh after edit
-        }}
       />
 
       {/* Create Connection Dialog */}

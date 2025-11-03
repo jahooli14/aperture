@@ -18,7 +18,6 @@ import { SuggestionBadge } from '../SuggestionBadge'
 
 export function ProjectCard({
   project: initialProject,
-  onEdit,
   onDelete,
   onClick,
   showActions = true,
@@ -195,11 +194,6 @@ export function ProjectCard({
   }
 
   const contextMenuItems: ContextMenuItem[] = [
-    ...(onEdit ? [{
-      label: 'Edit',
-      icon: <Edit className="h-5 w-5" />,
-      onClick: () => onEdit(project.id),
-    }] : []),
     {
       label: 'Add Quick Note',
       icon: <Pencil className="h-5 w-5" />,
@@ -418,18 +412,6 @@ export function ProjectCard({
                   className="h-5 w-5"
                   fill={project.is_priority ? 'currentColor' : 'none'}
                 />
-              </Button>
-            )}
-            {showActions && onEdit && (
-              <Button
-                onClick={() => onEdit(project.id)}
-                variant="ghost"
-                size="sm"
-                className="h-11 w-11 p-0 touch-manipulation"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-                aria-label="Edit project"
-              >
-                <Edit className="h-5 w-5" />
               </Button>
             )}
             {showActions && onDelete && (

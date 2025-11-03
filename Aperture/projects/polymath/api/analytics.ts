@@ -873,7 +873,7 @@ async function getInspiration(excludeProjectIds: string[]) {
       title: article.title || 'Interesting read',
       description: article.excerpt || 'Expand your knowledge',
       url: `/reading/${article.id}`,
-      reasoning: '📚 A fresh perspective from your reading queue'
+      reasoning: 'A fresh perspective from your reading queue'
     })
   }
 
@@ -885,7 +885,7 @@ async function getInspiration(excludeProjectIds: string[]) {
       title: oldMemory.title || 'Past insight',
       description: oldMemory.body?.substring(0, 150) || '',
       url: `/memories`,
-      reasoning: '💡 A thought worth revisiting'
+      reasoning: 'A thought worth revisiting'
     })
   }
 
@@ -898,7 +898,7 @@ async function getInspiration(excludeProjectIds: string[]) {
       title: project.title,
       description: nextStep || project.description || 'Explore this idea',
       url: `/projects/${project.id}`,
-      reasoning: '🎨 A project waiting for your attention'
+      reasoning: 'A project waiting for your attention'
     })
   }
 
@@ -908,7 +908,7 @@ async function getInspiration(excludeProjectIds: string[]) {
       type: 'empty',
       title: 'Create something new',
       description: 'No content to inspire from yet',
-      reasoning: '✨ Time to add thoughts, articles, or projects'
+      reasoning: 'Time to add thoughts, articles, or projects'
     }
   }
 
