@@ -625,6 +625,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (error) {
         console.error('[projects] Insert error:', error)
+
+        // Check for constraint violation on type
+        if (error.message?.includes('projects_type_check') || error.code === '23514') {
+          return res.status(400).json({
+            error: 'Invalid project type',
+            details: `Type must be one of: 'hobby', 'side-project', or 'learning'. Received: '${projectData.type}'`,
+            suggestion: 'The database schema may need migration. Run scripts/update-project-types.sql'
+          })
+        }
+
         throw error
       }
 
@@ -777,14 +787,19 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
   }
 
   try {
+    console.log('[rate] Rating suggestion:', id, 'Body:', req.body)
+
     const parseResult = RateRequestSchema.safeParse(req.body)
     if (!parseResult.success) {
+      console.error('[rate] Validation failed:', parseResult.error)
       return res.status(400).json({
-        error: 'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)'
+        error: 'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)',
+        details: parseResult.error
       })
     }
 
     const { rating, feedback } = parseResult.data
+    console.log('[rate] Parsed rating:', rating, 'feedback:', feedback)
 
     // Store rating
     const { data: ratingData, error: ratingError } = await supabase
@@ -799,11 +814,15 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
       .single()
 
     if (ratingError) {
-      return res.status(500).json({ error: ratingError.message })
+      console.error('[rate] Rating insert error:', ratingError)
+      return res.status(500).json({ error: ratingError.message, details: ratingError })
     }
+
+    console.log('[rate] Rating stored:', ratingData)
 
     // Update suggestion status
     let newStatus = rating === 2 ? 'built' : rating === 1 ? 'spark' : 'meh'
+    console.log('[rate] Setting status to:', newStatus)
 
     const { data: suggestion, error: updateError } = await supabase
       .from('project_suggestions')
@@ -813,18 +832,29 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
       .single()
 
     if (updateError) {
-      return res.status(500).json({ error: updateError.message })
+      console.error('[rate] Suggestion update error:', updateError)
+      return res.status(500).json({ error: updateError.message, details: updateError })
     }
+
+    console.log('[rate] Suggestion updated:', suggestion)
 
     // Learn from rating
-    if (rating > 0) {
-      for (const capabilityId of suggestion.capability_ids || []) {
-        await incrementCapabilityStrength(capabilityId, 0.05, supabase)
+    try {
+      if (rating > 0) {
+        console.log('[rate] Incrementing capability strengths for positive rating')
+        for (const capabilityId of suggestion.capability_ids || []) {
+          await incrementCapabilityStrength(capabilityId, 0.05, supabase)
+        }
+      } else if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
+        console.log('[rate] Penalizing combination for negative rating')
+        await penalizeCombination(suggestion.capability_ids, 0.1, supabase)
       }
-    } else if (suggestion.capability_ids) {
-      await penalizeCombination(suggestion.capability_ids, 0.1, supabase)
+    } catch (learningError) {
+      console.error('[rate] Learning error (non-fatal):', learningError)
+      // Don't fail the request if learning fails
     }
 
+    console.log('[rate] Successfully rated suggestion')
     return res.status(200).json({
       success: true,
       rating: ratingData,
@@ -835,8 +865,10 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
     })
 
   } catch (error) {
+    console.error('[rate] Unexpected error:', error)
     return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     })
   }
 }
@@ -985,21 +1017,43 @@ async function incrementCapabilityStrength(capabilityId: string, increment: numb
  * Helper: Penalize capability combination (merged from suggestions.ts)
  */
 async function penalizeCombination(capabilityIds: string[], penalty: number, supabase: any) {
-  const sortedIds = [...capabilityIds].sort()
+  try {
+    console.log('[penalize] Penalizing combination:', capabilityIds)
+    const sortedIds = [...capabilityIds].sort()
 
-  const { data: combo } = await supabase
-    .from('capability_combinations')
-    .select('*')
-    .eq('capability_ids', sortedIds)
-    .single()
+    const { data: combo, error: fetchError } = await supabase
+      .from('capability_combinations')
+      .select('*')
+      .eq('capability_ids', sortedIds)
+      .maybeSingle()
 
-  if (!combo) return
+    if (fetchError) {
+      console.error('[penalize] Error fetching combo:', fetchError)
+      throw fetchError
+    }
 
-  await supabase
-    .from('capability_combinations')
-    .update({
-      times_rated_negative: combo.times_rated_negative + 1,
-      penalty_score: combo.penalty_score + penalty
-    })
-    .eq('capability_ids', sortedIds)
+    if (!combo) {
+      console.log('[penalize] No combo found for:', sortedIds)
+      return
+    }
+
+    console.log('[penalize] Found combo:', combo)
+    const { error: updateError } = await supabase
+      .from('capability_combinations')
+      .update({
+        times_rated_negative: combo.times_rated_negative + 1,
+        penalty_score: combo.penalty_score + penalty
+      })
+      .eq('capability_ids', sortedIds)
+
+    if (updateError) {
+      console.error('[penalize] Error updating combo:', updateError)
+      throw updateError
+    }
+
+    console.log('[penalize] Successfully penalized combination')
+  } catch (error) {
+    console.error('[penalize] Unexpected error:', error)
+    throw error
+  }
 }

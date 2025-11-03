@@ -37,7 +37,7 @@ interface SuggestionState {
   buildSuggestion: (id: string, projectData?: {
     title?: string
     description?: string
-    type?: 'creative' | 'technical' | 'learning'
+    type?: 'hobby' | 'side-project' | 'learning'
   }) => Promise<any>
   triggerSynthesis: () => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
@@ -92,6 +92,7 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
 
   rateSuggestion: async (id: string, rating: number) => {
     try {
+      console.log('[store] Rating suggestion:', id, 'with rating:', rating)
       const response = await fetch(`${API_BASE}/projects?resource=suggestions&action=rate&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,15 +100,20 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
       })
 
       if (!response.ok) {
-        throw new Error('Failed to rate suggestion')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('[store] Rating failed:', errorData)
+        throw new Error(errorData.error || 'Failed to rate suggestion')
       }
 
+      console.log('[store] Rating successful')
       // Refresh suggestions after rating
       await get().fetchSuggestions()
     } catch (error) {
+      console.error('[store] Rating error:', error)
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
       })
+      throw error
     }
   },
 
