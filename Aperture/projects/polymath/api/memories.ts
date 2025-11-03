@@ -163,6 +163,10 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
   console.log('[handleCapture] Starting capture processing')
 
+  // Default fallback values
+  let parsedTitle = text.substring(0, 50) + (text.length > 50 ? '...' : '')
+  let parsedBullets = [text]
+
   try {
     // Parse transcript with Gemini FIRST (should be <5 seconds)
     const model = genAI.getGenerativeModel({
@@ -185,10 +189,23 @@ Return ONLY JSON:
 {"title": "...", "bullets": ["...", "..."]}`
 
     console.log('[handleCapture] Calling Gemini...')
-    const result = await model.generateContent(prompt)
+
+    // Add timeout wrapper
+    const geminiPromise = model.generateContent(prompt)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini timeout')), 10000)
+    )
+
+    const result = await Promise.race([geminiPromise, timeoutPromise]) as any
     const geminiResponse = result.response.text()
     console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
     console.log('[handleCapture] Raw response:', geminiResponse)
+
+    // Check if response is empty
+    if (!geminiResponse || geminiResponse.trim().length === 0) {
+      console.warn('[handleCapture] Empty Gemini response, using fallback')
+      throw new Error('Empty Gemini response')
+    }
 
     // Parse Gemini response - try multiple strategies
     let parsed: any = null
@@ -243,21 +260,30 @@ Return ONLY JSON:
       }
     }
 
-    if (!parsed) {
-      throw new Error(`No valid JSON found in Gemini response. Raw response: ${geminiResponse}`)
+    // If we successfully parsed, use those values
+    if (parsed && parsed.title && parsed.bullets) {
+      parsedTitle = parsed.title
+      parsedBullets = parsed.bullets
+      console.log('[handleCapture] Successfully parsed Gemini response')
+    } else {
+      console.warn('[handleCapture] Could not parse Gemini response, using fallback')
+      if (parsed) {
+        console.warn('[handleCapture] Parsed but invalid format:', JSON.stringify(parsed))
+      }
     }
+  } catch (geminiError) {
+    // Gemini failed - log but continue with fallback
+    console.error('[handleCapture] Gemini error, using fallback:', geminiError)
+  }
 
-    if (!parsed.title || !parsed.bullets) {
-      throw new Error(`Invalid Gemini response format. Expected {title, bullets}, got: ${JSON.stringify(parsed)}`)
-    }
-
-    // Create memory with parsed content
+  // Always create memory (either with Gemini parsing or fallback)
+  try {
     const now = new Date().toISOString()
-    const body = parsed.bullets.join('\n\n')
+    const body = Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text
 
     const newMemory = {
       audiopen_id: `voice_${Date.now()}`,
-      title: parsed.title,
+      title: parsedTitle,
       body,
       orig_transcript: text,
       tags: ['voice-note'],
