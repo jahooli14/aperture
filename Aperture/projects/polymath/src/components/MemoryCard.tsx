@@ -222,10 +222,20 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       <div className="relative" {...longPressHandlers}>
         <div>
         <Card className="group h-full flex flex-col premium-card">
-      {/* Glow effect on hover */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }} />
-      {/* Accent gradient bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, var(--premium-indigo), #818cf8)' }} />
+      {/* Glow effect - different colors for processing vs processed */}
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
+        style={{ backgroundColor: !memory.processed ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.15)' }}
+      />
+      {/* Accent gradient bar - amber for processing, indigo for processed */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2"
+        style={{
+          background: !memory.processed
+            ? 'linear-gradient(90deg, var(--premium-amber), #fbbf24)'
+            : 'linear-gradient(90deg, var(--premium-indigo), #818cf8)'
+        }}
+      />
 
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
@@ -523,18 +533,18 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {/* Processing Status */}
         {!memory.processed && (
           <div
-            className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border"
+            className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border animate-pulse"
             style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              color: 'var(--premium-blue)',
-              borderColor: 'rgba(59, 130, 246, 0.3)'
+              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+              color: 'var(--premium-amber)',
+              borderColor: 'rgba(245, 158, 11, 0.4)'
             }}
           >
             <div
               className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-r-transparent"
-              style={{ borderColor: 'var(--premium-blue)' }}
+              style={{ borderColor: 'var(--premium-amber)' }}
             ></div>
-            <span className="font-medium">Processing...</span>
+            <span className="font-medium">AI analyzing...</span>
           </div>
         )}
 

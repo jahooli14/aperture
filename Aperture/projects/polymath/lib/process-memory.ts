@@ -34,22 +34,19 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 2. Extract entities and metadata using Gemini
     const metadata = await extractMetadata(memory.title, memory.body)
 
-    // 3. Normalize tags using semantic clustering
-    const normalizedTags = await normalizeTags(metadata.tags || [])
-
-    // 4. Generate embedding for the memory content
+    // 3. Generate embedding for the memory content
     const embedding = await generateEmbedding(
       `${memory.title}\n\n${memory.body}`
     )
 
-    // 5. Update the memory with extracted metadata
+    // 4. Update the memory with extracted metadata
     const { error: updateError } = await supabase
       .from('memories')
       .update({
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,
-        tags: normalizedTags,
+        tags: metadata.tags || [], // Use raw tags from Gemini (skip normalization bottleneck)
         emotional_tone: metadata.emotional_tone,
         embedding,
         processed: true,
@@ -64,10 +61,8 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 5. Store individual entities in the entities table
     await storeEntities(memoryId, metadata.entities)
 
-    // 6. Trigger connection detection (async, non-blocking)
-    triggerConnectionDetection(memoryId, memory.title, memory.body).catch(err =>
-      logger.warn({ memory_id: memoryId, error: err }, 'Connection detection failed')
-    )
+    // 6. Skip connection detection for now (too slow - ~10-15s)
+    // Can be added as separate background job later if needed
 
     logger.info({
       memory_id: memoryId,
