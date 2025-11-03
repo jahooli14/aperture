@@ -384,7 +384,9 @@ export function ProjectDetailPage() {
           <ConnectionsList
             itemType="project"
             itemId={project.id}
+            content={`${project.title}\n\n${project.description || ''}`}
             onConnectionDeleted={loadProjectDetails}
+            onConnectionCreated={loadProjectDetails}
           />
         </div>
 
