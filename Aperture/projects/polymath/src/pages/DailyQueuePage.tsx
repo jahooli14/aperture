@@ -488,7 +488,7 @@ export function DailyQueuePage() {
                     <div className="flex gap-3">
                       <Button
                         onClick={() => window.location.href = `/projects`}
-                        className="btn-primary flex-1 flex items-center justify-center gap-2"
+                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-amber-500 text-white font-semibold hover:from-blue-600 hover:to-amber-600 transition-all"
                       >
                         Continue
                         <ArrowRight className="h-4 w-4" />

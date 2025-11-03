@@ -31,7 +31,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
     title: '',
     description: '',
     status: 'active' as 'upcoming' | 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived' | 'abandoned',
-    next_step: '',
     progress: 0,
   })
 
@@ -42,7 +41,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         title: project.title,
         description: project.description || '',
         status: project.status,
-        next_step: project.metadata?.next_step || '',
         progress: project.metadata?.progress || 0,
       })
     }
@@ -61,7 +59,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
         status: formData.status as any, // Status type updated to include 'abandoned'
         metadata: {
           ...project.metadata,
-          next_step: formData.next_step || undefined,
           progress: formData.progress > 0 ? formData.progress : undefined,
         },
       })
@@ -146,22 +143,6 @@ export function EditProjectDialog({ project, open, onOpenChange }: EditProjectDi
                 <option value="completed">✅ Completed</option>
                 <option value="archived">📦 Archived</option>
               </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-next-step" className="text-sm sm:text-base">Next Step</Label>
-              <Input
-                id="edit-next-step"
-                placeholder="e.g., Fix the login bug, Add color palette, Research frameworks"
-                value={formData.next_step}
-                onChange={(e) =>
-                  setFormData({ ...formData, next_step: e.target.value })
-                }
-                className="text-base h-11 sm:h-12"
-              />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                What's the immediate next action for this project?
-              </p>
             </div>
 
             <div className="grid gap-2">

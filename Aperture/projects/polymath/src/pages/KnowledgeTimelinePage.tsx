@@ -80,7 +80,7 @@ export function KnowledgeTimelinePage() {
           type: 'thought' as const,
           title: m.title || 'Untitled thought',
           date: m.created_at,
-          color: '#6366f1', // Indigo for thoughts
+          color: '#8B5CF6', // Purple for thoughts
           sourceReference: m.source_reference
         })))
       }
@@ -256,43 +256,59 @@ export function KnowledgeTimelinePage() {
 
       {/* Timeline Tracks */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="space-y-6">
-          {/* Projects Track */}
-          {(activeTrack === 'all' || activeTrack === 'projects') && tracks.projects.length > 0 && (
-            <TimelineTrack
-              title="Projects"
-              icon={FolderKanban}
-              items={tracks.projects}
-              connections={connections}
-              color="blue"
-              onItemClick={(item) => navigate(`/projects/${item.id}`)}
-            />
-          )}
+        {/* Unified Timeline View (when 'all' is selected) */}
+        {activeTrack === 'all' && filteredItems.length > 0 && (
+          <UnifiedTimeline
+            items={filteredItems}
+            connections={connections}
+            onItemClick={(item) => {
+              if (item.type === 'project') navigate(`/projects/${item.id}`)
+              else if (item.type === 'thought') navigate('/memories')
+              else if (item.type === 'article') item.url ? window.open(item.url, '_blank') : navigate(`/reading/${item.id}`)
+            }}
+          />
+        )}
 
-          {/* Thoughts Track */}
-          {(activeTrack === 'all' || activeTrack === 'thoughts') && tracks.thoughts.length > 0 && (
-            <TimelineTrack
-              title="Thoughts"
-              icon={Layers}
-              items={tracks.thoughts}
-              connections={connections}
-              color="indigo"
-              onItemClick={(item) => navigate('/memories')}
-            />
-          )}
+        {/* Separated Track View (when specific track is selected) */}
+        {activeTrack !== 'all' && (
+          <div className="space-y-6">
+            {/* Projects Track */}
+            {activeTrack === 'projects' && tracks.projects.length > 0 && (
+              <TimelineTrack
+                title="Projects"
+                icon={FolderKanban}
+                items={tracks.projects}
+                connections={connections}
+                color="blue"
+                onItemClick={(item) => navigate(`/projects/${item.id}`)}
+              />
+            )}
 
-          {/* Articles Track */}
-          {(activeTrack === 'all' || activeTrack === 'articles') && tracks.articles.length > 0 && (
-            <TimelineTrack
-              title="Reading"
-              icon={FileText}
-              items={tracks.articles}
-              connections={connections}
-              color="green"
-              onItemClick={(item) => item.url ? window.open(item.url, '_blank') : navigate(`/reading/${item.id}`)}
-            />
-          )}
-        </div>
+            {/* Thoughts Track */}
+            {activeTrack === 'thoughts' && tracks.thoughts.length > 0 && (
+              <TimelineTrack
+                title="Thoughts"
+                icon={Layers}
+                items={tracks.thoughts}
+                connections={connections}
+                color="purple"
+                onItemClick={(item) => navigate('/memories')}
+              />
+            )}
+
+            {/* Articles Track */}
+            {activeTrack === 'articles' && tracks.articles.length > 0 && (
+              <TimelineTrack
+                title="Reading"
+                icon={FileText}
+                items={tracks.articles}
+                connections={connections}
+                color="green"
+                onItemClick={(item) => item.url ? window.open(item.url, '_blank') : navigate(`/reading/${item.id}`)}
+              />
+            )}
+          </div>
+        )}
 
         {filteredItems.length === 0 && (
           <div className="premium-card p-16 text-center">
@@ -302,6 +318,129 @@ export function KnowledgeTimelinePage() {
         )}
       </div>
     </motion.div>
+  )
+}
+
+interface UnifiedTimelineProps {
+  items: TimelineItem[]
+  connections: Connection[]
+  onItemClick: (item: TimelineItem) => void
+}
+
+function UnifiedTimeline({ items, connections, onItemClick }: UnifiedTimelineProps) {
+  const getItemConnections = (itemId: string) => {
+    const outgoing = connections.filter(c => c.fromId === itemId)
+    const incoming = connections.filter(c => c.toId === itemId)
+    return { outgoing, incoming }
+  }
+
+  const getItemIcon = (type: string) => {
+    switch (type) {
+      case 'project': return FolderKanban
+      case 'thought': return Layers
+      case 'article': return FileText
+      default: return Calendar
+    }
+  }
+
+  const getItemTypeLabel = (type: string) => {
+    switch (type) {
+      case 'project': return 'Project'
+      case 'thought': return 'Thought'
+      case 'article': return 'Article'
+      default: return type
+    }
+  }
+
+  return (
+    <div className="premium-card overflow-hidden">
+      {/* Header */}
+      <div className="premium-glass-subtle border-b px-5 py-3" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+          <h3 className="font-semibold premium-text-platinum">Unified Timeline</h3>
+          <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>({items.length} events)</span>
+        </div>
+      </div>
+
+      {/* Timeline Items */}
+      <div className="p-5">
+        <div className="relative">
+          {/* Vertical line */}
+          <div className="absolute left-3 top-0 bottom-0 w-0.5" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)' }} />
+
+          {/* Items */}
+          <div className="space-y-4">
+            {items.map((item) => {
+              const { outgoing, incoming } = getItemConnections(item.id)
+              const hasConnections = outgoing.length > 0 || incoming.length > 0
+              const ItemIcon = getItemIcon(item.type)
+
+              return (
+                <div key={item.id} className="relative pl-10">
+                  {/* Dot with type icon */}
+                  <div
+                    className="absolute left-0 top-2 h-6 w-6 rounded-full border-4 border-white shadow-sm flex items-center justify-center"
+                    style={{ backgroundColor: item.color }}
+                  >
+                    {/* Connection indicator badge */}
+                    {hasConnections && (
+                      <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-orange-500 border-2 border-white" />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <button
+                    onClick={() => onItemClick(item)}
+                    className="text-left w-full group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <ItemIcon className="h-3.5 w-3.5 shrink-0" style={{ color: item.color }} />
+                          <span className="text-xs font-medium" style={{ color: item.color }}>
+                            {getItemTypeLabel(item.type)}
+                          </span>
+                        </div>
+                        <h4 className="font-medium premium-text-platinum group-hover:opacity-80 transition-opacity line-clamp-2">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          {formatDate(item.date)}
+                          {item.status && ` • ${item.status}`}
+                        </p>
+
+                        {/* Connection summary */}
+                        {hasConnections && (
+                          <div className="mt-2 flex gap-2 text-xs">
+                            {incoming.length > 0 && (
+                              <span className="px-2 py-0.5 rounded" style={{
+                                color: 'var(--premium-amber)',
+                                backgroundColor: 'rgba(245, 158, 11, 0.1)'
+                              }}>
+                                ← {incoming.length} source{incoming.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {outgoing.length > 0 && (
+                              <span className="px-2 py-0.5 rounded" style={{
+                                color: 'var(--premium-blue)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                              }}>
+                                → {outgoing.length} inspired
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
