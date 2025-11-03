@@ -87,74 +87,70 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      <div className="premium-card p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Sparkles className="h-7 w-7" style={{ color: 'var(--premium-amber)' }} />
-          <h2 className="text-2xl font-bold premium-text-platinum">Get Inspiration</h2>
+      <div className="premium-card p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+          <h2 className="text-xl font-bold premium-text-platinum">Get Inspiration</h2>
         </div>
 
         {loading ? (
-          <div className="premium-glass-subtle p-5 rounded-xl animate-pulse">
-            {/* Skeleton loader matching the content layout */}
-            <div className="flex items-start gap-4">
-              {/* Icon skeleton */}
-              <div className="h-12 w-12 rounded-lg bg-white/10 flex-shrink-0"></div>
-              <div className="flex-1 min-w-0">
-                {/* Reasoning text skeleton */}
-                <div className="h-4 bg-white/10 rounded w-3/4 mb-3"></div>
-                {/* Title skeleton */}
-                <div className="h-6 bg-white/10 rounded w-full mb-3"></div>
-                <div className="h-6 bg-white/10 rounded w-2/3 mb-3"></div>
-                {/* Description skeleton */}
-                <div className="h-4 bg-white/10 rounded w-full mb-2"></div>
-                <div className="h-4 bg-white/10 rounded w-5/6"></div>
+          <div className="premium-glass-subtle p-3 rounded-xl animate-pulse">
+            {/* Skeleton loader - compact */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-5 w-5 rounded bg-white/10"></div>
+                <div className="h-5 bg-white/10 rounded w-2/3"></div>
               </div>
+              <div className="h-4 bg-white/10 rounded w-full"></div>
+              <div className="h-4 bg-white/10 rounded w-4/5"></div>
             </div>
           </div>
         ) : inspiration && inspiration.type !== 'empty' ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {inspiration.url ? (
               <Link
                 to={inspiration.url}
-                className="group block premium-glass-subtle p-5 rounded-xl transition-all duration-300 hover:bg-white/10"
+                className="group block premium-glass-subtle p-3 rounded-xl transition-all duration-300 hover:bg-white/10"
               >
-                <div className="flex items-start gap-4">
-                  {React.createElement(getIconAndColor(inspiration.type).icon, {
-                    className: "h-12 w-12 flex-shrink-0",
-                    style: { color: getIconAndColor(inspiration.type).color }
-                  })}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      {inspiration.reasoning}
-                    </p>
-                    <h3 className="premium-text-platinum font-bold text-lg mb-2 line-clamp-2">
-                      {inspiration.title}
-                    </h3>
-                    <p className="text-sm line-clamp-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {inspiration.description}
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {React.createElement(getIconAndColor(inspiration.type).icon, {
+                        className: "h-5 w-5 flex-shrink-0",
+                        style: { color: getIconAndColor(inspiration.type).color }
+                      })}
+                      <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        {inspiration.reasoning}
+                      </p>
+                    </div>
+                    <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: getIconAndColor(inspiration.type).color }} />
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-1" style={{ color: getIconAndColor(inspiration.type).color }} />
+                  <h3 className="premium-text-platinum font-bold text-base line-clamp-2">
+                    {inspiration.title}
+                  </h3>
+                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {inspiration.description}
+                  </p>
                 </div>
               </Link>
             ) : (
-              <div className="premium-glass-subtle p-5 rounded-xl">
-                <div className="flex items-start gap-4">
-                  {React.createElement(getIconAndColor(inspiration.type).icon, {
-                    className: "h-12 w-12 flex-shrink-0",
-                    style: { color: getIconAndColor(inspiration.type).color }
-                  })}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="premium-glass-subtle p-3 rounded-xl">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {React.createElement(getIconAndColor(inspiration.type).icon, {
+                      className: "h-5 w-5 flex-shrink-0",
+                      style: { color: getIconAndColor(inspiration.type).color }
+                    })}
+                    <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                       {inspiration.reasoning}
                     </p>
-                    <h3 className="premium-text-platinum font-bold text-lg mb-2">
-                      {inspiration.title}
-                    </h3>
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {inspiration.description}
-                    </p>
                   </div>
+                  <h3 className="premium-text-platinum font-bold text-base">
+                    {inspiration.title}
+                  </h3>
+                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {inspiration.description}
+                  </p>
                 </div>
               </div>
             )}
@@ -162,7 +158,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             {hasPendingSuggestions && (
               <Link
                 to="/suggestions"
-                className="block text-center py-3 rounded-lg font-medium transition-all hover:bg-white/5"
+                className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
                 style={{ color: 'var(--premium-amber)' }}
               >
                 View Project Suggestions ({pendingSuggestionsCount}) <ArrowRight className="inline h-4 w-4 ml-1" />
@@ -170,9 +166,9 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             )}
           </div>
         ) : (
-          <div className="premium-glass-subtle p-5 rounded-xl text-center">
-            <Sparkles className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
-            <p style={{ color: 'var(--premium-text-secondary)' }}>
+          <div className="premium-glass-subtle p-4 rounded-xl text-center">
+            <Sparkles className="h-8 w-8 mx-auto mb-3" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
+            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
               No content to inspire from yet. Add thoughts, articles, or projects!
             </p>
           </div>
