@@ -28,13 +28,13 @@ let generateBatchReasoning: any
 
 async function ensureGeminiImports() {
   if (!generateEmbedding) {
-    const embeddings = await import('./lib/gemini-embeddings')
+    const embeddings = await import('./lib/gemini-embeddings.js')
     generateEmbedding = embeddings.generateEmbedding
     batchGenerateEmbeddings = embeddings.batchGenerateEmbeddings
     cosineSimilarity = embeddings.cosineSimilarity
   }
   if (!generateBatchReasoning) {
-    const chat = await import('./lib/gemini-chat')
+    const chat = await import('./lib/gemini-chat.js')
     generateBatchReasoning = chat.generateBatchReasoning
   }
 }
