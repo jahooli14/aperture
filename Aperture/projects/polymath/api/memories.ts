@@ -312,39 +312,45 @@ Return ONLY JSON:
 
     console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
 
-    // Trigger Gemini processing in background (fire and forget)
-    const host = req.headers.host || process.env.VERCEL_URL
-    if (host) {
-      const protocol = host.includes('localhost') ? 'http' : 'https'
-      const baseUrl = `${protocol}://${host}`
+    // Process memory inline with Gemini (tags, summary, linking, etc.)
+    console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
 
-      console.log(`[handleCapture] Triggering background processing at ${baseUrl}/api/process`)
+    try {
+      // Import processMemory function
+      const { processMemory } = await import('../lib/process-memory.js')
 
-      // Process with Gemini in background - this will update the memory with parsed content
-      fetch(`${baseUrl}/api/process`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memory_id: memory.id })
-      })
-        .then(response => {
-          if (!response.ok) {
-            console.error(`[capture] Background processing failed: ${response.status} ${response.statusText}`)
-          } else {
-            console.log('[capture] Background processing triggered successfully')
-          }
+      // Process the memory (extract entities, generate embeddings, etc.)
+      await processMemory(memory.id)
+
+      console.log(`[handleCapture] ✅ AI processing complete for ${memory.id}`)
+
+      // Fetch the updated memory to return to client
+      const { data: updatedMemory, error: fetchError } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('id', memory.id)
+        .single()
+
+      if (!fetchError && updatedMemory) {
+        console.log(`[handleCapture] Response sent with processed memory, total time: ${Date.now() - startTime}ms`)
+
+        return res.status(201).json({
+          success: true,
+          memory: updatedMemory,
+          message: 'Voice note saved and AI analysis complete!'
         })
-        .catch(err => console.error('[capture] Background processing trigger failed:', err))
-    } else {
-      console.warn('[capture] No host found, skipping background processing (will be handled by cron)')
+      }
+    } catch (processingError) {
+      // Log error but still return the memory - it will be picked up by cron later
+      console.error(`[handleCapture] AI processing failed, memory saved but not processed:`, processingError)
     }
 
+    // Fallback: return the unprocessed memory if processing failed
     console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
-
-    // Return immediately with the placeholder memory
     return res.status(201).json({
       success: true,
       memory,
-      message: 'Voice note saved! AI is processing your transcript...'
+      message: 'Voice note saved! AI processing in progress...'
     })
 
   } catch (error) {
