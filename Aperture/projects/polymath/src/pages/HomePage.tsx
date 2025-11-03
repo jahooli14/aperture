@@ -260,11 +260,16 @@ export function HomePage() {
 
   const fetchCardOfTheDay = async () => {
     try {
-      const response = await fetch('/api/memories?resurfacing=true&limit=1')
+      // Fetch more memories and select one based on today's date
+      const response = await fetch('/api/memories?resurfacing=true&limit=10')
       if (response.ok) {
         const data = await response.json()
         if (data.memories && data.memories.length > 0) {
-          setCardOfTheDay(data.memories[0])
+          // Use today's date as seed to pick a consistent memory for the day
+          const today = new Date().toDateString()
+          const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+          const index = seed % data.memories.length
+          setCardOfTheDay(data.memories[index])
         }
       } else {
         // Silently fail - this is a nice-to-have feature

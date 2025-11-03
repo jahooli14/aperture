@@ -104,6 +104,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
+ * Attempt to repair incomplete JSON from Gemini
+ * Handles cases like: {"title": "something
+ */
+function repairIncompleteJSON(jsonStr: string): string {
+  let repaired = jsonStr.trim()
+
+  // Count braces to see if incomplete
+  const openBraces = (repaired.match(/\{/g) || []).length
+  const closeBraces = (repaired.match(/\}/g) || []).length
+
+  // If missing closing brace
+  if (openBraces > closeBraces) {
+    // Check if last field value is incomplete (missing closing quote)
+    if (repaired.match(/"[^"]*$/)) {
+      repaired += '"'  // Close the string
+    }
+
+    // Add missing bullets field if it's missing
+    if (!repaired.includes('"bullets"')) {
+      // Extract the title if possible
+      const titleMatch = repaired.match(/"title"\s*:\s*"([^"]*)"/)
+      if (titleMatch) {
+        // Create a simple bullet from the title
+        repaired = repaired.replace(/"title"\s*:\s*"([^"]*)"[^}]*$/,
+          `"title": "${titleMatch[1]}", "bullets": ["${titleMatch[1]}"]`)
+      } else {
+        // Fallback: add empty bullets
+        if (!repaired.endsWith(',')) {
+          repaired += ','
+        }
+        repaired += ' "bullets": ["Quick thought"]'
+      }
+    }
+
+    // Add missing closing braces
+    for (let i = 0; i < (openBraces - closeBraces); i++) {
+      repaired += '}'
+    }
+  }
+
+  return repaired
+}
+
+/**
  * Handle voice capture with Gemini parsing
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
@@ -156,7 +200,15 @@ Return ONLY JSON:
         parsed = JSON.parse(codeBlockMatch[1].trim())
         console.log('[handleCapture] Parsed from markdown code block')
       } catch (e) {
-        console.log('[handleCapture] Code block parse failed:', e)
+        console.log('[handleCapture] Code block parse failed, trying repair:', e)
+        // Try to repair incomplete JSON in code block
+        try {
+          const repaired = repairIncompleteJSON(codeBlockMatch[1].trim())
+          parsed = JSON.parse(repaired)
+          console.log('[handleCapture] Repaired and parsed code block JSON')
+        } catch (e2) {
+          console.log('[handleCapture] JSON repair failed:', e2)
+        }
       }
     }
 
@@ -168,7 +220,15 @@ Return ONLY JSON:
           parsed = JSON.parse(jsonMatch[0])
           console.log('[handleCapture] Parsed from raw JSON')
         } catch (e) {
-          console.log('[handleCapture] Raw JSON parse failed:', e)
+          console.log('[handleCapture] Raw JSON parse failed, trying repair:', e)
+          // Try to repair incomplete JSON
+          try {
+            const repaired = repairIncompleteJSON(jsonMatch[0])
+            parsed = JSON.parse(repaired)
+            console.log('[handleCapture] Repaired and parsed raw JSON')
+          } catch (e2) {
+            console.log('[handleCapture] JSON repair failed:', e2)
+          }
         }
       }
     }
