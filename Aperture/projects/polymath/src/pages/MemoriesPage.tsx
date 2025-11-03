@@ -113,6 +113,20 @@ export function MemoriesPage() {
     }
   }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Poll for updates when there are unprocessed memories
+  useEffect(() => {
+    const hasUnprocessed = memories.some(m => !m.processed)
+
+    if (!hasUnprocessed) return
+
+    console.log('🔄 Polling for memory updates (unprocessed memories detected)')
+    const pollInterval = setInterval(() => {
+      loadMemoriesWithCache()
+    }, 10000) // Poll every 10 seconds
+
+    return () => clearInterval(pollInterval)
+  }, [memories, loadMemoriesWithCache])
+
   const handleReview = async (memoryId: string) => {
     try {
       await fetch(`/api/memories`, {
