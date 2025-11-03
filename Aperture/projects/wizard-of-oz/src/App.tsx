@@ -39,6 +39,7 @@ function App() {
   const [showPWAGuide, setShowPWAGuide] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
   // Check for passcode on mount
@@ -102,14 +103,51 @@ function App() {
 
   useEffect(() => {
     initialize();
-  }, [initialize]);
+
+    // Safety timeout - if loading takes more than 15 seconds, show recovery option
+    const safetyTimer = setTimeout(() => {
+      if (loading) {
+        setLoadingTooLong(true);
+      }
+    }, 15000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [initialize, loading]);
 
   if (loading) {
+    const handleClearCache = () => {
+      try {
+        // Clear all localStorage
+        localStorage.clear();
+        // Clear all sessionStorage
+        sessionStorage.clear();
+        // Reload the page
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to clear cache:', error);
+        alert('Failed to clear cache. Please try clearing your browser data manually.');
+      }
+    };
+
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 mb-4">Loading...</p>
+
+          {loadingTooLong && (
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800 mb-3">
+                Loading is taking longer than usual. This might be due to a network issue or cached data.
+              </p>
+              <button
+                onClick={handleClearCache}
+                className="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors"
+              >
+                Clear Cache & Reload
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

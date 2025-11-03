@@ -28,47 +28,57 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   fetchSettings: async () => {
     set({ loading: true });
 
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Settings fetch timeout after 10 seconds')), 10000);
+    });
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      const fetchPromise = (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows returned
-        logger.error('Error fetching settings', { error: error.message }, 'SettingsStore');
-        throw error;
-      }
-
-      if (!data) {
-        // Create default settings if they don't exist
-        const { data: newSettings, error: insertError} = await supabase
+        const { data, error } = await supabase
           .from('user_settings')
-          .insert({
-            user_id: user.id,
-            baby_birthdate: null,
-          } as never)
-          .select()
+          .select('*')
+          .eq('user_id', user.id)
           .single();
 
-        if (insertError) {
-          logger.error('Error creating settings', { error: insertError.message }, 'SettingsStore');
-          throw insertError;
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 = no rows returned
+          logger.error('Error fetching settings', { error: error.message }, 'SettingsStore');
+          throw error;
         }
 
-        set({ settings: newSettings as UserSettings, loading: false });
-      } else {
-        set({ settings: data as UserSettings, loading: false });
-      }
+        if (!data) {
+          // Create default settings if they don't exist
+          const { data: newSettings, error: insertError} = await supabase
+            .from('user_settings')
+            .insert({
+              user_id: user.id,
+              baby_birthdate: null,
+            } as never)
+            .select()
+            .single();
+
+          if (insertError) {
+            logger.error('Error creating settings', { error: insertError.message }, 'SettingsStore');
+            throw insertError;
+          }
+
+          return newSettings as UserSettings;
+        } else {
+          return data as UserSettings;
+        }
+      })();
+
+      const settings = await Promise.race([fetchPromise, timeoutPromise]);
+      set({ settings, loading: false });
     } catch (error) {
       logger.error('Unexpected error fetching settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
-      set({ loading: false });
+      set({ loading: false, settings: null });
     }
   },
 

@@ -49,13 +49,41 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: async () => {
     set({ loading: true });
 
-    // Get initial session
-    const { data: { session } } = await supabase.auth.getSession();
-    set({ user: session?.user ?? null, loading: false });
+    try {
+      // Add timeout to prevent infinite loading (10 seconds)
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Auth initialization timeout')), 10000);
+      });
 
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange((_event, session) => {
-      set({ user: session?.user ?? null });
-    });
+      // Race between session check and timeout
+      const sessionPromise = supabase.auth.getSession();
+      const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+
+      set({ user: session?.user ?? null, loading: false });
+
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ user: session?.user ?? null });
+      });
+    } catch (error) {
+      console.error('Auth initialization error:', error);
+
+      // Clear potentially corrupted auth state from localStorage
+      try {
+        const keys = Object.keys(localStorage);
+        const authKeys = keys.filter(key =>
+          key.startsWith('sb-') ||
+          key.includes('supabase') ||
+          key.includes('auth-token')
+        );
+        authKeys.forEach(key => localStorage.removeItem(key));
+        console.log('Cleared auth localStorage keys:', authKeys);
+      } catch (storageError) {
+        console.error('Failed to clear localStorage:', storageError);
+      }
+
+      // Set loading to false so user can try to sign in again
+      set({ user: null, loading: false });
+    }
   },
 }));
