@@ -734,52 +734,11 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block premium-glass-subtle p-3 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
-                      {/* Project Title & Badges */}
+                      {/* Project Title & Priority Badge */}
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="premium-text-platinum font-bold text-base">
-                              {project.title}
-                            </h3>
-                          </div>
-                          {/* Type badge and progress */}
-                          <div className="flex items-center gap-2">
-                            {/* Type badge */}
-                            <div className="px-1.5 py-0.5 rounded text-xs font-medium backdrop-blur-sm" style={{
-                              backgroundColor: project.type === 'hobby' ? 'rgba(236, 72, 153, 0.15)' :
-                                              project.type === 'side-project' ? 'rgba(59, 130, 246, 0.15)' :
-                                              'rgba(16, 185, 129, 0.15)',
-                              color: project.type === 'hobby' ? 'var(--premium-pink)' :
-                                     project.type === 'side-project' ? 'var(--premium-blue)' :
-                                     'var(--premium-emerald)',
-                              border: `1px solid ${project.type === 'hobby' ? 'rgba(236, 72, 153, 0.3)' :
-                                                   project.type === 'side-project' ? 'rgba(59, 130, 246, 0.3)' :
-                                                   'rgba(16, 185, 129, 0.3)'}`
-                            }}>
-                              {project.type === 'hobby' ? '🎨 Hobby' :
-                               project.type === 'side-project' ? '💻 Side Project' :
-                               '📚 Learning'}
-                            </div>
-
-                            {/* Progress indicator */}
-                            {totalTasks > 0 && (
-                              <div className="flex items-center gap-1">
-                                <div className="h-1 w-12 rounded-full overflow-hidden backdrop-blur-sm" style={{
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                                }}>
-                                  <div className="h-full rounded-full transition-all duration-300" style={{
-                                    width: `${progressPercent}%`,
-                                    background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.6), rgba(99, 102, 241, 0.6))'
-                                  }} />
-                                </div>
-                                <span className="text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
-                                  {completedTasks}/{totalTasks}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        <h3 className="premium-text-platinum font-bold text-base flex-1">
+                          {project.title}
+                        </h3>
 
                         {project.is_priority && (
                           <div className="px-2 py-1 rounded-md text-xs font-bold flex-shrink-0" style={{
@@ -792,14 +751,19 @@ export function HomePage() {
                         )}
                       </div>
 
-                      {/* Next Step - Compact */}
-                      <div className="rounded-lg p-2 border" style={{
+                      {/* Next Step - Compact with Progress on Right */}
+                      <div className="rounded-lg p-2 border flex items-center justify-between gap-2" style={{
                         backgroundColor: nextStep ? 'rgba(251, 191, 36, 0.1)' : 'rgba(107, 114, 128, 0.1)',
                         borderColor: nextStep ? 'rgba(251, 191, 36, 0.3)' : 'rgba(107, 114, 128, 0.2)'
                       }}>
-                        <div className="premium-text-platinum font-medium text-sm">
+                        <div className="premium-text-platinum font-medium text-sm flex-1">
                           {nextStep || 'No tasks yet - click to add one'}
                         </div>
+                        {totalTasks > 0 && (
+                          <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            {completedTasks}/{totalTasks}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   )
