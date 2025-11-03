@@ -18,6 +18,7 @@ import { Thumbnail } from '../ui/optimized-image'
 import { PinButton } from '../PinButton'
 import { SuggestionBadge } from '../SuggestionBadge'
 import { EditArticleDialog } from './EditArticleDialog'
+import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
 
 interface ArticleCardProps {
   article: Article
@@ -33,6 +34,7 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
   const [exitX, setExitX] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
   // Motion values for swipe gesture
   const x = useMotionValue(0)
@@ -111,6 +113,8 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
         description: 'Article moved to archive',
         variant: 'success',
       })
+      // Show connections dialog after archiving
+      setShowConnectionsDialog(true)
     } catch (error) {
       addToast({
         title: 'Error',
@@ -161,6 +165,10 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
             description: 'Article marked as read',
             variant: 'success',
           })
+          // Show connections dialog after archiving
+          setExitX(0)
+          x.set(0)
+          setShowConnectionsDialog(true)
         } catch (error) {
           addToast({
             title: 'Error',
@@ -234,6 +242,8 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
             description: 'Article moved to archive',
             variant: 'success',
           })
+          // Show connections dialog after archiving
+          setShowConnectionsDialog(true)
         } catch (error) {
           addToast({
             title: 'Error',
@@ -522,6 +532,22 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
       article={article}
       open={showEditDialog}
       onOpenChange={setShowEditDialog}
+    />
+
+    {/* Connections Dialog */}
+    <ArticleConnectionsDialog
+      article={{
+        id: article.id,
+        title: article.title || 'Untitled',
+        content: article.content || '',
+        excerpt: article.excerpt || undefined
+      }}
+      isOpen={showConnectionsDialog}
+      onClose={() => setShowConnectionsDialog(false)}
+      onConnectionsCreated={() => {
+        // Refresh connection count if needed
+        console.log('Connections created for article:', article.id)
+      }}
     />
     </>
   )
