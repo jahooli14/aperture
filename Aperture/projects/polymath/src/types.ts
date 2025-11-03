@@ -294,6 +294,8 @@ export interface ExtractedMetadata {
   themes: string[]
   tags?: string[]
   emotional_tone: string
+  summary_title: string
+  insightful_body: string
 }
 
 export interface BridgeCandidate {

@@ -31,18 +31,20 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     logger.info({ memory_id: memoryId, title: memory.title }, 'Processing memory')
 
-    // 2. Extract entities and metadata using Gemini
+    // 2. Extract entities and metadata using Gemini (also generates summary title and insightful body)
     const metadata = await extractMetadata(memory.title, memory.body)
 
-    // 3. Generate embedding for the memory content
+    // 3. Generate embedding for the processed memory content
     const embedding = await generateEmbedding(
-      `${memory.title}\n\n${memory.body}`
+      `${metadata.summary_title}\n\n${metadata.insightful_body}`
     )
 
-    // 4. Update the memory with extracted metadata
+    // 4. Update the memory with extracted metadata and processed content
     const { error: updateError } = await supabase
       .from('memories')
       .update({
+        title: metadata.summary_title,
+        body: metadata.insightful_body,
         memory_type: metadata.memory_type,
         entities: metadata.entities,
         themes: metadata.themes,
@@ -66,6 +68,7 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     logger.info({
       memory_id: memoryId,
+      summary_title: metadata.summary_title,
       type: metadata.memory_type,
       entities: metadata.entities,
       themes: metadata.themes
@@ -93,13 +96,16 @@ export async function processMemory(memoryId: string): Promise<void> {
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
 
-  const prompt = `Analyze this voice note and extract structured metadata.
+  const prompt = `Analyze this voice note and transform it into a structured, insightful memory.
 
+Raw Voice Transcript:
 Title: ${title}
 Body: ${body}
 
 Extract the following in JSON format:
 {
+  "summary_title": "A concise, meaningful title that captures the essence (max 80 chars)",
+  "insightful_body": "Transform the raw transcript into clear, insightful prose with revelatory clarity. Preserve the core meaning and insights but make it more coherent, organized, and profound. Remove filler words, organize thoughts logically, and highlight key realizations.",
   "memory_type": "foundational" | "event" | "insight",
   "entities": {
     "people": ["names of specific people mentioned"],
@@ -112,6 +118,8 @@ Extract the following in JSON format:
 }
 
 Rules:
+- summary_title: Make it meaningful and specific, not generic. Capture what makes this memory unique.
+- insightful_body: Rewrite the transcript with clarity and insight. Make implicit ideas explicit. Connect dots. Reveal deeper meaning. Keep it in first person. This should feel like a polished journal entry, not raw speech-to-text.
 - memory_type: "foundational" = core belief/value, "event" = something that happened, "insight" = realization/idea
 - entities.people: Only actual names (e.g., "Sarah", "Alex"), not generic terms
 - entities.places: Only specific locations (e.g., "London", "Central Park")
@@ -145,6 +153,8 @@ Return ONLY the JSON, no other text.`
 
   const parsed = JSON.parse(jsonMatch[0])
   logger.info({
+    summary_title: parsed.summary_title?.substring(0, 60),
+    insightful_body_length: parsed.insightful_body?.length || 0,
     parsed_entities_count: (parsed.entities?.people?.length || 0) + (parsed.entities?.places?.length || 0) + (parsed.entities?.topics?.length || 0),
     parsed_themes_count: parsed.themes?.length || 0,
     parsed_tags_count: parsed.tags?.length || 0
