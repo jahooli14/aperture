@@ -214,19 +214,21 @@ export function KnowledgeTimelinePage() {
           {/* Track Filter */}
           <div className="flex gap-2 overflow-x-auto pb-2">
             {(['all', 'projects', 'thoughts', 'articles'] as const).map((track) => (
-              <Button
+              <button
                 key={track}
-                variant={activeTrack === track ? 'default' : 'outline'}
                 onClick={() => setActiveTrack(track)}
-                className="whitespace-nowrap text-sm"
-                size="sm"
+                className={`whitespace-nowrap text-sm px-4 py-2 rounded-lg font-medium ${
+                  activeTrack === track ? 'glass-filter-btn-active' : 'glass-filter-btn'
+                }`}
               >
-                {track === 'all' && <Filter className="h-3 w-3 mr-1" />}
-                {track === 'projects' && <FolderKanban className="h-3 w-3 mr-1" />}
-                {track === 'thoughts' && <Layers className="h-3 w-3 mr-1" />}
-                {track === 'articles' && <FileText className="h-3 w-3 mr-1" />}
-                {track.charAt(0).toUpperCase() + track.slice(1)}
-              </Button>
+                <div className="flex items-center gap-1.5 relative z-10">
+                  {track === 'all' && <Filter className="h-3 w-3" />}
+                  {track === 'projects' && <FolderKanban className="h-3 w-3" />}
+                  {track === 'thoughts' && <Layers className="h-3 w-3" />}
+                  {track === 'articles' && <FileText className="h-3 w-3" />}
+                  <span>{track.charAt(0).toUpperCase() + track.slice(1)}</span>
+                </div>
+              </button>
             ))}
           </div>
 
@@ -240,15 +242,15 @@ export function KnowledgeTimelinePage() {
               { key: '90d', label: 'Last 90 Days' },
               { key: 'year', label: 'Last Year' }
             ] as const).map(({ key, label }) => (
-              <Button
+              <button
                 key={key}
-                variant={dateFilter === key ? 'default' : 'outline'}
                 onClick={() => setDateFilter(key)}
-                className="whitespace-nowrap text-xs"
-                size="sm"
+                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg font-medium ${
+                  dateFilter === key ? 'glass-filter-btn-active' : 'glass-filter-btn'
+                }`}
               >
-                {label}
-              </Button>
+                <span className="relative z-10">{label}</span>
+              </button>
             ))}
           </div>
         </div>

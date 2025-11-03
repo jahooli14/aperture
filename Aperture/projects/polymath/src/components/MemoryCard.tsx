@@ -19,6 +19,7 @@ import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { MemoryLinks } from './MemoryLinks'
 import { PinButton } from './PinButton'
 import { SuggestionBadge } from './SuggestionBadge'
+import { ConnectionsList } from './connections/ConnectionsList'
 
 interface MemoryCardProps {
   memory: Memory
@@ -49,13 +50,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     threshold: 500,
   })
 
-  useEffect(() => {
-    // Skip fetching bridges for temporary/optimistic memories
+  // Function to load memory bridges
+  const loadMemoryBridges = () => {
     if (memory.id.startsWith('temp_')) {
       setBridges([])
       return
     }
     fetchBridgesForMemory(memory.id).then(setBridges)
+  }
+
+  useEffect(() => {
+    loadMemoryBridges()
   }, [memory.id, fetchBridgesForMemory])
 
   const formatDate = (date: string) => {
@@ -529,6 +534,19 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           currentMemoryId={memory.id}
           bridges={bridges}
         />
+
+        {/* AI Connection Discovery - Only show when expanded */}
+        {isExpanded && memory.processed && (
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <ConnectionsList
+              itemType="thought"
+              itemId={memory.id}
+              content={`${memory.title}\n\n${memory.body}`}
+              onConnectionCreated={loadMemoryBridges}
+              onConnectionDeleted={loadMemoryBridges}
+            />
+          </div>
+        )}
 
         {/* Processing Status */}
         {!memory.processed && (

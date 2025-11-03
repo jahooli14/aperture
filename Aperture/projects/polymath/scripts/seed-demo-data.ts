@@ -427,7 +427,7 @@ async function seedDemoData() {
       user_id: DEMO_USER_ID,
       title: 'Portfolio Website Redesign',
       description: 'Updated personal photography portfolio with new composition showcase section',
-      type: 'technical',
+      type: 'side-project',
       status: 'active',
       last_active: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       metadata: {
@@ -442,7 +442,7 @@ async function seedDemoData() {
       user_id: DEMO_USER_ID,
       title: 'Image Classifier Model',
       description: 'Computer vision model for categorizing landscape vs portrait photography',
-      type: 'technical',
+      type: 'side-project',
       status: 'active',
       last_active: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       metadata: {

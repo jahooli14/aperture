@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         user_id: userId,
         title: project_title || suggestion.title,
         description: project_description || suggestion.description,
-        type: 'technical', // Projects built from suggestions are technical
+        type: 'side-project', // Projects built from suggestions are side-projects
         status: 'active',
         last_active: new Date().toISOString(),
         metadata: {

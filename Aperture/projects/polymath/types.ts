@@ -21,7 +21,7 @@ export interface Project {
   embedding?: number[] // Vector embedding (1536 dims)
 }
 
-export type ProjectType = 'creative' | 'technical' | 'learning'
+export type ProjectType = 'hobby' | 'side-project' | 'learning'
 
 export type ProjectStatus = 'active' | 'on-hold' | 'maintaining' | 'completed' | 'archived'
 

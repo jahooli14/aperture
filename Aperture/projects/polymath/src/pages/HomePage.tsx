@@ -94,8 +94,22 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
         </div>
 
         {loading ? (
-          <div className="text-center py-8">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-amber)' }}></div>
+          <div className="premium-glass-subtle p-5 rounded-xl animate-pulse">
+            {/* Skeleton loader matching the content layout */}
+            <div className="flex items-start gap-4">
+              {/* Icon skeleton */}
+              <div className="h-12 w-12 rounded-lg bg-white/10 flex-shrink-0"></div>
+              <div className="flex-1 min-w-0">
+                {/* Reasoning text skeleton */}
+                <div className="h-4 bg-white/10 rounded w-3/4 mb-3"></div>
+                {/* Title skeleton */}
+                <div className="h-6 bg-white/10 rounded w-full mb-3"></div>
+                <div className="h-6 bg-white/10 rounded w-2/3 mb-3"></div>
+                {/* Description skeleton */}
+                <div className="h-4 bg-white/10 rounded w-full mb-2"></div>
+                <div className="h-4 bg-white/10 rounded w-5/6"></div>
+              </div>
+            </div>
           </div>
         ) : inspiration && inspiration.type !== 'empty' ? (
           <div className="space-y-4">
@@ -156,9 +170,9 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             )}
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="premium-glass-subtle p-5 rounded-xl text-center">
             <Sparkles className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
-            <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+            <p style={{ color: 'var(--premium-text-secondary)' }}>
               No content to inspire from yet. Add thoughts, articles, or projects!
             </p>
           </div>
@@ -206,7 +220,7 @@ export function HomePage() {
 
   const [dailyQueue, setDailyQueue] = useState<ProjectScore[]>([])
   const [cardOfTheDay, setCardOfTheDay] = useState<Memory | null>(null)
-  const [queueLoading, setQueueLoading] = useState(false)
+  const [queueLoading, setQueueLoading] = useState(true) // Start as true to show skeleton immediately
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
@@ -416,10 +430,10 @@ export function HomePage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.1 }}
     >
       {/* Debug Panel Toggle - Only show if there are errors */}
       {storedErrors.length > 0 && (
@@ -587,8 +601,19 @@ export function HomePage() {
             </div>
 
             {queueLoading ? (
-              <div className="text-center py-8">
-                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-blue)' }}></div>
+              <div className="space-y-4">
+                {/* Skeleton loaders with exact same height as actual content */}
+                {[1, 2].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-4 rounded-xl animate-pulse">
+                    {/* Title skeleton */}
+                    <div className="h-7 bg-white/10 rounded-lg w-2/3 mb-3"></div>
+                    {/* Next Action box skeleton */}
+                    <div className="rounded-lg p-3 border-2 border-white/10 bg-white/5">
+                      <div className="h-3 bg-white/10 rounded w-24 mb-2"></div>
+                      <div className="h-5 bg-white/10 rounded w-4/5"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : projectsToShow.length > 0 ? (
               <div className="space-y-4">
@@ -649,7 +674,7 @@ export function HomePage() {
                 </Link>
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="premium-glass-subtle p-5 rounded-xl text-center">
                 <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                   No active projects yet. Create one to get started!
                 </p>

@@ -43,7 +43,7 @@ async function seedProjects() {
       user_id: userId,
       title: 'MemoryOS enhancement',
       description: 'Adding semantic search and better entity extraction',
-      type: 'technical',
+      type: 'side-project',
       status: 'active',
       last_active: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       metadata: {
@@ -67,7 +67,7 @@ async function seedProjects() {
       user_id: userId,
       title: 'Wizard of Oz face alignment',
       description: 'Baby photo app - completed face detection system',
-      type: 'technical',
+      type: 'side-project',
       status: 'completed',
       last_active: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
       metadata: {

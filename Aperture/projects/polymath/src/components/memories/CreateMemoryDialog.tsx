@@ -67,28 +67,39 @@ export function CreateMemoryDialog() {
     e.preventDefault()
     setLoading(true)
 
+    // Prepare data before closing
+    const tags = formData.tags
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+
+    const body = bullets
+      .map(b => b.trim())
+      .filter(b => b.length > 0)
+      .join('\n\n')
+
+    const memoryData = {
+      title: formData.title,
+      body,
+      tags: tags.length > 0 ? tags : undefined,
+      memory_type: formData.memory_type || undefined,
+    }
+
+    const savedTitle = formData.title
+
+    // Close dialog immediately for better UX
+    resetForm()
+    setOpen(false)
+    setLoading(false)
+
+    // Save in background
     try {
-      const tags = formData.tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0)
-
-      const body = bullets
-        .map(b => b.trim())
-        .filter(b => b.length > 0)
-        .join('\n\n')
-
-      const newMemory = await createMemory({
-        title: formData.title,
-        body,
-        tags: tags.length > 0 ? tags : undefined,
-        memory_type: formData.memory_type || undefined,
-      })
+      const newMemory = await createMemory(memoryData)
 
       // Trigger AI suggestion system
       if (newMemory?.id) {
         setLastCreatedId(newMemory.id)
-        fetchSuggestions('thought', newMemory.id, `${formData.title} ${body}`)
+        fetchSuggestions('thought', newMemory.id, `${savedTitle} ${body}`)
       }
 
       // Check for milestone celebrations
@@ -115,17 +126,12 @@ export function CreateMemoryDialog() {
           variant: 'success',
         })
       }
-
-      resetForm()
-      setOpen(false)
     } catch (error) {
       addToast({
         title: 'Failed to create thought',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
   }
 

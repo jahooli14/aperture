@@ -173,7 +173,7 @@ async function getOrCreateProject(projectName: string): Promise<string | null> {
     .insert({
       title: projectName,
       description: projectDescriptions[projectName] || `Technical project: ${projectName}`,
-      type: 'technical',
+      type: 'side-project',
       status: 'active',
       user_id: process.env.USER_ID || 'default-user'
     })

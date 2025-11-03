@@ -611,7 +611,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const projectData = {
         ...req.body,
-        type: req.body.type || 'creative', // Default to creative if not provided
+        type: req.body.type || 'hobby', // Default to hobby if not provided
         user_id: userId,
         created_at: new Date().toISOString(),
         last_active: new Date().toISOString(),
@@ -867,7 +867,7 @@ async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse
     }
 
     const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
-    const projectType = metadata.type || (hasCapabilities ? 'technical' : 'creative')
+    const projectType = metadata.type || (hasCapabilities ? 'side-project' : 'hobby')
 
     // Create project
     const { data: project, error: createError } = await supabase

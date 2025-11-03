@@ -716,3 +716,88 @@
   background: rgba(59, 130, 246, 0.25);
   color: #1a1a1a;
 }
+
+/* === PREMIUM GLASS FILTER BUTTONS === */
+
+/* Glass Filter Button - Inactive State */
+.glass-filter-btn {
+  background: rgba(20, 27, 38, 0.3);
+  backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--premium-text-secondary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all var(--premium-transition-base);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-filter-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--premium-transition-base);
+}
+
+.glass-filter-btn:hover {
+  background: rgba(20, 27, 38, 0.5);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--premium-platinum);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.glass-filter-btn:hover::before {
+  opacity: 1;
+}
+
+.glass-filter-btn:active {
+  transform: translateY(0);
+}
+
+/* Glass Filter Button - Active State */
+.glass-filter-btn-active {
+  background: rgba(59, 130, 246, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--premium-blue);
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all var(--premium-transition-base);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-filter-btn-active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.1), transparent 70%);
+  opacity: 1;
+  transition: opacity var(--premium-transition-base);
+}
+
+.glass-filter-btn-active:hover {
+  background: rgba(59, 130, 246, 0.2);
+  backdrop-filter: blur(24px) saturate(200%);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow:
+    0 0 30px rgba(59, 130, 246, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.glass-filter-btn-active:hover::before {
+  opacity: 1;
+}
+
+.glass-filter-btn-active:active {
+  transform: translateY(0);
+}

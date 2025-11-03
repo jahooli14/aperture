@@ -17,7 +17,7 @@ async function testInsert() {
     user_id: 'f2404e61-2010-46c8-8edd-b8a3e702f0fb',
     title: 'Test Project',
     description: 'Testing RLS fix',
-    type: 'creative',
+    type: 'hobby',
     status: 'active',
     metadata: {}
   }
