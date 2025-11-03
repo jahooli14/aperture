@@ -741,7 +741,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { feed_url } = req.body
         if (!feed_url) {
           console.log('[RSS Subscribe] Missing feed_url in body:', req.body)
-          return res.status(400).json({ error: 'feed_url required' })
+          return res.status(400).json({
+            error: 'feed_url required',
+            received: req.body,
+            details: `Received body keys: ${Object.keys(req.body || {}).join(', ') || 'none'}`
+          })
         }
 
         const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
