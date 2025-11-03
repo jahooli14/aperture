@@ -130,13 +130,27 @@ Return ONLY the JSON, no other text.`
   const result = await model.generateContent(prompt)
   const response = result.response.text().trim()
 
+  logger.info({
+    memory_title: title.substring(0, 50),
+    response_length: response.length,
+    response_preview: response.substring(0, 200)
+  }, 'Gemini metadata extraction response')
+
   // Parse JSON (Gemini usually returns clean JSON)
   const jsonMatch = response.match(/\{[\s\S]*\}/)
   if (!jsonMatch) {
+    logger.error({ response }, 'Failed to parse Gemini response as JSON')
     throw new Error('Failed to parse Gemini response as JSON')
   }
 
-  return JSON.parse(jsonMatch[0])
+  const parsed = JSON.parse(jsonMatch[0])
+  logger.info({
+    parsed_entities_count: (parsed.entities?.people?.length || 0) + (parsed.entities?.places?.length || 0) + (parsed.entities?.topics?.length || 0),
+    parsed_themes_count: parsed.themes?.length || 0,
+    parsed_tags_count: parsed.tags?.length || 0
+  }, 'Parsed metadata from Gemini')
+
+  return parsed
 }
 
 /**
