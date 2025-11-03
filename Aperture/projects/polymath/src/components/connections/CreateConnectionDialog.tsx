@@ -181,41 +181,46 @@ export function CreateConnectionDialog({
 
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
           <input
             type="text"
             placeholder="Search for an item to link..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-xl backdrop-blur-xl bg-white/80 border-2 border-neutral-200 focus:border-blue-400 focus:outline-none transition-colors"
+            className="w-full pl-10 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-colors premium-glass"
+            style={{
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              color: 'var(--premium-text-primary)',
+              backgroundColor: 'rgba(255, 255, 255, 0.05)'
+            }}
             autoFocus
           />
         </div>
 
         {/* Type filters */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setSelectedType('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              selectedType === 'all'
-                ? 'bg-blue-100 text-blue-900'
-                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: selectedType === 'all' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+              color: selectedType === 'all' ? 'white' : 'var(--premium-text-secondary)'
+            }}
           >
             All
           </button>
           {Object.entries(SCHEMA_COLORS).map(([type, config]) => {
             const Icon = config.icon
+            const isSelected = selectedType === type
             return (
               <button
                 key={type}
                 onClick={() => setSelectedType(type as ConnectionSourceType)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                  selectedType === type
-                    ? 'text-white'
-                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                }`}
-                style={selectedType === type ? { backgroundColor: config.primary } : {}}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+                style={{
+                  backgroundColor: isSelected ? config.primary : 'rgba(255, 255, 255, 0.05)',
+                  color: isSelected ? 'white' : 'var(--premium-text-secondary)'
+                }}
               >
                 <Icon className="h-3.5 w-3.5" />
                 {type.charAt(0).toUpperCase() + type.slice(1)}s
@@ -228,14 +233,14 @@ export function CreateConnectionDialog({
         <div className="flex-1 overflow-y-auto -mx-6 px-6">
           {loading ? (
             <div className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-3" />
-              <p className="text-sm text-neutral-600">Loading items...</p>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3" style={{ color: 'var(--premium-blue)' }} />
+              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Loading items...</p>
             </div>
           ) : filteredResults.length === 0 ? (
             <div className="py-12 text-center">
-              <Search className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-600 font-medium">No items found</p>
-              <p className="text-sm text-neutral-500 mt-1">Try a different search or filter</p>
+              <Search className="h-12 w-12 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.3 }} />
+              <p className="font-medium" style={{ color: 'var(--premium-text-primary)' }}>No items found</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>Try a different search or filter</p>
             </div>
           ) : (
             <div className="space-y-2 py-2">
@@ -251,25 +256,28 @@ export function CreateConnectionDialog({
                     transition={{ delay: index * 0.03 }}
                     onClick={() => handleCreateConnection(item.type, item.id)}
                     disabled={creating}
-                    className="w-full text-left p-3 rounded-xl backdrop-blur-xl bg-white/80 border-2 hover:border-opacity-100 transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group"
-                    style={{ borderColor: schema.primary + '40' }}
+                    className="w-full text-left p-4 rounded-xl border transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group premium-card"
+                    style={{ borderColor: schema.primary + '30' }}
                   >
                     <div className="flex items-start gap-3">
                       <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: schema.primary }} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-1">
+                        <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: schema.primary, opacity: 0.7 }}>
                           {item.type}
                         </div>
-                        <div className="font-medium text-neutral-900 mb-1 line-clamp-1">
+                        <div className="font-medium mb-1 line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
                           {item.title}
                         </div>
                         {item.preview && (
-                          <div className="text-sm text-neutral-600 line-clamp-2">
+                          <div className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
                             {item.preview}
                           </div>
                         )}
                       </div>
-                      <LinkIcon className="h-4 w-4 text-neutral-400 group-hover:text-blue-600 transition-colors flex-shrink-0 mt-1" />
+                      <LinkIcon className="h-4 w-4 flex-shrink-0 mt-1 transition-colors" style={{
+                        color: 'var(--premium-text-tertiary)',
+                        opacity: 0.5
+                      }} />
                     </div>
                   </motion.button>
                 )
