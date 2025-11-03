@@ -36,8 +36,11 @@ export const SuggestionCard = memo(function SuggestionCard({
 
     setLoadingAction('rate')
     try {
-      // Map 1-3 scale to backend (-1, 0, 1 for now)
-      const backendRating = selectedRating === 1 ? -1 : selectedRating === 3 ? 1 : 0
+      // Map 1-3 scale to backend (-1, 1, 2)
+      // 1 (not interested) → -1 (meh)
+      // 2 (somewhat) → 1 (spark)
+      // 3 (very interested) → 2 (would build)
+      const backendRating = selectedRating === 1 ? -1 : selectedRating === 2 ? 1 : 2
 
       await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
         method: 'POST',
@@ -45,7 +48,7 @@ export const SuggestionCard = memo(function SuggestionCard({
         body: JSON.stringify({ rating: backendRating, feedback: reason, interest_level: selectedRating })
       })
 
-      await onRate(suggestion.id, backendRating)
+      await onRate(suggestion.id, backendRating as -1 | 1 | 2)
       setShowRatingDialog(false)
       setSelectedRating(null)
     } catch (error) {
@@ -131,13 +134,13 @@ export const SuggestionCard = memo(function SuggestionCard({
         )}
 
         {/* Why this suggestion box - matches daily queue style */}
-        {suggestion.reasoning && !compact && (
+        {suggestion.synthesis_reasoning && !compact && (
           <div className="mb-4 p-4 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
             <p className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
               Why this suggestion:
             </p>
             <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-              {suggestion.reasoning}
+              {suggestion.synthesis_reasoning}
             </p>
           </div>
         )}
