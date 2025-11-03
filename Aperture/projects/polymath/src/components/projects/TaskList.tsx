@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Trash2, Check, GripVertical } from 'lucide-react'
+import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
@@ -26,8 +26,11 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const [newTaskText, setNewTaskText] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
 
   const sortedTasks = [...tasks].sort((a, b) => a.order - b.order)
+  const incompleteTasks = sortedTasks.filter(t => !t.done)
+  const completedTasks = sortedTasks.filter(t => t.done)
 
   const handleAddTask = () => {
     if (!newTaskText.trim()) return
@@ -132,7 +135,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
 
         {/* Task List */}
         <div className="space-y-2">
-          {sortedTasks.map((task) => (
+          {/* Incomplete Tasks */}
+          {incompleteTasks.map((task) => (
             <div
               key={task.id}
               draggable
@@ -141,8 +145,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragEnd={handleDragEnd}
               className="group flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move"
               style={{
-                borderColor: task.done ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
-                backgroundColor: task.done ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
@@ -156,23 +160,15 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                 onClick={() => handleToggleTask(task.id)}
                 className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
                 style={{
-                  borderColor: task.done ? '#10b981' : 'rgba(255, 255, 255, 0.2)',
-                  backgroundColor: task.done ? '#10b981' : 'transparent'
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'transparent'
                 }}
               >
                 {task.done && <Check className="h-3 w-3 text-white" />}
               </button>
 
               {/* Task Text */}
-              <span
-                className={cn(
-                  "flex-1 text-sm transition-all",
-                  task.done && "line-through"
-                )}
-                style={{
-                  color: task.done ? 'var(--premium-text-tertiary)' : 'var(--premium-text-primary)'
-                }}
-              >
+              <span className="flex-1 text-sm" style={{ color: 'var(--premium-text-primary)' }}>
                 {task.text}
               </span>
 
@@ -187,6 +183,71 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               </button>
             </div>
           ))}
+
+          {/* Completed Tasks - Collapsible */}
+          {completedTasks.length > 0 && (
+            <div className="mt-3">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+              >
+                {showCompleted ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {completedTasks.length} completed task{completedTasks.length !== 1 ? 's' : ''}
+                </span>
+              </button>
+
+              {showCompleted && (
+                <div className="space-y-2 mt-2">
+                  {completedTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="group flex items-center gap-2 p-2.5 rounded-lg border transition-all"
+                      style={{
+                        borderColor: 'rgba(255, 255, 255, 0.05)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => handleToggleTask(task.id)}
+                        className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
+                        style={{
+                          borderColor: '#10b981',
+                          backgroundColor: '#10b981'
+                        }}
+                      >
+                        <Check className="h-3 w-3 text-white" />
+                      </button>
+
+                      {/* Task Text */}
+                      <span
+                        className="flex-1 text-sm line-through"
+                        style={{ color: 'var(--premium-text-tertiary)' }}
+                      >
+                        {task.text}
+                      </span>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteTask(task.id)}
+                        className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        style={{ color: 'var(--premium-text-tertiary)' }}
+                        aria-label="Delete task"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Add Task Input */}
