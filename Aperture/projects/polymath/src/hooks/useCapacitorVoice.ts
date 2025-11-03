@@ -222,7 +222,7 @@ export function useCapacitorVoice({
 
         console.log('Sending audio to transcription API...');
 
-        const response = await fetch('/api/transcribe', {
+        const response = await fetch('/api/memories?action=transcribe', {
           method: 'POST',
           body: formData
         });

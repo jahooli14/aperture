@@ -35,7 +35,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
-    memory_type: '' as '' | 'foundational' | 'event' | 'insight',
+    memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
 
   useEffect(() => {
@@ -220,7 +220,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight',
+                    memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
                   })
                 }
                 className="text-base h-11 sm:h-12"
@@ -234,6 +234,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
                 <option value="foundational">Foundational - Core knowledge</option>
                 <option value="event">Event - Something that happened</option>
                 <option value="insight">Insight - Realization or learning</option>
+                <option value="quick-note">Quick Note - Lightweight thought</option>
               </Select>
             </div>
 

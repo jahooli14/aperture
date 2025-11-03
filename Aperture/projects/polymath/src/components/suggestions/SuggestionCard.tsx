@@ -11,6 +11,7 @@ import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X } f
 import type { SuggestionCardProps } from '../../types'
 
 type FeedbackReason = 'too_hard' | 'not_interesting' | 'not_relevant' | 'too_time_consuming' | 'missing_skills' | 'other'
+type SparkFeedback = 'innovative' | 'fills_gap' | 'matches_goals' | 'exciting_challenge' | 'perfect_timing' | 'other'
 
 export const SuggestionCard = memo(function SuggestionCard({
   suggestion,
@@ -20,7 +21,7 @@ export const SuggestionCard = memo(function SuggestionCard({
   compact = false
 }: SuggestionCardProps) {
   const [loadingAction, setLoadingAction] = useState<'spark' | 'meh' | 'build' | null>(null)
-  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false)
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState<'spark' | 'meh' | null>(null)
   const [exitX, setExitX] = useState(0)
 
   // Motion values for swipe gesture
@@ -30,17 +31,31 @@ export const SuggestionCard = memo(function SuggestionCard({
   const sparkIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
   const mehIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
 
-  const handleSpark = async () => {
+  const handleSparkClick = () => {
+    setShowFeedbackDialog('spark')
+  }
+
+  const handleSparkWithFeedback = async (reason: SparkFeedback) => {
     setLoadingAction('spark')
     try {
+      // Send rating with feedback to consolidated endpoint
+      await fetch(`/api/projects?resource=suggestions&action=rate&id=${suggestion.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: 1, feedback: reason })
+      })
+      // Trigger re-fetch by calling onRate (which will refresh the list)
       await onRate(suggestion.id, 1)
+      setShowFeedbackDialog(null)
+    } catch (error) {
+      console.error('Failed to submit spark feedback:', error)
     } finally {
       setLoadingAction(null)
     }
   }
 
   const handleMehClick = () => {
-    setShowFeedbackDialog(true)
+    setShowFeedbackDialog('meh')
   }
 
   const handleMehWithFeedback = async (reason: FeedbackReason) => {
@@ -54,9 +69,9 @@ export const SuggestionCard = memo(function SuggestionCard({
       })
       // Trigger re-fetch by calling onRate (which will refresh the list)
       await onRate(suggestion.id, -1)
-      setShowFeedbackDialog(false)
+      setShowFeedbackDialog(null)
     } catch (error) {
-      console.error('Failed to submit feedback:', error)
+      console.error('Failed to submit meh feedback:', error)
     } finally {
       setLoadingAction(null)
     }
@@ -82,7 +97,7 @@ export const SuggestionCard = memo(function SuggestionCard({
     // Swipe right = Spark (threshold: 100px or fast velocity)
     if (offset > 100 || velocity > 500) {
       setExitX(1000)
-      setTimeout(() => handleSpark(), 200)
+      setTimeout(() => handleSparkClick(), 200)
     }
     // Swipe left = Meh (threshold: -100px or fast velocity)
     else if (offset < -100 || velocity < -500) {
@@ -244,7 +259,7 @@ export const SuggestionCard = memo(function SuggestionCard({
         onClick={(e) => e.stopPropagation()}
       >
         <Button
-          onClick={handleSpark}
+          onClick={handleSparkClick}
           variant="outline"
           size="sm"
           className="flex-1 h-11"
@@ -299,11 +314,74 @@ export const SuggestionCard = memo(function SuggestionCard({
         </Button>
       </CardFooter>
 
-      {/* Feedback Dialog */}
-      {showFeedbackDialog && (
+      {/* Spark Feedback Dialog */}
+      {showFeedbackDialog === 'spark' && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={() => setShowFeedbackDialog(false)}
+          onClick={() => setShowFeedbackDialog(null)}
+        >
+          <div
+            className="premium-card p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="premium-text-platinum font-bold text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5" style={{ color: '#fbbf24' }} />
+                What excites you?
+              </h3>
+              <button
+                onClick={() => setShowFeedbackDialog(null)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
+              </button>
+            </div>
+
+            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+              Your feedback helps us learn what you love
+            </p>
+
+            <div className="space-y-3">
+              {[
+                { reason: 'innovative' as SparkFeedback, label: 'Innovative and unique' },
+                { reason: 'fills_gap' as SparkFeedback, label: 'Fills a gap I have' },
+                { reason: 'matches_goals' as SparkFeedback, label: 'Aligns with my goals' },
+                { reason: 'exciting_challenge' as SparkFeedback, label: 'Exciting challenge' },
+                { reason: 'perfect_timing' as SparkFeedback, label: 'Perfect timing' },
+                { reason: 'other' as SparkFeedback, label: 'Other reason' }
+              ].map(({ reason, label }) => (
+                <button
+                  key={reason}
+                  onClick={() => handleSparkWithFeedback(reason)}
+                  disabled={loadingAction !== null}
+                  className="w-full p-4 rounded-lg text-left transition-all premium-glass-subtle hover:bg-white/10 disabled:opacity-50"
+                >
+                  <span className="premium-text-platinum font-medium">
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowFeedbackDialog(null)}
+              className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
+              style={{
+                color: 'var(--premium-text-secondary)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Meh Feedback Dialog */}
+      {showFeedbackDialog === 'meh' && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowFeedbackDialog(null)}
         >
           <div
             className="premium-card p-6 max-w-md w-full"
@@ -314,7 +392,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                 Why not interested?
               </h3>
               <button
-                onClick={() => setShowFeedbackDialog(false)}
+                onClick={() => setShowFeedbackDialog(null)}
                 className="p-1 hover:bg-white/10 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
@@ -348,7 +426,7 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
 
             <button
-              onClick={() => setShowFeedbackDialog(false)}
+              onClick={() => setShowFeedbackDialog(null)}
               className="w-full mt-6 p-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 color: 'var(--premium-text-secondary)',

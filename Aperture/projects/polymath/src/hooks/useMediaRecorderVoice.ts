@@ -78,7 +78,7 @@ export function useMediaRecorderVoice({
 
     console.log('[Transcribe] Sending to API:', fileName)
 
-    const response = await fetch('/api/transcribe', {
+    const response = await fetch('/api/memories?action=transcribe', {
       method: 'POST',
       body: formData
     })

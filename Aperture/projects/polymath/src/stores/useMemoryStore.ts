@@ -8,7 +8,7 @@ interface CreateMemoryInput {
   title: string
   body: string
   tags?: string[]
-  memory_type?: 'foundational' | 'event' | 'insight'
+  memory_type?: 'foundational' | 'event' | 'insight' | 'quick-note'
 }
 
 interface MemoryStore {
@@ -148,7 +148,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       // Trigger background processing
       try {
-        await fetch('/api/process', {
+        await fetch('/api/memories?action=process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ memory_id: data.id })
@@ -236,7 +236,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       // Trigger background processing
       try {
-        await fetch('/api/process', {
+        await fetch('/api/memories?action=process', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ memory_id: data.id })

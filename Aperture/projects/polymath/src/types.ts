@@ -1,6 +1,6 @@
 // MemoryOS Type Definitions
 
-export type MemoryType = 'foundational' | 'event' | 'insight'
+export type MemoryType = 'foundational' | 'event' | 'insight' | 'quick-note'
 
 export type BridgeType = 'entity_match' | 'semantic_similarity' | 'temporal_proximity'
 

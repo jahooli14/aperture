@@ -233,9 +233,7 @@ export function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        console.log('[HomePage] Refetching projects...')
         await fetchProjects()
-        console.log('[HomePage] Projects refreshed, count:', projects.length)
         fetchSuggestions()
         fetchMemories()
         await fetchDailyQueue()
@@ -250,10 +248,14 @@ export function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key])
 
-  // Show onboarding banner if not completed
+  // Show onboarding banner after delay if not completed
   useEffect(() => {
     if (progress && progress.completed_required < progress.total_required) {
-      setShowOnboardingBanner(true)
+      const timer = setTimeout(() => {
+        setShowOnboardingBanner(true)
+      }, 3000) // Slide in after 3 seconds
+
+      return () => clearTimeout(timer)
     }
   }, [progress])
 
@@ -427,6 +429,7 @@ export function HomePage() {
   }
 
   const storedErrors = getStoredErrors()
+  const isDev = import.meta.env.DEV
 
   return (
     <motion.div
@@ -435,8 +438,8 @@ export function HomePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.1 }}
     >
-      {/* Debug Panel Toggle - Only show if there are errors */}
-      {storedErrors.length > 0 && (
+      {/* Debug Panel Toggle - Only show in development if there are errors */}
+      {isDev && storedErrors.length > 0 && (
         <button
           onClick={() => setShowDebugPanel(!showDebugPanel)}
           className="fixed bottom-24 right-4 z-50 h-12 w-12 rounded-full flex items-center justify-center shadow-lg"
@@ -452,7 +455,7 @@ export function HomePage() {
 
       {/* Debug Panel */}
       <AnimatePresence>
-        {showDebugPanel && storedErrors.length > 0 && (
+        {isDev && showDebugPanel && storedErrors.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -516,8 +519,8 @@ export function HomePage() {
 
       <div className="min-h-screen py-6 pb-24">
         {/* Header with Search */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+          <div className="flex items-center justify-between gap-4 mb-3">
             <h1 className="premium-text-platinum flex-1 text-center text-4xl sm:text-5xl" style={{
               fontWeight: 700,
               letterSpacing: 'var(--premium-tracking-tight)'
@@ -536,15 +539,44 @@ export function HomePage() {
               <Search className="h-5 w-5" />
             </button>
           </div>
+
+          {/* Compact Quick Stats */}
+          {(projects.length > 0 || memories.length > 0) && (
+            <div className="flex items-center justify-center gap-3 text-xs">
+              {projects.length > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm" style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)'
+                }}>
+                  <Rocket className="h-3.5 w-3.5" style={{ color: 'var(--premium-blue)' }} />
+                  <span style={{ color: 'var(--premium-blue)' }}>
+                    {projects.filter(p => p.status === 'active').length} active
+                  </span>
+                </div>
+              )}
+              {memories.length > 0 && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm" style={{
+                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                  border: '1px solid rgba(99, 102, 241, 0.2)'
+                }}>
+                  <Brain className="h-3.5 w-3.5" style={{ color: 'var(--premium-indigo)' }} />
+                  <span style={{ color: 'var(--premium-indigo)' }}>
+                    {memories.length} {memories.length === 1 ? 'thought' : 'thoughts'}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Onboarding Banner - Persistent until completed */}
+        {/* Onboarding Banner - Slides in after delay */}
         <AnimatePresence>
           {showOnboardingBanner && progress && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -80, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -80, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6"
             >
               <div className="premium-card border-2 p-4 relative" style={{
@@ -620,12 +652,15 @@ export function HomePage() {
                 {projectsToShow.map((project) => {
                   // Get first incomplete task from the tasks array
                   const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-                  console.log(`[HomePage] Project "${project.title}" tasks:`, tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
                   const nextTask = tasks
                     .sort((a, b) => a.order - b.order)
                     .find(task => !task.done)
-                  console.log(`[HomePage] Next task for "${project.title}":`, nextTask?.text)
                   const nextStep = nextTask?.text
+
+                  // Calculate progress
+                  const totalTasks = tasks.length
+                  const completedTasks = tasks.filter(t => t.done).length
+                  const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
                   return (
                     <Link
@@ -633,13 +668,55 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
                     >
-                      {/* Project Title */}
+                      {/* Project Title & Badges */}
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <h3 className="premium-text-platinum font-bold text-lg flex-1">
-                          {project.title}
-                        </h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <h3 className="premium-text-platinum font-bold text-lg">
+                              {project.title}
+                            </h3>
+                          </div>
+                          {/* Type badge and progress */}
+                          <div className="flex items-center gap-2">
+                            {/* Type badge */}
+                            <div className="px-2 py-0.5 rounded-md text-xs font-medium backdrop-blur-sm" style={{
+                              backgroundColor: project.type === 'hobby' ? 'rgba(236, 72, 153, 0.15)' :
+                                              project.type === 'side-project' ? 'rgba(59, 130, 246, 0.15)' :
+                                              'rgba(16, 185, 129, 0.15)',
+                              color: project.type === 'hobby' ? 'var(--premium-pink)' :
+                                     project.type === 'side-project' ? 'var(--premium-blue)' :
+                                     'var(--premium-emerald)',
+                              border: `1px solid ${project.type === 'hobby' ? 'rgba(236, 72, 153, 0.3)' :
+                                                   project.type === 'side-project' ? 'rgba(59, 130, 246, 0.3)' :
+                                                   'rgba(16, 185, 129, 0.3)'}`
+                            }}>
+                              {project.type === 'hobby' ? '🎨 Hobby' :
+                               project.type === 'side-project' ? '💻 Side Project' :
+                               '📚 Learning'}
+                            </div>
+
+                            {/* Progress indicator */}
+                            {totalTasks > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-1.5 w-16 rounded-full overflow-hidden backdrop-blur-sm" style={{
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                                }}>
+                                  <div className="h-full rounded-full transition-all duration-300" style={{
+                                    width: `${progressPercent}%`,
+                                    background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.6), rgba(99, 102, 241, 0.6))'
+                                  }} />
+                                </div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                  {completedTasks}/{totalTasks}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {project.is_priority && (
-                          <div className="px-2 py-1 rounded-md text-xs font-bold" style={{
+                          <div className="px-2 py-1 rounded-md text-xs font-bold flex-shrink-0" style={{
                             background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
                             color: 'var(--premium-amber)',
                             border: '1px solid rgba(251, 191, 36, 0.4)'
@@ -674,9 +751,16 @@ export function HomePage() {
                 </Link>
               </div>
             ) : (
-              <div className="premium-glass-subtle p-5 rounded-xl text-center">
-                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                  No active projects yet. Create one to get started!
+              <div className="premium-glass-subtle p-6 rounded-xl text-center">
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-full mb-4" style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}>
+                  <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+                <h3 className="font-bold mb-2 premium-text-platinum">Ready to build something?</h3>
+                <p className="mb-4 text-sm max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Projects are where ideas become reality. Start one and we'll help you keep the momentum going.
                 </p>
                 <Link
                   to="/projects"
@@ -687,7 +771,7 @@ export function HomePage() {
                     border: '1px solid rgba(59, 130, 246, 0.3)'
                   }}
                 >
-                  Go to Projects <ArrowRight className="h-4 w-4" />
+                  Create Your First Project <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             )}

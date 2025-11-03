@@ -2,9 +2,18 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-
+import formidable from 'formidable'
+import type { File as FormidableFile } from 'formidable'
+import fs from 'fs'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+
+// Disable default body parser for multipart/form-data (transcription endpoint)
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article'
@@ -29,6 +38,8 @@ interface SearchResult {
  * GET /api/memories?bridges=true&id=xxx - Get bridges for memory
  * POST /api/memories - Mark memory as reviewed (requires id in body)
  * POST /api/memories?capture=true - Voice capture with transcript parsing (requires transcript in body)
+ * POST /api/memories?action=transcribe - Transcribe audio file (merged from transcribe.ts)
+ * POST /api/memories?action=process - Background memory processing (merged from process.ts)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
@@ -36,6 +47,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query
+
+    // POST: Transcribe audio (merged from transcribe.ts)
+    if (req.method === 'POST' && action === 'transcribe') {
+      return await handleTranscribe(req, res)
+    }
+
+    // POST: Background processing (merged from process.ts)
+    if (req.method === 'POST' && action === 'process') {
+      return await handleProcess(req, res)
+    }
 
     // POST: Submit foundational thought response
     if (req.method === 'POST' && submit_response === 'true') {
@@ -1000,4 +1021,122 @@ function calculateTextScore(query: string, ...fields: (string | null | undefined
   }
 
   return score
+}
+
+/**
+ * Handle background processing (merged from process.ts)
+ * Processes a memory with AI extraction (entities, themes, embeddings)
+ */
+async function handleProcess(req: VercelRequest, res: VercelResponse) {
+  const { memory_id } = req.body
+
+  if (!memory_id) {
+    return res.status(400).json({ error: 'memory_id required' })
+  }
+
+  try {
+    const { processMemory } = await import('../lib/process-memory.js')
+    await processMemory(memory_id)
+
+    return res.status(200).json({
+      success: true,
+      message: 'Memory processed successfully'
+    })
+  } catch (error) {
+    console.error('[handleProcess] Processing failed:', { memory_id, error })
+    return res.status(500).json({
+      error: 'Processing failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}
+
+/**
+ * Handle audio transcription (merged from transcribe.ts)
+ * Uses Google Gemini API to transcribe audio from native recordings
+ */
+async function handleTranscribe(req: VercelRequest, res: VercelResponse) {
+  try {
+    // Parse multipart form data
+    const form = formidable({
+      maxFileSize: 25 * 1024 * 1024, // 25MB max
+    })
+
+    const { files } = await new Promise<{ files: formidable.Files }>((resolve, reject) => {
+      form.parse(req as any, (err, fields, files) => {
+        if (err) reject(err)
+        else resolve({ files })
+      })
+    })
+
+    // Get audio file
+    const audioFile = Array.isArray(files.audio) ? files.audio[0] : files.audio
+
+    if (!audioFile) {
+      return res.status(400).json({ error: 'No audio file provided' })
+    }
+
+    const file = audioFile as FormidableFile
+
+    console.log('[transcribe] File received:', {
+      originalFilename: file.originalFilename,
+      mimetype: file.mimetype,
+      size: file.size
+    })
+
+    // Read audio file as base64
+    const audioData = fs.readFileSync(file.filepath)
+    const base64Audio = audioData.toString('base64')
+
+    console.log('[transcribe] Audio data:', {
+      size: audioData.length,
+      base64Length: base64Audio.length
+    })
+
+    // Use Gemini 2.5 Flash for audio transcription
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+    console.log('[transcribe] Sending to Gemini with mimetype:', file.mimetype || 'audio/aac')
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: file.mimetype || 'audio/webm',
+          data: base64Audio
+        }
+      },
+      'Listen to this audio recording and transcribe exactly what is said. Return only the transcribed text, with no additional commentary or formatting.'
+    ])
+
+    const response = await result.response
+    const text = response.text().trim()
+
+    console.log('[transcribe] Gemini response:', {
+      textLength: text.length,
+      text: text.slice(0, 200) // First 200 chars for logging
+    })
+
+    // Clean up temp file
+    fs.unlinkSync(file.filepath)
+
+    if (!text || text.length === 0) {
+      console.error('[transcribe] Empty transcription returned')
+      return res.status(500).json({
+        error: 'No transcription returned',
+        details: 'Gemini returned an empty response'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      text: text,
+    })
+
+  } catch (error) {
+    console.error('[handleTranscribe] Error:', error)
+    return res.status(500).json({
+      error: 'Transcription failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
 }

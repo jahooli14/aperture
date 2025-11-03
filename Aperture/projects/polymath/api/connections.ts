@@ -128,22 +128,38 @@ interface SuggestionCandidate {
 
 async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
+  const userId = getUserId() // Get from auth instead of body
   const body: AutoSuggestRequest = req.body
-  const { itemType, itemId, content, userId, existingConnectionIds = [] } = body
+  const { itemType, itemId, content, existingConnectionIds = [] } = body
 
-  if (!itemType || !itemId || !content || !userId) {
-    return res.status(400).json({ error: 'Missing required fields' })
+  if (!itemType || !itemId || !content) {
+    return res.status(400).json({ error: 'Missing required fields: itemType, itemId, content' })
   }
 
   // Ensure Gemini imports are loaded
   try {
     await ensureGeminiImports()
-  } catch {
-    return res.status(500).json({ error: 'AI suggestion service not available' })
+  } catch (error) {
+    console.error('[auto-suggest] Gemini initialization error:', error)
+    return res.status(503).json({
+      error: 'AI suggestion service not available',
+      details: 'Gemini API not configured. Set GEMINI_API_KEY environment variable.',
+      suggestions: [] // Return empty array for graceful degradation
+    })
   }
 
   // Step 1: Generate embedding for the input content using Gemini (FREE!)
-  const embedding = await generateEmbedding(content)
+  let embedding
+  try {
+    embedding = await generateEmbedding(content)
+  } catch (error) {
+    console.error('[auto-suggest] Embedding generation error:', error)
+    return res.status(503).json({
+      error: 'Failed to generate embeddings',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      suggestions: [] // Return empty array for graceful degradation
+    })
+  }
 
   // Step 2: Collect all items to compare
   const allItems: Array<{ type: string; id: string; title: string; content: string }> = []
@@ -215,8 +231,18 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
   }
 
   // Step 3: Generate embeddings for all items in batch (MUCH faster!)
-  const itemContents = allItems.map(item => item.content)
-  const itemEmbeddings = await batchGenerateEmbeddings(itemContents)
+  let itemEmbeddings
+  try {
+    const itemContents = allItems.map(item => item.content)
+    itemEmbeddings = await batchGenerateEmbeddings(itemContents)
+  } catch (error) {
+    console.error('[auto-suggest] Batch embedding error:', error)
+    return res.status(503).json({
+      error: 'Failed to generate item embeddings',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      suggestions: []
+    })
+  }
 
   // Step 4: Calculate similarities and filter candidates
   const candidates: SuggestionCandidate[] = []
@@ -244,49 +270,82 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
   }
 
   // Step 6: Generate reasoning for all candidates in ONE batch call
-  const reasonings = await generateBatchReasoning(
-    content,
-    itemType,
-    topCandidates.map(c => ({
-      title: c.title,
-      type: c.type,
-      similarity: c.similarity
-    }))
-  )
+  let reasonings
+  try {
+    reasonings = await generateBatchReasoning(
+      content,
+      itemType,
+      topCandidates.map(c => ({
+        title: c.title,
+        type: c.type,
+        similarity: c.similarity
+      }))
+    )
+  } catch (error) {
+    console.error('[auto-suggest] Reasoning generation error:', error)
+    // Use fallback reasoning if AI fails
+    reasonings = topCandidates.map(() => ({ reasoning: 'Related content' }))
+  }
 
   // Step 7: Store suggestions in database
-  const suggestions = await Promise.all(
-    topCandidates.map(async (candidate, idx) => {
-      const reasoning = reasonings[idx]?.reasoning || 'Related content'
+  try {
+    const suggestions = await Promise.all(
+      topCandidates.map(async (candidate, idx) => {
+        const reasoning = reasonings[idx]?.reasoning || 'Related content'
 
-      const { data: suggestion } = await supabase
-        .from('connection_suggestions')
-        .insert({
-          from_item_type: itemType,
-          from_item_id: itemId,
-          to_item_type: candidate.type,
-          to_item_id: candidate.id,
+        const { data: suggestion, error: insertError } = await supabase
+          .from('connection_suggestions')
+          .insert({
+            source_type: itemType,
+            source_id: itemId,
+            target_type: candidate.type,
+            target_id: candidate.id,
+            reasoning,
+            confidence_score: candidate.similarity,
+            user_id: userId,
+            status: 'pending'
+          })
+          .select()
+          .single()
+
+        if (insertError) {
+          console.error('[auto-suggest] Insert error:', insertError)
+          // Return suggestion without DB id if insert fails
+          return {
+            id: null,
+            toItemType: candidate.type,
+            toItemId: candidate.id,
+            toItemTitle: candidate.title,
+            reasoning,
+            confidence: candidate.similarity
+          }
+        }
+
+        return {
+          id: suggestion?.id,
+          toItemType: candidate.type,
+          toItemId: candidate.id,
+          toItemTitle: candidate.title,
           reasoning,
-          confidence: candidate.similarity,
-          user_id: userId,
-          status: 'pending',
-          model_version: 'gemini-2.5-flash'
-        })
-        .select()
-        .single()
+          confidence: candidate.similarity
+        }
+      })
+    )
 
-      return {
-        id: suggestion?.id,
-        toItemType: candidate.type,
-        toItemId: candidate.id,
-        toItemTitle: candidate.title,
-        reasoning,
-        confidence: candidate.similarity
-      }
-    })
-  )
-
-  return res.status(200).json({ suggestions })
+    return res.status(200).json({ suggestions })
+  } catch (error) {
+    console.error('[auto-suggest] Database error:', error)
+    // Return suggestions even if DB storage fails
+    const suggestions = topCandidates.map((candidate, idx) => ({
+      id: null,
+      toItemType: candidate.type,
+      toItemId: candidate.id,
+      toItemTitle: candidate.title,
+      reasoning: reasonings[idx]?.reasoning || 'Related content',
+      confidence: candidate.similarity
+    }))
+    return res.status(200).json({ suggestions })
+  }
 }
 
 // ============================================================================
@@ -304,8 +363,8 @@ async function handleUpdateSuggestion(req: VercelRequest, res: VercelResponse, s
   const { data, error } = await supabase
     .from('connection_suggestions')
     .update({
-      status,
-      resolved_at: new Date().toISOString()
+      status
+      // updated_at is automatically set by trigger
     })
     .eq('id', suggestionId)
     .select()

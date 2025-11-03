@@ -5,7 +5,12 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+// Validate API key at module load
+if (!process.env.GEMINI_API_KEY) {
+  console.error('[Gemini Chat] GEMINI_API_KEY environment variable is not set')
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-key-for-initialization')
 
 /**
  * Generate text using Gemini 2.5 Flash (fast, cost-effective)
@@ -18,20 +23,34 @@ export async function generateText(
     responseFormat?: 'text' | 'json'
   } = {}
 ): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'dummy-key-for-initialization') {
+    throw new Error('GEMINI_API_KEY environment variable is not configured')
+  }
 
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      maxOutputTokens: options.maxTokens || 500,
-      temperature: options.temperature || 0.7,
-      ...(options.responseFormat === 'json' && {
-        responseMimeType: 'application/json'
-      })
-    }
-  })
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-  return result.response.text()
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        maxOutputTokens: options.maxTokens || 500,
+        temperature: options.temperature || 0.7,
+        ...(options.responseFormat === 'json' && {
+          responseMimeType: 'application/json'
+        })
+      }
+    })
+
+    return result.response.text()
+  } catch (error: any) {
+    console.error('[Gemini Chat] Generation error:', error)
+    console.error('[Gemini Chat] Error details:', {
+      message: error?.message,
+      status: error?.status,
+      promptLength: prompt.length
+    })
+    throw error
+  }
 }
 
 /**

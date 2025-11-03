@@ -7,6 +7,7 @@ import type { VercelRequest, VercelResponse} from '@vercel/node'
 import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
 import { z } from 'zod'
+import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -617,7 +618,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         last_active: new Date().toISOString(),
       }
 
-      const { data, error } = await supabase
+      const { data: project, error } = await supabase
         .from('projects')
         .insert([projectData])
         .select()
@@ -638,7 +639,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         throw error
       }
 
-      return res.status(201).json(data)
+      // Generate embedding and auto-suggest connections asynchronously (don't block response)
+      // Return project immediately, then process connections in background
+      const embeddingPromise = generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
+        .catch(err => console.error('[projects] Async embedding/connection error:', err))
+
+      return res.status(201).json({
+        ...project,
+        _meta: {
+          processing_connections: true,
+          message: 'AI is finding related items in the background'
+        }
+      })
     } catch (error) {
       console.error('[projects] Failed to create project:', error)
       return res.status(500).json({
@@ -821,7 +833,15 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
     console.log('[rate] Rating stored:', ratingData)
 
     // Update suggestion status
-    let newStatus = rating === 2 ? 'built' : rating === 1 ? 'spark' : 'meh'
+    // Map ratings to database-allowed statuses: pending, rated, built, dismissed, saved
+    let newStatus: string
+    if (rating === 2) {
+      newStatus = 'built'  // User wants to build this
+    } else if (rating === 1) {
+      newStatus = 'rated'  // User likes it (spark)
+    } else {
+      newStatus = 'dismissed'  // User doesn't want it (meh)
+    }
     console.log('[rate] Setting status to:', newStatus)
 
     const { data: suggestion, error: updateError } = await supabase
@@ -975,6 +995,213 @@ async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
+}
+
+/**
+ * Generate embedding for a project and auto-suggest/create connections
+ * Runs asynchronously after project creation
+ */
+async function generateProjectEmbeddingAndConnect(
+  projectId: string,
+  title: string,
+  description: string | null,
+  userId: string
+) {
+  const supabase = getSupabaseClient()
+
+  try {
+    console.log(`[projects] Generating embedding for project ${projectId}`)
+
+    // Generate embedding from title + description
+    const content = `${title}\n\n${description || ''}`
+    const embedding = await generateEmbedding(content)
+
+    // Store embedding in database
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ embedding })
+      .eq('id', projectId)
+
+    if (updateError) {
+      console.error('[projects] Failed to store embedding:', updateError)
+      return
+    }
+
+    console.log(`[projects] Embedding stored, finding connections...`)
+
+    // Find related items across all types
+    const candidates = await findRelatedItemsForProject(projectId, userId, embedding, content)
+
+    console.log(`[projects] Found ${candidates.length} potential connections`)
+
+    // Auto-link high confidence matches (>90%)
+    const autoLinked = []
+    const suggestions = []
+
+    for (const candidate of candidates) {
+      if (candidate.similarity > 0.9) {
+        // Auto-create connection (with deduplication)
+        const created = await createConnection(
+          'project',
+          projectId,
+          candidate.type,
+          candidate.id,
+          'relates_to',
+          'ai',
+          `${Math.round(candidate.similarity * 100)}% semantic match`
+        )
+        if (created) {
+          autoLinked.push(candidate)
+        }
+      } else if (candidate.similarity > 0.7) {
+        // Store as suggestion
+        suggestions.push(candidate)
+      }
+    }
+
+    console.log(`[projects] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
+
+    // Store suggestions in database
+    if (suggestions.length > 0) {
+      const suggestionInserts = suggestions.map(s => ({
+        from_item_type: 'project',
+        from_item_id: projectId,
+        to_item_type: s.type,
+        to_item_id: s.id,
+        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
+        confidence: s.similarity,
+        user_id: userId,
+        status: 'pending'
+      }))
+
+      await supabase
+        .from('connection_suggestions')
+        .insert(suggestionInserts)
+    }
+
+  } catch (error) {
+    console.error('[projects] Embedding/connection generation failed:', error)
+  }
+}
+
+/**
+ * Find related items for a project using vector similarity
+ */
+async function findRelatedItemsForProject(
+  projectId: string,
+  userId: string,
+  projectEmbedding: number[],
+  projectContent: string
+): Promise<Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }>> {
+  const supabase = getSupabaseClient()
+  const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
+
+  // Search other projects
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('id, title, description, embedding')
+    .eq('user_id', userId)
+    .neq('id', projectId)
+    .not('embedding', 'is', null)
+    .limit(50)
+
+  if (projects) {
+    for (const p of projects) {
+      if (p.embedding) {
+        const similarity = cosineSimilarity(projectEmbedding, p.embedding)
+        if (similarity > 0.7) {
+          candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
+        }
+      }
+    }
+  }
+
+  // Search thoughts/memories
+  const { data: thoughts } = await supabase
+    .from('memories')
+    .select('id, title, body, embedding')
+    .eq('user_id', userId)
+    .not('embedding', 'is', null)
+    .limit(50)
+
+  if (thoughts) {
+    for (const t of thoughts) {
+      if (t.embedding) {
+        const similarity = cosineSimilarity(projectEmbedding, t.embedding)
+        if (similarity > 0.7) {
+          candidates.push({ type: 'thought', id: t.id, title: t.title || t.body?.slice(0, 50) + '...', similarity })
+        }
+      }
+    }
+  }
+
+  // Search articles
+  const { data: articles } = await supabase
+    .from('articles')
+    .select('id, title, summary, embedding')
+    .eq('user_id', userId)
+    .not('embedding', 'is', null)
+    .limit(50)
+
+  if (articles) {
+    for (const a of articles) {
+      if (a.embedding) {
+        const similarity = cosineSimilarity(projectEmbedding, a.embedding)
+        if (similarity > 0.7) {
+          candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
+        }
+      }
+    }
+  }
+
+  // Sort by similarity descending
+  return candidates.sort((a, b) => b.similarity - a.similarity).slice(0, 10)
+}
+
+/**
+ * Create a connection between two items (with deduplication)
+ */
+async function createConnection(
+  sourceType: string,
+  sourceId: string,
+  targetType: string,
+  targetId: string,
+  connectionType: string,
+  createdBy: string,
+  reasoning?: string
+): Promise<boolean> {
+  const supabase = getSupabaseClient()
+
+  // Check if connection already exists (either direction)
+  const { data: existing } = await supabase
+    .from('connections')
+    .select('id')
+    .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${targetType},target_id.eq.${targetId}),and(source_type.eq.${targetType},source_id.eq.${targetId},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
+    .maybeSingle()
+
+  if (existing) {
+    console.log('[projects] Connection already exists, skipping duplicate')
+    return false
+  }
+
+  const { error } = await supabase
+    .from('connections')
+    .insert({
+      source_type: sourceType,
+      source_id: sourceId,
+      target_type: targetType,
+      target_id: targetId,
+      connection_type: connectionType,
+      created_by: createdBy,
+      ai_reasoning: reasoning
+    })
+
+  if (error) {
+    console.error('[projects] Failed to create connection:', error)
+    return false
+  }
+
+  return true
 }
 
 /**

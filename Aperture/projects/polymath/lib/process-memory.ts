@@ -4,6 +4,7 @@ import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../src/typ
 import { getSupabaseConfig, getGeminiConfig } from './env.js'
 import { logger } from './logger.js'
 import { normalizeTags } from './tag-normalizer.js'
+import { cosineSimilarity } from '../api/lib/gemini-embeddings.js'
 
 const { apiKey } = getGeminiConfig()
 const genAI = new GoogleGenerativeAI(apiKey)
@@ -63,15 +64,16 @@ export async function processMemory(memoryId: string): Promise<void> {
     // 5. Store individual entities in the entities table
     await storeEntities(memoryId, metadata.entities)
 
-    // 6. Skip connection detection for now (too slow - ~10-15s)
-    // Can be added as separate background job later if needed
+    // 6. Auto-suggest and create connections
+    await findAndCreateConnections(memoryId, memory.user_id, embedding, metadata.summary_title, metadata.insightful_body)
 
     logger.info({
       memory_id: memoryId,
       summary_title: metadata.summary_title,
       type: metadata.memory_type,
       entities: metadata.entities,
-      themes: metadata.themes
+      themes: metadata.themes,
+      connections_processing: true
     }, 'Successfully processed memory')
 
   } catch (error) {
@@ -96,7 +98,7 @@ export async function processMemory(memoryId: string): Promise<void> {
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-05-20' })
 
-  const prompt = `Analyze this voice note and transform it into a structured, insightful memory.
+  const prompt = `Clean up this voice note into something natural and readable.
 
 Raw Voice Transcript:
 Title: ${title}
@@ -104,8 +106,8 @@ Body: ${body}
 
 Extract the following in JSON format:
 {
-  "summary_title": "A concise, meaningful title that captures the essence (max 80 chars)",
-  "insightful_body": "Transform the raw transcript into clear, insightful prose with revelatory clarity. Preserve the core meaning and insights but make it more coherent, organized, and profound. Remove filler words, organize thoughts logically, and highlight key realizations.",
+  "summary_title": "A clear, specific title (max 80 chars)",
+  "insightful_body": "Rewrite in plain, conversational English. Keep the same ideas and tone, just make it readable. Remove filler words and 'um's but don't make it formal or flowery. Write how a smart person would naturally explain this idea to a friend. First person. No jargon unless it was in the original.",
   "memory_type": "foundational" | "event" | "insight",
   "entities": {
     "people": ["names of specific people mentioned"],
@@ -118,8 +120,8 @@ Extract the following in JSON format:
 }
 
 Rules:
-- summary_title: Make it meaningful and specific, not generic. Capture what makes this memory unique.
-- insightful_body: Rewrite the transcript with clarity and insight. Make implicit ideas explicit. Connect dots. Reveal deeper meaning. Keep it in first person. This should feel like a polished journal entry, not raw speech-to-text.
+- summary_title: What's this about? Be specific, not generic.
+- insightful_body: Clean up the rambling but keep it conversational. Don't use words like "nascent", "formative", "preliminary", "profound", "revelatory". Just write like a normal person who happens to have interesting thoughts. Natural language only.
 - memory_type: "foundational" = core belief/value, "event" = something that happened, "insight" = realization/idea
 - entities.people: Only actual names (e.g., "Sarah", "Alex"), not generic terms
 - entities.places: Only specific locations (e.g., "London", "Central Park")
@@ -211,36 +213,136 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
 }
 
 /**
- * Trigger connection detection for new memory (async, non-blocking)
+ * Find and create connections for a new memory
  */
-async function triggerConnectionDetection(
+async function findAndCreateConnections(
   memoryId: string,
+  userId: string,
+  embedding: number[],
   title: string,
   body: string
 ): Promise<void> {
   try {
-    // Get base URL from environment
-    const host = process.env.VERCEL_URL || 'localhost:5173'
-    const protocol = host.includes('localhost') ? 'http' : 'https'
-    const baseUrl = `${protocol}://${host}`
+    logger.info({ memory_id: memoryId }, 'Finding connections for memory')
 
-    logger.debug({ memory_id: memoryId }, 'Triggering connection detection')
+    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
 
-    // Call connection detection API
-    await fetch(`${baseUrl}/api/connections/suggest`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contentType: 'memory',
-        contentId: memoryId,
-        contentText: `${title}\n\n${body}`,
-        contentTitle: title
-      })
-    })
+    // Search projects
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, description, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(50)
 
-    logger.debug({ memory_id: memoryId }, 'Connection detection triggered')
+    if (projects) {
+      for (const p of projects) {
+        if (p.embedding) {
+          const similarity = cosineSimilarity(embedding, p.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
+          }
+        }
+      }
+    }
+
+    // Search other memories
+    const { data: memories } = await supabase
+      .from('memories')
+      .select('id, title, body, embedding')
+      .eq('user_id', userId)
+      .neq('id', memoryId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (memories) {
+      for (const m of memories) {
+        if (m.embedding) {
+          const similarity = cosineSimilarity(embedding, m.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
+          }
+        }
+      }
+    }
+
+    // Search articles
+    const { data: articles } = await supabase
+      .from('articles')
+      .select('id, title, summary, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (articles) {
+      for (const a of articles) {
+        if (a.embedding) {
+          const similarity = cosineSimilarity(embedding, a.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
+          }
+        }
+      }
+    }
+
+    // Sort by similarity
+    candidates.sort((a, b) => b.similarity - a.similarity)
+
+    logger.info({ memory_id: memoryId, candidates_found: candidates.length }, 'Found connection candidates')
+
+    // Auto-link >90%, suggest 70-90%
+    const autoLinked = []
+    const suggestions = []
+
+    for (const candidate of candidates.slice(0, 10)) {
+      if (candidate.similarity > 0.9) {
+        // Auto-create connection (with deduplication check)
+        const { data: existing } = await supabase
+          .from('connections')
+          .select('id')
+          .or(`and(source_type.eq.thought,source_id.eq.${memoryId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.thought,target_id.eq.${memoryId})`)
+          .maybeSingle()
+
+        if (!existing) {
+          await supabase
+            .from('connections')
+            .insert({
+              source_type: 'thought',
+              source_id: memoryId,
+              target_type: candidate.type,
+              target_id: candidate.id,
+              connection_type: 'relates_to',
+              created_by: 'ai',
+              ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
+            })
+          autoLinked.push(candidate)
+        }
+      } else if (candidate.similarity > 0.7) {
+        suggestions.push(candidate)
+      }
+    }
+
+    logger.info({ memory_id: memoryId, auto_linked: autoLinked.length, suggestions: suggestions.length }, 'Created connections')
+
+    // Store suggestions
+    if (suggestions.length > 0) {
+      const suggestionInserts = suggestions.map(s => ({
+        from_item_type: 'thought',
+        from_item_id: memoryId,
+        to_item_type: s.type,
+        to_item_id: s.id,
+        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
+        confidence: s.similarity,
+        user_id: userId,
+        status: 'pending'
+      }))
+
+      await supabase
+        .from('connection_suggestions')
+        .insert(suggestionInserts)
+    }
+
   } catch (error) {
-    // Log but don't throw - connection detection is non-critical
-    logger.warn({ memory_id: memoryId, error }, 'Failed to trigger connection detection')
+    logger.warn({ memory_id: memoryId, error }, 'Failed to find connections (non-fatal)')
   }
 }

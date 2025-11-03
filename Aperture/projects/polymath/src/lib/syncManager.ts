@@ -30,7 +30,7 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
 
         // Trigger background processing
         try {
-          await fetch('/api/process', {
+          await fetch('/api/memories?action=process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ memory_id: data.id }),

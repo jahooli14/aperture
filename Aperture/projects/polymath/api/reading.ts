@@ -9,6 +9,7 @@ import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
+import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 
 
 const rssParser = new Parser()
@@ -525,6 +526,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
           } else {
             console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id}`)
+
+            // Generate embedding and auto-connect (async, non-blocking)
+            generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
+              .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
+              .catch(err => console.error('[reading] Async embedding/connection error:', err))
           }
         })
         .catch(async (extractError) => {
@@ -797,4 +803,158 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(405).json({ error: 'Method not allowed' })
+}
+
+/**
+ * Generate embedding for an article and auto-suggest/create connections
+ * Runs asynchronously after article content extraction
+ */
+async function generateArticleEmbeddingAndConnect(
+  articleId: string,
+  title: string,
+  excerpt: string,
+  userId: string
+) {
+  const supabase = getSupabaseClient()
+
+  try {
+    console.log(`[reading] Generating embedding for article ${articleId}`)
+
+    // Generate embedding from title + excerpt
+    const content = `${title}\n\n${excerpt || ''}`
+    const embedding = await generateEmbedding(content)
+
+    // Store embedding in database (note: table is reading_queue, not articles)
+    const { error: updateError } = await supabase
+      .from('reading_queue')
+      .update({ embedding })
+      .eq('id', articleId)
+
+    if (updateError) {
+      console.error('[reading] Failed to store embedding:', updateError)
+      return
+    }
+
+    console.log(`[reading] Embedding stored, finding connections...`)
+
+    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
+
+    // Search projects
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, description, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (projects) {
+      for (const p of projects) {
+        if (p.embedding) {
+          const similarity = cosineSimilarity(embedding, p.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
+          }
+        }
+      }
+    }
+
+    // Search memories
+    const { data: memories } = await supabase
+      .from('memories')
+      .select('id, title, body, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (memories) {
+      for (const m of memories) {
+        if (m.embedding) {
+          const similarity = cosineSimilarity(embedding, m.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
+          }
+        }
+      }
+    }
+
+    // Search other articles (use reading_queue table)
+    const { data: articles } = await supabase
+      .from('reading_queue')
+      .select('id, title, excerpt, embedding')
+      .eq('user_id', userId)
+      .neq('id', articleId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (articles) {
+      for (const a of articles) {
+        if (a.embedding) {
+          const similarity = cosineSimilarity(embedding, a.embedding)
+          if (similarity > 0.7) {
+            candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
+          }
+        }
+      }
+    }
+
+    // Sort by similarity
+    candidates.sort((a, b) => b.similarity - a.similarity)
+
+    console.log(`[reading] Found ${candidates.length} potential connections`)
+
+    // Auto-link >90%, suggest 70-90%
+    const autoLinked = []
+    const suggestions = []
+
+    for (const candidate of candidates.slice(0, 10)) {
+      if (candidate.similarity > 0.9) {
+        // Auto-create connection (with deduplication check)
+        const { data: existing } = await supabase
+          .from('connections')
+          .select('id')
+          .or(`and(source_type.eq.article,source_id.eq.${articleId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.article,target_id.eq.${articleId})`)
+          .maybeSingle()
+
+        if (!existing) {
+          await supabase
+            .from('connections')
+            .insert({
+              source_type: 'article',
+              source_id: articleId,
+              target_type: candidate.type,
+              target_id: candidate.id,
+              connection_type: 'relates_to',
+              created_by: 'ai',
+              ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
+            })
+          autoLinked.push(candidate)
+        }
+      } else if (candidate.similarity > 0.7) {
+        suggestions.push(candidate)
+      }
+    }
+
+    console.log(`[reading] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
+
+    // Store suggestions
+    if (suggestions.length > 0) {
+      const suggestionInserts = suggestions.map(s => ({
+        from_item_type: 'article',
+        from_item_id: articleId,
+        to_item_type: s.type,
+        to_item_id: s.id,
+        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
+        confidence: s.similarity,
+        user_id: userId,
+        status: 'pending'
+      }))
+
+      await supabase
+        .from('connection_suggestions')
+        .insert(suggestionInserts)
+    }
+
+  } catch (error) {
+    console.error('[reading] Embedding/connection generation failed:', error)
+  }
 }
