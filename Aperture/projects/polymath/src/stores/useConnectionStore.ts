@@ -35,7 +35,7 @@ export const useConnectionStore = create<ConnectionState>((set) => ({
     set({ loading: true })
 
     try {
-      const response = await fetch('/api/connections/suggest', {
+      const response = await fetch('/api/connections?action=suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
