@@ -197,9 +197,20 @@ Return ONLY JSON:
     )
 
     const result = await Promise.race([geminiPromise, timeoutPromise]) as any
-    const geminiResponse = result.response.text()
     console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
-    console.log('[handleCapture] Raw response:', geminiResponse)
+
+    // Check for safety filters or blocked content
+    const response = result.response
+    if (response.promptFeedback?.blockReason) {
+      console.warn('[handleCapture] Content blocked:', response.promptFeedback.blockReason)
+      throw new Error(`Content blocked: ${response.promptFeedback.blockReason}`)
+    }
+
+    const geminiResponse = response.text()
+    console.log('[handleCapture] Raw response length:', geminiResponse?.length || 0)
+    if (geminiResponse) {
+      console.log('[handleCapture] Raw response:', geminiResponse.substring(0, 200))
+    }
 
     // Check if response is empty
     if (!geminiResponse || geminiResponse.trim().length === 0) {
@@ -281,8 +292,11 @@ Return ONLY JSON:
     const now = new Date().toISOString()
     const body = Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text
 
+    // Generate unique ID with timestamp + random component to prevent collisions on retry
+    const uniqueId = `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
     const newMemory = {
-      audiopen_id: `voice_${Date.now()}`,
+      audiopen_id: uniqueId,
       title: parsedTitle,
       body,
       orig_transcript: text,
