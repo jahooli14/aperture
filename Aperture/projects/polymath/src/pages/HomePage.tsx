@@ -1,7 +1,7 @@
 /**
  * Home Page - 4-Pillar Architecture
- * 1. Keep the momentum - next steps on priority/recent projects
- * 2. Add something new - voice, thought, article, project
+ * 1. Add something new - voice, thought, article, project
+ * 2. Keep the momentum - next steps on priority/recent projects
  * 3. Get inspiration - AI suggestions
  * 4. Explore - timeline, constellation, card of the day
  */
@@ -624,161 +624,7 @@ export function HomePage() {
           )}
         </AnimatePresence>
 
-        {/* 1. KEEP THE MOMENTUM */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="premium-card p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Rocket className="h-7 w-7" style={{ color: 'var(--premium-blue)' }} />
-              <h2 className="text-2xl font-bold premium-text-platinum">Keep the Momentum</h2>
-            </div>
-
-            {queueLoading ? (
-              <div className="space-y-4">
-                {/* Skeleton loaders with exact same height as actual content */}
-                {[1, 2].map((i) => (
-                  <div key={i} className="premium-glass-subtle p-4 rounded-xl animate-pulse">
-                    {/* Title skeleton */}
-                    <div className="h-7 bg-white/10 rounded-lg w-2/3 mb-3"></div>
-                    {/* Next Action box skeleton */}
-                    <div className="rounded-lg p-3 border-2 border-white/10 bg-white/5">
-                      <div className="h-3 bg-white/10 rounded w-24 mb-2"></div>
-                      <div className="h-5 bg-white/10 rounded w-4/5"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : projectsToShow.length > 0 ? (
-              <div className="space-y-4">
-                {projectsToShow.map((project) => {
-                  // Get first incomplete task from the tasks array
-                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-                  const nextTask = tasks
-                    .sort((a, b) => a.order - b.order)
-                    .find(task => !task.done)
-                  const nextStep = nextTask?.text
-
-                  // Calculate progress
-                  const totalTasks = tasks.length
-                  const completedTasks = tasks.filter(t => t.done).length
-                  const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-
-                  return (
-                    <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
-                      className="group block premium-glass-subtle p-4 rounded-xl transition-all duration-300 hover:bg-white/10"
-                    >
-                      {/* Project Title & Badges */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <h3 className="premium-text-platinum font-bold text-lg">
-                              {project.title}
-                            </h3>
-                          </div>
-                          {/* Type badge and progress */}
-                          <div className="flex items-center gap-2">
-                            {/* Type badge */}
-                            <div className="px-2 py-0.5 rounded-md text-xs font-medium backdrop-blur-sm" style={{
-                              backgroundColor: project.type === 'hobby' ? 'rgba(236, 72, 153, 0.15)' :
-                                              project.type === 'side-project' ? 'rgba(59, 130, 246, 0.15)' :
-                                              'rgba(16, 185, 129, 0.15)',
-                              color: project.type === 'hobby' ? 'var(--premium-pink)' :
-                                     project.type === 'side-project' ? 'var(--premium-blue)' :
-                                     'var(--premium-emerald)',
-                              border: `1px solid ${project.type === 'hobby' ? 'rgba(236, 72, 153, 0.3)' :
-                                                   project.type === 'side-project' ? 'rgba(59, 130, 246, 0.3)' :
-                                                   'rgba(16, 185, 129, 0.3)'}`
-                            }}>
-                              {project.type === 'hobby' ? '🎨 Hobby' :
-                               project.type === 'side-project' ? '💻 Side Project' :
-                               '📚 Learning'}
-                            </div>
-
-                            {/* Progress indicator */}
-                            {totalTasks > 0 && (
-                              <div className="flex items-center gap-1.5">
-                                <div className="h-1.5 w-16 rounded-full overflow-hidden backdrop-blur-sm" style={{
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                                }}>
-                                  <div className="h-full rounded-full transition-all duration-300" style={{
-                                    width: `${progressPercent}%`,
-                                    background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.6), rgba(99, 102, 241, 0.6))'
-                                  }} />
-                                </div>
-                                <span className="text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
-                                  {completedTasks}/{totalTasks}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {project.is_priority && (
-                          <div className="px-2 py-1 rounded-md text-xs font-bold flex-shrink-0" style={{
-                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
-                            color: 'var(--premium-amber)',
-                            border: '1px solid rgba(251, 191, 36, 0.4)'
-                          }}>
-                            ⭐ PRIORITY
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Next Step - Always Show */}
-                      <div className="rounded-lg p-3 mb-2 border-2" style={{
-                        backgroundColor: nextStep ? 'rgba(251, 191, 36, 0.1)' : 'rgba(107, 114, 128, 0.1)',
-                        borderColor: nextStep ? 'rgba(251, 191, 36, 0.4)' : 'rgba(107, 114, 128, 0.3)'
-                      }}>
-                        <div className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: nextStep ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)' }}>
-                          NEXT ACTION
-                        </div>
-                        <div className="premium-text-platinum font-medium text-sm">
-                          {nextStep || 'No tasks yet - click to add one'}
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-
-                <Link
-                  to="/projects"
-                  className="block text-center py-3 rounded-lg font-medium transition-all hover:bg-white/5"
-                  style={{ color: 'var(--premium-blue)' }}
-                >
-                  View All Projects <ArrowRight className="inline h-4 w-4 ml-1" />
-                </Link>
-              </div>
-            ) : (
-              <div className="premium-glass-subtle p-6 rounded-xl text-center">
-                <div className="inline-flex items-center justify-center h-16 w-16 rounded-full mb-4" style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)'
-                }}>
-                  <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-                <h3 className="font-bold mb-2 premium-text-platinum">Ready to build something?</h3>
-                <p className="mb-4 text-sm max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Projects are where ideas become reality. Start one and we'll help you keep the momentum going.
-                </p>
-                <Link
-                  to="/projects"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-white/5"
-                  style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    color: 'var(--premium-blue)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
-                  }}
-                >
-                  Create Your First Project <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 2. ADD SOMETHING NEW */}
+        {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="premium-card p-6">
             <div className="flex items-center gap-3 mb-4">
@@ -842,6 +688,156 @@ export function HomePage() {
                 <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
             </div>
+          </div>
+        </section>
+
+        {/* 2. KEEP THE MOMENTUM (Compact) */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="premium-card p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <h2 className="text-xl font-bold premium-text-platinum">Keep the Momentum</h2>
+            </div>
+
+            {queueLoading ? (
+              <div className="space-y-3">
+                {/* Skeleton loaders - compact */}
+                {[1, 2].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-3 rounded-xl animate-pulse">
+                    {/* Title skeleton */}
+                    <div className="h-5 bg-white/10 rounded-lg w-2/3 mb-2"></div>
+                    {/* Next Action box skeleton */}
+                    <div className="rounded-lg p-2 border border-white/10 bg-white/5">
+                      <div className="h-3 bg-white/10 rounded w-4/5"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : projectsToShow.length > 0 ? (
+              <div className="space-y-3">
+                {projectsToShow.map((project) => {
+                  // Get first incomplete task from the tasks array
+                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                  const nextTask = tasks
+                    .sort((a, b) => a.order - b.order)
+                    .find(task => !task.done)
+                  const nextStep = nextTask?.text
+
+                  // Calculate progress
+                  const totalTasks = tasks.length
+                  const completedTasks = tasks.filter(t => t.done).length
+                  const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
+
+                  return (
+                    <Link
+                      key={project.id}
+                      to={`/projects/${project.id}`}
+                      className="group block premium-glass-subtle p-3 rounded-xl transition-all duration-300 hover:bg-white/10"
+                    >
+                      {/* Project Title & Badges */}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="premium-text-platinum font-bold text-base">
+                              {project.title}
+                            </h3>
+                          </div>
+                          {/* Type badge and progress */}
+                          <div className="flex items-center gap-2">
+                            {/* Type badge */}
+                            <div className="px-1.5 py-0.5 rounded text-xs font-medium backdrop-blur-sm" style={{
+                              backgroundColor: project.type === 'hobby' ? 'rgba(236, 72, 153, 0.15)' :
+                                              project.type === 'side-project' ? 'rgba(59, 130, 246, 0.15)' :
+                                              'rgba(16, 185, 129, 0.15)',
+                              color: project.type === 'hobby' ? 'var(--premium-pink)' :
+                                     project.type === 'side-project' ? 'var(--premium-blue)' :
+                                     'var(--premium-emerald)',
+                              border: `1px solid ${project.type === 'hobby' ? 'rgba(236, 72, 153, 0.3)' :
+                                                   project.type === 'side-project' ? 'rgba(59, 130, 246, 0.3)' :
+                                                   'rgba(16, 185, 129, 0.3)'}`
+                            }}>
+                              {project.type === 'hobby' ? '🎨 Hobby' :
+                               project.type === 'side-project' ? '💻 Side Project' :
+                               '📚 Learning'}
+                            </div>
+
+                            {/* Progress indicator */}
+                            {totalTasks > 0 && (
+                              <div className="flex items-center gap-1">
+                                <div className="h-1 w-12 rounded-full overflow-hidden backdrop-blur-sm" style={{
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                                }}>
+                                  <div className="h-full rounded-full transition-all duration-300" style={{
+                                    width: `${progressPercent}%`,
+                                    background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.6), rgba(99, 102, 241, 0.6))'
+                                  }} />
+                                </div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                  {completedTasks}/{totalTasks}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {project.is_priority && (
+                          <div className="px-2 py-1 rounded-md text-xs font-bold flex-shrink-0" style={{
+                            background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))',
+                            color: 'var(--premium-amber)',
+                            border: '1px solid rgba(251, 191, 36, 0.4)'
+                          }}>
+                            ⭐ PRIORITY
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Next Step - Compact */}
+                      <div className="rounded-lg p-2 border" style={{
+                        backgroundColor: nextStep ? 'rgba(251, 191, 36, 0.1)' : 'rgba(107, 114, 128, 0.1)',
+                        borderColor: nextStep ? 'rgba(251, 191, 36, 0.3)' : 'rgba(107, 114, 128, 0.2)'
+                      }}>
+                        <div className="premium-text-platinum font-medium text-sm">
+                          {nextStep || 'No tasks yet - click to add one'}
+                        </div>
+                      </div>
+                    </Link>
+                  )
+                })}
+
+                <Link
+                  to="/projects"
+                  className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+                  style={{ color: 'var(--premium-blue)' }}
+                >
+                  View All Projects <ArrowRight className="inline h-4 w-4 ml-1" />
+                </Link>
+              </div>
+            ) : (
+              <div className="premium-glass-subtle p-4 rounded-xl text-center">
+                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full mb-3" style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}>
+                  <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+                <h3 className="font-bold mb-2 premium-text-platinum text-sm">Ready to build something?</h3>
+                <p className="mb-3 text-xs max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Projects are where ideas become reality.
+                </p>
+                <Link
+                  to="/projects"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: 'var(--premium-blue)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)'
+                  }}
+                >
+                  Create Project <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 
