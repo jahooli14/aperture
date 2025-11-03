@@ -461,49 +461,84 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
-      // Fetch article content
-      const article = await fetchArticle(url)
-
-      // Prepare article data for database
-      const articleData = {
+      // Save URL immediately with placeholder - extraction happens in background
+      const placeholderArticle = {
         user_id: userId,
-        url: article.url,
-        title: article.title,
-        author: article.author || null,
-        content: article.content,
-        excerpt: article.excerpt,
-        published_date: article.publishedDate || null,
-        thumbnail_url: article.thumbnailUrl || null,
-        favicon_url: article.faviconUrl || null,
-        source: extractDomain(article.url),
-        read_time_minutes: estimateReadTime(article.content),
-        word_count: countWords(article.content),
+        url,
+        title: url, // Use URL as temporary title
+        author: null,
+        content: null, // Will be filled by background processing
+        excerpt: 'Extracting article content...',
+        published_date: null,
+        thumbnail_url: null,
+        favicon_url: null,
+        source: extractDomain(url),
+        read_time_minutes: 0,
+        word_count: 0,
         status: 'unread',
         tags: tags || [],
+        processed: false, // Mark as unprocessed
         created_at: new Date().toISOString(),
       }
 
-      const { data, error } = await supabase
+      const { data: savedArticle, error: insertError } = await supabase
         .from('reading_queue')
-        .insert([articleData])
+        .insert([placeholderArticle])
         .select()
         .single()
 
-      if (error) {
-        console.error('Database insert error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        })
-        throw new Error(`Database error: ${error.message}`)
+      if (insertError) {
+        console.error('Database insert error:', insertError)
+        throw new Error(`Database error: ${insertError.message}`)
       }
 
+      console.log(`[reading] Article placeholder saved, ID: ${savedArticle.id}`)
 
-      return res.status(201).json({
+      // Return immediately with placeholder
+      res.status(201).json({
         success: true,
-        article: data
+        article: savedArticle,
+        message: 'Article saved! Extracting content in background...'
       })
+
+      // Process article content in background (don't await)
+      fetchArticle(url)
+        .then(async (article) => {
+          // Update with extracted content
+          const { error: updateError } = await supabase
+            .from('reading_queue')
+            .update({
+              title: article.title,
+              author: article.author,
+              content: article.content,
+              excerpt: article.excerpt,
+              published_date: article.publishedDate,
+              thumbnail_url: article.thumbnailUrl,
+              favicon_url: article.faviconUrl,
+              read_time_minutes: estimateReadTime(article.content),
+              word_count: countWords(article.content),
+              processed: true,
+            })
+            .eq('id', savedArticle.id)
+
+          if (updateError) {
+            console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
+          } else {
+            console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id}`)
+          }
+        })
+        .catch(async (extractError) => {
+          console.error(`[reading] Extraction failed for ${savedArticle.id}:`, extractError)
+
+          // Mark as failed but keep the record
+          await supabase
+            .from('reading_queue')
+            .update({
+              excerpt: 'Failed to extract content. Click to retry.',
+              processed: false,
+            })
+            .eq('id', savedArticle.id)
+        })
 
     } catch (error) {
       return res.status(500).json({
