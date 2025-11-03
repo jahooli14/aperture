@@ -427,11 +427,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           )}
         </div>
 
-        {/* Metadata - Only show when expanded */}
-        {isExpanded && (
+        {/* AI Enrichment - Always show when processed */}
+        {memory.processed && (
           <>
             {/* Memory Type & Emotional Tone */}
-            {memory.processed && (
+            {(memory.memory_type || memory.emotional_tone) && (
               <div className="flex flex-wrap gap-2">
                 {memory.memory_type && (
                   <div className="px-3 py-1 rounded-md text-xs font-medium border" style={memoryTypeConfig[memory.memory_type].style}>
