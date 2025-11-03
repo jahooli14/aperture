@@ -37,22 +37,22 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
 
   return (
     <Card className="premium-card">
-      <CardContent className="p-4">
-        <div className="grid grid-cols-2 gap-3">
+      <CardContent className="p-3">
+        <div className="grid grid-cols-2 gap-2">
           {/* Status */}
           <div className="relative">
-            <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--premium-text-tertiary)' }}>Status</div>
+            <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Status</div>
             <button
               onClick={() => setShowStatusPicker(!showStatusPicker)}
-              className="w-full px-3 py-2 rounded-lg font-medium border-2 transition-all hover:shadow-sm touch-manipulation text-left flex items-center gap-2"
+              className="w-full px-2 py-1.5 rounded-lg font-medium border transition-all hover:shadow-sm touch-manipulation text-left flex items-center gap-1.5"
               style={{
                 backgroundColor: currentStatus.bg,
                 color: currentStatus.text,
                 borderColor: currentStatus.border
               }}
             >
-              <span>{currentStatus.emoji}</span>
-              <span className="text-sm">{currentStatus.label}</span>
+              <span className="text-sm">{currentStatus.emoji}</span>
+              <span className="text-xs">{currentStatus.label}</span>
             </button>
 
             {showStatusPicker && (
@@ -90,14 +90,14 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
           {/* Energy Level */}
           {currentEnergy && (
             <div>
-              <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--premium-text-tertiary)' }}>Energy</div>
-              <div className="px-3 py-2 rounded-lg border-2 font-medium flex items-center gap-2" style={{
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Energy</div>
+              <div className="px-2 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: currentEnergy.color
               }}>
-                <span>{currentEnergy.emoji}</span>
-                <span className="text-sm">{currentEnergy.label}</span>
+                <span className="text-sm">{currentEnergy.emoji}</span>
+                <span className="text-xs">{currentEnergy.label}</span>
               </div>
             </div>
           )}
@@ -105,27 +105,18 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
           {/* Estimated Time */}
           {project.estimated_next_step_time && (
             <div>
-              <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--premium-text-tertiary)' }}>Time</div>
-              <div className="px-3 py-2 rounded-lg border-2 font-medium flex items-center gap-2" style={{
+              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>Time</div>
+              <div className="px-2 py-1.5 rounded-lg border font-medium flex items-center gap-1.5" style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 color: 'var(--premium-text-primary)'
               }}>
-                <span>⏱️</span>
-                <span className="text-sm">{project.estimated_next_step_time}min</span>
+                <span className="text-sm">⏱️</span>
+                <span className="text-xs">{project.estimated_next_step_time}min</span>
               </div>
             </div>
           )}
         </div>
-
-        {/* Description */}
-        {project.description && (
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-              {project.description}
-            </p>
-          </div>
-        )}
 
         {/* Context Requirements */}
         {project.context_requirements && project.context_requirements.length > 0 && (

@@ -1097,8 +1097,15 @@ async function fetchItemByTypeAndId(itemType: string, itemId: string): Promise<a
     .eq('id', itemId)
     .single()
 
-  if (error) {
-    return null
+  if (error || !data) {
+    // Return a fallback object instead of null so UI can show something useful
+    console.warn(`[fetchItemByTypeAndId] Could not fetch ${itemType} with id ${itemId}:`, error?.message)
+    return {
+      id: itemId,
+      title: `[Deleted ${itemType}]`,
+      body: 'This item has been deleted or is no longer available',
+      _missing: true
+    }
   }
 
   return data
