@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { X, Mic, Plus, Trash2 } from 'lucide-react'
+import { X, Mic, Plus, Trash2, FileText } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useToast } from '../ui/toast'
 
@@ -133,53 +133,57 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
             </button>
           </div>
 
-          {/* Type Toggle - Prominent */}
-          <div className="p-4 border-b-2" style={{
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1))'
-          }}>
-            <p className="text-sm font-medium mb-3" style={{ color: 'var(--premium-text-secondary)' }}>Choose update type:</p>
+          {/* Type Toggle - Clear Selection */}
+          <div className="p-6 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
             <div className="flex gap-3">
               <button
                 onClick={() => setNoteType('voice')}
-                className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
+                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
                   noteType === 'voice'
-                    ? 'shadow-lg scale-105'
-                    : 'border-2 hover:shadow-lg'
+                    ? 'shadow-2xl ring-2'
+                    : 'hover:bg-white/5'
                 }`}
                 style={noteType === 'voice' ? {
                   background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                  color: 'white'
+                  color: 'white',
+                  ringColor: 'var(--premium-blue)'
                 } : {
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-secondary)'
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-tertiary)'
                 }}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl">🎤</span>
-                  <span>Voice</span>
+                <div className="flex flex-col items-center gap-2">
+                  <Mic className={`h-6 w-6 ${noteType === 'voice' ? '' : 'opacity-50'}`} />
+                  <span className="text-sm">Voice Note</span>
+                  {noteType === 'voice' && (
+                    <span className="text-xs opacity-80">Creates linked thought</span>
+                  )}
                 </div>
               </button>
               <button
                 onClick={() => setNoteType('text')}
-                className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
+                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
                   noteType === 'text'
-                    ? 'shadow-lg scale-105'
-                    : 'border-2 hover:shadow-lg'
+                    ? 'shadow-2xl ring-2'
+                    : 'hover:bg-white/5'
                 }`}
                 style={noteType === 'text' ? {
                   background: 'linear-gradient(135deg, var(--premium-indigo), var(--premium-purple))',
-                  color: 'white'
+                  color: 'white',
+                  ringColor: 'var(--premium-indigo)'
                 } : {
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-secondary)'
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-tertiary)'
                 }}
               >
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl">📝</span>
-                  <span>Text</span>
+                <div className="flex flex-col items-center gap-2">
+                  <FileText className={`h-6 w-6 ${noteType === 'text' ? '' : 'opacity-50'}`} />
+                  <span className="text-sm">Text Update</span>
+                  {noteType === 'text' && (
+                    <span className="text-xs opacity-80">Project progress notes</span>
+                  )}
                 </div>
               </button>
             </div>
