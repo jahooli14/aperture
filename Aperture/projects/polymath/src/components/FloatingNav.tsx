@@ -67,7 +67,20 @@ export function FloatingNav() {
     return location.pathname === option.path
   }
 
+  // Check if we're on a project detail page
+  const isProjectDetailPage = location.pathname.startsWith('/projects/') && location.pathname !== '/projects'
+
   const handleCaptureClick = () => {
+    // On project pages, trigger the project's AddNote dialog instead
+    if (isProjectDetailPage) {
+      // Find and click the project's FAB
+      const projectFab = document.querySelector('[aria-label="Add note"]') as HTMLButtonElement
+      if (projectFab) {
+        projectFab.click()
+        return
+      }
+    }
+
     if (isOnline) {
       setIsVoiceOpen(true)
     }

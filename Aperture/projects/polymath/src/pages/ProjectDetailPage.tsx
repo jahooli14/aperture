@@ -736,14 +736,10 @@ export function ProjectDetailPage() {
         />
       </div>
 
-      {/* FAB - Add Note (Voice or Text) */}
+      {/* Hidden trigger for AddNote dialog - triggered by FloatingNav FAB */}
       <button
         onClick={() => setShowAddNote(true)}
-        className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-2xl transition-all flex items-center justify-center z-20 touch-manipulation active:scale-95"
-        style={{
-          background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-          color: 'white'
-        }}
+        className="hidden"
         aria-label="Add note"
       >
         <Plus className="h-6 w-6" />
