@@ -21,7 +21,7 @@ import type { Project } from '../types'
 export function ProjectsPage() {
   const navigate = useNavigate()
   const {
-    projects,
+    projects: allProjects,
     loading,
     error,
     filter,
@@ -31,8 +31,34 @@ export function ProjectsPage() {
   } = useProjectStore()
 
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
+
+  // Extract all unique tags from projects
+  const allTags = React.useMemo(() => {
+    const tagSet = new Set<string>()
+    allProjects.forEach(project => {
+      const tags = project.metadata?.tags || []
+      tags.forEach((tag: string) => tagSet.add(tag))
+    })
+    return Array.from(tagSet).sort()
+  }, [allProjects])
+
+  // Filter projects by selected tags
+  const projects = React.useMemo(() => {
+    if (selectedTags.length === 0) return allProjects
+    return allProjects.filter(project => {
+      const projectTags = project.metadata?.tags || []
+      return selectedTags.every(tag => projectTags.includes(tag))
+    })
+  }, [allProjects, selectedTags])
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    )
+  }
 
   useEffect(() => {
     fetchProjects()
@@ -92,10 +118,15 @@ export function ProjectsPage() {
           <div className="flex items-center gap-2">
             <Link
               to="/suggestions"
-              className="premium-glass border px-3 py-1.5 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all text-sm"
+              className="border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
+              style={{
+                backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                borderColor: 'rgba(251, 191, 36, 0.5)',
+                color: 'var(--premium-amber)'
+              }}
             >
-              <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
-              <span style={{ color: 'var(--premium-text-primary)' }}>Discover</span>
+              <Sparkles className="h-4 w-4" />
+              <span>Discover</span>
             </Link>
             <CreateProjectDialog />
           </div>
@@ -170,6 +201,46 @@ export function ProjectsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Tag Filters */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <span className="text-sm font-medium self-center" style={{ color: 'var(--premium-text-secondary)' }}>
+              Tags:
+            </span>
+            {allTags.map(tag => (
+              <Button
+                key={tag}
+                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                onClick={() => toggleTag(tag)}
+                size="sm"
+                className={`whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs ${
+                  selectedTags.includes(tag)
+                    ? 'premium-card border-2 shadow-lg'
+                    : 'premium-card border shadow-sm hover:shadow-md'
+                }`}
+                style={{
+                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(139, 92, 246, 0.2)',
+                  backgroundColor: selectedTags.includes(tag) ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                  color: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
+                }}
+              >
+                #{tag}
+              </Button>
+            ))}
+            {selectedTags.length > 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => setSelectedTags([])}
+                size="sm"
+                className="text-xs underline"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+              >
+                Clear tags
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
@@ -300,13 +371,21 @@ function CompactProjectCard({
   onDelete: () => void
   onClick?: (id: string) => void
 }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on action buttons
-    if ((e.target as HTMLElement).closest('button')) {
+    if ((e.target as HTMLElement).closest('button[data-action]')) {
       return
     }
-    onClick?.(project.id)
+    // Toggle expand on click
+    if (!isExpanded) {
+      setIsExpanded(true)
+    } else {
+      onClick?.(project.id)
+    }
   }
+
   const statusConfig: Record<string, { color: string; emoji: string }> = {
     upcoming: { color: 'bg-amber-100 text-amber-700 border-amber-300', emoji: '📅' },
     active: { color: 'bg-green-100 text-green-700 border-green-300', emoji: '🚀' },
@@ -329,80 +408,95 @@ function CompactProjectCard({
       {/* Accent gradient bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-accent))' }} />
 
-      <CardContent className="relative z-10 p-4">
-        {/* Header Row */}
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg">📄</span>
-              <h3 className="font-bold truncate text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                {project.title}
-              </h3>
+      <CardContent className="relative z-10 p-3">
+        {/* Header Row - Always visible */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <span className="text-base">📄</span>
+            <h3 className="font-bold truncate text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+              {project.title}
+            </h3>
+            <div className={`px-1.5 py-0.5 rounded text-xs font-medium border ${statusConfig[project.status].color}`}>
+              {statusConfig[project.status].emoji}
             </div>
-            {project.description && (
-              <p className="text-sm line-clamp-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                {project.description}
-              </p>
-            )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {typeof project.metadata?.progress === 'number' && (
+              <span className="text-xs font-bold" style={{ color: 'var(--premium-blue)' }}>
+                {project.metadata.progress}%
+              </span>
+            )}
             <Button
-              onClick={onDelete}
+              data-action="delete"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+              }}
               variant="ghost"
               size="sm"
-              className="h-11 w-11 p-0 hover:text-red-600 hover:bg-red-50 touch-manipulation"
+              className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50"
               style={{ color: 'var(--premium-text-tertiary)' }}
               aria-label="Delete project"
             >
-              <Trash2 className="h-5 w-5" style={{ color: 'inherit' }} />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        {/* Next Step - Compact (first incomplete task) */}
-        {(() => {
-          const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-          const nextTask = tasks
-            .sort((a, b) => a.order - b.order)
-            .find(t => !t.done)
-          return nextTask && (
-            <div className="premium-card rounded-lg px-3 py-2 mb-3" style={{ borderColor: 'var(--premium-blue)' }}>
-              <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>
-              <p className="text-sm line-clamp-2 leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
-                {nextTask.text}
+        {/* Expanded Content */}
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mt-3 space-y-3"
+          >
+            {/* Description */}
+            {project.description && (
+              <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                {project.description}
               </p>
-            </div>
-          )
-        })()}
+            )}
 
-        {/* Bottom Row - Status, Progress, Last Active */}
-        <div className="flex items-center gap-3 text-xs">
-          <div className={`px-2 py-1 rounded-md font-medium border ${statusConfig[project.status].color}`}>
-            {statusConfig[project.status].emoji}
-          </div>
+            {/* Next Step */}
+            {(() => {
+              const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+              const nextTask = tasks
+                .sort((a, b) => a.order - b.order)
+                .find(t => !t.done)
+              return nextTask && (
+                <div className="premium-card rounded-lg px-3 py-2" style={{ borderColor: 'var(--premium-blue)' }}>
+                  <div className="text-xs font-semibold mb-1" style={{ color: 'var(--premium-accent)' }}>Next</div>
+                  <p className="text-sm line-clamp-2 leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
+                    {nextTask.text}
+                  </p>
+                </div>
+              )
+            })()}
 
-          {typeof project.metadata?.progress === 'number' && (
-            <div className="flex items-center gap-2 flex-1">
-              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(var(--premium-text-tertiary-rgb), 0.2)' }}>
-                <div
-                  className="h-full"
-                  style={{
-                    width: `${project.metadata.progress}%`,
-                    background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-accent))'
-                  }}
-                />
+            {/* Progress Bar */}
+            {typeof project.metadata?.progress === 'number' && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(var(--premium-text-tertiary-rgb), 0.2)' }}>
+                  <div
+                    className="h-full"
+                    style={{
+                      width: `${project.metadata.progress}%`,
+                      background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-accent))'
+                    }}
+                  />
+                </div>
               </div>
-              <span className="font-bold w-8 text-right" style={{ color: 'var(--premium-blue)' }}>
-                {project.metadata.progress}%
-              </span>
-            </div>
-          )}
+            )}
 
-          <div className="flex items-center gap-1 ml-auto" style={{ color: 'var(--premium-text-tertiary)' }}>
-            <Clock className="h-3 w-3" />
-            <span className="whitespace-nowrap">{relativeTime}</span>
-          </div>
-        </div>
+            {/* Last Active */}
+            <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <Clock className="h-3 w-3" />
+              <span>Last active {relativeTime} ago</span>
+            </div>
+          </motion.div>
+        )}
       </CardContent>
     </Card>
   )
