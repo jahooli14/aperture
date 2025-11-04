@@ -736,13 +736,13 @@ export function ProjectDetailPage() {
         />
       </div>
 
-      {/* FAB - Voice Note */}
+      {/* FAB - Add Note (Voice or Text) */}
       <button
         onClick={() => setShowAddNote(true)}
-        className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg transition-all flex items-center justify-center z-20 touch-manipulation active:scale-95"
+        className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-2xl transition-all flex items-center justify-center z-20 touch-manipulation active:scale-95"
         style={{
-          backgroundColor: 'var(--premium-blue)',
-          color: '#ffffff'
+          background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+          color: 'white'
         }}
         aria-label="Add note"
       >

@@ -13,11 +13,6 @@ import { haptic } from '../utils/haptics'
 export function VoiceCommandButton() {
   const [showModal, setShowModal] = useState(false)
   const location = useLocation()
-
-  // Hide on ProjectDetailPage since it has its own FAB
-  if (location.pathname.startsWith('/projects/') && location.pathname !== '/projects') {
-    return null
-  }
   const {
     isListening,
     transcript,
@@ -28,6 +23,11 @@ export function VoiceCommandButton() {
     clearError,
     commands
   } = useVoiceCommands()
+
+  // Hide on ProjectDetailPage since it has its own FAB
+  if (location.pathname.startsWith('/projects/') && location.pathname !== '/projects') {
+    return null
+  }
 
   const handleOpen = () => {
     haptic.light()
