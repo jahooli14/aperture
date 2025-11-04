@@ -49,7 +49,7 @@ const NAV_OPTIONS: NavOption[] = [
 ]
 
 export function FloatingNav() {
-  const [isVoiceOpen, setIsVoiceOpen] = useState(false)
+  const [isVoiceOpen, setIsVoiceOpen] = React.useState(false)
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
@@ -58,7 +58,7 @@ export function FloatingNav() {
   const location = useLocation()
 
   // Listen for voice capture requests from AddNoteDialog
-  useEffect(() => {
+  React.useEffect(() => {
     const handleOpenVoiceCapture = () => {
       console.log('[FloatingNav] Received openVoiceCapture event')
       if (isOnline) {
