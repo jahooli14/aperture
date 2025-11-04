@@ -6,7 +6,6 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
 import { PWAUpdateNotification } from './components/PWAUpdateNotification'
-import { VoiceCommandButton } from './components/VoiceCommandButton'
 import { PinProvider } from './contexts/PinContext'
 import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
@@ -199,9 +198,6 @@ export default function App() {
 
           {/* Floating Navigation */}
           <FloatingNav />
-
-          {/* Voice Command Button */}
-          <VoiceCommandButton />
 
           {/* Pin Overlay - Split Screen */}
           <PinOverlay />
