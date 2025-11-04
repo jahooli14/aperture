@@ -16,7 +16,7 @@ interface AddNoteDialogProps {
 }
 
 export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNoteDialogProps) {
-  const [noteType, setNoteType] = useState<'voice' | 'text'>('voice')
+  const [noteType, setNoteType] = useState<'voice' | 'text'>('text')
   const [bullets, setBullets] = useState<string[]>([''])
   const [isRecording, setIsRecording] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -27,7 +27,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
       // Reset on close
       setBullets([''])
       setIsRecording(false)
-      setNoteType('voice')
+      setNoteType('text')
     }
   }, [open])
 
