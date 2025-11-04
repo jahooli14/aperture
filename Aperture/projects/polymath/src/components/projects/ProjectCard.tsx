@@ -33,6 +33,7 @@ export const ProjectCard = React.memo(function ProjectCard({
   const [showQuickNote, setShowQuickNote] = useState(false)
   const [quickNote, setQuickNote] = useState('')
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
   const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
@@ -66,7 +67,12 @@ export const ProjectCard = React.memo(function ProjectCard({
     if ((e.target as HTMLElement).closest('button')) {
       return
     }
-    onClick?.(project.id)
+    // Toggle expand on first click, navigate on second
+    if (!isExpanded) {
+      setIsExpanded(true)
+    } else {
+      onClick?.(project.id)
+    }
   }
 
   const handleDragEnd = (_: any, info: any) => {
@@ -389,53 +395,100 @@ export const ProjectCard = React.memo(function ProjectCard({
       {/* Accent gradient bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
 
-      <CardHeader className="relative z-10 pb-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <CardTitle className="text-2xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
-            {project.title}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <SuggestionBadge itemId={project.id} itemType="project" />
-            {showActions && (
-              <Button
-                onClick={handleTogglePriority}
-                variant="ghost"
-                size="sm"
-                className="h-11 w-11 p-0 touch-manipulation"
-                style={{
-                  color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)'
-                }}
-                aria-label={project.is_priority ? "Remove priority" : "Set as priority"}
-                title={project.is_priority ? "Remove priority" : "Set as priority"}
-              >
-                <Star
-                  className="h-5 w-5"
-                  fill={project.is_priority ? 'currentColor' : 'none'}
-                />
-              </Button>
-            )}
-            {showActions && onDelete && (
-              <Button
-                onClick={() => onDelete(project.id)}
-                variant="ghost"
-                size="sm"
-                className="h-11 w-11 p-0 touch-manipulation"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-                aria-label="Delete project"
-              >
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            )}
+      {!isExpanded ? (
+        // Compact View - Show minimal info
+        <CardContent className="relative z-10 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-lg">📄</span>
+              <h3 className="font-bold truncate text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                {project.title}
+              </h3>
+              <div className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+                backgroundColor: statusConfig[project.status]?.style?.backgroundColor || 'rgba(156, 163, 175, 0.2)',
+                color: statusConfig[project.status]?.style?.color || '#9ca3af',
+                borderColor: statusConfig[project.status]?.style?.borderColor || 'rgba(156, 163, 175, 0.3)'
+              }}>
+                {statusConfig[project.status]?.label || project.status}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {typeof project.metadata?.progress === 'number' && (
+                <span className="text-sm font-bold" style={{ color: 'var(--premium-blue)' }}>
+                  {project.metadata.progress}%
+                </span>
+              )}
+              {project.is_priority && (
+                <Star className="h-4 w-4" fill="var(--premium-amber)" style={{ color: 'var(--premium-amber)' }} />
+              )}
+              {showActions && onDelete && (
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDelete(project.id)
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  aria-label="Delete project"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
-        {project.description && (
-          <CardDescription className="line-clamp-3 text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-            {project.description}
-          </CardDescription>
-        )}
-      </CardHeader>
+        </CardContent>
+      ) : (
+        // Expanded View - Show full details
+        <>
+          <CardHeader className="relative z-10 pb-4">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <CardTitle className="text-2xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
+                {project.title}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <SuggestionBadge itemId={project.id} itemType="project" />
+                {showActions && (
+                  <Button
+                    onClick={handleTogglePriority}
+                    variant="ghost"
+                    size="sm"
+                    className="h-11 w-11 p-0 touch-manipulation"
+                    style={{
+                      color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)'
+                    }}
+                    aria-label={project.is_priority ? "Remove priority" : "Set as priority"}
+                    title={project.is_priority ? "Remove priority" : "Set as priority"}
+                  >
+                    <Star
+                      className="h-5 w-5"
+                      fill={project.is_priority ? 'currentColor' : 'none'}
+                    />
+                  </Button>
+                )}
+                {showActions && onDelete && (
+                  <Button
+                    onClick={() => onDelete(project.id)}
+                    variant="ghost"
+                    size="sm"
+                    className="h-11 w-11 p-0 touch-manipulation"
+                    style={{ color: 'var(--premium-text-tertiary)' }}
+                    aria-label="Delete project"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {project.description && (
+              <CardDescription className="line-clamp-3 text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                {project.description}
+              </CardDescription>
+            )}
+          </CardHeader>
 
-      <CardContent className="relative z-10 flex-1 space-y-4">
+          <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Next Step - Prominent Display (first incomplete task) */}
         {(() => {
           const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
@@ -563,7 +616,9 @@ export const ProjectCard = React.memo(function ProjectCard({
             </span>
           </div>
         )}
-      </CardContent>
+          </CardContent>
+        </>
+      )}
     </Card>
         </motion.div>
       </motion.div>
