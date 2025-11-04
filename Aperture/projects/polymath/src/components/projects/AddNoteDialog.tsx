@@ -131,28 +131,35 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
             </button>
           </div>
 
-          {/* Type Toggle */}
-          <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-            <div className="flex gap-2">
+          {/* Type Toggle - Prominent */}
+          <div className="p-4 border-b-2 border-neutral-300 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <p className="text-sm font-medium text-neutral-700 mb-3">Choose update type:</p>
+            <div className="flex gap-3">
               <button
                 onClick={() => setNoteType('voice')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
                   noteType === 'voice'
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-white text-neutral-600 border border-neutral-300 hover:border-blue-300'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105'
+                    : 'bg-white text-neutral-700 border-2 border-neutral-300 hover:border-blue-400 hover:shadow-lg'
                 }`}
               >
-                🎤 Voice Note
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xl">🎤</span>
+                  <span>Voice</span>
+                </div>
               </button>
               <button
                 onClick={() => setNoteType('text')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
                   noteType === 'text'
-                    ? 'bg-blue-900 text-white'
-                    : 'bg-white text-neutral-600 border border-neutral-300 hover:border-blue-300'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg scale-105'
+                    : 'bg-white text-neutral-700 border-2 border-neutral-300 hover:border-indigo-400 hover:shadow-lg'
                 }`}
               >
-                📝 Text Note
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xl">📝</span>
+                  <span>Text</span>
+                </div>
               </button>
             </div>
           </div>
