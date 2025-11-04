@@ -100,12 +100,12 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
   }
 
   const handleVoiceRecord = () => {
-    // TODO: Integrate with existing voice recording system
-    addToast({
-      title: 'Coming soon',
-      description: 'Voice recording integration in progress',
-      variant: 'default',
-    })
+    // Close this dialog and trigger FloatingNav voice capture
+    // which creates a memory/thought linked to the project
+    console.log('[AddNoteDialog] Switching to voice capture (creates thought)')
+    onClose()
+    // Dispatch event to open FloatingNav voice modal
+    window.dispatchEvent(new CustomEvent('openVoiceCapture'))
   }
 
   if (!open) return null

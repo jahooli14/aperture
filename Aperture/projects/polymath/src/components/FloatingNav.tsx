@@ -3,7 +3,7 @@
  * Fixed navigation bar with integrated voice input
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -56,6 +56,18 @@ export function FloatingNav() {
   const { addToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Listen for voice capture requests from AddNoteDialog
+  useEffect(() => {
+    const handleOpenVoiceCapture = () => {
+      console.log('[FloatingNav] Received openVoiceCapture event')
+      if (isOnline) {
+        setIsVoiceOpen(true)
+      }
+    }
+    window.addEventListener('openVoiceCapture', handleOpenVoiceCapture)
+    return () => window.removeEventListener('openVoiceCapture', handleOpenVoiceCapture)
+  }, [isOnline])
 
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
