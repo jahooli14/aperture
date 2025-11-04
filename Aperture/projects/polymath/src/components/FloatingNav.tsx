@@ -236,7 +236,7 @@ export function FloatingNav() {
           damping: 20,
           delay: 0.2
         }}
-        className="fixed z-50 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
+        className="fixed z-30 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
         style={{
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
           right: 'max(1rem, env(safe-area-inset-right, 1rem))',

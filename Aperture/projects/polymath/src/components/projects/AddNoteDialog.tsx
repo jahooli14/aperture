@@ -114,12 +114,12 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 animate-fadeIn"
+        className="fixed inset-0 bg-black/50 z-[60] animate-fadeIn"
         onClick={onClose}
       />
 
       {/* Dialog */}
-      <div className="fixed inset-x-0 bottom-0 z-50 animate-slideUp md:inset-0 md:flex md:items-center md:justify-center">
+      <div className="fixed inset-x-0 bottom-0 z-[70] animate-slideUp md:inset-0 md:flex md:items-center md:justify-center">
         <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-neutral-200">
@@ -224,18 +224,21 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-neutral-200 flex gap-3">
+          <div className="p-4 border-t border-neutral-200 flex gap-3 bg-white">
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1"
+              className="flex-1 border-2 border-neutral-300 text-neutral-700 font-semibold hover:bg-neutral-50"
               disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="flex-1 bg-blue-900 hover:bg-blue-800"
+              className="flex-1 font-semibold text-white shadow-lg"
+              style={{
+                background: 'linear-gradient(135deg, #1e3a8a, #1e40af)',
+              }}
               disabled={isSaving || (noteType === 'text' && bullets.every(b => !b.trim()))}
             >
               {isSaving ? 'Saving...' : 'Save Note'}
