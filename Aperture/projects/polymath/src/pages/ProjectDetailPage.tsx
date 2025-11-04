@@ -37,6 +37,16 @@ export function ProjectDetailPage() {
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
+
+  // Listen for custom event from FloatingNav to open AddNote dialog
+  useEffect(() => {
+    const handleOpenAddNote = () => {
+      console.log('[ProjectDetailPage] Received openAddNote event')
+      setShowAddNote(true)
+    }
+    window.addEventListener('openProjectAddNote', handleOpenAddNote)
+    return () => window.removeEventListener('openProjectAddNote', handleOpenAddNote)
+  }, [])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
@@ -735,15 +745,6 @@ export function ProjectDetailPage() {
           onRefresh={loadProjectDetails}
         />
       </div>
-
-      {/* Hidden trigger for AddNote dialog - triggered by FloatingNav FAB */}
-      <button
-        onClick={() => setShowAddNote(true)}
-        className="hidden"
-        aria-label="Add note"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
 
       {/* Add Note Dialog */}
       <AddNoteDialog

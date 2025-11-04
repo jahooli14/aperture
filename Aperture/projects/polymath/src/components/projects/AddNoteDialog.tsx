@@ -28,8 +28,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
       setBullets([''])
       setIsRecording(false)
       setNoteType('text')
+    } else {
+      console.log('[AddNoteDialog] Opened with noteType:', noteType)
     }
-  }, [open])
+  }, [open, noteType])
 
   const addBullet = () => {
     setBullets([...bullets, ''])
