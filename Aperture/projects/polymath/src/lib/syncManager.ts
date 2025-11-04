@@ -12,6 +12,9 @@ import {
 } from './offlineQueue'
 
 const MAX_RETRIES = 3
+let isSyncing = false
+let syncScheduled = false
+let autoSyncSetup = false
 
 /**
  * Process a single queued operation
@@ -102,11 +105,22 @@ export async function syncPendingOperations(): Promise<{
   failed: number
   total: number
 }> {
-  const operations = await getPendingOperations()
-  let success = 0
-  let failed = 0
+  // Prevent concurrent syncs
+  if (isSyncing) {
+    console.log('[SyncManager] Sync already in progress, scheduling next sync')
+    syncScheduled = true
+    return { success: 0, failed: 0, total: 0 }
+  }
 
-  console.log(`[SyncManager] Starting sync of ${operations.length} operations`)
+  isSyncing = true
+  syncScheduled = false
+
+  try {
+    const operations = await getPendingOperations()
+    let success = 0
+    let failed = 0
+
+    console.log(`[SyncManager] Starting sync of ${operations.length} operations`)
 
   for (const operation of operations) {
     if (!operation.id) continue
@@ -136,11 +150,20 @@ export async function syncPendingOperations(): Promise<{
     }
   }
 
-  console.log(
-    `[SyncManager] Sync complete: ${success} succeeded, ${failed} failed, ${operations.length} total`
-  )
+    console.log(
+      `[SyncManager] Sync complete: ${success} succeeded, ${failed} failed, ${operations.length} total`
+    )
 
-  return { success, failed, total: operations.length }
+    return { success, failed, total: operations.length }
+  } finally {
+    isSyncing = false
+
+    // If another sync was requested while we were syncing, start it now
+    if (syncScheduled) {
+      console.log('[SyncManager] Starting scheduled sync')
+      setTimeout(() => syncPendingOperations(), 100) // Small delay to avoid stack overflow
+    }
+  }
 }
 
 /**
@@ -151,12 +174,22 @@ export function setupAutoSync(onSyncComplete?: (result: {
   failed: number
   total: number
 }) => void) {
+  // Prevent duplicate setup
+  if (autoSyncSetup) {
+    console.log('[SyncManager] Auto-sync already set up, skipping')
+    return
+  }
+
+  autoSyncSetup = true
+
   // Listen for online event
-  window.addEventListener('online', async () => {
+  const handleOnline = async () => {
     console.log('[SyncManager] Connection restored, starting sync...')
     const result = await syncPendingOperations()
     onSyncComplete?.(result)
-  })
+  }
+
+  window.addEventListener('online', handleOnline)
 
   // Initial sync if already online
   if (navigator.onLine) {
