@@ -61,7 +61,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects()
-  }, [fetchProjects])
+  }, [fetchProjects, filter])
 
   const handleDelete = async (project: Project) => {
     const confirmed = await confirm({
