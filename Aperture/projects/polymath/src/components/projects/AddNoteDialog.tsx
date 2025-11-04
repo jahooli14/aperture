@@ -120,30 +120,41 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
 
       {/* Dialog */}
       <div className="fixed inset-x-0 bottom-0 z-[70] animate-slideUp md:inset-0 md:flex md:items-center md:justify-center">
-        <div className="bg-white rounded-t-2xl md:rounded-2xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="premium-card rounded-t-2xl md:rounded-2xl shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-200">
-            <h2 className="text-lg font-bold text-neutral-900">Add Update</h2>
+          <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+            <h2 className="text-lg font-bold premium-text-platinum">Add Update</h2>
             <button
               onClick={onClose}
-              className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-neutral-100 transition-colors"
+              className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
               aria-label="Close"
             >
-              <X className="h-5 w-5 text-neutral-600" />
+              <X className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
             </button>
           </div>
 
           {/* Type Toggle - Prominent */}
-          <div className="p-4 border-b-2 border-neutral-300 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <p className="text-sm font-medium text-neutral-700 mb-3">Choose update type:</p>
+          <div className="p-4 border-b-2" style={{
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1))'
+          }}>
+            <p className="text-sm font-medium mb-3" style={{ color: 'var(--premium-text-secondary)' }}>Choose update type:</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setNoteType('voice')}
                 className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
                   noteType === 'voice'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105'
-                    : 'bg-white text-neutral-700 border-2 border-neutral-300 hover:border-blue-400 hover:shadow-lg'
+                    ? 'shadow-lg scale-105'
+                    : 'border-2 hover:shadow-lg'
                 }`}
+                style={noteType === 'voice' ? {
+                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                  color: 'white'
+                } : {
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-secondary)'
+                }}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-xl">🎤</span>
@@ -154,9 +165,17 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                 onClick={() => setNoteType('text')}
                 className={`flex-1 px-5 py-3 rounded-xl font-semibold transition-all shadow-md ${
                   noteType === 'text'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg scale-105'
-                    : 'bg-white text-neutral-700 border-2 border-neutral-300 hover:border-indigo-400 hover:shadow-lg'
+                    ? 'shadow-lg scale-105'
+                    : 'border-2 hover:shadow-lg'
                 }`}
+                style={noteType === 'text' ? {
+                  background: 'linear-gradient(135deg, var(--premium-indigo), var(--premium-purple))',
+                  color: 'white'
+                } : {
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-secondary)'
+                }}
               >
                 <div className="flex items-center justify-center gap-2">
                   <span className="text-xl">📝</span>
@@ -174,36 +193,50 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                   onClick={handleVoiceRecord}
                   className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all ${
                     isRecording
-                      ? 'bg-red-600 text-white animate-pulse'
-                      : 'bg-blue-900 text-white hover:bg-blue-800'
+                      ? 'animate-pulse'
+                      : ''
                   }`}
+                  style={isRecording ? {
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    color: 'white'
+                  } : {
+                    background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                    color: 'white'
+                  }}
                 >
                   <Mic className="h-8 w-8" />
                 </button>
-                <p className="text-sm text-neutral-600">
+                <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                   {isRecording ? 'Recording...' : 'Tap to start recording'}
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-neutral-600 mb-4">
+                <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                   Add bullet points for your project update
                 </p>
 
                 {bullets.map((bullet, index) => (
                   <div key={index} className="flex gap-2">
-                    <span className="text-neutral-400 flex-shrink-0 mt-3">•</span>
+                    <span className="flex-shrink-0 mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
                     <textarea
                       value={bullet}
                       onChange={(e) => updateBullet(index, e.target.value)}
                       placeholder="Add a bullet point..."
                       rows={2}
-                      className="flex-1 px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      className="flex-1 px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 resize-none"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        color: 'var(--premium-text-primary)',
+                        '--tw-ring-color': 'var(--premium-blue)'
+                      } as React.CSSProperties}
                     />
                     {bullets.length > 1 && (
                       <button
                         onClick={() => removeBullet(index)}
-                        className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-50 text-red-600 flex-shrink-0 mt-2"
+                        className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-500/10 flex-shrink-0 mt-2 transition-colors"
+                        style={{ color: '#ef4444' }}
                         aria-label="Remove bullet"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -214,7 +247,8 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
 
                 <button
                   onClick={addBullet}
-                  className="flex items-center gap-2 text-sm font-medium text-blue-900 hover:text-blue-700 transition-colors"
+                  className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
+                  style={{ color: 'var(--premium-blue)' }}
                 >
                   <Plus className="h-4 w-4" />
                   Add another bullet
@@ -224,11 +258,15 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-neutral-200 flex gap-3 bg-white">
+          <div className="p-4 border-t flex gap-3" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
             <Button
               onClick={onClose}
               variant="outline"
-              className="flex-1 border-2 border-neutral-300 text-neutral-700 font-semibold hover:bg-neutral-50"
+              className="flex-1 border-2 font-semibold hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                color: 'var(--premium-text-secondary)'
+              }}
               disabled={isSaving}
             >
               Cancel
@@ -237,7 +275,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               onClick={handleSave}
               className="flex-1 font-semibold text-white shadow-lg"
               style={{
-                background: 'linear-gradient(135deg, #1e3a8a, #1e40af)',
+                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
               }}
               disabled={isSaving || (noteType === 'text' && bullets.every(b => !b.trim()))}
             >
