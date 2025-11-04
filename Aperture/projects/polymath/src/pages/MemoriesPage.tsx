@@ -3,7 +3,7 @@
  * Browse all memories, view resurfacing queue, see connections
  */
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -52,6 +52,7 @@ export function MemoriesPage() {
   const [selectedCluster, setSelectedCluster] = useState<ThemeCluster | null>(null)
   const [loadingClusters, setLoadingClusters] = useState(false)
   const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
+  const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
 
   const loadMemoriesWithCache = useCallback(async () => {
     try {
@@ -73,19 +74,29 @@ export function MemoriesPage() {
     }
   }, [fetchWithCache, addToast, setMemories])
 
-  const fetchThemeClusters = useCallback(async () => {
+  const fetchThemeClusters = useCallback(async (force = false) => {
+    // Check if clusters are still fresh (5 minutes = 300000ms)
+    const now = Date.now()
+    const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+    if (!force && clusters.length > 0 && (now - clustersLastFetched) < CACHE_TTL) {
+      console.log('[MemoriesPage] Using cached clusters')
+      return
+    }
+
     setLoadingClusters(true)
     try {
       const response = await fetch('/api/memories?themes=true')
       if (!response.ok) throw new Error('Failed to fetch themes')
       const data: ThemeClustersResponse = await response.json()
       setClusters(data.clusters)
+      setClustersLastFetched(now)
     } catch (err) {
       console.error('Failed to fetch theme clusters:', err)
     } finally {
       setLoadingClusters(false)
     }
-  }, [])
+  }, [clusters.length, clustersLastFetched])
 
   const fetchResurfacing = useCallback(async () => {
     setLoadingResurfacing(true)
@@ -103,15 +114,14 @@ export function MemoriesPage() {
   useEffect(() => {
     // Clear any stale errors when navigating to this page
     clearError()
-    loadMemoriesWithCache()
-    if (view === 'all') {
-      fetchThemeClusters()
-    }
-  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
     if (view === 'resurfacing') {
       fetchResurfacing()
+    } else {
+      loadMemoriesWithCache()
+      if (view === 'all') {
+        fetchThemeClusters()
+      }
     }
   }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -310,14 +320,18 @@ export function MemoriesPage() {
     }
   }
 
-  const displayMemories = view === 'all' ? memories : resurfacing
+  // Memoize displayMemories to prevent recalculation on every render
+  const displayMemories = useMemo(() => {
+    return view === 'all' ? memories : resurfacing
+  }, [view, memories, resurfacing])
+
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
   const handleRefresh = async () => {
     if (view === 'all') {
       await Promise.all([
         loadMemoriesWithCache(),
-        fetchThemeClusters()
+        fetchThemeClusters(true) // Force refresh on manual refresh
       ])
     } else if (view === 'resurfacing') {
       await fetchResurfacing()
