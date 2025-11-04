@@ -733,7 +733,12 @@ export default function ConstellationView() {
     recognition.onend = () => setIsListening(false)
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript.toLowerCase()
+      const result = event.results?.[0]?.[0];
+      if (!result) {
+        console.log('[ConstellationView] No result available');
+        return;
+      }
+      const transcript = result.transcript.toLowerCase()
       console.log('Voice command:', transcript)
 
       // Process commands

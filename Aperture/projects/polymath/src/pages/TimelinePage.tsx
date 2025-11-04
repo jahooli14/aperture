@@ -112,13 +112,15 @@ export function TimelinePage() {
                         Your top thinking times:
                       </p>
                       <div className="space-y-2">
-                        {pattern.data.slice(0, 5).map((time: any, i: number) => (
+                        {pattern.data.slice(0, 5).map((time: any, i: number) => {
+                          const maxCount = pattern.data[0]?.count || 1;
+                          return (
                           <div key={i} className="flex items-center gap-3">
                             <div className="flex-1 rounded-full h-8 relative overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
                               <div
                                 className="absolute inset-y-0 left-0 rounded-full"
                                 style={{
-                                  width: `${(time.count / pattern.data[0].count) * 100}%`,
+                                  width: `${(time.count / maxCount) * 100}%`,
                                   background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-amber))'
                                 }}
                               />
@@ -132,7 +134,7 @@ export function TimelinePage() {
                               </div>
                             </div>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     </div>
                   )}

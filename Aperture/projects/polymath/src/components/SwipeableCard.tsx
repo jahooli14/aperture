@@ -44,14 +44,18 @@ export function SwipeableCard({
     if (!element || disabled) return
 
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX
+      const touch = e.touches[0];
+      if (!touch) return;
+      touchStartX.current = touch.clientX
       setIsSwiping(true)
     }
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isSwiping) return
 
-      const currentX = e.touches[0].clientX
+      const touch = e.touches[0];
+      if (!touch) return;
+      const currentX = touch.clientX
       const distance = currentX - touchStartX.current
 
       // Only allow swipe if there's an action defined for that direction

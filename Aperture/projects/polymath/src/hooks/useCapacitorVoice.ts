@@ -66,7 +66,10 @@ export function useCapacitorVoice({
       let finalTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcriptSegment = event.results[i][0].transcript;
+        const result = event.results?.[i]?.[0];
+        if (!result) continue;
+
+        const transcriptSegment = result.transcript;
         if (event.results[i].isFinal) {
           finalTranscript += transcriptSegment + ' ';
         } else {

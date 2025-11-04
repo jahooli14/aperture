@@ -165,7 +165,12 @@ export function useVoiceCommands() {
     recognition.lang = 'en-US'
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
+      const result = event.results?.[0]?.[0];
+      if (!result) {
+        console.log('[VoiceCommands] No result available');
+        return;
+      }
+      const transcript = result.transcript
       console.log('[VoiceCommands] Recognized:', transcript)
 
       setState(prev => ({ ...prev, transcript }))

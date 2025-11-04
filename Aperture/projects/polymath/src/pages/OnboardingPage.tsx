@@ -341,7 +341,7 @@ export function OnboardingPage() {
                   <div key={i} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                     <span className="text-neutral-700 line-clamp-1">
-                      {QUESTIONS[i].text}: {response.transcript.substring(0, 60)}...
+                      {QUESTIONS[i]?.text || 'Question'}: {response?.transcript?.substring(0, 60) || ''}...
                     </span>
                   </div>
                 ))}

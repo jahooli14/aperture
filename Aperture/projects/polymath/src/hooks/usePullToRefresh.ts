@@ -31,15 +31,18 @@ export function usePullToRefresh({
 
     const handleTouchStart = (e: TouchEvent) => {
       // Only start pull if scrolled to top
-      if (element.scrollTop === 0) {
-        touchStartY.current = e.touches[0].clientY
+      const touch = e.touches[0];
+      if (element.scrollTop === 0 && touch) {
+        touchStartY.current = touch.clientY
       }
     }
 
     const handleTouchMove = (e: TouchEvent) => {
       if (isRefreshing || element.scrollTop > 0) return
 
-      const touchY = e.touches[0].clientY
+      const touch = e.touches[0];
+      if (!touch) return;
+      const touchY = touch.clientY
       const distance = touchY - touchStartY.current
 
       // Only allow pulling down

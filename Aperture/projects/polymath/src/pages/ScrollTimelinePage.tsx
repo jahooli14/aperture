@@ -188,8 +188,14 @@ export function ScrollTimelinePage() {
             }
           })
 
-          const year = monthEvents[0].year
-          const month = monthEvents[0].month
+          // Safety check: ensure monthEvents has at least one element
+          const firstEvent = monthEvents[0];
+          if (!firstEvent) {
+            throw new Error('monthEvents array is unexpectedly empty');
+          }
+
+          const year = firstEvent.year
+          const month = firstEvent.month
           const monthLabel = new Date(year, month).toLocaleDateString('en-US', {
             month: 'long',
             year: 'numeric'

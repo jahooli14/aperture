@@ -58,7 +58,10 @@ export function VoiceSearch({
       let final = ''
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript
+        const result = event.results?.[i]?.[0];
+        if (!result) continue;
+
+        const transcript = result.transcript
         if (event.results[i].isFinal) {
           final += transcript + ' '
         } else {
