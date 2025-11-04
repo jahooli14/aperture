@@ -35,7 +35,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
-import type { ProjectScore, DailyQueueResponse, Memory, Project } from '../types'
+import type { Memory, Project } from '../types'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -186,6 +186,7 @@ export function HomePage() {
   let suggestions: any[] = []
   let fetchSuggestions = () => {}
   let projects: any[] = []
+  let projectsLoading = false
   let fetchProjects = () => {}
   let memories: any[] = []
   let fetchMemories = () => {}
@@ -200,6 +201,7 @@ export function HomePage() {
 
     const projectStore = useProjectStore()
     projects = projectStore.projects || []
+    projectsLoading = projectStore.loading
     fetchProjects = projectStore.fetchProjects
 
     const memoryStore = useMemoryStore()
@@ -214,9 +216,7 @@ export function HomePage() {
     console.error('[HomePage] Store initialization error:', err)
   }
 
-  const [dailyQueue, setDailyQueue] = useState<ProjectScore[]>([])
   const [cardOfTheDay, setCardOfTheDay] = useState<Memory | null>(null)
-  const [queueLoading, setQueueLoading] = useState(true) // Start as true to show skeleton immediately
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
   const [saveArticleOpen, setSaveArticleOpen] = useState(false)
   const [createThoughtOpen, setCreateThoughtOpen] = useState(false)
@@ -232,7 +232,6 @@ export function HomePage() {
         await fetchProjects()
         fetchSuggestions()
         fetchMemories()
-        await fetchDailyQueue()
         await fetchCardOfTheDay()
         fetchPrompts()
         setRefreshKey(k => k + 1)
@@ -254,21 +253,6 @@ export function HomePage() {
       return () => clearTimeout(timer)
     }
   }, [progress])
-
-  const fetchDailyQueue = async () => {
-    setQueueLoading(true)
-    try {
-      const response = await fetch('/api/projects?resource=daily-queue')
-      if (response.ok) {
-        const data: DailyQueueResponse = await response.json()
-        setDailyQueue(data.queue.slice(0, 2)) // Top 2 for homepage
-      }
-    } catch (err) {
-      console.error('Failed to fetch daily queue:', err)
-    } finally {
-      setQueueLoading(false)
-    }
-  }
 
   const fetchCardOfTheDay = async () => {
     try {
@@ -305,7 +289,7 @@ export function HomePage() {
     .filter(p => p.id !== priorityProject?.id)
     .sort((a, b) => {
       const aTime = new Date(a.updated_at || a.last_active).getTime()
-      const bTime = new Date(b.updated_at || a.last_active).getTime()
+      const bTime = new Date(b.updated_at || b.last_active).getTime()
       return bTime - aTime
     })[0] || null
 
@@ -695,7 +679,7 @@ export function HomePage() {
               <h2 className="text-xl font-bold premium-text-platinum">Keep the Momentum</h2>
             </div>
 
-            {queueLoading ? (
+            {projectsLoading ? (
               <div className="space-y-3">
                 {/* Skeleton loaders - compact */}
                 {[1, 2].map((i) => (

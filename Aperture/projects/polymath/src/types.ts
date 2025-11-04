@@ -776,7 +776,6 @@ export interface SuggestionCardProps {
   onRate: (id: string, rating: -1 | 1 | 2) => void
   onBuild: (id: string) => void
   onViewDetail: (id: string) => void
-  compact?: boolean
 }
 
 export interface RatingActionsProps {

@@ -18,8 +18,7 @@ export const SuggestionCard = memo(function SuggestionCard({
   suggestion,
   onRate,
   onBuild,
-  onViewDetail,
-  compact = false
+  onViewDetail
 }: SuggestionCardProps) {
   const [loadingAction, setLoadingAction] = useState<'rate' | 'build' | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
@@ -94,13 +93,6 @@ export const SuggestionCard = memo(function SuggestionCard({
       {/* Subtle accent bar */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
 
-      {/* Wildcard indicator */}
-      {suggestion.is_wildcard && (
-        <div className="absolute top-4 right-4">
-          <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-        </div>
-      )}
-
       <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
         {/* Type badges */}
         <div className="mb-4">
@@ -112,8 +104,6 @@ export const SuggestionCard = memo(function SuggestionCard({
             }`}>
               <Lightbulb className="h-4 w-4" />
               {suggestion.total_points}pts
-              {isCreative && ' · Creative'}
-              {suggestion.is_wildcard && ' · Wildcard'}
             </span>
           </div>
         </div>
@@ -124,17 +114,15 @@ export const SuggestionCard = memo(function SuggestionCard({
           {suggestion.title}
         </CardTitle>
 
-        {!compact && (
-          <CardDescription
-            className="text-base leading-relaxed mb-4"
-            style={{ color: 'var(--premium-text-secondary)' }}
-          >
-            {suggestion.description}
-          </CardDescription>
-        )}
+        <CardDescription
+          className="text-base leading-relaxed mb-4"
+          style={{ color: 'var(--premium-text-secondary)' }}
+        >
+          {suggestion.description}
+        </CardDescription>
 
         {/* Why this suggestion box - matches daily queue style */}
-        {suggestion.synthesis_reasoning && !compact && (
+        {suggestion.synthesis_reasoning && (
           <div className="mb-4 p-4 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
             <p className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
               Why this suggestion:
@@ -146,53 +134,51 @@ export const SuggestionCard = memo(function SuggestionCard({
         )}
       </CardHeader>
 
-      {!compact && (
-        <CardContent className="flex-1 space-y-4">
-          {suggestion.capabilities && suggestion.capabilities.length > 0 && (
-            <div className="space-y-2">
-              <p
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-              >
-                Uses:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {suggestion.capabilities.slice(0, 3).map((cap) => (
-                  <span
-                    key={cap.id}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
-                      color: 'var(--premium-blue)',
-                      border: '1px solid rgba(59, 130, 246, 0.3)'
-                    }}
-                  >
-                    {cap.name}
-                  </span>
-                ))}
-                {suggestion.capabilities.length > 3 && (
-                  <span
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
-                      color: 'var(--premium-indigo)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)'
-                    }}
-                  >
-                    +{suggestion.capabilities.length - 3} more
-                  </span>
-                )}
-              </div>
+      <CardContent className="flex-1 space-y-4">
+        {suggestion.capabilities && suggestion.capabilities.length > 0 && (
+          <div className="space-y-2">
+            <p
+              className="text-xs font-semibold uppercase tracking-wide"
+              style={{ color: 'var(--premium-text-tertiary)' }}
+            >
+              Uses:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {suggestion.capabilities.slice(0, 3).map((cap) => (
+                <span
+                  key={cap.id}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
+                    color: 'var(--premium-blue)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)'
+                  }}
+                >
+                  {cap.name}
+                </span>
+              ))}
+              {suggestion.capabilities.length > 3 && (
+                <span
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
+                    color: 'var(--premium-indigo)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)'
+                  }}
+                >
+                  +{suggestion.capabilities.length - 3} more
+                </span>
+              )}
             </div>
-          )}
-
-          <div className="grid grid-cols-3 gap-2">
-            <ScorePill label="Fresh" score={suggestion.novelty_score} />
-            <ScorePill label="Doable" score={suggestion.feasibility_score} />
-            <ScorePill label="Exciting" score={suggestion.interest_score} />
           </div>
-        </CardContent>
-      )}
+        )}
+
+        <div className="grid grid-cols-3 gap-2">
+          <ScorePill label="Fresh" score={suggestion.novelty_score} />
+          <ScorePill label="Doable" score={suggestion.feasibility_score} />
+          <ScorePill label="Exciting" score={suggestion.interest_score} />
+        </div>
+      </CardContent>
 
       <CardFooter
         className="flex gap-2 border-t pt-4"

@@ -313,6 +313,7 @@ export function useCapacitorVoice({
 
   /**
    * Initialize Web Speech API on mount for web platform
+   * Cleanup on unmount to prevent memory leaks
    */
   useEffect(() => {
     console.log('[Voice Hook] useCapacitorVoice mounted - timestamp:', Date.now());
@@ -322,6 +323,32 @@ export function useCapacitorVoice({
     } else {
       console.log('[Voice] Platform is NATIVE, skipping Web Speech API init');
     }
+
+    // Cleanup function
+    return () => {
+      console.log('[Voice Hook] Cleaning up on unmount');
+
+      // Stop timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+
+      // Stop recording if active
+      if (isRecordingRef.current) {
+        if (isNative()) {
+          VoiceRecorder.stopRecording().catch(console.error);
+        } else if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+            recognitionRef.current = null;
+          } catch (error) {
+            console.error('[Voice Cleanup] Error stopping recognition:', error);
+          }
+        }
+        isRecordingRef.current = false;
+      }
+    };
   }, []); // Run once on mount
 
   return {

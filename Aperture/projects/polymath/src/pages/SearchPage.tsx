@@ -7,13 +7,13 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Mic, Brain, Rocket, BookOpen, Loader2, ArrowRight } from 'lucide-react'
+import { Search, Mic, Brain, Rocket, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
 import { VoiceSearch } from '../components/VoiceSearch'
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 
 interface SearchResult {
-  type: 'memory' | 'project' | 'article'
+  type: 'memory' | 'project' | 'article' | 'suggestion'
   id: string
   title: string
   body?: string
@@ -23,6 +23,7 @@ interface SearchResult {
   created_at: string
   entities?: any
   tags?: string[]
+  status?: string
 }
 
 interface SearchResponse {
@@ -33,6 +34,7 @@ interface SearchResponse {
     memories: number
     projects: number
     articles: number
+    suggestions: number
   }
 }
 
@@ -66,7 +68,7 @@ export function SearchPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
       if (!response.ok) {
         throw new Error('Search failed')
       }
@@ -105,9 +107,9 @@ export function SearchPage() {
     haptic.light()
     switch (result.type) {
       case 'memory':
-        // Memories don't have detail pages yet, could open edit dialog
+        navigate('/memories')
         addToast({
-          title: 'Memory selected',
+          title: 'Memory found',
           description: result.title,
           variant: 'default'
         })
@@ -117,6 +119,14 @@ export function SearchPage() {
         break
       case 'article':
         navigate(`/reading/${result.id}`)
+        break
+      case 'suggestion':
+        navigate('/suggestions')
+        addToast({
+          title: 'Suggestion found',
+          description: result.title,
+          variant: 'default'
+        })
         break
     }
   }
@@ -129,6 +139,8 @@ export function SearchPage() {
         return <Rocket className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
       case 'article':
         return <BookOpen className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
+      case 'suggestion':
+        return <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
     }
   }
 
@@ -140,6 +152,8 @@ export function SearchPage() {
         return 'rgba(59, 130, 246, 0.15)'
       case 'article':
         return 'rgba(16, 185, 129, 0.15)'
+      case 'suggestion':
+        return 'rgba(251, 191, 36, 0.15)'
       default:
         return 'rgba(255, 255, 255, 0.05)'
     }
@@ -163,7 +177,7 @@ export function SearchPage() {
             Search Everything
           </h1>
           <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-            Find memories, projects, and articles instantly
+            Find memories, projects, articles, and suggestions instantly
           </p>
         </div>
 
@@ -263,6 +277,8 @@ export function SearchPage() {
                 <span>{results.breakdown.projects} projects</span>
                 <span>•</span>
                 <span>{results.breakdown.articles} articles</span>
+                <span>•</span>
+                <span>{results.breakdown.suggestions} suggestions</span>
               </div>
             </div>
 
