@@ -396,47 +396,45 @@ export const ProjectCard = React.memo(function ProjectCard({
       <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
 
       {!isExpanded ? (
-        // Compact View - Show minimal info
+        // Compact View - Standardized minimal info
         <CardContent className="relative z-10 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-lg">📄</span>
-              <h3 className="font-bold truncate text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                {project.title}
-              </h3>
-              <div className="px-2 py-0.5 rounded text-xs font-medium border" style={{
-                backgroundColor: statusConfig[project.status]?.style?.backgroundColor || 'rgba(156, 163, 175, 0.2)',
-                color: statusConfig[project.status]?.style?.color || '#9ca3af',
-                borderColor: statusConfig[project.status]?.style?.borderColor || 'rgba(156, 163, 175, 0.3)'
-              }}>
-                {statusConfig[project.status]?.label || project.status}
-              </div>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-bold text-base flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+              {project.title}
+            </h3>
+            {showActions && onDelete && (
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(project.id)
+                }}
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+                aria-label="Delete project"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+              backgroundColor: statusConfig[project.status]?.style?.backgroundColor || 'rgba(156, 163, 175, 0.2)',
+              color: statusConfig[project.status]?.style?.color || '#9ca3af',
+              borderColor: statusConfig[project.status]?.style?.borderColor || 'rgba(156, 163, 175, 0.3)'
+            }}>
+              {statusConfig[project.status]?.label || project.status}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {typeof project.metadata?.progress === 'number' && (
-                <span className="text-sm font-bold" style={{ color: 'var(--premium-blue)' }}>
-                  {project.metadata.progress}%
-                </span>
-              )}
-              {project.is_priority && (
-                <Star className="h-4 w-4" fill="var(--premium-amber)" style={{ color: 'var(--premium-amber)' }} />
-              )}
-              {showActions && onDelete && (
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDelete(project.id)
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                  aria-label="Delete project"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+
+            {project.is_priority && (
+              <Star className="h-4 w-4" fill="var(--premium-amber)" style={{ color: 'var(--premium-amber)' }} />
+            )}
+
+            <span className="text-xs font-bold ml-auto" style={{ color: 'var(--premium-blue)' }}>
+              {typeof project.metadata?.progress === 'number' ? `${project.metadata.progress}%` : '0%'}
+            </span>
           </div>
         </CardContent>
       ) : (
