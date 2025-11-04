@@ -16,7 +16,7 @@ import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { SuggestionBadge } from '../SuggestionBadge'
 
-export function ProjectCard({
+export const ProjectCard = React.memo(function ProjectCard({
   project: initialProject,
   onDelete,
   onClick,
@@ -569,7 +569,7 @@ export function ProjectCard({
       </motion.div>
     </>
   )
-}
+})
 
 function formatRelativeTime(isoString: string): string {
   const date = new Date(isoString)

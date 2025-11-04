@@ -1,3 +1,4 @@
+import React from 'react'
 import { ThemeCluster } from '../../types'
 import { ChevronRight } from 'lucide-react'
 
@@ -6,7 +7,7 @@ interface ThemeClusterCardProps {
   onClick: () => void
 }
 
-export function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
+export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
   return (
     <button
       onClick={onClick}
@@ -64,4 +65,4 @@ export function ThemeClusterCard({ cluster, onClick }: ThemeClusterCardProps) {
       </div>
     </button>
   )
-}
+})

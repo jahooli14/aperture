@@ -3,7 +3,7 @@
  * Displays a saved article in the reading queue with offline status
  */
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check, Copy, Share2, Edit } from 'lucide-react'
 import { format } from 'date-fns'
@@ -25,7 +25,7 @@ interface ArticleCardProps {
   onClick?: () => void
 }
 
-export function ArticleCard({ article, onClick }: ArticleCardProps) {
+export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
   const { addToast } = useToast()
   const [isOffline, setIsOffline] = useState(false)
@@ -551,4 +551,4 @@ export function ArticleCard({ article, onClick }: ArticleCardProps) {
     />
     </>
   )
-}
+})
