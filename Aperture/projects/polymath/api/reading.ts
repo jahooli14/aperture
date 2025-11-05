@@ -758,7 +758,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (existingError && existingError.code !== 'PGRST116') throw existingError
         if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
 
-        const feedData = await rssParser.parseURL(feed_url)
+        console.log('[RSS Subscribe] Fetching RSS feed:', feed_url)
+        let feedData
+        try {
+          feedData = await rssParser.parseURL(feed_url)
+          console.log('[RSS Subscribe] Feed parsed successfully:', feedData.title)
+        } catch (parseError) {
+          console.error('[RSS Subscribe] Failed to parse RSS feed:', parseError)
+          return res.status(400).json({
+            error: 'Failed to parse RSS feed',
+            details: parseError instanceof Error ? parseError.message : 'Invalid RSS feed URL or feed is unreachable'
+          })
+        }
+
         const { data, error } = await supabase.from('rss_feeds').insert([{
           user_id: userId,
           feed_url,
@@ -769,10 +781,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           enabled: true
         }]).select().single()
 
-        if (error) throw error
+        if (error) {
+          console.error('[RSS Subscribe] Database insert failed:', error)
+          throw error
+        }
+
+        console.log('[RSS Subscribe] Successfully subscribed to feed:', data.title)
         return res.status(201).json({ success: true, feed: data })
       } catch (error) {
-        return res.status(500).json({ error: 'Failed to subscribe to feed' })
+        console.error('[RSS Subscribe] Unexpected error:', error)
+        return res.status(500).json({
+          error: 'Failed to subscribe to feed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        })
       }
     }
 
