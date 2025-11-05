@@ -33,7 +33,7 @@ export function BedtimePage() {
   const fetchPrompts = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/bedtime')
+      const response = await fetch('/api/projects?resource=bedtime')
       const data = await response.json()
 
       setPrompts(data.prompts || [])
@@ -52,7 +52,7 @@ export function BedtimePage() {
   const generateNew = async () => {
     setGenerating(true)
     try {
-      const response = await fetch('/api/bedtime', { method: 'POST' })
+      const response = await fetch('/api/projects?resource=bedtime', { method: 'POST' })
       const data = await response.json()
 
       setPrompts(data.prompts || [])
@@ -76,7 +76,7 @@ export function BedtimePage() {
     setViewedIds(prev => new Set(prev).add(id))
 
     try {
-      await fetch('/api/bedtime', {
+      await fetch('/api/projects?resource=bedtime', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: [id] })
