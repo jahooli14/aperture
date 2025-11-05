@@ -393,6 +393,10 @@ export function ReadingPage() {
                     key={item.guid}
                     item={item}
                     onSave={() => handleSaveRSSItem(item)}
+                    onDismiss={() => {
+                      // Remove from local state
+                      setRssItems(prev => prev.filter(i => i.guid !== item.guid))
+                    }}
                   />
                 ))}
               </div>
