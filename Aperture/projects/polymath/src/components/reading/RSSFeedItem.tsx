@@ -20,19 +20,28 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
 
   // Motion values for swipe gesture
   const x = useMotionValue(0)
+  const saveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
   const dismissIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
   const backgroundColor = useTransform(
     x,
-    [-150, 0],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)']
+    [-150, 0, 150],
+    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
   )
 
   const handleDragEnd = (_: any, info: any) => {
     const offset = info.offset.x
     const velocity = info.velocity.x
 
+    // Swipe right = Save to reading queue
+    if (offset > 100 || velocity > 500) {
+      haptic.success()
+      setExitX(1000)
+      setTimeout(() => {
+        onSave()
+      }, 200)
+    }
     // Swipe left = Dismiss
-    if ((offset < -100 || velocity < -500) && onDismiss) {
+    else if ((offset < -100 || velocity < -500) && onDismiss) {
       haptic.light()
       setExitX(-1000)
       setTimeout(() => {
@@ -64,13 +73,24 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
     <motion.div
       style={{ x }}
       drag="x"
-      dragConstraints={{ left: -200, right: 0 }}
+      dragConstraints={{ left: -200, right: 200 }}
       dragElastic={0.1}
       onDragEnd={handleDragEnd}
       animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="relative"
     >
+      {/* Save Indicator (Swipe Right) */}
+      <motion.div
+        style={{ opacity: saveIndicatorOpacity }}
+        className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
+      >
+        <div className="flex items-center gap-2">
+          <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+          <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>SAVE</span>
+        </div>
+      </motion.div>
+
       {/* Dismiss Indicator (Swipe Left) */}
       <motion.div
         style={{ opacity: dismissIndicatorOpacity }}
