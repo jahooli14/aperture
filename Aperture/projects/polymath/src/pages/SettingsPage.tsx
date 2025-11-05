@@ -15,7 +15,8 @@ import {
   ListChecks,
   Rss,
   Palette,
-  Check
+  Check,
+  Moon
 } from 'lucide-react'
 import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
@@ -39,6 +40,15 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
     path: '/suggestions',
     color: '#f59e0b',
     glow: 'rgba(245, 158, 11, 0.4)'
+  },
+  {
+    id: 'bedtime',
+    label: 'Bedtime Ideas',
+    description: 'Trippy prompts for creative subconscious thinking (9:30pm daily)',
+    icon: Moon,
+    path: '/bedtime',
+    color: '#6366f1',
+    glow: 'rgba(99, 102, 241, 0.4)'
   },
   {
     id: 'today',
