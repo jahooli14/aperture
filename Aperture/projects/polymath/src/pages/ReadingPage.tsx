@@ -39,6 +39,24 @@ export function ReadingPage() {
 
   const bulkSelection = useBulkSelection<Article>()
 
+  // Dismissal log helpers
+  const getDismissedItems = (): Set<string> => {
+    try {
+      const dismissed = localStorage.getItem('rss-dismissed-items')
+      return dismissed ? new Set(JSON.parse(dismissed)) : new Set()
+    } catch {
+      return new Set()
+    }
+  }
+
+  const addToDismissedLog = (guid: string) => {
+    const dismissed = getDismissedItems()
+    dismissed.add(guid)
+    // Keep only the last 500 dismissed items to prevent localStorage bloat
+    const dismissedArray = Array.from(dismissed).slice(-500)
+    localStorage.setItem('rss-dismissed-items', JSON.stringify(dismissedArray))
+  }
+
   useEffect(() => {
     fetchArticles()
     fetchFeeds()
@@ -96,7 +114,11 @@ export function ReadingPage() {
         return dateB - dateA
       })
 
-      setRssItems(allItems)
+      // Filter out dismissed items
+      const dismissed = getDismissedItems()
+      const filteredItems = allItems.filter(item => !dismissed.has(item.guid))
+
+      setRssItems(filteredItems)
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
       addToast({
@@ -394,6 +416,8 @@ export function ReadingPage() {
                     item={item}
                     onSave={() => handleSaveRSSItem(item)}
                     onDismiss={() => {
+                      // Add to permanent dismissal log
+                      addToDismissedLog(item.guid)
                       // Remove from local state
                       setRssItems(prev => prev.filter(i => i.guid !== item.guid))
                     }}
