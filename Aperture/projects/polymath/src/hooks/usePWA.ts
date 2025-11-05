@@ -63,13 +63,16 @@ export function usePWA(): PWAState {
   useEffect(() => {
     // Register service worker
     if ('serviceWorker' in navigator) {
+      // Track if we've already reloaded to prevent infinite loops
+      let hasReloaded = sessionStorage.getItem('sw-reloaded') === 'true'
+
       navigator.serviceWorker
         .register('/service-worker.js', { scope: '/' })
         .then((registration) => {
           console.log('[PWA] Service worker registered:', registration.scope)
 
           // Check for updates every hour
-          setInterval(() => {
+          const updateInterval = setInterval(() => {
             registration.update()
           }, 60 * 60 * 1000)
 
@@ -89,16 +92,39 @@ export function usePWA(): PWAState {
               })
             }
           })
+
+          // Clean up interval on unmount
+          return () => {
+            clearInterval(updateInterval)
+          }
         })
         .catch((error) => {
           console.error('[PWA] Service worker registration failed:', error)
         })
 
       // Listen for controller change (new SW activated)
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('[PWA] New service worker activated, reloading page')
-        window.location.reload()
-      })
+      const handleControllerChange = () => {
+        console.log('[PWA] New service worker activated')
+        // Only reload once per session to prevent infinite loops
+        if (!hasReloaded) {
+          console.log('[PWA] Reloading page for new service worker')
+          sessionStorage.setItem('sw-reloaded', 'true')
+          window.location.reload()
+        } else {
+          console.log('[PWA] Already reloaded this session, skipping')
+          // Clear the flag after a short delay
+          setTimeout(() => {
+            sessionStorage.removeItem('sw-reloaded')
+          }, 5000)
+        }
+      }
+
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)
+
+      // Cleanup listener on unmount
+      return () => {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
+      }
     }
   }, [])
 
