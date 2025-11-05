@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "analyze": "npm run build && npx vite-bundle-analyzer dist",
-    "health": "curl -f http://localhost:5175/api/health || curl -f https://wizard-of-ngsh70dke-daniels-projects-ca7c7923.vercel.app/api/health"
+    "health": "curl -f http://localhost:5175/api/health || curl -f https://wizard-of-ngsh70dke-daniels-projects-ca7c7923.vercel.app/api/health",
+    "check-migrations": "tsx scripts/check-migrations.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

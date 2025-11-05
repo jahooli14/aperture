@@ -8,7 +8,7 @@ import { milestones, calculateAgeInWeeks, formatAgeRange, type Milestone } from 
 
 export function MilestonesView() {
   const { settings } = useSettingsStore();
-  const { fetchAchievements, addAchievement, deleteAchievement, isAchieved, getAchievement } = useMilestoneStore();
+  const { fetchAchievements, addAchievement, deleteAchievement, isAchieved, getAchievement, error: milestoneError, loading: milestoneLoading } = useMilestoneStore();
   const { photos } = usePhotoStore();
   const [showInfo, setShowInfo] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('all');
@@ -78,13 +78,19 @@ export function MilestonesView() {
       await addAchievement({
         milestone_id: selectedMilestone.id,
         achieved_date: achievementDate,
-        photo_id: selectedPhotoId,
-        notes: achievementNotes || null,
+        photo_id: selectedPhotoId === '' ? null : selectedPhotoId,
+        notes: achievementNotes.trim() || null,
       });
+
+      // Success - close dialog and reset form
       setSelectedMilestone(null);
+      setAchievementDate('');
+      setAchievementNotes('');
+      setSelectedPhotoId(null);
     } catch (error) {
       console.error('Failed to save achievement:', error);
-      alert('Failed to save milestone. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to save milestone: ${errorMessage}\n\nPlease check the console for more details.`);
     }
   };
 
@@ -211,6 +217,31 @@ export function MilestonesView() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Migration Error Banner */}
+      {milestoneError && milestoneError.includes('table has not been created') && (
+        <div className="mb-6 p-6 bg-red-50 border-2 border-red-200 rounded-lg">
+          <h3 className="text-lg font-bold text-red-900 mb-2">⚙️ Setup Required</h3>
+          <p className="text-sm text-red-800 mb-4">
+            The milestones feature requires a database migration to be run.
+          </p>
+          <div className="bg-white p-4 rounded border border-red-200">
+            <p className="text-sm font-semibold text-gray-900 mb-2">To fix this:</p>
+            <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+              <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Supabase Dashboard</a></li>
+              <li>Open the SQL Editor</li>
+              <li>Copy and run the contents of <code className="bg-gray-100 px-2 py-0.5 rounded text-xs">supabase/migrations/006_add_milestone_tracking.sql</code></li>
+              <li>Reload this page</li>
+            </ol>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold"
+          >
+            Reload Page
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Developmental Milestones</h2>
@@ -415,7 +446,10 @@ export function MilestonesView() {
                   </label>
                   <select
                     value={selectedPhotoId || ''}
-                    onChange={(e) => setSelectedPhotoId(e.target.value || null)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedPhotoId(value === '' ? null : value);
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
                   >
                     <option value="">No photo</option>

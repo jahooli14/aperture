@@ -34,12 +34,25 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
   fetchAchievements: async () => {
     set({ loading: true, error: null });
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('milestone_achievements')
         .select('*')
         .order('achieved_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching achievements:', error);
+
+        // Check if it's a missing table error
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          const helpfulError = 'The milestone_achievements table has not been created yet. Please run the migration in your Supabase SQL Editor. See the console for details.';
+          console.error('❌ MIGRATION NEEDED:');
+          console.error('Go to: https://supabase.com/dashboard/project/_/sql/new');
+          console.error('Copy and run: supabase/migrations/006_add_milestone_tracking.sql');
+          throw new Error(helpfulError);
+        }
+
+        throw error;
+      }
 
       set({ achievements: (data || []) as MilestoneAchievement[], loading: false });
     } catch (error) {
@@ -57,13 +70,34 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      const { data, error } = await (supabase as any)
+      console.log('Adding milestone achievement:', { achievement, user_id: user.id });
+
+      const { data, error } = await supabase
         .from('milestone_achievements')
         .insert({ ...achievement, user_id: user.id })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+
+        // Check if it's a missing table error
+        if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+          const helpfulError = 'The milestone_achievements table has not been created yet. Please run the migration in your Supabase SQL Editor. See the console for details.';
+          console.error('❌ MIGRATION NEEDED:');
+          console.error('Go to: https://supabase.com/dashboard/project/_/sql/new');
+          console.error('Copy and run: supabase/migrations/006_add_milestone_tracking.sql');
+          throw new Error(helpfulError);
+        }
+
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from insert');
+      }
+
+      console.log('Milestone achievement added successfully:', data);
 
       set((state) => ({
         achievements: [data as MilestoneAchievement, ...state.achievements],
@@ -74,19 +108,22 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
       console.error('Error adding milestone achievement:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to add achievement';
       set({ error: errorMessage });
-      throw new Error(errorMessage);
+      throw error;
     }
   },
 
   updateAchievement: async (id: string, updates: MilestoneAchievementUpdate) => {
     set({ error: null });
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('milestone_achievements')
         .update(updates)
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error updating achievement:', error);
+        throw error;
+      }
 
       set((state) => ({
         achievements: state.achievements.map((achievement) =>
@@ -97,19 +134,22 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
       console.error('Error updating milestone achievement:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update achievement';
       set({ error: errorMessage });
-      throw new Error(errorMessage);
+      throw error;
     }
   },
 
   deleteAchievement: async (id: string) => {
     set({ error: null });
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('milestone_achievements')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error deleting achievement:', error);
+        throw error;
+      }
 
       set((state) => ({
         achievements: state.achievements.filter((achievement) => achievement.id !== id),
@@ -118,7 +158,7 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
       console.error('Error deleting milestone achievement:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete achievement';
       set({ error: errorMessage });
-      throw new Error(errorMessage);
+      throw error;
     }
   },
 
