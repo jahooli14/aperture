@@ -75,11 +75,15 @@ export function MilestonesView() {
     if (!selectedMilestone || !achievementDate) return;
 
     try {
+      // Ensure photo_id is properly null if not selected
+      const photoId = selectedPhotoId && selectedPhotoId !== '' ? selectedPhotoId : null;
+      const milestoneNotes = achievementNotes?.trim();
+
       await addAchievement({
         milestone_id: selectedMilestone.id,
         achieved_date: achievementDate,
-        photo_id: selectedPhotoId === '' ? null : selectedPhotoId,
-        notes: achievementNotes.trim() || null,
+        photo_id: photoId,
+        notes: milestoneNotes || null,
       });
 
       // Success - close dialog and reset form

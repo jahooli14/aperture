@@ -183,7 +183,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     }
     // Swipe left = Delete
     else if (offset < -100 || velocity < -500) {
-      haptic.impact()
+      haptic.warning()
       setExitX(-1000)
       setTimeout(async () => {
         try {
