@@ -3,8 +3,10 @@
  * Enables offline support and background sync
  */
 
-const CACHE_NAME = 'polymath-v1'
-const RUNTIME_CACHE = 'polymath-runtime'
+// Update this version when you want to trigger a new service worker
+const VERSION = '1.0.1'
+const CACHE_NAME = `polymath-v${VERSION}`
+const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [

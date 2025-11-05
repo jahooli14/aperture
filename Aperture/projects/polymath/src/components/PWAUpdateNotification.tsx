@@ -7,14 +7,34 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, X } from 'lucide-react'
 import { usePWA } from '../hooks/usePWA'
 import { haptic } from '../utils/haptics'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function PWAUpdateNotification() {
   const { isUpdateAvailable } = usePWA()
   const [dismissed, setDismissed] = useState(false)
 
+  // Check if this update was already dismissed
+  useEffect(() => {
+    if (isUpdateAvailable) {
+      const dismissedUpdate = localStorage.getItem('pwa-update-dismissed')
+      if (dismissedUpdate) {
+        // If dismissed less than 1 hour ago, keep it dismissed
+        const dismissedTime = parseInt(dismissedUpdate)
+        const oneHour = 60 * 60 * 1000
+        if (Date.now() - dismissedTime < oneHour) {
+          setDismissed(true)
+        } else {
+          // Clear old dismissal
+          localStorage.removeItem('pwa-update-dismissed')
+        }
+      }
+    }
+  }, [isUpdateAvailable])
+
   const handleUpdate = () => {
     haptic.light()
+    // Clear dismissal flag before reloading
+    localStorage.removeItem('pwa-update-dismissed')
     // Refresh the page to activate the new service worker
     window.location.reload()
   }
@@ -22,6 +42,8 @@ export function PWAUpdateNotification() {
   const handleDismiss = () => {
     haptic.light()
     setDismissed(true)
+    // Store dismissal time so it doesn't show again for an hour
+    localStorage.setItem('pwa-update-dismissed', Date.now().toString())
   }
 
   if (!isUpdateAvailable || dismissed) return null

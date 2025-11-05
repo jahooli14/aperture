@@ -80,7 +80,11 @@ export function usePWA(): PWAState {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   console.log('[PWA] New service worker installed, update available')
-                  setIsUpdateAvailable(true)
+                  // Only show update notification if not dismissed recently
+                  const dismissed = localStorage.getItem('pwa-update-dismissed')
+                  if (!dismissed || Date.now() - parseInt(dismissed) > 60 * 60 * 1000) {
+                    setIsUpdateAvailable(true)
+                  }
                 }
               })
             }
