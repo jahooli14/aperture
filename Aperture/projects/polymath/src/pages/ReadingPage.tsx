@@ -52,8 +52,8 @@ export function ReadingPage() {
   const addToDismissedLog = (guid: string) => {
     const dismissed = getDismissedItems()
     dismissed.add(guid)
-    // Keep only the last 500 dismissed items to prevent localStorage bloat
-    const dismissedArray = Array.from(dismissed).slice(-500)
+    // Keep only the last 1000 dismissed items to prevent localStorage bloat
+    const dismissedArray = Array.from(dismissed).slice(-1000)
     localStorage.setItem('rss-dismissed-items', JSON.stringify(dismissedArray))
   }
 
