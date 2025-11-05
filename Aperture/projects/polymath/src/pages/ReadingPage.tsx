@@ -460,23 +460,30 @@ export function ReadingPage() {
                         bulkSelection.toggleSelection(article.id)
                       }
                     }}
+                    style={{
+                      // Allow drag events to pass through when not in selection mode
+                      pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
+                    }}
                   >
                     {bulkSelection.isSelectionMode && (
                       <div
                         className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
                         style={{
                           backgroundColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.05)',
-                          borderColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.2)'
+                          borderColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.2)',
+                          pointerEvents: 'auto'
                         }}
                       >
                         {isSelected && <Check className="h-4 w-4 text-white" />}
                       </div>
                     )}
-                    <ArticleCard
-                      key={article.id}
-                      article={article}
-                      onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
-                    />
+                    <div style={{ pointerEvents: 'auto' }}>
+                      <ArticleCard
+                        key={article.id}
+                        article={article}
+                        onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
+                      />
+                    </div>
                   </div>
                 </div>
               )
