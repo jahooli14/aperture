@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseConfig, getGeminiConfig } from './env.js'
 import { logger } from './logger.js'
+import { generateProjectScaffold, generateCreativeScaffold } from './generate-project-scaffold.js'
 
 const { url, serviceRoleKey } = getSupabaseConfig()
 const supabase = createClient(url, serviceRoleKey)
@@ -53,6 +54,13 @@ interface ProjectIdea {
   interestScore: number
   totalPoints: number
   isWildcard: boolean
+  scaffold?: {
+    readme: string
+    techStack: string[]
+    fileStructure: Record<string, string>
+    mvpFeatures: string[]
+    setupInstructions: string[]
+  }
 }
 
 /**
