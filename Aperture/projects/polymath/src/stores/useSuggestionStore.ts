@@ -156,11 +156,15 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' }
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to trigger synthesis')
-      }
-
       const data = await response.json()
+
+      if (!response.ok) {
+        // Extract helpful error message from API response
+        const errorMsg = data.error || 'Failed to trigger synthesis'
+        const suggestion = data.suggestions || ''
+        const fullError = suggestion ? `${errorMsg}\n\n${suggestion}` : errorMsg
+        throw new Error(fullError)
+      }
 
       // Refresh suggestions after synthesis
       await get().fetchSuggestions()

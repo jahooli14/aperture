@@ -140,16 +140,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } else if (job === 'synthesis') {
       const userId = process.env.userId || 'default-user'
-      const suggestions = await runSynthesis(userId)
 
-      console.log(`[cron/jobs] Generated ${suggestions?.length || 0} suggestions`)
+      try {
+        const suggestions = await runSynthesis(userId)
 
-      return res.status(200).json({
-        success: true,
-        job: 'synthesis',
-        suggestions_generated: suggestions?.length || 0,
-        timestamp: new Date().toISOString()
-      })
+        console.log(`[cron/jobs] Generated ${suggestions?.length || 0} suggestions`)
+
+        return res.status(200).json({
+          success: true,
+          job: 'synthesis',
+          suggestions_generated: suggestions?.length || 0,
+          timestamp: new Date().toISOString()
+        })
+      } catch (error) {
+        console.error('[cron/jobs/synthesis] Error:', error)
+
+        // Return helpful error message
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const isCapabilityError = errorMessage.includes('capabilities') || errorMessage.includes('Capability')
+        const isInterestError = errorMessage.includes('interests') || errorMessage.includes('entities')
+
+        return res.status(500).json({
+          success: false,
+          job: 'synthesis',
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+          suggestions: isCapabilityError
+            ? 'Run capability scanner on your projects first, or create more projects'
+            : isInterestError
+            ? 'Capture more thoughts/memories to extract interests'
+            : 'Check server logs for details'
+        })
+      }
 
     } else if (job === 'strengthen') {
       const updates = await strengthenNodes(24)
