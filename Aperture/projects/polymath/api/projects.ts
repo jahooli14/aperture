@@ -1135,10 +1135,10 @@ async function findRelatedItemsForProject(
     }
   }
 
-  // Search articles
+  // Search articles (stored in reading_queue table)
   const { data: articles } = await supabase
-    .from('articles')
-    .select('id, title, summary, embedding')
+    .from('reading_queue')
+    .select('id, title, excerpt, embedding')
     .eq('user_id', userId)
     .not('embedding', 'is', null)
     .limit(50)

@@ -490,12 +490,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (insertError) {
         console.error('[reading] Database insert error:', insertError)
-        console.error('[reading] Insert error details:', JSON.stringify(insertError, null, 2))
-        return res.status(500).json({
-          error: 'Failed to save article',
-          details: insertError.message,
-          code: insertError.code
-        })
+        throw new Error(`Database error: ${insertError.message}`)
       }
 
       console.log(`[reading] Article placeholder saved, ID: ${savedArticle.id}`)
