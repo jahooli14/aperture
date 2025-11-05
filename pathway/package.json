@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "fetch-data": "ts-node src/fetchData.ts",
-    "run-model": "ts-node src/runModel.ts"
+    "run-model": "ts-node src/runModel.ts",
+    "run-2020-2025": "ts-node src/runLast5Years.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",

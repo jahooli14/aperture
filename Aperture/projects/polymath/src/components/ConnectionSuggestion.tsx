@@ -18,7 +18,7 @@ interface ConnectionSuggestion {
 
 interface ConnectionSuggestionProps {
   suggestions: ConnectionSuggestion[]
-  sourceType: 'memory' | 'article'
+  sourceType: 'memory' | 'article' | 'project'
   sourceId: string
   onLinkCreated?: (targetId: string, targetType: string) => void
   onDismiss?: () => void
