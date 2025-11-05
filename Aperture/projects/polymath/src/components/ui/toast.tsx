@@ -27,8 +27,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     setToasts((prev) => [...prev, newToast])
 
-    // Auto remove after duration (default 3s)
-    const duration = toast.duration ?? 3000
+    // Auto remove after duration (default 4.5s for better readability)
+    // Success messages with actionable info get longer duration (6s)
+    const defaultDuration = toast.variant === 'success' && toast.description ? 6000 : 4500
+    const duration = toast.duration ?? defaultDuration
     if (duration > 0) {
       setTimeout(() => {
         removeToast(id)

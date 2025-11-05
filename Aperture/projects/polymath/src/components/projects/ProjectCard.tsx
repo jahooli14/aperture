@@ -33,7 +33,6 @@ export const ProjectCard = React.memo(function ProjectCard({
   const [showQuickNote, setShowQuickNote] = useState(false)
   const [quickNote, setQuickNote] = useState('')
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(false)
   const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
@@ -67,12 +66,8 @@ export const ProjectCard = React.memo(function ProjectCard({
     if ((e.target as HTMLElement).closest('button')) {
       return
     }
-    // Toggle expand on first click, navigate on second
-    if (!isExpanded) {
-      setIsExpanded(true)
-    } else {
-      onClick?.(project.id)
-    }
+    // Navigate immediately on click (removed expand-then-navigate pattern)
+    onClick?.(project.id)
   }
 
   const handleDragEnd = (_: any, info: any) => {
@@ -395,8 +390,7 @@ export const ProjectCard = React.memo(function ProjectCard({
       {/* Accent gradient bar */}
       <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
 
-      {!isExpanded ? (
-        // Compact View - Standardized minimal info
+      {/* Compact View - Always shown now for cleaner UX */}
         <CardContent className="relative z-10 p-4">
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="font-bold text-base flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
@@ -437,8 +431,8 @@ export const ProjectCard = React.memo(function ProjectCard({
             </span>
           </div>
         </CardContent>
-      ) : (
-        // Expanded View - Show full details
+      {/* Removed expanded view - navigate to detail page instead */}
+      {false && (
         <>
           <CardHeader className="relative z-10 pb-4">
             <div className="flex items-start justify-between gap-3 mb-3">
