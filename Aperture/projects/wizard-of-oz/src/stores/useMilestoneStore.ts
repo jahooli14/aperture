@@ -72,9 +72,14 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
 
       console.log('Adding milestone achievement:', { achievement, user_id: user.id });
 
+      const insertData: Database['public']['Tables']['milestone_achievements']['Insert'] = {
+        ...achievement,
+        user_id: user.id,
+      };
+
       const { data, error } = await supabase
         .from('milestone_achievements')
-        .insert({ ...achievement, user_id: user.id })
+        .insert(insertData as any)
         .select()
         .single();
 
@@ -115,7 +120,7 @@ export const useMilestoneStore = create<MilestoneStore>((set, get) => ({
   updateAchievement: async (id: string, updates: MilestoneAchievementUpdate) => {
     set({ error: null });
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('milestone_achievements')
         .update(updates)
         .eq('id', id);
