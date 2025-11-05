@@ -623,8 +623,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // RSS FEEDS RESOURCE - Consolidated from api/rss.ts
   if (resource === 'rss' || resource === 'feeds') {
-    // Sync RSS feeds
-    if (resource === 'rss' && req.query.action === 'sync' && req.method === 'POST') {
+    // Sync RSS feeds (must check action first!)
+    if (req.query.action === 'sync' && req.method === 'POST') {
       try {
         const { data: feeds } = await supabase
           .from('rss_feeds')
@@ -681,7 +681,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Fetch RSS feed items (without adding to reading queue)
-    if (resource === 'rss' && req.query.action === 'items' && req.method === 'GET') {
+    if (req.query.action === 'items' && req.method === 'GET') {
       try {
         const { feed_id } = req.query
 
@@ -724,8 +724,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // GET feeds
-    if (req.method === 'GET') {
+    // GET feeds (no action specified)
+    if (req.method === 'GET' && !req.query.action) {
       try {
         if (id) {
           const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', userId).single()
@@ -740,8 +740,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // POST - Subscribe
-    if (req.method === 'POST') {
+    // POST - Subscribe (no action specified)
+    if (req.method === 'POST' && !req.query.action) {
       try {
         console.log('[RSS Subscribe] Request body:', JSON.stringify(req.body, null, 2))
         const { feed_url } = req.body
