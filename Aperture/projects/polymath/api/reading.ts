@@ -354,10 +354,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // ARTICLES RESOURCE (default)
+  // ARTICLES RESOURCE (default - only if no resource specified)
 
   // GET - List articles OR get single article
-  if (req.method === 'GET') {
+  if (req.method === 'GET' && !resource) {
     // Get single article with highlights
     if (id && typeof id === 'string') {
       try {
@@ -430,8 +430,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // POST - Save new article
-  if (req.method === 'POST') {
+  // POST - Save new article (only if no resource specified)
+  if (req.method === 'POST' && !resource) {
     try {
       const { url, tags } = req.body
 
@@ -554,8 +554,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // PATCH - Update article
-  if (req.method === 'PATCH') {
+  // PATCH - Update article (only if no resource specified)
+  if (req.method === 'PATCH' && !resource) {
     try {
       const { id: articleId, status, tags } = req.body
 
@@ -598,8 +598,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // DELETE - Remove article
-  if (req.method === 'DELETE') {
+  // DELETE - Remove article (only if no resource specified)
+  if (req.method === 'DELETE' && !resource) {
     try {
       const articleId = id
 
