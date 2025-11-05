@@ -787,7 +787,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         console.log('[RSS Subscribe] Successfully subscribed to feed:', data.title)
-        return res.status(201).json({ success: true, feed: data })
+
+        // Auto-import latest 3 articles immediately (no cron needed!)
+        let articlesAdded = 0
+        try {
+          console.log('[RSS Subscribe] Auto-importing latest articles...')
+          for (const item of feedData.items.slice(0, 3)) {
+            const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
+            if (existing.data) continue
+
+            const jinaUrl = `https://r.jina.ai/${item.link}`
+            const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
+            let content = item.contentSnippet || item.description || ''
+            if (response.ok) {
+              const result = await response.json()
+              const rawContent = result.data?.content || result.content || content
+              content = cleanArticleContent(rawContent)
+            }
+
+            await supabase.from('reading_queue').insert([{
+              user_id: userId,
+              url: item.link || '',
+              title: item.title || 'Untitled',
+              author: item.creator || item.author || null,
+              content,
+              excerpt: content.substring(0, 200),
+              published_date: item.pubDate || item.isoDate || null,
+              source: new URL(item.link || '').hostname.replace('www.', ''),
+              read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
+              word_count: content.split(/\s+/).length,
+              status: 'unread',
+              tags: ['rss', 'auto-imported'],
+              processed: true
+            }])
+            articlesAdded++
+          }
+
+          await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', data.id)
+          console.log(`[RSS Subscribe] Auto-imported ${articlesAdded} articles`)
+        } catch (importError) {
+          console.error('[RSS Subscribe] Auto-import failed:', importError)
+          // Don't fail the subscription if import fails
+        }
+
+        return res.status(201).json({
+          success: true,
+          feed: data,
+          articlesAdded,
+          message: `Subscribed! ${articlesAdded} articles added to your reading queue.`
+        })
       } catch (error) {
         console.error('[RSS Subscribe] Unexpected error:', error)
         return res.status(500).json({

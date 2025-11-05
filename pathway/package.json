@@ -1,0 +1,23 @@
+{
+  "name": "pathway",
+  "version": "1.0.0",
+  "description": "Investment data analysis and modeling over 40 years",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "fetch-data": "ts-node src/fetchData.ts",
+    "run-model": "ts-node src/runModel.ts"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "csv-parse": "^5.5.0",
+    "date-fns": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}
