@@ -145,8 +145,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                 }`}
                 style={noteType === 'voice' ? {
                   background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                  color: 'white',
-                  ringColor: 'var(--premium-blue)'
+                  color: 'white'
                 } : {
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -170,8 +169,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                 }`}
                 style={noteType === 'text' ? {
                   background: 'linear-gradient(135deg, var(--premium-indigo), var(--premium-purple))',
-                  color: 'white',
-                  ringColor: 'var(--premium-indigo)'
+                  color: 'white'
                 } : {
                   backgroundColor: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
