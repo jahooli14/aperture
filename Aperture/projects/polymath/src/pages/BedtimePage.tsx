@@ -6,8 +6,9 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star } from 'lucide-react'
+import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2 } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
+import { ZenMode } from '../components/bedtime/ZenMode'
 
 interface BedtimePrompt {
   id: string
@@ -24,6 +25,7 @@ export function BedtimePage() {
   const [generating, setGenerating] = useState(false)
   const [message, setMessage] = useState('')
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
+  const [zenModeOpen, setZenModeOpen] = useState(false)
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -144,18 +146,31 @@ export function BedtimePage() {
             </div>
           </div>
 
-          <button
-            onClick={generateNew}
-            disabled={generating}
-            className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10"
-            style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
-          >
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--premium-platinum)' }} />
-            ) : (
-              <RefreshCw className="h-4 w-4" style={{ color: 'var(--premium-platinum)' }} />
+          <div className="flex items-center gap-2">
+            {prompts.length > 0 && (
+              <button
+                onClick={() => setZenModeOpen(true)}
+                className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
+                style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                title="Zen Mode"
+              >
+                <Maximize2 className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
+                <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Zen</span>
+              </button>
             )}
-          </button>
+            <button
+              onClick={generateNew}
+              disabled={generating}
+              className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10"
+              style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+            >
+              {generating ? (
+                <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--premium-platinum)' }} />
+              ) : (
+                <RefreshCw className="h-4 w-4" style={{ color: 'var(--premium-platinum)' }} />
+              )}
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -292,9 +307,18 @@ export function BedtimePage() {
         className="max-w-2xl mx-auto mt-12 p-6 rounded-xl premium-glass-subtle text-center"
       >
         <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-          💡 <strong>Tip:</strong> Read these as you're falling asleep. Let your subconscious work on them overnight. Capture any insights that emerge in the morning.
+          💡 <strong>Tip:</strong> Try Zen Mode for a calming, focused experience. One prompt at a time, perfect for bedtime reflection.
         </p>
       </motion.div>
+
+      {/* Zen Mode */}
+      {zenModeOpen && prompts.length > 0 && (
+        <ZenMode
+          prompts={prompts}
+          onClose={() => setZenModeOpen(false)}
+          onMarkViewed={markViewed}
+        />
+      )}
     </div>
   )
 }
