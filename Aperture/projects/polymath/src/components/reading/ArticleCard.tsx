@@ -39,10 +39,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   // Motion values for swipe gesture
   const x = useMotionValue(0)
   const archiveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
   const backgroundColor = useTransform(
     x,
-    [0, 150],
-    ['rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
+    [-150, 0, 150],
+    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
   )
 
   // Long-press for context menu
@@ -180,6 +181,29 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         }
       }, 200)
     }
+    // Swipe left = Delete
+    else if (offset < -100 || velocity < -500) {
+      haptic.impact()
+      setExitX(-1000)
+      setTimeout(async () => {
+        try {
+          await deleteArticle(article.id)
+          addToast({
+            title: 'Deleted',
+            description: 'Article removed from queue',
+            variant: 'success',
+          })
+        } catch (error) {
+          addToast({
+            title: 'Error',
+            description: 'Failed to delete article',
+            variant: 'destructive',
+          })
+          setExitX(0)
+          x.set(0)
+        }
+      }, 200)
+    }
   }
 
   const handleCopyLink = () => {
@@ -289,7 +313,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       <motion.div
         style={{ x }}
         drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
+        dragConstraints={{ left: -200, right: 200 }}
         dragElastic={0.1}
         onDragEnd={handleDragEnd}
         animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
@@ -305,6 +329,17 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         <div className="flex items-center gap-2">
           <Check className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
           <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>ARCHIVE</span>
+        </div>
+      </motion.div>
+
+      {/* Delete Indicator (Swipe Left) */}
+      <motion.div
+        style={{ opacity: deleteIndicatorOpacity }}
+        className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10 rounded-xl"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-bold text-red-500">DELETE</span>
+          <Trash2 className="h-6 w-6 text-red-500" />
         </div>
       </motion.div>
 
