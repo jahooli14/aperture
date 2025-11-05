@@ -38,6 +38,7 @@ const ConstellationView = lazy(() => import('./pages/ConstellationView'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
+const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage })))
 
 // Loading fallback component with skeleton
 function PageLoader() {
@@ -191,6 +192,7 @@ export default function App() {
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/rss" element={<RSSFeedsPage />} />
                   <Route path="/search" element={<SearchPage />} />
+                  <Route path="/bedtime" element={<BedtimePage />} />
                 </Routes>
               </Suspense>
             </ErrorBoundary>
