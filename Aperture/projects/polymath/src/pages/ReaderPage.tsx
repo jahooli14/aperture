@@ -28,6 +28,7 @@ import { useToast } from '../components/ui/toast'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
+import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -47,12 +48,28 @@ export function ReaderPage() {
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
 
   useEffect(() => {
     if (!id) return
     fetchArticle()
     checkOfflineStatus()
+    fetchSuggestions()
   }, [id])
+
+  const fetchSuggestions = async () => {
+    if (!id) return
+
+    try {
+      const response = await fetch(`/api/connections/suggestions?sourceId=${id}&sourceType=article`)
+      if (response.ok) {
+        const data = await response.json()
+        setSuggestions(data.suggestions || [])
+      }
+    } catch (error) {
+      console.error('[ReaderPage] Failed to fetch suggestions:', error)
+    }
+  }
 
   const fetchArticle = async () => {
     if (!id) return
@@ -651,6 +668,20 @@ export function ReaderPage() {
         onCapture={handleCaptureThought}
         onSkip={handleSkipThought}
       />
+
+      {/* Connection Suggestions - Floating */}
+      {suggestions.length > 0 && (
+        <ConnectionSuggestion
+          suggestions={suggestions}
+          sourceId={article.id}
+          sourceType="article"
+          onLinkCreated={() => {
+            fetchArticle()
+            setSuggestions([]) // Clear suggestions after linking
+          }}
+          onDismiss={() => setSuggestions([])}
+        />
+      )}
 
       {/* Bottom Safe Area */}
       <div className="h-24" />

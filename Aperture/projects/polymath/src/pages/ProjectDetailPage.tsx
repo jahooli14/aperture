@@ -14,6 +14,7 @@ import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog'
+import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
@@ -37,6 +38,7 @@ export function ProjectDetailPage() {
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
+  const [suggestions, setSuggestions] = useState<any[]>([])
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {
@@ -60,6 +62,25 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     loadProjectDetails()
+  }, [id])
+
+  // Fetch connection suggestions
+  useEffect(() => {
+    if (!id) return
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`/api/connections/suggestions?sourceId=${id}&sourceType=project`)
+        if (response.ok) {
+          const data = await response.json()
+          setSuggestions(data.suggestions || [])
+        }
+      } catch (error) {
+        console.error('[ProjectDetail] Failed to fetch suggestions:', error)
+      }
+    }
+
+    fetchSuggestions()
   }, [id])
 
   const loadProjectDetails = async () => {
@@ -765,6 +786,20 @@ export function ProjectDetailPage() {
 
       {/* Confirmation Dialog */}
       {confirmDialog}
+
+      {/* Connection Suggestions - Floating */}
+      {suggestions.length > 0 && (
+        <ConnectionSuggestion
+          suggestions={suggestions}
+          sourceId={project.id}
+          sourceType="project"
+          onLinkCreated={() => {
+            loadProjectDetails()
+            setSuggestions([]) // Clear suggestions after linking
+          }}
+          onDismiss={() => setSuggestions([])}
+        />
+      )}
     </div>
   )
 }
