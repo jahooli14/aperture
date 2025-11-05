@@ -164,4 +164,47 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       throw error
     }
   },
+
+  // Auto-sync feeds in background (throttled)
+  autoSyncFeeds: async () => {
+    const SYNC_INTERVAL = 2 * 60 * 60 * 1000 // 2 hours
+    const lastSync = localStorage.getItem('rss_last_sync')
+    const now = Date.now()
+
+    // Check if we synced recently
+    if (lastSync && now - parseInt(lastSync) < SYNC_INTERVAL) {
+      console.log('[RSS] Skipping sync - last synced', Math.floor((now - parseInt(lastSync)) / 60000), 'minutes ago')
+      return { feedsSynced: 0, articlesAdded: 0 }
+    }
+
+    // Don't show loading spinner for background sync
+    try {
+      const response = await fetch('/api/reading?resource=rss&action=sync', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        console.warn('[RSS] Background sync failed:', response.status)
+        return { feedsSynced: 0, articlesAdded: 0 }
+      }
+
+      const data = await response.json()
+      localStorage.setItem('rss_last_sync', now.toString())
+
+      console.log('[RSS] Background sync complete:', data.articlesAdded, 'new articles')
+
+      return {
+        feedsSynced: data.feedsSynced || 0,
+        articlesAdded: data.articlesAdded || 0
+      }
+    } catch (error) {
+      console.warn('[RSS] Background sync error:', error)
+      return { feedsSynced: 0, articlesAdded: 0 }
+    }
+  },
 }))
+
+// Export helper to add to interface
+export type RSSStoreWithAutoSync = RSSState & {
+  autoSyncFeeds: () => Promise<{ feedsSynced: number; articlesAdded: number }>
+}

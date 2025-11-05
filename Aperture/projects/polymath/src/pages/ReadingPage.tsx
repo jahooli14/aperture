@@ -28,7 +28,7 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
-  const { feeds, syncing, fetchFeeds, syncFeeds } = useRSSStore()
+  const { feeds, syncing, fetchFeeds, syncFeeds, autoSyncFeeds } = useRSSStore() as any
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -42,7 +42,14 @@ export function ReadingPage() {
   useEffect(() => {
     fetchArticles()
     fetchFeeds()
-  }, [fetchArticles, fetchFeeds])
+
+    // Auto-sync RSS feeds in background (throttled to 2 hours)
+    if (autoSyncFeeds) {
+      autoSyncFeeds().catch(() => {
+        // Silently fail - it's a background operation
+      })
+    }
+  }, [fetchArticles, fetchFeeds, autoSyncFeeds])
 
   useEffect(() => {
     if (activeTab === 'updates') {
