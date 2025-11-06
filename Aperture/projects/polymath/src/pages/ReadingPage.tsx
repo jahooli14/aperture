@@ -226,11 +226,13 @@ export function ReadingPage() {
     { key: 'archived', label: 'Archived', icon: Archive },
   ]
 
-  // Ensure articles is always an array to prevent "Cannot read properties of undefined" errors
-  const safeArticles = Array.isArray(articles) ? articles : []
+  // Memoize safe articles to prevent useMemo dependency issues
+  const safeArticles = React.useMemo(() => {
+    return Array.isArray(articles) ? articles : []
+  }, [articles])
 
   const filteredArticles = React.useMemo(() => {
-    if (!Array.isArray(safeArticles)) return []
+    if (!Array.isArray(safeArticles) || safeArticles.length === 0) return []
 
     if (activeTab === 'queue') {
       return safeArticles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))

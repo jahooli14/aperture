@@ -36,9 +36,11 @@ export function ProjectsPage() {
 
   // Extract all unique tags from projects
   const allTags = React.useMemo(() => {
-    if (!allProjects || !Array.isArray(allProjects)) return []
+    const safeProjects = Array.isArray(allProjects) ? allProjects : []
+    if (safeProjects.length === 0) return []
+
     const tagSet = new Set<string>()
-    allProjects.forEach(project => {
+    safeProjects.forEach(project => {
       const tags = project.metadata?.tags || []
       tags.forEach((tag: string) => tagSet.add(tag))
     })
@@ -47,9 +49,13 @@ export function ProjectsPage() {
 
   // Filter projects by selected tags
   const projects = React.useMemo(() => {
-    if (!allProjects || !Array.isArray(allProjects)) return []
-    if (selectedTags.length === 0) return allProjects
-    return allProjects.filter(project => {
+    // Ensure allProjects is always an array
+    const safeProjects = Array.isArray(allProjects) ? allProjects : []
+    if (safeProjects.length === 0) return []
+
+    if (selectedTags.length === 0) return safeProjects
+
+    return safeProjects.filter(project => {
       const projectTags = project.metadata?.tags || []
       return selectedTags.every(tag => projectTags.includes(tag))
     })
