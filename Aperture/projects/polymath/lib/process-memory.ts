@@ -240,12 +240,16 @@ async function findAndCreateConnections(
     const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
 
     // Search projects
-    const { data: projects } = await supabase
+    const { data: projects, error: projectsError } = await supabase
       .from('projects')
       .select('id, title, description, embedding')
       .eq('user_id', userId)
       .not('embedding', 'is', null)
       .limit(50)
+
+    if (projectsError) {
+      logger.warn({ memory_id: memoryId, error: projectsError }, 'Error querying projects for connections')
+    }
 
     if (projects) {
       for (const p of projects) {
@@ -260,12 +264,16 @@ async function findAndCreateConnections(
     }
 
     // Search other memories (memories table has no user_id column - single user app)
-    const { data: memories } = await supabase
+    const { data: memories, error: memoriesError } = await supabase
       .from('memories')
       .select('id, title, body, embedding')
       .neq('id', memoryId)
       .not('embedding', 'is', null)
       .limit(50)
+
+    if (memoriesError) {
+      logger.warn({ memory_id: memoryId, error: memoriesError }, 'Error querying memories for connections')
+    }
 
     if (memories) {
       for (const m of memories) {
@@ -280,12 +288,16 @@ async function findAndCreateConnections(
     }
 
     // Search articles (stored in reading_queue table)
-    const { data: articles } = await supabase
+    const { data: articles, error: articlesError } = await supabase
       .from('reading_queue')
       .select('id, title, excerpt, embedding')
       .eq('user_id', userId)
       .not('embedding', 'is', null)
       .limit(50)
+
+    if (articlesError) {
+      logger.warn({ memory_id: memoryId, error: articlesError }, 'Error querying articles for connections')
+    }
 
     if (articles) {
       for (const a of articles) {
@@ -357,6 +369,11 @@ async function findAndCreateConnections(
     }
 
   } catch (error) {
-    logger.warn({ memory_id: memoryId, error }, 'Failed to find connections (non-fatal)')
+    logger.warn({
+      memory_id: memoryId,
+      error_message: error instanceof Error ? error.message : String(error),
+      error_stack: error instanceof Error ? error.stack : undefined,
+      error_type: error instanceof Error ? error.constructor.name : typeof error
+    }, 'Failed to find connections (non-fatal)')
   }
 }
