@@ -39,9 +39,13 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
     set({ loading: true, error: null })
 
     try {
+      // Use the same hardcoded user_id as the API for consistency
+      const userId = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
+
       const { data, error } = await supabase
         .from('memories')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
