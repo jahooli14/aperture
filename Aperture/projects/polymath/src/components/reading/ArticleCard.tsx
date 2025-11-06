@@ -36,15 +36,15 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
-  // Motion values for swipe gesture - memoized to prevent recreation
-  const x = React.useMemo(() => useMotionValue(0), [])
-  const archiveIndicatorOpacity = React.useMemo(() => useTransform(x, [0, 100], [0, 1]), [x])
-  const deleteIndicatorOpacity = React.useMemo(() => useTransform(x, [-100, 0], [1, 0]), [x])
-  const backgroundColor = React.useMemo(() => useTransform(
+  // Motion values for swipe gesture - stable references, no memoization needed
+  const x = useMotionValue(0)
+  const archiveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
+  const backgroundColor = useTransform(
     x,
     [-150, 0, 150],
     ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
-  ), [x])
+  )
 
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {

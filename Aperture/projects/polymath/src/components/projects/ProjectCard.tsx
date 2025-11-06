@@ -36,14 +36,14 @@ export const ProjectCard = React.memo(function ProjectCard({
   const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
-  // Motion values for swipe gesture - memoized to prevent recreation
-  const x = React.useMemo(() => useMotionValue(0), [])
-  const noteIndicatorOpacity = React.useMemo(() => useTransform(x, [0, 100], [0, 1]), [x])
-  const backgroundColor = React.useMemo(() => useTransform(
+  // Motion values for swipe gesture - stable references, no memoization needed
+  const x = useMotionValue(0)
+  const noteIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
+  const backgroundColor = useTransform(
     x,
     [0, 150],
     ['rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
-  ), [x])
+  )
 
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {
