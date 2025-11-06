@@ -28,7 +28,6 @@ const ReaderPage = lazy(() => import('./pages/ReaderPage').then(m => ({ default:
 const SuggestionsPage = lazy(() => import('./pages/SuggestionsPage').then(m => ({ default: m.SuggestionsPage })))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then(m => ({ default: m.ProjectsPage })))
 const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'))
-const DailyQueuePage = lazy(() => import('./pages/DailyQueuePage').then(m => ({ default: m.DailyQueuePage })))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then(m => ({ default: m.OnboardingPage })))
 const TimelinePage = lazy(() => import('./pages/TimelinePage').then(m => ({ default: m.TimelinePage })))
 const KnowledgeTimelinePage = lazy(() => import('./pages/KnowledgeTimelinePage').then(m => ({ default: m.KnowledgeTimelinePage })))
@@ -178,7 +177,6 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/onboarding" element={<OnboardingPage />} />
-                  <Route path="/today" element={<DailyQueuePage />} />
                   <Route path="/memories" element={<MemoriesPage />} />
                   <Route path="/reading" element={<ReadingPage />} />
                   <Route path="/reading/:id" element={<ReaderPage />} />
