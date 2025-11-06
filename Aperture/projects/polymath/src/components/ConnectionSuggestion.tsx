@@ -107,7 +107,7 @@ export function ConnectionSuggestion({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -20, scale: 0.95 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="fixed bottom-24 right-4 z-50 w-96 max-w-[calc(100vw-2rem)]"
+        className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 z-50 md:w-96 max-w-[calc(100vw-2rem)]"
       >
         <div className="premium-card p-6 shadow-2xl" style={{
           border: '2px solid rgba(59, 130, 246, 0.3)',

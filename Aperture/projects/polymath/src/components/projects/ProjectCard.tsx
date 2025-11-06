@@ -426,6 +426,44 @@ export const ProjectCard = React.memo(function ProjectCard({
               <Star className="h-4 w-4" fill="var(--premium-amber)" style={{ color: 'var(--premium-amber)' }} />
             )}
 
+            {/* Quick Complete Next Task Button */}
+            {(() => {
+              const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+              const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
+              return nextTask && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      const updatedTasks = tasks.map(t =>
+                        t.id === nextTask.id ? { ...t, done: true } : t
+                      ) as any
+                      await updateProject(project.id, {
+                        metadata: { ...project.metadata, tasks: updatedTasks } as any
+                      })
+                      addToast({
+                        title: '✓ Task complete!',
+                        description: nextTask.text,
+                        variant: 'success',
+                      })
+                      haptic.success()
+                    } catch (error) {
+                      addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded text-xs font-medium border hover:bg-white/10 transition-all"
+                  style={{
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    color: 'var(--premium-emerald)',
+                    borderColor: 'rgba(16, 185, 129, 0.3)'
+                  }}
+                  title={`Complete: ${nextTask.text}`}
+                >
+                  ✓ Next
+                </button>
+              )
+            })()}
+
             <span className="text-xs font-bold ml-auto" style={{ color: 'var(--premium-blue)' }}>
               {typeof project.metadata?.progress === 'number' ? `${project.metadata.progress}%` : '0%'}
             </span>

@@ -14,14 +14,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from './lib/supabase.js'
-import { getUserId } from './lib/auth.js'
+import { getSupabaseClient } from '../lib/supabase.js'
+import { getUserId } from '../lib/auth.js'
 import { runSynthesis } from '../../lib/synthesis.js'
 import { strengthenNodes } from '../../lib/strengthen-nodes.js'
 import { processMemory } from '../../lib/process-memory.js'
-
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()

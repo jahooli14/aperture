@@ -495,14 +495,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log(`[reading] Article placeholder saved, ID: ${savedArticle.id}`)
 
-      // Return immediately with placeholder
-      res.status(201).json({
-        success: true,
-        article: savedArticle,
-        message: 'Article saved! Extracting content in background...'
-      })
-
-      // Process article content in background (don't await)
+      // Process article content in background (start promise chain before returning)
       fetchArticle(url)
         .then(async (article) => {
           // Update with extracted content
@@ -545,6 +538,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             })
             .eq('id', savedArticle.id)
         })
+
+      // Return immediately with placeholder (must return to prevent double response at line 874)
+      return res.status(201).json({
+        success: true,
+        article: savedArticle,
+        message: 'Article saved! Extracting content in background...'
+      })
 
     } catch (error) {
       return res.status(500).json({
