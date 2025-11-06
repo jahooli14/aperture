@@ -123,9 +123,13 @@
 
   /* === TRANSITIONS === */
 
+  /* Silky smooth easing curves - like dancing on water */
   --premium-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --premium-transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --premium-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --premium-transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --premium-ease-fluid: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --premium-ease-silk: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* === PREMIUM COMPONENTS === */
@@ -800,4 +804,189 @@
 
 .glass-filter-btn-active:active {
   transform: translateY(0);
+}
+
+/* === FLUID ANIMATIONS - CELLAR DOOR === */
+
+/* Floating/breathing animation - subtle, like suspended in liquid */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+}
+
+/* Gentle fade in - like mist clearing */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Silk-smooth scale in */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Ripple effect - like dropping a pebble in water */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Utility classes for fluid animations */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s var(--premium-ease-silk) forwards;
+}
+
+.animate-fade-in-down {
+  animation: fadeInDown 0.6s var(--premium-ease-silk) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s var(--premium-ease-silk) forwards;
+}
+
+/* Staggered children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.6s var(--premium-ease-silk) forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(9) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(10) { animation-delay: 540ms; }
+
+/* Hover lift effect - weightless, like floating on water */
+.hover-lift {
+  transition: transform 0.3s var(--premium-ease-silk), box-shadow 0.3s var(--premium-ease-silk);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* Interactive element pulse - subtle glow on hover */
+.interactive-glow {
+  position: relative;
+  transition: all 0.3s var(--premium-ease-silk);
+}
+
+.interactive-glow::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s var(--premium-ease-silk);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.interactive-glow:hover::after {
+  opacity: 1;
+}
+
+/* Smooth scale on interaction */
+.scale-on-hover {
+  transition: transform 0.25s var(--premium-ease-silk);
+}
+
+.scale-on-hover:hover {
+  transform: scale(1.05);
+}
+
+.scale-on-hover:active {
+  transform: scale(0.98);
+}
+
+/* Silky button transitions */
+button, a, [role="button"] {
+  transition: all 0.2s var(--premium-ease-fluid);
+}
+
+/* Smooth focus states */
+*:focus-visible {
+  outline: 2px solid var(--premium-blue);
+  outline-offset: 2px;
+  transition: outline-offset 0.2s var(--premium-ease-silk);
+}
+
+/* Skeleton loading - graceful placeholder */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--premium-radius-md);
 }

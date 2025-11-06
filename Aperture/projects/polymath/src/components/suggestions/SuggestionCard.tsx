@@ -83,7 +83,14 @@ export const SuggestionCard = memo(function SuggestionCard({
   return (
     <motion.div
       animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      whileHover={{ y: -6, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{
+        type: 'spring',
+        stiffness: 400,
+        damping: 28,
+        mass: 0.6
+      }}
       className="relative"
     >
       <Card

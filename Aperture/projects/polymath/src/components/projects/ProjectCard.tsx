@@ -376,9 +376,14 @@ export const ProjectCard = React.memo(function ProjectCard({
 
         <motion.div
           style={{ backgroundColor }}
-          whileHover={{ y: -4, scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ duration: 0.2 }}
+          whileHover={{ y: -6, scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 25,
+            mass: 0.5
+          }}
           className="rounded-xl"
         >
           <Card

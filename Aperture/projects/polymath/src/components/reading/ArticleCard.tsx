@@ -347,7 +347,18 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         </div>
       </motion.div>
 
-      <motion.div style={{ backgroundColor }} className="rounded-xl">
+      <motion.div
+        style={{ backgroundColor }}
+        className="rounded-xl"
+        whileHover={{ y: -4, scale: 1.01 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{
+          type: "spring",
+          stiffness: 400,
+          damping: 28,
+          mass: 0.6
+        }}
+      >
         <div
           onClick={onClick}
           className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50"

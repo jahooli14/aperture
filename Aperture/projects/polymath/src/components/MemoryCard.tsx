@@ -225,7 +225,16 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       />
 
       <div className="relative" {...longPressHandlers}>
-        <div>
+        <motion.div
+          whileHover={{ y: -4, scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 28,
+            mass: 0.6
+          }}
+        >
         <Card className="group h-full flex flex-col premium-card">
       {/* Glow effect - different colors for processing vs processed */}
       <div
@@ -582,7 +591,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         )}
       </CardContent>
     </Card>
-        </div>
+        </motion.div>
       </div>
     </>
   )
