@@ -465,8 +465,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               </div>
             )}
 
-            {/* Tags */}
-            {memory.tags && memory.tags.length > 0 && (
+            {/* Tags - Hidden (duplicative of topics, kept for backend processing) */}
+            {false && memory.tags && memory.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {memory.tags.map((tag) => (
                   <span

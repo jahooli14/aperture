@@ -7,8 +7,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Trash2, Brain, Rocket, BookOpen, Lightbulb, RefreshCw, X, Check } from 'lucide-react'
+import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Trash2, Brain, Rocket, BookOpen, Lightbulb, RefreshCw, X, Check, Plus } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
+import { CreateConnectionDialog } from './CreateConnectionDialog'
 
 interface ConnectionsListProps {
   itemType: ConnectionSourceType
@@ -71,6 +72,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
   const [error, setError] = useState<string | null>(null)
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
 
   useEffect(() => {
     fetchConnections()
@@ -239,16 +241,59 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
   if (hasNoContent && !loadingSuggestions) {
     return (
-      <div className="py-8 text-center">
-        <LinkIcon className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-        <p className="text-neutral-600 text-sm">No connections yet</p>
-        <p className="text-neutral-500 text-xs mt-1">Link this item to projects, thoughts, or articles</p>
-      </div>
+      <>
+        <div className="py-8 text-center">
+          <LinkIcon className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
+          <p className="text-neutral-600 text-sm mb-3">No connections yet</p>
+          <button
+            onClick={() => setShowCreateDialog(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all scale-on-hover"
+            style={{
+              background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
+              color: '#ffffff',
+              boxShadow: 'var(--premium-shadow-2)'
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Add Connection
+          </button>
+        </div>
+        <CreateConnectionDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          sourceType={itemType}
+          sourceId={itemId}
+          onConnectionCreated={() => {
+            fetchConnections()
+            onConnectionCreated?.()
+            setShowCreateDialog(false)
+          }}
+        />
+      </>
     )
   }
 
   return (
     <div className="space-y-6">
+      {/* Header with Add Connection Button */}
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold premium-text-secondary">
+          Connections
+        </h4>
+        <button
+          onClick={() => setShowCreateDialog(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all scale-on-hover"
+          style={{
+            background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
+            color: '#ffffff',
+            boxShadow: 'var(--premium-shadow-1)'
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add Link
+        </button>
+      </div>
+
       {/* Manual Connections Section */}
       {connections.length > 0 && (
         <div>
@@ -457,6 +502,19 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
           </div>
         </div>
       )}
+
+      {/* Create Connection Dialog */}
+      <CreateConnectionDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        sourceType={itemType}
+        sourceId={itemId}
+        onConnectionCreated={() => {
+          fetchConnections()
+          onConnectionCreated?.()
+          setShowCreateDialog(false)
+        }}
+      />
     </div>
   )
 }
