@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ConnectionSuggestion } from './ConnectionSuggestion'
-import type { ConnectionSuggestion as ConnectionSuggestionType } from '../types'
+import type { ConnectionSuggestion as ConnectionSuggestionType } from '../stores/useConnectionStore'
 
 interface ConnectionSuggestionDelayedProps {
   suggestions: ConnectionSuggestionType[]
