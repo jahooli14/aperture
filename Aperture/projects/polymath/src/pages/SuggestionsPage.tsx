@@ -290,10 +290,10 @@ export function SuggestionsPage() {
               Project Opportunities
             </h2>
             {creativeOpportunities.slice(0, 1).map(opp => (
-              <Card key={opp.id} className="premium-card border-2" style={{ borderColor: 'var(--premium-amber)' }}>
+              <Card key={opp.id} className="premium-card">
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="text-xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
+                    <h3 className="text-2xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
                       {opp.title}
                     </h3>
                     <button
@@ -306,18 +306,18 @@ export function SuggestionsPage() {
                     </button>
                   </div>
 
-                  <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                  <p className="mb-4 text-base" style={{ color: 'var(--premium-text-secondary)' }}>
                     {opp.description}
                   </p>
 
-                  <div className="mb-4 p-4 premium-glass-subtle rounded-lg">
+                  <div className="mb-4 p-4 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
                     <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Why this fits you:
                     </p>
                     <ul className="space-y-1">
                       {opp.why_you.map((reason, i) => (
                         <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                          <span style={{ color: 'var(--premium-amber)' }} className="mt-1 flex-shrink-0">✓</span>
+                          <span style={{ color: 'var(--premium-blue)' }} className="mt-1 flex-shrink-0">✓</span>
                           <span>{reason}</span>
                         </li>
                       ))}
@@ -325,8 +325,8 @@ export function SuggestionsPage() {
                   </div>
 
                   {opp.revenue_potential && (
-                    <div className="mb-4 p-3 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-emerald)' }}>
-                      <p className="text-sm font-medium" style={{ color: 'var(--premium-emerald)' }}>
+                    <div className="mb-4 p-3 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--premium-blue)' }}>
                         💰 Revenue potential: {opp.revenue_potential}
                       </p>
                     </div>
@@ -346,7 +346,7 @@ export function SuggestionsPage() {
                   </div>
 
                   <Button className="w-full" style={{
-                    background: 'linear-gradient(135deg, var(--premium-amber), var(--premium-blue))',
+                    background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
                     color: '#ffffff'
                   }}>
                     Create Project

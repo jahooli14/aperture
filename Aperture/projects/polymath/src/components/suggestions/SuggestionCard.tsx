@@ -104,11 +104,11 @@ export const SuggestionCard = memo(function SuggestionCard({
         {/* Type badges */}
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${
-              isCreative ? 'from-purple-500 to-pink-500' :
-              suggestion.is_wildcard ? 'from-blue-500 to-cyan-500' :
-              'from-emerald-500 to-teal-500'
-            }`}>
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
+              style={{
+                background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
+                color: '#ffffff'
+              }}>
               <Lightbulb className="h-4 w-4" />
               {suggestion.total_points}pts
             </span>
@@ -156,7 +156,7 @@ export const SuggestionCard = memo(function SuggestionCard({
                   key={cap.id}
                   className="px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
+                    background: 'rgba(59, 130, 246, 0.15)',
                     color: 'var(--premium-blue)',
                     border: '1px solid rgba(59, 130, 246, 0.3)'
                   }}
@@ -168,9 +168,9 @@ export const SuggestionCard = memo(function SuggestionCard({
                 <span
                   className="px-3 py-1.5 rounded-full text-xs font-semibold"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))',
-                    color: 'var(--premium-indigo)',
-                    border: '1px solid rgba(139, 92, 246, 0.3)'
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    color: 'var(--premium-blue)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
                   }}
                 >
                   +{suggestion.capabilities.length - 3} more
@@ -192,16 +192,16 @@ export const SuggestionCard = memo(function SuggestionCard({
         style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Rate 1-3 buttons */}
+        {/* Rate 1-3 buttons - simplified colors */}
         <Button
           onClick={() => handleRateClick(1)}
           variant="outline"
           size="sm"
           className="flex-1 h-11"
           style={{
-            background: 'rgba(107, 114, 128, 0.15)',
-            border: '1.5px solid rgba(156, 163, 175, 0.3)',
-            color: '#9ca3af'
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1.5px solid rgba(255, 255, 255, 0.1)',
+            color: 'var(--premium-text-secondary)'
           }}
           title="Not interested"
           disabled={loadingAction !== null}
@@ -214,9 +214,9 @@ export const SuggestionCard = memo(function SuggestionCard({
           size="sm"
           className="flex-1 h-11"
           style={{
-            background: 'rgba(251, 191, 36, 0.15)',
-            border: '1.5px solid rgba(251, 191, 36, 0.4)',
-            color: '#f59e0b'
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1.5px solid rgba(59, 130, 246, 0.3)',
+            color: 'var(--premium-blue)'
           }}
           title="Somewhat interesting"
           disabled={loadingAction !== null}
@@ -229,9 +229,9 @@ export const SuggestionCard = memo(function SuggestionCard({
           size="sm"
           className="flex-1 h-11"
           style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1.5px solid rgba(16, 185, 129, 0.4)',
-            color: '#10b981'
+            background: 'rgba(59, 130, 246, 0.2)',
+            border: '1.5px solid rgba(59, 130, 246, 0.4)',
+            color: 'var(--premium-blue)'
           }}
           title="Very interesting"
           disabled={loadingAction !== null}

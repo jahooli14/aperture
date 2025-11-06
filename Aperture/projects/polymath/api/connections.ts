@@ -254,7 +254,9 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
   allItems.forEach((item, index) => {
     const similarity = cosineSimilarity(embedding, itemEmbeddings[index])
 
-    if (similarity > 0.7) {
+    // Lowered threshold from 0.7 to 0.55 to find more connections
+    // (e.g., two "Peter and the Wolf" notes should connect at ~60-65% similarity)
+    if (similarity > 0.55) {
       candidates.push({
         type: item.type as 'project' | 'thought' | 'article',
         id: item.id,
