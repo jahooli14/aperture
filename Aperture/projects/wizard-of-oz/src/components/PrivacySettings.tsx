@@ -7,14 +7,15 @@ import { subscribeToPushNotifications, unsubscribeFromPushNotifications, getPush
 
 interface PrivacySettingsProps {
   onClose: () => void;
+  onJoinSuccess?: () => void;
 }
 
 const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 const PASSCODE_KEY = 'wizard-passcode';
 
-export function PrivacySettings({ onClose }: PrivacySettingsProps) {
-  const { photos } = usePhotoStore();
-  const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser } = useSettingsStore();
+export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps) {
+  const { photos, fetchPhotos } = usePhotoStore();
+  const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser, joinWithCode } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
   const [showPasscodeSetup, setShowPasscodeSetup] = useState(false);
@@ -34,6 +35,9 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
   const [generatingCode, setGeneratingCode] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [sharedUsers, setSharedUsers] = useState<Array<{ user_id: string; email: string | null }>>([]);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+  const [joinError, setJoinError] = useState('');
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -225,6 +229,27 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
         console.error('Error removing user:', error);
         alert('Failed to remove user. Please try again.');
       }
+    }
+  };
+
+  const handleJoinAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!joinCode.trim() || joinCode.length !== 6) return;
+
+    setJoining(true);
+    setJoinError('');
+
+    try {
+      await joinWithCode(joinCode.trim());
+      await fetchPhotos();
+      setJoinCode('');
+      if (onJoinSuccess) {
+        onJoinSuccess();
+      }
+      alert('Successfully joined the shared album!');
+    } catch (err) {
+      setJoinError(err instanceof Error ? err.message : 'Failed to join with code');
+      setJoining(false);
     }
   };
 
@@ -493,6 +518,52 @@ export function PrivacySettings({ onClose }: PrivacySettingsProps) {
               </div>
             </div>
           )}
+
+          {/* Join Shared Album */}
+          <div className="bg-teal-50 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Users className="w-5 h-5 text-teal-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">Join Shared Album</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Enter your partner's invite code to access their photos
+                </p>
+
+                <form onSubmit={handleJoinAlbum} className="space-y-3">
+                  <div>
+                    <label htmlFor="joinCodeSettings" className="block text-xs font-medium text-gray-700 mb-1">
+                      6-Digit Invite Code
+                    </label>
+                    <input
+                      id="joinCodeSettings"
+                      type="text"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      maxLength={6}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-center text-lg tracking-wider font-mono"
+                    />
+                  </div>
+
+                  {joinError && (
+                    <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+                      {joinError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={joining || joinCode.length !== 6}
+                    className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                  >
+                    {joining ? 'Joining...' : 'Join Album'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
 
           {/* Shared Access */}
           <div className="bg-indigo-50 rounded-xl p-4">

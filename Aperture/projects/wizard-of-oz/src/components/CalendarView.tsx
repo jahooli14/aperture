@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Upload } from 'lucide-react';
+import { Upload, Sparkles } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import { milestones } from '../data/milestones';
 
 interface CalendarViewProps {
   onUploadClick?: () => void;
@@ -10,8 +12,22 @@ interface CalendarViewProps {
 
 export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
   const { photos } = usePhotoStore();
+  const { achievements } = useMilestoneStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Get milestones by date
+  const milestonesByDate = useMemo(() => {
+    const map = new Map<string, typeof achievements>();
+    achievements.forEach(achievement => {
+      const date = achievement.achieved_date;
+      if (!map.has(date)) {
+        map.set(date, []);
+      }
+      map.get(date)!.push(achievement);
+    });
+    return map;
+  }, [achievements]);
 
   // Get photo map by date
   const photosByDate = useMemo(() => {
@@ -183,6 +199,7 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
             const isToday = day.dateString === today;
             const isSelected = day.dateString === selectedDate;
             const hasPhoto = day.hasPhoto;
+            const hasMilestone = milestonesByDate.has(day.dateString);
 
             return (
               <motion.button
@@ -203,6 +220,11 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
                 {day.date}
                 {hasPhoto && !isSelected && (
                   <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary-600 rounded-full" />
+                )}
+                {hasMilestone && (
+                  <div className="absolute top-0.5 right-0.5">
+                    <Sparkles className="w-3 h-3 text-yellow-500" fill="currentColor" />
+                  </div>
                 )}
               </motion.button>
             );
@@ -248,7 +270,7 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
                 </button>
               </div>
 
-              <div className="space-y-1 text-sm text-gray-600">
+              <div className="space-y-2 text-sm text-gray-600">
                 {selectedPhoto.eye_coordinates && (
                   <p className="flex items-center gap-1">
                     <span className="text-green-600">✓</span>
@@ -260,6 +282,24 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
                     <span className="text-blue-600">📷</span>
                     Original photo (no alignment)
                   </p>
+                )}
+                {milestonesByDate.has(selectedPhoto.upload_date) && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="flex items-center gap-1 font-medium text-yellow-800 mb-1">
+                      <Sparkles className="w-4 h-4" fill="currentColor" />
+                      Milestones Achieved
+                    </p>
+                    <ul className="text-xs text-yellow-700 space-y-0.5">
+                      {milestonesByDate.get(selectedPhoto.upload_date)!.map(achievement => {
+                        const milestone = milestones.find(m => m.id === achievement.milestone_id);
+                        return (
+                          <li key={achievement.id}>
+                            {milestone?.icon} {milestone?.title || achievement.milestone_id}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 )}
               </div>
             </div>

@@ -52,9 +52,24 @@ export function ReadingPage() {
   const addToDismissedLog = (guid: string) => {
     const dismissed = getDismissedItems()
     dismissed.add(guid)
+
+    // Auto-cleanup: Remove items dismissed more than 90 days ago
+    const now = Date.now()
+    const dismissalTimestamps = JSON.parse(localStorage.getItem('rss-dismissed-timestamps') || '{}')
+    dismissalTimestamps[guid] = now
+
+    // Filter out old dismissals (90 days)
+    const ninetyDaysAgo = now - (90 * 24 * 60 * 60 * 1000)
+    const validGuids = Array.from(dismissed).filter(g => {
+      const timestamp = dismissalTimestamps[g as string]
+      return timestamp && timestamp > ninetyDaysAgo
+    })
+
     // Keep only the last 1000 dismissed items to prevent localStorage bloat
-    const dismissedArray = Array.from(dismissed).slice(-1000)
-    localStorage.setItem('rss-dismissed-items', JSON.stringify(dismissedArray))
+    const trimmedGuids = validGuids.slice(-1000)
+
+    localStorage.setItem('rss-dismissed-items', JSON.stringify(trimmedGuids))
+    localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(dismissalTimestamps))
   }
 
   useEffect(() => {
@@ -154,7 +169,14 @@ export function ReadingPage() {
   // Handle saving RSS item to reading queue
   const handleSaveRSSItem = async (item: RSSItem) => {
     try {
+      addToast({
+        title: '📰 Fetching article...',
+        description: 'Extracting content with Jina AI',
+        variant: 'default',
+      })
+
       await saveArticle({ url: item.link })
+
       addToast({
         title: 'Article saved!',
         description: 'Added to your reading queue',

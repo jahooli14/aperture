@@ -121,7 +121,7 @@ export function AuthForm() {
                 className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-2 text-center">
-                💡 iOS will auto-fill the code from your email
+                💡 Your device may auto-fill the code from your email
               </p>
             </div>
 
@@ -215,7 +215,7 @@ export function AuthForm() {
 
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800">
-            📱 <strong>Works perfectly on iOS!</strong> We'll send you a 6-digit code that you can enter right here in the app.
+            📱 We'll send you a 6-digit code that you can enter right here in the app.
           </p>
         </div>
       </form>

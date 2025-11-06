@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, Check, Calendar, Camera, X } from 'lucide-react';
+import { Info, Check, Calendar, Camera, X, Sparkles } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
@@ -64,10 +64,13 @@ export function MilestonesView() {
       }
     } else {
       // Open achievement dialog
+      const today = new Date().toISOString().split('T')[0];
+      const todayPhoto = photos.find(photo => photo.upload_date === today);
+
       setSelectedMilestone(milestone);
-      setAchievementDate(new Date().toISOString().split('T')[0]); // Default to today
+      setAchievementDate(today);
       setAchievementNotes('');
-      setSelectedPhotoId(null);
+      setSelectedPhotoId(todayPhoto?.id || null);
     }
   };
 
@@ -427,47 +430,18 @@ export function MilestonesView() {
               <h3 className="font-semibold text-gray-900 mb-4">{selectedMilestone.title}</h3>
 
               <div className="space-y-4">
-                {/* Date picker */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Info about auto-linking */}
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
                     <Calendar className="w-4 h-4 inline mr-1" />
-                    When did this happen?
-                  </label>
-                  <input
-                    type="date"
-                    value={achievementDate}
-                    onChange={(e) => setAchievementDate(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-                  />
-                </div>
-
-                {/* Photo picker */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Camera className="w-4 h-4 inline mr-1" />
-                    Link to a photo (optional)
-                  </label>
-                  <select
-                    value={selectedPhotoId || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSelectedPhotoId(value === '' ? null : value);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
-                  >
-                    <option value="">No photo</option>
-                    {photos.map((photo) => (
-                      <option key={photo.id} value={photo.id}>
-                        {new Date(photo.upload_date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </option>
-                    ))}
-                  </select>
+                    This milestone will be marked as achieved today
+                    {selectedPhotoId && (
+                      <>
+                        {' '}and linked to today's photo
+                        <Camera className="w-4 h-4 inline ml-1" />
+                      </>
+                    )}
+                  </p>
                 </div>
 
                 {/* Notes */}
