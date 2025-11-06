@@ -381,7 +381,13 @@ Return ONLY JSON:
       }
     } catch (processingError) {
       // Log error but still return the memory - it will be picked up by cron later
-      console.error(`[handleCapture] AI processing failed, memory saved but not processed:`, processingError)
+      console.error(`[handleCapture] 🚨 AI PROCESSING FAILED for memory ${memory.id}`)
+      console.error(`[handleCapture] Error type: ${processingError instanceof Error ? processingError.constructor.name : typeof processingError}`)
+      console.error(`[handleCapture] Error message: ${processingError instanceof Error ? processingError.message : String(processingError)}`)
+      console.error(`[handleCapture] Full error:`, processingError)
+      if (processingError instanceof Error && processingError.stack) {
+        console.error(`[handleCapture] Stack trace:`, processingError.stack)
+      }
     }
 
     // Fallback: return the unprocessed memory if processing failed
