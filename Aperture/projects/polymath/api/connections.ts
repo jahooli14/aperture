@@ -905,7 +905,10 @@ async function handleListSparks(
       })
     )
 
-    return res.status(200).json({ connections })
+    // Filter out connections to deleted items
+    const validConnections = connections.filter(conn => !conn.related_item?._missing)
+
+    return res.status(200).json({ connections: validConnections })
   } catch (error: any) {
     return res.status(200).json({
       connections: [],
