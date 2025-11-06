@@ -47,7 +47,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
       const existingConnectionIds = connections?.map((c: any) => c.related_item_id) || []
 
       // Fetch AI suggestions
-      const suggestResponse = await fetch('/api/connections/auto-suggest', {
+      const suggestResponse = await fetch('/api/connections?action=auto-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,7 +107,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
       }
 
       // Update suggestion status
-      await fetch(`/api/connections/suggestions/${suggestion.id}`, {
+      await fetch(`/api/connections?action=update-suggestion&id=${suggestion.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'accepted' })
@@ -132,7 +132,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       // Update suggestion status
-      await fetch(`/api/connections/suggestions/${suggestionId}`, {
+      await fetch(`/api/connections?action=update-suggestion&id=${suggestionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'dismissed' })

@@ -722,7 +722,7 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: 
 
     // Enrich prompts with status
     const enrichedPrompts = prompts.map(prompt => {
-      const userStatus = statusMap.get(prompt.id)
+      const userStatus = statusMap.get(prompt.id) as any
       return {
         ...prompt,
         status: userStatus?.status || 'pending',

@@ -226,17 +226,20 @@ export function ReadingPage() {
     { key: 'archived', label: 'Archived', icon: Archive },
   ]
 
+  // Ensure articles is always an array to prevent "Cannot read properties of undefined" errors
+  const safeArticles = articles || []
+
   const filteredArticles = activeTab === 'queue'
-    ? articles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
+    ? safeArticles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
     : activeTab === 'updates'
       ? [] // RSS items are handled separately
-      : articles.filter((a) => a.status === activeTab)
+      : safeArticles.filter((a) => a.status === activeTab)
 
   // Count for tabs
   const getTabCount = (tab: FilterTab) => {
-    if (tab === 'queue') return articles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
+    if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'updates') return rssItems.length
-    return articles.filter(a => a.status === tab).length
+    return safeArticles.filter(a => a.status === tab).length
   }
 
   const handleRefresh = async () => {
@@ -327,9 +330,9 @@ export function ReadingPage() {
                   onClick={() => bulkSelection.isSelectionMode ? bulkSelection.exitSelectionMode() : bulkSelection.enterSelectionMode()}
                   className="rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all"
                   style={{
-                    borderColor: bulkSelection.isSelectionMode ? 'rgba(168, 85, 247, 0.3)' : 'rgba(255, 255, 255, 0.1)',
-                    color: bulkSelection.isSelectionMode ? 'var(--premium-purple)' : 'var(--premium-text-secondary)',
-                    backgroundColor: bulkSelection.isSelectionMode ? 'rgba(168, 85, 247, 0.1)' : 'transparent'
+                    borderColor: bulkSelection.isSelectionMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                    color: bulkSelection.isSelectionMode ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
+                    backgroundColor: bulkSelection.isSelectionMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                   }}
                 >
                   <CheckSquare className="h-4 w-4" />
@@ -409,7 +412,7 @@ export function ReadingPage() {
             ) : (!feeds || feeds.length === 0) ? (
               <div className="premium-card p-20 text-center">
                 <div className="flex flex-col items-center justify-center">
-                  <Rss className="h-16 w-16 mb-4" style={{ color: 'var(--premium-emerald)' }} />
+                  <Rss className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
                   <h3 className="text-xl font-semibold premium-text-platinum mb-2">No RSS feeds yet</h3>
                   <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
                     Subscribe to RSS feeds in Settings to see updates here
@@ -419,7 +422,7 @@ export function ReadingPage() {
             ) : rssItems.length === 0 ? (
               <div className="premium-card p-20 text-center">
                 <div className="flex flex-col items-center justify-center">
-                  <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-emerald)' }} />
+                  <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
                   <h3 className="text-xl font-semibold premium-text-platinum mb-2">No updates yet</h3>
                   <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
                     Click "Sync Feeds" to fetch latest articles from your RSS feeds
@@ -462,7 +465,7 @@ export function ReadingPage() {
         {/* Regular Articles - Queue/Unread/Archived */}
         {activeTab !== 'updates' && (
           <>
-            {loading && articles.length === 0 ? (
+            {loading && safeArticles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading articles...</p>
@@ -470,7 +473,7 @@ export function ReadingPage() {
             ) : filteredArticles.length === 0 ? (
           <div className="premium-card p-20 text-center">
             <div className="flex flex-col items-center justify-center">
-              <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-emerald)' }} />
+              <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
               <h3 className="text-xl font-semibold premium-text-platinum mb-2">
                 {activeTab === 'queue'
                   ? 'No articles yet'
@@ -524,8 +527,8 @@ export function ReadingPage() {
                       <div
                         className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
                         style={{
-                          backgroundColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.05)',
-                          borderColor: isSelected ? 'var(--premium-purple)' : 'rgba(255, 255, 255, 0.2)',
+                          backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+                          borderColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.2)',
                           pointerEvents: 'auto'
                         }}
                       >

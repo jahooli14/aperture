@@ -20,14 +20,14 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 
-// Schema colors for each section
+// Schema colors for each section - unified blue theme
 const SCHEMA_COLORS = {
   home: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  thoughts: { primary: '#6366f1', glow: 'rgba(99, 102, 241, 0.4)' },
+  thoughts: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  reading: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.4)' },
-  timeline: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)' },
-  constellation: { primary: '#8b5cf6', glow: 'rgba(139, 92, 246, 0.4)' }
+  reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  constellation: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' }
 } as const
 
 interface NavOption {
