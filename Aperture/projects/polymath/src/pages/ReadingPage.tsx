@@ -227,18 +227,25 @@ export function ReadingPage() {
   ]
 
   // Ensure articles is always an array to prevent "Cannot read properties of undefined" errors
-  const safeArticles = articles || []
+  const safeArticles = Array.isArray(articles) ? articles : []
 
-  const filteredArticles = activeTab === 'queue'
-    ? safeArticles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
-    : activeTab === 'updates'
-      ? [] // RSS items are handled separately
-      : safeArticles.filter((a) => a.status === activeTab)
+  const filteredArticles = React.useMemo(() => {
+    if (!Array.isArray(safeArticles)) return []
+
+    if (activeTab === 'queue') {
+      return safeArticles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
+    } else if (activeTab === 'updates') {
+      return [] // RSS items are handled separately
+    } else {
+      return safeArticles.filter((a) => a.status === activeTab)
+    }
+  }, [safeArticles, activeTab])
 
   // Count for tabs
   const getTabCount = (tab: FilterTab) => {
+    if (!Array.isArray(safeArticles)) return 0
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
-    if (tab === 'updates') return rssItems.length
+    if (tab === 'updates') return Array.isArray(rssItems) ? rssItems.length : 0
     return safeArticles.filter(a => a.status === tab).length
   }
 

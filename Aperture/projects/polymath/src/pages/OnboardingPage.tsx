@@ -118,7 +118,7 @@ export function OnboardingPage() {
   }
 
   const handleSkipOnboarding = () => {
-    navigate('/today')
+    navigate('/')
   }
 
   if (isAnalyzing) {
@@ -238,7 +238,7 @@ export function OnboardingPage() {
           {/* CTA */}
           <div className="text-center">
             <button
-              onClick={() => navigate('/today')}
+              onClick={() => navigate('/')}
               className="btn-primary px-8 py-4 text-lg inline-flex items-center gap-2"
             >
               Start Capturing Thoughts

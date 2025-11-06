@@ -51,15 +51,6 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
     glow: 'rgba(99, 102, 241, 0.4)'
   },
   {
-    id: 'today',
-    label: 'Daily Queue',
-    description: 'Your personalized daily tasks and priorities',
-    icon: ListChecks,
-    path: '/today',
-    color: '#3b82f6',
-    glow: 'rgba(59, 130, 246, 0.4)'
-  },
-  {
     id: 'rss',
     label: 'Auto-Import',
     description: 'RSS feeds & email newsletters auto-added to reading queue',

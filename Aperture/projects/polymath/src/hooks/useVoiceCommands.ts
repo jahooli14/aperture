@@ -54,12 +54,6 @@ const createCommands = (navigate: any): VoiceCommand[] => [
     examples: ['go to suggestions', 'show ideas', 'open suggestions']
   },
   {
-    pattern: /(?:go to|open|show|navigate to|take me to)\s+(?:the\s+)?(?:today|daily queue|focus)/i,
-    action: () => navigate('/today'),
-    description: 'Navigate to today',
-    examples: ['go to today', 'show daily queue', "show today's focus"]
-  },
-  {
     pattern: /(?:go to|open|show|navigate to|take me to)\s+(?:the\s+)?(?:timeline|history)/i,
     action: () => navigate('/timeline'),
     description: 'Navigate to timeline',

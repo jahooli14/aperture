@@ -13,8 +13,22 @@ export function PWAUpdateNotification() {
   const { isUpdateAvailable } = usePWA()
   const [dismissed, setDismissed] = useState(false)
 
-  // Check if this update was already dismissed
+  // Check if this update was already dismissed or if we just updated
   useEffect(() => {
+    // Check if we just clicked "Update Now" (prevents showing again after reload)
+    const justUpdated = sessionStorage.getItem('pwa-just-updated')
+    if (justUpdated) {
+      const updateTime = parseInt(justUpdated)
+      const fiveSeconds = 5 * 1000
+      if (Date.now() - updateTime < fiveSeconds) {
+        setDismissed(true)
+        return
+      } else {
+        // Clear old flag
+        sessionStorage.removeItem('pwa-just-updated')
+      }
+    }
+
     if (isUpdateAvailable) {
       const dismissedUpdate = localStorage.getItem('pwa-update-dismissed')
       if (dismissedUpdate) {
@@ -35,6 +49,10 @@ export function PWAUpdateNotification() {
     haptic.light()
     // Hide notification immediately to prevent it from reappearing
     setDismissed(true)
+
+    // Store a flag that we just updated so we don't show the notification again after reload
+    sessionStorage.setItem('pwa-just-updated', Date.now().toString())
+
     // Clear dismissal flag before reloading
     localStorage.removeItem('pwa-update-dismissed')
 
