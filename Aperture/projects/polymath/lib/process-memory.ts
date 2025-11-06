@@ -74,7 +74,9 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     // 6. Auto-suggest and create connections
     logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
-    await findAndCreateConnections(memoryId, memory.user_id, embedding, metadata.summary_title, metadata.insightful_body)
+    // Use hardcoded user_id (single-user app, memories table doesn't have user_id)
+    const userId = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
+    await findAndCreateConnections(memoryId, userId, embedding, metadata.summary_title, metadata.insightful_body)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
     logger.info({
@@ -257,11 +259,10 @@ async function findAndCreateConnections(
       }
     }
 
-    // Search other memories
+    // Search other memories (memories table has no user_id column - single user app)
     const { data: memories } = await supabase
       .from('memories')
       .select('id, title, body, embedding')
-      .eq('user_id', userId)
       .neq('id', memoryId)
       .not('embedding', 'is', null)
       .limit(50)
