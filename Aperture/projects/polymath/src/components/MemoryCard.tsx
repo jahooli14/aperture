@@ -455,9 +455,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 )}
                 {memory.emotional_tone && (
                   <div className="px-3 py-1 rounded-md text-xs font-medium border" style={{
-                    backgroundColor: 'rgba(236, 72, 153, 0.15)',
-                    color: '#ec4899',
-                    borderColor: 'rgba(236, 72, 153, 0.3)'
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--premium-blue)',
+                    borderColor: 'rgba(59, 130, 246, 0.3)'
                   }}>
                     {memory.emotional_tone}
                   </div>
