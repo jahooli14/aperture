@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Info, Check, Calendar, Camera, X, Sparkles } from 'lucide-react';
+import { Info, Check, Calendar, Camera, X } from 'lucide-react';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
