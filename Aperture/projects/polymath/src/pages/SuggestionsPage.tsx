@@ -198,7 +198,7 @@ export function SuggestionsPage() {
           <button
             onClick={handleSynthesize}
             disabled={synthesizing}
-            className="premium-btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="premium-btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed scale-on-hover"
             style={{ borderRadius: '9999px' }}
           >
             {synthesizing ? (
@@ -216,7 +216,7 @@ export function SuggestionsPage() {
         </div>
         {/* Centered header content below button */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4">
+          <div className="inline-flex items-center justify-center mb-4 animate-float">
             <Sparkles className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
           </div>
           <h1 className="premium-text-platinum mb-3" style={{
@@ -286,7 +286,7 @@ export function SuggestionsPage() {
         {creativeOpportunities.length > 0 && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
-              <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+              <Lightbulb className="h-6 w-6 animate-float" style={{ color: 'var(--premium-amber)' }} />
               Project Opportunities
             </h2>
             {creativeOpportunities.slice(0, 1).map(opp => (

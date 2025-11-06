@@ -361,7 +361,7 @@ export function MemoriesPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <Brain className="h-6 w-6 animate-float" style={{ color: 'var(--premium-blue)' }} />
             <h1 className="text-2xl font-bold premium-text-platinum">Thoughts</h1>
           </div>
           {view === 'all' && <CreateMemoryDialog />}

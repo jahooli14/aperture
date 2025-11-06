@@ -116,7 +116,7 @@ export function ProjectsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <Rocket className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
+            <Rocket className="h-8 w-8 animate-float" style={{ color: 'var(--premium-blue)' }} />
             <div>
               <h1 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
                 My Projects
