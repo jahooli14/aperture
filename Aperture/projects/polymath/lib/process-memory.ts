@@ -239,7 +239,8 @@ async function findAndCreateConnections(
       for (const p of projects) {
         if (p.embedding) {
           const similarity = cosineSimilarity(embedding, p.embedding)
-          if (similarity > 0.7) {
+          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
+          if (similarity > 0.55) {
             candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
           }
         }
@@ -259,7 +260,8 @@ async function findAndCreateConnections(
       for (const m of memories) {
         if (m.embedding) {
           const similarity = cosineSimilarity(embedding, m.embedding)
-          if (similarity > 0.7) {
+          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
+          if (similarity > 0.55) {
             candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
           }
         }
@@ -278,7 +280,8 @@ async function findAndCreateConnections(
       for (const a of articles) {
         if (a.embedding) {
           const similarity = cosineSimilarity(embedding, a.embedding)
-          if (similarity > 0.7) {
+          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
+          if (similarity > 0.55) {
             candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
           }
         }
@@ -290,12 +293,12 @@ async function findAndCreateConnections(
 
     logger.info({ memory_id: memoryId, candidates_found: candidates.length }, 'Found connection candidates')
 
-    // Auto-link >90%, suggest 70-90%
+    // Auto-link >85%, suggest 55-85%
     const autoLinked = []
     const suggestions = []
 
     for (const candidate of candidates.slice(0, 10)) {
-      if (candidate.similarity > 0.9) {
+      if (candidate.similarity > 0.85) {
         // Auto-create connection (with deduplication check)
         const { data: existing } = await supabase
           .from('connections')
@@ -317,7 +320,7 @@ async function findAndCreateConnections(
             })
           autoLinked.push(candidate)
         }
-      } else if (candidate.similarity > 0.7) {
+      } else if (candidate.similarity > 0.55) {
         suggestions.push(candidate)
       }
     }

@@ -115,8 +115,8 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
           itemType,
           itemId,
           content,
-          userId: 'current-user', // This will be handled by the API
           existingConnectionIds: existingIds
+          // Note: userId is handled server-side by getUserId()
         })
       })
 
@@ -142,13 +142,13 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourceType: itemType,
-          sourceId: itemId,
-          targetType: suggestion.type,
-          targetId: suggestion.id,
-          connectionType: 'relates_to',
-          createdBy: 'ai',
-          aiReasoning: suggestion.reasoning || `${Math.round(suggestion.similarity * 100)}% semantic similarity`
+          source_type: itemType,
+          source_id: itemId,
+          target_type: suggestion.type,
+          target_id: suggestion.id,
+          connection_type: 'relates_to',
+          created_by: 'ai',
+          ai_reasoning: suggestion.reasoning || `${Math.round(suggestion.similarity * 100)}% semantic similarity`
         })
       })
 
