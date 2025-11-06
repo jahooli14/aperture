@@ -212,7 +212,8 @@ export function FloatingNav() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{
               backgroundColor: 'rgba(10, 14, 26, 0.6)',
-              backdropFilter: 'blur(16px)'
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)'
             }}
             onClick={() => setIsVoiceOpen(false)}
           >
@@ -300,9 +301,7 @@ export function FloatingNav() {
           <div
             className="premium-glass-strong flex items-center justify-between gap-2 px-3 py-3"
             style={{
-              borderRadius: 'var(--premium-radius-2xl)',
-              backgroundColor: 'rgba(20, 27, 38, 0.7)',
-              backdropFilter: 'blur(32px) saturate(200%)',
+              borderRadius: 'var(--premium-radius-2xl)'
             }}
           >
             {NAV_OPTIONS.map((option) => {

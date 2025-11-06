@@ -93,14 +93,17 @@ const DialogOverlay = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        // Modern backdrop with smooth fade
+        // Modern backdrop with enhanced glassmorphism
         "fixed inset-0 z-50",
-        "bg-black/60 backdrop-blur-sm",
+        "backdrop-blur-md",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "duration-300 ease-out",
         className
       )}
+      style={{
+        backgroundColor: 'rgba(10, 14, 26, 0.6)'
+      }}
       onClick={() => onOpenChange(false)}
       {...props}
     />
@@ -142,8 +145,11 @@ const DialogContent = React.forwardRef<
           className
         )}
         style={{
-          backgroundColor: 'var(--premium-surface-card)',
-          borderColor: 'rgba(255, 255, 255, 0.1)'
+          background: 'rgba(20, 27, 38, 0.5)',
+          backdropFilter: 'blur(32px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 12px 48px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
         }}
         onClick={(e) => e.stopPropagation()}
         {...props}
@@ -164,9 +170,11 @@ const DialogContent = React.forwardRef<
             "z-10"
           )}
           style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            background: 'rgba(59, 130, 246, 0.15)',
+            backdropFilter: 'blur(12px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(180%)',
             borderColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'var(--premium-text-primary)'
+            color: 'var(--premium-blue)'
           }}
         >
           <X className="h-5 w-5" />
