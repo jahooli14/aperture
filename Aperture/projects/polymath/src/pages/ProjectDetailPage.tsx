@@ -70,7 +70,7 @@ export function ProjectDetailPage() {
 
     const fetchSuggestions = async () => {
       try {
-        const response = await fetch(`/api/connections/suggestions?sourceId=${id}&sourceType=project`)
+        const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=project`)
         if (response.ok) {
           const data = await response.json()
           setSuggestions(data.suggestions || [])

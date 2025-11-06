@@ -61,7 +61,7 @@ export function ReaderPage() {
     if (!id) return
 
     try {
-      const response = await fetch(`/api/connections/suggestions?sourceId=${id}&sourceType=article`)
+      const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=article`)
       if (response.ok) {
         const data = await response.json()
         setSuggestions(data.suggestions || [])
