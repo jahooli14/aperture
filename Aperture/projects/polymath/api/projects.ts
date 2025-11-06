@@ -1054,12 +1054,12 @@ async function generateProjectEmbeddingAndConnect(
 
     console.log(`[projects] Found ${candidates.length} potential connections`)
 
-    // Auto-link high confidence matches (>90%)
+    // Auto-link >85%, suggest 55-85% (consistent with memories and articles)
     const autoLinked = []
     const suggestions = []
 
     for (const candidate of candidates) {
-      if (candidate.similarity > 0.9) {
+      if (candidate.similarity > 0.85) {
         // Auto-create connection (with deduplication)
         const created = await createConnection(
           'project',
@@ -1073,7 +1073,7 @@ async function generateProjectEmbeddingAndConnect(
         if (created) {
           autoLinked.push(candidate)
         }
-      } else if (candidate.similarity > 0.7) {
+      } else if (candidate.similarity > 0.55) {
         // Store as suggestion
         suggestions.push(candidate)
       }
@@ -1129,7 +1129,8 @@ async function findRelatedItemsForProject(
     for (const p of projects) {
       if (p.embedding) {
         const similarity = cosineSimilarity(projectEmbedding, p.embedding)
-        if (similarity > 0.7) {
+        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+        if (similarity > 0.55) {
           candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
         }
       }
@@ -1148,7 +1149,8 @@ async function findRelatedItemsForProject(
     for (const t of thoughts) {
       if (t.embedding) {
         const similarity = cosineSimilarity(projectEmbedding, t.embedding)
-        if (similarity > 0.7) {
+        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+        if (similarity > 0.55) {
           candidates.push({ type: 'thought', id: t.id, title: t.title || t.body?.slice(0, 50) + '...', similarity })
         }
       }
@@ -1167,7 +1169,8 @@ async function findRelatedItemsForProject(
     for (const a of articles) {
       if (a.embedding) {
         const similarity = cosineSimilarity(projectEmbedding, a.embedding)
-        if (similarity > 0.7) {
+        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+        if (similarity > 0.55) {
           candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
         }
       }
