@@ -227,14 +227,14 @@ export function ReadingPage() {
   ]
 
   const filteredArticles = activeTab === 'queue'
-    ? articles.filter((a) => a.status !== 'archived' && !a.tags.includes('rss'))
+    ? articles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
     : activeTab === 'updates'
       ? [] // RSS items are handled separately
       : articles.filter((a) => a.status === activeTab)
 
   // Count for tabs
   const getTabCount = (tab: FilterTab) => {
-    if (tab === 'queue') return articles.filter(a => a.status !== 'archived' && !a.tags.includes('rss')).length
+    if (tab === 'queue') return articles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'updates') return rssItems.length
     return articles.filter(a => a.status === tab).length
   }
