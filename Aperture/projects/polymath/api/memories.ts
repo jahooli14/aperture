@@ -356,10 +356,14 @@ Return ONLY JSON:
 
     try {
       // Import processMemory function
+      console.log(`[handleCapture] 🔄 Attempting to import process-memory module...`)
       const { processMemory } = await import('../lib/process-memory.js')
+      console.log(`[handleCapture] ✅ Successfully imported process-memory module`)
 
       // Process the memory (extract entities, generate embeddings, etc.)
+      console.log(`[handleCapture] 🔄 Calling processMemory(${memory.id})...`)
       await processMemory(memory.id)
+      console.log(`[handleCapture] ✅ processMemory completed successfully`)
 
       console.log(`[handleCapture] ✅ AI processing complete for ${memory.id}`)
 

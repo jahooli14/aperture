@@ -33,14 +33,18 @@ export async function processMemory(memoryId: string): Promise<void> {
     logger.info({ memory_id: memoryId, title: memory.title }, 'Processing memory')
 
     // 2. Extract entities and metadata using Gemini (also generates summary title and insightful body)
+    logger.info({ memory_id: memoryId }, '🔄 Extracting metadata...')
     const metadata = await extractMetadata(memory.title, memory.body)
+    logger.info({ memory_id: memoryId, summary_title: metadata.summary_title }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content
-    const embedding = await generateEmbedding(
-      `${metadata.summary_title}\n\n${metadata.insightful_body}`
-    )
+    const embeddingText = `${metadata.summary_title}\n\n${metadata.insightful_body}`
+    logger.info({ memory_id: memoryId, text_length: embeddingText.length }, '🔄 Generating embedding...')
+    const embedding = await generateEmbedding(embeddingText)
+    logger.info({ memory_id: memoryId, embedding_length: embedding.length, embedding_sample: embedding.slice(0, 5) }, '✅ Embedding generated')
 
     // 4. Update the memory with extracted metadata and processed content
+    logger.info({ memory_id: memoryId }, '🔄 Updating memory in database...')
     const { error: updateError } = await supabase
       .from('memories')
       .update({
@@ -58,14 +62,20 @@ export async function processMemory(memoryId: string): Promise<void> {
       .eq('id', memoryId)
 
     if (updateError) {
+      logger.error({ memory_id: memoryId, error: updateError }, '🚨 Failed to update memory')
       throw new Error(`Failed to update memory: ${updateError.message}`)
     }
+    logger.info({ memory_id: memoryId }, '✅ Memory updated in database')
 
     // 5. Store individual entities in the entities table
+    logger.info({ memory_id: memoryId }, '🔄 Storing entities...')
     await storeEntities(memoryId, metadata.entities)
+    logger.info({ memory_id: memoryId }, '✅ Entities stored')
 
     // 6. Auto-suggest and create connections
+    logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
     await findAndCreateConnections(memoryId, memory.user_id, embedding, metadata.summary_title, metadata.insightful_body)
+    logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
     logger.info({
       memory_id: memoryId,
