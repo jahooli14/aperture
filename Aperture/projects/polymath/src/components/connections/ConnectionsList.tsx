@@ -247,12 +247,17 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
           <p className="text-neutral-600 text-sm mb-3">No connections yet</p>
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all scale-on-hover"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all"
             style={{
-              background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
-              color: '#ffffff',
-              boxShadow: 'var(--premium-shadow-2)'
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              color: 'var(--premium-blue)'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.25)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
           >
             <Plus className="h-4 w-4" />
             Add Connection
@@ -282,12 +287,17 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         </h4>
         <button
           onClick={() => setShowCreateDialog(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all scale-on-hover"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
           style={{
-            background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
-            color: '#ffffff',
-            boxShadow: 'var(--premium-shadow-1)'
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            color: 'var(--premium-blue)'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.25)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
         >
           <Plus className="h-3.5 w-3.5" />
           Add Link

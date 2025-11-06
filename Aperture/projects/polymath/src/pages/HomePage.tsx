@@ -619,50 +619,70 @@ export function HomePage() {
                   const voiceFab = document.querySelector('[data-voice-fab]') as HTMLButtonElement
                   if (voiceFab) voiceFab.click()
                 }}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
                 title="Voice Note"
               >
-                <Mic className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
+                <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
 
               {/* Written Thought */}
               <button
                 onClick={() => setCreateThoughtOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
                 title="Thought"
               >
-                <Brain className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
+                <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
 
               {/* Article */}
               <button
                 onClick={() => setSaveArticleOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
                 title="Article"
               >
-                <FileText className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+                <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
 
               {/* Project */}
               <button
                 onClick={() => setCreateProjectOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/10"
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
                 title="Project"
               >
                 <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
