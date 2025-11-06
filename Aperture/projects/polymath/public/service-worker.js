@@ -32,6 +32,15 @@ const CACHEABLE_API_PATTERNS = [
   '/api/analytics',
 ]
 
+// Message listener - handle skip waiting from client
+self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data)
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] SKIP_WAITING message received, activating new service worker')
+    self.skipWaiting()
+  }
+})
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('[SW] Install event')
@@ -56,8 +65,8 @@ self.addEventListener('install', (event) => {
       console.log('[SW] Static assets cached')
     })
   )
-  // Activate immediately
-  self.skipWaiting()
+  // Don't auto-skip waiting on install - let user click "Update Now"
+  // self.skipWaiting()
 })
 
 // Activate event - clean up old caches

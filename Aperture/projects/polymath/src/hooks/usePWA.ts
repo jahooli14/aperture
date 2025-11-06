@@ -103,20 +103,12 @@ export function usePWA(): PWAState {
         })
 
       // Listen for controller change (new SW activated)
+      // NOTE: We DON'T auto-reload here anymore - let the user click "Update Now" button
+      // This prevents unwanted reloads when returning to the app
       const handleControllerChange = () => {
         console.log('[PWA] New service worker activated')
-        // Only reload once per session to prevent infinite loops
-        if (!hasReloaded) {
-          console.log('[PWA] Reloading page for new service worker')
-          sessionStorage.setItem('sw-reloaded', 'true')
-          window.location.reload()
-        } else {
-          console.log('[PWA] Already reloaded this session, skipping')
-          // Clear the flag after a short delay
-          setTimeout(() => {
-            sessionStorage.removeItem('sw-reloaded')
-          }, 5000)
-        }
+        // Clear the reload flag so next update can work
+        sessionStorage.removeItem('sw-reloaded')
       }
 
       navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange)

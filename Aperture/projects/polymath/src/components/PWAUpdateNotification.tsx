@@ -35,8 +35,21 @@ export function PWAUpdateNotification() {
     haptic.light()
     // Clear dismissal flag before reloading
     localStorage.removeItem('pwa-update-dismissed')
-    // Refresh the page to activate the new service worker
-    window.location.reload()
+
+    // Skip the waiting service worker to activate immediately
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.ready.then((registration) => {
+        if (registration.waiting) {
+          // Tell the waiting service worker to skip waiting and become active
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' })
+        }
+      })
+    }
+
+    // Reload after a brief delay to let the skip_waiting message process
+    setTimeout(() => {
+      window.location.reload()
+    }, 100)
   }
 
   const handleDismiss = () => {
