@@ -12,10 +12,19 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
-import { Sparkles, Calendar, Brain, Lightbulb, Database, Network, Workflow } from 'lucide-react'
+import { Sparkles, Calendar, Brain, Lightbulb, Database, Network, Workflow, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
+
+type CreativeOpportunity = {
+  id: string
+  title: string
+  description: string
+  why_you: string[]
+  revenue_potential?: string
+  next_steps: string[]
+}
 
 export function SuggestionsPage() {
   const {
@@ -38,6 +47,8 @@ export function SuggestionsPage() {
   const [buildDialogOpen, setBuildDialogOpen] = useState(false)
   const [suggestionToBuild, setSuggestionToBuild] = useState<ProjectSuggestion | null>(null)
   const [progress, setProgress] = useState(0)
+  const [creativeOpportunities, setCreativeOpportunities] = useState<CreativeOpportunity[]>([])
+  const [opportunitiesLoading, setOpportunitiesLoading] = useState(false)
 
   const navigate = useNavigate()
   const { addToast } = useToast()
@@ -45,7 +56,30 @@ export function SuggestionsPage() {
 
   useEffect(() => {
     fetchSuggestions()
+    fetchCreativeOpportunities()
   }, [fetchSuggestions])
+
+  const fetchCreativeOpportunities = async () => {
+    setOpportunitiesLoading(true)
+    try {
+      const response = await fetch('/api/analytics?resource=opportunities')
+      if (response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json()
+          setCreativeOpportunities(data.opportunities || [])
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch creative opportunities:', err)
+    } finally {
+      setOpportunitiesLoading(false)
+    }
+  }
+
+  const dismissOpportunity = (oppId: string) => {
+    setCreativeOpportunities(prev => prev.filter(o => o.id !== oppId))
+  }
 
   const handleRate = async (id: string, rating: number) => {
     await rateSuggestion(id, rating)
@@ -140,13 +174,23 @@ export function SuggestionsPage() {
   }, [])
 
   return (
-    <motion.div
-      className="min-h-screen pt-12 pb-24"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
-    >
+    <>
+      {/* Depth background with subtle gradients */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 h-96 opacity-25" style={{
+          background: 'radial-gradient(ellipse at top, rgba(251, 191, 36, 0.2), transparent 70%)'
+        }} />
+        <div className="absolute bottom-0 right-1/3 w-[600px] h-[600px] opacity-20" style={{
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%)'
+        }} />
+      </div>
+      <motion.div
+        className="min-h-screen pt-12 pb-24 relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
       {/* Header with Action */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         {/* Button row - pushes content down */}
@@ -237,6 +281,81 @@ export function SuggestionsPage() {
               </Button>
             ))}
         </div>
+
+        {/* Creative Opportunities */}
+        {creativeOpportunities.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
+              <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+              Project Opportunities
+            </h2>
+            {creativeOpportunities.slice(0, 1).map(opp => (
+              <Card key={opp.id} className="premium-card border-2" style={{ borderColor: 'var(--premium-amber)' }}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <h3 className="text-xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
+                      {opp.title}
+                    </h3>
+                    <button
+                      onClick={() => dismissOpportunity(opp.id)}
+                      className="p-1 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
+                      style={{ color: 'var(--premium-text-tertiary)' }}
+                      title="Dismiss"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {opp.description}
+                  </p>
+
+                  <div className="mb-4 p-4 premium-glass-subtle rounded-lg">
+                    <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                      Why this fits you:
+                    </p>
+                    <ul className="space-y-1">
+                      {opp.why_you.map((reason, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                          <span style={{ color: 'var(--premium-amber)' }} className="mt-1 flex-shrink-0">✓</span>
+                          <span>{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {opp.revenue_potential && (
+                    <div className="mb-4 p-3 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-emerald)' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--premium-emerald)' }}>
+                        💰 Revenue potential: {opp.revenue_potential}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <p className="text-sm font-medium mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                      Next steps:
+                    </p>
+                    <ol className="space-y-1">
+                      {opp.next_steps.map((step, i) => (
+                        <li key={i} className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                          {i + 1}. {step}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <Button className="w-full" style={{
+                    background: 'linear-gradient(135deg, var(--premium-amber), var(--premium-blue))',
+                    color: '#ffffff'
+                  }}>
+                    Create Project
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Error Banner */}
         {error && (
@@ -361,5 +480,6 @@ export function SuggestionsPage() {
         onConfirm={handleBuildConfirm}
       />
     </motion.div>
+    </>
   )
 }

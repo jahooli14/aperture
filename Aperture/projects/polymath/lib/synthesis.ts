@@ -918,7 +918,8 @@ export async function runSynthesis(userId: string) {
 
 // CLI execution
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const userId = process.env.USER_ID || 'default-user'
+  // Single user app - use hardcoded UUID
+  const userId = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
 
   runSynthesis(userId)
     .then(() => {

@@ -36,14 +36,14 @@ export const ProjectCard = React.memo(function ProjectCard({
   const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
-  // Motion values for swipe gesture
-  const x = useMotionValue(0)
-  const noteIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
-  const backgroundColor = useTransform(
+  // Motion values for swipe gesture - memoized to prevent recreation
+  const x = React.useMemo(() => useMotionValue(0), [])
+  const noteIndicatorOpacity = React.useMemo(() => useTransform(x, [0, 100], [0, 1]), [x])
+  const backgroundColor = React.useMemo(() => useTransform(
     x,
     [0, 150],
     ['rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
-  )
+  ), [x])
 
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {
@@ -387,8 +387,6 @@ export const ProjectCard = React.memo(function ProjectCard({
           >
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }} />
-      {/* Accent gradient bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2" style={{ background: 'linear-gradient(90deg, #3b82f6, #60a5fa)' }} />
 
       {/* Compact View - Always shown now for cleaner UX */}
         <CardContent className="relative z-10 p-4">

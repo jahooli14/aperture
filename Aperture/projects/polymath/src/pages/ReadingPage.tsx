@@ -298,7 +298,16 @@ export function ReadingPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <div className="min-h-screen pb-24">
+      {/* Depth background with subtle gradients */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 left-0 right-0 h-96 opacity-30" style={{
+          background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.15), transparent 70%)'
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 h-96 opacity-20" style={{
+          background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
+        }} />
+      </div>
+      <div className="min-h-screen pb-24 relative z-10">
       {/* Header */}
       <div className="premium-glass-strong border-b shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">

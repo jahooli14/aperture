@@ -33,6 +33,8 @@ export function PWAUpdateNotification() {
 
   const handleUpdate = () => {
     haptic.light()
+    // Hide notification immediately to prevent it from reappearing
+    setDismissed(true)
     // Clear dismissal flag before reloading
     localStorage.removeItem('pwa-update-dismissed')
 
@@ -99,7 +101,7 @@ export function PWAUpdateNotification() {
                 Update Available
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                A new version of Polymath is ready. Refresh to get the latest features and improvements.
+                A new version of Clandestined is ready. Refresh to get the latest features and improvements.
               </p>
             </div>
           </div>

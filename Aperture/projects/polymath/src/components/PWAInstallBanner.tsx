@@ -85,7 +85,7 @@ export function PWAInstallBanner() {
 
             <div className="flex-1 min-w-0">
               <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
-                Install Polymath
+                Install Clandestined
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
                 Install on your device for a faster, app-like experience with offline support

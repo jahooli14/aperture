@@ -341,8 +341,17 @@ export function MemoriesPage() {
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+        {/* Depth background with subtle gradients */}
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] opacity-25" style={{
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.18), transparent 70%)'
+          }} />
+          <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] opacity-20" style={{
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%)'
+          }} />
+        </div>
         <motion.div
-          className="pt-12 pb-24"
+          className="pt-12 pb-24 relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -608,28 +617,27 @@ export function MemoriesPage() {
         {/* My Memories: Theme Clusters or Recent View */}
         {view === 'all' && !isLoading && memories.length > 0 && (
           <>
-            {/* Sub-navigation for Themes vs Recent */}
-            <div className="flex gap-2 justify-center mb-4">
+            {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
+            <div className="flex gap-1 mb-6">
               {[
-                { key: 'themes', label: 'By Theme' },
-                { key: 'recent', label: 'Recent' }
+                { key: 'recent', label: 'Recent' },
+                { key: 'themes', label: 'By Theme' }
               ].map(({ key, label }) => (
-                <Button
+                <button
                   key={key}
-                  variant={memoryView === key ? 'default' : 'outline'}
                   onClick={() => setMemoryView(key as typeof memoryView)}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  className={`px-4 py-1.5 text-sm font-medium transition-all rounded-lg ${
                     memoryView === key
-                      ? 'premium-card border-2 shadow-lg'
-                      : 'premium-card border shadow-sm hover:shadow-md'
+                      ? ''
+                      : 'opacity-50 hover:opacity-75'
                   }`}
                   style={{
-                    borderColor: memoryView === key ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
-                    color: memoryView === key ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
+                    backgroundColor: memoryView === key ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    color: memoryView === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                   }}
                 >
                   {label}
-                </Button>
+                </button>
               ))}
             </div>
 

@@ -96,8 +96,17 @@ export function ProjectsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+      {/* Depth background with subtle gradients */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] opacity-20" style={{
+          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%)'
+        }} />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] opacity-15" style={{
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%)'
+        }} />
+      </div>
       <motion.div
-        className="pt-12 pb-24"
+        className="pt-12 pb-24 relative z-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
