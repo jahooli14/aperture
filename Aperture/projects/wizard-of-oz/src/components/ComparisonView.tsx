@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeftRight, Calendar, Baby } from 'lucide-react';
+import { ArrowLeftRight, Calendar, Baby, ImageIcon } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { ComparisonSlider } from './ComparisonSlider';
@@ -15,6 +15,17 @@ export function ComparisonView() {
   const [selectedPhoto1, setSelectedPhoto1] = useState<Photo | null>(null);
   const [selectedPhoto2, setSelectedPhoto2] = useState<Photo | null>(null);
   const [sliderPosition, setSliderPosition] = useState(50);
+
+  // Set default selections: oldest photo on left, newest on right
+  useEffect(() => {
+    if (photos.length >= 2 && !selectedPhoto1 && !selectedPhoto2) {
+      const sortedByDate = [...photos].sort((a, b) =>
+        new Date(a.upload_date).getTime() - new Date(b.upload_date).getTime()
+      );
+      setSelectedPhoto1(sortedByDate[0]); // Oldest
+      setSelectedPhoto2(sortedByDate[sortedByDate.length - 1]); // Newest
+    }
+  }, [photos, selectedPhoto1, selectedPhoto2]);
 
   const handleSwapPhotos = () => {
     const temp = selectedPhoto1;
@@ -66,57 +77,99 @@ export function ComparisonView() {
       ) : (
         <div className="space-y-6">
           {/* Photo Selectors */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Photo 1 Selector */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Photo 1 (Left)
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border-2 border-blue-200">
+              <label className="flex items-center gap-2 text-sm font-semibold text-blue-900 mb-3">
+                <ImageIcon className="w-4 h-4" />
+                Photo 1 (Left Side)
               </label>
-              <select
-                value={selectedPhoto1?.id || ''}
-                onChange={(e) => {
-                  const photo = photos.find(p => p.id === e.target.value);
-                  setSelectedPhoto1(photo || null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a photo...</option>
-                {sortedPhotos.map(photo => (
-                  <option key={photo.id} value={photo.id}>
-                    {new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedPhoto1?.id || ''}
+                  onChange={(e) => {
+                    const photo = photos.find(p => p.id === e.target.value);
+                    setSelectedPhoto1(photo || null);
+                  }}
+                  className="w-full px-4 py-3 bg-white border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium shadow-sm appearance-none cursor-pointer transition-all hover:border-blue-400"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="">Select a photo...</option>
+                  {sortedPhotos.map((photo) => {
+                    const age = settings?.baby_birthdate
+                      ? ` • ${formatAge(calculateAge(settings.baby_birthdate, photo.upload_date))}`
+                      : '';
+                    return (
+                      <option key={photo.id} value={photo.id}>
+                        📅 {new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}{age}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {selectedPhoto1 && (
+                <div className="mt-2 text-xs text-blue-700 font-medium">
+                  ✓ Selected: {new Date(selectedPhoto1.upload_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              )}
             </div>
 
             {/* Photo 2 Selector */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Photo 2 (Right)
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
+              <label className="flex items-center gap-2 text-sm font-semibold text-purple-900 mb-3">
+                <ImageIcon className="w-4 h-4" />
+                Photo 2 (Right Side)
               </label>
-              <select
-                value={selectedPhoto2?.id || ''}
-                onChange={(e) => {
-                  const photo = photos.find(p => p.id === e.target.value);
-                  setSelectedPhoto2(photo || null);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a photo...</option>
-                {sortedPhotos.map(photo => (
-                  <option key={photo.id} value={photo.id}>
-                    {new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedPhoto2?.id || ''}
+                  onChange={(e) => {
+                    const photo = photos.find(p => p.id === e.target.value);
+                    setSelectedPhoto2(photo || null);
+                  }}
+                  className="w-full px-4 py-3 bg-white border-2 border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 font-medium shadow-sm appearance-none cursor-pointer transition-all hover:border-purple-400"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem'
+                  }}
+                >
+                  <option value="">Select a photo...</option>
+                  {sortedPhotos.map((photo) => {
+                    const age = settings?.baby_birthdate
+                      ? ` • ${formatAge(calculateAge(settings.baby_birthdate, photo.upload_date))}`
+                      : '';
+                    return (
+                      <option key={photo.id} value={photo.id}>
+                        📅 {new Date(photo.upload_date + 'T00:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}{age}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+              {selectedPhoto2 && (
+                <div className="mt-2 text-xs text-purple-700 font-medium">
+                  ✓ Selected: {new Date(selectedPhoto2.upload_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
+              )}
             </div>
           </div>
 
