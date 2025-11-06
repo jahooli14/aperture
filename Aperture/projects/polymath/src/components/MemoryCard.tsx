@@ -88,17 +88,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     event: {
       label: 'Event',
       style: {
-        backgroundColor: 'rgba(16, 185, 129, 0.15)',
-        color: 'var(--premium-emerald)',
-        borderColor: 'rgba(16, 185, 129, 0.3)'
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        color: 'var(--premium-blue)',
+        borderColor: 'rgba(59, 130, 246, 0.3)'
       }
     },
     insight: {
       label: 'Insight',
       style: {
-        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-        color: 'var(--premium-amber)',
-        borderColor: 'rgba(245, 158, 11, 0.3)'
+        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+        color: 'var(--premium-blue)',
+        borderColor: 'rgba(59, 130, 246, 0.3)'
       }
     },
   }
@@ -513,15 +513,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 )}
                 {memory.entities.topics && memory.entities.topics.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 items-center">
-                    <Brain className="h-3 w-3" style={{ color: 'var(--premium-indigo)' }} />
+                    <Brain className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
                     <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
                     {memory.entities.topics.slice(0, 3).map((topic) => (
                       <span
                         key={topic}
                         className="px-2 py-0.5 rounded-full text-xs font-medium"
                         style={{
-                          backgroundColor: 'rgba(139, 92, 246, 0.2)',
-                          color: 'var(--premium-indigo)'
+                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                          color: 'var(--premium-blue)'
                         }}
                       >
                         {topic}

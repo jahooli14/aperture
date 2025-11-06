@@ -36,21 +36,21 @@ const SCHEMA_COLORS = {
     icon: Rocket
   },
   thought: {
-    primary: '#6366f1',
-    light: 'rgba(99, 102, 241, 0.3)',
-    bg: 'rgba(99, 102, 241, 0.15)',
+    primary: '#3b82f6',
+    light: 'rgba(59, 130, 246, 0.3)',
+    bg: 'rgba(59, 130, 246, 0.15)',
     icon: Brain
   },
   article: {
-    primary: '#10b981',
-    light: 'rgba(16, 185, 129, 0.3)',
-    bg: 'rgba(16, 185, 129, 0.15)',
+    primary: '#3b82f6',
+    light: 'rgba(59, 130, 246, 0.3)',
+    bg: 'rgba(59, 130, 246, 0.15)',
     icon: BookOpen
   },
   suggestion: {
-    primary: '#f59e0b',
-    light: 'rgba(245, 158, 11, 0.3)',
-    bg: 'rgba(245, 158, 11, 0.15)',
+    primary: '#3b82f6',
+    light: 'rgba(59, 130, 246, 0.3)',
+    bg: 'rgba(59, 130, 246, 0.15)',
     icon: Lightbulb
   }
 }
