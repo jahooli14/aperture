@@ -781,6 +781,7 @@ export function ProjectDetailPage() {
         onOpenChange={setShowCreateConnection}
         sourceType="project"
         sourceId={project.id}
+        sourceContent={`${project.title}\n\n${project.description || ''}`}
         onConnectionCreated={loadProjectDetails}
       />
 

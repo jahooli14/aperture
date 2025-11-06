@@ -268,6 +268,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
           onOpenChange={setShowCreateDialog}
           sourceType={itemType}
           sourceId={itemId}
+          sourceContent={content}
           onConnectionCreated={() => {
             fetchConnections()
             onConnectionCreated?.()
