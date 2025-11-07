@@ -13,6 +13,8 @@ import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useProjectStore } from '../stores/useProjectStore'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
+import { useToast } from '../components/ui/toast'
+import { haptic } from '../utils/haptics'
 import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
@@ -32,7 +34,8 @@ import {
   Zap,
   Brain,
   X,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import type { Memory, Project } from '../types'
@@ -86,11 +89,13 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      <div className="premium-card p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
-          <h2 className="text-xl font-bold premium-text-platinum">Get Inspiration</h2>
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+      <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+        background: 'rgba(25, 35, 55, 0.6)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div className="mb-5">
+          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Get Inspiration</h2>
         </div>
 
         {loading ? (
@@ -110,7 +115,18 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             {inspiration.url ? (
               <Link
                 to={inspiration.url}
-                className="group block premium-glass-subtle p-3 rounded-xl transition-all duration-300 hover:bg-white/10"
+                className="group block p-3 rounded-xl transition-all duration-300"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                }}
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -134,7 +150,11 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
                 </div>
               </Link>
             ) : (
-              <div className="premium-glass-subtle p-3 rounded-xl">
+              <div className="p-3 rounded-xl" style={{
+                background: 'rgba(30, 41, 59, 0.6)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+              }}>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     {React.createElement(getIconAndColor(inspiration.type).icon, {
@@ -188,6 +208,7 @@ export function HomePage() {
   let projects: any[] = []
   let projectsLoading = false
   let fetchProjects = () => {}
+  let updateProject = async (_id: string, _data: Partial<Project>) => {}
   let memories: any[] = []
   let fetchMemories = () => {}
   let progress: any = null
@@ -203,6 +224,7 @@ export function HomePage() {
     projects = projectStore.projects || []
     projectsLoading = projectStore.loading
     fetchProjects = projectStore.fetchProjects
+    updateProject = projectStore.updateProject
 
     const memoryStore = useMemoryStore()
     memories = memoryStore.memories || []
@@ -215,6 +237,8 @@ export function HomePage() {
   } catch (err) {
     console.error('[HomePage] Store initialization error:', err)
   }
+
+  const { addToast } = useToast()
 
   const [cardOfTheDay, setCardOfTheDay] = useState<Memory | null>(null)
   const [showOnboardingBanner, setShowOnboardingBanner] = useState(false)
@@ -497,58 +521,38 @@ export function HomePage() {
         )}
       </AnimatePresence>
 
-      <div className="min-h-screen py-6 pb-24">
-        {/* Header with Search */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-          <div className="flex items-center justify-between gap-4 mb-3">
-            <h1 className="premium-text-platinum flex-1 text-center text-4xl sm:text-5xl" style={{
-              fontWeight: 700,
-              letterSpacing: 'var(--premium-tracking-tight)'
-            }}>
-              <BrandName className="inline" />
-            </h1>
-            <button
-              onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
-              style={{
-                borderColor: 'rgba(59, 130, 246, 0.2)',
-                color: 'var(--premium-blue)'
-              }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Compact Quick Stats */}
-          {(projects.length > 0 || memories.length > 0) && (
-            <div className="flex items-center justify-center gap-3 text-xs">
-              {projects.length > 0 && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm" style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)'
-                }}>
-                  <Rocket className="h-3.5 w-3.5" style={{ color: 'var(--premium-blue)' }} />
-                  <span style={{ color: 'var(--premium-blue)' }}>
-                    {projects.filter(p => p.status === 'active').length} active
-                  </span>
-                </div>
-              )}
-              {memories.length > 0 && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md backdrop-blur-sm" style={{
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid rgba(99, 102, 241, 0.2)'
-                }}>
-                  <Brain className="h-3.5 w-3.5" style={{ color: 'var(--premium-indigo)' }} />
-                  <span style={{ color: 'var(--premium-indigo)' }}>
-                    {memories.length} {memories.length === 1 ? 'thought' : 'thoughts'}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
+      {/* Fixed Header Bar - Brand & Search */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b"
+        style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)',
+          borderColor: 'rgba(255, 255, 255, 0.05)'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <h1 className="text-2xl sm:text-3xl" style={{
+            fontWeight: 600,
+            letterSpacing: 'var(--premium-tracking-tight)',
+            color: 'var(--premium-text-secondary)',
+            opacity: 0.7
+          }}>
+            <BrandName className="inline" />
+          </h1>
+          <button
+            onClick={() => navigate('/search')}
+            className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+            style={{
+              borderColor: 'rgba(59, 130, 246, 0.2)',
+              color: 'var(--premium-blue)'
+            }}
+            title="Search everything"
+          >
+            <Search className="h-5 w-5" />
+          </button>
         </div>
+      </div>
 
+      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
         {/* Onboarding Banner - Slides in after delay */}
         <AnimatePresence>
           {showOnboardingBanner && progress && (
@@ -557,22 +561,21 @@ export function HomePage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -80, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6"
+              className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8"
             >
-              <div className="premium-card border-2 p-4 relative" style={{
-                borderColor: 'rgba(251, 191, 36, 0.5)',
-                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(59, 130, 246, 0.1))'
+              <div className="premium-card p-6 relative" style={{
+                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(59, 130, 246, 0.1))',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
               }}>
                 <button
                   onClick={() => setShowOnboardingBanner(false)}
-                  className="absolute top-2 right-2 h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+                  className="absolute top-3 right-3 h-8 w-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                 >
                   <X className="h-4 w-4" />
                 </button>
 
-                <div className="flex items-start gap-3 pr-8">
-                  <AlertCircle className="h-6 w-6 flex-shrink-0 mt-0.5" style={{ color: 'var(--premium-amber)' }} />
+                <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
                     <h3 className="font-bold mb-1 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Complete Your Profile
@@ -588,14 +591,14 @@ export function HomePage() {
                     </p>
                     <Link
                       to="/onboarding"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:bg-white/10"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:opacity-90"
                       style={{
-                        backgroundColor: 'rgba(251, 191, 36, 0.2)',
+                        backgroundColor: 'rgba(120, 80, 20, 0.8)',
                         color: 'var(--premium-amber)',
-                        border: '1px solid rgba(251, 191, 36, 0.3)'
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                       }}
                     >
-                      Complete Now <ArrowRight className="h-4 w-4" />
+                      Complete Now
                     </Link>
                   </div>
                 </div>
@@ -606,10 +609,12 @@ export function HomePage() {
 
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="premium-card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Plus className="h-7 w-7" style={{ color: 'var(--premium-indigo)' }} />
-              <h2 className="text-2xl font-bold premium-text-platinum">Add Something New</h2>
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'rgba(25, 35, 55, 0.6)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Add Something New</h2>
             </div>
 
             <div className="flex items-center gap-3">
@@ -621,14 +626,13 @@ export function HomePage() {
                 }}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: 'rgba(30, 42, 88, 0.8)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(38, 50, 96, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 42, 88, 0.8)'}
                 title="Voice Note"
               >
                 <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -639,14 +643,13 @@ export function HomePage() {
                 onClick={() => setCreateThoughtOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: 'rgba(30, 42, 88, 0.8)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(38, 50, 96, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 42, 88, 0.8)'}
                 title="Thought"
               >
                 <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -657,14 +660,13 @@ export function HomePage() {
                 onClick={() => setSaveArticleOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: 'rgba(30, 42, 88, 0.8)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(38, 50, 96, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 42, 88, 0.8)'}
                 title="Article"
               >
                 <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -675,14 +677,13 @@ export function HomePage() {
                 onClick={() => setCreateProjectOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  backgroundColor: 'rgba(30, 42, 88, 0.8)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(38, 50, 96, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 42, 88, 0.8)'}
                 title="Project"
               >
                 <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -692,11 +693,13 @@ export function HomePage() {
         </section>
 
         {/* 2. KEEP THE MOMENTUM (Compact) */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="premium-card p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              <h2 className="text-xl font-bold premium-text-platinum">Keep the Momentum</h2>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'rgba(25, 35, 55, 0.6)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="mb-5">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Keep the Momentum</h2>
             </div>
 
             {projectsLoading ? (
@@ -717,7 +720,7 @@ export function HomePage() {
               <div className="space-y-3">
                 {projectsToShow.map((project) => {
                   // Get first incomplete task from the tasks array
-                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; created_at: string; order: number }>
                   const nextTask = tasks
                     .sort((a, b) => a.order - b.order)
                     .find(task => !task.done)
@@ -732,7 +735,20 @@ export function HomePage() {
                     <Link
                       key={project.id}
                       to={`/projects/${project.id}`}
-                      className="group block premium-glass-subtle p-3 rounded-xl transition-all duration-300 hover:bg-white/10"
+                      className="group block p-4 rounded-xl transition-all duration-300"
+                      style={{
+                        background: 'rgba(30, 41, 59, 0.6)',
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+                      }}
                     >
                       {/* Project Title & Priority Badge */}
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -753,14 +769,52 @@ export function HomePage() {
                         )}
                       </div>
 
-                      {/* Next Step - Compact with Progress on Right */}
-                      <div className="rounded-lg p-2 border flex items-center justify-between gap-2" style={{
-                        backgroundColor: nextStep ? 'rgba(251, 191, 36, 0.1)' : 'rgba(107, 114, 128, 0.1)',
-                        borderColor: nextStep ? 'rgba(251, 191, 36, 0.3)' : 'rgba(107, 114, 128, 0.2)'
-                      }}>
-                        <div className="premium-text-platinum font-medium text-sm flex-1">
-                          {nextStep || 'No tasks yet - click to add one'}
-                        </div>
+                      {/* Next Step - Interactive with Checkbox */}
+                      <div
+                        className="rounded-lg p-2.5 flex items-center justify-between gap-2"
+                        style={{
+                          backgroundColor: 'rgba(30, 42, 88, 0.9)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {nextTask ? (
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <button
+                              onClick={async (e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                const updatedTasks = tasks.map(t =>
+                                  t.id === nextTask.id ? { ...t, done: true } : t
+                                )
+                                try {
+                                  await updateProject(project.id, {
+                                    metadata: { ...project.metadata, tasks: updatedTasks }
+                                  })
+                                  addToast({ title: '✓ Task complete!', description: nextTask.text, variant: 'success' })
+                                  haptic.success()
+                                } catch (error) {
+                                  console.error('Failed to complete task:', error)
+                                  addToast({ title: 'Failed to complete task', variant: 'destructive' })
+                                }
+                              }}
+                              className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-emerald-500/20 hover:border-emerald-500"
+                              style={{
+                                borderColor: 'rgba(16, 185, 129, 0.5)',
+                                color: 'rgba(16, 185, 129, 0.8)'
+                              }}
+                              title="Mark as complete"
+                            >
+                              <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
+                            </button>
+                            <div className="premium-text-platinum font-medium text-sm flex-1">
+                              {nextStep}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="premium-text-platinum font-medium text-sm flex-1">
+                            No tasks yet - click to add one
+                          </div>
+                        )}
                         {totalTasks > 0 && (
                           <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
                             {completedTasks}/{totalTasks}
@@ -815,18 +869,31 @@ export function HomePage() {
         />
 
         {/* 4. EXPLORE */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="premium-card p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <TrendingUp className="h-7 w-7" style={{ color: 'var(--premium-emerald)' }} />
-              <h2 className="text-2xl font-bold premium-text-platinum">Explore</h2>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'rgba(25, 35, 55, 0.6)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Explore</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {/* Timeline */}
               <Link
                 to="/knowledge-timeline"
-                className="group premium-glass-subtle p-5 rounded-xl transition-all hover:bg-white/10"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
@@ -845,7 +912,18 @@ export function HomePage() {
               {/* Constellation */}
               <Link
                 to="/constellation"
-                className="group premium-glass-subtle p-5 rounded-xl transition-all hover:bg-white/10"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'rgba(30, 41, 59, 0.6)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
@@ -868,11 +946,10 @@ export function HomePage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="premium-glass-subtle p-6 rounded-2xl border-2 relative overflow-hidden"
+                className="premium-glass-subtle p-6 rounded-2xl relative overflow-hidden"
                 style={{
-                  borderColor: 'rgba(139, 92, 246, 0.4)',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15))',
-                  boxShadow: '0 8px 32px rgba(139, 92, 246, 0.2)'
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
+                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.4)'
                 }}
               >
                 {/* Ambient glow effect */}
