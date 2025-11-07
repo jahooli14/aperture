@@ -41,6 +41,7 @@ function App() {
   const [passcode, setPasscode] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   const loadingRef = useRef(loading);
+  const unlockedThisSession = useRef(false); // Track if user unlocked passcode this session
   const { toast, showToast, hideToast } = useToast();
 
   // Keep ref in sync with loading state
@@ -48,13 +49,16 @@ function App() {
     loadingRef.current = loading;
   }, [loading]);
 
-  // Check for passcode on mount
+  // Check for passcode on mount - but only lock if not already unlocked this session
   useEffect(() => {
     if (user) {
       const savedPasscode = localStorage.getItem(PASSCODE_KEY);
       if (savedPasscode) {
         setPasscode(savedPasscode);
-        setIsLocked(true);
+        // Only lock if user hasn't unlocked in this session
+        if (!unlockedThisSession.current) {
+          setIsLocked(true);
+        }
       }
     }
   }, [user]);
@@ -194,7 +198,10 @@ function App() {
     return (
       <PasscodeLock
         expectedPasscode={passcode}
-        onUnlock={() => setIsLocked(false)}
+        onUnlock={() => {
+          setIsLocked(false);
+          unlockedThisSession.current = true; // Mark as unlocked for this session
+        }}
       />
     );
   }
