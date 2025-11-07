@@ -488,6 +488,63 @@ export const ProjectCard = React.memo(function ProjectCard({
               {typeof project.metadata?.progress === 'number' ? `${project.metadata.progress}%` : '0%'}
             </span>
           </div>
+
+          {/* Next Step - Prominent Display */}
+          {(() => {
+            const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+            const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
+            return nextTask && (
+              <div
+                className="mt-3 p-3 rounded-lg border-2"
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: 'rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      try {
+                        const updatedTasks = tasks.map(t =>
+                          t.id === nextTask.id ? { ...t, done: true } : t
+                        ) as any
+                        await updateProject(project.id, {
+                          metadata: { ...project.metadata, tasks: updatedTasks } as any
+                        })
+                        addToast({
+                          title: '✓ Task complete!',
+                          description: nextTask.text,
+                          variant: 'success',
+                        })
+                        haptic.success()
+                      } catch (error) {
+                        addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
+                      }
+                    }}
+                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-emerald-500/20"
+                    style={{
+                      borderColor: 'var(--premium-emerald)',
+                      color: 'var(--premium-emerald)'
+                    }}
+                    title="Complete this task"
+                  >
+                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-emerald)' }}>
+                      Next Step
+                    </div>
+                    <p className="text-sm leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
+                      {nextTask.text}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
         </CardContent>
       {/* Removed expanded view - navigate to detail page instead */}
       {false && (
@@ -547,10 +604,10 @@ export const ProjectCard = React.memo(function ProjectCard({
             .find(t => !t.done)
           return nextTask && (
             <div
-              className="border-2 rounded-xl p-4"
+              className="rounded-xl p-4"
               style={{
                 backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                borderColor: 'rgba(59, 130, 246, 0.3)'
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
               }}
             >
               <div

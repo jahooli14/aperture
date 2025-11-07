@@ -13,7 +13,7 @@ import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton'
-import { Rocket, Sparkles } from 'lucide-react'
+import { Rocket, Sparkles, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { Project } from '../types'
@@ -113,47 +113,23 @@ export function ProjectsPage() {
           background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%)'
         }} />
       </div>
-      <motion.div
-        className="pt-12 pb-24 relative z-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-      >
-      {/* Compact Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <Rocket className="h-8 w-8 animate-float" style={{ color: 'var(--premium-blue)' }} />
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
-                My Projects
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/suggestions"
-              className="border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
-              style={{
-                backgroundColor: 'rgba(251, 191, 36, 0.2)',
-                borderColor: 'rgba(251, 191, 36, 0.5)',
-                color: 'var(--premium-amber)'
-              }}
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>Discover</span>
-            </Link>
-            <CreateProjectDialog />
-          </div>
-        </div>
-      </div>
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)',
+        borderColor: 'rgba(255, 255, 255, 0.05)'
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl" style={{
+            fontWeight: 600,
+            letterSpacing: 'var(--premium-tracking-tight)',
+            color: 'var(--premium-text-secondary)',
+            opacity: 0.7
+          }}>
+            Projects
+          </h1>
 
-      {/* Controls */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Filters and View Mode in one compact row */}
-        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-          <div className="flex flex-wrap gap-2">
+          {/* Filter Tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
             {[
               { key: 'all', label: 'All' },
               { key: 'upcoming', label: 'Upcoming' },
@@ -161,27 +137,47 @@ export function ProjectsPage() {
               { key: 'dormant', label: 'Dormant' },
               { key: 'completed', label: 'Completed' }
             ].map(({ key, label }) => (
-              <Button
+              <button
                 key={key}
-                variant={filter === key ? 'default' : 'outline'}
                 onClick={() => setFilter(key as typeof filter)}
-                size="sm"
-                className={`whitespace-nowrap px-3 py-1.5 rounded-full font-medium transition-all text-sm ${
-                  filter === key
-                    ? 'premium-card border-2 shadow-xl'
-                    : 'premium-card border-2 shadow-md hover:shadow-lg'
-                }`}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  borderColor: filter === key ? 'var(--premium-blue)' : 'rgba(var(--premium-blue-rgb), 0.2)',
-                  color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
+                  backgroundColor: filter === key ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                  color: filter === key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backdropFilter: 'blur(12px)'
                 }}
               >
                 {label}
-              </Button>
+              </button>
             ))}
           </div>
-        </div>
 
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <CreateProjectDialog />
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(30, 42, 88, 0.2)',
+                color: 'rgba(100, 180, 255, 1)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <motion.div
+        className="pt-20 pb-24 relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.2 }}
+      >
+      {/* Controls */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tag Filters */}
         {allTags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">

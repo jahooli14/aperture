@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -24,11 +25,12 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
-import { Brain, Zap, ArrowLeft, CloudOff } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 export function MemoriesPage() {
+  const navigate = useNavigate()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
   const setMemories = useMemoryStore((state: any) => state.setMemories)
   const { progress } = useOnboardingStore()
@@ -350,86 +352,89 @@ export function MemoriesPage() {
             background: 'radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%)'
           }} />
         </div>
+        {/* Header */}
+        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)',
+          borderColor: 'rgba(255, 255, 255, 0.05)'
+        }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <h1 className="text-2xl sm:text-3xl" style={{
+              fontWeight: 600,
+              letterSpacing: 'var(--premium-tracking-tight)',
+              color: 'var(--premium-text-secondary)',
+              opacity: 0.7
+            }}>
+              Thoughts
+            </h1>
+
+            {/* View Toggle */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
+              <button
+                onClick={() => setView('foundational')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                style={{
+                  backgroundColor: view === 'foundational' ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                  color: view === 'foundational' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backdropFilter: 'blur(12px)'
+                }}
+              >
+                Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
+              </button>
+              <button
+                onClick={() => setView('all')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                style={{
+                  backgroundColor: view === 'all' ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                  color: view === 'all' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backdropFilter: 'blur(12px)'
+                }}
+              >
+                All ({memories.length})
+              </button>
+              <button
+                onClick={() => setView('resurfacing')}
+                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                style={{
+                  backgroundColor: view === 'resurfacing' ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                  color: view === 'resurfacing' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backdropFilter: 'blur(12px)'
+                }}
+              >
+                {resurfacing.length > 0 && view !== 'resurfacing' && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full animate-ping" style={{ backgroundColor: 'var(--premium-amber)' }} />
+                )}
+                {resurfacing.length > 0 && view !== 'resurfacing' && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--premium-amber)' }} />
+                )}
+                ⏰ Resurface ({resurfacing.length})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {view === 'all' && <CreateMemoryDialog />}
+              <button
+                onClick={() => navigate('/search')}
+                className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+                style={{
+                  borderColor: 'rgba(30, 42, 88, 0.2)',
+                  color: 'rgba(100, 180, 255, 1)'
+                }}
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         <motion.div
-          className="pt-12 pb-24 relative z-10"
+          className="pt-20 pb-24 relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.2 }}
         >
-          {/* Compact Header */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 animate-float" style={{ color: 'var(--premium-blue)' }} />
-            <h1 className="text-2xl font-bold premium-text-platinum">Thoughts</h1>
-          </div>
-          {view === 'all' && <CreateMemoryDialog />}
-        </div>
-        {showingCachedData && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs">
-            <CloudOff className="h-3 w-3" />
-            <span className="font-medium">Offline mode</span>
-          </div>
-        )}
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* View Toggle */}
-        <div className="flex flex-wrap gap-2 justify-center mb-4">
-          <Button
-            variant={view === 'foundational' ? 'default' : 'outline'}
-            onClick={() => setView('foundational')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              view === 'foundational'
-                ? 'premium-card border-2 shadow-lg'
-                : 'premium-card border shadow-sm hover:shadow-md'
-            }`}
-            style={{
-              borderColor: view === 'foundational' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
-              color: view === 'foundational' ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
-            }}
-          >
-            Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
-          </Button>
-          <Button
-            variant={view === 'all' ? 'default' : 'outline'}
-            onClick={() => setView('all')}
-            className={`whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              view === 'all'
-                ? 'premium-card border-2 shadow-lg'
-                : 'premium-card border shadow-sm hover:shadow-md'
-            }`}
-            style={{
-              borderColor: view === 'all' ? 'var(--premium-indigo)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
-              color: view === 'all' ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
-            }}
-          >
-            All ({memories.length})
-          </Button>
-          <Button
-            variant={view === 'resurfacing' ? 'default' : 'outline'}
-            onClick={() => setView('resurfacing')}
-            className={`relative whitespace-nowrap px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-              view === 'resurfacing'
-                ? 'premium-card border-2 shadow-lg'
-                : 'premium-card border shadow-sm hover:shadow-md'
-            } ${resurfacing.length > 0 && view !== 'resurfacing' ? 'animate-pulse' : ''}`}
-            style={{
-              borderColor: view === 'resurfacing' || resurfacing.length > 0 ? 'var(--premium-amber)' : 'rgba(var(--premium-indigo-rgb), 0.2)',
-              color: view === 'resurfacing' || resurfacing.length > 0 ? 'var(--premium-amber)' : 'var(--premium-text-secondary)'
-            }}
-          >
-            {resurfacing.length > 0 && view !== 'resurfacing' && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full animate-ping" style={{ backgroundColor: 'var(--premium-amber)' }} />
-            )}
-            {resurfacing.length > 0 && view !== 'resurfacing' && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--premium-amber)' }} />
-            )}
-            ⏰ Resurface ({resurfacing.length})
-          </Button>
-        </div>
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (

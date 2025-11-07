@@ -365,20 +365,21 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       >
         <div
           onClick={onClick}
-          className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50 relative overflow-hidden"
+          className="group premium-card rounded-xl p-4 sm:p-5 transition-all cursor-pointer relative overflow-hidden"
           style={{
-            borderColor: 'rgba(16, 185, 129, 0.2)',
-            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)'
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(30, 42, 88, 0.8)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(30, 42, 88, 0.6)'
+            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}
         >
-      {/* Ambient glow effect */}
-      <div
-        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
-        style={{
-          background: 'radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.3), transparent 60%)',
-          pointerEvents: 'none'
-        }}
-      />
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
         {/* Thumbnail (if available) */}

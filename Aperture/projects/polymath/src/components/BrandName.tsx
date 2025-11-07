@@ -19,9 +19,7 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
   return (
     <span className={`${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.02em' }}>
       Clan<span style={{
-        color: 'var(--premium-amber)',
-        fontWeight: 600,
-        fontSize: '1.15em',
+        color: 'rgba(100, 180, 255, 1)',
         letterSpacing: '0.01em'
       }}>destined</span>
     </span>

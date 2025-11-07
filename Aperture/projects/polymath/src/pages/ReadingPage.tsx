@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
-import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check } from 'lucide-react'
+import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -319,67 +319,24 @@ export function ReadingPage() {
           background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
         }} />
       </div>
-      <div className="min-h-screen pb-24 relative z-10">
+      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
-      <div className="premium-glass-strong border-b shadow-lg sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold premium-text-platinum" style={{ letterSpacing: 'var(--premium-tracking-tight)' }}>
-                Reading Queue
-              </h1>
-              <p className="text-sm sm:text-base mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                {filteredArticles.length} {filteredArticles.length === 1 ? 'article' : 'articles'}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {activeTab !== 'updates' && filteredArticles.length > 0 && (
-                <button
-                  onClick={() => bulkSelection.isSelectionMode ? bulkSelection.exitSelectionMode() : bulkSelection.enterSelectionMode()}
-                  className="rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all"
-                  style={{
-                    borderColor: bulkSelection.isSelectionMode ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.1)',
-                    color: bulkSelection.isSelectionMode ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
-                    backgroundColor: bulkSelection.isSelectionMode ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
-                  }}
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  <span className="hidden sm:inline">{bulkSelection.isSelectionMode ? 'Cancel' : 'Select'}</span>
-                </button>
-              )}
-              {activeTab === 'updates' && (
-                <button
-                  onClick={handleRSSSync}
-                  disabled={syncing}
-                  className="rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all"
-                  style={{
-                    borderColor: 'rgba(59, 130, 246, 0.3)',
-                    color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
-                    backgroundColor: syncing ? 'rgba(255, 255, 255, 0.03)' : 'transparent'
-                  }}
-                >
-                  <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Feeds'}</span>
-                </button>
-              )}
-              <button
-                onClick={() => setShowSaveDialog(true)}
-                className="premium-glass rounded-full px-4 py-2 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
-                style={{
-                  borderColor: 'rgba(59, 130, 246, 0.3)',
-                  color: 'var(--premium-blue)'
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Save Article</span>
-                <span className="sm:hidden">Save</span>
-              </button>
-            </div>
-          </div>
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)',
+        borderColor: 'rgba(255, 255, 255, 0.05)'
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <h1 className="text-2xl sm:text-3xl" style={{
+            fontWeight: 600,
+            letterSpacing: 'var(--premium-tracking-tight)',
+            color: 'var(--premium-text-secondary)',
+            opacity: 0.7
+          }}>
+            Reading Queue
+          </h1>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
             {tabs.map((tab) => {
               const Icon = tab.icon
               const count = getTabCount(tab.key)
@@ -388,14 +345,11 @@ export function ReadingPage() {
                 <button
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all whitespace-nowrap ${
-                    activeTab === tab.key
-                      ? 'premium-glass border shadow-xl'
-                      : 'premium-glass-subtle border shadow-md hover:shadow-lg'
-                  }`}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                   style={{
-                    borderColor: activeTab === tab.key ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.06)',
-                    color: activeTab === tab.key ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)'
+                    backgroundColor: activeTab === tab.key ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                    color: activeTab === tab.key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                    backdropFilter: 'blur(12px)'
                   }}
                 >
                   <Icon className="h-4 w-4" />
@@ -405,6 +359,18 @@ export function ReadingPage() {
               )
             })}
           </div>
+
+          <button
+            onClick={() => navigate('/search')}
+            className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5 flex-shrink-0"
+            style={{
+              borderColor: 'rgba(30, 42, 88, 0.2)',
+              color: 'rgba(100, 180, 255, 1)'
+            }}
+            title="Search everything"
+          >
+            <Search className="h-5 w-5" />
+          </button>
         </div>
       </div>
 

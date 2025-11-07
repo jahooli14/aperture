@@ -1,4 +1,3 @@
-import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 
@@ -88,9 +87,7 @@ console.log('[Main] Global error handlers installed')
 try {
   console.log('[Main] Starting React render...')
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
+    <App />
   )
   console.log('[Main] React render initiated successfully')
 } catch (error) {

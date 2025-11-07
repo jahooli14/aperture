@@ -117,28 +117,22 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
                 to={inspiration.url}
                 className="group block p-3 rounded-xl transition-all duration-300"
                 style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
+                  background: 'rgba(30, 42, 88, 0.6)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.8)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.6)'
                 }}
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {React.createElement(getIconAndColor(inspiration.type).icon, {
-                        className: "h-5 w-5 flex-shrink-0",
-                        style: { color: getIconAndColor(inspiration.type).color }
-                      })}
-                      <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        {inspiration.reasoning}
-                      </p>
-                    </div>
+                    <p className="text-xs flex-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {inspiration.reasoning}
+                    </p>
                     <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: getIconAndColor(inspiration.type).color }} />
                   </div>
                   <h3 className="premium-text-platinum font-bold text-base line-clamp-2">
@@ -151,20 +145,14 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
               </Link>
             ) : (
               <div className="p-3 rounded-xl" style={{
-                background: 'rgba(30, 41, 59, 0.6)',
+                background: 'rgba(30, 42, 88, 0.6)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
               }}>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {React.createElement(getIconAndColor(inspiration.type).icon, {
-                      className: "h-5 w-5 flex-shrink-0",
-                      style: { color: getIconAndColor(inspiration.type).color }
-                    })}
-                    <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      {inspiration.reasoning}
-                    </p>
-                  </div>
+                  <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    {inspiration.reasoning}
+                  </p>
                   <h3 className="premium-text-platinum font-bold text-base">
                     {inspiration.title}
                   </h3>
@@ -179,7 +167,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
               <Link
                 to="/suggestions"
                 className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                style={{ color: 'var(--premium-amber)' }}
+                style={{ color: 'var(--premium-blue)' }}
               >
                 View Project Suggestions ({pendingSuggestionsCount}) <ArrowRight className="inline h-4 w-4 ml-1" />
               </Link>
@@ -564,7 +552,7 @@ export function HomePage() {
               className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8"
             >
               <div className="premium-card p-6 relative" style={{
-                background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(59, 130, 246, 0.1))',
+                background: 'rgba(15, 85, 135, 0.15)',
                 boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
               }}>
                 <button
@@ -580,8 +568,8 @@ export function HomePage() {
                     <h3 className="font-bold mb-1 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Complete Your Profile
                       <span className="text-sm px-2 py-0.5 rounded-full" style={{
-                        backgroundColor: 'rgba(251, 191, 36, 0.2)',
-                        color: 'var(--premium-amber)'
+                        backgroundColor: 'rgba(15, 85, 135, 0.3)',
+                        color: 'rgba(15, 85, 135, 0.9)'
                       }}>
                         {progress.completed_required}/{progress.total_required}
                       </span>
@@ -593,8 +581,8 @@ export function HomePage() {
                       to="/onboarding"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:opacity-90"
                       style={{
-                        backgroundColor: 'rgba(120, 80, 20, 0.8)',
-                        color: 'var(--premium-amber)',
+                        backgroundColor: 'rgba(15, 85, 135, 0.6)',
+                        color: 'rgba(200, 240, 255, 0.95)',
                         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                       }}
                     >
@@ -737,16 +725,16 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block p-4 rounded-xl transition-all duration-300"
                       style={{
-                        background: 'rgba(30, 41, 59, 0.6)',
+                        background: 'rgba(30, 42, 88, 0.6)',
                         backdropFilter: 'blur(12px)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                        e.currentTarget.style.background = 'rgba(30, 42, 88, 0.8)'
                         e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                        e.currentTarget.style.background = 'rgba(30, 42, 88, 0.6)'
                         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                     >
@@ -759,10 +747,10 @@ export function HomePage() {
                         {project.is_priority && (
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             <div className="h-2 w-2 rounded-full" style={{
-                              backgroundColor: 'var(--premium-amber)',
-                              boxShadow: '0 0 8px rgba(251, 191, 36, 0.5)'
+                              backgroundColor: 'var(--premium-blue)',
+                              boxShadow: '0 0 8px rgba(59, 130, 246, 0.5)'
                             }} />
-                            <span className="text-xs font-medium" style={{ color: 'var(--premium-amber)' }}>
+                            <span className="text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
                               Priority
                             </span>
                           </div>
@@ -773,7 +761,7 @@ export function HomePage() {
                       <div
                         className="rounded-lg p-2.5 flex items-center justify-between gap-2"
                         style={{
-                          backgroundColor: 'rgba(30, 42, 88, 0.9)'
+                          backgroundColor: 'rgba(15, 85, 135, 0.3)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -797,10 +785,10 @@ export function HomePage() {
                                   addToast({ title: 'Failed to complete task', variant: 'destructive' })
                                 }
                               }}
-                              className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-emerald-500/20 hover:border-emerald-500"
+                              className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-blue-500/20 hover:border-blue-500"
                               style={{
-                                borderColor: 'rgba(16, 185, 129, 0.5)',
-                                color: 'rgba(16, 185, 129, 0.8)'
+                                borderColor: 'rgba(59, 130, 246, 0.6)',
+                                color: 'rgba(59, 130, 246, 0.9)'
                               }}
                               title="Mark as complete"
                             >
@@ -884,15 +872,15 @@ export function HomePage() {
                 to="/knowledge-timeline"
                 className="group p-5 rounded-xl transition-all"
                 style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
+                  background: 'rgba(30, 42, 88, 0.6)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.8)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.6)'
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -914,20 +902,20 @@ export function HomePage() {
                 to="/constellation"
                 className="group p-5 rounded-xl transition-all"
                 style={{
-                  background: 'rgba(30, 41, 59, 0.6)',
+                  background: 'rgba(30, 42, 88, 0.6)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.8)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.8)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(30, 41, 59, 0.6)'
+                  e.currentTarget.style.background = 'rgba(30, 42, 88, 0.6)'
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <Network className="h-6 w-6 mt-1" style={{ color: 'var(--premium-indigo)' }} />
+                    <Network className="h-6 w-6 mt-1" style={{ color: 'var(--premium-blue)' }} />
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Constellation</h3>
                       <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
@@ -949,12 +937,12 @@ export function HomePage() {
                 className="premium-glass-subtle p-6 rounded-2xl relative overflow-hidden"
                 style={{
                   background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
-                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.4)'
+                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
                 }}
               >
                 {/* Ambient glow effect */}
                 <div
-                  className="absolute inset-0 opacity-30"
+                  className="absolute inset-0 opacity-15"
                   style={{
                     background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
                     pointerEvents: 'none'

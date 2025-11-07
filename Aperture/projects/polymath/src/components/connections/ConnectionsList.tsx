@@ -283,7 +283,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     <div className="space-y-6">
       {/* Header with Add Connection Button */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold premium-text-secondary">
+        <h4 className="text-sm font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
           Connections
         </h4>
         <button
@@ -308,7 +308,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       {/* Manual Connections Section */}
       {connections.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold premium-text-secondary mb-3">
+          <h4 className="text-sm font-semibold mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
             Linked ({connections.length})
           </h4>
           <div className="space-y-3">
@@ -326,8 +326,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                 >
                   <Link
                     to={getItemUrl(connection.related_type, connection.related_id)}
-                    className="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-white/80 border-2 shadow-lg hover-lift p-4 block transition-all duration-300 hover:shadow-xl"
-                    style={{ borderColor: schema.light }}
+                    className="group relative overflow-hidden rounded-xl backdrop-blur-xl shadow-lg hover-lift p-4 block transition-all duration-300 hover:shadow-xl premium-glass-subtle"
                   >
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
@@ -344,15 +343,15 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                            <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--premium-text-tertiary)' }}>
                               {connection.related_type}
                             </span>
                             {isOutbound ? (
-                              <ArrowRight className="h-3 w-3 text-neutral-400" />
+                              <ArrowRight className="h-3 w-3" style={{ color: 'var(--premium-text-tertiary)' }} />
                             ) : (
-                              <ArrowLeft className="h-3 w-3 text-neutral-400" />
+                              <ArrowLeft className="h-3 w-3" style={{ color: 'var(--premium-text-tertiary)' }} />
                             )}
-                            <span className="text-xs text-neutral-500">
+                            <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                               {CONNECTION_TYPE_LABELS[connection.connection_type]}
                             </span>
                             {connection.created_by === 'ai' && (
@@ -360,17 +359,17 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                             )}
                           </div>
 
-                          <h4 className="font-medium text-neutral-900 mb-1 line-clamp-2">
+                          <h4 className="font-medium mb-1 line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                             {getItemTitle(connection)}
                           </h4>
 
                           {connection.ai_reasoning && (
-                            <p className="text-xs text-neutral-600 italic line-clamp-2">
+                            <p className="text-xs italic line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
                               "{connection.ai_reasoning}"
                             </p>
                           )}
 
-                          <div className="text-xs text-neutral-500 mt-2">
+                          <div className="text-xs mt-2" style={{ color: 'var(--premium-text-tertiary)' }}>
                             {new Date(connection.created_at).toLocaleDateString()}
                           </div>
                         </div>
@@ -382,7 +381,20 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                             e.stopPropagation()
                             handleDeleteConnection(connection.connection_id)
                           }}
-                          className="flex-shrink-0 p-2 rounded-lg hover:bg-red-50 text-neutral-400 hover:text-red-600 transition-colors"
+                          className="flex-shrink-0 p-2 rounded-lg transition-colors"
+                          style={{
+                            color: 'var(--premium-text-tertiary)',
+                            '--hover-bg': 'rgba(239, 68, 68, 0.1)',
+                            '--hover-color': '#ef4444'
+                          } as React.CSSProperties}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'
+                            e.currentTarget.style.color = '#ef4444'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent'
+                            e.currentTarget.style.color = 'var(--premium-text-tertiary)'
+                          }}
                           title="Remove connection"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -406,7 +418,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       {(visibleSuggestions.length > 0 || loadingSuggestions) && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold premium-text-secondary flex items-center gap-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
               <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
               AI Discovered
               {visibleSuggestions.length > 0 && (
@@ -443,8 +455,11 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="group relative overflow-hidden rounded-xl backdrop-blur-xl bg-gradient-to-r from-amber-50/50 to-yellow-50/50 border-2 shadow-md hover:shadow-lg p-4 transition-all duration-300"
-                  style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}
+                  className="group relative overflow-hidden rounded-xl backdrop-blur-xl shadow-md hover:shadow-lg p-4 transition-all duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(251, 191, 36, 0.08))',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+                  }}
                 >
                   <div className="absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold" style={{
                     background: `linear-gradient(135deg, ${schema.primary}22, ${schema.primary}44)`,
@@ -460,17 +475,17 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
                     <div className="flex-1 min-w-0 pr-12">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
+                        <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--premium-text-tertiary)' }}>
                           {suggestion.type}
                         </span>
                       </div>
 
-                      <h4 className="font-semibold text-neutral-900 mb-2 line-clamp-2">
+                      <h4 className="font-semibold mb-2 line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                         {suggestion.title}
                       </h4>
 
                       {suggestion.reasoning && (
-                        <p className="text-sm text-neutral-700 italic mb-3 line-clamp-2 flex items-start gap-1">
+                        <p className="text-sm italic mb-3 line-clamp-2 flex items-start gap-1" style={{ color: 'var(--premium-text-secondary)' }}>
                           <Brain className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--premium-gold)' }} />
                           <span>"{suggestion.reasoning}"</span>
                         </p>
@@ -490,11 +505,14 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                         </button>
                         <button
                           onClick={() => handleDismissSuggestion(suggestion.id)}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5 hover:bg-neutral-100"
+                          className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-all flex items-center gap-1.5"
                           style={{
-                            borderColor: 'rgba(0, 0, 0, 0.1)',
-                            color: 'var(--premium-text-secondary)'
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            color: 'var(--premium-text-secondary)',
+                            backgroundColor: 'transparent'
                           }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           <X className="h-3 w-3" />
                           Not relevant
