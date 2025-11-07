@@ -51,20 +51,57 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
 
 /**
  * Get recent memories (last N days)
+ * Also finds thematically related memories via vector similarity
  */
 async function getRecentMemories(userId: string, days: number) {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
 
-  const { data } = await supabase
+  const { data: recentData } = await supabase
     .from('memories')
-    .select('id, title, body, entities, themes, tags, created_at')
+    .select('id, title, body, entities, themes, tags, created_at, embedding')
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(10)
 
-  return data || []
+  if (!recentData || recentData.length === 0) return []
+
+  // Extract common themes from recent memories
+  const allThemes = recentData
+    .flatMap(m => m.themes || [])
+    .filter(Boolean)
+
+  const themeCounts = allThemes.reduce((acc: Record<string, number>, theme: string) => {
+    acc[theme] = (acc[theme] || 0) + 1
+    return acc
+  }, {})
+
+  // Find consequential themes (appear 2+ times)
+  const consequentialThemes = Object.entries(themeCounts)
+    .filter(([_, count]) => count >= 2)
+    .map(([theme]) => theme)
+
+  // If we have consequential themes, find related memories via vector search
+  if (consequentialThemes.length > 0 && recentData[0].embedding) {
+    const { data: relatedData } = await supabase.rpc('match_memories', {
+      query_embedding: recentData[0].embedding,
+      match_threshold: 0.7,
+      match_count: 5,
+      filter_user_id: userId
+    })
+
+    if (relatedData) {
+      // Merge and deduplicate
+      const allMemories = [...recentData, ...relatedData]
+      const unique = Array.from(
+        new Map(allMemories.map(m => [m.id, m])).values()
+      )
+      return unique.slice(0, 15) // Return top 15 for better context
+    }
+  }
+
+  return recentData
 }
 
 /**
@@ -134,7 +171,7 @@ async function getOldInsights(userId: string, daysAgo: number) {
 }
 
 /**
- * Generate prompts using Gemini with trippy, memorable style
+ * Generate prompts using Gemini with insightful, natural style
  */
 async function generatePromptsWithAI(
   recentMemories: any[],
@@ -144,7 +181,26 @@ async function generatePromptsWithAI(
 ): Promise<BedtimePrompt[]> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
-  const prompt = `You are a creative prompt generator for bedtime ideation. Generate 3-5 trippy, memorable prompts to ponder while falling asleep.
+  // Extract consequential themes (appear multiple times)
+  const allThemes = recentMemories
+    .flatMap(m => m.themes || [])
+    .filter(Boolean)
+
+  const themeCounts = allThemes.reduce((acc: Record<string, number>, theme: string) => {
+    acc[theme] = (acc[theme] || 0) + 1
+    return acc
+  }, {})
+
+  const consequentialThemes = Object.entries(themeCounts)
+    .filter(([_, count]) => count >= 2)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([theme, count]) => `${theme} (appears ${count}x)`)
+
+  const prompt = `You are a creative prompt generator for bedtime ideation. Generate 3-5 insightful, evocative prompts to ponder while falling asleep.
+
+**Consequential Themes (recurring patterns to explore):**
+${consequentialThemes.length > 0 ? consequentialThemes.join(', ') : 'No clear recurring themes yet'}
 
 **Context:**
 Recent thoughts (last 7 days):
@@ -159,25 +215,47 @@ Old insights (forgotten wisdom):
 ${oldInsights.map(i => `- "${i.title}": ${i.body?.substring(0, 100)}`).join('\n')}
 
 **Goal:** Generate prompts that:
-1. Make unexpected connections between projects/thoughts/interests
-2. Use vivid metaphors and surreal imagery (dreams, transformations, impossible scenarios)
-3. Are MEMORABLE - stick in the mind as you drift off
-4. Access the creative subconscious - not logical problem-solving
-5. Open-ended - not "solve X" but "what if X became Y?"
+1. Identify GENUINE thematic threads across their thoughts - don't force connections
+2. Use evocative metaphors that feel natural, not contrived
+3. Are MEMORABLE and resonate emotionally
+4. Access the creative subconscious through curiosity, not instruction
+5. Open-ended questions that invite wondering, not problem-solving
 
-**Styles to mix:**
-- 🌊 Poetic: "Your dashboard is a garden..."
-- 🔮 Surreal: "Imagine types as musical notes..."
-- 💭 Dream logic: "In a dream, frustration is a locked door..."
-- 🎨 Visual metaphor: "Picture projects as planets orbiting..."
-- 🧬 Transformation: "What if [concept] was made of water/light/sound?"
+**Principles:**
+- Look for consequential themes that appear multiple times organically
+- Only reference specific content if there's a genuine insight to explore
+- Prefer universal, resonant questions over forced name-dropping
+- Use metaphors that illuminate patterns, not decorate
+- Quality over cleverness - some prompts can be simple and profound
 
-**IMPORTANT:**
-- Don't give solutions - give **seeds to ponder**
-- Be weird and memorable
-- Each prompt should feel like a mini zen koan
-- Reference specific things from their context
-- Make them want to think about it as they fall asleep
+**Styles (use naturally):**
+- 🌊 Poetic: Natural imagery that reflects real patterns
+- 🔮 Philosophical: Deep questions that emerge from their work
+- 💭 Contemplative: Gentle invitations to notice patterns
+- 🎨 Metaphorical: Only when it genuinely clarifies a theme
+- 🧬 Exploratory: "What emerges when..." not "What if you forced..."
+
+**CRITICAL - Avoid:**
+- Forced references to project names just to prove you read the context
+- Overly clever wordplay that distracts from insight
+- Generic self-help platitudes
+- Prescriptive solutions disguised as questions
+- Cramming multiple unrelated concepts into one prompt
+
+**Do this instead:**
+- Start with the CONSEQUENTIAL THEMES listed above - these are real patterns
+- Find ONE genuine thread and explore it with depth
+- Let prompts breathe - simple can be profound
+- Reference specifics ONLY when they reveal a larger pattern
+- Trust that organic connections are more powerful than forced ones
+- If no strong themes emerge, create universal contemplative questions
+
+**Example of good vs bad:**
+❌ Bad: "What if your React project became a symphony and your TypeScript types were musical notes?"
+✅ Good: "What patterns repeat across the things you're building? What if those patterns are trying to tell you something?"
+
+❌ Bad: "Imagine your dashboard project as a garden where each component is a flower..."
+✅ Good: "When you notice yourself organizing things, what are you really searching for?"
 
 Return ONLY valid JSON (no markdown):
 [
