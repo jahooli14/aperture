@@ -350,22 +350,37 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       <motion.div
         style={{ backgroundColor }}
         className="rounded-xl"
-        whileHover={{ y: -4, scale: 1.01 }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ y: -6, scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{
           type: "spring",
           stiffness: 400,
           damping: 28,
-          mass: 0.6
+          mass: 0.6,
+          opacity: { duration: 0.3 },
+          scale: { duration: 0.3 }
         }}
       >
         <div
           onClick={onClick}
-          className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50"
-          style={{ borderColor: 'rgba(16, 185, 129, 0.2)' }}
+          className="group premium-card border rounded-xl p-4 sm:p-5 transition-all cursor-pointer hover:border-emerald-500/50 relative overflow-hidden"
+          style={{
+            borderColor: 'rgba(16, 185, 129, 0.2)',
+            boxShadow: '0 8px 32px rgba(16, 185, 129, 0.2)'
+          }}
         >
+      {/* Ambient glow effect */}
+      <div
+        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+        style={{
+          background: 'radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.3), transparent 60%)',
+          pointerEvents: 'none'
+        }}
+      />
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
         {/* Thumbnail (if available) */}
         {article.thumbnail_url && (
           <div className="flex-shrink-0">

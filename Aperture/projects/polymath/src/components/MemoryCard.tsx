@@ -226,20 +226,33 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
       <div className="relative" {...longPressHandlers}>
         <motion.div
-          whileHover={{ y: -4, scale: 1.01 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ y: -6, scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{
             type: "spring",
             stiffness: 400,
             damping: 28,
-            mass: 0.6
+            mass: 0.6,
+            opacity: { duration: 0.3 },
+            scale: { duration: 0.3 }
           }}
         >
-        <Card className="group h-full flex flex-col premium-card">
-      {/* Glow effect - different colors for processing vs processed */}
+        <Card className="group h-full flex flex-col premium-card relative overflow-hidden" style={{
+          boxShadow: !memory.processed
+            ? '0 8px 32px rgba(245, 158, 11, 0.2)'
+            : '0 8px 32px rgba(99, 102, 241, 0.2)'
+        }}>
+      {/* Ambient glow effect - stronger on hover */}
       <div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
-        style={{ backgroundColor: !memory.processed ? 'rgba(245, 158, 11, 0.2)' : 'rgba(99, 102, 241, 0.15)' }}
+        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+        style={{
+          background: !memory.processed
+            ? 'radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.3), transparent 60%)'
+            : 'radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.3), transparent 60%)',
+          pointerEvents: 'none'
+        }}
       />
       {/* Accent gradient bar - amber for processing, indigo for processed */}
       <div
