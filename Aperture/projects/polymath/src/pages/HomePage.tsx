@@ -862,25 +862,48 @@ export function HomePage() {
               </Link>
             </div>
 
-            {/* Card of the Day - Resurfacing */}
+            {/* Card of the Day - Resurfacing - Enhanced Design */}
             {cardOfTheDay && (
-              <div className="premium-glass-subtle p-5 rounded-xl border-2" style={{
-                borderColor: 'rgba(139, 92, 246, 0.3)',
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1))'
-              }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
-                  <h3 className="font-bold" style={{ color: 'var(--premium-text-primary)' }}>
-                    Card of the Day
-                  </h3>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="premium-glass-subtle p-6 rounded-2xl border-2 relative overflow-hidden"
+                style={{
+                  borderColor: 'rgba(139, 92, 246, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(236, 72, 153, 0.15))',
+                  boxShadow: '0 8px 32px rgba(139, 92, 246, 0.2)'
+                }}
+              >
+                {/* Ambient glow effect */}
+                <div
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
+                    pointerEvents: 'none'
+                  }}
+                />
+
+                {/* Content */}
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Zap className="h-6 w-6" style={{ color: 'var(--premium-purple)' }} />
+                    <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
+                      Thought of the Day
+                    </h3>
+                  </div>
+                  <p className="mb-4 leading-relaxed text-lg" style={{
+                    color: 'var(--premium-text-primary)',
+                    fontWeight: 500
+                  }}>
+                    {cardOfTheDay.body}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--premium-purple)' }} />
+                    <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
                 </div>
-                <p className="mb-3 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                  {cardOfTheDay.body}
-                </p>
-                <div className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  From {new Date(cardOfTheDay.created_at).toLocaleDateString()}
-                </div>
-              </div>
+              </motion.div>
             )}
           </div>
         </section>

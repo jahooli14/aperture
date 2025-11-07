@@ -26,10 +26,14 @@ export function BedtimePage() {
   const [message, setMessage] = useState('')
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
   const [zenModeOpen, setZenModeOpen] = useState(false)
+  const [showWelcome, setShowWelcome] = useState(false)
   const { addToast } = useToast()
 
   useEffect(() => {
     fetchPrompts()
+    // Show welcome animation after a brief delay
+    const timer = setTimeout(() => setShowWelcome(true), 300)
+    return () => clearTimeout(timer)
   }, [])
 
   const fetchPrompts = async () => {
@@ -109,23 +113,42 @@ export function BedtimePage() {
   }
 
   return (
-    <div className="min-h-screen premium-bg p-4 pb-24">
+    <div className="min-h-screen premium-bg p-4 pb-24 relative overflow-hidden">
+      {/* Ambient starfield background */}
+      <div className="fixed inset-0 pointer-events-none opacity-30">
+        <div className="absolute top-10 left-10 w-1 h-1 rounded-full bg-white animate-pulse" />
+        <div className="absolute top-20 right-20 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-40 left-1/4 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-40 right-1/3 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1.5s' }} />
+      </div>
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto mb-8"
+        animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : -20 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="max-w-2xl mx-auto mb-8 relative z-10"
       >
         <div className="flex items-center gap-4 mb-4">
-          <div className="p-4 rounded-2xl premium-glass-subtle">
+          <motion.div
+            className="p-4 rounded-2xl premium-glass-subtle relative"
+            animate={{
+              boxShadow: [
+                '0 0 20px rgba(251, 191, 36, 0.2)',
+                '0 0 30px rgba(251, 191, 36, 0.4)',
+                '0 0 20px rgba(251, 191, 36, 0.2)'
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
             <Moon className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
-          </div>
+          </motion.div>
           <div>
             <h1 className="premium-text-platinum text-2xl font-bold">
-              Bedtime Ideas
+              Thoughts Before Bed
             </h1>
             <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-              💭 Seeds for your creative subconscious
+              ✨ Let your mind wander into tomorrow's inspiration
             </p>
           </div>
         </div>
@@ -183,7 +206,7 @@ export function BedtimePage() {
 
       {/* Prompts */}
       {!loading && prompts.length > 0 && (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-6 relative z-10">
           <AnimatePresence>
             {prompts.map((prompt, index) => {
               const isViewed = viewedIds.has(prompt.id) || prompt.viewed
@@ -191,20 +214,27 @@ export function BedtimePage() {
               return (
                 <motion.div
                   key={prompt.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 30, scale: 0.92 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: index * 0.1, duration: 0.4 }}
-                  className="premium-card p-6 relative overflow-hidden group"
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  transition={{
+                    delay: index * 0.15,
+                    duration: 0.6,
+                    ease: "easeOut",
+                    scale: { duration: 0.2 }
+                  }}
+                  className="premium-card p-6 relative overflow-hidden group cursor-pointer"
                   style={{
                     border: `2px solid ${getTypeColor(prompt.type)}40`,
-                    opacity: isViewed ? 0.6 : 1
+                    opacity: isViewed ? 0.6 : 1,
+                    boxShadow: `0 10px 40px ${getTypeColor(prompt.type)}15`
                   }}
                 >
-                  {/* Background glow */}
+                  {/* Background glow - stronger on hover */}
                   <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
                     style={{
-                      background: `radial-gradient(circle at 50% 50%, ${getTypeColor(prompt.type)}10, transparent 70%)`
+                      background: `radial-gradient(circle at 50% 50%, ${getTypeColor(prompt.type)}20, transparent 70%)`
                     }}
                   />
 
@@ -299,15 +329,19 @@ export function BedtimePage() {
         </motion.div>
       )}
 
-      {/* Footer tip */}
+      {/* Footer tip - Enhanced with warmth */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="max-w-2xl mx-auto mt-12 p-6 rounded-xl premium-glass-subtle text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : 20 }}
+        transition={{ delay: 1, duration: 0.8 }}
+        className="max-w-2xl mx-auto mt-12 p-6 rounded-xl premium-glass-subtle text-center relative z-10 border-2"
+        style={{
+          borderColor: 'rgba(251, 191, 36, 0.2)',
+          background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.05), rgba(139, 92, 246, 0.05))'
+        }}
       >
-        <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-          💡 <strong>Tip:</strong> Try Zen Mode for a calming, focused experience. One prompt at a time, perfect for bedtime reflection.
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+          🌙 <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnight—insights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
         </p>
       </motion.div>
 
