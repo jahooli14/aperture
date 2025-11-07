@@ -82,25 +82,40 @@ export const SuggestionCard = memo(function SuggestionCard({
 
   return (
     <motion.div
-      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : { opacity: 1, scale: 1 }}
       whileHover={{ y: -6, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{
         type: 'spring',
         stiffness: 400,
         damping: 28,
-        mass: 0.6
+        mass: 0.6,
+        opacity: { duration: 0.3 },
+        scale: { duration: 0.3 }
       }}
       className="relative"
     >
       <Card
-        className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer`}
+        className={`group h-full flex flex-col premium-card transition-smooth hover-lift cursor-pointer relative overflow-hidden`}
         onClick={handleMore}
+        style={{
+          boxShadow: '0 8px 32px rgba(59, 130, 246, 0.25)'
+        }}
       >
+      {/* Ambient glow effect - enhanced */}
+      <div
+        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+        style={{
+          background: 'radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.4), transparent 60%)',
+          pointerEvents: 'none'
+        }}
+      />
+
       {/* Subtle accent bar */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
 
-      <CardHeader className="relative" onClick={(e) => e.stopPropagation()}>
+      <CardHeader className="relative z-10" onClick={(e) => e.stopPropagation()}>
         {/* Type badges */}
         <div className="mb-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +156,7 @@ export const SuggestionCard = memo(function SuggestionCard({
         )}
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-4">
+      <CardContent className="flex-1 space-y-4 relative z-10">
         {suggestion.capabilities && suggestion.capabilities.length > 0 && (
           <div className="space-y-2">
             <p
@@ -188,7 +203,7 @@ export const SuggestionCard = memo(function SuggestionCard({
       </CardContent>
 
       <CardFooter
-        className="flex gap-2 border-t pt-4"
+        className="flex gap-2 border-t pt-4 relative z-10"
         style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
         onClick={(e) => e.stopPropagation()}
       >
