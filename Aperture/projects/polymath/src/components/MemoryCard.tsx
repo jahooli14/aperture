@@ -297,7 +297,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
               <div className="flex flex-wrap gap-1.5 items-center">
                 <Brain className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
                 <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
-                {memory.entities.topics.slice(0, 3).map((topic) => (
+                {memory.entities.topics.slice(0, 8).map((topic) => (
                   <span
                     key={topic}
                     className="px-2 py-0.5 rounded-full text-xs font-medium"
@@ -309,9 +309,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                     {topic}
                   </span>
                 ))}
-                {memory.entities.topics.length > 3 && (
+                {memory.entities.topics.length > 8 && (
                   <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    +{memory.entities.topics.length - 3} more
+                    +{memory.entities.topics.length - 8} more
                   </span>
                 )}
               </div>
