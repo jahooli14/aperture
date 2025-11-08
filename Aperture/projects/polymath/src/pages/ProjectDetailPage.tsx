@@ -501,22 +501,7 @@ export function ProjectDetailPage() {
           })}
 
           {/* Add task row with + button */}
-          <div className="flex items-center gap-2 p-1.5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                console.log('[+ Button] Clicked')
-                addPinnedTask()
-              }}
-              className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
-              style={{
-                borderColor: 'var(--premium-blue)',
-                color: 'var(--premium-blue)'
-              }}
-              aria-label="Add task"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
+          <div className="flex items-center gap-2 mt-2">
             <input
               ref={pinnedTaskInputRef}
               type="text"
@@ -537,11 +522,27 @@ export function ProjectDetailPage() {
                   addPinnedTask()
                 }
               }}
-              className="flex-1 text-sm bg-transparent outline-none"
+              className="flex-1 px-3 py-2 text-sm rounded-lg border-2 focus:outline-none focus:ring-2 premium-glass"
               style={{
+                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-text-primary)'
               }}
             />
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                console.log('[Add Button] Clicked')
+                addPinnedTask()
+              }}
+              disabled={!newPinnedTaskText.trim()}
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+              style={{
+                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                color: 'white'
+              }}
+            >
+              Add
+            </button>
           </div>
         </div>
       </div>
