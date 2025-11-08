@@ -33,7 +33,6 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 90%;
     --input: 220 13% 90%;
     --ring: 218 90% 48%;
 
@@ -45,9 +44,6 @@
     --radius-xl: 1.5rem;
   }
 
-  * {
-    @apply border-border;
-  }
 
   body {
     @apply antialiased;
@@ -151,7 +147,6 @@
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
-    border: 1px solid var(--md-sys-color-outline-variant);
     box-shadow: var(--md-sys-shadow-0);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -161,7 +156,6 @@
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface-1);
     color: var(--md-sys-color-on-surface);
-    border: none;
     box-shadow: var(--md-sys-shadow-1);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -177,7 +171,6 @@
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface-3);
     color: var(--md-sys-color-on-surface);
-    border: none;
     box-shadow: var(--md-sys-shadow-3);
     transition: all 0.3s cubic-bezier(0, 0, 0.2, 1);
   }
@@ -193,7 +186,6 @@
     @apply backdrop-blur-md rounded-xl;
     background-color: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface);
-    border: 1px solid var(--md-sys-color-outline-variant);
     box-shadow: var(--md-sys-shadow-2);
   }
 
@@ -215,7 +207,6 @@
     min-height: 40px;
     background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary);
-    border: none;
     border-radius: var(--md-sys-shape-corner-full);
     box-shadow: var(--md-sys-shadow-1);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -256,7 +247,6 @@
     min-height: 40px;
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
-    border: none;
     border-radius: var(--md-sys-shape-corner-full);
     box-shadow: var(--md-sys-shadow-0);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -305,7 +295,6 @@
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-medium;
     background-color: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
-    border: 1px solid var(--md-sys-color-outline-variant);
     font-family: var(--md-sys-typescale-label-small-font);
     font-size: var(--md-sys-typescale-label-small-size);
     font-weight: var(--md-sys-typescale-label-small-weight);
@@ -438,19 +427,12 @@
     @apply transition-all duration-300;
     background-color: var(--md-sys-color-surface-container-highest);
     color: var(--md-sys-color-on-surface);
-    border: 1px solid var(--md-sys-color-outline);
     border-radius: var(--md-sys-shape-corner-extra-small);
     font-family: var(--md-sys-typescale-body-large-font);
     font-size: var(--md-sys-typescale-body-large-size);
   }
 
-  .input-pro:hover {
-    border-color: var(--md-sys-color-on-surface);
-  }
-
   .input-pro:focus {
-    border-color: var(--md-sys-color-primary);
-    border-width: 2px;
     box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
   }
 
@@ -460,19 +442,12 @@
     @apply transition-all duration-300;
     background-color: var(--md-sys-color-surface-container-highest);
     color: var(--md-sys-color-on-surface);
-    border: 1px solid var(--md-sys-color-outline);
     border-radius: var(--md-sys-shape-corner-extra-small);
     font-family: var(--md-sys-typescale-body-large-font);
     font-size: var(--md-sys-typescale-body-large-size);
   }
 
-  .select-pro:hover {
-    border-color: var(--md-sys-color-on-surface);
-  }
-
   .select-pro:focus {
-    border-color: var(--md-sys-color-primary);
-    border-width: 2px;
     box-shadow: 0 0 0 3px var(--md-sys-color-primary-container);
   }
 

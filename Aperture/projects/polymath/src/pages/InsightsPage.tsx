@@ -47,11 +47,11 @@ export function InsightsPage() {
 
   const getInsightStyle = (type: string): React.CSSProperties => {
     switch (type) {
-      case 'evolution': return { backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.3)' }
-      case 'pattern': return { backgroundColor: 'rgba(139, 92, 246, 0.1)', borderColor: 'rgba(139, 92, 246, 0.3)' }
-      case 'collision': return { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderColor: 'rgba(245, 158, 11, 0.3)' }
-      case 'opportunity': return { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }
-      default: return { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)' }
+      case 'evolution': return { backgroundColor: 'rgba(59, 130, 246, 0.1)' }
+      case 'pattern': return { backgroundColor: 'rgba(139, 92, 246, 0.1)' }
+      case 'collision': return { backgroundColor: 'rgba(245, 158, 11, 0.1)' }
+      case 'opportunity': return { backgroundColor: 'rgba(16, 185, 129, 0.1)' }
+      default: return { backgroundColor: 'rgba(255, 255, 255, 0.05)' }
     }
   }
 
@@ -115,7 +115,7 @@ export function InsightsPage() {
 
       <div className="max-w-5xl mx-auto px-4 space-y-6">
         {insights.map((insight, index) => (
-          <Card key={index} className="premium-card border-2" style={getInsightStyle(insight.type)}>
+          <Card key={index} className="premium-card" style={getInsightStyle(insight.type)}>
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
@@ -133,7 +133,7 @@ export function InsightsPage() {
                   {insight.type === 'evolution' && insight.data?.timeline && (
                     <div className="mb-4 space-y-3">
                       {insight.data.timeline.map((event: any, i: number) => (
-                        <div key={i} className="pl-4 border-l-2" style={{ borderColor: 'var(--premium-blue)' }}>
+                        <div key={i} className="pl-4">
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-24 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                               {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -194,7 +194,7 @@ export function InsightsPage() {
 
                   {/* Action Button */}
                   {insight.actionable && insight.action && (
-                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                    <div className="mt-4 pt-4">
                       <Button className="btn-primary w-full sm:w-auto">
                         {insight.action}
                       </Button>
@@ -207,7 +207,7 @@ export function InsightsPage() {
         ))}
 
         {/* Summary */}
-        <Card className="premium-card border-2" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+        <Card className="premium-card">
           <CardContent className="pt-6">
             <h3 className="text-lg font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
               Understanding Your Journey

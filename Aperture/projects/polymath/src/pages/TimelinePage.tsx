@@ -83,7 +83,7 @@ export function TimelinePage() {
       <div className="max-w-6xl mx-auto px-4 space-y-6">
         {/* Pattern Cards */}
         {patterns.map((pattern, index) => (
-          <Card key={index} className="premium-card border-2" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+          <Card key={index} className="premium-card">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
@@ -99,7 +99,7 @@ export function TimelinePage() {
                   <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
                     {pattern.description}
                   </p>
-                  <div className="p-4 rounded-lg border premium-glass-subtle" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                  <div className="p-4 rounded-lg premium-glass-subtle">
                     <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
                       💡 {pattern.insight}
                     </p>
@@ -202,7 +202,7 @@ export function TimelinePage() {
         ))}
 
         {/* Summary Card */}
-        <Card className="premium-card border-2" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+        <Card className="premium-card">
           <CardContent className="pt-6">
             <h3 className="text-lg font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
               What This Means

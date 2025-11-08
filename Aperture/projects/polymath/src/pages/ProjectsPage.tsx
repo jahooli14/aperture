@@ -105,9 +105,8 @@ export function ProjectsPage() {
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)',
-        borderColor: 'rgba(255, 255, 255, 0.05)'
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center" style={{
@@ -145,9 +144,8 @@ export function ProjectsPage() {
             <CreateProjectDialog />
             <button
               onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="Search everything"
@@ -179,9 +177,8 @@ export function ProjectsPage() {
                 variant={selectedTags.includes(tag) ? 'default' : 'outline'}
                 onClick={() => toggleTag(tag)}
                 size="sm"
-                className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs border"
+                className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs"
                 style={{
-                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'var(--premium-bg-2)',
                   backgroundColor: selectedTags.includes(tag) ? 'var(--premium-bg-3)' : 'transparent',
                   color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                 }}
@@ -206,7 +203,6 @@ export function ProjectsPage() {
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
           <Card className="mb-8" style={{
-            borderColor: 'var(--premium-blue)',
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
@@ -229,7 +225,7 @@ export function ProjectsPage() {
 
         {/* Error Banner */}
         {error && (
-          <Card className="mb-6 border-red-300 bg-red-50">
+          <Card className="mb-6 bg-red-50">
             <CardContent className="pt-6">
               <p className="text-sm text-red-600 font-semibold">{error}</p>
             </CardContent>

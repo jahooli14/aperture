@@ -110,7 +110,6 @@ export function ConnectionSuggestion({
         className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 z-50 md:w-96 max-w-[calc(100vw-2rem)]"
       >
         <div className="premium-card p-6 shadow-2xl" style={{
-          border: '2px solid rgba(59, 130, 246, 0.3)',
           boxShadow: '0 0 40px rgba(59, 130, 246, 0.2)'
         }}>
           {/* Header */}
@@ -179,8 +178,7 @@ export function ConnectionSuggestion({
 
                       {suggestion.snippet && (
                         <div className="mt-2 p-2 rounded" style={{
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          borderLeft: '2px solid rgba(59, 130, 246, 0.3)'
+                          background: 'rgba(255, 255, 255, 0.03)'
                         }}>
                           <p className="text-xs italic" style={{ color: 'var(--premium-text-tertiary)' }}>
                             "{suggestion.snippet}"
@@ -199,8 +197,7 @@ export function ConnectionSuggestion({
                             onClick={() => handleLink(suggestion)}
                             className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-white/10"
                             style={{
-                              color: 'var(--premium-blue)',
-                              border: '1px solid rgba(59, 130, 246, 0.3)'
+                              color: 'var(--premium-blue)'
                             }}
                           >
                             Link Together
@@ -211,8 +208,7 @@ export function ConnectionSuggestion({
                           href={getPath(suggestion.targetType, suggestion.targetId)}
                           className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all hover:bg-white/10 inline-flex items-center gap-1"
                           style={{
-                            color: 'var(--premium-text-secondary)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                            color: 'var(--premium-text-secondary)'
                           }}
                         >
                           View <ExternalLink className="h-3 w-3" />
@@ -226,7 +222,7 @@ export function ConnectionSuggestion({
           </div>
 
           {/* Footer tip */}
-          <div className="mt-4 pt-3 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
+          <div className="mt-4 pt-3">
             <p className="text-xs text-center" style={{ color: 'var(--premium-text-tertiary)' }}>
               💡 Linking related content helps build your knowledge graph
             </p>

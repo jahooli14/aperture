@@ -128,9 +128,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragStart={() => handleDragStart(task.id)}
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
-              className="group flex items-center gap-2 p-2.5 rounded-lg border transition-all cursor-move"
+              className="group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move"
               style={{
-                borderColor: 'rgba(255, 255, 255, 0.1)',
                 backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
@@ -143,9 +142,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               {/* Checkbox */}
               <button
                 onClick={() => handleToggleTask(task.id)}
-                className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
+                className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
                 style={{
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
                   backgroundColor: 'transparent'
                 }}
               >
@@ -192,18 +190,16 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                   {completedTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="group flex items-center gap-2 p-2.5 rounded-lg border transition-all"
+                      className="group flex items-center gap-2 p-2.5 rounded-lg transition-all"
                       style={{
-                        borderColor: 'rgba(255, 255, 255, 0.05)',
                         backgroundColor: 'rgba(255, 255, 255, 0.02)'
                       }}
                     >
                       {/* Checkbox */}
                       <button
                         onClick={() => handleToggleTask(task.id)}
-                        className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
+                        className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
                         style={{
-                          borderColor: 'var(--premium-blue)',
                           backgroundColor: 'var(--premium-blue)'
                         }}
                       >
@@ -252,9 +248,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               }}
               placeholder="Task description..."
               autoFocus
-              className="flex-1 px-3 py-2 text-sm rounded-lg border-2 focus:outline-none focus:ring-2 premium-glass"
+              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
               style={{
-                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-text-primary)'
               }}
             />
@@ -274,9 +269,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                 setIsAdding(false)
                 setNewTaskText('')
               }}
-              className="px-4 py-2 text-sm font-medium rounded-lg border transition-all"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
               style={{
-                borderColor: 'rgba(255, 255, 255, 0.2)',
                 color: 'var(--premium-text-primary)'
               }}
             >

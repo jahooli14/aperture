@@ -325,9 +325,8 @@ export function ReadingPage() {
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)',
-        borderColor: 'rgba(255, 255, 255, 0.05)'
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center" style={{
@@ -363,9 +362,8 @@ export function ReadingPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="New Article"
@@ -375,9 +373,8 @@ export function ReadingPage() {
 
             <button
               onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="Search everything"
@@ -419,9 +416,8 @@ export function ReadingPage() {
                   <button
                     onClick={handleRSSSync}
                     disabled={syncing}
-                    className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
+                    className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
                     style={{
-                      borderColor: 'var(--premium-blue)',
                       color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
                       opacity: syncing ? 0.5 : 1
                     }}
@@ -476,9 +472,8 @@ export function ReadingPage() {
               {activeTab === 'queue' && (
                 <button
                   onClick={() => setShowSaveDialog(true)}
-                  className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
+                  className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
                   style={{
-                    borderColor: 'var(--premium-blue)',
                     color: 'var(--premium-blue)'
                   }}
                 >
@@ -514,10 +509,9 @@ export function ReadingPage() {
                   >
                     {bulkSelection.isSelectionMode && (
                       <div
-                        className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                        className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
                         style={{
                           backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-                          borderColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.2)',
                           pointerEvents: 'auto'
                         }}
                       >

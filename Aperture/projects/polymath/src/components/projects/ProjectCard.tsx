@@ -229,60 +229,50 @@ export const ProjectCard = React.memo(function ProjectCard({
       label: 'Upcoming',
       style: {
         backgroundColor: 'rgba(251, 191, 36, 0.2)',
-        color: '#fbbf24',
-        borderColor: 'rgba(251, 191, 36, 0.3)'
+        color: '#fbbf24'
       },
       bgStyle: {
-        backgroundColor: 'rgba(251, 191, 36, 0.1)',
-        borderColor: 'rgba(251, 191, 36, 0.2)'
+        backgroundColor: 'rgba(251, 191, 36, 0.1)'
       }
     },
     active: {
       label: 'Active',
       style: {
         backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        color: 'var(--premium-blue)',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
+        color: 'var(--premium-blue)'
       },
       bgStyle: {
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderColor: 'rgba(59, 130, 246, 0.2)'
+        backgroundColor: 'rgba(59, 130, 246, 0.1)'
       }
     },
     dormant: {
       label: 'Dormant',
       style: {
         backgroundColor: 'rgba(156, 163, 175, 0.2)',
-        color: '#9ca3af',
-        borderColor: 'rgba(156, 163, 175, 0.3)'
+        color: '#9ca3af'
       },
       bgStyle: {
-        backgroundColor: 'rgba(156, 163, 175, 0.1)',
-        borderColor: 'rgba(156, 163, 175, 0.2)'
+        backgroundColor: 'rgba(156, 163, 175, 0.1)'
       }
     },
     completed: {
       label: 'Completed',
       style: {
         backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        color: 'var(--premium-blue)',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
+        color: 'var(--premium-blue)'
       },
       bgStyle: {
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderColor: 'rgba(59, 130, 246, 0.2)'
+        backgroundColor: 'rgba(59, 130, 246, 0.1)'
       }
     },
     archived: {
       label: 'Archived',
       style: {
         backgroundColor: 'rgba(139, 92, 246, 0.2)',
-        color: 'var(--premium-indigo)',
-        borderColor: 'rgba(139, 92, 246, 0.3)'
+        color: 'var(--premium-indigo)'
       },
       bgStyle: {
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        borderColor: 'rgba(139, 92, 246, 0.2)'
+        backgroundColor: 'rgba(139, 92, 246, 0.1)'
       }
     }
   }
@@ -321,10 +311,9 @@ export const ProjectCard = React.memo(function ProjectCard({
                 }
               }}
               placeholder="What's the next step?"
-              className="w-full px-4 py-3 rounded-lg border text-base"
+              className="w-full px-4 py-3 rounded-lg text-base"
               style={{
                 backgroundColor: 'var(--premium-surface-elevated)',
-                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-text-primary)'
               }}
               autoFocus
@@ -437,10 +426,9 @@ export const ProjectCard = React.memo(function ProjectCard({
 
                     {/* Menu */}
                     <div
-                      className="absolute right-0 top-full mt-1 z-50 rounded-lg border overflow-hidden"
+                      className="absolute right-0 top-full mt-1 z-50 rounded-lg overflow-hidden"
                       style={{
                         backgroundColor: 'var(--premium-surface-2)',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
                         minWidth: '140px'
                       }}
@@ -478,10 +466,9 @@ export const ProjectCard = React.memo(function ProjectCard({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+            <div className="px-2 py-0.5 rounded text-xs font-medium" style={{
               backgroundColor: statusConfig[project.status]?.style?.backgroundColor || 'rgba(156, 163, 175, 0.2)',
-              color: statusConfig[project.status]?.style?.color || '#9ca3af',
-              borderColor: statusConfig[project.status]?.style?.borderColor || 'rgba(156, 163, 175, 0.3)'
+              color: statusConfig[project.status]?.style?.color || '#9ca3af'
             }}>
               {statusConfig[project.status]?.label || project.status}
             </div>
@@ -515,11 +502,10 @@ export const ProjectCard = React.memo(function ProjectCard({
                       addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
                     }
                   }}
-                  className="px-2 py-0.5 rounded text-xs font-medium border hover:bg-white/10 transition-all"
+                  className="px-2 py-0.5 rounded text-xs font-medium hover:bg-white/10 transition-all"
                   style={{
                     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--premium-blue)',
-                    borderColor: 'rgba(59, 130, 246, 0.3)'
+                    color: 'var(--premium-blue)'
                   }}
                   title={`Complete: ${nextTask.text}`}
                 >
@@ -539,10 +525,9 @@ export const ProjectCard = React.memo(function ProjectCard({
             const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
             return nextTask && (
               <div
-                className="mt-3 p-3 rounded-lg border-2"
+                className="mt-3 p-3 rounded-lg"
                 style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)'
                 }}
               >
                 <div className="flex items-start gap-2">
@@ -566,9 +551,8 @@ export const ProjectCard = React.memo(function ProjectCard({
                         addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
                       }
                     }}
-                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-blue-500/20"
+                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
                     style={{
-                      borderColor: 'var(--premium-blue)',
                       color: 'var(--premium-blue)'
                     }}
                     title="Complete this task"
@@ -693,12 +677,12 @@ export const ProjectCard = React.memo(function ProjectCard({
 
         <div className="flex items-center gap-3">
           <div
-            className="px-4 py-2 rounded-xl border flex-1"
+            className="px-4 py-2 rounded-xl flex-1"
             style={statusConfig[project.status].bgStyle}
           >
             <div className="flex items-center gap-2">
               <div
-                className="px-3 py-1 rounded-md text-xs font-medium border"
+                className="px-3 py-1 rounded-md text-xs font-medium"
                 style={statusConfig[project.status].style}
               >
                 {statusConfig[project.status].label}
@@ -708,10 +692,9 @@ export const ProjectCard = React.memo(function ProjectCard({
 
           {/* Connection Badge */}
           {connectionCount > 0 && (
-            <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2 border" style={{
+            <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2" style={{
               backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              color: 'var(--premium-blue)',
-              borderColor: 'rgba(59, 130, 246, 0.3)'
+              color: 'var(--premium-blue)'
             }}>
               <Link2 className="h-3.5 w-3.5" />
               <span className="font-bold">{connectionCount}</span>
@@ -724,11 +707,10 @@ export const ProjectCard = React.memo(function ProjectCard({
             {project.metadata.tags.map((tag) => (
               <span
                 key={tag}
-                className="px-3 py-1 rounded-md text-xs font-medium border"
+                className="px-3 py-1 rounded-md text-xs font-medium"
                 style={{
                   backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  color: 'var(--premium-indigo)',
-                  borderColor: 'rgba(139, 92, 246, 0.3)'
+                  color: 'var(--premium-indigo)'
                 }}
               >
                 #{tag}
@@ -742,24 +724,21 @@ export const ProjectCard = React.memo(function ProjectCard({
             <Zap className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
             <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Energy:</span>
             <span
-              className="px-3 py-1 rounded-md text-xs font-medium border"
+              className="px-3 py-1 rounded-md text-xs font-medium"
               style={
                 project.metadata.energy_level === 'high'
                   ? {
                       backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      color: '#ef4444',
-                      borderColor: 'rgba(239, 68, 68, 0.3)'
+                      color: '#ef4444'
                     }
                   : project.metadata.energy_level === 'low'
                     ? {
                         backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                        color: 'var(--premium-blue)',
-                        borderColor: 'rgba(59, 130, 246, 0.3)'
+                        color: 'var(--premium-blue)'
                       }
                     : {
                         backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                        color: 'var(--premium-amber)',
-                        borderColor: 'rgba(245, 158, 11, 0.3)'
+                        color: 'var(--premium-amber)'
                       }
               }
             >

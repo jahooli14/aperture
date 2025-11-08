@@ -211,7 +211,6 @@
 .md-filled-button {
   background-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
-  border: none;
   border-radius: var(--md-sys-shape-corner-full);
   padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
   font-size: var(--md-sys-typescale-label-large-size);
@@ -235,7 +234,6 @@
 .md-filled-tonal-button {
   background-color: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
-  border: none;
   border-radius: var(--md-sys-shape-corner-full);
   padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
   font-size: var(--md-sys-typescale-label-large-size);
@@ -252,7 +250,6 @@
 .md-outlined-button {
   background-color: transparent;
   color: var(--md-sys-color-primary);
-  border: 1px solid var(--md-sys-color-outline);
   border-radius: var(--md-sys-shape-corner-full);
   padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
   font-size: var(--md-sys-typescale-label-large-size);
@@ -269,7 +266,6 @@
 .md-text-button {
   background-color: transparent;
   color: var(--md-sys-color-primary);
-  border: none;
   border-radius: var(--md-sys-shape-corner-full);
   padding: var(--md-sys-spacing-3) var(--md-sys-spacing-6);
   font-size: var(--md-sys-typescale-label-large-size);
@@ -309,7 +305,6 @@
 .md-card-outlined {
   background-color: var(--md-sys-color-surface);
   color: var(--md-sys-color-on-surface);
-  border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-large);
   padding: var(--md-sys-spacing-4);
 }
@@ -318,7 +313,6 @@
 .md-fab {
   background-color: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
-  border: none;
   border-radius: var(--md-sys-shape-corner-large);
   width: 56px;
   height: 56px;

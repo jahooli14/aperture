@@ -416,8 +416,7 @@ export function ReaderPage() {
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-50 premium-glass-strong border-b"
-        style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+        className="sticky top-0 z-50 premium-glass-strong"
       >
         {/* Progress Bar */}
         <div className="h-0.5" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
@@ -582,7 +581,7 @@ export function ReaderPage() {
 
         {/* Highlights Section */}
         {highlights.length > 0 && (
-          <div className="mt-20 pt-12 border-t" style={{ borderColor: 'rgba(0, 0, 0, 0.1)' }}>
+          <div className="mt-20 pt-12">
             <h2 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>
               Your Highlights
             </h2>
@@ -590,16 +589,9 @@ export function ReaderPage() {
               {highlights.map((highlight) => (
                 <div
                   key={highlight.id}
-                  className="p-5 rounded-xl border-l-4"
+                  className="p-5 rounded-xl"
                   style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                    borderLeftColor: highlight.color === 'yellow'
-                      ? '#f59e0b'
-                      : highlight.color === 'blue'
-                      ? '#3b82f6'
-                      : highlight.color === 'green'
-                      ? '#10b981'
-                      : '#ef4444'
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
                   }}
                 >
                   <p className="text-base italic mb-2" style={{ color: '#2a2a2a' }}>
@@ -625,12 +617,11 @@ export function ReaderPage() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.9 }}
             transition={{ duration: 0.15 }}
-            className="fixed z-50 premium-glass-strong rounded-xl shadow-2xl border p-2 flex gap-1"
+            className="fixed z-50 premium-glass-strong rounded-xl shadow-2xl p-2 flex gap-1"
             style={{
               left: `${menuPosition.x}px`,
               top: `${menuPosition.y}px`,
-              transform: 'translate(-50%, -100%)',
-              borderColor: 'rgba(255, 255, 255, 0.15)',
+              transform: 'translate(-50%, -100%)'
             }}
           >
             <button

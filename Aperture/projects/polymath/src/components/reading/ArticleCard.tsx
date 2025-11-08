@@ -455,9 +455,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           {connectionCount > 0 && (
             <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
               backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--premium-blue)',
-              borderColor: 'rgba(59, 130, 246, 0.4)',
-              border: '1px solid'
+              color: 'var(--premium-blue)'
             }}>
               <Link2 className="h-3 w-3" />
               {connectionCount} link{connectionCount > 1 ? 's' : ''}
@@ -519,7 +517,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <div className="flex items-center justify-between pt-3">
         <div className="flex items-center gap-4 text-xs sm:text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
           {article.read_time_minutes && (
             <div className="flex items-center gap-1">

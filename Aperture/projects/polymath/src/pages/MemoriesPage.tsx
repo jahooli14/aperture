@@ -347,9 +347,8 @@ export function MemoriesPage() {
     <>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)',
-          borderColor: 'rgba(255, 255, 255, 0.05)'
+        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center" style={{
@@ -406,9 +405,8 @@ export function MemoriesPage() {
               {view === 'all' && <CreateMemoryDialog />}
               <button
                 onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
                 style={{
-                  borderColor: 'rgba(30, 42, 88, 0.2)',
                   color: 'rgba(100, 180, 255, 1)'
                 }}
                 title="Search everything"
@@ -430,8 +428,7 @@ export function MemoriesPage() {
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-          <Card className="mb-8 border-2" style={{
-            borderColor: 'var(--premium-blue)',
+          <Card className="mb-8" style={{
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
@@ -454,7 +451,7 @@ export function MemoriesPage() {
 
         {/* Resurfacing Info Banner */}
         {view === 'resurfacing' && resurfacing.length > 0 && (
-          <Card className="mb-8 border-2 border-amber-300" style={{
+          <Card className="mb-8" style={{
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
@@ -491,8 +488,7 @@ export function MemoriesPage() {
 
             {/* Voice Note Processing Banner */}
             {processingVoiceNote && (
-              <Card className="mb-6 border-2 animate-pulse" style={{
-                borderColor: 'var(--premium-blue)',
+              <Card className="mb-6 animate-pulse" style={{
                 backgroundColor: 'var(--premium-bg-4)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
@@ -578,8 +574,7 @@ export function MemoriesPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-xl p-8 border-2" style={{
-                      borderColor: 'rgba(var(--premium-indigo-rgb), 0.2)',
+                    <div className="rounded-xl p-8" style={{
                       background: 'var(--premium-bg-2)',
                       backdropFilter: 'blur(12px)',
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'

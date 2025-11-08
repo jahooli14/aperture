@@ -1022,7 +1022,7 @@ export default function ConstellationView() {
 
               {/* Dropdown */}
               <div className="absolute top-full right-0 mt-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <div className="rounded-xl premium-glass-strong overflow-hidden" style={{ border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                <div className="rounded-xl premium-glass-strong overflow-hidden">
                   <button
                     onClick={startBirthDemo}
                     className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2"
@@ -1131,8 +1131,7 @@ export default function ConstellationView() {
             style={{
               left: tooltipPos.x + 15,
               top: tooltipPos.y + 15,
-              maxWidth: '300px',
-              border: '1px solid rgba(255, 255, 255, 0.2)'
+              maxWidth: '300px'
             }}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -1153,7 +1152,7 @@ export default function ConstellationView() {
                 <span>{new Date(hoveredNode.created_at).toLocaleDateString()}</span>
               </div>
             </div>
-            <div className="mt-2 pt-2 border-t border-white/10 text-xs" style={{ color: '#9ca3af' }}>
+            <div className="mt-2 pt-2 text-xs" style={{ color: '#9ca3af' }}>
               Click to open • Double-click to focus • Right-click for options
             </div>
           </motion.div>
@@ -1171,7 +1170,6 @@ export default function ConstellationView() {
             style={{
               left: contextMenu.x,
               top: contextMenu.y,
-              border: '1px solid rgba(255, 255, 255, 0.2)',
               minWidth: '180px'
             }}
           >
@@ -1202,7 +1200,6 @@ export default function ConstellationView() {
               <Target className="h-4 w-4" />
               <span>Focus</span>
             </button>
-            <div className="border-t border-white/10" />
             <div className="px-4 py-2 text-xs" style={{ color: '#9ca3af' }}>
               {contextMenu.node.name}
             </div>
@@ -1219,7 +1216,6 @@ export default function ConstellationView() {
             exit={{ opacity: 0, x: 20 }}
             className="fixed top-24 right-4 z-20 premium-glass-strong rounded-xl p-4 shadow-2xl"
             style={{
-              border: '1px solid rgba(255, 255, 255, 0.2)',
               maxWidth: '250px'
             }}
           >
@@ -1261,7 +1257,7 @@ export default function ConstellationView() {
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/10 text-xs space-y-1" style={{ color: '#9ca3af' }}>
+            <div className="mt-4 pt-4 text-xs space-y-1" style={{ color: '#9ca3af' }}>
               <div><kbd className="px-1 py-0.5 rounded bg-white/10">Space</kbd> Play/Pause</div>
               <div><kbd className="px-1 py-0.5 rounded bg-white/10">R</kbd> Reset View</div>
               <div><kbd className="px-1 py-0.5 rounded bg-white/10">⌘F</kbd> Search</div>
@@ -1277,7 +1273,6 @@ export default function ConstellationView() {
         animate={{ opacity: 1, scale: 1 }}
         className="fixed bottom-24 right-4 z-20 premium-glass-strong rounded-xl p-3 shadow-2xl"
         style={{
-          border: '1px solid rgba(255, 255, 255, 0.2)',
           width: '200px',
           height: '150px'
         }}

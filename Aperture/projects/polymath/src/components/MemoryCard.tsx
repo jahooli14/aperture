@@ -73,24 +73,21 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       label: 'Foundational',
       style: {
         backgroundColor: 'rgba(59, 130, 246, 0.15)',
-        color: 'var(--premium-blue)',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
+        color: 'var(--premium-blue)'
       }
     },
     event: {
       label: 'Event',
       style: {
         backgroundColor: 'rgba(59, 130, 246, 0.15)',
-        color: 'var(--premium-blue)',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
+        color: 'var(--premium-blue)'
       }
     },
     insight: {
       label: 'Insight',
       style: {
         backgroundColor: 'rgba(59, 130, 246, 0.15)',
-        color: 'var(--premium-blue)',
-        borderColor: 'rgba(59, 130, 246, 0.3)'
+        color: 'var(--premium-blue)'
       }
     },
   }
@@ -185,10 +182,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </CardTitle>
           <div className="flex items-center gap-2">
             {isManual && (
-              <div className="px-2 py-1 rounded-md text-xs font-medium border" style={{
+              <div className="px-2 py-1 rounded-md text-xs font-medium" style={{
                 backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)',
-                borderColor: 'rgba(59, 130, 246, 0.3)'
+                color: 'var(--premium-blue)'
               }}>
                 Manual
               </div>
@@ -211,11 +207,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                       {memory.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-1 rounded-md text-xs font-medium border"
+                          className="px-2 py-1 rounded-md text-xs font-medium"
                           style={{
                             backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                            color: 'var(--premium-blue)',
-                            borderColor: 'rgba(59, 130, 246, 0.3)'
+                            color: 'var(--premium-blue)'
                           }}
                         >
                           {tag}
@@ -284,15 +279,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             {(memory.memory_type || memory.emotional_tone) && (
               <div className="flex flex-wrap gap-2">
                 {memory.memory_type && (
-                  <div className="px-3 py-1 rounded-md text-xs font-medium border" style={memoryTypeConfig[memory.memory_type].style}>
+                  <div className="px-3 py-1 rounded-md text-xs font-medium" style={memoryTypeConfig[memory.memory_type].style}>
                     {memoryTypeConfig[memory.memory_type].label}
                   </div>
                 )}
                 {memory.emotional_tone && (
-                  <div className="px-3 py-1 rounded-md text-xs font-medium border" style={{
+                  <div className="px-3 py-1 rounded-md text-xs font-medium" style={{
                     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--premium-blue)',
-                    borderColor: 'rgba(59, 130, 246, 0.3)'
+                    color: 'var(--premium-blue)'
                   }}>
                     {memory.emotional_tone}
                   </div>
@@ -306,11 +300,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 {memory.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-1 rounded-md text-xs font-medium border flex items-center gap-1"
+                    className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
                     style={{
                       backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                      color: 'var(--premium-blue)',
-                      borderColor: 'rgba(59, 130, 246, 0.3)'
+                      color: 'var(--premium-blue)'
                     }}
                   >
                     <Tag className="h-3 w-3" />
@@ -382,7 +375,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
         {/* AI Connection Discovery - Always show for processed thoughts */}
         {memory.processed && (
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <div className="mt-4 pt-4">
             <ConnectionsList
               itemType="thought"
               itemId={memory.id}
@@ -396,16 +389,22 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {/* Processing Status */}
         {!memory.processed && (
           <div
-            className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 border animate-pulse"
+            className="flex items-center gap-2 text-sm rounded-lg px-3 py-2 animate-pulse"
             style={{
               backgroundColor: 'rgba(245, 158, 11, 0.15)',
-              color: 'var(--premium-amber)',
-              borderColor: 'rgba(245, 158, 11, 0.4)'
+              color: 'var(--premium-amber)'
             }}
           >
             <div
-              className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-r-transparent"
-              style={{ borderColor: 'var(--premium-amber)' }}
+              className="h-4 w-4 animate-spin rounded-full"
+              style={{
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                borderTopColor: 'var(--premium-amber)',
+                borderRightColor: 'transparent',
+                borderBottomColor: 'var(--premium-amber)',
+                borderLeftColor: 'var(--premium-amber)'
+              }}
             ></div>
             <span className="font-medium">AI analyzing...</span>
           </div>
@@ -414,11 +413,10 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {/* Error Status */}
         {memory.error && (
           <div
-            className="text-sm rounded-lg px-3 py-2 border"
+            className="text-sm rounded-lg px-3 py-2"
             style={{
               backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              color: '#ef4444',
-              borderColor: 'rgba(239, 68, 68, 0.3)'
+              color: '#ef4444'
             }}
           >
             <strong>Error:</strong> {memory.error}

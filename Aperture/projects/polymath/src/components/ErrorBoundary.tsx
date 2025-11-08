@@ -71,7 +71,6 @@ export class ErrorBoundary extends Component<Props, State> {
         >
           <div
             className="max-w-md w-full premium-card p-8 text-center"
-            style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
           >
             <div className="inline-flex items-center justify-center mb-4">
               <div
@@ -109,8 +108,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   className="p-4 rounded-lg text-xs font-mono overflow-auto max-h-64"
                   style={{
                     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    color: '#ef4444',
-                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                    color: '#ef4444'
                   }}
                 >
                   <div className="mb-3">
@@ -141,9 +139,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
             <button
               onClick={this.handleReset}
-              className="premium-glass border px-6 py-3 rounded-lg font-medium transition-all hover:bg-white/10"
+              className="premium-glass px-6 py-3 rounded-lg font-medium transition-all hover:bg-white/10"
               style={{
-                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-blue)'
               }}
             >

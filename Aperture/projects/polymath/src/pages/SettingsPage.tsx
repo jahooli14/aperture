@@ -170,8 +170,7 @@ export function SettingsPage() {
                   <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: `linear-gradient(135deg, ${option.glow}, transparent)`,
-                      border: `1px solid ${option.color}40`,
+                      background: `linear-gradient(135deg, ${option.glow}, transparent)`
                     }}
                   >
                     <Icon
@@ -242,8 +241,7 @@ export function SettingsPage() {
                     onClick={() => setAccentColor(color)}
                     className="relative aspect-square rounded-xl transition-transform hover:scale-110 active:scale-95"
                     style={{
-                      background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`,
-                      border: isSelected ? `3px solid ${preview.primary}` : '2px solid rgba(255, 255, 255, 0.1)',
+                      background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`
                     }}
                   >
                     {isSelected && (
@@ -269,10 +267,6 @@ export function SettingsPage() {
                   key={option.value}
                   onClick={() => setIntensity(option.value)}
                   className="premium-card p-4 text-center transition-all hover:scale-105"
-                  style={{
-                    borderColor: intensity === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: intensity === option.value ? '2px' : '1px',
-                  }}
                 >
                   <div className="font-semibold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
                     {option.label}
@@ -297,9 +291,7 @@ export function SettingsPage() {
                   onClick={() => setFontSize(option.value)}
                   className="premium-card p-4 text-center transition-all hover:scale-105"
                   style={{
-                    borderColor: fontSize === option.value ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
-                    borderWidth: fontSize === option.value ? '2px' : '1px',
-                    fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px',
+                    fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
                   }}
                 >
                   <div className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>

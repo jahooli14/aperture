@@ -371,8 +371,7 @@ export function HomePage() {
                 {storedErrors.reverse().map((err: any, idx: number) => (
                   <div key={idx} className="p-3 rounded-lg text-xs font-mono" style={{
                     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                    color: '#ef4444',
-                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                    color: '#ef4444'
                   }}>
                     <div className="mb-1 font-bold">{err.timestamp}</div>
                     <div className="mb-1">Type: {err.type}</div>
@@ -396,8 +395,7 @@ export function HomePage() {
                 className="mt-3 px-4 py-2 rounded-lg font-medium text-sm"
                 style={{
                   backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                  color: '#ef4444'
                 }}
               >
                 Clear Errors & Reload
@@ -472,8 +470,7 @@ export function HomePage() {
                 {storedErrors.reverse().map((err: any, idx: number) => (
                   <div key={idx} className="p-3 rounded-lg text-xs font-mono" style={{
                     backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#ef4444',
-                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                    color: '#ef4444'
                   }}>
                     <div className="mb-1 font-bold">{err.timestamp}</div>
                     <div className="mb-1">Type: {err.type}</div>
@@ -498,8 +495,7 @@ export function HomePage() {
                 className="mt-4 w-full px-4 py-2 rounded-lg font-medium"
                 style={{
                   backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                  color: '#ef4444'
                 }}
               >
                 Clear All Errors & Reload
@@ -511,10 +507,9 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b"
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)',
-          borderColor: 'rgba(255, 255, 255, 0.05)'
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -528,9 +523,8 @@ export function HomePage() {
           </h1>
           <button
             onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
             style={{
-              borderColor: 'rgba(59, 130, 246, 0.2)',
               color: 'var(--premium-blue)'
             }}
             title="Search everything"
@@ -785,9 +779,8 @@ export function HomePage() {
                                   addToast({ title: 'Failed to complete task', variant: 'destructive' })
                                 }
                               }}
-                              className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-blue-500/20 hover:border-blue-500"
+                              className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
                               style={{
-                                borderColor: 'rgba(59, 130, 246, 0.6)',
                                 color: 'rgba(59, 130, 246, 0.9)'
                               }}
                               title="Mark as complete"
@@ -824,8 +817,7 @@ export function HomePage() {
             ) : (
               <div className="premium-glass-subtle p-4 rounded-xl text-center">
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-full mb-3" style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)'
                 }}>
                   <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
                 </div>
@@ -838,8 +830,7 @@ export function HomePage() {
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
                   style={{
                     backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    color: 'var(--premium-blue)',
-                    border: '1px solid rgba(59, 130, 246, 0.3)'
+                    color: 'var(--premium-blue)'
                   }}
                 >
                   Create Project <ArrowRight className="h-4 w-4" />

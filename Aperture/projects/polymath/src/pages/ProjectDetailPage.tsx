@@ -403,7 +403,7 @@ export function ProjectDetailPage() {
     <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
       {/* Status */}
       <div className="flex items-center gap-2">
-        <div className="px-3 py-1.5 rounded-lg border flex items-center gap-1.5" style={{
+        <div className="px-3 py-1.5 rounded-lg flex items-center gap-1.5" style={{
           backgroundColor: {
             active: 'rgba(59, 130, 246, 0.15)',
             upcoming: 'rgba(251, 191, 36, 0.15)',
@@ -412,15 +412,6 @@ export function ProjectDetailPage() {
             completed: 'rgba(168, 85, 247, 0.15)',
             archived: 'rgba(156, 163, 175, 0.15)',
             abandoned: 'rgba(239, 68, 68, 0.15)'
-          }[project.status],
-          borderColor: {
-            active: 'rgba(59, 130, 246, 0.3)',
-            upcoming: 'rgba(251, 191, 36, 0.3)',
-            'on-hold': 'rgba(156, 163, 175, 0.3)',
-            maintaining: 'rgba(59, 130, 246, 0.3)',
-            completed: 'rgba(168, 85, 247, 0.3)',
-            archived: 'rgba(156, 163, 175, 0.3)',
-            abandoned: 'rgba(239, 68, 68, 0.3)'
           }[project.status],
           color: {
             active: '#3b82f6',
@@ -470,12 +461,7 @@ export function ProjectDetailPage() {
                 className={`group w-full flex items-center gap-2 text-sm p-1.5 rounded transition-colors text-left cursor-move ${
                   isNextTask ? 'premium-glass-subtle' : 'hover:bg-white/5'
                 }`}
-                style={isNextTask ? {
-                  borderColor: 'var(--premium-blue)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
-                } : {
+                style={{
                   opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
                 }}
               >
@@ -486,9 +472,7 @@ export function ProjectDetailPage() {
                   onClick={() => togglePinnedTask(task.id)}
                   className="flex items-center gap-2 flex-1"
                 >
-                  <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
-                    borderColor: isNextTask ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.2)'
-                  }}>
+                  <div className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0">
                   </div>
                   <span style={{
                     color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
@@ -524,9 +508,8 @@ export function ProjectDetailPage() {
                   addPinnedTask()
                 }
               }}
-              className="flex-1 px-3 py-2 text-sm rounded-lg border-2 focus:outline-none focus:ring-2 premium-glass"
+              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
               style={{
-                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-text-primary)'
               }}
             />
@@ -579,7 +562,7 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Sticky Header */}
-      <div className="premium-glass-strong border-b sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+      <div className="premium-glass-strong sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
             <button
@@ -603,10 +586,9 @@ export function ProjectDetailPage() {
                       if (e.key === 'Enter') saveTitle()
                       if (e.key === 'Escape') cancelEdit()
                     }}
-                    className="flex-1 text-xl font-bold bg-transparent border-b-2 outline-none"
+                    className="flex-1 text-xl font-bold bg-transparent outline-none"
                     style={{
-                      color: 'var(--premium-text-primary)',
-                      borderColor: 'var(--premium-blue)'
+                      color: 'var(--premium-text-primary)'
                     }}
                   />
                   <button onClick={saveTitle} className="p-1 rounded hover:bg-white/10">
@@ -704,10 +686,9 @@ export function ProjectDetailPage() {
                 }}
                 rows={3}
                 placeholder="Add a description..."
-                className="w-full bg-transparent border-2 rounded-lg p-2 outline-none resize-none"
+                className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
                 style={{
-                  color: 'var(--premium-text-primary)',
-                  borderColor: 'var(--premium-blue)'
+                  color: 'var(--premium-text-primary)'
                 }}
               />
               <div className="flex gap-2 justify-end">
@@ -797,9 +778,8 @@ export function ProjectDetailPage() {
             </h3>
             <button
               onClick={() => setShowCreateConnection(true)}
-              className="px-4 py-2 text-sm font-medium rounded-lg border transition-all hover:bg-white/5"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(59, 130, 246, 0.3)',
                 color: 'var(--premium-blue)'
               }}
             >
