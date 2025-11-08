@@ -35,6 +35,7 @@ export function ReadingPage() {
   const [rssItems, setRssItems] = useState<RSSItem[]>([])
   const [loadingRSS, setLoadingRSS] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState(0)
   const { addToast } = useToast()
 
   const bulkSelection = useBulkSelection<Article>()
@@ -116,6 +117,11 @@ export function ReadingPage() {
       const filteredItems = allItems.filter(item => !dismissed.has(item.guid))
 
       setRssItems(filteredItems)
+
+      // Track the last known count (only update if we have items)
+      if (filteredItems.length > 0) {
+        setLastKnownUpdatesCount(filteredItems.length)
+      }
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
       addToast({
@@ -244,10 +250,17 @@ export function ReadingPage() {
   }, [safeArticles, activeTab])
 
   // Count for tabs
-  const getTabCount = (tab: FilterTab) => {
+  const getTabCount = (tab: FilterTab): number | string => {
     if (!Array.isArray(safeArticles)) return 0
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
-    if (tab === 'updates') return Array.isArray(rssItems) ? rssItems.length : 0
+    if (tab === 'updates') {
+      const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
+      // Show last known count with + if we have dismissed items and had a higher count before
+      if (lastKnownUpdatesCount > 0 && currentCount === 0) {
+        return `${lastKnownUpdatesCount}+`
+      }
+      return lastKnownUpdatesCount > 0 ? `${lastKnownUpdatesCount}+` : currentCount
+    }
     return safeArticles.filter(a => a.status === tab).length
   }
 
@@ -313,7 +326,7 @@ export function ReadingPage() {
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(0, 15, 130, 1)',
+        backgroundColor: 'var(--premium-bg-1)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -335,7 +348,7 @@ export function ReadingPage() {
                   onClick={() => handleTabChange(tab.key)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                   style={{
-                    backgroundColor: activeTab === tab.key ? 'rgba(0, 114, 255, 0.4)' : 'rgba(0, 114, 255, 0.25)',
+                    backgroundColor: activeTab === tab.key ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
                     color: activeTab === tab.key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                     backdropFilter: 'blur(12px)'
                   }}
