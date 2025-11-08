@@ -363,7 +363,7 @@ export function ProjectDetailPage() {
       <div className="flex items-center gap-2">
         <div className="px-3 py-1.5 rounded-lg border flex items-center gap-1.5" style={{
           backgroundColor: {
-            active: 'rgba(16, 185, 129, 0.15)',
+            active: 'rgba(59, 130, 246, 0.15)',
             upcoming: 'rgba(251, 191, 36, 0.15)',
             'on-hold': 'rgba(156, 163, 175, 0.15)',
             maintaining: 'rgba(59, 130, 246, 0.15)',
@@ -372,7 +372,7 @@ export function ProjectDetailPage() {
             abandoned: 'rgba(239, 68, 68, 0.15)'
           }[project.status],
           borderColor: {
-            active: 'rgba(16, 185, 129, 0.3)',
+            active: 'rgba(59, 130, 246, 0.3)',
             upcoming: 'rgba(251, 191, 36, 0.3)',
             'on-hold': 'rgba(156, 163, 175, 0.3)',
             maintaining: 'rgba(59, 130, 246, 0.3)',
@@ -381,7 +381,7 @@ export function ProjectDetailPage() {
             abandoned: 'rgba(239, 68, 68, 0.3)'
           }[project.status],
           color: {
-            active: '#10b981',
+            active: '#3b82f6',
             upcoming: '#fbbf24',
             'on-hold': '#9ca3af',
             maintaining: '#3b82f6',
@@ -458,8 +458,8 @@ export function ProjectDetailPage() {
               }}
               className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 hover:bg-white/10 transition-colors"
               style={{
-                borderColor: 'var(--premium-emerald)',
-                color: 'var(--premium-emerald)'
+                borderColor: 'var(--premium-blue)',
+                color: 'var(--premium-blue)'
               }}
               aria-label="Add task"
             >
@@ -555,7 +555,7 @@ export function ProjectDetailPage() {
                     }}
                   />
                   <button onClick={saveTitle} className="p-1 rounded hover:bg-white/10">
-                    <Check className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
+                    <Check className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                   </button>
                   <button onClick={cancelEdit} className="p-1 rounded hover:bg-white/10">
                     <X className="h-5 w-5" style={{ color: '#ef4444' }} />

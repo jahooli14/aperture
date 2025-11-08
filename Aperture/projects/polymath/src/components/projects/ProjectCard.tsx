@@ -240,13 +240,13 @@ export const ProjectCard = React.memo(function ProjectCard({
     active: {
       label: 'Active',
       style: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-        color: 'var(--premium-emerald)',
-        borderColor: 'rgba(16, 185, 129, 0.3)'
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        color: 'var(--premium-blue)',
+        borderColor: 'rgba(59, 130, 246, 0.3)'
       },
       bgStyle: {
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderColor: 'rgba(16, 185, 129, 0.2)'
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgba(59, 130, 246, 0.2)'
       }
     },
     dormant: {
@@ -527,9 +527,9 @@ export const ProjectCard = React.memo(function ProjectCard({
                   }}
                   className="px-2 py-0.5 rounded text-xs font-medium border hover:bg-white/10 transition-all"
                   style={{
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                    color: 'var(--premium-emerald)',
-                    borderColor: 'rgba(16, 185, 129, 0.3)'
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--premium-blue)',
+                    borderColor: 'rgba(59, 130, 246, 0.3)'
                   }}
                   title={`Complete: ${nextTask.text}`}
                 >
@@ -551,8 +551,8 @@ export const ProjectCard = React.memo(function ProjectCard({
               <div
                 className="mt-3 p-3 rounded-lg border-2"
                 style={{
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  borderColor: 'rgba(16, 185, 129, 0.3)'
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderColor: 'rgba(59, 130, 246, 0.3)'
                 }}
               >
                 <div className="flex items-start gap-2">
@@ -576,10 +576,10 @@ export const ProjectCard = React.memo(function ProjectCard({
                         addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
                       }
                     }}
-                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-emerald-500/20"
+                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all hover:bg-blue-500/20"
                     style={{
-                      borderColor: 'var(--premium-emerald)',
-                      color: 'var(--premium-emerald)'
+                      borderColor: 'var(--premium-blue)',
+                      color: 'var(--premium-blue)'
                     }}
                     title="Complete this task"
                   >
@@ -588,7 +588,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                     </svg>
                   </button>
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-emerald)' }}>
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-blue)' }}>
                       Next Step
                     </div>
                     <p className="text-sm leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
@@ -762,9 +762,9 @@ export const ProjectCard = React.memo(function ProjectCard({
                     }
                   : project.metadata.energy_level === 'low'
                     ? {
-                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                        color: 'var(--premium-emerald)',
-                        borderColor: 'rgba(16, 185, 129, 0.3)'
+                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                        color: 'var(--premium-blue)',
+                        borderColor: 'rgba(59, 130, 246, 0.3)'
                       }
                     : {
                         backgroundColor: 'rgba(245, 158, 11, 0.15)',

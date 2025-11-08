@@ -187,15 +187,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           pointerEvents: 'none'
         }}
       />
-      {/* Accent gradient bar - amber for processing, indigo for processed */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-1 transition-all duration-300 group-hover:h-2"
-        style={{
-          background: !memory.processed
-            ? 'linear-gradient(90deg, var(--premium-amber), #fbbf24)'
-            : 'linear-gradient(90deg, var(--premium-indigo), #818cf8)'
-        }}
-      />
 
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
