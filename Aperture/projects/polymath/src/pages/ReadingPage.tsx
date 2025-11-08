@@ -356,17 +356,31 @@ export function ReadingPage() {
             })}
           </div>
 
-          <button
-            onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5 flex-shrink-0"
-            style={{
-              borderColor: 'rgba(30, 42, 88, 0.2)',
-              color: 'rgba(100, 180, 255, 1)'
-            }}
-            title="Search everything"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(30, 42, 88, 0.2)',
+                color: 'rgba(100, 180, 255, 1)'
+              }}
+              title="New Article"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+              style={{
+                borderColor: 'rgba(30, 42, 88, 0.2)',
+                color: 'rgba(100, 180, 255, 1)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
