@@ -17,14 +17,18 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
   const [showStatusPicker, setShowStatusPicker] = useState(false)
 
   const statusConfig: Record<Project['status'], { bg: string; text: string; border: string; label: string; emoji: string }> = {
-    upcoming: { bg: 'rgba(251, 191, 36, 0.15)', text: '#fbbf24', border: 'rgba(251, 191, 36, 0.3)', label: 'Upcoming', emoji: '📅' },
+    upcoming: { bg: 'rgba(251, 191, 36, 0.15)', text: '#fbbf24', border: 'rgba(251, 191, 36, 0.3)', label: 'Next', emoji: '📅' },
     active: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)', label: 'Active', emoji: '🚀' },
+    dormant: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'Dormant', emoji: '💤' },
+    completed: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)', label: 'Done', emoji: '✅' },
     'on-hold': { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'On Hold', emoji: '⏸️' },
     maintaining: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)', label: 'Maintaining', emoji: '🔧' },
-    completed: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)', label: 'Completed', emoji: '✅' },
     archived: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'Archived', emoji: '📦' },
     abandoned: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)', label: 'Abandoned', emoji: '⚠️' },
   }
+
+  // Only show the 4 main status options that match the navbar chips
+  const availableStatuses: Project['status'][] = ['upcoming', 'active', 'dormant', 'completed']
 
   const energyConfig: Record<string, { label: string; emoji: string; color: string }> = {
     low: { label: 'Low Energy', emoji: '🔋', color: '#10b981' },
@@ -61,7 +65,7 @@ export function ProjectProperties({ project, onUpdate, onStatusChange }: Project
                   onClick={() => setShowStatusPicker(false)}
                 />
                 <div className="absolute top-full left-0 mt-2 premium-card rounded-lg shadow-lg py-1 z-20 max-h-64 overflow-y-auto min-w-[160px]">
-                  {(Object.keys(statusConfig) as Project['status'][]).map((status) => {
+                  {availableStatuses.map((status) => {
                     const config = statusConfig[status]
                     return (
                       <button
