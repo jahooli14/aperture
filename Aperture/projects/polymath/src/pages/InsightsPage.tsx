@@ -8,7 +8,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { PullToRefresh } from '../components/PullToRefresh'
 import { Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react'
 import type { SynthesisInsight } from '../types'
 
@@ -55,10 +54,6 @@ export function InsightsPage() {
     }
   }
 
-  const handleRefresh = async () => {
-    await fetchInsights()
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
@@ -93,7 +88,7 @@ export function InsightsPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+    <div className="min-h-screen">
       <motion.div
         className="py-12"
         initial={{ opacity: 0, y: 20 }}
@@ -220,6 +215,6 @@ export function InsightsPage() {
         </Card>
       </div>
       </motion.div>
-    </PullToRefresh>
+    </div>
   )
 }

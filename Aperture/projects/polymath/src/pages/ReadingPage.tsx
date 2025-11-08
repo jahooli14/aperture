@@ -12,7 +12,6 @@ import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
-import { PullToRefresh } from '../components/PullToRefresh'
 import { useShareTarget } from '../hooks/useShareTarget'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
@@ -267,10 +266,6 @@ export function ReadingPage() {
     return safeArticles.filter(a => a.status === tab).length
   }
 
-  const handleRefresh = async () => {
-    await fetchArticles()
-  }
-
   // Bulk actions handlers
   const handleBulkArchive = async () => {
     setBulkActionLoading(true)
@@ -325,8 +320,7 @@ export function ReadingPage() {
   }
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
+    <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
         backgroundColor: 'rgba(15, 24, 41, 0.7)'
@@ -590,7 +584,6 @@ export function ReadingPage() {
           },
         ]}
       />
-      </div>
-    </PullToRefresh>
+    </div>
   )
 }

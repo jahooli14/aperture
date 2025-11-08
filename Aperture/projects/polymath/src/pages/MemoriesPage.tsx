@@ -14,7 +14,6 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
-import { PullToRefresh } from '../components/PullToRefresh'
 import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
@@ -332,20 +331,8 @@ export function MemoriesPage() {
 
   const isLoading = view === 'all' ? loading : loadingResurfacing
 
-  const handleRefresh = async () => {
-    if (view === 'all') {
-      await Promise.all([
-        loadMemoriesWithCache(),
-        fetchThemeClusters(true) // Force refresh on manual refresh
-      ])
-    } else if (view === 'resurfacing') {
-      await fetchResurfacing()
-    }
-  }
-
   return (
     <>
-      <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
         {/* Header */}
         <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
           backgroundColor: 'rgba(15, 24, 41, 0.7)'
@@ -798,7 +785,6 @@ export function MemoriesPage() {
       {/* Confirmation Dialog */}
       {confirmDialog}
         </motion.div>
-      </PullToRefresh>
 
       {/* Connection Suggestions */}
       {suggestions.length > 0 && sourceType === 'memory' && (

@@ -9,7 +9,6 @@ import { Virtuoso } from 'react-virtuoso'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { PullToRefresh } from '../components/PullToRefresh'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton'
@@ -98,12 +97,8 @@ export function ProjectsPage() {
     }
   }
 
-  const handleRefresh = async () => {
-    await fetchProjects()
-  }
-
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
+    <div className="min-h-screen">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
         backgroundColor: 'rgba(15, 24, 41, 0.7)'
@@ -294,7 +289,7 @@ export function ProjectsPage() {
       {/* Confirmation Dialog */}
       {confirmDialog}
       </motion.div>
-    </PullToRefresh>
+    </div>
   )
 }
 
