@@ -91,7 +91,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
       <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-        background: 'rgba(15, 25, 45, 0.6)',
+        background: 'rgba(25, 50, 90, 0.6)',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
       }}>
         <div className="mb-5">
@@ -683,7 +683,7 @@ export function HomePage() {
         {/* 2. KEEP THE MOMENTUM (Compact) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(15, 25, 45, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-5">
@@ -859,7 +859,7 @@ export function HomePage() {
         {/* 4. EXPLORE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(15, 25, 45, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-6">
