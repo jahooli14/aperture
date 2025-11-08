@@ -6,7 +6,7 @@ import { useState, useEffect, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
-import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2, Pin } from 'lucide-react'
+import { Brain, Calendar, User, Tag, Edit, Trash2, ChevronDown, ChevronUp, Copy, Share2, Pin, MoreVertical } from 'lucide-react'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -173,7 +173,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           }}
         >
         <Card className="group h-full flex flex-col relative overflow-hidden" style={{
-          background: 'rgba(30, 42, 88, 0.6)',
+          background: 'rgba(25, 50, 90, 0.6)',
           backdropFilter: 'blur(12px)',
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
         }}>
@@ -226,26 +226,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
                 </div>
               }
             />
-            {onEdit && (
+            {(onEdit || onDelete) && (
               <Button
-                onClick={() => onEdit(memory)}
+                onClick={() => setShowContextMenu(true)}
                 variant="ghost"
                 size="sm"
                 className="h-11 w-11 p-0 touch-manipulation hover:bg-white/10 transition-colors"
-                aria-label="Edit memory"
+                aria-label="More options"
               >
-                <Edit className="h-5 w-5 hover:opacity-80" style={{ color: 'var(--premium-blue)' }} />
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                onClick={() => onDelete(memory)}
-                variant="ghost"
-                size="sm"
-                className="h-11 w-11 p-0 touch-manipulation hover:bg-white/10 transition-colors"
-                aria-label="Delete memory"
-              >
-                <Trash2 className="h-5 w-5 hover:opacity-80" style={{ color: '#ef4444' }} />
+                <MoreVertical className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
               </Button>
             )}
           </div>

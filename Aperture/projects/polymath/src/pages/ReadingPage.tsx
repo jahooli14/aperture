@@ -313,7 +313,7 @@ export function ReadingPage() {
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(25, 35, 55, 0.6)',
+        backgroundColor: 'rgba(15, 25, 45, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -335,7 +335,7 @@ export function ReadingPage() {
                   onClick={() => handleTabChange(tab.key)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                   style={{
-                    backgroundColor: activeTab === tab.key ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                    backgroundColor: activeTab === tab.key ? 'rgba(40, 80, 130, 0.8)' : 'rgba(25, 50, 90, 0.6)',
                     color: activeTab === tab.key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                     backdropFilter: 'blur(12px)'
                   }}
@@ -352,7 +352,7 @@ export function ReadingPage() {
               onClick={() => setShowSaveDialog(true)}
               className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(30, 42, 88, 0.2)',
+                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="New Article"
@@ -364,7 +364,7 @@ export function ReadingPage() {
               onClick={() => navigate('/search')}
               className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(30, 42, 88, 0.2)',
+                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="Search everything"

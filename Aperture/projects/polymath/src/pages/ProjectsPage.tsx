@@ -106,7 +106,7 @@ export function ProjectsPage() {
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(25, 35, 55, 0.6)',
+        backgroundColor: 'rgba(15, 25, 45, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -121,17 +121,17 @@ export function ProjectsPage() {
           <div className="flex gap-2 flex-1 flex-wrap">
             {[
               { key: 'all', label: 'All' },
-              { key: 'upcoming', label: 'Upcoming' },
+              { key: 'upcoming', label: 'Next' },
               { key: 'active', label: 'Active' },
               { key: 'dormant', label: 'Dormant' },
-              { key: 'completed', label: 'Completed' }
+              { key: 'completed', label: 'Done' }
             ].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setFilter(key as typeof filter)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  backgroundColor: filter === key ? 'rgba(30, 42, 88, 0.8)' : 'rgba(30, 42, 88, 0.6)',
+                  backgroundColor: filter === key ? 'rgba(40, 80, 130, 0.8)' : 'rgba(25, 50, 90, 0.6)',
                   color: filter === key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                   backdropFilter: 'blur(12px)'
                 }}
@@ -147,7 +147,7 @@ export function ProjectsPage() {
               onClick={() => navigate('/search')}
               className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
               style={{
-                borderColor: 'rgba(30, 42, 88, 0.2)',
+                borderColor: 'rgba(25, 50, 90, 0.2)',
                 color: 'rgba(100, 180, 255, 1)'
               }}
               title="Search everything"
@@ -181,8 +181,8 @@ export function ProjectsPage() {
                 size="sm"
                 className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs border"
                 style={{
-                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(30, 42, 88, 0.6)',
-                  backgroundColor: selectedTags.includes(tag) ? 'rgba(30, 42, 88, 0.8)' : 'transparent',
+                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(25, 50, 90, 0.6)',
+                  backgroundColor: selectedTags.includes(tag) ? 'rgba(40, 80, 130, 0.8)' : 'transparent',
                   color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                 }}
               >
@@ -207,7 +207,7 @@ export function ProjectsPage() {
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
           <Card className="mb-8" style={{
             borderColor: 'var(--premium-blue)',
-            background: 'rgba(30, 42, 88, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -246,7 +246,7 @@ export function ProjectsPage() {
         ) : projects.length === 0 ? (
           /* Empty State */
           <Card style={{
-            background: 'rgba(30, 42, 88, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>

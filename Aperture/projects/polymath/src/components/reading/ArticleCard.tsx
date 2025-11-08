@@ -367,16 +367,16 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           onClick={onClick}
           className="group premium-card rounded-xl p-4 sm:p-5 transition-all cursor-pointer relative overflow-hidden"
           style={{
-            background: 'rgba(30, 42, 88, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(30, 42, 88, 0.8)'
+            (e.currentTarget as HTMLElement).style.background = 'rgba(40, 80, 130, 0.8)'
             ;(e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(30, 42, 88, 0.6)'
+            (e.currentTarget as HTMLElement).style.background = 'rgba(25, 50, 90, 0.6)'
             ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}
         >
