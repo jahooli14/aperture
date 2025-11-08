@@ -232,14 +232,14 @@ export function ProjectsPage() {
           </Card>
         )}
 
-        {/* Loading State - only show skeleton if we have no data yet */}
-        {loading && projects.length === 0 ? (
+        {/* Loading State */}
+        {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
-        ) : projects.length === 0 && !loading ? (
+        ) : projects.length === 0 ? (
           /* Empty State */
           <Card style={{
             background: 'var(--premium-bg-2)',

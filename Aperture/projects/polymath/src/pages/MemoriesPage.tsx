@@ -519,8 +519,8 @@ export function MemoriesPage() {
               </Card>
             )}
 
-            {/* Loading State - only show spinner if we have no data yet */}
-            {isLoading && memories.length === 0 && (
+            {/* Loading State */}
+            {isLoading && (
               <Card style={{
                 background: 'var(--premium-bg-2)',
                 backdropFilter: 'blur(12px)',
@@ -537,8 +537,8 @@ export function MemoriesPage() {
           </>
         )}
 
-        {/* Resurfacing Tab Loading - only show spinner if we have no data yet */}
-        {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
+        {/* Resurfacing Tab Loading */}
+        {view === 'resurfacing' && isLoading && (
           <Card style={{
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
