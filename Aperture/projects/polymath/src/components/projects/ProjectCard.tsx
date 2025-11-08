@@ -384,7 +384,7 @@ export const ProjectCard = React.memo(function ProjectCard({
             className="group h-full flex flex-col cursor-pointer relative overflow-hidden"
             onClick={handleCardClick}
             style={{
-              background: 'var(--premium-bg-2)',
+              background: project.is_priority ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
               backdropFilter: 'blur(12px)',
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
             }}
@@ -472,10 +472,6 @@ export const ProjectCard = React.memo(function ProjectCard({
             }}>
               {statusConfig[project.status]?.label || project.status}
             </div>
-
-            {project.is_priority && (
-              <Star className="h-4 w-4" fill="var(--premium-amber)" style={{ color: 'var(--premium-amber)' }} />
-            )}
 
             {/* Quick Complete Next Task Button */}
             {(() => {
