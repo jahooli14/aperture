@@ -513,7 +513,7 @@ export function HomePage() {
       <div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)',
+          backgroundColor: 'var(--premium-bg-1)',
           borderColor: 'rgba(255, 255, 255, 0.05)'
         }}
       >
