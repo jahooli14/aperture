@@ -761,7 +761,7 @@ export function HomePage() {
                       <div
                         className="rounded-lg p-2.5 flex items-center justify-between gap-2"
                         style={{
-                          backgroundColor: 'var(--premium-bg-4)'
+                          background: 'var(--premium-bg-3)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                       >
