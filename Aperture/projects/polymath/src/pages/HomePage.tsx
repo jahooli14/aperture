@@ -598,7 +598,7 @@ export function HomePage() {
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(15, 25, 45, 0.6)',
+            background: 'rgba(25, 50, 90, 0.6)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-4">
