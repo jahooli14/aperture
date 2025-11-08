@@ -123,13 +123,13 @@ export function OnboardingPage() {
 
   if (isAnalyzing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-white">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-900 mx-auto mb-6"></div>
-          <h2 className="text-2xl font-bold text-neutral-900 mb-2">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 mx-auto mb-6" style={{ borderColor: 'var(--premium-blue)' }}></div>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
             Analyzing your responses...
           </h2>
-          <p className="text-neutral-600">
+          <p style={{ color: 'var(--premium-text-secondary)' }}>
             Building your first knowledge graph
           </p>
         </div>
@@ -139,29 +139,29 @@ export function OnboardingPage() {
 
   if (analysis) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white py-12">
+      <div className="min-h-screen py-12">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-6">
-              <Check className="h-8 w-8 text-blue-900" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)' }}>
+              <Check className="h-8 w-8" style={{ color: 'var(--premium-blue)' }} />
             </div>
-            <h1 className="text-4xl font-bold text-neutral-900 mb-4">
+            <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
               Your First Patterns
             </h1>
-            <p className="text-xl text-neutral-600">
+            <p className="text-xl" style={{ color: 'var(--premium-text-secondary)' }}>
               Here's what we found from just 5 thoughts
             </p>
           </div>
 
           <div className="grid gap-6 mb-8">
             {/* Capabilities */}
-            <div className="pro-card p-6">
-              <h3 className="font-semibold text-neutral-900 mb-3">
+            <div className="p-6" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
+              <h3 className="font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
                 ✅ {analysis.capabilities.length} capabilities detected
               </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.capabilities.map((cap, i) => (
-                  <span key={i} className="px-3 py-1 bg-blue-100 text-blue-950 rounded-full text-sm font-medium">
+                  <span key={i} className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-blue)' }}>
                     {cap}
                   </span>
                 ))}
@@ -169,13 +169,13 @@ export function OnboardingPage() {
             </div>
 
             {/* Themes */}
-            <div className="pro-card p-6">
-              <h3 className="font-semibold text-neutral-900 mb-3">
+            <div className="p-6" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
+              <h3 className="font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
                 ✅ {analysis.themes.length} themes emerging
               </h3>
               <div className="flex flex-wrap gap-2">
                 {analysis.themes.map((theme, i) => (
-                  <span key={i} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  <span key={i} className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-blue)' }}>
                     {theme}
                   </span>
                 ))}
@@ -184,14 +184,14 @@ export function OnboardingPage() {
 
             {/* Patterns */}
             {analysis.patterns.length > 0 && (
-              <div className="pro-card p-6">
-                <h3 className="font-semibold text-neutral-900 mb-3">
+              <div className="p-6" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
+                <h3 className="font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
                   ✅ {analysis.patterns.length} pattern found
                 </h3>
                 <ul className="space-y-2">
                   {analysis.patterns.map((pattern, i) => (
-                    <li key={i} className="text-neutral-700 flex items-start gap-2">
-                      <span className="text-blue-900 mt-1">→</span>
+                    <li key={i} className="flex items-start gap-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                      <span className="mt-1" style={{ color: 'var(--premium-blue)' }}>→</span>
                       {pattern}
                     </li>
                   ))}
@@ -200,14 +200,14 @@ export function OnboardingPage() {
             )}
 
             {/* First Insight */}
-            <div className="pro-card p-6 border-2 border-blue-200 bg-blue-50">
+            <div className="p-6" style={{ background: 'var(--premium-bg-3)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
               <div className="flex items-start gap-3">
-                <Sparkles className="h-6 w-6 text-blue-900 flex-shrink-0 mt-1" />
+                <Sparkles className="h-6 w-6 flex-shrink-0 mt-1" style={{ color: 'var(--premium-blue)' }} />
                 <div>
-                  <h3 className="font-semibold text-neutral-900 mb-2">
+                  <h3 className="font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                     💡 First Insight
                   </h3>
-                  <p className="text-neutral-700">
+                  <p style={{ color: 'var(--premium-text-secondary)' }}>
                     {analysis.first_insight}
                   </p>
                 </div>
@@ -216,21 +216,21 @@ export function OnboardingPage() {
           </div>
 
           {/* Graph Visualization Placeholder */}
-          <div className="pro-card p-6 mb-8">
-            <h3 className="font-semibold text-neutral-900 mb-4 text-center">
+          <div className="p-6 mb-8" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
+            <h3 className="font-semibold mb-4 text-center" style={{ color: 'var(--premium-text-primary)' }}>
               Your Knowledge Graph
             </h3>
             <div className="flex items-center justify-center gap-8 py-8">
               {analysis.graph_preview.nodes.map((node, i) => (
                 <div key={node.id} className="flex flex-col items-center">
-                  <div className={`w-24 h-24 rounded-full flex items-center justify-center text-sm font-medium text-center p-2
-                    ${node.type === 'capability' ? 'bg-blue-100 text-blue-950' : 'bg-blue-100 text-blue-700'}`}>
+                  <div className="w-24 h-24 rounded-full flex items-center justify-center text-sm font-medium text-center p-2"
+                    style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-blue)' }}>
                     {node.label}
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-center text-sm text-neutral-600 mt-4">
+            <p className="text-center text-sm mt-4" style={{ color: 'var(--premium-text-tertiary)' }}>
               This is just the beginning. Imagine after 50 captures...
             </p>
           </div>
@@ -244,7 +244,7 @@ export function OnboardingPage() {
               Start Capturing Thoughts
               <ArrowRight className="h-5 w-5" />
             </button>
-            <p className="text-sm text-neutral-600 mt-4">
+            <p className="text-sm mt-4" style={{ color: 'var(--premium-text-tertiary)' }}>
               Your knowledge graph will grow with every voice note
             </p>
           </div>
@@ -254,12 +254,12 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+    <div className="min-h-screen">
       {/* Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 h-1 bg-neutral-200 z-50">
+      <div className="fixed top-0 left-0 right-0 h-1 z-50" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
         <div
-          className="h-full bg-blue-900 transition-all duration-300"
-          style={{ width: `${progress}%` }}
+          className="h-full transition-all duration-300"
+          style={{ width: `${progress}%`, backgroundColor: 'var(--premium-blue)' }}
         />
       </div>
 
@@ -267,23 +267,24 @@ export function OnboardingPage() {
         <div className="max-w-2xl w-full">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-neutral-900 mb-3">
+            <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
               Let's map your creative brain
             </h1>
-            <p className="text-xl text-neutral-600">
+            <p className="text-xl" style={{ color: 'var(--premium-text-secondary)' }}>
               Question {currentQuestion + 1} of {QUESTIONS.length}
             </p>
             <button
               onClick={handleSkipOnboarding}
-              className="text-sm text-neutral-500 hover:text-neutral-700 mt-4"
+              className="text-sm mt-4 hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--premium-text-tertiary)' }}
             >
               Skip onboarding →
             </button>
           </div>
 
           {/* Question Card */}
-          <div className="pro-card p-8 mb-6">
-            <h2 className="text-2xl font-semibold text-neutral-900 mb-6">
+          <div className="p-8 mb-6" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
+            <h2 className="text-2xl font-semibold mb-6" style={{ color: 'var(--premium-text-primary)' }}>
               {question.text}
             </h2>
 
@@ -292,7 +293,13 @@ export function OnboardingPage() {
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
                 placeholder={question.placeholder}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 rounded-lg focus:ring-2 resize-none"
+                style={{
+                  backgroundColor: 'var(--premium-surface-elevated)',
+                  color: 'var(--premium-text-primary)',
+                  borderWidth: '0',
+                  outlineColor: 'var(--premium-blue)'
+                }}
                 rows={question.type === 'freeform' ? 6 : 3}
                 autoFocus
               />
@@ -309,11 +316,12 @@ export function OnboardingPage() {
 
           {/* Navigation */}
           <div className="flex items-center justify-between">
-            <div className="text-sm text-neutral-600">
+            <div className="text-sm">
               {currentQuestion > 0 && (
                 <button
                   onClick={() => setCurrentQuestion(currentQuestion - 1)}
-                  className="text-neutral-600 hover:text-neutral-900"
+                  className="hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--premium-text-secondary)' }}
                 >
                   ← Back
                 </button>
@@ -332,15 +340,15 @@ export function OnboardingPage() {
 
           {/* Completed Questions */}
           {responses.length > 0 && (
-            <div className="mt-8 pt-8 border-t border-neutral-200">
-              <h3 className="text-sm font-medium text-neutral-600 mb-3">
+            <div className="mt-8 pt-8" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <h3 className="text-sm font-medium mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
                 Your responses so far:
               </h3>
               <div className="space-y-2">
                 {responses.map((response, i) => (
                   <div key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
-                    <span className="text-neutral-700 line-clamp-1">
+                    <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--premium-blue)' }} />
+                    <span className="line-clamp-1" style={{ color: 'var(--premium-text-secondary)' }}>
                       {QUESTIONS[i]?.text || 'Question'}: {response?.transcript?.substring(0, 60) || ''}...
                     </span>
                   </div>
