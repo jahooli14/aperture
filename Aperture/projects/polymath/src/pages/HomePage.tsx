@@ -91,7 +91,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
       <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-        background: 'rgba(0, 114, 255, 0.44)',
+        background: 'rgba(0, 114, 255, 0.25)',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
       }}>
         <div className="mb-5">
@@ -117,15 +117,15 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
                 to={inspiration.url}
                 className="group block p-3 rounded-xl transition-all duration-300"
                 style={{
-                  background: 'rgba(0, 114, 255, 0.44)',
+                  background: 'rgba(0, 114, 255, 0.25)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.62)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.4)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.44)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.25)'
                 }}
               >
                 <div className="space-y-2">
@@ -145,7 +145,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
               </Link>
             ) : (
               <div className="p-3 rounded-xl" style={{
-                background: 'rgba(0, 114, 255, 0.44)',
+                background: 'rgba(0, 114, 255, 0.25)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
               }}>
@@ -568,7 +568,7 @@ export function HomePage() {
                     <h3 className="font-bold mb-1 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
                       Complete Your Profile
                       <span className="text-sm px-2 py-0.5 rounded-full" style={{
-                        backgroundColor: 'rgba(0, 114, 255, 0.8)',
+                        backgroundColor: 'rgba(0, 114, 255, 0.75)',
                         color: 'rgba(60, 140, 180, 0.9)'
                       }}>
                         {progress.completed_required}/{progress.total_required}
@@ -598,7 +598,7 @@ export function HomePage() {
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(0, 114, 255, 0.44)',
+            background: 'rgba(0, 114, 255, 0.25)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-4">
@@ -614,13 +614,13 @@ export function HomePage() {
                 }}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(0, 114, 255, 0.62)',
+                  backgroundColor: 'rgba(0, 114, 255, 0.4)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.62)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.4)'}
                 title="Voice Note"
               >
                 <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -631,13 +631,13 @@ export function HomePage() {
                 onClick={() => setCreateThoughtOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(0, 114, 255, 0.62)',
+                  backgroundColor: 'rgba(0, 114, 255, 0.4)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.62)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.4)'}
                 title="Thought"
               >
                 <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -648,13 +648,13 @@ export function HomePage() {
                 onClick={() => setSaveArticleOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(0, 114, 255, 0.62)',
+                  backgroundColor: 'rgba(0, 114, 255, 0.4)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.62)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.4)'}
                 title="Article"
               >
                 <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -665,13 +665,13 @@ export function HomePage() {
                 onClick={() => setCreateProjectOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'rgba(0, 114, 255, 0.62)',
+                  backgroundColor: 'rgba(0, 114, 255, 0.4)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
                   boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.62)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 114, 255, 0.4)'}
                 title="Project"
               >
                 <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -683,7 +683,7 @@ export function HomePage() {
         {/* 2. KEEP THE MOMENTUM (Compact) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(0, 114, 255, 0.44)',
+            background: 'rgba(0, 114, 255, 0.25)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-5">
@@ -725,16 +725,16 @@ export function HomePage() {
                       to={`/projects/${project.id}`}
                       className="group block p-4 rounded-xl transition-all duration-300"
                       style={{
-                        background: 'rgba(0, 114, 255, 0.44)',
+                        background: 'rgba(0, 114, 255, 0.25)',
                         backdropFilter: 'blur(12px)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 114, 255, 0.62)'
+                        e.currentTarget.style.background = 'rgba(0, 114, 255, 0.4)'
                         e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(0, 114, 255, 0.44)'
+                        e.currentTarget.style.background = 'rgba(0, 114, 255, 0.25)'
                         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                     >
@@ -761,7 +761,7 @@ export function HomePage() {
                       <div
                         className="rounded-lg p-2.5 flex items-center justify-between gap-2"
                         style={{
-                          backgroundColor: 'rgba(0, 114, 255, 0.8)'
+                          backgroundColor: 'rgba(0, 114, 255, 0.75)'
                         }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -859,7 +859,7 @@ export function HomePage() {
         {/* 4. EXPLORE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'rgba(0, 114, 255, 0.44)',
+            background: 'rgba(0, 114, 255, 0.25)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-6">
@@ -872,15 +872,15 @@ export function HomePage() {
                 to="/knowledge-timeline"
                 className="group p-5 rounded-xl transition-all"
                 style={{
-                  background: 'rgba(0, 114, 255, 0.44)',
+                  background: 'rgba(0, 114, 255, 0.25)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.62)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.4)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.44)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.25)'
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -902,15 +902,15 @@ export function HomePage() {
                 to="/constellation"
                 className="group p-5 rounded-xl transition-all"
                 style={{
-                  background: 'rgba(0, 114, 255, 0.44)',
+                  background: 'rgba(0, 114, 255, 0.25)',
                   backdropFilter: 'blur(12px)',
                   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.62)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.4)'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.44)'
+                  e.currentTarget.style.background = 'rgba(0, 114, 255, 0.25)'
                 }}
               >
                 <div className="flex items-start justify-between gap-3">

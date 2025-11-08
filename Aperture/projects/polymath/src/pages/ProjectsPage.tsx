@@ -131,7 +131,7 @@ export function ProjectsPage() {
                 onClick={() => setFilter(key as typeof filter)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  backgroundColor: filter === key ? 'rgba(0, 114, 255, 0.62)' : 'rgba(0, 114, 255, 0.44)',
+                  backgroundColor: filter === key ? 'rgba(0, 114, 255, 0.4)' : 'rgba(0, 114, 255, 0.25)',
                   color: filter === key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                   backdropFilter: 'blur(12px)'
                 }}
@@ -181,8 +181,8 @@ export function ProjectsPage() {
                 size="sm"
                 className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs border"
                 style={{
-                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(0, 114, 255, 0.44)',
-                  backgroundColor: selectedTags.includes(tag) ? 'rgba(0, 114, 255, 0.62)' : 'transparent',
+                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(0, 114, 255, 0.25)',
+                  backgroundColor: selectedTags.includes(tag) ? 'rgba(0, 114, 255, 0.4)' : 'transparent',
                   color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                 }}
               >
@@ -207,7 +207,7 @@ export function ProjectsPage() {
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
           <Card className="mb-8" style={{
             borderColor: 'var(--premium-blue)',
-            background: 'rgba(0, 114, 255, 0.44)',
+            background: 'rgba(0, 114, 255, 0.25)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -246,7 +246,7 @@ export function ProjectsPage() {
         ) : projects.length === 0 ? (
           /* Empty State */
           <Card style={{
-            background: 'rgba(0, 114, 255, 0.44)',
+            background: 'rgba(0, 114, 255, 0.25)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>

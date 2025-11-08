@@ -173,7 +173,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           }}
         >
         <Card className="group h-full flex flex-col relative overflow-hidden" style={{
-          background: 'rgba(0, 114, 255, 0.44)',
+          background: 'rgba(0, 114, 255, 0.25)',
           backdropFilter: 'blur(12px)',
           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
         }}>

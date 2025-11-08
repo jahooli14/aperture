@@ -335,7 +335,7 @@ export function ReadingPage() {
                   onClick={() => handleTabChange(tab.key)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                   style={{
-                    backgroundColor: activeTab === tab.key ? 'rgba(0, 114, 255, 0.62)' : 'rgba(0, 114, 255, 0.44)',
+                    backgroundColor: activeTab === tab.key ? 'rgba(0, 114, 255, 0.4)' : 'rgba(0, 114, 255, 0.25)',
                     color: activeTab === tab.key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                     backdropFilter: 'blur(12px)'
                   }}
