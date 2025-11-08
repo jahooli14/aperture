@@ -5,7 +5,6 @@ import { OfflineIndicator } from './components/OfflineIndicator'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { FloatingNav } from './components/FloatingNav'
 import { PWAInstallBanner } from './components/PWAInstallBanner'
-import { PWAUpdateNotification } from './components/PWAUpdateNotification'
 import { PinProvider } from './contexts/PinContext'
 import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
@@ -165,7 +164,6 @@ export default function App() {
           <ScrollToTop />
           <div className="min-h-screen flex flex-col">
             <OfflineIndicator />
-            <PWAUpdateNotification />
             <PWAInstallBanner />
 
           {/* Safe area spacer for mobile status bar */}

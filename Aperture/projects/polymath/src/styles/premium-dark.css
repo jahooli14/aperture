@@ -41,10 +41,10 @@
   --premium-amber-glow: rgba(245, 158, 11, 0.4);
 
   /* Background Colors - App-wide hierarchy */
-  --premium-bg-1: rgba(15, 30, 60, 0.5);
-  --premium-bg-2: rgba(30, 60, 120, 0.15);
+  --premium-bg-1: rgba(10, 20, 45, 0.7);
+  --premium-bg-2: rgba(30, 60, 120, 0.25);
   --premium-bg-3: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.15));
-  --premium-bg-4: rgba(59, 130, 246, 0.35);
+  --premium-bg-4: rgba(59, 130, 246, 0.55);
 
   /* Text Colors */
   --premium-text-primary: #ffffff;
