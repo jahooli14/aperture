@@ -106,14 +106,14 @@ export function ProjectsPage() {
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
       {/* Depth background with subtle gradients */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] opacity-20" style={{
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent 70%)'
+        <div className="absolute top-0 left-0 right-0 h-96 opacity-30" style={{
+          background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.15), transparent 70%)'
         }} />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] opacity-15" style={{
-          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%)'
+        <div className="absolute bottom-0 left-0 right-0 h-96 opacity-20" style={{
+          background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
         }} />
-        <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] opacity-28" style={{
-          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.22), transparent 70%)'
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] opacity-25" style={{
+          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2), transparent 70%)'
         }} />
       </div>
       {/* Header */}
