@@ -179,11 +179,7 @@ export function ProjectsPage() {
                 variant={selectedTags.includes(tag) ? 'default' : 'outline'}
                 onClick={() => toggleTag(tag)}
                 size="sm"
-                className={`whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs ${
-                  selectedTags.includes(tag)
-                    ? 'premium-card border-2 shadow-lg'
-                    : 'premium-card border shadow-sm hover:shadow-md'
-                }`}
+                className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs border"
                 style={{
                   borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(30, 42, 88, 0.6)',
                   backgroundColor: selectedTags.includes(tag) ? 'rgba(30, 42, 88, 0.8)' : 'transparent',
@@ -209,7 +205,12 @@ export function ProjectsPage() {
 
         {/* Demo Projects Context Banner - Only show when projects include demo data */}
         {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
-          <Card className="mb-8 premium-card" style={{ borderColor: 'var(--premium-blue)' }}>
+          <Card className="mb-8" style={{
+            borderColor: 'var(--premium-blue)',
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
                 <Rocket className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
@@ -244,7 +245,11 @@ export function ProjectsPage() {
           </div>
         ) : projects.length === 0 ? (
           /* Empty State */
-          <Card className="premium-card">
+          <Card style={{
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="py-24">
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center justify-center">

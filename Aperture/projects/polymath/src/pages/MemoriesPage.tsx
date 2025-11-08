@@ -430,7 +430,12 @@ export function MemoriesPage() {
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-          <Card className="premium-card mb-8 border-2" style={{ borderColor: 'var(--premium-blue)' }}>
+          <Card className="mb-8 border-2" style={{
+            borderColor: 'var(--premium-blue)',
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
@@ -449,7 +454,11 @@ export function MemoriesPage() {
 
         {/* Resurfacing Info Banner */}
         {view === 'resurfacing' && resurfacing.length > 0 && (
-          <Card className="premium-card mb-8 border-2 border-amber-300">
+          <Card className="mb-8 border-2 border-amber-300" style={{
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                 <Zap className="h-5 w-5 text-amber-600" />
@@ -482,7 +491,12 @@ export function MemoriesPage() {
 
             {/* Voice Note Processing Banner */}
             {processingVoiceNote && (
-              <Card className="premium-card mb-6 border-2 animate-pulse" style={{ borderColor: 'var(--premium-blue)', backgroundColor: 'rgba(15, 85, 135, 0.3)' }}>
+              <Card className="mb-6 border-2 animate-pulse" style={{
+                borderColor: 'var(--premium-blue)',
+                backgroundColor: 'rgba(15, 85, 135, 0.3)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+              }}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
@@ -511,7 +525,11 @@ export function MemoriesPage() {
 
             {/* Loading State */}
             {isLoading && (
-              <Card className="premium-card">
+              <Card style={{
+                background: 'rgba(30, 42, 88, 0.6)',
+                backdropFilter: 'blur(12px)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+              }}>
                 <CardContent className="py-24">
                   <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
                     <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
@@ -525,7 +543,11 @@ export function MemoriesPage() {
 
         {/* Resurfacing Tab Loading */}
         {view === 'resurfacing' && isLoading && (
-          <Card className="premium-card">
+          <Card style={{
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="py-24">
               <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
                 <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
@@ -537,7 +559,11 @@ export function MemoriesPage() {
 
         {/* Empty State */}
         {!isLoading && displayMemories.length === 0 && (
-          <Card className="premium-card">
+          <Card style={{
+            background: 'rgba(30, 42, 88, 0.6)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          }}>
             <CardContent className="py-16">
               <div className="max-w-2xl mx-auto text-center space-y-8">
                 {view === 'all' ? (
@@ -552,7 +578,12 @@ export function MemoriesPage() {
                       </p>
                     </div>
 
-                    <div className="premium-card rounded-xl p-8 border-2" style={{ borderColor: 'rgba(var(--premium-indigo-rgb), 0.2)' }}>
+                    <div className="rounded-xl p-8 border-2" style={{
+                      borderColor: 'rgba(var(--premium-indigo-rgb), 0.2)',
+                      background: 'rgba(30, 42, 88, 0.6)',
+                      backdropFilter: 'blur(12px)',
+                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                    }}>
                       <h4 className="font-bold mb-6 text-lg premium-text-platinum">How to Capture Thoughts</h4>
                       <div className="space-y-4 text-left">
                         <div className="flex gap-4">
@@ -688,7 +719,11 @@ export function MemoriesPage() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="premium-card p-8 text-center">
+                  <Card className="p-8 text-center" style={{
+                    background: 'rgba(30, 42, 88, 0.6)',
+                    backdropFilter: 'blur(12px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                  }}>
                     <p style={{ color: 'var(--premium-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
                   </Card>
                 )}
