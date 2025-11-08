@@ -576,7 +576,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PROJECTS CRUD (default)
   if (req.method === 'GET') {
     try {
-      const { id, include_notes } = req.query
+      const { id, include_notes, filter } = req.query
 
       // Single project with notes
       if (id && typeof id === 'string') {
@@ -613,11 +613,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
-      // List all projects
-      const { data, error } = await supabase
+      // List all projects with optional status filtering
+      let query = supabase
         .from('projects')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
+
+      // Apply status filter if provided
+      if (filter && filter !== 'all') {
+        if (filter === 'upcoming') {
+          query = query.eq('status', 'upcoming')
+        } else if (filter === 'active') {
+          query = query.eq('status', 'active')
+        } else if (filter === 'completed') {
+          query = query.eq('status', 'completed')
+        }
+        // Note: 'dormant' filter is handled client-side in the store (line 93-97)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
