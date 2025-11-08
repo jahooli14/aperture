@@ -116,20 +116,6 @@ export const SuggestionCard = memo(function SuggestionCard({
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-40" />
 
       <CardHeader className="relative z-10" onClick={(e) => e.stopPropagation()}>
-        {/* Type badges */}
-        <div className="mb-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
-              style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), #2563eb)',
-                color: '#ffffff'
-              }}>
-              <Lightbulb className="h-4 w-4" />
-              {suggestion.total_points}pts
-            </span>
-          </div>
-        </div>
-
         <CardTitle
           className="text-2xl font-bold leading-tight premium-text-platinum mb-3"
         >
@@ -143,14 +129,16 @@ export const SuggestionCard = memo(function SuggestionCard({
           {suggestion.description}
         </CardDescription>
 
-        {/* Why this suggestion box - matches daily queue style */}
-        {suggestion.synthesis_reasoning && (
-          <div className="mb-4 p-4 premium-glass-subtle rounded-lg border" style={{ borderColor: 'var(--premium-blue)' }}>
-            <p className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
-              Why this suggestion:
-            </p>
-            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-              {suggestion.synthesis_reasoning}
+        {/* One-line insight based on capability overlap */}
+        {suggestion.capabilities && suggestion.capabilities.length > 0 && (
+          <div className="mb-4 p-3 premium-glass-subtle rounded-lg">
+            <p className="text-sm italic" style={{ color: 'var(--premium-text-secondary)' }}>
+              {suggestion.capabilities.length === 1
+                ? `Leverages your ${suggestion.capabilities[0].name} experience`
+                : suggestion.capabilities.length === 2
+                ? `At the intersection of ${suggestion.capabilities[0].name} and ${suggestion.capabilities[1].name}`
+                : `Uniquely combines ${suggestion.capabilities.slice(0, 2).map(c => c.name).join(', ')}, and ${suggestion.capabilities.length - 2} more ${suggestion.capabilities.length - 2 === 1 ? 'skill' : 'skills'}—a rare convergence`
+              }
             </p>
           </div>
         )}
@@ -194,12 +182,6 @@ export const SuggestionCard = memo(function SuggestionCard({
             </div>
           </div>
         )}
-
-        <div className="grid grid-cols-3 gap-2">
-          <ScorePill label="Fresh" score={suggestion.novelty_score} />
-          <ScorePill label="Doable" score={suggestion.feasibility_score} />
-          <ScorePill label="Exciting" score={suggestion.interest_score} />
-        </div>
       </CardContent>
 
       <CardFooter
@@ -207,12 +189,12 @@ export const SuggestionCard = memo(function SuggestionCard({
         style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Rate 1-3 buttons - simplified colors */}
+        {/* Rate 1-3 buttons - centered text */}
         <Button
           onClick={() => handleRateClick(1)}
           variant="outline"
           size="sm"
-          className="flex-1 h-11"
+          className="flex-1 h-11 flex items-center justify-center"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
             border: '1.5px solid rgba(255, 255, 255, 0.1)',
@@ -221,13 +203,13 @@ export const SuggestionCard = memo(function SuggestionCard({
           title="Not interested"
           disabled={loadingAction !== null}
         >
-          1
+          <span>1</span>
         </Button>
         <Button
           onClick={() => handleRateClick(2)}
           variant="outline"
           size="sm"
-          className="flex-1 h-11"
+          className="flex-1 h-11 flex items-center justify-center"
           style={{
             background: 'rgba(59, 130, 246, 0.1)',
             border: '1.5px solid rgba(59, 130, 246, 0.3)',
@@ -236,13 +218,13 @@ export const SuggestionCard = memo(function SuggestionCard({
           title="Somewhat interesting"
           disabled={loadingAction !== null}
         >
-          2
+          <span>2</span>
         </Button>
         <Button
           onClick={() => handleRateClick(3)}
           variant="outline"
           size="sm"
-          className="flex-1 h-11"
+          className="flex-1 h-11 flex items-center justify-center"
           style={{
             background: 'rgba(59, 130, 246, 0.2)',
             border: '1.5px solid rgba(59, 130, 246, 0.4)',
@@ -251,7 +233,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           title="Very interesting"
           disabled={loadingAction !== null}
         >
-          3
+          <span>3</span>
         </Button>
         <Button
           onClick={handleBuild}
@@ -359,34 +341,3 @@ export const SuggestionCard = memo(function SuggestionCard({
   )
 })
 
-function ScorePill({ label, score }: { label: string; score: number }) {
-  const percentage = Math.round(score * 100)
-  const gradient = score > 0.7
-    ? 'linear-gradient(135deg, #10b981, #059669)'
-    : score > 0.4
-      ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-      : 'linear-gradient(135deg, #ef4444, #dc2626)'
-
-  return (
-    <div
-      className="flex flex-col items-center gap-1.5 p-3 rounded-xl shadow-inner hover:shadow-lg transition-shadow"
-      style={{
-        background: 'rgba(26, 35, 50, 0.3)',
-        border: '1px solid rgba(255, 255, 255, 0.06)'
-      }}
-    >
-      <span
-        className="text-xs font-semibold uppercase tracking-wide"
-        style={{ color: 'var(--premium-text-tertiary)' }}
-      >
-        {label}
-      </span>
-      <div
-        className="px-3 py-1 rounded-full text-white text-sm font-bold shadow-md"
-        style={{ background: gradient }}
-      >
-        {percentage}%
-      </div>
-    </div>
-  )
-}
