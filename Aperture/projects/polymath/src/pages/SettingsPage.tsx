@@ -16,7 +16,8 @@ import {
   Rss,
   Palette,
   Check,
-  Moon
+  Moon,
+  Map
 } from 'lucide-react'
 import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
@@ -32,6 +33,15 @@ interface SettingsOption {
 }
 
 const SETTINGS_OPTIONS: SettingsOption[] = [
+  {
+    id: 'map',
+    label: 'Knowledge Map',
+    description: 'Geographic visualization with glowing doors of opportunity',
+    icon: Map,
+    path: '/map',
+    color: '#fbbf24',
+    glow: 'rgba(251, 191, 36, 0.4)'
+  },
   {
     id: 'suggestions',
     label: 'Discover Projects',
