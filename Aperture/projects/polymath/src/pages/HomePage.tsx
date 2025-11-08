@@ -611,13 +611,8 @@ export function HomePage() {
                 }}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'var(--premium-bg-3)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  background: 'var(--premium-bg-3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--premium-bg-3)'}
                 title="Voice Note"
               >
                 <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -628,13 +623,8 @@ export function HomePage() {
                 onClick={() => setCreateThoughtOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'var(--premium-bg-3)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  background: 'var(--premium-bg-3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--premium-bg-3)'}
                 title="Thought"
               >
                 <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -645,13 +635,8 @@ export function HomePage() {
                 onClick={() => setSaveArticleOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'var(--premium-bg-3)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  background: 'var(--premium-bg-3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--premium-bg-3)'}
                 title="Article"
               >
                 <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -662,13 +647,8 @@ export function HomePage() {
                 onClick={() => setCreateProjectOpen(true)}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'var(--premium-bg-3)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  background: 'var(--premium-bg-3)'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(40, 80, 130, 0.9)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--premium-bg-3)'}
                 title="Project"
               >
                 <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
@@ -784,7 +764,8 @@ export function HomePage() {
                               }}
                               className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
                               style={{
-                                color: 'rgba(59, 130, 246, 0.9)'
+                                color: 'rgba(59, 130, 246, 0.9)',
+                                border: '2px solid rgba(255, 255, 255, 0.3)'
                               }}
                               title="Mark as complete"
                             >

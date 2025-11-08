@@ -144,7 +144,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                 onClick={() => handleToggleTask(task.id)}
                 className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
                 style={{
-                  backgroundColor: 'transparent'
+                  backgroundColor: 'transparent',
+                  border: '2px solid rgba(255, 255, 255, 0.3)'
                 }}
               >
                 {task.done && <Check className="h-3 w-3 text-white" />}
@@ -200,7 +201,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                         onClick={() => handleToggleTask(task.id)}
                         className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
                         style={{
-                          backgroundColor: 'var(--premium-blue)'
+                          backgroundColor: 'var(--premium-blue)',
+                          border: '2px solid var(--premium-blue)'
                         }}
                       >
                         <Check className="h-3 w-3 text-white" />
