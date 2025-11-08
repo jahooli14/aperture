@@ -69,7 +69,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects()
-  }, [fetchProjects, filter])
+  }, [filter]) // Only re-fetch when filter changes, not when fetchProjects changes
 
   const handleDelete = async (project: Project) => {
     const confirmed = await confirm({

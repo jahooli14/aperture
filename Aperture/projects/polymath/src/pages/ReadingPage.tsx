@@ -150,7 +150,7 @@ export function ReadingPage() {
     if (activeTab === 'updates') {
       fetchRSSItems()
     }
-  }, [activeTab, fetchRSSItems])
+  }, [activeTab]) // Only re-fetch when activeTab changes, fetchRSSItems is stable
 
   // Handle RSS sync
   const handleRSSSync = async () => {
