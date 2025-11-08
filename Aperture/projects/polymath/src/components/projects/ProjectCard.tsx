@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive, Star, MoreVertical } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive, Star, MoreVertical, Check } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -569,13 +569,12 @@ export const ProjectCard = React.memo(function ProjectCard({
                     }}
                     className="mt-0.5 flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
                     style={{
-                      color: 'var(--premium-blue)'
+                      color: 'rgba(59, 130, 246, 0.9)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)'
                     }}
                     title="Complete this task"
                   >
-                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-blue)' }}>
