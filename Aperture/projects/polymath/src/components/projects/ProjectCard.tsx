@@ -15,6 +15,7 @@ import { haptic } from '../../utils/haptics'
 import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { SuggestionBadge } from '../SuggestionBadge'
+import { PinButton } from '../PinButton'
 
 export const ProjectCard = React.memo(function ProjectCard({
   project: initialProject,
@@ -396,8 +397,26 @@ export const ProjectCard = React.memo(function ProjectCard({
             <h3 className="font-bold text-base flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
               {project.title}
             </h3>
-            {showActions && onDelete && (
-              <div className="relative flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <PinButton
+                type="project"
+                id={project.id}
+                title={project.title}
+                content={
+                  <div className="p-6 overflow-y-auto">
+                    <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                      {project.title}
+                    </h2>
+                    {project.description && (
+                      <p className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+                }
+              />
+              {showActions && onDelete && (
+                <div className="relative flex-shrink-0">
                 <Button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -462,7 +481,8 @@ export const ProjectCard = React.memo(function ProjectCard({
                   </>
                 )}
               </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
