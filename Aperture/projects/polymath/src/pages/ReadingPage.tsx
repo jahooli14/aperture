@@ -3,7 +3,7 @@
  * Displays saved articles with filtering and save functionality
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
@@ -72,26 +72,8 @@ export function ReadingPage() {
     localStorage.setItem('rss-dismissed-timestamps', JSON.stringify(dismissalTimestamps))
   }
 
-  useEffect(() => {
-    fetchArticles()
-    fetchFeeds()
-
-    // Auto-sync RSS feeds in background (throttled to 2 hours)
-    if (autoSyncFeeds) {
-      autoSyncFeeds().catch(() => {
-        // Silently fail - it's a background operation
-      })
-    }
-  }, [fetchArticles, fetchFeeds, autoSyncFeeds])
-
-  useEffect(() => {
-    if (activeTab === 'updates') {
-      fetchRSSItems()
-    }
-  }, [activeTab])
-
   // Fetch RSS feed items from all enabled feeds
-  const fetchRSSItems = async () => {
+  const fetchRSSItems = useCallback(async () => {
     setLoadingRSS(true)
     try {
       const allItems: RSSItem[] = []
@@ -144,7 +126,25 @@ export function ReadingPage() {
     } finally {
       setLoadingRSS(false)
     }
-  }
+  }, [feeds, addToast])
+
+  useEffect(() => {
+    fetchArticles()
+    fetchFeeds()
+
+    // Auto-sync RSS feeds in background (throttled to 2 hours)
+    if (autoSyncFeeds) {
+      autoSyncFeeds().catch(() => {
+        // Silently fail - it's a background operation
+      })
+    }
+  }, []) // Run once on mount
+
+  useEffect(() => {
+    if (activeTab === 'updates') {
+      fetchRSSItems()
+    }
+  }, [activeTab, fetchRSSItems])
 
   // Handle RSS sync
   const handleRSSSync = async () => {

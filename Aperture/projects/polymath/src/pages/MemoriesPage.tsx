@@ -125,17 +125,19 @@ export function MemoriesPage() {
         fetchThemeClusters()
       }
     }
-  }, [view]) // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]) // Only re-run when view changes
+
+  // Memoize unprocessed count to avoid unnecessary re-renders
+  const unprocessedCount = useMemo(() => {
+    return memories.filter(m => !m.processed).length
+  }, [memories])
 
   // Poll for updates when there are unprocessed memories
   useEffect(() => {
-    const unprocessed = memories.filter(m => !m.processed)
-    const hasUnprocessed = unprocessed.length > 0
+    if (unprocessedCount === 0) return
 
-    if (!hasUnprocessed) return
-
-    console.log(`🔄 Polling for memory updates (${unprocessed.length} unprocessed)`)
-    console.log('Unprocessed memory IDs:', unprocessed.map(m => ({ id: m.id, title: m.title })))
+    console.log(`🔄 Polling for memory updates (${unprocessedCount} unprocessed)`)
 
     const pollInterval = setInterval(() => {
       console.log('⏰ Polling tick - fetching fresh data...')
@@ -143,7 +145,8 @@ export function MemoriesPage() {
     }, 10000) // Poll every 10 seconds
 
     return () => clearInterval(pollInterval)
-  }, [memories, loadMemoriesWithCache])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unprocessedCount]) // Only re-run when unprocessed count changes
 
   const handleReview = async (memoryId: string) => {
     try {
