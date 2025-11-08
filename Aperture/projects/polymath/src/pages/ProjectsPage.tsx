@@ -112,6 +112,9 @@ export function ProjectsPage() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] opacity-15" style={{
           background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent 70%)'
         }} />
+        <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] opacity-12" style={{
+          background: 'radial-gradient(circle, rgba(16, 185, 129, 0.12), transparent 70%)'
+        }} />
       </div>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
