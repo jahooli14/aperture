@@ -392,24 +392,14 @@ export const ProjectCard = React.memo(function ProjectCard({
           className="rounded-xl"
         >
           <Card
-            className="group h-full flex flex-col premium-card cursor-pointer relative overflow-hidden"
+            className="group h-full flex flex-col cursor-pointer relative overflow-hidden"
             onClick={handleCardClick}
             style={{
-              boxShadow: project.is_priority
-                ? '0 8px 32px rgba(251, 191, 36, 0.25)'
-                : '0 8px 32px rgba(59, 130, 246, 0.2)'
+              background: 'rgba(30, 42, 88, 0.6)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
             }}
           >
-      {/* Ambient glow effect - enhanced */}
-      <div
-        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
-        style={{
-          background: project.is_priority
-            ? 'radial-gradient(circle at 30% 30%, rgba(251, 191, 36, 0.3), transparent 60%)'
-            : 'radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.3), transparent 60%)',
-          pointerEvents: 'none'
-        }}
-      />
 
       {/* Compact View - Always shown now for cleaner UX */}
         <CardContent className="relative z-10 p-4">

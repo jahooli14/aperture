@@ -172,21 +172,11 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             scale: { duration: 0.3 }
           }}
         >
-        <Card className="group h-full flex flex-col premium-card relative overflow-hidden" style={{
-          boxShadow: !memory.processed
-            ? '0 8px 32px rgba(245, 158, 11, 0.2)'
-            : '0 8px 32px rgba(99, 102, 241, 0.2)'
+        <Card className="group h-full flex flex-col relative overflow-hidden" style={{
+          background: 'rgba(30, 42, 88, 0.6)',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
         }}>
-      {/* Ambient glow effect - stronger on hover */}
-      <div
-        className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500"
-        style={{
-          background: !memory.processed
-            ? 'radial-gradient(circle at 30% 30%, rgba(245, 158, 11, 0.3), transparent 60%)'
-            : 'radial-gradient(circle at 30% 30%, rgba(99, 102, 241, 0.3), transparent 60%)',
-          pointerEvents: 'none'
-        }}
-      />
 
       <CardHeader className="relative z-10">
         <div className="flex items-start justify-between gap-2 mb-2">
