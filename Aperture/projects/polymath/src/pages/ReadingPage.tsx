@@ -117,9 +117,10 @@ export function ReadingPage() {
 
       setRssItems(filteredItems)
 
-      // Track the last known count (only update if we have items)
-      if (filteredItems.length > 0) {
-        setLastKnownUpdatesCount(filteredItems.length)
+      // Track the last known count based on total items (before filtering dismissals)
+      // This persists even when all items are dismissed
+      if (allItems.length > 0) {
+        setLastKnownUpdatesCount(allItems.length)
       }
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
