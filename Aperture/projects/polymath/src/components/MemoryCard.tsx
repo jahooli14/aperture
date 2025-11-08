@@ -176,7 +176,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         }}>
 
       <CardHeader className="relative z-10">
-        <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg font-semibold leading-tight flex-1" style={{ color: 'var(--premium-text-primary)' }}>
             {memory.title}
           </CardTitle>
@@ -234,11 +234,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             )}
           </div>
         </div>
-
-        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-          <Calendar className="h-3 w-3" />
-          <span>{formatDate(memory.created_at)}</span>
-        </div>
       </CardHeader>
 
       <CardContent className="relative z-10 flex-1 space-y-4">
@@ -272,99 +267,56 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         </div>
 
 
-        {/* AI Enrichment - Always show when processed */}
-        {memory.processed && (
-          <>
-            {/* Memory Type & Emotional Tone */}
-            {(memory.memory_type || memory.emotional_tone) && (
-              <div className="flex flex-wrap gap-2">
-                {memory.memory_type && (
-                  <div className="px-3 py-1 rounded-md text-xs font-medium" style={memoryTypeConfig[memory.memory_type].style}>
-                    {memoryTypeConfig[memory.memory_type].label}
-                  </div>
-                )}
-                {memory.emotional_tone && (
-                  <div className="px-3 py-1 rounded-md text-xs font-medium" style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--premium-blue)'
-                  }}>
-                    {memory.emotional_tone}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tags - Hidden (duplicative of topics, kept for backend processing) */}
-            {false && memory.tags && memory.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {memory.tags.map((tag) => (
+        {/* AI Enrichment - Only show People and Topics */}
+        {memory.processed && memory.entities && (
+          <div className="space-y-2">
+            {memory.entities.people && memory.entities.people.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <User className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
+                {memory.entities.people.slice(0, 3).map((person) => (
                   <span
-                    key={tag}
-                    className="px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1"
+                    key={person}
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
                     style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
                       color: 'var(--premium-blue)'
                     }}
                   >
-                    <Tag className="h-3 w-3" />
-                    {tag}
+                    {person}
                   </span>
                 ))}
-              </div>
-            )}
-
-            {/* Entities */}
-            {memory.entities && (
-              <div className="space-y-2">
-                {memory.entities.people && memory.entities.people.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    <User className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
-                    <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>People:</span>
-                    {memory.entities.people.slice(0, 3).map((person) => (
-                      <span
-                        key={person}
-                        className="px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                          color: 'var(--premium-blue)'
-                        }}
-                      >
-                        {person}
-                      </span>
-                    ))}
-                    {memory.entities.people.length > 3 && (
-                      <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        +{memory.entities.people.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                )}
-                {memory.entities.topics && memory.entities.topics.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    <Brain className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
-                    <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
-                    {memory.entities.topics.slice(0, 3).map((topic) => (
-                      <span
-                        key={topic}
-                        className="px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{
-                          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                          color: 'var(--premium-blue)'
-                        }}
-                      >
-                        {topic}
-                      </span>
-                    ))}
-                    {memory.entities.topics.length > 3 && (
-                      <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        +{memory.entities.topics.length - 3} more
-                      </span>
-                    )}
-                  </div>
+                {memory.entities.people.length > 3 && (
+                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    +{memory.entities.people.length - 3} more
+                  </span>
                 )}
               </div>
             )}
-          </>
+            {memory.entities.topics && memory.entities.topics.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <Brain className="h-3 w-3" style={{ color: 'var(--premium-blue)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>Topics:</span>
+                {memory.entities.topics.slice(0, 3).map((topic) => (
+                  <span
+                    key={topic}
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                      color: 'var(--premium-blue)'
+                    }}
+                  >
+                    {topic}
+                  </span>
+                ))}
+                {memory.entities.topics.length > 3 && (
+                  <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    +{memory.entities.topics.length - 3} more
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Bi-Directional Memory Links */}
@@ -385,6 +337,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             />
           </div>
         )}
+
+        {/* Timestamp at bottom */}
+        <div className="flex items-center gap-2 text-xs pt-3 mt-3 border-t" style={{
+          color: 'var(--premium-text-tertiary)',
+          borderColor: 'rgba(255, 255, 255, 0.1)'
+        }}>
+          <Calendar className="h-3 w-3" />
+          <span>{formatDate(memory.created_at)}</span>
+        </div>
 
         {/* Processing Status */}
         {!memory.processed && (
