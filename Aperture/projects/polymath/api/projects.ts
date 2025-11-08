@@ -403,59 +403,94 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (resource === 'knowledge_map') {
     const action = req.query.action as string
 
-    // GET: Load map state or generate initial map
-    if (req.method === 'GET') {
-      if (action === 'suggestions') {
-        // Generate door suggestions
-        const { data: mapState } = await supabase
+    try {
+      // GET: Load map state or generate initial map
+      if (req.method === 'GET') {
+        if (action === 'suggestions') {
+          // Generate door suggestions
+          const { data: mapState, error: fetchError } = await supabase
+            .from('knowledge_map_state')
+            .select('map_data')
+            .eq('user_id', userId)
+            .single()
+
+          if (fetchError) {
+            if (fetchError.code === '42P01') {
+              return res.status(503).json({
+                error: 'Database table knowledge_map_state does not exist',
+                hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql'
+              })
+            }
+            throw fetchError
+          }
+
+          if (!mapState) {
+            return res.status(404).json({ error: 'Map not found' })
+          }
+
+          // Import and use the suggestions logic
+          const { generateDoorSuggestions } = await import('./lib/map-suggestions.js')
+          const doors = await generateDoorSuggestions(userId, mapState.map_data)
+          return res.status(200).json({ doors })
+        }
+
+        // Default: Load existing map or generate initial
+        const { data: existingMap, error: loadError } = await supabase
           .from('knowledge_map_state')
-          .select('map_data')
+          .select('*')
           .eq('user_id', userId)
           .single()
 
-        if (!mapState) {
-          return res.status(404).json({ error: 'Map not found' })
+        // Check for table not found error
+        if (loadError && loadError.code === '42P01') {
+          return res.status(503).json({
+            error: 'Database table knowledge_map_state does not exist',
+            hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql',
+            migrationFile: 'supabase/migrations/create_knowledge_map.sql'
+          })
         }
 
-        // Import and use the suggestions logic (we'll create this later)
-        const { generateDoorSuggestions } = await import('./lib/map-suggestions.js')
-        const doors = await generateDoorSuggestions(userId, mapState.map_data)
-        return res.status(200).json({ doors })
-      }
+        if (existingMap) {
+          return res.status(200).json({
+            mapData: existingMap.map_data,
+            version: existingMap.version
+          })
+        }
 
-      // Default: Load existing map or generate initial
-      const { data: existingMap } = await supabase
-        .from('knowledge_map_state')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
+        // No map exists - generate initial
+        const { generateInitialMap } = await import('./lib/map-generation.js')
+        const initialMap = await generateInitialMap(userId)
 
-      if (existingMap) {
+        // Save it
+        const { error: insertError } = await supabase
+          .from('knowledge_map_state')
+          .insert({
+            user_id: userId,
+            map_data: initialMap,
+            version: 1
+          })
+
+        if (insertError) {
+          if (insertError.code === '42P01') {
+            return res.status(503).json({
+              error: 'Database table knowledge_map_state does not exist',
+              hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql'
+            })
+          }
+          throw insertError
+        }
+
         return res.status(200).json({
-          mapData: existingMap.map_data,
-          version: existingMap.version
+          mapData: initialMap,
+          version: 1,
+          generated: true
         })
       }
-
-      // No map exists - generate initial
-      const { generateInitialMap } = await import('./lib/map-generation.js')
-      const initialMap = await generateInitialMap(userId)
-
-      // Save it
-      const { error } = await supabase
-        .from('knowledge_map_state')
-        .insert({
-          user_id: userId,
-          map_data: initialMap,
-          version: 1
-        })
-
-      if (error) throw error
-
-      return res.status(200).json({
-        mapData: initialMap,
-        version: 1,
-        generated: true
+    } catch (error) {
+      console.error('[knowledge_map] Error:', error)
+      return res.status(500).json({
+        error: 'Knowledge map operation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
       })
     }
 

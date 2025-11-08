@@ -41,14 +41,19 @@ export const useMapStore = create<MapState>((set, get) => ({
     try {
       const data = await api.get('projects?resource=knowledge_map')
 
+      // Validate response structure
+      if (!data || !data.mapData) {
+        throw new Error('Invalid response from server - mapData is missing')
+      }
+
       set({
         mapData: data.mapData,
         loading: false
       })
 
       logger.info('[map] Loaded map:', {
-        cities: data.mapData.cities.length,
-        roads: data.mapData.roads.length,
+        cities: data.mapData.cities?.length || 0,
+        roads: data.mapData.roads?.length || 0,
         generated: data.generated
       })
 
@@ -56,8 +61,19 @@ export const useMapStore = create<MapState>((set, get) => ({
       get().fetchDoorSuggestions()
     } catch (error) {
       logger.error('Failed to fetch knowledge map:', error)
+
+      // Provide helpful error message
+      let errorMessage = 'Failed to load knowledge map'
+      if (error instanceof Error) {
+        if (error.message.includes('relation') || error.message.includes('table')) {
+          errorMessage = 'Database migration not run yet. Please run the knowledge_map migration.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+
       set({
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         loading: false
       })
     }
