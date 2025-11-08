@@ -24,24 +24,24 @@ const genAI = new GoogleGenerativeAI(apiKey)
 
 interface BedtimePrompt {
   prompt: string
-  type: 'synthesis' | 'activation' | 'connection' | 'blocker'
+  type: 'connection' | 'divergent' | 'revisit' | 'transform'
   relatedIds: string[] // Memory/project/article IDs that inspired this
-  actionHint?: string // What output could emerge from this prompt
-  metaphor?: string
+  metaphor?: string // Optional poetic framing for enhanced contemplation
 }
 
 /**
- * Prompt types optimized for input → output flow:
- * - synthesis: "You've been reading about X and thinking about Y. What could you build?"
- * - activation: "You have these ingredients sitting unused. What emerges if you combine them?"
- * - connection: "These disparate inputs share a hidden thread. What does it unlock?"
- * - blocker: "This project is stuck. What input are you missing?"
+ * Prompt types optimized for hypnagogic state processing:
+ * - connection: Find hidden bridges between disparate knowledge pieces
+ * - divergent: Unlock creative angles through pattern disruption
+ * - revisit: Resurface dormant insights that may now be relevant
+ * - transform: Personal development through knowledge synthesis
  */
 
 /**
  * Generate bedtime prompts for a user
  * Called at 9:30pm or on-demand
- * Focus: Bridge collected inputs (reading, thoughts) → creative outputs (projects)
+ * Focus: Leverage hypnagogic state for pattern recognition, creative insights,
+ * and subconscious processing of accumulated knowledge
  */
 export async function generateBedtimePrompts(userId: string): Promise<BedtimePrompt[]> {
   logger.info({ userId }, 'Generating bedtime prompts')
@@ -148,16 +148,17 @@ async function getRecentMemories(userId: string, days: number) {
 }
 
 /**
- * Get active projects
+ * Get all projects (active, dormant, upcoming - not just active)
+ * Hypnagogic state can unlock insights for ANY project, not just active ones
  */
 async function getActiveProjects(userId: string) {
   const { data } = await supabase
     .from('projects')
-    .select('id, title, description, type, metadata')
+    .select('id, title, description, status, type, metadata')
     .eq('user_id', userId)
-    .eq('status', 'active')
+    .in('status', ['active', 'dormant', 'upcoming', 'completed'])
     .order('last_active', { ascending: false })
-    .limit(5)
+    .limit(10)
 
   return data || []
 }
@@ -246,77 +247,105 @@ async function generatePromptsWithAI(
     .slice(0, 5)
     .map(([theme, count]) => `${theme} (appears ${count}x)`)
 
-  const prompt = `You are a creative synthesis agent helping someone transform collected material into creative projects.
+  const prompt = `You are a hypnagogic thought catalyst. These prompts will be read during the pre-sleep hypnagogic state—that twilight zone between waking and sleeping where the brain excels at pattern recognition, creative association, and insight generation.
 
-**THE SUNDIAL PHILOSOPHY:**
-This app follows a flow: Reading/Input → Thoughts/Processing → Projects/Output
-Your job: Generate bedtime prompts that help move material from LEFT (inputs) to RIGHT (outputs).
+**UNDERSTANDING THE HYPNAGOGIC STATE:**
+The hypnagogic state (transition to sleep) uniquely enables:
+- **Associative thinking**: Brain makes unexpected connections between disparate concepts
+- **Pattern recognition**: Subconscious identifies hidden patterns in accumulated knowledge
+- **Creative problem-solving**: Logic relaxes, allowing novel solution pathways to emerge
+- **Emotional integration**: Processing experiences and synthesizing meaning
+- **Memory consolidation**: Brain reorganizes and connects new information with existing knowledge
 
-**USER'S CURRENT STATE:**
-- Has rich input material: ${context.hasRichInput ? 'YES - plenty of reading/thoughts to work with' : 'NO - needs more input first'}
-- Has blocked projects: ${context.hasBlockedProjects ? 'YES - needs unsticking' : 'NO'}
-- Has active projects: ${context.hasNoProjects ? 'NO - pure consumption mode' : 'YES - building things'}
+Your prompts should SEED questions that the sleeping mind will process overnight, potentially yielding insights upon waking.
 
-**INPUTS (Reading - last 2 weeks):**
+**USER'S KNOWLEDGE MAP:**
+
+**Recent Reading (last 2 weeks):**
 ${recentArticles.length > 0 ? recentArticles.map(a => `- "${a.title}": ${a.summary?.substring(0, 150) || 'no summary'}`).join('\n') : 'No recent reading'}
 
-**PROCESSING (Thoughts - last 7 days):**
+**Recent Thoughts (last 7 days):**
 ${recentMemories.length > 0 ? recentMemories.map(m => `- "${m.title}": ${m.body?.substring(0, 150)}`).join('\n') : 'No recent thoughts'}
 
-**OUTPUTS (Active Projects):**
-${activeProjects.length > 0 ? activeProjects.map(p => `- "${p.title}": ${p.description}`).join('\n') : 'No active projects yet'}
+**All Projects (active, dormant, upcoming, completed):**
+${activeProjects.length > 0 ? activeProjects.map(p => `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}`).join('\n') : 'No projects yet'}
 
-**Recurring Themes:**
+**Recurring Themes in Knowledge:**
 ${consequentialThemes.length > 0 ? consequentialThemes.join(', ') : 'No clear recurring themes yet'}
 
-**Current interests:** ${currentInterests.map(i => i.name).join(', ') || 'None identified'}
+**Current Interests:** ${currentInterests.map(i => i.name).join(', ') || 'None identified'}
 
-**Old insights:**
+**Old Insights (90 days ago):**
 ${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : 'None'}
 
 **YOUR MISSION:**
-Generate 3-5 prompts that help synthesize INPUTS → OUTPUTS. Choose prompt types based on their state:
+Generate 3-5 thought-provoking questions optimized for hypnagogic processing. Each prompt should plant a seed that the subconscious can work on overnight.
 
-**Prompt Types:**
-1. **synthesis** - They have rich input but no output → "You've been reading/thinking about X. What could you build with this?"
-2. **activation** - They have dormant material → "These pieces are sitting unused. What emerges if you activate them?"
-3. **connection** - Multiple inputs, no bridge → "These inputs share a thread. What project does it suggest?"
-4. **blocker** - Stuck project → "This project needs an input you haven't found yet. What is it?"
+**Prompt Types (choose based on their knowledge map):**
 
-**Prompt Crafting Principles:**
-- **Bridge the gap**: Always connect specific inputs (articles, thoughts) to potential outputs (projects)
-- **Be concrete**: Reference actual material they've collected, but only if it suggests an actionable output
-- **Ask synthesis questions**: "What could you build?" "What project emerges?" "What's the output here?"
-- **Avoid pure contemplation**: Not "What does this mean?" but "What does this enable you to CREATE?"
-- **One thread, actionable end**: Each prompt should point toward something they could actually make
+1. **connection** - Find hidden bridges between disparate knowledge
+   - "What unexpected connection exists between [X] and [Y] in your knowledge map?"
+   - "How does [past insight] reframe [current project]?"
 
-**Context-Aware Strategies:**
-${context.hasNoProjects && context.hasRichInput ? '→ SYNTHESIS prompts: They\'re consuming without creating. Push them to build something.' : ''}
-${context.hasBlockedProjects ? '→ BLOCKER prompts: Help unstick their projects by identifying missing inputs.' : ''}
-${!context.hasRichInput ? '→ Skip this - they need to read/think more before synthesizing.' : ''}
+2. **divergent** - Unlock creative angles through pattern disruption
+   - "If you approached [project/problem] from the opposite direction, what would you see?"
+   - "What would [project] look like if the main constraint disappeared?"
 
-**Good Examples:**
-✅ "You've saved 5 articles about habit formation and written 3 thoughts about motivation. What simple app could you build to test these ideas on yourself?"
-✅ "Your reading about design systems and your thoughts about accessibility keep circling each other. What component library wants to exist here?"
-✅ "That project about X is stuck because you're missing Y insight. Which article in your queue might have it?"
+3. **revisit** - Resurface dormant insights that may now be relevant
+   - "Why did [old insight] matter then? What does it unlock now?"
+   - "What was trying to emerge in [dormant project] that you couldn't see before?"
 
-**Bad Examples (avoid these):**
-❌ "What does productivity mean to you?" (pure navel-gazing, no output)
-❌ "Imagine your React components as a symphony..." (forced metaphor, no actionable synthesis)
-❌ "Reflect on your journey..." (self-help fluff, doesn't create anything)
+4. **transform** - Personal development through knowledge synthesis
+   - "What pattern in your thinking keeps appearing across [themes]?"
+   - "If your knowledge map could teach you one thing about yourself, what would it be?"
+
+**CRAFTING PRINCIPLES FOR HYPNAGOGIC PROMPTS:**
+
+✅ **Open-ended exploration**: Questions should invite subconscious wandering, not demand immediate answers
+✅ **Concrete anchors**: Reference SPECIFIC items from their knowledge (articles, thoughts, projects) to give the subconscious real material to work with
+✅ **Pattern recognition**: Ask questions that require connecting multiple pieces of their knowledge
+✅ **Temporal bridges**: Connect past insights with current projects, or dormant ideas with fresh thinking
+✅ **Personal growth**: Some prompts should foster self-understanding through their knowledge patterns
+✅ **Project breakthroughs**: Seed questions that could unlock dormant/stuck/active projects
+✅ **Metaphorical space**: Leave room for dream-logic associations and non-literal thinking
+
+❌ **Avoid:**
+- Direct action items ("Go do X") - hypnagogic state is for synthesis, not task lists
+- Binary questions (yes/no) - limit associative thinking
+- Purely abstract philosophy with no connection to their actual knowledge
+- Forced metaphors or poetic language that feels artificial
+- Questions that require data/facts the sleeping mind can't access
+
+**EXAMPLES OF EXCELLENT HYPNAGOGIC PROMPTS:**
+
+✅ "Your thoughts on [topic A] from last week and that article about [topic B] you saved—what invisible thread connects them that you haven't consciously noticed yet?"
+
+✅ "That dormant project about [X]—what if the reason it went dormant is actually pointing you toward a deeper insight about [recurring theme in their thoughts]?"
+
+✅ "You've been circling around [theme] in your reading and thinking for weeks. If this pattern could speak, what question is it trying to ask you?"
+
+✅ "Three months ago you had that insight about [old insight]. Looking at your current projects, which one secretly needs that insight to unlock its next phase?"
+
+✅ "What would change if you approached [stuck/dormant project] with the same mindset you had when writing that thought about [specific thought]?"
+
+**CONTEXT-AWARE STRATEGIES:**
+${context.hasNoProjects && context.hasRichInput ? '→ CONNECTION/DIVERGENT prompts: Rich knowledge but no projects—help them see project possibilities in their material' : ''}
+${context.hasBlockedProjects ? '→ REVISIT/TRANSFORM prompts: Blocked projects may need old insights or different perspectives to unlock' : ''}
+${consequentialThemes.length > 0 ? `→ TRANSFORM prompts: Recurring themes (${consequentialThemes.slice(0, 2).join(', ')}) suggest deeper patterns worth exploring` : ''}
+${oldInsights.length > 0 ? '→ REVISIT prompts: Old insights may hold keys to current challenges' : ''}
+${activeProjects.filter(p => p.status === 'dormant').length > 0 ? `→ DIVERGENT prompts: ${activeProjects.filter(p => p.status === 'dormant').length} dormant project(s) may need fresh angles` : ''}
 
 Return ONLY valid JSON (no markdown):
 [
   {
-    "prompt": "Synthesis-oriented prompt connecting inputs to potential outputs...",
-    "type": "synthesis|activation|connection|blocker",
-    "relatedIds": ["article_id", "memory_id", "project_id"],
-    "actionHint": "What specific project/output this might lead to (1 sentence)"
-  },
-  ...
+    "prompt": "Thought-provoking question that seeds overnight subconscious processing...",
+    "type": "connection|divergent|revisit|transform",
+    "relatedIds": ["specific IDs from their knowledge map that this prompt references"],
+    "metaphor": "Optional: A subtle metaphor or poetic framing (1 sentence, ONLY if it genuinely enhances the prompt)"
+  }
 ]
 
-**Remember:** Every prompt should move them from consuming → creating. The prompt should feel like it's unlocking a project idea, not just philosophical musing.`
+**CRITICAL**: Every prompt must reference SPECIFIC items from their knowledge map (use actual titles, themes, project names). Generic prompts will fail. The hypnagogic mind needs concrete anchors to work with.`
 
   const result = await model.generateContent(prompt)
   const text = result.response.text()
@@ -343,7 +372,6 @@ async function storePrompts(userId: string, prompts: BedtimePrompt[]) {
         prompt: p.prompt,
         type: p.type,
         related_ids: p.relatedIds,
-        action_hint: p.actionHint, // What project/output this could lead to
         metaphor: p.metaphor,
         created_at: new Date().toISOString()
       }))
