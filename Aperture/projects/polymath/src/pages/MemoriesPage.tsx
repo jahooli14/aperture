@@ -370,7 +370,7 @@ export function MemoriesPage() {
                   backdropFilter: 'blur(12px)'
                 }}
               >
-                Foundational {progress && `(${progress.completed_required}/${progress.total_required})`}
+                Core {progress && `(${progress.completed_required}/${progress.total_required})`}
               </button>
               <button
                 onClick={() => setView('all')}
@@ -398,7 +398,7 @@ export function MemoriesPage() {
                 {resurfacing.length > 0 && view !== 'resurfacing' && (
                   <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--premium-amber)' }} />
                 )}
-                ⏰ Resurface ({resurfacing.length})
+                Resurface ({resurfacing.length})
               </button>
             </div>
 
