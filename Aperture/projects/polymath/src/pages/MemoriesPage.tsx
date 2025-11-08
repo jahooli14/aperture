@@ -348,7 +348,7 @@ export function MemoriesPage() {
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
         {/* Header */}
         <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-          backgroundColor: 'rgba(15, 25, 45, 0.6)',
+          backgroundColor: 'rgba(0, 15, 130, 1)',
           borderColor: 'rgba(255, 255, 255, 0.05)'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -365,7 +365,7 @@ export function MemoriesPage() {
                 onClick={() => setView('foundational')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  backgroundColor: view === 'foundational' ? 'rgba(40, 80, 130, 0.8)' : 'rgba(25, 50, 90, 0.6)',
+                  backgroundColor: view === 'foundational' ? 'rgba(0, 114, 255, 0.62)' : 'rgba(0, 114, 255, 0.44)',
                   color: view === 'foundational' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                   backdropFilter: 'blur(12px)'
                 }}
@@ -376,7 +376,7 @@ export function MemoriesPage() {
                 onClick={() => setView('all')}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  backgroundColor: view === 'all' ? 'rgba(40, 80, 130, 0.8)' : 'rgba(25, 50, 90, 0.6)',
+                  backgroundColor: view === 'all' ? 'rgba(0, 114, 255, 0.62)' : 'rgba(0, 114, 255, 0.44)',
                   color: view === 'all' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                   backdropFilter: 'blur(12px)'
                 }}
@@ -387,7 +387,7 @@ export function MemoriesPage() {
                 onClick={() => setView('resurfacing')}
                 className="relative flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
                 style={{
-                  backgroundColor: view === 'resurfacing' ? 'rgba(40, 80, 130, 0.8)' : 'rgba(25, 50, 90, 0.6)',
+                  backgroundColor: view === 'resurfacing' ? 'rgba(0, 114, 255, 0.62)' : 'rgba(0, 114, 255, 0.44)',
                   color: view === 'resurfacing' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
                   backdropFilter: 'blur(12px)'
                 }}
@@ -432,7 +432,7 @@ export function MemoriesPage() {
         {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
           <Card className="mb-8 border-2" style={{
             borderColor: 'var(--premium-blue)',
-            background: 'rgba(25, 50, 90, 0.6)',
+            background: 'rgba(0, 114, 255, 0.44)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -455,7 +455,7 @@ export function MemoriesPage() {
         {/* Resurfacing Info Banner */}
         {view === 'resurfacing' && resurfacing.length > 0 && (
           <Card className="mb-8 border-2 border-amber-300" style={{
-            background: 'rgba(25, 50, 90, 0.6)',
+            background: 'rgba(0, 114, 255, 0.44)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -493,7 +493,7 @@ export function MemoriesPage() {
             {processingVoiceNote && (
               <Card className="mb-6 border-2 animate-pulse" style={{
                 borderColor: 'var(--premium-blue)',
-                backgroundColor: 'rgba(60, 140, 180, 0.4)',
+                backgroundColor: 'rgba(0, 114, 255, 0.8)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
               }}>
@@ -526,7 +526,7 @@ export function MemoriesPage() {
             {/* Loading State */}
             {isLoading && (
               <Card style={{
-                background: 'rgba(25, 50, 90, 0.6)',
+                background: 'rgba(0, 114, 255, 0.44)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
               }}>
@@ -544,7 +544,7 @@ export function MemoriesPage() {
         {/* Resurfacing Tab Loading */}
         {view === 'resurfacing' && isLoading && (
           <Card style={{
-            background: 'rgba(25, 50, 90, 0.6)',
+            background: 'rgba(0, 114, 255, 0.44)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -560,7 +560,7 @@ export function MemoriesPage() {
         {/* Empty State */}
         {!isLoading && displayMemories.length === 0 && (
           <Card style={{
-            background: 'rgba(25, 50, 90, 0.6)',
+            background: 'rgba(0, 114, 255, 0.44)',
             backdropFilter: 'blur(12px)',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
@@ -580,7 +580,7 @@ export function MemoriesPage() {
 
                     <div className="rounded-xl p-8 border-2" style={{
                       borderColor: 'rgba(var(--premium-indigo-rgb), 0.2)',
-                      background: 'rgba(25, 50, 90, 0.6)',
+                      background: 'rgba(0, 114, 255, 0.44)',
                       backdropFilter: 'blur(12px)',
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                     }}>
@@ -660,7 +660,7 @@ export function MemoriesPage() {
                       : 'opacity-50 hover:opacity-75'
                   }`}
                   style={{
-                    backgroundColor: memoryView === key ? 'rgba(40, 80, 130, 0.8)' : 'transparent',
+                    backgroundColor: memoryView === key ? 'rgba(0, 114, 255, 0.62)' : 'transparent',
                     color: memoryView === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                   }}
                 >
@@ -720,7 +720,7 @@ export function MemoriesPage() {
                   </div>
                 ) : (
                   <Card className="p-8 text-center" style={{
-                    background: 'rgba(25, 50, 90, 0.6)',
+                    background: 'rgba(0, 114, 255, 0.44)',
                     backdropFilter: 'blur(12px)',
                     boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                   }}>
