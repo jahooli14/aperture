@@ -116,22 +116,6 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               </p>
             )}
           </div>
-          {totalCount > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-24 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                <div
-                  className="h-full transition-all duration-300"
-                  style={{
-                    width: `${(completedCount / totalCount) * 100}%`,
-                    background: 'linear-gradient(90deg, #10b981, #059669)'
-                  }}
-                />
-              </div>
-              <span className="text-xs font-semibold" style={{ color: '#10b981' }}>
-                {Math.round((completedCount / totalCount) * 100)}%
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Task List */}
@@ -219,8 +203,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                         onClick={() => handleToggleTask(task.id)}
                         className="flex-shrink-0 h-5 w-5 rounded border-2 flex items-center justify-center transition-all"
                         style={{
-                          borderColor: '#10b981',
-                          backgroundColor: '#10b981'
+                          borderColor: 'var(--premium-blue)',
+                          backgroundColor: 'var(--premium-blue)'
                         }}
                       >
                         <Check className="h-3 w-3 text-white" />
