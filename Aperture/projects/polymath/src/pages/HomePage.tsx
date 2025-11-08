@@ -38,7 +38,7 @@ import {
   Check
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
-import { ShootingStarsBackground } from '../components/ShootingStarsBackground'
+import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory, Project } from '../types'
 
 interface InspirationData {
@@ -429,8 +429,8 @@ export function HomePage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.1 }}
     >
-      {/* Shooting Stars Background Effect */}
-      <ShootingStarsBackground />
+      {/* Subtle Background Effect */}
+      <SubtleBackground />
       {/* Debug Panel Toggle - Only show in development if there are errors */}
       {isDev && storedErrors.length > 0 && (
         <button
