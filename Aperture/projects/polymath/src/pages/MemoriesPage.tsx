@@ -354,8 +354,8 @@ export function MemoriesPage() {
           <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] opacity-20" style={{
             background: 'radial-gradient(circle, rgba(139, 92, 246, 0.12), transparent 70%)'
           }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] opacity-15" style={{
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1), transparent 70%)'
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] opacity-30" style={{
+            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.25), transparent 70%)'
           }} />
         </div>
         {/* Header */}
