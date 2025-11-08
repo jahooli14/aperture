@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -54,6 +54,7 @@ export function ProjectDetailPage() {
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
   const [newPinnedTaskText, setNewPinnedTaskText] = useState('')
+  const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const pinnedTaskInputRef = useRef<HTMLInputElement>(null)
@@ -317,6 +318,46 @@ export function ProjectDetailPage() {
     }
   }, [project, updateProject, loadProjectDetails, addToast])
 
+  const handlePinnedDragStart = useCallback((taskId: string) => {
+    setDraggedPinnedTaskId(taskId)
+  }, [])
+
+  const handlePinnedDragOver = useCallback((e: React.DragEvent, targetTaskId: string) => {
+    e.preventDefault()
+    if (!draggedPinnedTaskId || !project || draggedPinnedTaskId === targetTaskId) return
+
+    const allTasks = (project.metadata?.tasks || []) as Task[]
+    const sortedTasks = [...allTasks].sort((a, b) => a.order - b.order)
+
+    const draggedIndex = sortedTasks.findIndex(t => t.id === draggedPinnedTaskId)
+    const targetIndex = sortedTasks.findIndex(t => t.id === targetTaskId)
+
+    if (draggedIndex === -1 || targetIndex === -1) return
+
+    // Reorder tasks
+    const newTasks = [...sortedTasks]
+    const [draggedTask] = newTasks.splice(draggedIndex, 1)
+    newTasks.splice(targetIndex, 0, draggedTask)
+
+    // Update order property
+    const reorderedTasks = newTasks.map((task, index) => ({
+      ...task,
+      order: index
+    }))
+
+    const newMetadata = {
+      ...project.metadata,
+      tasks: reorderedTasks
+    }
+
+    updateProject(project.id, { metadata: newMetadata })
+    setProject({ ...project, metadata: newMetadata })
+  }, [draggedPinnedTaskId, project, updateProject])
+
+  const handlePinnedDragEnd = useCallback(() => {
+    setDraggedPinnedTaskId(null)
+  }, [])
+
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
 
@@ -419,29 +460,43 @@ export function ProjectDetailPage() {
           {tasks.filter(t => !t.done).map((task, index) => {
             const isNextTask = index === 0
             return (
-              <button
+              <div
                 key={task.id}
-                onClick={() => togglePinnedTask(task.id)}
-                className={`w-full flex items-center gap-2 text-sm p-1.5 rounded transition-colors text-left ${
+                draggable
+                onDragStart={() => handlePinnedDragStart(task.id)}
+                onDragOver={(e) => handlePinnedDragOver(e, task.id)}
+                onDragEnd={handlePinnedDragEnd}
+                className={`group w-full flex items-center gap-2 text-sm p-1.5 rounded transition-colors text-left cursor-move ${
                   isNextTask ? 'premium-glass-subtle' : 'hover:bg-white/5'
                 }`}
                 style={isNextTask ? {
                   borderColor: 'var(--premium-amber)',
                   borderWidth: '1px',
-                  borderStyle: 'solid'
-                } : {}}
+                  borderStyle: 'solid',
+                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
+                } : {
+                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
+                }}
               >
-                <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
-                  borderColor: isNextTask ? 'var(--premium-amber)' : 'rgba(255, 255, 255, 0.2)'
-                }}>
+                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <GripVertical className="h-3 w-3" />
                 </div>
-                <span style={{
-                  color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
-                  fontWeight: isNextTask ? 600 : 400
-                }}>
-                  {task.text}
-                </span>
-              </button>
+                <button
+                  onClick={() => togglePinnedTask(task.id)}
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
+                    borderColor: isNextTask ? 'var(--premium-amber)' : 'rgba(255, 255, 255, 0.2)'
+                  }}>
+                  </div>
+                  <span style={{
+                    color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                    fontWeight: isNextTask ? 600 : 400
+                  }}>
+                    {task.text}
+                  </span>
+                </button>
+              </div>
             )
           })}
 
@@ -492,7 +547,7 @@ export function ProjectDetailPage() {
       </div>
     </div>
     )
-  }, [tasks.length, project?.status, progress, togglePinnedTask, addPinnedTask, project])
+  }, [tasks.length, project?.status, progress, togglePinnedTask, addPinnedTask, project, handlePinnedDragStart, handlePinnedDragOver, handlePinnedDragEnd, draggedPinnedTaskId])
 
   if (loading) {
     return (
