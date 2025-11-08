@@ -36,7 +36,8 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   error: null,
 
   fetchMemories: async () => {
-    set({ loading: true, error: null })
+    // Preserve existing memories during loading to prevent flicker
+    set((state) => ({ ...state, loading: true, error: null }))
 
     try {
       // Single-user app - no user_id filtering needed in DB

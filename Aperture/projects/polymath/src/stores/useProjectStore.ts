@@ -74,7 +74,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   filter: 'all',
 
   fetchProjects: async () => {
-    set({ loading: true, error: null })
+    // Preserve existing projects during loading to prevent flicker
+    set((state) => ({ ...state, loading: true, error: null }))
 
     try {
       const { filter } = get()

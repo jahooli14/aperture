@@ -28,7 +28,8 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   currentFilter: 'all',
 
   fetchArticles: async (status?: ArticleStatus) => {
-    set({ loading: true, error: null })
+    // Preserve existing articles during loading to prevent flicker
+    set((state) => ({ ...state, loading: true, error: null }))
 
     try {
       const params = new URLSearchParams()
