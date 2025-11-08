@@ -708,7 +708,8 @@ export const ProjectCard = React.memo(function ProjectCard({
           {/* Connection Badge */}
           {connectionCount > 0 && (
             <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              background: 'var(--premium-bg-3)',
+              backdropFilter: 'blur(12px)',
               color: 'var(--premium-blue)'
             }}>
               <Link2 className="h-3.5 w-3.5" />
@@ -724,8 +725,9 @@ export const ProjectCard = React.memo(function ProjectCard({
                 key={tag}
                 className="px-3 py-1 rounded-md text-xs font-medium"
                 style={{
-                  backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                  color: 'var(--premium-indigo)'
+                  background: 'var(--premium-bg-3)',
+                  backdropFilter: 'blur(12px)',
+                  color: 'var(--premium-blue)'
                 }}
               >
                 #{tag}
