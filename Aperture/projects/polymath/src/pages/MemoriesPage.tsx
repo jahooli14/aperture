@@ -637,8 +637,8 @@ export function MemoriesPage() {
           </Card>
         )}
 
-        {/* My Memories: Theme Clusters or Recent View - show if we have data, even while loading */}
-        {view === 'all' && memories.length > 0 && (
+        {/* My Memories: Theme Clusters or Recent View */}
+        {view === 'all' && !isLoading && memories.length > 0 && (
           <>
             {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
             <div className="flex gap-1 mb-6">
@@ -766,7 +766,7 @@ export function MemoriesPage() {
         )}
 
         {/* Resurfacing Memories Grid */}
-        {view === 'resurfacing' && !loadingResurfacing && resurfacing.length > 0 && (
+        {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
             {resurfacing.map((memory) => (
               <div key={memory.id} className="flex flex-col gap-3">
