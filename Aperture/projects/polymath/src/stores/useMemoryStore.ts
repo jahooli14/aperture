@@ -58,7 +58,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
   },
 
   setMemories: (memories: Memory[]) => {
-    set({ memories, error: null })
+    set({ memories, loading: false, error: null })
   },
 
   clearError: () => {
