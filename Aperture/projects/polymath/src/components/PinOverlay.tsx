@@ -65,12 +65,15 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-30 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-50 premium-glass-strong border-t"
         style={{
           top: viewState === 'maximized' ? 0 : '50%',
           borderColor: 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: 'var(--premium-surface-base)'
+          backgroundColor: 'var(--premium-surface-base)',
+          overscrollBehavior: 'contain'
         }}
+        onTouchMove={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
@@ -115,7 +118,13 @@ export function PinOverlay() {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto" style={{ height: viewState === 'maximized' ? 'calc(100vh - 60px)' : 'calc(50vh - 60px)' }}>
+        <div
+          className="overflow-y-auto"
+          style={{
+            height: viewState === 'maximized' ? 'calc(100vh - 60px)' : 'calc(50vh - 60px)',
+            overscrollBehavior: 'contain'
+          }}
+        >
           {pinnedItem?.content}
         </div>
       </motion.div>
