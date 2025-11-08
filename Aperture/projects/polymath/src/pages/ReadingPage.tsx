@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
-import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search } from 'lucide-react'
+import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -326,19 +326,16 @@ export function ReadingPage() {
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl" style={{
-            fontWeight: 600,
-            letterSpacing: 'var(--premium-tracking-tight)',
-            color: 'var(--premium-text-secondary)',
+          <div className="flex items-center" style={{
+            color: 'var(--premium-blue)',
             opacity: 0.7
           }}>
-            Reading Queue
-          </h1>
+            <FileText className="h-7 w-7" />
+          </div>
 
           {/* Filter Tabs */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
             {tabs.map((tab) => {
-              const Icon = tab.icon
               const count = getTabCount(tab.key)
 
               return (
@@ -352,7 +349,6 @@ export function ReadingPage() {
                     backdropFilter: 'blur(12px)'
                   }}
                 >
-                  <Icon className="h-4 w-4" />
                   {tab.label}
                   <span className="text-xs opacity-75">({count})</span>
                 </button>

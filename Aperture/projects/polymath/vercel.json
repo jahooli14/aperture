@@ -26,7 +26,7 @@
   "crons": [
     {
       "path": "/api/cron/jobs?job=daily",
-      "schedule": "0 0 * * *"
+      "schedule": "30 21 * * *"
     }
   ]
 }

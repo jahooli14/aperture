@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2 } from 'lucide-react'
+import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2 } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { ZenMode } from '../components/bedtime/ZenMode'
 
@@ -94,11 +94,11 @@ export function BedtimePage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'connection': return '🔗'
-      case 'divergent': return '🌊'
-      case 'revisit': return '🔮'
-      case 'transform': return '✨'
-      default: return '💭'
+      case 'connection': return <Link2 className="h-5 w-5" />
+      case 'divergent': return <Sparkles className="h-5 w-5" />
+      case 'revisit': return <Eye className="h-5 w-5" />
+      case 'transform': return <Star className="h-5 w-5" />
+      default: return <Moon className="h-5 w-5" />
     }
   }
 
@@ -148,7 +148,7 @@ export function BedtimePage() {
               Thoughts Before Bed
             </h1>
             <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-              ✨ Let your mind wander into tomorrow's inspiration
+              Let your mind wander into tomorrow's inspiration
             </p>
           </div>
         </div>
@@ -243,7 +243,7 @@ export function BedtimePage() {
                     {/* Type badge */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl">{getTypeIcon(prompt.type)}</span>
+                        <span style={{ color: getTypeColor(prompt.type) }}>{getTypeIcon(prompt.type)}</span>
                         <span
                           className="text-xs font-semibold uppercase tracking-wider"
                           style={{ color: getTypeColor(prompt.type) }}
@@ -341,7 +341,7 @@ export function BedtimePage() {
         }}
       >
         <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-          🌙 <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnight—insights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
+          <strong className="premium-text-platinum">Reflection ritual:</strong> These prompts are designed to spark gentle curiosity before sleep. Let them simmer in your subconscious overnight—insights often arrive in the morning. Try Zen Mode for a peaceful, one-at-a-time experience.
         </p>
       </motion.div>
 

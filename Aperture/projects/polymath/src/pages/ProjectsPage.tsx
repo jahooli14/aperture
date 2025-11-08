@@ -119,14 +119,12 @@ export function ProjectsPage() {
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl" style={{
-            fontWeight: 600,
-            letterSpacing: 'var(--premium-tracking-tight)',
-            color: 'var(--premium-text-secondary)',
+          <div className="flex items-center" style={{
+            color: 'var(--premium-blue)',
             opacity: 0.7
           }}>
-            Projects
-          </h1>
+            <Rocket className="h-7 w-7" />
+          </div>
 
           {/* Filter Tabs */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">

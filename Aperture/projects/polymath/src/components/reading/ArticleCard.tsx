@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, BookOpen, WifiOff, Link2, Check, Copy, Share2, Edit } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Check, Copy, Share2, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -448,15 +448,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               }}>
                 <WifiOff className="h-3 w-3" />
                 Offline
-              </div>
-            )}
-            {article.status === 'reading' && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)'
-              }}>
-                <BookOpen className="h-3 w-3" />
-                Reading
               </div>
             )}
           </div>

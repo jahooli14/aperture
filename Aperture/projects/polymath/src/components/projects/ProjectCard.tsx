@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive, Star } from 'lucide-react'
+import { Clock, Zap, Edit, Trash2, Link2, Pencil, Copy, Share2, Archive, Star, MoreVertical } from 'lucide-react'
 import type { ProjectCardProps } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -33,6 +33,7 @@ export const ProjectCard = React.memo(function ProjectCard({
   const [showQuickNote, setShowQuickNote] = useState(false)
   const [quickNote, setQuickNote] = useState('')
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
   const { updateProject, setPriority } = useProjectStore()
   const { addToast } = useToast()
 
@@ -417,19 +418,72 @@ export const ProjectCard = React.memo(function ProjectCard({
               {project.title}
             </h3>
             {showActions && onDelete && (
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(project.id)
-                }}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:text-red-600 hover:bg-red-50 flex-shrink-0"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-                aria-label="Delete project"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="relative flex-shrink-0">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowDropdown(!showDropdown)
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-white/10 transition-colors"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  aria-label="Project actions"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+
+                {/* Dropdown Menu */}
+                {showDropdown && (
+                  <>
+                    {/* Backdrop to close dropdown */}
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowDropdown(false)
+                      }}
+                    />
+
+                    {/* Menu */}
+                    <div
+                      className="absolute right-0 top-full mt-1 z-50 rounded-lg border overflow-hidden"
+                      style={{
+                        backgroundColor: 'var(--premium-surface-2)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                        minWidth: '140px'
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDropdown(false)
+                          onClick?.(project.id)
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-white/10"
+                        style={{ color: 'var(--premium-text-primary)' }}
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span className="text-sm font-medium">Edit</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDropdown(false)
+                          onDelete(project.id)
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-red-500/20"
+                        style={{ color: '#ef4444' }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="text-sm font-medium">Delete</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
 

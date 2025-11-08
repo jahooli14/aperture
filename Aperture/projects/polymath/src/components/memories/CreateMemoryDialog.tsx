@@ -140,15 +140,14 @@ export function CreateMemoryDialog() {
       {/* Trigger Button */}
       <button
         onClick={() => setOpen(true)}
-        className="border-2 shadow-xl rounded-full px-6 py-2.5 font-medium transition-all hover:shadow-2xl inline-flex items-center gap-2 hover-lift touch-manipulation"
+        className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
         style={{
-          backgroundColor: 'rgba(99, 102, 241, 0.2)',
-          borderColor: 'rgba(99, 102, 241, 0.5)',
-          color: 'var(--premium-indigo)'
+          borderColor: 'rgba(30, 42, 88, 0.2)',
+          color: 'rgba(100, 180, 255, 1)'
         }}
+        title="New Thought"
       >
-        <Plus className="h-4 w-4" />
-        New Thought
+        <Plus className="h-5 w-5" />
       </button>
 
       <BottomSheet open={open} onOpenChange={setOpen}>

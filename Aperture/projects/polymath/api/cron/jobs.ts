@@ -2,8 +2,11 @@
  * Consolidated Cron Jobs Handler
  *
  * Handles:
- * - Daily job (runs strengthen + process_stuck every day at 00:00 UTC)
- * - Weekly synthesis (Mondays only)
+ * - Daily job (runs at 21:30 UTC / 9:30pm GMT):
+ *   - Strengthen nodes
+ *   - Process stuck memories
+ *   - Generate bedtime prompts
+ *   - Weekly synthesis (Mondays only)
  * - Manual triggers for individual jobs
  *
  * Route with ?job= query parameter:
@@ -133,6 +136,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      // 4. Generate bedtime prompts (runs once daily)
+      try {
+        const { generateBedtimePrompts } = await import('../../lib/bedtime-ideas.js')
+        const prompts = await generateBedtimePrompts(userId)
+        results.tasks.bedtime = {
+          success: true,
+          prompts_generated: prompts?.length || 0
+        }
+        console.log(`[cron/jobs/daily] Generated ${prompts?.length || 0} bedtime prompts`)
+      } catch (error) {
+        results.tasks.bedtime = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+        console.error('[cron/jobs/daily] Bedtime prompts failed:', error)
+      }
+
       return res.status(200).json(results)
 
     } else if (job === 'synthesis') {
@@ -227,12 +247,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   "crons": [
     {
       "path": "/api/cron/jobs?job=daily",
-      "schedule": "0 0 * * *"
+      "schedule": "30 21 * * *"
     }
   ]
 }
-Note: Hobby accounts limited to 1 cron/day. Daily job runs:
+Note: Hobby accounts limited to 1 cron/day. Daily job runs at 21:30 UTC (9:30pm GMT / 8:30pm BST):
 - Node strengthening (every day)
 - Stuck memory processing (every day)
+- Bedtime prompts generation (every day)
 - Synthesis (Mondays only)
 */
