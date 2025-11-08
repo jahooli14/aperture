@@ -8,6 +8,7 @@ import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight } from 'lu
 import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
+import { handleInputFocus } from '../../utils/keyboard'
 
 export interface Task {
   id: string
@@ -257,6 +258,7 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               type="text"
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
+              onFocus={handleInputFocus}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddTask()
                 if (e.key === 'Escape') {

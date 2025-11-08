@@ -19,6 +19,7 @@ import { PinButton } from '../components/PinButton'
 import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
+import { handleInputFocus } from '../utils/keyboard'
 import type { Project } from '../types'
 
 interface ProjectNote {
@@ -515,6 +516,7 @@ export function ProjectDetailPage() {
                 e.stopPropagation()
                 pinnedTaskInputRef.current?.focus()
               }}
+              onFocus={handleInputFocus}
               onKeyDown={(e) => {
                 console.log('[Pinned Input] onKeyDown:', e.key)
                 if (e.key === 'Enter') {
