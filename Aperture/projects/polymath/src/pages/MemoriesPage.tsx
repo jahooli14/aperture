@@ -519,8 +519,8 @@ export function MemoriesPage() {
               </Card>
             )}
 
-            {/* Loading State */}
-            {isLoading && (
+            {/* Loading State - only show spinner if we have no data yet */}
+            {isLoading && memories.length === 0 && (
               <Card style={{
                 background: 'var(--premium-bg-2)',
                 backdropFilter: 'blur(12px)',
@@ -537,8 +537,8 @@ export function MemoriesPage() {
           </>
         )}
 
-        {/* Resurfacing Tab Loading */}
-        {view === 'resurfacing' && isLoading && (
+        {/* Resurfacing Tab Loading - only show spinner if we have no data yet */}
+        {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
           <Card style={{
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
@@ -637,8 +637,8 @@ export function MemoriesPage() {
           </Card>
         )}
 
-        {/* My Memories: Theme Clusters or Recent View */}
-        {view === 'all' && !isLoading && memories.length > 0 && (
+        {/* My Memories: Theme Clusters or Recent View - show if we have data, even while loading */}
+        {view === 'all' && memories.length > 0 && (
           <>
             {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
             <div className="flex gap-1 mb-6">

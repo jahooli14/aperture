@@ -455,7 +455,7 @@ export function ReadingPage() {
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading articles...</p>
               </div>
-            ) : filteredArticles.length === 0 ? (
+            ) : filteredArticles.length === 0 && !loading ? (
           <div className="premium-card p-20 text-center">
             <div className="flex flex-col items-center justify-center">
               <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
