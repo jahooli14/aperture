@@ -29,25 +29,27 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
       {/* FAB Button */}
       {!isOpen && (
         <button
+          data-voice-fab
           onClick={() => {
             haptic.medium()
             setIsOpen(true)
           }}
           className={cn(
-            "fixed z-40",
+            "fixed z-50",
             "bottom-24 md:bottom-6 right-4 md:right-6",
             "h-14 w-14 md:h-16 md:w-16 rounded-full",
-            "bg-gradient-to-br from-blue-500 to-blue-900",
-            "text-white shadow-lg hover:shadow-xl",
+            "shadow-lg hover:shadow-xl",
             "flex items-center justify-center",
             "transition-all duration-300",
             "active:scale-90",
-            "hover:scale-110",
-            "btn-ripple btn-ripple-blue"
+            "hover:scale-110"
           )}
+          style={{
+            background: 'var(--premium-bg-3)'
+          }}
           aria-label="Voice capture"
         >
-          <Mic className="h-6 w-6" />
+          <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
         </button>
       )}
 
