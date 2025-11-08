@@ -326,7 +326,7 @@ export function ReadingPage() {
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'var(--premium-bg-1)',
+        backgroundColor: 'rgba(15, 24, 41, 0.7)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
