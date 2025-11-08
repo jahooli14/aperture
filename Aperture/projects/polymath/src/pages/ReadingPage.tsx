@@ -255,11 +255,14 @@ export function ReadingPage() {
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'updates') {
       const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
-      // Show last known count with + if we have dismissed items and had a higher count before
-      if (lastKnownUpdatesCount > 0 && currentCount === 0) {
+      // Show current count if we have items
+      // Show last known count with + if all items dismissed but we had items before
+      if (currentCount > 0) {
+        return currentCount
+      } else if (lastKnownUpdatesCount > 0) {
         return `${lastKnownUpdatesCount}+`
       }
-      return lastKnownUpdatesCount > 0 ? `${lastKnownUpdatesCount}+` : currentCount
+      return 0
     }
     return safeArticles.filter(a => a.status === tab).length
   }
