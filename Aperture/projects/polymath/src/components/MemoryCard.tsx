@@ -137,12 +137,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       icon: <Share2 className="h-5 w-5" />,
       onClick: handleShare,
     },
-    ...(onDelete ? [{
-      label: 'Delete',
-      icon: <Trash2 className="h-5 w-5" />,
-      onClick: () => onDelete(memory),
-      variant: 'destructive' as const,
-    }] : []),
   ]
 
   return (
