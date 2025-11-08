@@ -242,12 +242,11 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
   if (hasNoContent && !loadingSuggestions) {
     return (
       <>
-        <div className="py-8 text-center">
-          <LinkIcon className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-          <p className="text-neutral-600 text-sm mb-3">No connections yet</p>
+        <div className="py-3 text-center">
+          <p className="text-xs mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>No connections yet</p>
           <button
             onClick={() => setShowCreateDialog(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               backgroundColor: 'rgba(59, 130, 246, 0.15)',
               backdropFilter: 'blur(12px)',
@@ -259,7 +258,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.25)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.15)'}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             Add Connection
           </button>
         </div>

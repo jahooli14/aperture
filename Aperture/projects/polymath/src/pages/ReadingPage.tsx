@@ -256,8 +256,9 @@ export function ReadingPage() {
       const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
       // Show current count if we have items
       // Show last known count with + if all items dismissed but we had items before
+      // Always show with + to indicate there may be more on next reload
       if (currentCount > 0) {
-        return currentCount
+        return `${currentCount}+`
       } else if (lastKnownUpdatesCount > 0) {
         return `${lastKnownUpdatesCount}+`
       }
