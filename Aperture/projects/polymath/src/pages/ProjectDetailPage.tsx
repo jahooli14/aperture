@@ -471,7 +471,7 @@ export function ProjectDetailPage() {
                   isNextTask ? 'premium-glass-subtle' : 'hover:bg-white/5'
                 }`}
                 style={isNextTask ? {
-                  borderColor: 'var(--premium-amber)',
+                  borderColor: 'var(--premium-blue)',
                   borderWidth: '1px',
                   borderStyle: 'solid',
                   opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
@@ -487,7 +487,7 @@ export function ProjectDetailPage() {
                   className="flex items-center gap-2 flex-1"
                 >
                   <div className="h-4 w-4 rounded border flex items-center justify-center flex-shrink-0" style={{
-                    borderColor: isNextTask ? 'var(--premium-amber)' : 'rgba(255, 255, 255, 0.2)'
+                    borderColor: isNextTask ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.2)'
                   }}>
                   </div>
                   <span style={{
