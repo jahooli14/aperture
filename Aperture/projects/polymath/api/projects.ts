@@ -399,6 +399,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // KNOWLEDGE MAP RESOURCE
+  if (resource === 'knowledge_map') {
+    const action = req.query.action as string
+
+    // GET: Load map state or generate initial map
+    if (req.method === 'GET') {
+      if (action === 'suggestions') {
+        // Generate door suggestions
+        const { data: mapState } = await supabase
+          .from('knowledge_map_state')
+          .select('map_data')
+          .eq('user_id', userId)
+          .single()
+
+        if (!mapState) {
+          return res.status(404).json({ error: 'Map not found' })
+        }
+
+        // Import and use the suggestions logic (we'll create this later)
+        const { generateDoorSuggestions } = await import('./lib/map-suggestions.js')
+        const doors = await generateDoorSuggestions(userId, mapState.map_data)
+        return res.status(200).json({ doors })
+      }
+
+      // Default: Load existing map or generate initial
+      const { data: existingMap } = await supabase
+        .from('knowledge_map_state')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (existingMap) {
+        return res.status(200).json({
+          mapData: existingMap.map_data,
+          version: existingMap.version
+        })
+      }
+
+      // No map exists - generate initial
+      const { generateInitialMap } = await import('./lib/map-generation.js')
+      const initialMap = await generateInitialMap(userId)
+
+      // Save it
+      const { error } = await supabase
+        .from('knowledge_map_state')
+        .insert({
+          user_id: userId,
+          map_data: initialMap,
+          version: 1
+        })
+
+      if (error) throw error
+
+      return res.status(200).json({
+        mapData: initialMap,
+        version: 1,
+        generated: true
+      })
+    }
+
+    // POST: Save map state
+    if (req.method === 'POST') {
+      const { mapData } = req.body
+
+      const { error } = await supabase
+        .from('knowledge_map_state')
+        .upsert({
+          user_id: userId,
+          map_data: mapData,
+          version: mapData.version,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (error) throw error
+
+      return res.status(200).json({ success: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // CONTEXT RESOURCE
   if (resource === 'context') {
     if (req.method === 'GET') {
