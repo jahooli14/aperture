@@ -270,7 +270,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       <CardContent className="relative z-10 flex-1 space-y-4">
         {/* Body Text - Compact Preview */}
         <div>
-          <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`}>
+          <CardDescription className={`text-sm leading-relaxed ${!isExpanded ? 'line-clamp-2' : ''}`} style={{ color: 'var(--premium-text-secondary)' }}>
             {memory.body}
           </CardDescription>
 
