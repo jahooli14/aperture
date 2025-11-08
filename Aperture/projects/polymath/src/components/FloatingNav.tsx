@@ -8,8 +8,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home,
-  Layers,
-  FolderKanban,
+  Brain,
+  Rocket,
   FileText,
   Mic,
   Settings
@@ -43,8 +43,8 @@ interface NavOption {
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
-  { id: 'thoughts', label: 'Thoughts', icon: Layers, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'projects', label: 'Projects', icon: Rocket, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'more', label: 'More', icon: Settings, path: '/settings', action: 'navigate', color: 'constellation' },
 ]
 

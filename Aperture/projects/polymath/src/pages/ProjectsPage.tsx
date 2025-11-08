@@ -127,7 +127,7 @@ export function ProjectsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
+          <div className="flex gap-2 flex-1 flex-wrap">
             {[
               { key: 'all', label: 'All' },
               { key: 'upcoming', label: 'Upcoming' },
@@ -229,7 +229,7 @@ export function ProjectsPage() {
                 Each has <strong>next steps</strong> and tracks capability growth as you work.
               </p>
               <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                💡 <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
+                <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
               </p>
             </CardContent>
           </Card>

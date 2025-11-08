@@ -82,7 +82,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
       case 'thought':
         return { icon: Brain, color: 'var(--premium-indigo)' }
       case 'project':
-        return { icon: FolderKanban, color: 'var(--premium-blue)' }
+        return { icon: Rocket, color: 'var(--premium-blue)' }
       default:
         return { icon: Sparkles, color: 'var(--premium-amber)' }
     }
@@ -674,7 +674,7 @@ export function HomePage() {
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(30, 42, 88, 0.8)'}
                 title="Project"
               >
-                <FolderKanban className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
             </div>
           </div>
@@ -778,7 +778,7 @@ export function HomePage() {
                                   await updateProject(project.id, {
                                     metadata: { ...project.metadata, tasks: updatedTasks }
                                   })
-                                  addToast({ title: '✓ Task complete!', description: nextTask.text, variant: 'success' })
+                                  addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
                                   haptic.success()
                                 } catch (error) {
                                   console.error('Failed to complete task:', error)

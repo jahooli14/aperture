@@ -390,9 +390,6 @@ export function ProjectDetailPage() {
             abandoned: '#ef4444'
           }[project.status]
         }}>
-          <span className="text-sm">
-            {{ active: '🚀', upcoming: '📅', 'on-hold': '⏸️', maintaining: '🔧', completed: '✅', archived: '📦', abandoned: '⚠️' }[project.status]}
-          </span>
           <span className="text-xs font-medium">
             {{ active: 'Active', upcoming: 'Upcoming', 'on-hold': 'On Hold', maintaining: 'Maintaining', completed: 'Completed', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
           </span>
