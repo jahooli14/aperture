@@ -104,21 +104,9 @@ export function ProjectsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      {/* Depth background with subtle gradients */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-96 opacity-30" style={{
-          background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.15), transparent 70%)'
-        }} />
-        <div className="absolute bottom-0 left-0 right-0 h-96 opacity-20" style={{
-          background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
-        }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] opacity-25" style={{
-          background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2), transparent 70%)'
-        }} />
-      </div>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)',
+        backgroundColor: 'rgba(25, 35, 55, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -197,9 +185,9 @@ export function ProjectsPage() {
                     : 'premium-card border shadow-sm hover:shadow-md'
                 }`}
                 style={{
-                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(139, 92, 246, 0.2)',
-                  backgroundColor: selectedTags.includes(tag) ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                  color: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'var(--premium-text-secondary)'
+                  borderColor: selectedTags.includes(tag) ? 'var(--premium-indigo)' : 'rgba(30, 42, 88, 0.6)',
+                  backgroundColor: selectedTags.includes(tag) ? 'rgba(30, 42, 88, 0.8)' : 'transparent',
+                  color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                 }}
               >
                 #{tag}

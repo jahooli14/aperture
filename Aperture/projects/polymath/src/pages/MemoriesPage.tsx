@@ -346,21 +346,9 @@ export function MemoriesPage() {
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-        {/* Depth background with subtle gradients */}
-        <div className="fixed inset-0 pointer-events-none">
-          <div className="absolute top-0 left-0 right-0 h-96 opacity-30" style={{
-            background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.15), transparent 70%)'
-          }} />
-          <div className="absolute bottom-0 left-0 right-0 h-96 opacity-20" style={{
-            background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
-          }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] opacity-25" style={{
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.2), transparent 70%)'
-          }} />
-        </div>
         {/* Header */}
         <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)',
+          backgroundColor: 'rgba(25, 35, 55, 0.6)',
           borderColor: 'rgba(255, 255, 255, 0.05)'
         }}>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -494,7 +482,7 @@ export function MemoriesPage() {
 
             {/* Voice Note Processing Banner */}
             {processingVoiceNote && (
-              <Card className="premium-card mb-6 border-2 animate-pulse" style={{ borderColor: 'var(--premium-blue)', backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
+              <Card className="premium-card mb-6 border-2 animate-pulse" style={{ borderColor: 'var(--premium-blue)', backgroundColor: 'rgba(15, 85, 135, 0.3)' }}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
@@ -641,7 +629,7 @@ export function MemoriesPage() {
                       : 'opacity-50 hover:opacity-75'
                   }`}
                   style={{
-                    backgroundColor: memoryView === key ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    backgroundColor: memoryView === key ? 'rgba(30, 42, 88, 0.8)' : 'transparent',
                     color: memoryView === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
                   }}
                 >

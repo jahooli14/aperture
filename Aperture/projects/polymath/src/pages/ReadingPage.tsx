@@ -310,19 +310,10 @@ export function ReadingPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="min-h-screen">
-      {/* Depth background with subtle gradients */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-96 opacity-30" style={{
-          background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.15), transparent 70%)'
-        }} />
-        <div className="absolute bottom-0 left-0 right-0 h-96 opacity-20" style={{
-          background: 'radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.1), transparent 70%)'
-        }} />
-      </div>
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)',
+        backgroundColor: 'rgba(25, 35, 55, 0.6)',
         borderColor: 'rgba(255, 255, 255, 0.05)'
       }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
@@ -417,7 +408,7 @@ export function ReadingPage() {
                     disabled={syncing}
                     className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
                     style={{
-                      borderColor: 'rgba(59, 130, 246, 0.3)',
+                      borderColor: 'var(--premium-blue)',
                       color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
                       opacity: syncing ? 0.5 : 1
                     }}
@@ -474,7 +465,7 @@ export function ReadingPage() {
                   onClick={() => setShowSaveDialog(true)}
                   className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 border transition-all hover:bg-white/10"
                   style={{
-                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    borderColor: 'var(--premium-blue)',
                     color: 'var(--premium-blue)'
                   }}
                 >
