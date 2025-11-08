@@ -401,47 +401,6 @@ export function ProjectDetailPage() {
 
     return (
     <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
-      {/* Status */}
-      <div className="flex items-center gap-2">
-        <div className="px-3 py-1.5 rounded-lg flex items-center gap-1.5" style={{
-          backgroundColor: {
-            active: 'rgba(59, 130, 246, 0.15)',
-            upcoming: 'rgba(251, 191, 36, 0.15)',
-            'on-hold': 'rgba(156, 163, 175, 0.15)',
-            maintaining: 'rgba(59, 130, 246, 0.15)',
-            completed: 'rgba(168, 85, 247, 0.15)',
-            archived: 'rgba(156, 163, 175, 0.15)',
-            abandoned: 'rgba(239, 68, 68, 0.15)'
-          }[project.status],
-          color: {
-            active: '#3b82f6',
-            upcoming: '#fbbf24',
-            'on-hold': '#9ca3af',
-            maintaining: '#3b82f6',
-            completed: '#a855f7',
-            archived: '#9ca3af',
-            abandoned: '#ef4444'
-          }[project.status]
-        }}>
-          <span className="text-xs font-medium">
-            {{ active: 'Active', upcoming: 'Upcoming', 'on-hold': 'On Hold', maintaining: 'Maintaining', completed: 'Completed', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
-          </span>
-        </div>
-        {progress > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-              <div className="h-full" style={{
-                width: `${progress}%`,
-                background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
-              }} />
-            </div>
-            <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
-              {progress}%
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* Active Tasks Only - Mobile Optimized */}
       <div>
         <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
@@ -599,29 +558,43 @@ export function ProjectDetailPage() {
                   </button>
                 </div>
               ) : (
-                <h1
-                  className="text-xl font-bold truncate cursor-pointer hover:opacity-70 transition-opacity"
-                  style={{ color: 'var(--premium-text-primary)' }}
-                  onClick={startEditTitle}
-                  title="Click to edit"
-                >
-                  {project.title}
-                </h1>
-              )}
-              {progress > 0 && (
-                <div className="mt-1 flex items-center gap-2">
-                  <div className="flex-1 h-1 rounded-full overflow-hidden max-w-[200px]" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                    <div
-                      className="h-full transition-all"
-                      style={{
-                        width: `${progress}%`,
-                        background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
-                      }}
-                    />
+                <div>
+                  <h1
+                    className="text-xl font-bold truncate cursor-pointer hover:opacity-70 transition-opacity"
+                    style={{ color: 'var(--premium-text-primary)' }}
+                    onClick={startEditTitle}
+                    title="Click to edit"
+                  >
+                    {project.title}
+                  </h1>
+                  {/* Status Badge in navbar */}
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="px-2.5 py-1 rounded-lg flex items-center gap-1.5" style={{
+                      background: 'var(--premium-bg-3)',
+                      backdropFilter: 'blur(12px)',
+                      color: 'var(--premium-blue)'
+                    }}>
+                      <span className="text-xs font-medium">
+                        {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
+                      </span>
+                    </div>
+                    {progress > 0 && (
+                      <>
+                        <div className="h-1 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                          <div
+                            className="h-full transition-all"
+                            style={{
+                              width: `${progress}%`,
+                              background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
+                          {progress}%
+                        </span>
+                      </>
+                    )}
                   </div>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
-                    {progress}%
-                  </span>
                 </div>
               )}
             </div>
