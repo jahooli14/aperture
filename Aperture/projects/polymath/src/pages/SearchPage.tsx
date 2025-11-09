@@ -100,7 +100,7 @@ export function SearchPage() {
       case 'memory':
         navigate('/memories')
         addToast({
-          title: 'Memory found',
+          title: 'Thought found',
           description: result.title,
           variant: 'default'
         })

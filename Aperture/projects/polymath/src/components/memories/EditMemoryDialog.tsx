@@ -97,7 +97,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
       })
 
       addToast({
-        title: 'Memory updated!',
+        title: 'Thought updated!',
         description: 'Your changes have been saved',
         variant: 'success',
       })
@@ -105,7 +105,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
       onOpenChange(false)
     } catch (error) {
       addToast({
-        title: 'Failed to update memory',
+        title: 'Failed to update thought',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
@@ -122,10 +122,10 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-            <BottomSheetTitle>Edit memory</BottomSheetTitle>
+            <BottomSheetTitle>Edit thought</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
-            Update your captured thought
+            Update your thought
           </BottomSheetDescription>
         </BottomSheetHeader>
 

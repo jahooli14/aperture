@@ -79,7 +79,7 @@ export function MemoriesPage() {
       if (fromCache) {
         addToast({
           title: 'Offline Mode',
-          description: `Showing ${fetchedMemories.length} cached memories`,
+          description: `Showing ${fetchedMemories.length} cached thoughts`,
           variant: 'default'
         })
       }
@@ -156,7 +156,7 @@ export function MemoriesPage() {
     }
 
     if (!isPollingRef.current) {
-      console.log(`🔄 Polling for memory updates (${unprocessedCount} unprocessed)`)
+      console.log(`🔄 Polling for thought updates (${unprocessedCount} unprocessed)`)
       isPollingRef.current = true
     }
 
@@ -197,7 +197,7 @@ export function MemoriesPage() {
   const handleDelete = async (memory: Memory) => {
     const confirmed = await confirm({
       title: `Delete "${memory.title}"?`,
-      description: 'This action cannot be undone. The memory will be permanently removed.',
+      description: 'This action cannot be undone. The thought will be permanently removed.',
       confirmText: 'Delete',
       cancelText: 'Cancel',
       variant: 'destructive',
@@ -207,13 +207,13 @@ export function MemoriesPage() {
       try {
         await deleteMemory(memory.id)
         addToast({
-          title: 'Memory deleted',
+          title: 'Thought deleted',
           description: `"${memory.title}" has been removed.`,
           variant: 'success',
         })
       } catch (error) {
         addToast({
-          title: 'Failed to delete memory',
+          title: 'Failed to delete thought',
           description: error instanceof Error ? error.message : 'An error occurred',
           variant: 'destructive',
         })
@@ -542,7 +542,7 @@ export function MemoriesPage() {
                 <CardContent className="py-24">
                   <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
                     <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <p className="text-lg">Loading memories...</p>
+                    <p className="text-lg">Loading thoughts...</p>
                   </div>
                 </CardContent>
               </Card>
@@ -600,7 +600,7 @@ export function MemoriesPage() {
                           </div>
                           <div>
                             <p className="font-semibold premium-text-platinum">Manually capture</p>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Click 'New Memory' to manually add thoughts, ideas, or insights</p>
+                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Click 'New thought' to manually add ideas, insights, or observations</p>
                           </div>
                         </div>
                         <div className="flex gap-4">

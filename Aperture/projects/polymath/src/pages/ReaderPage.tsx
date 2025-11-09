@@ -316,8 +316,8 @@ export function ReaderPage() {
       if (!response.ok) throw new Error('Failed to create memory')
 
       addToast({
-        title: 'Saved to memories!',
-        description: 'Highlight converted to memory',
+        title: 'Saved to thoughts!',
+        description: 'Highlight converted to thought',
         variant: 'success',
       })
 
@@ -326,7 +326,7 @@ export function ReaderPage() {
     } catch (error) {
       addToast({
         title: 'Error',
-        description: 'Failed to save as memory',
+        description: 'Failed to save as thought',
         variant: 'destructive',
       })
     }
@@ -641,7 +641,7 @@ export function ReaderPage() {
             <button
               onClick={handleSaveAsMemory}
               className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
-              title="Save as memory"
+              title="Save as thought"
             >
               <BookmarkPlus className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
             </button>
