@@ -114,9 +114,9 @@ export function PromptModal({
         )}
 
         <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
-          <div className="space-y-4">
+          <div>
             {bullets.map((bullet, index) => (
-              <div key={index} className="flex gap-2 items-start">
+              <div key={index} className="flex gap-2 items-start" style={{ marginBottom: index < bullets.length - 1 ? '16px' : '0' }}>
                 <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
                 <Textarea
                   value={bullet}
