@@ -531,8 +531,8 @@ export function MemoriesPage() {
               </Card>
             )}
 
-            {/* Loading State */}
-            {isLoading && (
+            {/* Loading State - Only show if no data yet (prevent flicker on refresh) */}
+            {isLoading && memories.length === 0 && (
               <Card style={{
                 background: 'var(--premium-bg-2)',
                 backdropFilter: 'blur(12px)',
@@ -549,8 +549,8 @@ export function MemoriesPage() {
           </>
         )}
 
-        {/* Resurfacing Tab Loading */}
-        {view === 'resurfacing' && isLoading && (
+        {/* Resurfacing Tab Loading - Only show if no data yet (prevent flicker on refresh) */}
+        {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
           <Card style={{
             background: 'var(--premium-bg-2)',
             backdropFilter: 'blur(12px)',
@@ -727,7 +727,7 @@ export function MemoriesPage() {
             {/* Theme clusters grid */}
             {!selectedCluster && memoryView === 'themes' && (
               <>
-                {loadingClusters ? (
+                {loadingClusters && clusters.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
                     <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
