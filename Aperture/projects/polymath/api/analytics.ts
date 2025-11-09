@@ -850,20 +850,13 @@ async function fetchMemories() {
 
 /**
  * GET INSPIRATION
- * Shows relevant content that's DIFFERENT from Keep Momentum projects
- * Uses Gemini to suggest: unread article, old thought, or creative prompt
+ * Shows a random project that's DIFFERENT from Keep Momentum projects
  */
 async function getInspiration(excludeProjectIds: string[]) {
-  const [projects, articles, memories] = await Promise.all([
-    fetchProjects(),
-    fetchArticles(),
-    fetchMemories()
-  ])
+  const projects = await fetchProjects()
 
   console.log('[Inspiration] Data fetched:', {
     projectsCount: projects.length,
-    articlesCount: articles.length,
-    memoriesCount: memories.length,
     excludedProjectIds: excludeProjectIds
   })
 
@@ -872,51 +865,8 @@ async function getInspiration(excludeProjectIds: string[]) {
 
   console.log('[Inspiration] Other projects after exclusion:', otherProjects.length)
 
-  const inspirationOptions = []
-
-  // Option 1: Unread article
-  const unreadArticles = articles.filter(a => a.status === 'unread')
-  console.log('[Inspiration] Unread articles:', unreadArticles.length)
-  if (unreadArticles.length > 0) {
-    const article = unreadArticles[Math.floor(Math.random() * Math.min(3, unreadArticles.length))]
-    inspirationOptions.push({
-      type: 'article',
-      title: article.title || 'Interesting read',
-      description: article.excerpt || 'Expand your knowledge',
-      url: `/reading/${article.id}`,
-      reasoning: 'A fresh perspective from your reading queue'
-    })
-  }
-
-  // Option 2: Old thought to resurface
-  if (memories.length > 5) {
-    const oldMemory = memories[Math.floor(Math.random() * Math.min(10, memories.length))]
-    inspirationOptions.push({
-      type: 'thought',
-      title: oldMemory.title || 'Past insight',
-      description: oldMemory.body?.substring(0, 150) || '',
-      url: `/memories`,
-      reasoning: 'A thought worth revisiting'
-    })
-  }
-
-  // Option 3: Different project (not in Keep Momentum)
-  if (otherProjects.length > 0) {
-    const project = otherProjects[Math.floor(Math.random() * Math.min(3, otherProjects.length))]
-    const nextStep = getNextStep(project)
-    inspirationOptions.push({
-      type: 'project',
-      title: project.title,
-      description: nextStep || project.description || 'Explore this idea',
-      url: `/projects/${project.id}`,
-      reasoning: 'A project waiting for your attention'
-    })
-  }
-
-  // Pick one randomly
-  console.log('[Inspiration] Total options available:', inspirationOptions.length)
-
-  if (inspirationOptions.length === 0) {
+  // Pick a random project from the remaining ones
+  if (otherProjects.length === 0) {
     return {
       type: 'empty',
       title: 'Create something new',
@@ -925,8 +875,18 @@ async function getInspiration(excludeProjectIds: string[]) {
     }
   }
 
-  const selected = inspirationOptions[Math.floor(Math.random() * inspirationOptions.length)]
-  console.log('[Inspiration] Selected:', selected.type, '-', selected.title)
+  const project = otherProjects[Math.floor(Math.random() * otherProjects.length)]
+  const nextStep = getNextStep(project)
+
+  const selected = {
+    type: 'project',
+    title: project.title,
+    description: nextStep || project.description || 'Explore this idea',
+    url: `/projects/${project.id}`,
+    reasoning: 'A project waiting for your attention'
+  }
+
+  console.log('[Inspiration] Selected project:', selected.title)
   return selected
 }
 
