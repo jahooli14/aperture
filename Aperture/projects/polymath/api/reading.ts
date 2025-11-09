@@ -158,11 +158,7 @@ async function fetchArticleWithJina(url: string) {
       contentWithoutH1 = html.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '')
     }
 
-    // Calculate word count and reading time from text content (not HTML)
-    const wordCount = textContent.trim().split(/\s+/).length
-    const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 225))
-
-    console.log('[Jina AI] Final extraction - Title:', title, 'Word count:', wordCount, 'Read time:', readTimeMinutes)
+    console.log('[Jina AI] Final extraction - Title:', title, 'Text content length:', textContent.length)
 
     return {
       title: title || 'Untitled',
@@ -172,8 +168,6 @@ async function fetchArticleWithJina(url: string) {
       publishedDate: data.data.publishedTime || null,
       thumbnailUrl: data.data.image || null,
       faviconUrl: data.data.favicon || null,
-      wordCount,
-      readTimeMinutes,
       url
     }
   } catch (error) {
@@ -592,8 +586,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               published_date: article.publishedDate,
               thumbnail_url: article.thumbnailUrl,
               favicon_url: article.faviconUrl,
-              read_time_minutes: article.readTimeMinutes,
-              word_count: article.wordCount,
+              read_time_minutes: estimateReadTime(article.content),
+              word_count: countWords(article.content),
               processed: true,
             })
             .eq('id', savedArticle.id)
@@ -601,7 +595,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (updateError) {
             console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
           } else {
-            console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id}`)
+            console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id} - Title: "${article.title}"`)
 
             // Generate embedding and auto-connect (async, non-blocking)
             generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
@@ -610,7 +604,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         })
         .catch(async (extractError) => {
-          console.error(`[reading] Extraction failed for ${savedArticle.id}:`, extractError)
+          console.error(`[reading] ❌ Extraction failed for ${savedArticle.id}:`, extractError.message || extractError)
 
           // Mark as failed but keep the record
           await supabase
