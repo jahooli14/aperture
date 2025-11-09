@@ -11,9 +11,10 @@ interface ReadingState {
   loading: boolean
   error: string | null
   currentFilter: ArticleStatus | 'all'
+  lastFetched: number | null
 
   // Actions
-  fetchArticles: (status?: ArticleStatus) => Promise<void>
+  fetchArticles: (status?: ArticleStatus, force?: boolean) => Promise<void>
   saveArticle: (request: SaveArticleRequest) => Promise<Article>
   updateArticle: (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => Promise<void>
   updateArticleStatus: (id: string, status: ArticleStatus) => Promise<void>
@@ -26,8 +27,19 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
   loading: false,
   error: null,
   currentFilter: 'all',
+  lastFetched: null,
 
-  fetchArticles: async (status?: ArticleStatus) => {
+  fetchArticles: async (status?: ArticleStatus, force = false) => {
+    const state = get()
+    const now = Date.now()
+    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+    // Skip if we have recent data and not forcing refresh
+    if (!force && state.articles.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
+      console.log('[ReadingStore] Using cached articles')
+      return
+    }
+
     // Preserve existing articles during loading to prevent flicker
     set((state) => ({ ...state, loading: true, error: null }))
 
@@ -43,7 +55,7 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
       const { articles } = await response.json()
 
-      set({ articles, loading: false })
+      set({ articles, loading: false, lastFetched: now })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage, loading: false })
@@ -77,10 +89,11 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
       const { article } = await response.json()
 
-      // Add to articles list
+      // Add to articles list and update cache timestamp
       set((state) => ({
         articles: [article, ...state.articles],
         loading: false,
+        lastFetched: Date.now(),
       }))
 
       return article

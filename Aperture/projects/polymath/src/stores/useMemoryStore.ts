@@ -16,8 +16,9 @@ interface MemoryStore {
   bridges: Bridge[]
   loading: boolean
   error: string | null
+  lastFetched: number | null
 
-  fetchMemories: () => Promise<void>
+  fetchMemories: (force?: boolean) => Promise<void>
   setMemories: (memories: Memory[]) => void
   clearError: () => void
   fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
@@ -29,13 +30,24 @@ interface MemoryStore {
   removeOptimisticMemory: (tempId: string) => void
 }
 
-export const useMemoryStore = create<MemoryStore>((set) => ({
+export const useMemoryStore = create<MemoryStore>((set, get) => ({
   memories: [],
   bridges: [],
   loading: false,
   error: null,
+  lastFetched: null,
 
-  fetchMemories: async () => {
+  fetchMemories: async (force = false) => {
+    const state = get()
+    const now = Date.now()
+    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+    // Skip if we have recent data and not forcing refresh
+    if (!force && state.memories.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
+      console.log('[MemoryStore] Using cached memories')
+      return
+    }
+
     // Preserve existing memories during loading to prevent flicker
     set((state) => ({ ...state, loading: true, error: null }))
 
@@ -48,7 +60,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       if (error) throw error
 
-      set({ memories: data || [], loading: false })
+      set({ memories: data || [], loading: false, lastFetched: now })
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch memories',
@@ -148,9 +160,10 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
 
       if (error) throw error
 
-      // Add to local state
+      // Add to local state and update cache timestamp
       set((state) => ({
         memories: [data, ...(Array.isArray(state.memories) ? state.memories : [])],
+        lastFetched: Date.now(),
       }))
 
       // Trigger background processing
@@ -320,9 +333,10 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
       source_reference: null,
     } as Memory
 
-    // Add to top of list immediately
+    // Add to top of list immediately and update cache timestamp
     set((state) => ({
       memories: [optimisticMemory, ...(Array.isArray(state.memories) ? state.memories : [])],
+      lastFetched: Date.now(),
     }))
 
     return tempId
@@ -333,6 +347,7 @@ export const useMemoryStore = create<MemoryStore>((set) => ({
       memories: Array.isArray(state.memories)
         ? state.memories.map((m) => (m.id === tempId ? realMemory : m))
         : [realMemory],
+      lastFetched: Date.now(),
     }))
   },
 
