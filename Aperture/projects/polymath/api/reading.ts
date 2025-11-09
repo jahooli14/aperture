@@ -90,14 +90,21 @@ async function fetchArticleWithJina(url: string) {
     // Extract H1 from HTML content using regex ([\s\S] matches any char including newlines)
     let title = 'Untitled'
     const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+
     if (h1Match && h1Match[1]) {
       // Strip HTML tags from the H1 content
       const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim()
+      console.log('[Jina AI] Found H1 tag, text:', h1Text.substring(0, 100))
+
       // Use H1 if it's valid and not generic
       if (h1Text.length > 0 && h1Text.length < 200 && !isUrlLike(h1Text) && !h1Text.toLowerCase().includes('homepage')) {
         title = h1Text
-        console.log('[Jina AI] Found H1 title from HTML:', title)
+        console.log('[Jina AI] Using H1 title from HTML:', title)
+      } else {
+        console.log('[Jina AI] H1 rejected (length:', h1Text.length, 'isUrl:', isUrlLike(h1Text), 'hasHomepage:', h1Text.toLowerCase().includes('homepage') + ')')
       }
+    } else {
+      console.log('[Jina AI] No H1 tag found in HTML')
     }
 
     // Fallback to Jina's title if H1 extraction failed and Jina title is valid
@@ -153,9 +160,13 @@ async function fetchArticleWithJina(url: string) {
     }
 
     // Remove the H1 from content to avoid duplication (we display title separately)
-    let contentWithoutH1 = html
-    if (h1Match) {
-      contentWithoutH1 = html.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '')
+    // Always remove H1 tags, regardless of whether we used them for the title
+    let contentWithoutH1 = html.replace(/<h1[^>]*>[\s\S]*?<\/h1>/gi, '')
+
+    if (contentWithoutH1 !== html) {
+      console.log('[Jina AI] Removed H1 tag(s) from content')
+    } else {
+      console.log('[Jina AI] No H1 tags to remove from content')
     }
 
     console.log('[Jina AI] Final extraction - Title:', title, 'Text content length:', textContent.length)
@@ -325,13 +336,17 @@ function extractDomain(url: string): string {
 }
 
 function estimateReadTime(content: string): number {
-  const words = content.trim().split(/\s+/).length
+  // Strip HTML tags before counting words
+  const textOnly = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const words = textOnly.split(/\s+/).length
   const minutes = Math.ceil(words / 225)
   return Math.max(1, minutes)
 }
 
 function countWords(content: string): number {
-  return content.trim().split(/\s+/).length
+  // Strip HTML tags before counting words
+  const textOnly = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  return textOnly.split(/\s+/).length
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
