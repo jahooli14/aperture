@@ -36,21 +36,27 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
-  // Clean excerpt by removing common metadata patterns
+  // Clean excerpt by removing common metadata patterns and HTML/CSS
   const cleanExcerpt = (text: string | undefined | null): string | undefined => {
     if (!text) return undefined
 
-    // Remove patterns like "#7246 (no title)" at the start
-    let cleaned = text.replace(/^#\d+\s*\(no title\)\s*/i, '')
-
-    // Remove date patterns at the start (e.g., "October 24, 2025")
-    cleaned = cleaned.replace(/^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*/, '')
-
-    // Remove "By [Author]" patterns at the start
-    cleaned = cleaned.replace(/^By\s+[^\.]+\s*/, '')
-
-    // Trim whitespace
-    cleaned = cleaned.trim()
+    // Remove HTML/CSS that might have leaked through (for old articles saved before the fix)
+    let cleaned = text
+      // Remove style/script tags and their contents
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      // Remove all HTML tags
+      .replace(/<[^>]+>/g, '')
+      // Remove CSS-like patterns (e.g., "img:is([sizes...")
+      .replace(/\w+:is\([^\)]*\)\s*\{[^\}]*\}/g, '')
+      .replace(/\w+\[[^\]]*\]\s*\{[^\}]*\}/g, '')
+      // Remove common metadata patterns
+      .replace(/^#\d+\s*\(no title\)\s*/i, '')
+      .replace(/^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*/, '')
+      .replace(/^By\s+[^\.]+\s*/, '')
+      // Clean up whitespace
+      .replace(/\s+/g, ' ')
+      .trim()
 
     return cleaned || undefined
   }
@@ -77,7 +83,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     const loadData = async () => {
       await Promise.all([
         checkOfflineStatus(),
-        checkProgress()
+        checkProgress(),
+        fetchConnectionCount()
       ])
     }
     loadData()
@@ -120,7 +127,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     try {
       const savedProgress = await readingDb.getProgress(article.id)
       if (savedProgress) {
+        console.log(`[ArticleCard] Progress for ${article.title}: ${savedProgress.scroll_percentage}%`)
         setProgress(savedProgress.scroll_percentage)
+      } else {
+        console.log(`[ArticleCard] No progress found for ${article.title}`)
+        setProgress(0)
       }
     } catch (error) {
       console.warn('[ArticleCard] Failed to check progress:', error)
