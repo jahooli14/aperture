@@ -160,7 +160,6 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
                 style={{
                   background: 'var(--premium-bg-3)'
                 }}
-                onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start gap-2.5 flex-1">
                   <button
