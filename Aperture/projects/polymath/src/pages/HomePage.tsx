@@ -49,17 +49,25 @@ interface InspirationData {
   reasoning: string
 }
 
-function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendingSuggestionsCount }: {
+function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendingSuggestionsCount, projectsLoading }: {
   excludeProjectIds: string[]
   hasPendingSuggestions: boolean
   pendingSuggestionsCount: number
+  projectsLoading: boolean
 }) {
   const [inspiration, setInspiration] = useState<InspirationData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasFetched, setHasFetched] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
+    // Don't fetch until projects have finished loading, and only fetch once
+    if (projectsLoading || hasFetched) {
+      return
+    }
+
     const fetchInspiration = async () => {
+      setLoading(true)
       try {
         const excludeParam = excludeProjectIds.length > 0 ? `&exclude=${excludeProjectIds.join(',')}` : ''
         const response = await fetch(`/api/analytics?resource=inspiration${excludeParam}`)
@@ -71,10 +79,12 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
         console.error('Failed to fetch inspiration:', error)
       } finally {
         setLoading(false)
+        setHasFetched(true)
       }
     }
+
     fetchInspiration()
-  }, [excludeProjectIds.join(',')])
+  }, [projectsLoading, hasFetched, excludeProjectIds.join(',')])
 
   const getIconAndColor = (type: string) => {
     switch (type) {
@@ -835,6 +845,7 @@ export function HomePage() {
           excludeProjectIds={projectsToShow.map(p => p.id)}
           hasPendingSuggestions={pendingSuggestions.length > 0}
           pendingSuggestionsCount={pendingSuggestions.length}
+          projectsLoading={projectsLoading}
         />
 
         {/* 4. EXPLORE */}
