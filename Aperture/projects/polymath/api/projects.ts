@@ -825,6 +825,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Remove id from updates if present in body
       const { id: _bodyId, ...updates } = req.body
 
+      console.log('[PATCH] Updating project:', projectId, 'with data:', updates)
+
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
@@ -833,16 +835,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('[PATCH] Supabase error:', error)
+        return res.status(500).json({
+          error: 'Failed to update project',
+          details: error.message,
+          code: error.code
+        })
+      }
 
       if (!data) {
         return res.status(404).json({ error: 'Project not found' })
       }
 
+      console.log('[PATCH] Successfully updated project')
       return res.status(200).json(data)
     } catch (error) {
-      console.error('Failed to update project:', error)
-      return res.status(500).json({ error: 'Failed to update project' })
+      console.error('[PATCH] Unexpected error:', error)
+      return res.status(500).json({
+        error: 'Failed to update project',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 
