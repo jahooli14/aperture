@@ -220,8 +220,8 @@ export function useMediaRecorderVoice({
         stopWebRecording()
       }
 
-      // Start recording - request data every second to ensure chunks are captured
-      mediaRecorder.start(1000) // Request data chunks every 1000ms
+      // Start recording - we'll explicitly request data before stopping
+      mediaRecorder.start()
       console.log('[Web] MediaRecorder state after start():', mediaRecorder.state)
 
       setIsRecording(true)
@@ -286,6 +286,15 @@ export function useMediaRecorderVoice({
     setIsRecording(false)
     stopTimer()
 
+    // Request final data chunk before stopping
+    if (mediaRecorderRef.current?.state === 'recording') {
+      console.log('[Web] Requesting final data before stop')
+      // Force a dataavailable event to fire with accumulated data
+      mediaRecorderRef.current.requestData()
+      // Wait for the dataavailable event to fire
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
     // Stop MediaRecorder and wait for final chunks
     const waitForStop = new Promise<void>((resolve) => {
       if (mediaRecorderRef.current?.state === 'recording') {
@@ -316,8 +325,8 @@ export function useMediaRecorderVoice({
       // Wait for recording to fully stop
       await waitForStop
 
-      // Wait a bit more for any pending dataavailable events
-      await new Promise(resolve => setTimeout(resolve, 300))
+      // Wait longer for requestData() dataavailable event to fire
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       console.log('[Web] Chunks collected after waiting:', chunksRef.current.length)
 
