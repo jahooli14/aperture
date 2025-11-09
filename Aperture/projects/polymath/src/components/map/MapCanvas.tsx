@@ -94,37 +94,10 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
     }
   }, [transform, updateViewport])
 
-  // Viewport culling - only render visible cities (now reactive to transform state!)
-  const visibleCities = useMemo(() => {
-    if (!containerRef.current) return mapData.cities
-
-    const containerWidth = containerRef.current.clientWidth || 1920
-    const containerHeight = containerRef.current.clientHeight || 1080
-
-    const { x, y, scale } = transform
-
-    // Calculate visible bounds in world coordinates
-    const padding = 500 // Extra padding to prevent pop-in
-    const left = (-x / scale) - padding
-    const right = ((-x + containerWidth) / scale) + padding
-    const top = (-y / scale) - padding
-    const bottom = ((-y + containerHeight) / scale) + padding
-
-    return mapData.cities.filter(city => {
-      return city.position.x >= left &&
-             city.position.x <= right &&
-             city.position.y >= top &&
-             city.position.y <= bottom
-    })
-  }, [mapData.cities, transform.x, transform.y, transform.scale])
-
-  // Visible roads (only show if both cities are visible)
-  const visibleRoads = useMemo(() => {
-    const visibleCityIds = new Set(visibleCities.map(c => c.id))
-    return mapData.roads.filter(road =>
-      visibleCityIds.has(road.fromCityId) && visibleCityIds.has(road.toCityId)
-    )
-  }, [mapData.roads, visibleCities])
+  // Disable viewport culling for stability - render all cities
+  // (With only a few cities, performance impact is negligible)
+  const visibleCities = mapData.cities
+  const visibleRoads = mapData.roads
 
   const handleCityClick = (cityId: string) => {
     onCityClick(cityId)
@@ -154,55 +127,53 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden touch-none"
+      className="w-full h-full overflow-hidden touch-none relative"
       style={{
-        background: 'linear-gradient(135deg, #141b26 0%, #1a2332 50%, #0f1419 100%)'
+        background: 'var(--premium-bg-1)'
       }}
     >
+      {/* Subtle animated gradient orbs (like homepage) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute rounded-full blur-3xl opacity-10"
+          style={{
+            width: '500px',
+            height: '500px',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%)',
+            top: '-10%',
+            right: '-10%'
+          }}
+        />
+        <div
+          className="absolute rounded-full blur-3xl opacity-10"
+          style={{
+            width: '400px',
+            height: '400px',
+            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent 70%)',
+            bottom: '-5%',
+            left: '-5%'
+          }}
+        />
+        <div
+          className="absolute rounded-full blur-3xl opacity-10"
+          style={{
+            width: '450px',
+            height: '450px',
+            background: 'radial-gradient(circle, rgba(236, 72, 153, 0.25), transparent 70%)',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+      </div>
       <svg
         ref={svgRef}
-        className="w-full h-full"
-        style={{ cursor: 'grab' }}
+        className="w-full h-full relative"
+        style={{ cursor: 'grab', zIndex: 1 }}
       >
-        <defs>
-          {/* Terrain texture pattern */}
-          <filter id="terrain-noise">
-            <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" />
-            <feColorMatrix values="0 0 0 0 0.1
-                                    0 0 0 0 0.15
-                                    0 0 0 0 0.2
-                                    0 0 0 0.05 0" />
-          </filter>
-
-          {/* Radial gradient for regions */}
-          <radialGradient id="region-gradient">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
-            <stop offset="70%" stopColor="currentColor" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-          </radialGradient>
-
-          {/* Road gradient for highways */}
-          <linearGradient id="highway-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(59, 130, 246, 0.2)" />
-            <stop offset="50%" stopColor="rgba(59, 130, 246, 0.4)" />
-            <stop offset="100%" stopColor="rgba(59, 130, 246, 0.2)" />
-          </linearGradient>
-        </defs>
-
         <g style={{ transformOrigin: 'center' }}>
-          {/* Terrain background */}
-          <rect
-            x={-1000}
-            y={-1000}
-            width={6000}
-            height={5000}
-            fill="#0f1419"
-            filter="url(#terrain-noise)"
-            opacity={0.3}
-          />
-
-          {/* Subtle grid (like lat/long lines on maps) */}
-          <g opacity={0.05}>
+          {/* Subtle grid (minimal) */}
+          <g opacity={0.02}>
             {Array.from({ length: 15 }).map((_, i) => (
               <g key={`grid-${i}`}>
                 <line
@@ -344,16 +315,6 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </div>
       </div>
 
-      {/* Performance indicator */}
-      <div
-        className="absolute top-4 right-4 px-3 py-2 rounded text-xs"
-        style={{
-          background: 'rgba(32, 43, 62, 0.8)',
-          color: 'var(--premium-text-tertiary)'
-        }}
-      >
-        Rendering: {visibleCities.length}/{mapData.cities.length} cities
-      </div>
     </div>
   )
 }
