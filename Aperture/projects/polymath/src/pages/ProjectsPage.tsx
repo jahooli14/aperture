@@ -112,7 +112,7 @@ export function ProjectsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 flex-1 flex-nowrap overflow-x-auto scrollbar-hide">
+          <div className="flex gap-1 flex-1 flex-nowrap">
             {[
               { key: 'all', label: 'All' },
               { key: 'upcoming', label: 'Next' },
@@ -123,7 +123,7 @@ export function ProjectsPage() {
               <button
                 key={key}
                 onClick={() => setFilter(key as typeof filter)}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
                 style={{
                   backgroundColor: filter === key ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
                   color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',

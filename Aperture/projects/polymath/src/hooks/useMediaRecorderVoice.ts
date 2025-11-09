@@ -141,7 +141,7 @@ export function useMediaRecorderVoice({
   /**
    * Start recording - Web platform
    */
-  const startWebRecording = async () => {
+  const startWebRecording = useCallback(async () => {
     try {
       console.log('[Web] Requesting microphone access...')
 
@@ -171,10 +171,18 @@ export function useMediaRecorderVoice({
 
       // Collect audio chunks
       mediaRecorder.ondataavailable = (event) => {
+        console.log('[Web] dataavailable event:', event.data.size, 'bytes')
         if (event.data.size > 0) {
           chunksRef.current.push(event.data)
-          console.log('[Web] Chunk received:', event.data.size, 'bytes')
+          console.log('[Web] Chunk added, total chunks:', chunksRef.current.length)
+        } else {
+          console.warn('[Web] Received empty chunk')
         }
+      }
+
+      // Handle recording stop
+      mediaRecorder.onstop = () => {
+        console.log('[Web] MediaRecorder stopped, total chunks:', chunksRef.current.length)
       }
 
       // Handle recording errors
@@ -184,8 +192,10 @@ export function useMediaRecorderVoice({
         stopWebRecording()
       }
 
-      // Start recording with 1 second chunks
-      mediaRecorder.start(1000)
+      // Start recording - request data on stop, not on timer
+      mediaRecorder.start()
+      console.log('[Web] MediaRecorder state after start():', mediaRecorder.state)
+
       setIsRecording(true)
       startTimer()
 
@@ -201,7 +211,7 @@ export function useMediaRecorderVoice({
         alert(`Failed to start recording: ${error.message}`)
       }
     }
-  }
+  }, [getBestAudioFormat, startTimer])
 
   /**
    * Stop recording - Native platform
@@ -243,19 +253,33 @@ export function useMediaRecorderVoice({
   /**
    * Stop recording - Web platform
    */
-  const stopWebRecording = async () => {
+  const stopWebRecording = useCallback(async () => {
+    console.log('[Web] Stopping recording, current state:', mediaRecorderRef.current?.state)
     setIsRecording(false)
     stopTimer()
 
     // Stop MediaRecorder and wait for final chunks
     const waitForStop = new Promise<void>((resolve) => {
       if (mediaRecorderRef.current?.state === 'recording') {
-        mediaRecorderRef.current.onstop = () => {
-          console.log('[Web] MediaRecorder stopped')
+        console.log('[Web] Calling stop() on MediaRecorder')
+        // onstop handler is already set during start, just call stop
+        const timeoutId = setTimeout(() => {
+          console.warn('[Web] Stop event timeout - proceeding anyway')
+          resolve()
+        }, 2000)
+
+        const originalOnStop = mediaRecorderRef.current.onstop
+        mediaRecorderRef.current.onstop = (event) => {
+          clearTimeout(timeoutId)
+          if (originalOnStop) {
+            originalOnStop.call(mediaRecorderRef.current, event)
+          }
           resolve()
         }
+
         mediaRecorderRef.current.stop()
       } else {
+        console.warn('[Web] MediaRecorder not in recording state:', mediaRecorderRef.current?.state)
         resolve()
       }
     })
@@ -264,16 +288,16 @@ export function useMediaRecorderVoice({
       // Wait for recording to fully stop
       await waitForStop
 
-      // Wait a bit more for any pending chunks
-      await new Promise(resolve => setTimeout(resolve, 200))
+      // Wait a bit more for any pending dataavailable events
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      console.log('[Web] Chunks collected after waiting:', chunksRef.current.length)
 
       // Release microphone
       streamRef.current?.getTracks().forEach(track => track.stop())
 
-      console.log('[Web] Chunks collected:', chunksRef.current.length)
-
       if (chunksRef.current.length === 0) {
-        console.error('[Web] No audio chunks recorded')
+        console.error('[Web] No audio chunks recorded - this indicates the dataavailable event never fired')
         alert('No audio was recorded. Please try again and make sure to speak.')
         return
       }
@@ -307,7 +331,7 @@ export function useMediaRecorderVoice({
       setIsProcessing(false)
       chunksRef.current = []
     }
-  }
+  }, [stopTimer, onTranscript, autoSubmit, transcribeAudio])
 
   /**
    * Start recording (platform-agnostic)
@@ -318,18 +342,7 @@ export function useMediaRecorderVoice({
     } else {
       await startWebRecording()
     }
-  }, [])
-
-  /**
-   * Stop recording (platform-agnostic)
-   */
-  const stopRecording = useCallback(async () => {
-    if (isNative()) {
-      await stopNativeRecording()
-    } else {
-      await stopWebRecording()
-    }
-  }, [])
+  }, [startWebRecording])
 
   /**
    * Toggle recording
@@ -343,9 +356,31 @@ export function useMediaRecorderVoice({
   }, [isRecording, startRecording, stopRecording])
 
   /**
+   * Stop countdown timer
+   */
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setTimeLeft(maxDuration)
+  }, [maxDuration])
+
+  /**
+   * Stop recording (platform-agnostic)
+   */
+  const stopRecording = useCallback(async () => {
+    if (isNative()) {
+      await stopNativeRecording()
+    } else {
+      await stopWebRecording()
+    }
+  }, [])
+
+  /**
    * Start countdown timer
    */
-  const startTimer = () => {
+  const startTimer = useCallback(() => {
     setTimeLeft(maxDuration)
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
@@ -356,18 +391,7 @@ export function useMediaRecorderVoice({
         return prev - 1
       })
     }, 1000)
-  }
-
-  /**
-   * Stop countdown timer
-   */
-  const stopTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-    setTimeLeft(maxDuration)
-  }
+  }, [maxDuration, stopRecording])
 
   return {
     isRecording,
