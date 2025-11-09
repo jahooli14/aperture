@@ -142,20 +142,23 @@ export function PromptModal({
           </div>
         </div>
 
-        <button
-          onClick={handleAddBullet}
-          className="flex items-center gap-2 mt-4 text-sm font-medium"
-          style={{ color: 'var(--premium-blue)' }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-          disabled={submitting}
-        >
-          <Plus className="h-4 w-4" />
-          Add bullet
-        </button>
+        <div className="mt-6">
+          <button
+            onClick={handleAddBullet}
+            className="flex items-center gap-2 text-sm font-medium"
+            style={{ color: 'var(--premium-blue)' }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+            disabled={submitting}
+          >
+            <Plus className="h-4 w-4" />
+            Add bullet
+          </button>
+        </div>
 
         <div className="mt-6 p-4 rounded-lg" style={{
-          backgroundColor: 'var(--premium-bg-3)'
+          backgroundColor: 'var(--premium-bg-3)',
+          border: 'none'
         }}>
           <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
             💡 <strong>Be specific!</strong> AI can't suggest great projects from vague responses.
@@ -164,8 +167,9 @@ export function PromptModal({
         </div>
 
         {error && (
-          <div className="mt-4 p-3 rounded-lg" style={{
-            backgroundColor: 'var(--premium-bg-3)'
+          <div className="mt-6 p-4 rounded-lg" style={{
+            backgroundColor: 'var(--premium-bg-3)',
+            border: 'none'
           }}>
             <p className="text-sm" style={{ color: '#ef4444' }}>{error}</p>
           </div>
