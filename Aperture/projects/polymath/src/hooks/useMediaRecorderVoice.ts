@@ -139,9 +139,37 @@ export function useMediaRecorderVoice({
   }
 
   /**
+   * Start countdown timer
+   */
+  const startTimer = () => {
+    setTimeLeft(maxDuration)
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // Call stop via the public API
+          stopRecording()
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  /**
+   * Stop countdown timer
+   */
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setTimeLeft(maxDuration)
+  }
+
+  /**
    * Start recording - Web platform
    */
-  const startWebRecording = useCallback(async () => {
+  const startWebRecording = async () => {
     try {
       console.log('[Web] Requesting microphone access...')
 
@@ -211,7 +239,7 @@ export function useMediaRecorderVoice({
         alert(`Failed to start recording: ${error.message}`)
       }
     }
-  }, [getBestAudioFormat, startTimer])
+  }
 
   /**
    * Stop recording - Native platform
@@ -253,7 +281,7 @@ export function useMediaRecorderVoice({
   /**
    * Stop recording - Web platform
    */
-  const stopWebRecording = useCallback(async () => {
+  const stopWebRecording = async () => {
     console.log('[Web] Stopping recording, current state:', mediaRecorderRef.current?.state)
     setIsRecording(false)
     stopTimer()
@@ -331,7 +359,7 @@ export function useMediaRecorderVoice({
       setIsProcessing(false)
       chunksRef.current = []
     }
-  }, [stopTimer, onTranscript, autoSubmit, transcribeAudio])
+  }
 
   /**
    * Start recording (platform-agnostic)
@@ -342,29 +370,7 @@ export function useMediaRecorderVoice({
     } else {
       await startWebRecording()
     }
-  }, [startWebRecording])
-
-  /**
-   * Toggle recording
-   */
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }, [isRecording, startRecording, stopRecording])
-
-  /**
-   * Stop countdown timer
-   */
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-    setTimeLeft(maxDuration)
-  }, [maxDuration])
+  }, [])
 
   /**
    * Stop recording (platform-agnostic)
@@ -378,20 +384,15 @@ export function useMediaRecorderVoice({
   }, [])
 
   /**
-   * Start countdown timer
+   * Toggle recording
    */
-  const startTimer = useCallback(() => {
-    setTimeLeft(maxDuration)
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          stopRecording()
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }, [maxDuration, stopRecording])
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording])
 
   return {
     isRecording,

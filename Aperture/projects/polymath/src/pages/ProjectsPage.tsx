@@ -112,7 +112,7 @@ export function ProjectsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-1 flex-1 flex-nowrap">
+          <div className="flex gap-1 flex-nowrap justify-center">
             {[
               { key: 'all', label: 'All' },
               { key: 'upcoming', label: 'Next' },
