@@ -69,18 +69,33 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
 }
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
-  const variantStyles = {
-    default: "bg-background border",
-    destructive: "bg-destructive text-destructive-foreground border-destructive",
-    success: "bg-green-600 text-white border-green-700",
+  const getVariantStyles = () => {
+    switch (toast.variant) {
+      case "destructive":
+        return {
+          backgroundColor: 'var(--premium-bg-3)',
+          color: '#ef4444',
+          border: 'none'
+        }
+      case "success":
+        return {
+          backgroundColor: 'var(--premium-bg-3)',
+          color: 'var(--premium-text-primary)',
+          border: 'none'
+        }
+      default:
+        return {
+          backgroundColor: 'var(--premium-bg-2)',
+          color: 'var(--premium-text-primary)',
+          border: 'none'
+        }
+    }
   }
 
   return (
     <div
-      className={cn(
-        "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full mb-2",
-        variantStyles[toast.variant ?? "default"]
-      )}
+      className="group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full mb-2"
+      style={getVariantStyles()}
     >
       <div className="grid gap-1">
         {toast.title && <div className="text-sm font-semibold">{toast.title}</div>}
