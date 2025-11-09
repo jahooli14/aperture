@@ -303,41 +303,20 @@ export function FloatingNav() {
         }}
         className="fixed z-30 w-16 h-16 rounded-2xl flex items-center justify-center group"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8rem)',
           right: 'max(1rem, env(safe-area-inset-right, 1rem))',
           opacity: !isOnline ? 0.3 : 1,
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(236, 72, 153, 0.25))',
+          background: 'var(--premium-bg-3)',
           backdropFilter: 'blur(32px) saturate(200%)',
           WebkitBackdropFilter: 'blur(32px) saturate(200%)',
-          boxShadow: '0 12px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.2)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         }}
       >
-          {/* Pulsing Glow Effect */}
-          {isOnline && (
-            <motion.div
-              animate={{
-                opacity: [0.4, 0.8, 0.4],
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: 'easeInOut'
-              }}
-              className="absolute inset-0 rounded-2xl pointer-events-none"
-              style={{
-                background: `radial-gradient(circle, ${SCHEMA_COLORS.thoughts.glow}, transparent 70%)`,
-                filter: 'blur(12px)',
-              }}
-            />
-          )}
-
           {/* Icon */}
           <Mic
             className="relative z-10 w-8 h-8"
             style={{
-              color: 'var(--premium-platinum)',
-              filter: 'drop-shadow(0 0 8px rgba(99, 102, 241, 0.6))'
+              color: 'var(--premium-blue)'
             }}
           />
 
@@ -355,9 +334,10 @@ export function FloatingNav() {
       >
         <div className="mx-auto max-w-2xl px-4">
           <div
-            className="premium-glass-strong flex items-center justify-between gap-2 px-3 py-3"
+            className="premium-glass flex items-center justify-between gap-2 px-3 py-3"
             style={{
-              borderRadius: 'var(--premium-radius-2xl)'
+              borderRadius: 'var(--premium-radius-2xl)',
+              backgroundColor: 'var(--premium-bg-2)'
             }}
           >
             {NAV_OPTIONS.map((option) => {
@@ -380,8 +360,8 @@ export function FloatingNav() {
                       layoutId="activeTab"
                       className="absolute inset-0 rounded-xl"
                       style={{
-                        background: `linear-gradient(135deg, ${colors.glow}, transparent)`,
-                        border: `1px solid ${colors.primary}40`,
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
                       }}
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />

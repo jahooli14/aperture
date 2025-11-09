@@ -82,7 +82,11 @@ export function PromptModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--premium-bg-1)' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{
+      backgroundColor: 'rgba(10, 14, 26, 0.95)',
+      backdropFilter: 'blur(20px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(20px) saturate(180%)'
+    }}>
       {/* Header */}
       <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <button
