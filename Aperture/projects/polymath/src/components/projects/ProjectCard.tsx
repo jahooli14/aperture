@@ -367,17 +367,13 @@ export const ProjectCard = React.memo(function ProjectCard({
 
         <motion.div
           style={{ backgroundColor }}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
           whileHover={{ y: -6, scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           transition={{
             type: "spring",
             stiffness: 400,
             damping: 25,
-            mass: 0.5,
-            opacity: { duration: 0.3 },
-            scale: { duration: 0.3 }
+            mass: 0.5
           }}
           className="rounded-xl"
         >

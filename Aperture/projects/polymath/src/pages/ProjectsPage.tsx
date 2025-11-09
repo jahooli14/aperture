@@ -262,7 +262,7 @@ export function ProjectsPage() {
               totalCount={projects.length}
               itemContent={(index) => (
                 <ProjectCard
-                  key={`${projects[index].id}-${projects[index].updated_at || projects[index].created_at}`}
+                  key={projects[index].id}
                   project={projects[index]}
                   onDelete={() => handleDelete(projects[index])}
                   onClick={(id) => navigate(`/projects/${id}`)}
