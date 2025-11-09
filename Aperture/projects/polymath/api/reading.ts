@@ -48,7 +48,7 @@ async function fetchArticleWithJina(url: string) {
     const response = await fetch(jinaUrl, {
       headers: {
         'Accept': 'text/plain',
-        'X-Return-Format': 'text'
+        'X-Return-Format': 'markdown'
       }
     })
 
@@ -64,7 +64,7 @@ async function fetchArticleWithJina(url: string) {
       throw new Error('Jina AI returned empty content')
     }
 
-    // Extract title from first line if it looks like a title (before first paragraph)
+    // Extract title from first H1 in markdown (# Title)
     const lines = rawText.split('\n')
     let title = 'Untitled'
     let contentStartIndex = 0
@@ -82,13 +82,25 @@ async function fetchArticleWithJina(url: string) {
       return false
     }
 
-    // Look for title in first few lines
-    for (let i = 0; i < Math.min(5, lines.length); i++) {
+    // Look for first H1 heading (# Title) in markdown
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
       const line = lines[i].trim()
-      if (line.length > 0 && line.length < 200 && !isUrlLike(line)) {
+
+      // Check for H1 markdown syntax
+      if (line.startsWith('# ')) {
+        const h1Title = line.substring(2).trim()
+        if (h1Title.length > 0 && h1Title.length < 200 && !isUrlLike(h1Title)) {
+          title = h1Title
+          contentStartIndex = i + 1
+          console.log('[Jina AI] Found H1 title:', title)
+          break
+        }
+      }
+
+      // Fallback: if no H1 found yet, look for any reasonable title line
+      if (title === 'Untitled' && line.length > 0 && line.length < 200 && !isUrlLike(line) && !line.startsWith('#')) {
         title = line
         contentStartIndex = i + 1
-        break
       }
     }
 
