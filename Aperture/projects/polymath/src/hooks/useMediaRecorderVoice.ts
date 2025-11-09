@@ -364,35 +364,35 @@ export function useMediaRecorderVoice({
   /**
    * Start recording (platform-agnostic)
    */
-  const startRecording = useCallback(async () => {
+  const startRecording = async () => {
     if (isNative()) {
       await startNativeRecording()
     } else {
       await startWebRecording()
     }
-  }, [])
+  }
 
   /**
    * Stop recording (platform-agnostic)
    */
-  const stopRecording = useCallback(async () => {
+  const stopRecording = async () => {
     if (isNative()) {
       await stopNativeRecording()
     } else {
       await stopWebRecording()
     }
-  }, [])
+  }
 
   /**
    * Toggle recording
    */
-  const toggleRecording = useCallback(() => {
+  const toggleRecording = () => {
     if (isRecording) {
       stopRecording()
     } else {
       startRecording()
     }
-  }, [isRecording, startRecording, stopRecording])
+  }
 
   return {
     isRecording,
