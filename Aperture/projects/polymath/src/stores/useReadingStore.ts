@@ -40,8 +40,8 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       return
     }
 
-    // Preserve existing articles during loading to prevent flicker
-    set((state) => ({ ...state, loading: true, error: null }))
+    // Only set loading if we're actually fetching
+    set({ loading: true, error: null })
 
     try {
       const params = new URLSearchParams()
