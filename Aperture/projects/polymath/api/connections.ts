@@ -82,9 +82,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleAISparks(req, res, parseInt(limit as string) || 3)
     }
 
-    // Get connection suggestions for an item (from connection_suggestions table)
+    // Get connection suggestions for an item
+    // Note: This feature is not yet implemented in the database schema
     if (req.method === 'GET' && action === 'suggestions' && id && type) {
-      return await handleGetSuggestions(req, res, id as string, type as string)
+      console.log('[Connections API] Suggestions feature not implemented, returning empty array')
+      return res.status(200).json({ suggestions: [] })
     }
 
     // Get thread (recursive connections)

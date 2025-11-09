@@ -470,9 +470,8 @@ export function MemoriesPage() {
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
           }}>
             <CardContent className="pt-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-600" />
-                Time to Review
+              <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                Up for review
               </h3>
               <p className="leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
                 These thoughts are ready for review based on spaced repetition.
