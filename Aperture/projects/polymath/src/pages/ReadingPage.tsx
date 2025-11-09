@@ -404,7 +404,7 @@ export function ReadingPage() {
         {/* Updates Tab - RSS Feed Items */}
         {activeTab === 'updates' && (
           <>
-            {loadingRSS ? (
+            {loadingRSS && rssItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading RSS updates...</p>
@@ -464,7 +464,7 @@ export function ReadingPage() {
         {/* Regular Articles - Queue/Unread/Archived */}
         {activeTab !== 'updates' && (
           <>
-            {loading ? (
+            {loading && articles.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading articles...</p>

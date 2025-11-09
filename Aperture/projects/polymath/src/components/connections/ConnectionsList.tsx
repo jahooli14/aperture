@@ -70,6 +70,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
   const [connections, setConnections] = useState<ItemConnection[]>([])
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([])
   const [loading, setLoading] = useState(true)
+  const [showLoading, setShowLoading] = useState(false) // Delayed loading state
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
@@ -82,6 +83,21 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       fetchAISuggestions()
     }
   }, [itemType, itemId, content])
+
+  // Delay showing loading state to prevent flicker on fast loads
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | null = null
+    if (loading) {
+      timeout = setTimeout(() => {
+        setShowLoading(true)
+      }, 300) // Show loading after 300ms
+    } else {
+      setShowLoading(false)
+    }
+    return () => {
+      if (timeout) clearTimeout(timeout)
+    }
+  }, [loading])
 
   const fetchConnections = async () => {
     // Check cache first
@@ -233,13 +249,18 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
     return 'Untitled thought'
   }
 
-  if (loading) {
+  // Only show loading if it's taking longer than 300ms
+  if (showLoading) {
     return (
-      <div className="py-8 text-center">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-900 border-r-transparent"></div>
-        <p className="mt-3 text-sm text-neutral-600">Loading connections...</p>
+      <div className="py-4 text-center">
+        <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-r-transparent" style={{ borderColor: 'var(--premium-text-tertiary)' }}></div>
       </div>
     )
+  }
+
+  // Don't show anything while loading quickly (prevents flicker)
+  if (loading) {
+    return null
   }
 
   if (error) {
