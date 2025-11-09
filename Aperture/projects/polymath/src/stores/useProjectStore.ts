@@ -104,11 +104,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   createProject: async (data) => {
     try {
-      await api.post('projects', data)
+      console.log('[ProjectStore] Creating project with data:', data)
+      const result = await api.post('projects', data)
+      console.log('[ProjectStore] Project created:', result)
 
       // Refresh projects after creating
       await get().fetchProjects()
     } catch (error) {
+      console.error('[ProjectStore] Failed to create project:', error)
+      if (error instanceof Error) {
+        console.error('[ProjectStore] Error details:', error.message)
+      }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage })
       throw error
