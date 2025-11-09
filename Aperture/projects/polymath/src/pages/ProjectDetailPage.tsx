@@ -605,7 +605,7 @@ export function ProjectDetailPage() {
                         border: '1px solid rgba(59, 130, 246, 0.3)'
                       }}
                     >
-                      {['upcoming', 'active', 'completed'].map((status) => (
+                      {['upcoming', 'active', 'dormant', 'completed'].map((status) => (
                         <button
                           key={status}
                           onClick={() => {
