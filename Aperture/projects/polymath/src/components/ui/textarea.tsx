@@ -15,6 +15,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         style={{
           backgroundColor: 'var(--premium-bg-3)',
           border: 'none',
+          outline: 'none',
           color: 'var(--premium-text-primary)',
           ...style
         }}
