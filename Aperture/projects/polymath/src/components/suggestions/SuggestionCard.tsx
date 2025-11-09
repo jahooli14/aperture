@@ -73,9 +73,9 @@ export const SuggestionCard = memo(function SuggestionCard({
   // Get rating label and color
   const getRatingConfig = (rating: InterestRating) => {
     const configs = {
-      1: { label: 'Not Interested', color: 'from-gray-500 to-gray-600', emoji: '👎' },
-      2: { label: 'Somewhat Interesting', color: 'from-amber-500 to-orange-500', emoji: '🤔' },
-      3: { label: 'Very Interesting', color: 'from-emerald-500 to-blue-500', emoji: '⭐' }
+      1: { label: 'Not Interested', color: 'from-gray-500 to-gray-600' },
+      2: { label: 'Somewhat Interesting', color: 'from-amber-500 to-orange-500' },
+      3: { label: 'Very Interesting', color: 'from-emerald-500 to-blue-500' }
     }
     return configs[rating]
   }
@@ -263,8 +263,8 @@ export const SuggestionCard = memo(function SuggestionCard({
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="premium-text-platinum font-bold text-lg flex items-center gap-2">
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${getRatingConfig(selectedRating).color}`}>
-                  {getRatingConfig(selectedRating).emoji} {getRatingConfig(selectedRating).label}
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold text-white bg-gradient-to-r ${getRatingConfig(selectedRating).color}`}>
+                  {getRatingConfig(selectedRating).label}
                 </span>
               </h3>
               <button
