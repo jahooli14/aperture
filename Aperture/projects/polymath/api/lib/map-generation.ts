@@ -291,9 +291,10 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     })
   })
 
-  // Process projects - use capabilities + description
+  // Process projects - use capabilities + embeddings if available
   projects?.forEach(p => {
     const capabilities = p.metadata?.capabilities || []
+    const embedding = p.embedding ? (typeof p.embedding === 'string' ? JSON.parse(p.embedding) : p.embedding) : null
 
     capabilities.forEach((cap: any) => {
       const topicName = typeof cap === 'string' ? cap : cap.name
@@ -307,6 +308,11 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
       }
       const topicData = topicMap.get(topicName)!
       topicData.items.push({ id: p.id, type: 'project', timestamp: p.created_at })
+
+      // Use project embedding for topic if available
+      if (embedding && !topicData.embedding) {
+        topicData.embedding = embedding
+      }
 
       if (new Date(p.last_active || p.created_at) > new Date(topicData.lastSeen)) {
         topicData.lastSeen = p.last_active || p.created_at
