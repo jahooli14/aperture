@@ -35,7 +35,17 @@ export function ReadingPage() {
   const [rssItems, setRssItems] = useState<RSSItem[]>([])
   const [loadingRSS, setLoadingRSS] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
-  const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState(0)
+
+  // Load lastKnownUpdatesCount from localStorage on mount
+  const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('rss-last-known-count')
+      return stored ? parseInt(stored, 10) : 0
+    } catch {
+      return 0
+    }
+  })
+
   const { addToast } = useToast()
 
   const bulkSelection = useBulkSelection<Article>()
@@ -122,6 +132,8 @@ export function ReadingPage() {
       // This persists even when all items are dismissed
       if (allItems.length > 0) {
         setLastKnownUpdatesCount(allItems.length)
+        // Persist to localStorage so it survives navigation
+        localStorage.setItem('rss-last-known-count', allItems.length.toString())
       }
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
