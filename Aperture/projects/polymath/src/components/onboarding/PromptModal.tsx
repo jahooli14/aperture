@@ -175,14 +175,15 @@ export function PromptModal({
       {/* Sticky Footer */}
       <div className="fixed bottom-0 left-0 right-0 p-4 shadow-lg" style={{
         backgroundColor: 'var(--premium-bg-2)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        zIndex: 60
       }}>
         <Button
           onClick={handleSubmit}
           disabled={submitting}
           className="w-full py-6 text-lg"
           style={{
-            backgroundColor: 'var(--premium-blue)',
+            background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
             color: 'white'
           }}
         >
