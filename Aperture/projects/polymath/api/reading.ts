@@ -48,8 +48,7 @@ async function fetchArticleWithJina(url: string) {
     const response = await fetch(jinaUrl, {
       headers: {
         'Accept': 'application/json',
-        'X-Return-Format': 'html',
-        'X-With-Generated-Alt': 'true'
+        'X-Return-Format': 'html'
       }
     })
 
