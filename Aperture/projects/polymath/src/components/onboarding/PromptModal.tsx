@@ -113,31 +113,33 @@ export function PromptModal({
           <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
         )}
 
-        <div className="space-y-3">
-          {bullets.map((bullet, index) => (
-            <div key={index} className="flex gap-2 items-start">
-              <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
-              <Textarea
-                value={bullet}
-                onChange={(e) => handleBulletChange(index, e.target.value)}
-                placeholder={`Bullet ${index + 1}`}
-                className="flex-1 min-h-[80px]"
-                disabled={submitting}
-              />
-              {bullets.length > 3 && (
-                <button
-                  onClick={() => handleRemoveBullet(index)}
-                  className="p-2 rounded-full transition-colors mt-2"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
+          <div className="space-y-3">
+            {bullets.map((bullet, index) => (
+              <div key={index} className="flex gap-2 items-start">
+                <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
+                <Textarea
+                  value={bullet}
+                  onChange={(e) => handleBulletChange(index, e.target.value)}
+                  placeholder={`Bullet ${index + 1}`}
+                  className="flex-1 min-h-[80px]"
                   disabled={submitting}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          ))}
+                />
+                {bullets.length > 3 && (
+                  <button
+                    onClick={() => handleRemoveBullet(index)}
+                    className="p-2 rounded-full transition-colors mt-2"
+                    style={{ color: 'var(--premium-text-tertiary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    disabled={submitting}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <button
@@ -153,8 +155,7 @@ export function PromptModal({
         </button>
 
         <div className="mt-6 p-4 rounded-lg" style={{
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          border: '1px solid rgba(59, 130, 246, 0.2)'
+          backgroundColor: 'var(--premium-bg-3)'
         }}>
           <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
             💡 <strong>Be specific!</strong> AI can't suggest great projects from vague responses.
@@ -164,8 +165,7 @@ export function PromptModal({
 
         {error && (
           <div className="mt-4 p-3 rounded-lg" style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)'
+            backgroundColor: 'var(--premium-bg-3)'
           }}>
             <p className="text-sm" style={{ color: '#ef4444' }}>{error}</p>
           </div>
