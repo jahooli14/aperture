@@ -31,16 +31,9 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
     scale: mapData.viewport.scale
   })
 
-  // Apply transform to SVG
+  // Apply transform via state (React-controlled rendering)
   const applyTransform = (newTransform: { x: number; y: number; scale: number }) => {
-    if (svgRef.current) {
-      const { x, y, scale } = newTransform
-      const g = svgRef.current.querySelector('g')
-      if (g) {
-        g.style.transform = `translate(${x}px, ${y}px) scale(${scale})`
-      }
-    }
-    setTransform(newTransform) // Update state for viewport culling
+    setTransform(newTransform)
   }
 
   // Setup pan and zoom gestures
@@ -171,7 +164,10 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         className="w-full h-full relative"
         style={{ cursor: 'grab', zIndex: 1 }}
       >
-        <g style={{ transformOrigin: 'center' }}>
+        <g style={{
+          transformOrigin: 'center',
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
+        }}>
           {/* Subtle grid (minimal) */}
           <g opacity={0.02}>
             {Array.from({ length: 15 }).map((_, i) => (
