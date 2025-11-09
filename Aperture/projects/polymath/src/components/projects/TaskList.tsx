@@ -124,7 +124,7 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const totalCount = tasks.length
 
   return (
-    <Card className="premium-card" style={{ background: 'var(--premium-bg-3)' }}>
+    <Card className="premium-card">
       <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -143,7 +143,9 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
         {/* Task List */}
         <div className="space-y-2">
           {/* Incomplete Tasks */}
-          {incompleteTasks.map((task) => (
+          {incompleteTasks.map((task, index) => {
+            const isNextTask = index === 0
+            return (
             <div
               key={task.id}
               draggable
@@ -152,7 +154,7 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragEnd={handleDragEnd}
               className="group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
@@ -208,7 +210,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
-          ))}
+            )
+          })}
 
           {/* Completed Tasks - Collapsible */}
           {completedTasks.length > 0 && (
