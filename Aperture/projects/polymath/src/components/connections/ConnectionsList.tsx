@@ -10,6 +10,7 @@ import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Trash2, Brain, Layers, BookOpen, Lightbulb, RefreshCw, X, Check, Plus } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
+import { useConnectionStore } from '../../stores/useConnectionStore'
 
 interface ConnectionsListProps {
   itemType: ConnectionSourceType
@@ -65,6 +66,7 @@ const CONNECTION_TYPE_LABELS = {
 }
 
 export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted, onConnectionCreated }: ConnectionsListProps) {
+  const { getConnections, setConnections: cacheConnections, invalidateConnections } = useConnectionStore()
   const [connections, setConnections] = useState<ItemConnection[]>([])
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,6 +84,14 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
   }, [itemType, itemId, content])
 
   const fetchConnections = async () => {
+    // Check cache first
+    const cached = getConnections(itemType, itemId)
+    if (cached) {
+      setConnections(cached)
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
@@ -91,7 +101,10 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         throw new Error('Failed to fetch connections')
       }
       const data = await response.json()
-      setConnections(data.connections || [])
+      const fetchedConnections = data.connections || []
+      setConnections(fetchedConnections)
+      // Cache the result
+      cacheConnections(itemType, itemId, fetchedConnections)
     } catch (err) {
       console.error('Error fetching connections:', err)
       setError('Failed to load connections')
@@ -156,8 +169,9 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         throw new Error('Failed to create connection')
       }
 
-      // Remove from suggestions and add to connections
+      // Remove from suggestions and invalidate cache before refetching
       setSuggestions(prev => prev.filter(s => s.id !== suggestion.id))
+      invalidateConnections(itemType, itemId)
       await fetchConnections()
       onConnectionCreated?.()
     } catch (err) {
@@ -182,7 +196,8 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
         throw new Error('Failed to delete connection')
       }
 
-      // Refresh connections
+      // Invalidate cache before refreshing connections
+      invalidateConnections(itemType, itemId)
       await fetchConnections()
       onConnectionDeleted?.()
     } catch (err) {
