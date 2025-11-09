@@ -152,9 +152,11 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragStart={() => handleDragStart(task.id)}
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
-              className="group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move"
+              className={`group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move ${
+                isNextTask ? 'premium-glass-subtle' : ''
+              }`}
               style={{
-                backgroundColor: isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
+                backgroundColor: isNextTask ? undefined : 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
