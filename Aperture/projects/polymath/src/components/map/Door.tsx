@@ -21,16 +21,16 @@ export function Door({ door, onClick }: DoorProps) {
       onClick={onClick}
       className="cursor-pointer door-portal"
     >
-      {/* Suggestion marker - dashed circle like map POI */}
+      {/* Suggestion marker - dashed circle */}
       <circle
         cx={door.position.x}
         cy={door.position.y}
         r={20}
         fill="none"
-        stroke="#9333EA"
+        stroke="#60a5fa"
         strokeWidth={2}
         strokeDasharray="4,4"
-        opacity={0.8}
+        opacity={0.7}
       />
 
       {/* Center dot */}
@@ -38,8 +38,8 @@ export function Door({ door, onClick }: DoorProps) {
         cx={door.position.x}
         cy={door.position.y}
         r={6}
-        fill="#9333EA"
-        opacity={0.9}
+        fill="#60a5fa"
+        opacity={0.8}
       />
     </g>
   )

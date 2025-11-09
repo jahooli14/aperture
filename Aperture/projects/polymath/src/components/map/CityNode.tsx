@@ -14,72 +14,39 @@ interface CityNodeProps {
 export function CityNode({ city, onClick }: CityNodeProps) {
   const radius = getCityRadius(city.size)
 
-  // Map pin style - consistent red/orange like Google Maps
-  const pinColor = city.size === 'metropolis' ? '#EA4335' :  // Google red
-                   city.size === 'city' ? '#FBBC04' :        // Google yellow
-                   city.size === 'town' ? '#34A853' :        // Google green
-                   '#4285F4'                                 // Google blue
+  // Blue shades only - darker = more important
+  const fillColor = city.size === 'metropolis' ? '#1e40af' :  // Dark blue
+                    city.size === 'city' ? '#3b82f6' :        // Medium blue
+                    city.size === 'town' ? '#60a5fa' :        // Light blue
+                    '#93c5fd'                                 // Very light blue
 
   return (
     <g onClick={onClick} className="cursor-pointer group" data-city-id={city.id}>
-      {/* Map pin shadow */}
-      <ellipse
+      {/* Simple circle - no icons */}
+      <circle
         cx={city.position.x}
-        cy={city.position.y + radius + 2}
-        rx={radius * 0.6}
-        ry={radius * 0.3}
-        fill="#000000"
-        opacity={0.3}
+        cy={city.position.y}
+        r={radius}
+        fill={fillColor}
+        stroke="#ffffff"
+        strokeWidth={3}
+        style={{
+          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
+        }}
       />
 
-      {/* Map pin body (teardrop shape) */}
-      <g>
-        {/* Pin circle */}
-        <circle
-          cx={city.position.x}
-          cy={city.position.y}
-          r={radius}
-          fill={pinColor}
-          stroke="#ffffff"
-          strokeWidth={2}
-          style={{
-            filter: `drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))`
-          }}
-        />
-
-        {/* Pin point (triangle) */}
-        <path
-          d={`M ${city.position.x} ${city.position.y + radius}
-              L ${city.position.x - radius * 0.5} ${city.position.y + radius * 0.3}
-              L ${city.position.x + radius * 0.5} ${city.position.y + radius * 0.3} Z`}
-          fill={pinColor}
-          stroke="#ffffff"
-          strokeWidth={1.5}
-        />
-
-        {/* Pin center dot */}
-        <circle
-          cx={city.position.x}
-          cy={city.position.y}
-          r={radius * 0.35}
-          fill="#ffffff"
-          opacity={0.9}
-        />
-      </g>
-
-      {/* Label - Google Maps style */}
+      {/* Label */}
       <text
         x={city.position.x}
-        y={city.position.y - radius - 12}
+        y={city.position.y - radius - 10}
         textAnchor="middle"
-        fill="#ffffff"
+        fill="#1f2937"
         fontSize={city.size === 'metropolis' ? 14 : city.size === 'city' ? 12 : 11}
         fontWeight={600}
         className="pointer-events-none select-none"
         style={{
           fontFamily: 'Inter, Roboto, system-ui, sans-serif',
-          textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)',
-          letterSpacing: '0.5px'
+          letterSpacing: '0.3px'
         }}
       >
         {city.name}
@@ -88,21 +55,21 @@ export function CityNode({ city, onClick }: CityNodeProps) {
       {/* Population badge */}
       <g>
         <rect
-          x={city.position.x - 20}
-          y={city.position.y + radius + 10}
-          width={40}
-          height={18}
-          rx={9}
-          fill="#202020"
-          stroke="#ffffff"
+          x={city.position.x - 18}
+          y={city.position.y + radius + 8}
+          width={36}
+          height={16}
+          rx={8}
+          fill="#ffffff"
+          stroke={fillColor}
           strokeWidth={1.5}
           opacity={0.95}
         />
         <text
           x={city.position.x}
-          y={city.position.y + radius + 22}
+          y={city.position.y + radius + 19}
           textAnchor="middle"
-          fill="#ffffff"
+          fill={fillColor}
           fontSize={10}
           fontWeight={600}
           className="pointer-events-none select-none"
@@ -111,16 +78,16 @@ export function CityNode({ city, onClick }: CityNodeProps) {
         </text>
       </g>
 
-      {/* Hover pulse effect */}
+      {/* Hover ring */}
       <circle
         cx={city.position.x}
         cy={city.position.y}
-        r={radius + 8}
+        r={radius + 6}
         fill="none"
-        stroke={pinColor}
+        stroke={fillColor}
         strokeWidth={2}
         opacity={0}
-        className="group-hover:opacity-60 transition-opacity duration-200"
+        className="group-hover:opacity-50 transition-opacity duration-200"
       />
     </g>
   )

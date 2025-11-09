@@ -42,13 +42,30 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
       onDrag: ({ offset: [x, y] }) => {
         applyTransform({ ...transform, x, y })
       },
-      onPinch: ({ offset: [scale] }) => {
-        applyTransform({ ...transform, scale: Math.max(0.2, Math.min(3, scale)) })
+      onPinch: ({ offset: [scale], origin: [ox, oy] }) => {
+        const newScale = Math.max(0.2, Math.min(3, scale))
+        // Zoom towards pinch center
+        const scaleDiff = newScale / transform.scale
+        const newX = ox - (ox - transform.x) * scaleDiff
+        const newY = oy - (oy - transform.y) * scaleDiff
+        applyTransform({ x: newX, y: newY, scale: newScale })
       },
-      onWheel: ({ delta: [, dy] }) => {
+      onWheel: ({ delta: [, dy], event }) => {
+        if (!containerRef.current) return
+
+        const rect = containerRef.current.getBoundingClientRect()
+        const mouseX = (event as WheelEvent).clientX - rect.left
+        const mouseY = (event as WheelEvent).clientY - rect.top
+
         const scaleDelta = -dy * 0.001
         const newScale = Math.max(0.2, Math.min(3, transform.scale + scaleDelta))
-        applyTransform({ ...transform, scale: newScale })
+
+        // Zoom towards mouse position
+        const scaleDiff = newScale / transform.scale
+        const newX = mouseX - (mouseX - transform.x) * scaleDiff
+        const newY = mouseY - (mouseY - transform.y) * scaleDiff
+
+        applyTransform({ x: newX, y: newY, scale: newScale })
       }
     },
     {
@@ -125,9 +142,9 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         background: 'var(--premium-bg-1)'
       }}
     >
-      {/* Map-style background */}
+      {/* Map-style background - Light mode */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: '#1a1f2e' // Dark blue-gray base (like Google Maps dark mode)
+        background: '#e5e3df' // Light beige (like Google Maps light mode)
       }} />
 
       <svg
@@ -135,19 +152,9 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         className="w-full h-full relative"
         style={{ cursor: 'grab', zIndex: 1 }}
       >
-        <defs>
-          {/* Terrain texture pattern */}
-          <pattern id="terrain-texture" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-            <rect width="100" height="100" fill="#1e2332" />
-            <circle cx="10" cy="10" r="0.5" fill="#2a3142" opacity="0.3" />
-            <circle cx="50" cy="30" r="0.5" fill="#2a3142" opacity="0.2" />
-            <circle cx="80" cy="70" r="0.5" fill="#2a3142" opacity="0.3" />
-          </pattern>
-        </defs>
-
         <g style={{
-          transformOrigin: 'center',
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
+          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+          transition: 'none' // Disable transitions to prevent jitter
         }}>
           {/* Terrain base layer */}
           <rect
@@ -155,11 +162,11 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             y={-1000}
             width={6000}
             height={5000}
-            fill="url(#terrain-texture)"
+            fill="#f2efe9"
           />
 
           {/* Map grid lines (latitude/longitude style) */}
-          <g opacity={0.1} stroke="#4a5568" strokeWidth={0.5} strokeDasharray="5,5">
+          <g opacity={0.15} stroke="#c9c4b8" strokeWidth={0.5}>
             {Array.from({ length: 20 }).map((_, i) => (
               <g key={`grid-${i}`}>
                 <line x1={i * 300} y1={-500} x2={i * 300} y2={4500} />
@@ -204,14 +211,23 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         onDismiss={handleDoorDismiss}
       />
 
-      {/* Zoom controls - Google Maps style */}
+      {/* Zoom controls */}
       <div className="absolute bottom-8 right-4 flex flex-col rounded-md overflow-hidden shadow-lg" style={{
         background: '#ffffff'
       }}>
         <button
           onClick={() => {
+            if (!containerRef.current) return
+            const rect = containerRef.current.getBoundingClientRect()
+            const centerX = rect.width / 2
+            const centerY = rect.height / 2
+
             const newScale = Math.min(3, transform.scale * 1.2)
-            applyTransform({ ...transform, scale: newScale })
+            const scaleDiff = newScale / transform.scale
+            const newX = centerX - (centerX - transform.x) * scaleDiff
+            const newY = centerY - (centerY - transform.y) * scaleDiff
+
+            applyTransform({ x: newX, y: newY, scale: newScale })
           }}
           className="p-3 hover:bg-gray-100 transition-colors border-b border-gray-200"
           style={{
@@ -224,8 +240,17 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </button>
         <button
           onClick={() => {
+            if (!containerRef.current) return
+            const rect = containerRef.current.getBoundingClientRect()
+            const centerX = rect.width / 2
+            const centerY = rect.height / 2
+
             const newScale = Math.max(0.2, transform.scale / 1.2)
-            applyTransform({ ...transform, scale: newScale })
+            const scaleDiff = newScale / transform.scale
+            const newX = centerX - (centerX - transform.x) * scaleDiff
+            const newY = centerY - (centerY - transform.y) * scaleDiff
+
+            applyTransform({ x: newX, y: newY, scale: newScale })
           }}
           className="p-3 hover:bg-gray-100 transition-colors"
           style={{
@@ -238,7 +263,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </button>
       </div>
 
-      {/* Map legend - Google Maps style */}
+      {/* Map legend */}
       <div
         className="absolute bottom-8 left-4 p-3 rounded-md shadow-lg text-xs"
         style={{
@@ -251,19 +276,19 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: '#EA4335' }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: '#1e40af' }} />
             <span style={{ color: '#5f6368' }}>Major topic (50+)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: '#FBBC04' }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: '#3b82f6' }} />
             <span style={{ color: '#5f6368' }}>Topic (20-49)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: '#34A853' }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: '#60a5fa' }} />
             <span style={{ color: '#5f6368' }}>Subtopic (10-19)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ background: '#4285F4' }} />
+            <div className="w-4 h-4 rounded-full" style={{ background: '#93c5fd' }} />
             <span style={{ color: '#5f6368' }}>Theme (3-9)</span>
           </div>
         </div>

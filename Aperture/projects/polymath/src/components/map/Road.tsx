@@ -27,28 +27,28 @@ export function Road({ road, cities }: RoadProps) {
 
   return (
     <g data-road-id={road.id}>
-      {/* Road casing (dark outline) - Google Maps style */}
+      {/* Road casing (white outline) */}
       <line
         x1={fromCity.position.x}
         y1={fromCity.position.y}
         x2={toCity.position.x}
         y2={toCity.position.y}
-        stroke="#0f1419"
-        strokeWidth={width + 3}
-        strokeLinecap="round"
-        opacity={0.8}
-      />
-
-      {/* Road center (colored line) */}
-      <line
-        x1={fromCity.position.x}
-        y1={fromCity.position.y}
-        x2={toCity.position.x}
-        y2={toCity.position.y}
-        stroke="#ffa500"
-        strokeWidth={width}
+        stroke="#ffffff"
+        strokeWidth={width + 2}
         strokeLinecap="round"
         opacity={0.9}
+      />
+
+      {/* Road center (blue line) */}
+      <line
+        x1={fromCity.position.x}
+        y1={fromCity.position.y}
+        x2={toCity.position.x}
+        y2={toCity.position.y}
+        stroke="#3b82f6"
+        strokeWidth={width}
+        strokeLinecap="round"
+        opacity={0.8}
       />
     </g>
   )
