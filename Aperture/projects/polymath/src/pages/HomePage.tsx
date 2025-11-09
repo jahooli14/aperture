@@ -125,56 +125,66 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
           </div>
         ) : inspiration && inspiration.type !== 'empty' ? (
           <div className="space-y-3">
-            {inspiration.url ? (
-              <Link
-                to={inspiration.url}
-                className="group block p-3 rounded-xl transition-all duration-300"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs flex-1" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      {inspiration.reasoning}
-                    </p>
-                    <ArrowRight className="h-4 w-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: getIconAndColor(inspiration.type).color }} />
-                  </div>
-                  <h3 className="premium-text-platinum font-bold text-base line-clamp-2">
-                    {inspiration.title}
-                  </h3>
-                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                    {inspiration.description}
-                  </p>
-                </div>
-              </Link>
-            ) : (
-              <div className="p-3 rounded-xl" style={{
+            <Link
+              to={inspiration.url || '/projects'}
+              className="group block p-4 rounded-xl transition-all duration-300"
+              style={{
                 background: 'var(--premium-bg-2)',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-              }}>
-                <div className="space-y-2">
-                  <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-3)'
+                e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-2)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+              }}
+            >
+              {/* Title & Reasoning */}
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex-1">
+                  <p className="text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                     {inspiration.reasoning}
                   </p>
                   <h3 className="premium-text-platinum font-bold text-base">
                     {inspiration.title}
                   </h3>
-                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                    {inspiration.description}
-                  </p>
                 </div>
               </div>
-            )}
+
+              {/* Next Step/Description - Interactive with Checkbox */}
+              <div
+                className="rounded-lg p-2.5 flex items-center justify-between gap-2"
+                style={{
+                  background: 'var(--premium-bg-3)'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start gap-2.5 flex-1">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      // Optional: Handle checkbox click
+                      haptic.light()
+                    }}
+                    className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                    style={{
+                      color: 'rgba(59, 130, 246, 0.9)',
+                      border: '2px solid rgba(255, 255, 255, 0.3)'
+                    }}
+                    title="Mark as complete"
+                  >
+                    <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
+                  </button>
+                  <div className="premium-text-platinum font-medium text-sm flex-1">
+                    {inspiration.description}
+                  </div>
+                </div>
+              </div>
+            </Link>
 
             {hasPendingSuggestions && (
               <Link
