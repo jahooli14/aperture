@@ -3,7 +3,7 @@
  * Renders a glowing, mesmerizing door portal for map suggestions
  */
 
-import { motion } from 'framer-motion'
+import { memo } from 'react'
 import type { Door as DoorType } from '../../utils/mapTypes'
 
 interface DoorProps {
@@ -11,7 +11,7 @@ interface DoorProps {
   onClick: () => void
 }
 
-export function Door({ door, onClick }: DoorProps) {
+export const Door = memo(function Door({ door, onClick }: DoorProps) {
   if (door.dismissed) {
     return null // Don't render dismissed doors
   }
@@ -43,4 +43,4 @@ export function Door({ door, onClick }: DoorProps) {
       />
     </g>
   )
-}
+})

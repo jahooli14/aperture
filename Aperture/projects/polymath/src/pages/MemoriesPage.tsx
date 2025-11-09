@@ -3,9 +3,8 @@
  * Browse all memories, view resurfacing queue, see connections
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
@@ -132,18 +131,34 @@ export function MemoriesPage() {
     return memories.filter(m => !m.processed).length
   }, [memories])
 
+  // Track if we're currently polling to prevent duplicate fetches
+  const isPollingRef = useRef(false)
+
   // Poll for updates when there are unprocessed memories
   useEffect(() => {
-    if (unprocessedCount === 0) return
+    if (unprocessedCount === 0) {
+      isPollingRef.current = false
+      return
+    }
 
-    console.log(`🔄 Polling for memory updates (${unprocessedCount} unprocessed)`)
+    if (!isPollingRef.current) {
+      console.log(`🔄 Polling for memory updates (${unprocessedCount} unprocessed)`)
+      isPollingRef.current = true
+    }
 
-    const pollInterval = setInterval(() => {
+    const pollInterval = setInterval(async () => {
       console.log('⏰ Polling tick - fetching fresh data...')
-      loadMemoriesWithCache()
+      try {
+        await loadMemoriesWithCache()
+      } catch (error) {
+        console.error('Polling error:', error)
+      }
     }, 10000) // Poll every 10 seconds
 
-    return () => clearInterval(pollInterval)
+    return () => {
+      clearInterval(pollInterval)
+      isPollingRef.current = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unprocessedCount]) // Only re-run when unprocessed count changes
 
@@ -404,13 +419,7 @@ export function MemoriesPage() {
           </div>
         </div>
 
-        <motion.div
-          className="pt-20 pb-24 relative z-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2 }}
-        >
+        <div className="pt-20 pb-24 relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
@@ -717,6 +726,8 @@ export function MemoriesPage() {
               <Virtuoso
                 style={{ height: '800px' }}
                 totalCount={memories.length}
+                overscan={200}
+                computeItemKey={(index) => memories[index]?.id || `item-${index}`}
                 itemContent={(index) => {
                   const memory = memories[index]
                   const isNewlyCreated = memory.id === newlyCreatedMemoryId
@@ -725,7 +736,6 @@ export function MemoriesPage() {
                     <div className="pb-6">
                       <div className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}>
                         <MemoryCard
-                          key={memory.id}
                           memory={memory}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
@@ -784,7 +794,7 @@ export function MemoriesPage() {
 
       {/* Confirmation Dialog */}
       {confirmDialog}
-        </motion.div>
+        </div>
 
       {/* Connection Suggestions */}
       {suggestions.length > 0 && sourceType === 'memory' && (

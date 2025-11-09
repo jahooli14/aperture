@@ -1,9 +1,10 @@
 /**
  * Voice FAB (Floating Action Button)
  * Android Material Design pattern for quick voice capture
+ * Press and hold to start recording, tap to open full interface
  */
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Mic, X } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
@@ -13,15 +14,66 @@ import { haptic } from '../utils/haptics'
 interface VoiceFABProps {
   onTranscript: (text: string) => void
   maxDuration?: number
+  enablePressAndHold?: boolean // Allow disabling press-and-hold for specific pages
 }
 
-export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
+export function VoiceFAB({ onTranscript, maxDuration = 60, enablePressAndHold = true }: VoiceFABProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [startRecordingOnOpen, setStartRecordingOnOpen] = useState(false)
   const { isOnline } = useOnlineStatus()
+  const pressTimerRef = useRef<number | null>(null)
+  const pressStartRef = useRef<number>(0)
 
   const handleTranscript = (text: string) => {
     onTranscript(text)
     setIsOpen(false)
+    setStartRecordingOnOpen(false)
+  }
+
+  const handlePointerDown = () => {
+    if (!enablePressAndHold) {
+      return
+    }
+    pressStartRef.current = Date.now()
+    // Start a timer for press-and-hold (300ms threshold)
+    pressTimerRef.current = window.setTimeout(() => {
+      // Long press detected - open modal and start recording immediately
+      haptic.medium()
+      setStartRecordingOnOpen(true)
+      setIsOpen(true)
+    }, 300)
+  }
+
+  const handlePointerUp = () => {
+    if (!enablePressAndHold) {
+      // If press-and-hold is disabled, just open the modal on tap
+      haptic.medium()
+      setIsOpen(true)
+      return
+    }
+
+    const pressDuration = Date.now() - pressStartRef.current
+
+    // Clear the long press timer
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
+
+    // If it was a quick tap (not already opened by long press), open without auto-start
+    if (pressDuration < 300 && !isOpen) {
+      haptic.light()
+      setStartRecordingOnOpen(false)
+      setIsOpen(true)
+    }
+  }
+
+  const handlePointerCancel = () => {
+    // Clean up if the pointer is cancelled (e.g., user drags away)
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
   }
 
   return (
@@ -30,10 +82,9 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
       {!isOpen && (
         <button
           data-voice-fab
-          onClick={() => {
-            haptic.medium()
-            setIsOpen(true)
-          }}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           className={cn(
             "fixed z-50",
             "bottom-24 md:bottom-6 right-4 md:right-6",
@@ -47,7 +98,7 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
           style={{
             background: 'var(--premium-bg-3)'
           }}
-          aria-label="Voice capture"
+          aria-label="Voice capture - Press and hold to record, tap to open"
         >
           <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
         </button>
@@ -98,6 +149,7 @@ export function VoiceFAB({ onTranscript, maxDuration = 60 }: VoiceFABProps) {
                   onTranscript={handleTranscript}
                   maxDuration={maxDuration}
                   autoSubmit={true}
+                  autoStart={startRecordingOnOpen}
                 />
                 {!isOnline && (
                   <p className="mt-4 text-sm p-3 rounded-lg border" style={{

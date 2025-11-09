@@ -3,6 +3,7 @@
  * Records audio and transcribes using Web Speech API (web) or Capacitor Voice Recorder (native)
  */
 
+import { useEffect } from 'react'
 import { Mic, Square, Loader2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { useMediaRecorderVoice } from '../hooks/useMediaRecorderVoice'
@@ -11,20 +12,33 @@ interface VoiceInputProps {
   onTranscript: (text: string) => void
   maxDuration?: number // seconds
   autoSubmit?: boolean
+  autoStart?: boolean // Auto-start recording when component mounts
 }
 
-export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false }: VoiceInputProps) {
+export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false, autoStart = false }: VoiceInputProps) {
   const {
     isRecording,
     transcript,
     timeLeft,
     isProcessing,
-    toggleRecording
+    toggleRecording,
+    startRecording
   } = useMediaRecorderVoice({
     onTranscript,
     maxDuration,
     autoSubmit
   })
+
+  // Auto-start recording if requested
+  useEffect(() => {
+    if (autoStart && !isRecording && !isProcessing) {
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        startRecording()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [autoStart, isRecording, isProcessing, startRecording])
 
   return (
     <div className="space-y-3">

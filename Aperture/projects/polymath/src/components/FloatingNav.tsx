@@ -50,6 +50,9 @@ const NAV_OPTIONS: NavOption[] = [
 
 export function FloatingNav() {
   const [isVoiceOpen, setIsVoiceOpen] = React.useState(false)
+  const [autoStartRecording, setAutoStartRecording] = React.useState(false)
+  const pressTimerRef = React.useRef<number | null>(null)
+  const pressStartRef = React.useRef<number>(0)
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
@@ -88,8 +91,34 @@ export function FloatingNav() {
     return null
   }
 
-  const handleCaptureClick = () => {
-    console.log('[FloatingNav] Capture clicked, isProjectDetailPage:', isProjectDetailPage)
+  const handlePointerDown = () => {
+    if (!isOnline) return
+
+    // On project pages, trigger the project's AddNote dialog instead (disable press-and-hold)
+    if (isProjectDetailPage) {
+      return
+    }
+
+    pressStartRef.current = Date.now()
+    // Start a timer for press-and-hold (300ms threshold)
+    pressTimerRef.current = window.setTimeout(() => {
+      // Long press detected - open modal and start recording immediately
+      console.log('[FloatingNav] Long press detected - auto-starting recording')
+      setAutoStartRecording(true)
+      setIsVoiceOpen(true)
+    }, 300)
+  }
+
+  const handlePointerUp = () => {
+    if (!isOnline) return
+
+    const pressDuration = Date.now() - pressStartRef.current
+
+    // Clear the long press timer
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
+    }
 
     // On project pages, trigger the project's AddNote dialog instead
     if (isProjectDetailPage) {
@@ -98,9 +127,19 @@ export function FloatingNav() {
       return
     }
 
-    if (isOnline) {
-      console.log('[FloatingNav] Opening voice modal')
+    // If it was a quick tap (not already opened by long press), open without auto-start
+    if (pressDuration < 300 && !isVoiceOpen) {
+      console.log('[FloatingNav] Quick tap - opening voice modal')
+      setAutoStartRecording(false)
       setIsVoiceOpen(true)
+    }
+  }
+
+  const handlePointerCancel = () => {
+    // Clean up if the pointer is cancelled (e.g., user drags away)
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current)
+      pressTimerRef.current = null
     }
   }
 
@@ -108,6 +147,7 @@ export function FloatingNav() {
     if (!text) return
 
     setIsVoiceOpen(false)
+    setAutoStartRecording(false)
 
     // IMMEDIATELY show optimistic memory
     const tempId = addOptimisticMemory(text)
@@ -221,7 +261,10 @@ export function FloatingNav() {
               backdropFilter: 'blur(20px) saturate(180%)',
               WebkitBackdropFilter: 'blur(20px) saturate(180%)'
             }}
-            onClick={() => setIsVoiceOpen(false)}
+            onClick={() => {
+              setIsVoiceOpen(false)
+              setAutoStartRecording(false)
+            }}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
@@ -234,6 +277,7 @@ export function FloatingNav() {
                 onTranscript={handleVoiceTranscript}
                 maxDuration={60}
                 autoSubmit={true}
+                autoStart={autoStartRecording}
               />
             </motion.div>
           </motion.div>
@@ -243,7 +287,9 @@ export function FloatingNav() {
       {/* Prominent Capture FAB - Bottom right above nav */}
       <motion.button
         data-voice-fab
-        onClick={handleCaptureClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         disabled={!isOnline}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}

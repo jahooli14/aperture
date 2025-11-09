@@ -2,7 +2,7 @@
  * MemoryCard Component - Stunning Visual Design
  */
 
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
@@ -43,17 +43,17 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   })
 
   // Function to load memory bridges
-  const loadMemoryBridges = () => {
+  const loadMemoryBridges = useCallback(() => {
     if (memory.id.startsWith('temp_')) {
       setBridges([])
       return
     }
     fetchBridgesForMemory(memory.id).then(setBridges)
-  }
+  }, [memory.id, fetchBridgesForMemory])
 
   useEffect(() => {
     loadMemoryBridges()
-  }, [memory.id, fetchBridgesForMemory])
+  }, [loadMemoryBridges])
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -156,17 +156,13 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
       <div className="relative" {...longPressHandlers}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
           whileHover={{ y: -6, scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{
             type: "spring",
             stiffness: 400,
             damping: 28,
-            mass: 0.6,
-            opacity: { duration: 0.3 },
-            scale: { duration: 0.3 }
+            mass: 0.6
           }}
         >
         <Card className="group h-full flex flex-col relative overflow-hidden" style={{

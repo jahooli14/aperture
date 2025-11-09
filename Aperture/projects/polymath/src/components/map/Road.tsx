@@ -3,15 +3,16 @@
  * Renders a connection (road) between two cities
  */
 
-import type { Road, City } from '../../utils/mapTypes'
+import { memo } from 'react'
+import type { Road as RoadType, City } from '../../utils/mapTypes'
 import { getRoadWidth, getRoadColor, getRoadDashArray } from '../../utils/mapCalculations'
 
 interface RoadProps {
-  road: Road
+  road: RoadType
   cities: City[]
 }
 
-export function Road({ road, cities }: RoadProps) {
+export const Road = memo(function Road({ road, cities }: RoadProps) {
   // Find the connected cities
   const fromCity = cities.find(c => c.id === road.fromCityId)
   const toCity = cities.find(c => c.id === road.toCityId)
@@ -52,4 +53,4 @@ export function Road({ road, cities }: RoadProps) {
       />
     </g>
   )
-}
+})

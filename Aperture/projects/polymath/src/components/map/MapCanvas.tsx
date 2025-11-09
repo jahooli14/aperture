@@ -3,7 +3,7 @@
  * Google Maps-style SVG canvas with semantic regions, viewport culling, and optimized performance
  */
 
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { useGesture } from '@use-gesture/react'
 import type { MapData } from '../../utils/mapTypes'
 import { CityNode } from './CityNode'
@@ -21,33 +21,38 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
   const { updateViewport, acceptDoor, dismissDoor } = useMapStore()
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const transformGroupRef = useRef<SVGGElement>(null)
   const [selectedDoor, setSelectedDoor] = useState<any>(null)
   const [doorDialogOpen, setDoorDialogOpen] = useState(false)
 
-  // Pan and zoom state (using state for reactivity with viewport culling)
-  const [transform, setTransform] = useState({
+  // Use ref for transform to avoid re-renders on every pan/zoom
+  const transformRef = useRef({
     x: mapData.viewport.x,
     y: mapData.viewport.y,
     scale: mapData.viewport.scale
   })
 
-  // Apply transform via state (React-controlled rendering)
+  // Apply transform directly to DOM (no React re-render)
   const applyTransform = (newTransform: { x: number; y: number; scale: number }) => {
-    setTransform(newTransform)
+    transformRef.current = newTransform
+    if (transformGroupRef.current) {
+      transformGroupRef.current.style.transform =
+        `translate(${newTransform.x}px, ${newTransform.y}px) scale(${newTransform.scale})`
+    }
   }
 
   // Setup pan and zoom gestures
   useGesture(
     {
       onDrag: ({ offset: [x, y] }) => {
-        applyTransform({ ...transform, x, y })
+        applyTransform({ ...transformRef.current, x, y })
       },
       onPinch: ({ offset: [scale], origin: [ox, oy] }) => {
         const newScale = Math.max(0.2, Math.min(3, scale))
         // Zoom towards pinch center
-        const scaleDiff = newScale / transform.scale
-        const newX = ox - (ox - transform.x) * scaleDiff
-        const newY = oy - (oy - transform.y) * scaleDiff
+        const scaleDiff = newScale / transformRef.current.scale
+        const newX = ox - (ox - transformRef.current.x) * scaleDiff
+        const newY = oy - (oy - transformRef.current.y) * scaleDiff
         applyTransform({ x: newX, y: newY, scale: newScale })
       },
       onWheel: ({ delta: [, dy], event }) => {
@@ -58,12 +63,12 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         const mouseY = (event as WheelEvent).clientY - rect.top
 
         const scaleDelta = -dy * 0.001
-        const newScale = Math.max(0.2, Math.min(3, transform.scale + scaleDelta))
+        const newScale = Math.max(0.2, Math.min(3, transformRef.current.scale + scaleDelta))
 
         // Zoom towards mouse position
-        const scaleDiff = newScale / transform.scale
-        const newX = mouseX - (mouseX - transform.x) * scaleDiff
-        const newY = mouseY - (mouseY - transform.y) * scaleDiff
+        const scaleDiff = newScale / transformRef.current.scale
+        const newX = mouseX - (mouseX - transformRef.current.x) * scaleDiff
+        const newY = mouseY - (mouseY - transformRef.current.y) * scaleDiff
 
         applyTransform({ x: newX, y: newY, scale: newScale })
       }
@@ -71,10 +76,10 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
     {
       target: containerRef,
       drag: {
-        from: () => [transform.x, transform.y]
+        from: () => [transformRef.current.x, transformRef.current.y]
       },
       pinch: {
-        from: () => [transform.scale, 0]
+        from: () => [transformRef.current.scale, 0]
       }
     }
   )
@@ -87,12 +92,12 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
       scale: mapData.viewport.scale
     }
     applyTransform(newTransform)
-  }, [mapData.viewport])
+  }, [mapData.viewport.x, mapData.viewport.y, mapData.viewport.scale])
 
-  // Save viewport on unmount or when transform changes
+  // Save viewport periodically
   useEffect(() => {
     const saveViewport = () => {
-      const { x, y, scale } = transform
+      const { x, y, scale } = transformRef.current
       updateViewport(x, y, scale)
     }
 
@@ -102,37 +107,49 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
       clearInterval(interval)
       saveViewport() // Save one last time
     }
-  }, [transform, updateViewport])
+  }, [updateViewport])
 
   // Disable viewport culling for stability - render all cities
   // (With only a few cities, performance impact is negligible)
   const visibleCities = mapData.cities
   const visibleRoads = mapData.roads
 
-  const handleCityClick = (cityId: string) => {
-    onCityClick(cityId)
-  }
+  // Store click handlers in a ref to avoid creating new functions on every render
+  const cityClickHandlers = useRef<Map<string, () => void>>(new Map())
+  const doorClickHandlers = useRef<Map<string, () => void>>(new Map())
 
-  const handleDoorClick = (door: any) => {
-    setSelectedDoor(door)
-    setDoorDialogOpen(true)
-  }
+  const getCityClickHandler = useCallback((cityId: string) => {
+    if (!cityClickHandlers.current.has(cityId)) {
+      cityClickHandlers.current.set(cityId, () => onCityClick(cityId))
+    }
+    return cityClickHandlers.current.get(cityId)!
+  }, [onCityClick])
 
-  const handleDoorAccept = () => {
+  const getDoorClickHandler = useCallback((door: any) => {
+    if (!doorClickHandlers.current.has(door.id)) {
+      doorClickHandlers.current.set(door.id, () => {
+        setSelectedDoor(door)
+        setDoorDialogOpen(true)
+      })
+    }
+    return doorClickHandlers.current.get(door.id)!
+  }, [])
+
+  const handleDoorAccept = useCallback(() => {
     if (selectedDoor) {
       acceptDoor(selectedDoor)
       setDoorDialogOpen(false)
       setSelectedDoor(null)
     }
-  }
+  }, [selectedDoor, acceptDoor])
 
-  const handleDoorDismiss = () => {
+  const handleDoorDismiss = useCallback(() => {
     if (selectedDoor) {
       dismissDoor(selectedDoor.id)
       setDoorDialogOpen(false)
       setSelectedDoor(null)
     }
-  }
+  }, [selectedDoor, dismissDoor])
 
   return (
     <div
@@ -152,10 +169,13 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         className="w-full h-full relative"
         style={{ cursor: 'grab', zIndex: 1 }}
       >
-        <g style={{
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-          transition: 'none' // Disable transitions to prevent jitter
-        }}>
+        <g
+          ref={transformGroupRef}
+          style={{
+            willChange: 'transform',
+            transformOrigin: '0 0'
+          }}
+        >
           {/* Terrain base layer */}
           <rect
             x={-1000}
@@ -187,7 +207,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             <CityNode
               key={city.id}
               city={city}
-              onClick={() => handleCityClick(city.id)}
+              onClick={getCityClickHandler(city.id)}
             />
           ))}
 
@@ -196,7 +216,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             <Door
               key={door.id}
               door={door}
-              onClick={() => handleDoorClick(door)}
+              onClick={getDoorClickHandler(door)}
             />
           ))}
         </g>
@@ -222,10 +242,10 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             const centerX = rect.width / 2
             const centerY = rect.height / 2
 
-            const newScale = Math.min(3, transform.scale * 1.2)
-            const scaleDiff = newScale / transform.scale
-            const newX = centerX - (centerX - transform.x) * scaleDiff
-            const newY = centerY - (centerY - transform.y) * scaleDiff
+            const newScale = Math.min(3, transformRef.current.scale * 1.2)
+            const scaleDiff = newScale / transformRef.current.scale
+            const newX = centerX - (centerX - transformRef.current.x) * scaleDiff
+            const newY = centerY - (centerY - transformRef.current.y) * scaleDiff
 
             applyTransform({ x: newX, y: newY, scale: newScale })
           }}
@@ -245,10 +265,10 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             const centerX = rect.width / 2
             const centerY = rect.height / 2
 
-            const newScale = Math.max(0.2, transform.scale / 1.2)
-            const scaleDiff = newScale / transform.scale
-            const newX = centerX - (centerX - transform.x) * scaleDiff
-            const newY = centerY - (centerY - transform.y) * scaleDiff
+            const newScale = Math.max(0.2, transformRef.current.scale / 1.2)
+            const scaleDiff = newScale / transformRef.current.scale
+            const newX = centerX - (centerX - transformRef.current.x) * scaleDiff
+            const newY = centerY - (centerY - transformRef.current.y) * scaleDiff
 
             applyTransform({ x: newX, y: newY, scale: newScale })
           }}

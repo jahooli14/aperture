@@ -3,6 +3,7 @@
  * Renders cities with map-style visuals and minimal animations for performance
  */
 
+import { memo } from 'react'
 import type { City } from '../../utils/mapTypes'
 import { getCityRadius, getCityColor } from '../../utils/mapCalculations'
 
@@ -11,7 +12,7 @@ interface CityNodeProps {
   onClick: () => void
 }
 
-export function CityNode({ city, onClick }: CityNodeProps) {
+export const CityNode = memo(function CityNode({ city, onClick }: CityNodeProps) {
   const radius = getCityRadius(city.size)
 
   // Blue shades only - darker = more important
@@ -91,4 +92,4 @@ export function CityNode({ city, onClick }: CityNodeProps) {
       />
     </g>
   )
-}
+})
