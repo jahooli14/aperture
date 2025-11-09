@@ -87,15 +87,21 @@ async function fetchArticleWithJina(url: string) {
     }
 
     // Extract H1 from HTML content using regex
-    let title = jinaTitle || 'Untitled'
+    let title = 'Untitled'
     const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i)
     if (h1Match && h1Match[1]) {
       // Strip HTML tags from the H1 content
       const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim()
-      if (h1Text.length > 0 && h1Text.length < 200 && !isUrlLike(h1Text)) {
+      // Use H1 if it's valid and not generic
+      if (h1Text.length > 0 && h1Text.length < 200 && !isUrlLike(h1Text) && !h1Text.toLowerCase().includes('homepage')) {
         title = h1Text
         console.log('[Jina AI] Found H1 title:', title)
       }
+    }
+
+    // Fallback to Jina's title if H1 extraction failed and Jina title is valid
+    if (title === 'Untitled' && jinaTitle && jinaTitle.length > 0 && !jinaTitle.toLowerCase().includes('homepage')) {
+      title = jinaTitle
     }
 
     // If still using generic title, try to extract from URL
