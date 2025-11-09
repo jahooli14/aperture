@@ -113,15 +113,15 @@ export function PromptModal({
           <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
         )}
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {bullets.map((bullet, index) => (
-            <div key={index} className="p-4 rounded-lg flex gap-2 items-start" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
-              <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
+            <div key={index} className="p-3 rounded-lg flex gap-3 items-start" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
+              <span className="pt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
               <Textarea
                 value={bullet}
                 onChange={(e) => handleBulletChange(index, e.target.value)}
                 placeholder={`Bullet ${index + 1}`}
-                className="flex-1 min-h-[80px]"
+                className="flex-1 min-h-[60px]"
                 disabled={submitting}
               />
               {bullets.length > 3 && (
