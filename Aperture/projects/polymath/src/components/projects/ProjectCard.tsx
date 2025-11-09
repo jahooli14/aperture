@@ -385,7 +385,7 @@ export const ProjectCard = React.memo(function ProjectCard({
             className="group h-full flex flex-col cursor-pointer relative overflow-hidden"
             onClick={handleCardClick}
             style={{
-              background: project.is_priority ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+              background: 'var(--premium-bg-2)',
               backdropFilter: 'blur(12px)',
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
             }}
