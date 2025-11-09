@@ -1,9 +1,8 @@
 /**
- * CityNode Component
- * Renders an individual city on the knowledge map with enhanced visuals
+ * CityNode Component - OPTIMIZED
+ * Renders cities with map-style visuals and minimal animations for performance
  */
 
-import { motion } from 'framer-motion'
 import type { City } from '../../utils/mapTypes'
 import { getCityRadius, getCityColor } from '../../utils/mapCalculations'
 
@@ -24,27 +23,18 @@ export function CityNode({ city, onClick }: CityNodeProps) {
 
   return (
     <g onClick={onClick} className="cursor-pointer group" data-city-id={city.id}>
-      {/* Outer glow ring - animated pulse */}
-      <motion.circle
+      {/* Outer glow ring - static (no animation for performance) */}
+      <circle
         cx={city.position.x}
         cy={city.position.y}
         r={radius + 10}
         fill="none"
         stroke={strokeColor}
         strokeWidth={1}
-        opacity={0.3}
-        animate={{
-          r: [radius + 10, radius + 15, radius + 10],
-          opacity: [0.3, 0.5, 0.3]
-        }}
-        transition={{
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
+        opacity={0.2}
       />
 
-      {/* Main city circle */}
+      {/* Main city circle with cartographic style */}
       <circle
         cx={city.position.x}
         cy={city.position.y}
@@ -52,54 +42,60 @@ export function CityNode({ city, onClick }: CityNodeProps) {
         fill={fillColor}
         stroke={strokeColor}
         strokeWidth={2}
-        className="transition-all hover:stroke-[3px]"
+        className="transition-all"
         style={{
-          filter: `drop-shadow(0 4px 12px rgba(59, 130, 246, 0.4))`
+          filter: `drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))`
         }}
       />
 
-      {/* Inner rings for larger cities */}
+      {/* Inner rings for larger cities (like district boundaries) */}
       {(city.size === 'city' || city.size === 'metropolis') && (
         <>
           <circle
             cx={city.position.x}
             cy={city.position.y}
-            r={radius * 0.6}
+            r={radius * 0.65}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={1}
+            opacity={0.3}
+          />
+          <circle
+            cx={city.position.x}
+            cy={city.position.y}
+            r={radius * 0.35}
             fill="none"
             stroke={strokeColor}
             strokeWidth={1}
             opacity={0.4}
           />
-          <circle
-            cx={city.position.x}
-            cy={city.position.y}
-            r={radius * 0.3}
-            fill={strokeColor}
-            opacity={0.6}
-          />
         </>
       )}
 
-      {/* Population indicator (center dot) */}
-      <circle
-        cx={city.position.x}
-        cy={city.position.y}
-        r={radius * 0.15}
-        fill="white"
-        opacity={0.8}
-      />
+      {/* Central landmark for major cities */}
+      {(city.size === 'metropolis') && (
+        <circle
+          cx={city.position.x}
+          cy={city.position.y}
+          r={radius * 0.15}
+          fill={strokeColor}
+          opacity={0.8}
+        />
+      )}
 
-      {/* Label */}
+      {/* Label - map-style typography */}
       <text
         x={city.position.x}
         y={city.position.y - radius - 15}
         textAnchor="middle"
         fill="var(--premium-text-primary)"
-        fontSize={city.size === 'metropolis' || city.size === 'city' ? 16 : 14}
-        fontWeight={600}
-        className="pointer-events-none select-none"
+        fontSize={city.size === 'metropolis' ? 15 : city.size === 'city' ? 13 : 12}
+        fontWeight={city.size === 'metropolis' || city.size === 'city' ? 700 : 600}
+        letterSpacing={city.size === 'metropolis' ? 1.5 : city.size === 'city' ? 1 : 0.5}
+        className="pointer-events-none select-none uppercase"
         style={{
-          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+          fontFamily: 'Inter, system-ui, sans-serif',
+          textShadow: '0 2px 8px rgba(0,0,0,0.6), 0 0 4px rgba(0,0,0,0.8)'
         }}
       >
         {city.name}
@@ -108,20 +104,22 @@ export function CityNode({ city, onClick }: CityNodeProps) {
       {/* Population count badge */}
       <g>
         <rect
-          x={city.position.x - 15}
-          y={city.position.y + radius + 5}
-          width={30}
-          height={18}
-          rx={9}
-          fill="var(--premium-bg-3)"
-          opacity={0.9}
+          x={city.position.x - 18}
+          y={city.position.y + radius + 8}
+          width={36}
+          height={16}
+          rx={8}
+          fill="rgba(32, 43, 62, 0.9)"
+          stroke={strokeColor}
+          strokeWidth={1}
+          opacity={0.95}
         />
         <text
           x={city.position.x}
-          y={city.position.y + radius + 17}
+          y={city.position.y + radius + 19}
           textAnchor="middle"
           fill="var(--premium-text-primary)"
-          fontSize={11}
+          fontSize={10}
           fontWeight={600}
           className="pointer-events-none select-none"
         >
@@ -136,8 +134,12 @@ export function CityNode({ city, onClick }: CityNodeProps) {
         r={radius + 5}
         fill="none"
         stroke="var(--premium-gold)"
-        strokeWidth={2}
-        className="opacity-0 group-hover:opacity-100 transition-opacity"
+        strokeWidth={3}
+        opacity={0.8}
+        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        style={{
+          filter: `drop-shadow(0 0 10px var(--premium-gold))`
+        }}
       />
     </g>
   )

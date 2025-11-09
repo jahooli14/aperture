@@ -1,13 +1,13 @@
 /**
- * MapCanvas Component
- * SVG canvas with pan and zoom for the knowledge map
+ * MapCanvas Component - REDESIGNED
+ * Google Maps-style SVG canvas with semantic regions, viewport culling, and optimized performance
  */
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { useGesture } from '@use-gesture/react'
 import type { MapData } from '../../utils/mapTypes'
 import { CityNode } from './CityNode'
-import { Road } from './Road'
+import { Road as RoadComponent } from './Road'
 import { Door } from './Door'
 import { DoorDialog } from './DoorDialog'
 import { useMapStore } from '../../stores/useMapStore'
@@ -97,6 +97,38 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
     }
   }, [updateViewport])
 
+  // Viewport culling - only render visible cities
+  const visibleCities = useMemo(() => {
+    if (!containerRef.current) return mapData.cities
+
+    const containerWidth = containerRef.current.clientWidth || 1920
+    const containerHeight = containerRef.current.clientHeight || 1080
+
+    const { x, y, scale } = transformRef.current
+
+    // Calculate visible bounds in world coordinates
+    const padding = 500 // Extra padding to prevent pop-in
+    const left = (-x / scale) - padding
+    const right = ((-x + containerWidth) / scale) + padding
+    const top = (-y / scale) - padding
+    const bottom = ((-y + containerHeight) / scale) + padding
+
+    return mapData.cities.filter(city => {
+      return city.position.x >= left &&
+             city.position.x <= right &&
+             city.position.y >= top &&
+             city.position.y <= bottom
+    })
+  }, [mapData.cities, transformRef.current.x, transformRef.current.y, transformRef.current.scale])
+
+  // Visible roads (only show if both cities are visible)
+  const visibleRoads = useMemo(() => {
+    const visibleCityIds = new Set(visibleCities.map(c => c.id))
+    return mapData.roads.filter(road =>
+      visibleCityIds.has(road.fromCityId) && visibleCityIds.has(road.toCityId)
+    )
+  }, [mapData.roads, visibleCities])
+
   const handleCityClick = (cityId: string) => {
     onCityClick(cityId)
   }
@@ -126,7 +158,9 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
     <div
       ref={containerRef}
       className="w-full h-full overflow-hidden touch-none"
-      style={{ background: 'var(--premium-bg-1)' }}
+      style={{
+        background: 'linear-gradient(135deg, #141b26 0%, #1a2332 50%, #0f1419 100%)'
+      }}
     >
       <svg
         ref={svgRef}
@@ -134,48 +168,109 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         style={{ cursor: 'grab' }}
       >
         <defs>
-          {/* Gradient for premium look */}
-          <linearGradient id="map-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: 'var(--premium-bg-2)', stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: 'var(--premium-bg-1)', stopOpacity: 1 }} />
+          {/* Terrain texture pattern */}
+          <filter id="terrain-noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="3" />
+            <feColorMatrix values="0 0 0 0 0.1
+                                    0 0 0 0 0.15
+                                    0 0 0 0 0.2
+                                    0 0 0 0.05 0" />
+          </filter>
+
+          {/* Radial gradient for regions */}
+          <radialGradient id="region-gradient">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.3" />
+            <stop offset="70%" stopColor="currentColor" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Road gradient for highways */}
+          <linearGradient id="highway-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(59, 130, 246, 0.2)" />
+            <stop offset="50%" stopColor="rgba(59, 130, 246, 0.4)" />
+            <stop offset="100%" stopColor="rgba(59, 130, 246, 0.2)" />
           </linearGradient>
         </defs>
 
-        <g style={{ transformOrigin: 'center', transition: 'transform 0.1s ease-out' }}>
-          {/* Background rect for visual context */}
-          <rect x={-1000} y={-1000} width={5000} height={5000} fill="url(#map-gradient)" />
+        <g style={{ transformOrigin: 'center' }}>
+          {/* Terrain background */}
+          <rect
+            x={-1000}
+            y={-1000}
+            width={6000}
+            height={5000}
+            fill="#0f1419"
+            filter="url(#terrain-noise)"
+            opacity={0.3}
+          />
 
-          {/* Grid pattern for visual reference */}
-          <g opacity={0.1}>
-            {Array.from({ length: 20 }).map((_, i) => (
+          {/* Subtle grid (like lat/long lines on maps) */}
+          <g opacity={0.05}>
+            {Array.from({ length: 15 }).map((_, i) => (
               <g key={`grid-${i}`}>
                 <line
                   x1={i * 300}
                   y1={0}
                   x2={i * 300}
-                  y2={3000}
-                  stroke="var(--premium-blue)"
+                  y2={4500}
+                  stroke="#3b82f6"
                   strokeWidth={1}
+                  strokeDasharray="10,10"
                 />
                 <line
                   x1={0}
                   y1={i * 300}
-                  x2={3000}
+                  x2={4500}
                   y2={i * 300}
-                  stroke="var(--premium-blue)"
+                  stroke="#3b82f6"
                   strokeWidth={1}
+                  strokeDasharray="10,10"
                 />
               </g>
             ))}
           </g>
 
-          {/* Render roads first (so they appear behind cities) */}
-          {mapData.roads.map(road => (
-            <Road key={road.id} road={road} cities={mapData.cities} />
+          {/* Semantic regions (territories) */}
+          {mapData.regions?.map(region => (
+            <g key={region.id} opacity={0.4}>
+              {/* Region background circle */}
+              <circle
+                cx={region.center.x}
+                cy={region.center.y}
+                r={region.radius}
+                fill={region.color}
+                stroke={region.color}
+                strokeWidth={2}
+                strokeOpacity={0.3}
+              />
+
+              {/* Region label */}
+              <text
+                x={region.center.x}
+                y={region.center.y - region.radius - 20}
+                textAnchor="middle"
+                fill="rgba(255, 255, 255, 0.3)"
+                fontSize={18}
+                fontWeight={700}
+                letterSpacing={3}
+                className="uppercase"
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  textShadow: '0 2px 10px rgba(0,0,0,0.5)'
+                }}
+              >
+                {region.name}
+              </text>
+            </g>
           ))}
 
-          {/* Render cities */}
-          {mapData.cities.map(city => (
+          {/* Render roads first (so they appear behind cities) */}
+          {visibleRoads.map(road => (
+            <RoadComponent key={road.id} road={road} cities={mapData.cities} />
+          ))}
+
+          {/* Render visible cities only */}
+          {visibleCities.map(city => (
             <CityNode
               key={city.id}
               city={city}
@@ -210,7 +305,12 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             transformRef.current.scale = Math.min(3, transformRef.current.scale * 1.2)
             applyTransform()
           }}
-          className="premium-bg-3 text-premium-text-primary p-3 rounded-lg shadow-lg hover:bg-opacity-90 transition-all"
+          className="p-3 rounded-lg shadow-lg transition-all"
+          style={{
+            background: 'rgba(32, 43, 62, 0.95)',
+            color: 'var(--premium-text-primary)',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
+          }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
@@ -221,7 +321,12 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             transformRef.current.scale = Math.max(0.2, transformRef.current.scale / 1.2)
             applyTransform()
           }}
-          className="premium-bg-3 text-premium-text-primary p-3 rounded-lg shadow-lg hover:bg-opacity-90 transition-all"
+          className="p-3 rounded-lg shadow-lg transition-all"
+          style={{
+            background: 'rgba(32, 43, 62, 0.95)',
+            color: 'var(--premium-text-primary)',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
+          }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <path d="M5 10h10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
@@ -232,10 +337,58 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             transformRef.current = { x: 0, y: 0, scale: 1 }
             applyTransform()
           }}
-          className="premium-bg-3 text-premium-text-primary p-3 rounded-lg shadow-lg hover:bg-opacity-90 transition-all text-xs"
+          className="p-3 rounded-lg shadow-lg transition-all text-xs font-semibold"
+          style={{
+            background: 'rgba(32, 43, 62, 0.95)',
+            color: 'var(--premium-text-primary)',
+            border: '1px solid rgba(59, 130, 246, 0.2)'
+          }}
         >
           Reset
         </button>
+      </div>
+
+      {/* Map legend (bottom left) */}
+      <div
+        className="absolute bottom-4 left-4 p-4 rounded-lg shadow-lg text-xs"
+        style={{
+          background: 'rgba(32, 43, 62, 0.95)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
+          color: 'var(--premium-text-secondary)'
+        }}
+      >
+        <div className="font-bold mb-2 text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+          Legend
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-gold)' }} />
+            <span>Metropolis (50+ items)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-purple)' }} />
+            <span>City (20-49 items)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-indigo)' }} />
+            <span>Town (10-19 items)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-blue)' }} />
+            <span>Village (3-9 items)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Performance indicator */}
+      <div
+        className="absolute top-20 left-4 px-3 py-2 rounded text-xs"
+        style={{
+          background: 'rgba(32, 43, 62, 0.8)',
+          color: 'var(--premium-text-tertiary)'
+        }}
+      >
+        Rendering: {visibleCities.length}/{mapData.cities.length} cities
       </div>
     </div>
   )

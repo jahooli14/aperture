@@ -16,6 +16,7 @@ export interface City {
   itemIds: string[] // IDs of projects/thoughts/articles in this city
   founded: string // ISO date of first item
   lastActive: string // ISO date of most recent item
+  cluster?: number // Semantic cluster/region ID
 }
 
 export interface Road {
@@ -45,10 +46,20 @@ export interface Viewport {
   scale: number
 }
 
+export interface Region {
+  id: string
+  name: string // "Technology Region", "Creative Region", etc.
+  center: { x: number; y: number }
+  radius: number
+  cityIds: string[]
+  color: string // rgba color for background
+}
+
 export interface MapData {
   cities: City[]
   roads: Road[]
   doors: Door[]
+  regions?: Region[] // Semantic regions/territories
   viewport: Viewport
   version: number
 }
