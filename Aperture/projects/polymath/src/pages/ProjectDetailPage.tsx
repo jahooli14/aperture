@@ -600,12 +600,12 @@ export function ProjectDetailPage() {
                     />
                     <div className="absolute right-0 mt-2 w-40 rounded-lg py-1 z-20 shadow-lg"
                       style={{
-                        background: 'var(--premium-bg-2)',
+                        background: 'rgba(15, 24, 41, 0.9)',
                         backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                        border: '1px solid rgba(59, 130, 246, 0.3)'
                       }}
                     >
-                      {['active', 'upcoming', 'dormant', 'completed', 'on-hold', 'maintaining', 'archived', 'abandoned'].map((status) => (
+                      {['upcoming', 'active', 'completed'].map((status) => (
                         <button
                           key={status}
                           onClick={() => {
@@ -615,8 +615,7 @@ export function ProjectDetailPage() {
                           className="w-full px-4 py-2 text-left text-xs font-medium transition-colors hover:opacity-80"
                           style={{
                             color: project.status === status ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
-                            backgroundColor: project.status === status ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                            borderLeft: project.status === status ? '2px solid var(--premium-blue)' : '2px solid transparent'
+                            backgroundColor: project.status === status ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                           }}
                         >
                           {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[status]}
@@ -722,7 +721,6 @@ export function ProjectDetailPage() {
             setProject({ ...project, ...updates })
             updateProject(project.id, updates)
           }}
-          onStatusChange={handleStatusChange}
         />
 
         {/* Task Checklist */}
