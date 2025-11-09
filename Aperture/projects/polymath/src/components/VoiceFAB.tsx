@@ -1,7 +1,7 @@
 /**
  * Voice FAB (Floating Action Button)
  * Android Material Design pattern for quick voice capture
- * Press and hold to start recording, tap to open full interface
+ * Tap to open recording interface
  */
 
 import { useState, useRef } from 'react'
@@ -17,7 +17,7 @@ interface VoiceFABProps {
   enablePressAndHold?: boolean // Allow disabling press-and-hold for specific pages
 }
 
-export function VoiceFAB({ onTranscript, maxDuration = 60, enablePressAndHold = true }: VoiceFABProps) {
+export function VoiceFAB({ onTranscript, maxDuration = 60, enablePressAndHold = false }: VoiceFABProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [startRecordingOnOpen, setStartRecordingOnOpen] = useState(false)
   const { isOnline } = useOnlineStatus()
@@ -98,7 +98,7 @@ export function VoiceFAB({ onTranscript, maxDuration = 60, enablePressAndHold = 
           style={{
             background: 'var(--premium-bg-3)'
           }}
-          aria-label="Voice capture - Press and hold to record, tap to open"
+          aria-label="Voice capture - Tap to open recording interface"
         >
           <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
         </button>

@@ -220,8 +220,8 @@ export function useMediaRecorderVoice({
         stopWebRecording()
       }
 
-      // Start recording - request data on stop, not on timer
-      mediaRecorder.start()
+      // Start recording - request data every second to ensure chunks are captured
+      mediaRecorder.start(1000) // Request data chunks every 1000ms
       console.log('[Web] MediaRecorder state after start():', mediaRecorder.state)
 
       setIsRecording(true)
