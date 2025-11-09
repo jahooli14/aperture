@@ -298,144 +298,118 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     articles: articles?.length || 0
   })
 
-  // 2. Extract topics and their embeddings for semantic clustering
-  interface TopicData {
-    items: Array<{ id: string; type: string; timestamp: string }>
-    embedding: number[] | null
-    firstSeen: string
-    lastSeen: string
+  // 2. Collect all items with embeddings for direct semantic clustering
+  interface Item {
+    id: string
+    type: 'thought' | 'project' | 'article'
+    title: string
+    embedding: number[]
+    timestamp: string
   }
 
-  const topicMap = new Map<string, TopicData>()
+  const allItems: Item[] = []
 
-  // Process memories - use entities.topics for rich semantic content
+  // Collect memories
   memories?.forEach(m => {
-    const topics = m.entities?.topics || []
-    const embedding = m.embedding ? (typeof m.embedding === 'string' ? JSON.parse(m.embedding) : m.embedding) : null
-
-    topics.forEach((topic: string) => {
-      if (!topicMap.has(topic)) {
-        topicMap.set(topic, {
-          items: [],
-          embedding: null,
-          firstSeen: m.created_at,
-          lastSeen: m.created_at
-        })
-      }
-      const topicData = topicMap.get(topic)!
-      topicData.items.push({ id: m.id, type: 'thought', timestamp: m.created_at })
-
-      // Use average embedding for topic (simple approach)
-      if (embedding && !topicData.embedding) {
-        topicData.embedding = embedding
-      }
-
-      if (new Date(m.created_at) > new Date(topicData.lastSeen)) {
-        topicData.lastSeen = m.created_at
-      }
-    })
+    if (m.embedding) {
+      allItems.push({
+        id: m.id,
+        type: 'thought',
+        title: m.title || 'Untitled thought',
+        embedding: typeof m.embedding === 'string' ? JSON.parse(m.embedding) : m.embedding,
+        timestamp: m.created_at
+      })
+    }
   })
 
-  // Process projects - extract topics from title/description if no capabilities
+  // Collect projects
   projects?.forEach(p => {
-    const capabilities = p.metadata?.capabilities || []
-    const embedding = p.embedding ? (typeof p.embedding === 'string' ? JSON.parse(p.embedding) : p.embedding) : null
-
-    // Use capabilities if available, otherwise extract from title/description
-    let topics: string[] = []
-    if (capabilities.length > 0) {
-      topics = capabilities.map((cap: any) => typeof cap === 'string' ? cap : cap.name)
-    } else {
-      // Extract topics from project title and description
-      const text = `${p.title} ${p.description || ''}`
-      topics = extractTopicsFromText(text, 3)
+    if (p.embedding) {
+      allItems.push({
+        id: p.id,
+        type: 'project',
+        title: p.title,
+        embedding: typeof p.embedding === 'string' ? JSON.parse(p.embedding) : p.embedding,
+        timestamp: p.created_at
+      })
     }
-
-    topics.forEach((topicName: string) => {
-      if (!topicMap.has(topicName)) {
-        topicMap.set(topicName, {
-          items: [],
-          embedding: null,
-          firstSeen: p.created_at,
-          lastSeen: p.last_active || p.created_at
-        })
-      }
-      const topicData = topicMap.get(topicName)!
-      topicData.items.push({ id: p.id, type: 'project', timestamp: p.created_at })
-
-      // Use project embedding for topic if available
-      if (embedding && !topicData.embedding) {
-        topicData.embedding = embedding
-      }
-
-      if (new Date(p.last_active || p.created_at) > new Date(topicData.lastSeen)) {
-        topicData.lastSeen = p.last_active || p.created_at
-      }
-    })
   })
 
-  // Process articles - extract topics from title if no tags
+  // Collect articles
   articles?.forEach(a => {
-    const tags = a.tags || []
-    const embedding = a.embedding ? (typeof a.embedding === 'string' ? JSON.parse(a.embedding) : a.embedding) : null
-
-    // Use tags if available, otherwise extract from title
-    let topics: string[] = []
-    if (tags.length > 0) {
-      topics = tags
-    } else {
-      // Extract topics from article title
-      topics = extractTopicsFromText(a.title, 2)
+    if (a.embedding) {
+      allItems.push({
+        id: a.id,
+        type: 'article',
+        title: a.title,
+        embedding: typeof a.embedding === 'string' ? JSON.parse(a.embedding) : a.embedding,
+        timestamp: a.created_at
+      })
     }
-
-    topics.forEach((topicName: string) => {
-      if (!topicMap.has(topicName)) {
-        topicMap.set(topicName, {
-          items: [],
-          embedding: null,
-          firstSeen: a.created_at,
-          lastSeen: a.created_at
-        })
-      }
-      const topicData = topicMap.get(topicName)!
-      topicData.items.push({ id: a.id, type: 'article', timestamp: a.created_at })
-
-      if (embedding && !topicData.embedding) {
-        topicData.embedding = embedding
-      }
-
-      if (new Date(a.created_at) > new Date(topicData.lastSeen)) {
-        topicData.lastSeen = a.created_at
-      }
-    })
   })
 
-  console.log('[map-generation] Extracted topics:', topicMap.size)
+  console.log('[map-generation] Collected items with embeddings:', allItems.length)
 
-  // 3. Semantic clustering using k-means on embeddings
-  const topicsWithEmbeddings = Array.from(topicMap.entries())
-    .filter(([_, data]) => data.embedding !== null)
-    .map(([name, data]) => ({
-      id: name,
-      topic: name,
-      vector: data.embedding!
-    }))
+  if (allItems.length === 0) {
+    console.log('[map-generation] No items with embeddings found')
+    return {
+      cities: [],
+      roads: [],
+      doors: [],
+      regions: [],
+      viewport: { x: 0, y: 0, scale: 1 },
+      version: 1
+    }
+  }
 
-  console.log('[map-generation] Topics with embeddings:', topicsWithEmbeddings.length)
+  // 3. Semantic clustering using k-means on item embeddings directly
+  const itemsForClustering = allItems.map(item => ({
+    id: item.id,
+    topic: item.title, // Use title as identifier
+    vector: item.embedding
+  }))
 
-  // Determine optimal number of clusters (regions)
-  const numClusters = Math.max(3, Math.min(8, Math.floor(topicsWithEmbeddings.length / 5)))
-  console.log('[map-generation] Creating', numClusters, 'semantic regions')
+  console.log('[map-generation] Items for clustering:', itemsForClustering.length)
 
-  const clusters = kMeansClustering(topicsWithEmbeddings, numClusters)
+  // Determine optimal number of clusters (cities) based on item count
+  // More items = more granular clustering
+  const numClusters = Math.max(3, Math.min(20, Math.floor(Math.sqrt(allItems.length) * 2)))
+  console.log('[map-generation] Creating', numClusters, 'semantic clusters')
 
-  // 4. Define cluster centers for geographic layout (regions on map)
+  const clusters = kMeansClustering(itemsForClustering, numClusters)
+
+  // 4. Generate meaningful labels for each cluster from its members
+  function generateClusterLabel(clusterMembers: Array<{ id: string; topic: string }>): string {
+    // Get all items in this cluster
+    const items = clusterMembers.map(m => allItems.find(i => i.id === m.id)!).filter(Boolean)
+
+    // Extract keywords from titles
+    const allWords: string[] = []
+    items.forEach(item => {
+      const keywords = extractTopicsFromText(item.title, 5)
+      allWords.push(...keywords)
+    })
+
+    // Count frequency
+    const wordFreq = new Map<string, number>()
+    allWords.forEach(word => {
+      wordFreq.set(word, (wordFreq.get(word) || 0) + 1)
+    })
+
+    // Get most common word as label
+    const topWord = Array.from(wordFreq.entries())
+      .sort((a, b) => b[1] - a[1])[0]
+
+    return topWord ? topWord[0] : `Cluster ${clusterMembers.length} items`
+  }
+
+  // 5. Define cluster centers for geographic layout (regions on map)
   const clusterCenters = new Map<number, { x: number; y: number }>()
   const mapWidth = 4000
   const mapHeight = 3000
-  const padding = 400
 
-  // Arrange cluster centers in a circle pattern for visual appeal
+  // Arrange cluster centers in a grid/circle pattern for visual appeal
+  const gridSize = Math.ceil(Math.sqrt(numClusters))
   for (let i = 0; i < numClusters; i++) {
     const angle = (i / numClusters) * 2 * Math.PI
     const radius = Math.min(mapWidth, mapHeight) * 0.35
@@ -445,57 +419,88 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     })
   }
 
-  // 5. Create cities from topics
-  const topicToCluster = new Map<string, number>()
-  clusters.forEach((members, clusterId) => {
-    members.forEach(member => {
-      topicToCluster.set(member.topic, clusterId)
-    })
-  })
-
+  // 6. Create cities from clusters (each cluster becomes one city)
   const cities: City[] = []
-  const cityIdMap = new Map<string, string>()
   let cityIndex = 0
 
-  topicMap.forEach((data, topicName) => {
-    if (data.items.length === 0) return
+  clusters.forEach((members, clusterId) => {
+    if (members.length === 0) return
 
     const cityId = `city-${cityIndex++}`
-    cityIdMap.set(topicName, cityId)
+    const items = members.map(m => allItems.find(i => i.id === m.id)!).filter(Boolean)
+
+    // Generate semantic label from cluster members
+    const cityName = generateClusterLabel(members)
+
+    // Get timestamps
+    const timestamps = items.map(i => new Date(i.timestamp).getTime())
+    const firstSeen = new Date(Math.min(...timestamps)).toISOString()
+    const lastSeen = new Date(Math.max(...timestamps)).toISOString()
 
     cities.push({
       id: cityId,
-      name: topicName,
+      name: cityName,
       position: { x: 0, y: 0 }, // Will be set by force-directed layout
-      population: data.items.length,
-      size: getSizeFromPopulation(data.items.length),
-      itemIds: data.items.map(item => item.id),
-      founded: data.firstSeen,
-      lastActive: data.lastSeen,
-      cluster: topicToCluster.get(topicName) ?? 0
+      population: members.length,
+      size: getSizeFromPopulation(members.length),
+      itemIds: members.map(m => m.id),
+      founded: firstSeen,
+      lastActive: lastSeen,
+      cluster: clusterId
     })
   })
 
-  console.log('[map-generation] Created cities:', cities.length)
+  console.log('[map-generation] Created cities from clusters:', cities.length)
 
-  // 6. Create roads based on shared items (only if strength >= 3)
+  // 7. Create roads based on semantic similarity between cluster centroids
   const roads: Road[] = []
+
+  // Calculate cluster centroids (average embedding)
+  const clusterCentroids = new Map<number, number[]>()
+  clusters.forEach((members, clusterId) => {
+    if (members.length === 0) return
+
+    const items = members.map(m => allItems.find(i => i.id === m.id)!).filter(Boolean)
+    const embeddings = items.map(i => i.embedding)
+
+    // Average all embeddings in cluster
+    const centroid = new Array(embeddings[0].length).fill(0)
+    embeddings.forEach(emb => {
+      emb.forEach((val, idx) => {
+        centroid[idx] += val
+      })
+    })
+    centroid.forEach((val, idx) => {
+      centroid[idx] = val / embeddings.length
+    })
+
+    clusterCentroids.set(clusterId, centroid)
+  })
+
+  // Create roads between semantically similar cities
   for (let i = 0; i < cities.length; i++) {
     for (let j = i + 1; j < cities.length; j++) {
       const cityA = cities[i]
       const cityB = cities[j]
 
-      const shared = cityA.itemIds.filter(id => cityB.itemIds.includes(id))
+      const centroidA = clusterCentroids.get(cityA.cluster)
+      const centroidB = clusterCentroids.get(cityB.cluster)
 
-      // Only create road if significant connection (3+ shared items)
-      if (shared.length >= 3) {
+      if (!centroidA || !centroidB) continue
+
+      // Calculate semantic similarity between clusters
+      const similarity = cosineSimilarity(centroidA, centroidB)
+
+      // Only create road if similarity > 0.6 (semantically related)
+      if (similarity > 0.6) {
+        const strength = Math.round(similarity * 15) // Scale to 0-15 range
         roads.push({
           id: `road-${i}-${j}`,
           fromCityId: cityA.id,
           toCityId: cityB.id,
-          strength: shared.length,
-          type: getRoadTypeFromStrength(shared.length),
-          connectionIds: shared,
+          strength,
+          type: getRoadTypeFromStrength(strength),
+          connectionIds: [], // No shared items since each cluster is independent
           built: new Date().toISOString(),
           lastTraveled: new Date().toISOString()
         })
@@ -503,9 +508,9 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     }
   }
 
-  console.log('[map-generation] Created roads (≥3 connections):', roads.length)
+  console.log('[map-generation] Created roads (similarity > 0.6):', roads.length)
 
-  // 7. Apply force-directed layout
+  // 8. Apply force-directed layout
   const cityLayoutData = cities.map(c => ({
     id: c.id,
     topic: c.name,
@@ -529,23 +534,25 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     }
   })
 
-  // 8. Create regions metadata
+  // 9. Create regions metadata (one region per cluster/city in this design)
   const regions: Region[] = []
   clusters.forEach((members, clusterId) => {
     if (members.length === 0) return
 
     const center = clusterCenters.get(clusterId)!
-    const citiesInRegion = cities.filter(c => c.cluster === clusterId)
+    const city = cities.find(c => c.cluster === clusterId)
 
-    // Name region based on most common topic
-    const regionName = members.length > 0 ? `${members[0].topic} Region` : `Region ${clusterId + 1}`
+    if (!city) return
+
+    // Use city name as region name
+    const regionName = `${city.name} Region`
 
     regions.push({
       id: `region-${clusterId}`,
       name: regionName,
       center,
       radius: 600,
-      cityIds: citiesInRegion.map(c => c.id),
+      cityIds: [city.id],
       color: getRegionColor(clusterId)
     })
   })
