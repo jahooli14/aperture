@@ -237,12 +237,13 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
   console.log('[map-generation] 🗺️ Generating semantic knowledge map for user:', userId)
 
   // 1. Fetch all user's data with embeddings
+  // NOTE: memories table doesn't have user_id column - it's a single-user app
   const [
     { data: memories },
     { data: projects },
     { data: articles }
   ] = await Promise.all([
-    supabase.from('memories').select('*').eq('user_id', userId).not('embedding', 'is', null),
+    supabase.from('memories').select('*').not('embedding', 'is', null).limit(1000),
     supabase.from('projects').select('*').eq('user_id', userId),
     supabase.from('reading_queue').select('*').eq('user_id', userId).not('embedding', 'is', null)
   ])
