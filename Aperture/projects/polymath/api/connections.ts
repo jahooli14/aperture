@@ -976,6 +976,8 @@ async function handleGetSuggestions(
   const { target_type, limit = '10' } = req.query
 
   try {
+    console.log('[handleGetSuggestions] Fetching suggestions for:', { itemType, itemId, target_type, limit })
+
     // Query connection_suggestions table
     let query = supabase
       .from('connection_suggestions')
@@ -995,7 +997,11 @@ async function handleGetSuggestions(
 
     if (error) {
       console.error('[handleGetSuggestions] Query error:', error)
-      return res.status(500).json({ error: 'Failed to fetch suggestions' })
+      return res.status(500).json({
+        error: 'Failed to fetch suggestions',
+        details: error.message,
+        code: error.code
+      })
     }
 
     // Fetch the actual items for each suggestion
@@ -1016,8 +1022,11 @@ async function handleGetSuggestions(
 
     return res.status(200).json({ suggestions: validSuggestions })
   } catch (error) {
-    console.error('[handleGetSuggestions] Error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    console.error('[handleGetSuggestions] Unexpected error:', error)
+    return res.status(500).json({
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 
