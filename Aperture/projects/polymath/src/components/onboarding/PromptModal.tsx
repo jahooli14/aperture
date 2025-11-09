@@ -113,33 +113,31 @@ export function PromptModal({
           <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
         )}
 
-        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
-          <div>
-            {bullets.map((bullet, index) => (
-              <div key={index} className="flex gap-2 items-start" style={{ marginBottom: index < bullets.length - 1 ? '16px' : '0' }}>
-                <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
-                <Textarea
-                  value={bullet}
-                  onChange={(e) => handleBulletChange(index, e.target.value)}
-                  placeholder={`Bullet ${index + 1}`}
-                  className="flex-1 min-h-[80px]"
+        <div className="space-y-4">
+          {bullets.map((bullet, index) => (
+            <div key={index} className="p-4 rounded-lg flex gap-2 items-start" style={{ backgroundColor: 'var(--premium-bg-2)' }}>
+              <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
+              <Textarea
+                value={bullet}
+                onChange={(e) => handleBulletChange(index, e.target.value)}
+                placeholder={`Bullet ${index + 1}`}
+                className="flex-1 min-h-[80px]"
+                disabled={submitting}
+              />
+              {bullets.length > 3 && (
+                <button
+                  onClick={() => handleRemoveBullet(index)}
+                  className="p-2 rounded-full transition-colors mt-2"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   disabled={submitting}
-                />
-                {bullets.length > 3 && (
-                  <button
-                    onClick={() => handleRemoveBullet(index)}
-                    className="p-2 rounded-full transition-colors mt-2"
-                    style={{ color: 'var(--premium-text-tertiary)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    disabled={submitting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
         </div>
 
         <div className="mt-6">
