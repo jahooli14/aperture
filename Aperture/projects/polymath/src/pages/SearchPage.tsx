@@ -221,18 +221,22 @@ export function SearchPage() {
         {!loading && results && (
           <>
             {/* Results Summary */}
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                 {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
               </h2>
-              <div className="flex gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                 <span>{results.breakdown.memories} memories</span>
                 <span>•</span>
                 <span>{results.breakdown.projects} projects</span>
                 <span>•</span>
                 <span>{results.breakdown.articles} articles</span>
-                <span>•</span>
-                <span>{results.breakdown.suggestions} suggestions</span>
+                {results.breakdown.suggestions > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>{results.breakdown.suggestions} suggestions</span>
+                  </>
+                )}
               </div>
             </div>
 

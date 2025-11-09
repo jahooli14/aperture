@@ -391,13 +391,22 @@ export const ProjectCard = React.memo(function ProjectCard({
             }}
           >
 
-      {/* Compact View - Always shown now for cleaner UX */}
+      {/* Compact View - Simplified to match homepage design */}
         <CardContent className="relative z-10 p-4">
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h3 className="font-bold text-base flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+          {/* Title Row with Actions */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h3 className="font-bold text-lg flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
               {project.title}
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {project.is_priority && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  color: 'var(--premium-blue)'
+                }}>
+                  ● Priority
+                </span>
+              )}
               <PinButton
                 type="project"
                 id={project.id}
@@ -416,7 +425,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                 }
               />
               {showActions && onDelete && (
-                <div className="relative flex-shrink-0">
+                <div className="relative">
                 <Button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -434,7 +443,6 @@ export const ProjectCard = React.memo(function ProjectCard({
                 {/* Dropdown Menu */}
                 {showDropdown && (
                   <>
-                    {/* Backdrop to close dropdown */}
                     <div
                       className="fixed inset-0 z-40"
                       onClick={(e) => {
@@ -443,7 +451,6 @@ export const ProjectCard = React.memo(function ProjectCard({
                       }}
                     />
 
-                    {/* Menu */}
                     <div
                       className="absolute right-0 top-full mt-1 z-50 rounded-lg overflow-hidden"
                       style={{
@@ -485,108 +492,55 @@ export const ProjectCard = React.memo(function ProjectCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="px-2 py-0.5 rounded text-xs font-medium" style={{
-              backgroundColor: statusConfig[project.status]?.style?.backgroundColor || 'rgba(156, 163, 175, 0.2)',
-              color: statusConfig[project.status]?.style?.color || '#9ca3af'
-            }}>
-              {statusConfig[project.status]?.label || project.status}
-            </div>
-
-            {/* Quick Complete Next Task Button */}
-            {(() => {
-              const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-              const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
-              return nextTask && (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation()
-                    try {
-                      const updatedTasks = tasks.map(t =>
-                        t.id === nextTask.id ? { ...t, done: true } : t
-                      ) as any
-                      await updateProject(project.id, {
-                        metadata: { ...project.metadata, tasks: updatedTasks } as any
-                      })
-                      addToast({
-                        title: '✓ Task complete!',
-                        description: nextTask.text,
-                        variant: 'success',
-                      })
-                      haptic.success()
-                    } catch (error) {
-                      addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
-                    }
-                  }}
-                  className="px-2 py-0.5 rounded text-xs font-medium hover:bg-white/10 transition-all"
-                  style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                    color: 'var(--premium-blue)'
-                  }}
-                  title={`Complete: ${nextTask.text}`}
-                >
-                  ✓ Next
-                </button>
-              )
-            })()}
-
-            <span className="text-xs font-bold ml-auto" style={{ color: 'var(--premium-blue)' }}>
-              {typeof project.metadata?.progress === 'number' ? `${project.metadata.progress}%` : '0%'}
-            </span>
-          </div>
-
-          {/* Next Step - Prominent Display */}
+          {/* Next Task - Simplified */}
           {(() => {
             const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
             const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
-            return nextTask && (
-              <div
-                className="mt-3 p-3 rounded-lg"
-                style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)'
-                }}
+            const completedCount = tasks.filter(t => t.done).length
+            const totalCount = tasks.length
+
+            return nextTask ? (
+              <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{
+                background: 'var(--premium-bg-3)'
+              }}
+              onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2.5 flex-1">
                   <button
                     onClick={async (e) => {
+                      e.preventDefault()
                       e.stopPropagation()
+                      const updatedTasks = tasks.map(t =>
+                        t.id === nextTask.id ? { ...t, done: true } : t
+                      ) as any
                       try {
-                        const updatedTasks = tasks.map(t =>
-                          t.id === nextTask.id ? { ...t, done: true } : t
-                        ) as any
                         await updateProject(project.id, {
                           metadata: { ...project.metadata, tasks: updatedTasks } as any
                         })
-                        addToast({
-                          title: '✓ Task complete!',
-                          description: nextTask.text,
-                          variant: 'success',
-                        })
+                        addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
                         haptic.success()
                       } catch (error) {
-                        addToast({ title: 'Error', description: 'Failed to update task', variant: 'destructive' })
+                        console.error('Failed to complete task:', error)
+                        addToast({ title: 'Failed to complete task', variant: 'destructive' })
                       }
                     }}
-                    className="mt-0.5 flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                    className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
                     style={{
                       color: 'rgba(59, 130, 246, 0.9)',
-                      border: '2px solid rgba(255, 255, 255, 0.3)'
+                      border: '1.5px solid rgba(255, 255, 255, 0.3)'
                     }}
                     title="Complete this task"
-                  >
-                    <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: 'var(--premium-blue)' }}>
-                      Next Step
-                    </div>
-                    <p className="text-sm leading-snug" style={{ color: 'var(--premium-text-primary)' }}>
-                      {nextTask.text}
-                    </p>
-                  </div>
+                  />
+
+                  <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                    {nextTask.text}
+                  </p>
                 </div>
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--premium-blue)' }}>
+                  {completedCount}/{totalCount}
+                </span>
               </div>
-            )
+            ) : null
           })()}
         </CardContent>
       {/* Removed expanded view - navigate to detail page instead */}

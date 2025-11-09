@@ -13,7 +13,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform, useMotionValue, animate } from 'framer-motion'
-import { Layers, FolderKanban, FileText, Sparkles, GitBranch, ZoomIn, ZoomOut, Search, X } from 'lucide-react'
+import { Layers, Brain, FileText, Sparkles, GitBranch, ZoomIn, ZoomOut, Search, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { haptic } from '../utils/haptics'
 
@@ -413,8 +413,8 @@ export function ScrollTimelinePage() {
 
   const getIcon = (type: TimelineEvent['type']) => {
     switch (type) {
-      case 'project': return FolderKanban
-      case 'thought': return Layers
+      case 'project': return Layers
+      case 'thought': return Brain
       case 'article': return FileText
     }
   }
@@ -662,8 +662,8 @@ interface TimelineEventCardProps {
 function TimelineEventCard({ event, eventIndex, sectionIndex, totalSections, scrollProgress, onViewThread, onClick }: TimelineEventCardProps) {
   const getIconForType = (type: TimelineEvent['type']) => {
     switch (type) {
-      case 'project': return FolderKanban
-      case 'thought': return Layers
+      case 'project': return Layers
+      case 'thought': return Brain
       case 'article': return FileText
     }
   }

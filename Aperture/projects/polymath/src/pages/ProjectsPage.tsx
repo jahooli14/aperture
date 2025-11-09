@@ -251,7 +251,6 @@ export function ProjectsPage() {
                 <p className="max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
                   Build a project from a suggestion or create one manually to get started on your creative journey
                 </p>
-                <CreateProjectDialog />
               </div>
             </CardContent>
           </Card>

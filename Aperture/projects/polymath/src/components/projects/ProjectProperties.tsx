@@ -3,92 +3,27 @@
  * Displays key project metadata in a grid layout with inline editing
  */
 
-import { useState } from 'react'
 import { Card, CardContent } from '../ui/card'
 import type { Project } from '../../types'
 
 interface ProjectPropertiesProps {
   project: Project
   onUpdate: (updates: Partial<Project>) => void
-  onStatusChange: (status: Project['status']) => void
 }
 
-export function ProjectProperties({ project, onUpdate, onStatusChange }: ProjectPropertiesProps) {
-  const [showStatusPicker, setShowStatusPicker] = useState(false)
-
-  const statusConfig: Record<Project['status'], { bg: string; text: string; border: string; label: string; emoji: string }> = {
-    upcoming: { bg: 'rgba(251, 191, 36, 0.15)', text: '#fbbf24', border: 'rgba(251, 191, 36, 0.3)', label: 'Next', emoji: '📅' },
-    active: { bg: 'rgba(16, 185, 129, 0.15)', text: '#10b981', border: 'rgba(16, 185, 129, 0.3)', label: 'Active', emoji: '🚀' },
-    dormant: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'Dormant', emoji: '💤' },
-    completed: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)', label: 'Done', emoji: '✅' },
-    'on-hold': { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'On Hold', emoji: '⏸️' },
-    maintaining: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', border: 'rgba(59, 130, 246, 0.3)', label: 'Maintaining', emoji: '🔧' },
-    archived: { bg: 'rgba(156, 163, 175, 0.15)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)', label: 'Archived', emoji: '📦' },
-    abandoned: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)', label: 'Abandoned', emoji: '⚠️' },
-  }
-
-  // Only show the 4 main status options that match the navbar chips
-  const availableStatuses: Project['status'][] = ['upcoming', 'active', 'dormant', 'completed']
-
+export function ProjectProperties({ project, onUpdate }: ProjectPropertiesProps) {
   const energyConfig: Record<string, { label: string; emoji: string; color: string }> = {
     low: { label: 'Low Energy', emoji: '🔋', color: '#10b981' },
     moderate: { label: 'Moderate', emoji: '⚡', color: '#fbbf24' },
     high: { label: 'High Energy', emoji: '🔥', color: '#ef4444' },
   }
 
-  const currentStatus = statusConfig[project.status]
   const currentEnergy = project.energy_level ? energyConfig[project.energy_level] : null
 
   return (
     <Card className="premium-card">
       <CardContent className="p-3">
         <div className="flex flex-wrap items-start gap-3">
-          {/* Status */}
-          <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setShowStatusPicker(!showStatusPicker)}
-              className="px-3 py-1.5 rounded-lg font-medium border transition-all hover:shadow-sm touch-manipulation flex items-center gap-1.5"
-              style={{
-                backgroundColor: currentStatus.bg,
-                color: currentStatus.text,
-                borderColor: currentStatus.border
-              }}
-            >
-              <span className="text-sm">{currentStatus.emoji}</span>
-              <span className="text-xs">{currentStatus.label}</span>
-            </button>
-
-            {showStatusPicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowStatusPicker(false)}
-                />
-                <div className="absolute top-full left-0 mt-2 premium-card rounded-lg shadow-lg py-1 z-20 max-h-64 overflow-y-auto min-w-[160px]">
-                  {availableStatuses.map((status) => {
-                    const config = statusConfig[status]
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => {
-                          onStatusChange(status)
-                          setShowStatusPicker(false)
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-white/5 transition-colors flex items-center gap-2"
-                        style={{
-                          backgroundColor: project.status === status ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                          color: 'var(--premium-text-primary)'
-                        }}
-                      >
-                        <span>{config.emoji}</span>
-                        <span>{config.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </div>
 
           {/* Energy Level */}
           {currentEnergy && (

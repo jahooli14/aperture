@@ -28,6 +28,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState('')
 
   const sortedTasks = [...tasks].sort((a, b) => a.order - b.order)
   const incompleteTasks = sortedTasks.filter(t => !t.done)
@@ -97,6 +99,27 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
     setDraggedTaskId(null)
   }
 
+  const handleEditStart = (taskId: string, text: string) => {
+    setEditingTaskId(taskId)
+    setEditingText(text)
+  }
+
+  const handleEditSave = (taskId: string) => {
+    if (!editingText.trim()) return
+
+    const updatedTasks = tasks.map(task =>
+      task.id === taskId ? { ...task, text: editingText.trim() } : task
+    )
+    onUpdate(updatedTasks)
+    setEditingTaskId(null)
+    setEditingText('')
+  }
+
+  const handleEditCancel = () => {
+    setEditingTaskId(null)
+    setEditingText('')
+  }
+
   const completedCount = tasks.filter(t => t.done).length
   const totalCount = tasks.length
 
@@ -152,9 +175,29 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               </button>
 
               {/* Task Text */}
-              <span className="flex-1 text-sm" style={{ color: 'var(--premium-text-primary)' }}>
-                {task.text}
-              </span>
+              {editingTaskId === task.id ? (
+                <input
+                  type="text"
+                  value={editingText}
+                  onChange={(e) => setEditingText(e.target.value)}
+                  onFocus={handleInputFocus}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleEditSave(task.id)
+                    if (e.key === 'Escape') handleEditCancel()
+                  }}
+                  className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
+                  style={{ color: 'var(--premium-text-primary)' }}
+                  autoFocus
+                />
+              ) : (
+                <span
+                  className="flex-1 text-sm cursor-text hover:opacity-70 transition-opacity"
+                  onClick={() => handleEditStart(task.id, task.text)}
+                  style={{ color: 'var(--premium-text-primary)' }}
+                >
+                  {task.text}
+                </span>
+              )}
 
               {/* Delete Button */}
               <button
@@ -209,12 +252,29 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                       </button>
 
                       {/* Task Text */}
-                      <span
-                        className="flex-1 text-sm line-through"
-                        style={{ color: 'var(--premium-text-tertiary)' }}
-                      >
-                        {task.text}
-                      </span>
+                      {editingTaskId === task.id ? (
+                        <input
+                          type="text"
+                          value={editingText}
+                          onChange={(e) => setEditingText(e.target.value)}
+                          onFocus={handleInputFocus}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(task.id)
+                            if (e.key === 'Escape') handleEditCancel()
+                          }}
+                          className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
+                          style={{ color: 'var(--premium-text-primary)' }}
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
+                          onClick={() => handleEditStart(task.id, task.text)}
+                          style={{ color: 'var(--premium-text-tertiary)' }}
+                        >
+                          {task.text}
+                        </span>
+                      )}
 
                       {/* Delete Button */}
                       <button
