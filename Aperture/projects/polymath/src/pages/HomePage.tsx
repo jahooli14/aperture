@@ -599,7 +599,9 @@ export function HomePage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-4">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Add something new</h2>
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Add something <span style={{ color: 'rgba(100, 180, 255, 1)' }}>new</span>
+              </h2>
             </div>
 
             <div className="flex items-center gap-3">

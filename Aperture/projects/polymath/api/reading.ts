@@ -47,8 +47,9 @@ async function fetchArticleWithJina(url: string) {
 
     const response = await fetch(jinaUrl, {
       headers: {
-        'Accept': 'text/plain',
-        'X-Return-Format': 'markdown'
+        'Accept': 'application/json',
+        'X-Return-Format': 'html',
+        'X-With-Generated-Alt': 'true'
       }
     })
 
@@ -58,16 +59,19 @@ async function fetchArticleWithJina(url: string) {
       throw new Error(`Jina AI returned ${response.status}: ${errorText.substring(0, 200)}`)
     }
 
-    const rawText = await response.text()
+    const data = await response.json()
 
-    if (!rawText || rawText.trim().length === 0) {
-      throw new Error('Jina AI returned empty content')
+    if (!data || !data.data) {
+      throw new Error('Jina AI returned invalid response structure')
     }
 
-    // Extract title from first H1 in markdown (# Title)
-    const lines = rawText.split('\n')
-    let title = 'Untitled'
-    let contentStartIndex = 0
+    // Extract content from JSON response
+    const content = data.data.content || ''
+    const jinaTitle = data.data.title || ''
+
+    if (!content || content.trim().length === 0) {
+      throw new Error('Jina AI returned empty content')
+    }
 
     // Helper function to check if a string is URL-like
     const isUrlLike = (str: string): boolean => {
@@ -82,30 +86,20 @@ async function fetchArticleWithJina(url: string) {
       return false
     }
 
-    // Look for first H1 heading (# Title) in markdown
-    for (let i = 0; i < Math.min(10, lines.length); i++) {
-      const line = lines[i].trim()
-
-      // Check for H1 markdown syntax
-      if (line.startsWith('# ')) {
-        const h1Title = line.substring(2).trim()
-        if (h1Title.length > 0 && h1Title.length < 200 && !isUrlLike(h1Title)) {
-          title = h1Title
-          contentStartIndex = i + 1
-          console.log('[Jina AI] Found H1 title:', title)
-          break
-        }
-      }
-
-      // Fallback: if no H1 found yet, look for any reasonable title line
-      if (title === 'Untitled' && line.length > 0 && line.length < 200 && !isUrlLike(line) && !line.startsWith('#')) {
-        title = line
-        contentStartIndex = i + 1
+    // Extract H1 from HTML content using regex
+    let title = jinaTitle || 'Untitled'
+    const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i)
+    if (h1Match && h1Match[1]) {
+      // Strip HTML tags from the H1 content
+      const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim()
+      if (h1Text.length > 0 && h1Text.length < 200 && !isUrlLike(h1Text)) {
+        title = h1Text
+        console.log('[Jina AI] Found H1 title:', title)
       }
     }
 
-    // If title is still URL-like or "Untitled", try to extract from URL
-    if (title === 'Untitled' || isUrlLike(title)) {
+    // If still using generic title, try to extract from URL
+    if (title === 'Untitled' || isUrlLike(title) || title.toLowerCase().includes('homepage')) {
       try {
         const urlObj = new URL(url)
         const domain = urlObj.hostname.replace('www.', '')
@@ -127,42 +121,33 @@ async function fetchArticleWithJina(url: string) {
           title = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)
         }
       } catch (e) {
-        // Keep "Untitled" if URL parsing fails
-        title = 'Untitled Article'
+        // Keep existing title if URL parsing fails
+        if (title === 'Untitled') {
+          title = 'Untitled Article'
+        }
       }
     }
 
-    // Get content after title
-    const contentLines = lines.slice(contentStartIndex)
-    const rawContent = contentLines.join('\n')
+    // Extract description/excerpt from metadata
+    const description = data.data.description || ''
 
-    // Clean the content aggressively
-    const cleanedContent = cleanArticleContent(rawContent)
+    // Create excerpt from description or first 200 chars of text content
+    const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    let excerpt = description || textContent.substring(0, 200) || ''
 
-    // Check if the content is mostly just the URL - this means extraction failed
-    const contentLooksLikeUrl = isUrlLike(cleanedContent) || cleanedContent.length < 50
-
-    // Convert to simple HTML with paragraphs
-    const htmlContent = cleanedContent
-      .split('\n\n')
-      .filter(para => para.trim().length > 0 && !isUrlLike(para.trim()))
-      .map(para => `<p>${para.trim()}</p>`)
-      .join('\n')
-
-    // Create a better excerpt
-    let excerpt = cleanedContent.substring(0, 200) || ''
-    if (contentLooksLikeUrl || !htmlContent || htmlContent.length < 100) {
+    // Check if content extraction was successful
+    if (!content || content.length < 100) {
       excerpt = `Content extraction from ${extractDomain(url)} may be incomplete. Click to view the original article.`
     }
 
     return {
       title: title || 'Untitled',
-      content: htmlContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
+      content: content || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
-      author: null,
-      publishedDate: null,
-      thumbnailUrl: null,
-      faviconUrl: null,
+      author: data.data.author || null,
+      publishedDate: data.data.publishedTime || null,
+      thumbnailUrl: data.data.image || null,
+      faviconUrl: data.data.favicon || null,
       url
     }
   } catch (error) {

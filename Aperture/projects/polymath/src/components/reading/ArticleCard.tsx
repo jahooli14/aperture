@@ -414,20 +414,37 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         )}
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-            {article.title || 'Untitled'}
-          </h3>
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-muted)' }}>
-            {article.source && (
-              <span className="font-medium text-sm">{article.source}</span>
-            )}
-            {article.author && (
-              <>
-                <span>•</span>
-                <span>{article.author}</span>
-              </>
-            )}
-          </div>
+          {/* Check if article is still loading (URL as title indicates extraction in progress) */}
+          {article.title?.startsWith('http') ? (
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
+                <h3 className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Extracting article...
+                </h3>
+              </div>
+              <div className="text-xs line-clamp-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                {article.url}
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                {article.title || 'Untitled'}
+              </h3>
+              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-muted)' }}>
+                {article.source && (
+                  <span className="font-medium text-sm">{article.source}</span>
+                )}
+                {article.author && (
+                  <>
+                    <span>•</span>
+                    <span>{article.author}</span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Status Badges */}
