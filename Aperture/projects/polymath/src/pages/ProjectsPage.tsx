@@ -112,7 +112,7 @@ export function ProjectsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 flex-1 flex-wrap">
+          <div className="flex gap-2 flex-1 flex-nowrap overflow-x-auto scrollbar-hide">
             {[
               { key: 'all', label: 'All' },
               { key: 'upcoming', label: 'Next' },
