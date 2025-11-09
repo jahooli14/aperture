@@ -99,9 +99,11 @@ export async function generateDoorSuggestions(
     { data: projects },
     { data: articles }
   ] = await Promise.all([
-    supabase.from('memories').select('*').eq('user_id', userId),
-    supabase.from('projects').select('*').eq('user_id', userId),
-    supabase.from('reading_queue').select('*').eq('user_id', userId)
+    // NOTE: memories table doesn't have user_id column (single-user app)
+    // Only suggest items WITH embeddings (otherwise they won't cluster properly)
+    supabase.from('memories').select('*').not('embedding', 'is', null).limit(1000),
+    supabase.from('projects').select('*').eq('user_id', userId).not('embedding', 'is', null),
+    supabase.from('reading_queue').select('*').eq('user_id', userId).not('embedding', 'is', null)
   ])
 
   const unassignedItems = [

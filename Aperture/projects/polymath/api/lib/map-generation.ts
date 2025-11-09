@@ -610,12 +610,53 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
 
   console.log('[map-generation] Created regions:', regions.length)
 
+  // 10. Calculate optimal viewport to center on all cities
+  let viewport = { x: 0, y: 0, scale: 1 }
+
+  if (cities.length > 0) {
+    // Find bounding box of all cities
+    const xs = cities.map(c => c.position.x)
+    const ys = cities.map(c => c.position.y)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const minY = Math.min(...ys)
+    const maxY = Math.max(...ys)
+
+    // Center of all cities
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+
+    // Calculate scale to fit all cities (assuming 1920x1080 viewport)
+    const viewportWidth = 1920
+    const viewportHeight = 1080
+    const contentWidth = maxX - minX + 800 // Add padding
+    const contentHeight = maxY - minY + 800
+
+    const scaleX = viewportWidth / contentWidth
+    const scaleY = viewportHeight / contentHeight
+    const scale = Math.min(Math.max(scaleX, scaleY, 0.3), 1.5) // Clamp between 0.3 and 1.5
+
+    // Set viewport to center on cities
+    viewport = {
+      x: viewportWidth / 2 - centerX * scale,
+      y: viewportHeight / 2 - centerY * scale,
+      scale
+    }
+
+    console.log('[map-generation] Calculated viewport:', {
+      centerX,
+      centerY,
+      scale,
+      citiesCount: cities.length
+    })
+  }
+
   return {
     cities,
     roads,
     doors: [],
     regions,
-    viewport: { x: 0, y: 0, scale: 1 },
+    viewport,
     version: 1
   }
 }
