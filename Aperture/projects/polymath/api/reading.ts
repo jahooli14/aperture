@@ -10,20 +10,56 @@ import { getUserId } from './lib/auth.js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
+import { Readability } from '@mozilla/readability'
+import { JSDOM } from 'jsdom'
 
 
 const rssParser = new Parser()
 
 /**
- * Extract article content using Jina AI Reader API
- * Jina AI provides clean, reader-friendly content extraction
+ * Extract article content using multi-method fallback
+ * Tries Jina AI first, then falls back to Mozilla Readability
  */
 async function fetchArticle(url: string) {
+  let lastError: Error | null = null
+
+  // Try Jina AI first (fast and clean)
   try {
-    return await fetchArticleWithJina(url)
+    console.log('[fetchArticle] Trying Jina AI for:', url)
+    const result = await fetchArticleWithJina(url)
+
+    // Check if Jina AI returned meaningful content
+    if (result.content && result.content.length > 100 && !result.title.includes('http')) {
+      console.log('[fetchArticle] Jina AI succeeded')
+      return result
+    }
+    console.log('[fetchArticle] Jina AI returned insufficient content, trying Readability')
   } catch (error) {
-    throw new Error('Failed to extract article content')
+    console.log('[fetchArticle] Jina AI failed:', error instanceof Error ? error.message : 'Unknown error')
+    lastError = error instanceof Error ? error : new Error('Jina AI failed')
   }
+
+  // Fallback to Mozilla Readability (better for complex sites)
+  try {
+    console.log('[fetchArticle] Trying Readability for:', url)
+    const result = await fetchArticleWithReadability(url)
+
+    // Validate Readability result
+    if (!result.content || result.content.length < 50) {
+      console.log('[fetchArticle] Readability returned insufficient content:', result.content?.length || 0, 'chars')
+      throw new Error('Readability returned insufficient content')
+    }
+
+    console.log('[fetchArticle] Readability succeeded with', result.content.length, 'chars')
+    return result
+  } catch (error) {
+    console.log('[fetchArticle] Readability failed:', error instanceof Error ? error.message : 'Unknown error')
+    lastError = error instanceof Error ? error : new Error('Readability failed')
+  }
+
+  // Both methods failed
+  console.error('[fetchArticle] All extraction methods failed for:', url)
+  throw new Error(`Failed to extract article: ${lastError?.message || 'All extraction methods failed'}`)
 }
 
 /**
@@ -59,13 +95,54 @@ async function fetchArticleWithJina(url: string) {
     let title = 'Untitled'
     let contentStartIndex = 0
 
+    // Helper function to check if a string is URL-like
+    const isUrlLike = (str: string): boolean => {
+      // Check for URL schemes
+      if (/^https?:\/\//i.test(str)) return true
+      // Check for URL-encoded characters
+      if (/%[0-9A-F]{2}/i.test(str)) return true
+      // Check for common URL patterns (domain with path/query)
+      if (/^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(str)) return true
+      // Check for URL fragments and query strings
+      if (/[?&#]/.test(str) && str.length > 50) return true
+      return false
+    }
+
     // Look for title in first few lines
     for (let i = 0; i < Math.min(5, lines.length); i++) {
       const line = lines[i].trim()
-      if (line.length > 0 && line.length < 200 && !line.match(/^https?:\/\//)) {
+      if (line.length > 0 && line.length < 200 && !isUrlLike(line)) {
         title = line
         contentStartIndex = i + 1
         break
+      }
+    }
+
+    // If title is still URL-like or "Untitled", try to extract from URL
+    if (title === 'Untitled' || isUrlLike(title)) {
+      try {
+        const urlObj = new URL(url)
+        const domain = urlObj.hostname.replace('www.', '')
+        // Try to get a better title from the URL path
+        const pathParts = urlObj.pathname.split('/').filter(p => p.length > 0)
+        const lastPart = pathParts[pathParts.length - 1]
+        if (lastPart && lastPart.length > 3 && lastPart.length < 100) {
+          // Clean up the path part (remove extensions, decode URL, replace hyphens/underscores)
+          const cleanPart = lastPart
+            .replace(/\.(html?|php|aspx?|jsp)$/i, '')
+            .replace(/%20/g, ' ')
+            .replace(/[-_]/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ')
+          title = cleanPart
+        } else {
+          // Fall back to domain name
+          title = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)
+        }
+      } catch (e) {
+        // Keep "Untitled" if URL parsing fails
+        title = 'Untitled Article'
       }
     }
 
@@ -76,17 +153,26 @@ async function fetchArticleWithJina(url: string) {
     // Clean the content aggressively
     const cleanedContent = cleanArticleContent(rawContent)
 
+    // Check if the content is mostly just the URL - this means extraction failed
+    const contentLooksLikeUrl = isUrlLike(cleanedContent) || cleanedContent.length < 50
+
     // Convert to simple HTML with paragraphs
     const htmlContent = cleanedContent
       .split('\n\n')
-      .filter(para => para.trim().length > 0)
+      .filter(para => para.trim().length > 0 && !isUrlLike(para.trim()))
       .map(para => `<p>${para.trim()}</p>`)
       .join('\n')
 
+    // Create a better excerpt
+    let excerpt = cleanedContent.substring(0, 200) || ''
+    if (contentLooksLikeUrl || !htmlContent || htmlContent.length < 100) {
+      excerpt = `Content extraction from ${extractDomain(url)} may be incomplete. Click to view the original article.`
+    }
+
     return {
       title: title || 'Untitled',
-      content: htmlContent,
-      excerpt: cleanedContent.substring(0, 200) || '',
+      content: htmlContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
+      excerpt,
       author: null,
       publishedDate: null,
       thumbnailUrl: null,
@@ -236,6 +322,246 @@ function cleanArticleContent(content: string): string {
   })
 
   return lines.join('\n').trim()
+}
+
+/**
+ * Clean Readability-extracted content to remove common trailing sections
+ * Conservative approach: only remove if we have substantial content
+ */
+function cleanReadabilityContent(html: string): string {
+  if (!html) return ''
+
+  // More specific end patterns that are less likely to appear in actual content
+  const endPatterns = [
+    // Comments section - must be exact format
+    /^<p>View comments\s*\|\s*\d+<\/p>$/i,
+    /<h[1-6][^>]*>View comments/i,
+    // Related content sections - must be headings
+    /<h[1-6][^>]*>Elsewhere (on the|in)\s+(BBC|Sport)/i,
+    /<h[1-6][^>]*>Related Topics/i,
+    /<h[1-6][^>]*>More on this story/i,
+    /<h[1-6][^>]*>You might also like/i,
+    // BBC-specific sections
+    /<h[1-6][^>]*>Top Stories/i,
+    /^<p>BBC emails for you/i,
+    /^<p>Advertise with us/i,
+    /^<p>Get football news sent/i,
+    // Footer links
+    /<footer/i,
+    /<div[^>]*class="[^"]*footer/i,
+  ]
+
+  // Split by newlines but keep HTML structure
+  const lines = html.split('\n')
+  const cleanedLines: string[] = []
+  let foundEndMarker = false
+  let contentSoFar = ''
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Only start looking for end markers after we have substantial content (>1500 chars)
+    if (!foundEndMarker && contentSoFar.length > 1500) {
+      // Check if this line matches an end pattern
+      if (endPatterns.some(pattern => pattern.test(line))) {
+        console.log('[cleanReadabilityContent] Found end marker at char', contentSoFar.length, ':', line.substring(0, 100))
+        foundEndMarker = true
+        break
+      }
+    }
+
+    // Only keep lines before the end marker
+    if (!foundEndMarker) {
+      cleanedLines.push(line)
+      contentSoFar += line
+    }
+  }
+
+  const result = cleanedLines.join('\n').trim()
+
+  // If we found an end marker, log how much we removed
+  if (foundEndMarker) {
+    const removedChars = html.length - result.length
+    console.log('[cleanReadabilityContent] Removed', removedChars, 'chars of trailing content')
+  } else {
+    console.log('[cleanReadabilityContent] No end markers found, keeping all content')
+  }
+
+  return result
+}
+
+/**
+ * Extract article title from HTML document
+ * Tries multiple methods to find the actual article title, with BBC-specific handling
+ */
+function extractArticleTitle(doc: Document, readabilityTitle: string, url: string): string {
+  const genericTitles = ['homepage', 'home page', 'home', 'index', 'main page', 'bbc news', 'bbc sport']
+  const lowerTitle = readabilityTitle.toLowerCase()
+
+  console.log('[extractArticleTitle] Readability title:', readabilityTitle)
+
+  // BBC-specific selectors (try these first for BBC URLs)
+  if (url.includes('bbc.co.uk') || url.includes('bbc.com')) {
+    // BBC Sport articles
+    const articleHeading = doc.querySelector('[data-component="headline-block"] h1, [data-component="article-headline"] h1, .article__headline h1')
+    if (articleHeading && articleHeading.textContent && articleHeading.textContent.trim().length > 3) {
+      console.log('[extractArticleTitle] Found BBC article heading:', articleHeading.textContent.trim())
+      return articleHeading.textContent.trim()
+    }
+
+    // BBC News articles
+    const newsHeading = doc.querySelector('h1[id="main-heading"], h1.story-headline, h1.article-headline')
+    if (newsHeading && newsHeading.textContent && newsHeading.textContent.trim().length > 3) {
+      console.log('[extractArticleTitle] Found BBC news heading:', newsHeading.textContent.trim())
+      return newsHeading.textContent.trim()
+    }
+  }
+
+  // Try meta tags (Open Graph is usually most reliable)
+  const metaTitle = doc.querySelector('meta[property="og:title"]')?.getAttribute('content')
+  if (metaTitle && metaTitle.length > 3 && !genericTitles.some(g => metaTitle.toLowerCase().includes(g))) {
+    console.log('[extractArticleTitle] Using Open Graph title:', metaTitle)
+    return metaTitle
+  }
+
+  const twitterTitle = doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')
+  if (twitterTitle && twitterTitle.length > 3 && !genericTitles.some(g => twitterTitle.toLowerCase().includes(g))) {
+    console.log('[extractArticleTitle] Using Twitter title:', twitterTitle)
+    return twitterTitle
+  }
+
+  // Try Readability's title if it's good
+  if (readabilityTitle && !genericTitles.some(generic => lowerTitle.includes(generic))) {
+    console.log('[extractArticleTitle] Using Readability title:', readabilityTitle)
+    return readabilityTitle
+  }
+
+  // Try first h1 heading
+  const h1 = doc.querySelector('h1')
+  if (h1 && h1.textContent && h1.textContent.trim().length > 3) {
+    const h1Text = h1.textContent.trim()
+    if (!genericTitles.some(g => h1Text.toLowerCase().includes(g))) {
+      console.log('[extractArticleTitle] Using H1 title:', h1Text)
+      return h1Text
+    }
+  }
+
+  // Try page title and clean it
+  const titleTag = doc.querySelector('title')
+  if (titleTag && titleTag.textContent) {
+    const cleanTitle = titleTag.textContent
+      .replace(/\s*[-|–]\s*BBC.*$/i, '') // Remove "- BBC News" etc
+      .replace(/\s*[-|–]\s*Homepage.*$/i, '')
+      .trim()
+
+    if (cleanTitle.length > 3 && !genericTitles.some(g => cleanTitle.toLowerCase().includes(g))) {
+      console.log('[extractArticleTitle] Using cleaned page title:', cleanTitle)
+      return cleanTitle
+    }
+  }
+
+  // Last resort: extract from URL
+  try {
+    const urlObj = new URL(url)
+    const domain = urlObj.hostname.replace('www.', '')
+    const pathParts = urlObj.pathname.split('/').filter(p => p.length > 0)
+    const lastPart = pathParts[pathParts.length - 1]
+
+    if (lastPart && lastPart.length > 3 && lastPart.length < 100) {
+      const cleanPart = lastPart
+        .replace(/\.(html?|php|aspx?|jsp)$/i, '')
+        .replace(/%20/g, ' ')
+        .replace(/[-_]/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ')
+      console.log('[extractArticleTitle] Using URL-based title:', cleanPart)
+      return cleanPart
+    }
+
+    const fallback = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1)
+    console.log('[extractArticleTitle] Using domain fallback:', fallback)
+    return fallback
+  } catch {
+    console.log('[extractArticleTitle] All methods failed, using fallback')
+    return 'Untitled Article'
+  }
+}
+
+/**
+ * Extract article content using Mozilla Readability
+ * Works well with complex sites and JavaScript-heavy pages
+ */
+async function fetchArticleWithReadability(url: string) {
+  try {
+    // Fetch the raw HTML
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`)
+    }
+
+    const html = await response.text()
+
+    if (!html || html.trim().length === 0) {
+      throw new Error('Empty response from URL')
+    }
+
+    // Parse HTML with JSDOM
+    const dom = new JSDOM(html, { url })
+    const doc = dom.window.document
+
+    // Run Readability
+    const reader = new Readability(doc)
+    const article = reader.parse()
+
+    if (!article) {
+      throw new Error('Readability could not parse the article')
+    }
+
+    // Log original content length and preview
+    const originalContent = article.content || ''
+    console.log('[Readability] Original content length:', originalContent.length)
+    console.log('[Readability] Original content preview:', originalContent.substring(0, 300).replace(/\n/g, ' '))
+
+    // Clean up the content to remove trailing sections
+    const cleanedHTML = cleanReadabilityContent(originalContent)
+    console.log('[Readability] Cleaned content length:', cleanedHTML.length)
+
+    // Extract plain text for excerpt (strip HTML tags)
+    const plainText = cleanedHTML.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    console.log('[Readability] Plain text preview:', plainText.substring(0, 200))
+
+    // Get the best title using multiple methods
+    const bestTitle = extractArticleTitle(doc, article.title || '', url)
+    console.log('[Readability] Best title selected:', bestTitle)
+
+    // If cleaning removed too much content, use original
+    const finalContent = cleanedHTML.length > 200 ? cleanedHTML : originalContent
+    console.log('[Readability] Final content length:', finalContent.length)
+
+    if (finalContent.length < 500) {
+      console.warn('[Readability] WARNING: Final content is very short (<500 chars), extraction may have failed')
+    }
+
+    return {
+      title: bestTitle,
+      content: finalContent || `<p>${plainText}</p>`,
+      excerpt: article.excerpt || plainText.substring(0, 200),
+      author: article.byline || null,
+      publishedDate: article.publishedTime || null,
+      thumbnailUrl: null,
+      faviconUrl: null,
+      url
+    }
+  } catch (error) {
+    console.error('[fetchArticleWithReadability] Error:', error)
+    throw new Error(error instanceof Error ? error.message : 'Failed to fetch article with Readability')
+  }
 }
 
 function extractDomain(url: string): string {

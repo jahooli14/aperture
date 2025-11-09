@@ -59,7 +59,7 @@ export function ArticleConnectionsDialog({
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed inset-x-4 top-[10%] z-50 mx-auto max-w-2xl"
           >
-            <div className="premium-card border-2 shadow-2xl" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            <div className="premium-card border-2 shadow-2xl" style={{ borderColor: 'rgba(59, 130, 246, 0.3)' }}>
               {/* Close Button */}
               <button
                 onClick={onClose}
@@ -77,7 +77,7 @@ export function ArticleConnectionsDialog({
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
                     className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6"
-                    style={{ background: 'var(--premium-emerald-gradient)' }}
+                    style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(147, 197, 253, 0.8))' }}
                   >
                     <Check className="h-8 w-8 text-white" />
                   </motion.div>

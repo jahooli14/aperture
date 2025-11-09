@@ -152,49 +152,73 @@ export function ArticleCompletionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Capture Your Thoughts</DialogTitle>
-          <DialogDescription className="text-base">
+        <DialogHeader className="mb-2">
+          <DialogTitle className="text-2xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+            Capture Your Thoughts
+          </DialogTitle>
+          <DialogDescription className="text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
             What did you learn from "{article.title}"?
           </DialogDescription>
         </DialogHeader>
 
         {/* Mode Toggle */}
-        <div className="flex gap-2 justify-center my-4">
-          <Button
-            variant={mode === 'text' ? 'default' : 'outline'}
-            size="sm"
+        <div className="flex gap-3 justify-center my-6">
+          <button
             onClick={() => setMode('text')}
-            className="gap-2"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all"
+            style={{
+              backgroundColor: mode === 'text' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+              color: mode === 'text' ? 'white' : 'var(--premium-text-secondary)',
+              transform: mode === 'text' ? 'scale(1.05)' : 'scale(1)'
+            }}
           >
-            <Type className="h-4 w-4" />
+            <Type className="h-5 w-5" />
             Text
-          </Button>
-          <Button
-            variant={mode === 'voice' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button
             onClick={() => setMode('voice')}
-            className="gap-2"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl font-medium transition-all"
+            style={{
+              backgroundColor: mode === 'voice' ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+              color: mode === 'voice' ? 'white' : 'var(--premium-text-secondary)',
+              transform: mode === 'voice' ? 'scale(1.05)' : 'scale(1)'
+            }}
           >
-            <Mic className="h-4 w-4" />
+            <Mic className="h-5 w-5" />
             Voice
-          </Button>
+          </button>
         </div>
 
         {/* Text Mode */}
         {mode === 'text' && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="thought-text" className="text-sm">
+              <Label htmlFor="thought-text" className="text-sm font-medium mb-2 block" style={{ color: 'var(--premium-text-primary)' }}>
                 Your thoughts (key takeaways, questions, connections)
               </Label>
-              <Textarea
+              <textarea
                 id="thought-text"
                 placeholder={`• Main insight from the article\n• How this relates to my work\n• Questions it raised`}
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 rows={6}
-                className="mt-2 text-base"
+                className="w-full rounded-xl px-4 py-3 text-base transition-all focus:outline-none focus:ring-2 resize-none"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  color: 'var(--premium-text-primary)',
+                  borderWidth: '1px',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  borderStyle: 'solid',
+                  fontFamily: 'inherit'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = 'var(--premium-blue)'
+                  e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.05)'
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                  e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+                }}
               />
             </div>
 
@@ -228,22 +252,24 @@ export function ArticleCompletionDialog({
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
+                            <button
                               onClick={() => handleLinkToProject(project.id)}
-                              className="text-xs px-3 py-1 h-auto"
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-white/10"
+                              style={{
+                                color: 'var(--premium-blue)'
+                              }}
                             >
                               Link
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
+                            </button>
+                            <button
                               onClick={() => navigate(`/projects/${project.id}`)}
-                              className="h-auto p-1"
+                              className="p-1.5 rounded-lg transition-all hover:bg-white/10"
+                              style={{
+                                color: 'var(--premium-text-secondary)'
+                              }}
                             >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -278,14 +304,15 @@ export function ArticleCompletionDialog({
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
+                            <button
                               onClick={() => handleLinkToThought(thought.id)}
-                              className="text-xs px-3 py-1 h-auto"
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all hover:bg-white/10"
+                              style={{
+                                color: 'var(--premium-blue)'
+                              }}
                             >
                               Link
-                            </Button>
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -302,30 +329,37 @@ export function ArticleCompletionDialog({
               </div>
             )}
 
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="ghost"
+            <div className="flex gap-3 justify-end pt-2">
+              <button
                 onClick={handleSkip}
                 disabled={loading}
+                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-white/5"
+                style={{
+                  color: 'var(--premium-text-secondary)'
+                }}
               >
                 Skip
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={handleSubmit}
                 disabled={!textInput.trim() || loading}
-                className="gap-2"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all disabled:opacity-50"
+                style={{
+                  backgroundColor: !textInput.trim() || loading ? 'rgba(59, 130, 246, 0.3)' : 'var(--premium-blue)',
+                  color: 'white'
+                }}
               >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                 Save Thought
-              </Button>
+              </button>
             </div>
           </div>
         )}
 
         {/* Voice Mode */}
         {mode === 'voice' && (
-          <div className="space-y-4">
-            <div className="text-sm text-neutral-600 text-center mb-4">
+          <div className="space-y-6">
+            <div className="text-sm text-center mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
               Record your thoughts about this article
             </div>
 
@@ -334,14 +368,16 @@ export function ArticleCompletionDialog({
             />
 
             <div className="flex justify-center">
-              <Button
-                variant="ghost"
+              <button
                 onClick={handleSkip}
                 disabled={loading}
-                size="sm"
+                className="px-6 py-3 rounded-xl font-medium transition-all hover:bg-white/5"
+                style={{
+                  color: 'var(--premium-text-secondary)'
+                }}
               >
                 Skip for now
-              </Button>
+              </button>
             </div>
           </div>
         )}

@@ -25,7 +25,7 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
   const backgroundColor = useTransform(
     x,
     [-150, 0, 150],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
+    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
   )
 
   const handleDragEnd = (_: any, info: any) => {
@@ -86,8 +86,8 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
         className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
       >
         <div className="flex items-center gap-2">
-          <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-          <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>SAVE</span>
+          <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+          <span className="text-xl font-bold" style={{ color: 'var(--premium-blue)' }}>SAVE</span>
         </div>
       </motion.div>
 

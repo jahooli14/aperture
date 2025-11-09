@@ -36,6 +36,25 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
+  // Clean excerpt by removing common metadata patterns
+  const cleanExcerpt = (text: string | undefined | null): string | undefined => {
+    if (!text) return undefined
+
+    // Remove patterns like "#7246 (no title)" at the start
+    let cleaned = text.replace(/^#\d+\s*\(no title\)\s*/i, '')
+
+    // Remove date patterns at the start (e.g., "October 24, 2025")
+    cleaned = cleaned.replace(/^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*/, '')
+
+    // Remove "By [Author]" patterns at the start
+    cleaned = cleaned.replace(/^By\s+[^\.]+\s*/, '')
+
+    // Trim whitespace
+    cleaned = cleaned.trim()
+
+    return cleaned || undefined
+  }
+
   // Motion values for swipe gesture - stable references, no memoization needed
   const x = useMotionValue(0)
   const archiveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
@@ -395,12 +414,12 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         )}
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg sm:text-xl font-semibold line-clamp-2 mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+          <h3 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
             {article.title || 'Untitled'}
           </h3>
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-muted)' }}>
             {article.source && (
-              <span className="font-medium">{article.source}</span>
+              <span className="font-medium text-sm">{article.source}</span>
             )}
             {article.author && (
               <>
@@ -442,12 +461,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               }
             />
             {isOffline && (
-              <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--premium-emerald)'
-              }}>
-                <WifiOff className="h-3 w-3" />
-                Offline
+              <div className="p-1.5 rounded-full flex items-center justify-center" style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: 'var(--premium-blue)'
+              }} title="Saved for offline">
+                <WifiOff className="h-3.5 w-3.5" />
               </div>
             )}
           </div>
@@ -483,10 +501,18 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         </div>
       )}
 
+      {/* Visual Separator */}
+      <div className="h-px my-4" style={{
+        background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)'
+      }} />
+
       {/* Excerpt */}
-      {article.excerpt && (
-        <p className="text-sm sm:text-base line-clamp-2 mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-          {article.excerpt}
+      {cleanExcerpt(article.excerpt) && (
+        <p className="text-sm sm:text-base line-clamp-2 mb-3" style={{
+          color: 'var(--premium-text-secondary)',
+          lineHeight: '1.6'
+        }}>
+          {cleanExcerpt(article.excerpt)}
         </p>
       )}
 
@@ -498,8 +524,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               key={index}
               className="px-2 py-1 text-xs rounded-full"
               style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                color: 'var(--premium-emerald)'
+                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                color: 'var(--premium-blue)'
               }}
             >
               {tag}
@@ -507,8 +533,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           ))}
           {article.tags.length > 3 && (
             <span className="px-2 py-1 text-xs rounded-full" style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              color: 'var(--premium-emerald)'
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              color: 'var(--premium-blue)'
             }}>
               +{article.tags.length - 3}
             </span>
@@ -518,15 +544,21 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-3">
-        <div className="flex items-center gap-4 text-xs sm:text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+        <div className="flex items-center gap-2 text-xs sm:text-sm">
           {article.read_time_minutes && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>{article.read_time_minutes} min</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
+              color: 'var(--premium-blue)'
+            }}>
+              <Clock className="h-3.5 w-3.5" />
+              <span className="font-medium">{article.read_time_minutes} min</span>
             </div>
           )}
           {article.created_at && (
-            <span>
+            <span className="px-2.5 py-1 rounded-full font-medium" style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              color: 'var(--premium-text-tertiary)'
+            }}>
               {(() => {
                 try {
                   const date = new Date(article.created_at)

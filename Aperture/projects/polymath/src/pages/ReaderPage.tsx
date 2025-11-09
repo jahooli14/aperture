@@ -150,6 +150,32 @@ export function ReaderPage() {
     const parser = new DOMParser()
     const doc = parser.parseFromString(processedContent, 'text/html')
 
+    // Clean metadata from first paragraph if it matches common patterns
+    const firstParagraph = doc.querySelector('p')
+    if (firstParagraph) {
+      const firstParaText = firstParagraph.textContent || ''
+      const hasMetadataPattern =
+        /^#\d+\s*\([^)]*\)/.test(firstParaText) || // "#7246 (no title)"
+        /^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s+By\s+/.test(firstParaText) || // "October 24, 2025 By Author"
+        /Tales from [A-Z]/.test(firstParaText) // "Tales from Toddlerhood"
+
+      if (hasMetadataPattern) {
+        // Clean the text by removing metadata patterns
+        let cleanedText = firstParaText
+          .replace(/^#\d+\s*\([^)]*\)\s*/i, '')
+          .replace(/^Tales from [^A-Z]+/i, '')
+          .replace(/^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s+/i, '')
+          .replace(/^By\s+[^\s]+\s+/i, '')
+          .trim()
+
+        if (cleanedText.length > 0) {
+          firstParagraph.textContent = cleanedText
+        } else {
+          firstParagraph.remove()
+        }
+      }
+    }
+
     // Remove ads and navigation elements
     const selectorsToRemove = [
       // Navigation
@@ -443,25 +469,6 @@ export function ReaderPage() {
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Offline Download */}
-            <button
-              onClick={handleDownloadOffline}
-              disabled={caching || isOfflineCached}
-              className="p-2 rounded-lg hover:bg-white/5 transition-all disabled:opacity-50"
-              style={{
-                color: isOfflineCached ? 'var(--premium-emerald)' : 'var(--premium-text-secondary)'
-              }}
-              title={isOfflineCached ? 'Available offline' : 'Download for offline'}
-            >
-              {caching ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : isOfflineCached ? (
-                <WifiOff className="h-5 w-5" />
-              ) : (
-                <Download className="h-5 w-5" />
-              )}
-            </button>
-
             {/* Font Size Selector */}
             <div className="flex items-center gap-1 premium-glass-subtle rounded-lg p-1">
               {(['compact', 'comfortable', 'spacious'] as const).map((size, index) => (
@@ -486,7 +493,7 @@ export function ReaderPage() {
               style={{ color: 'var(--premium-text-secondary)' }}
               title="Finish & Archive"
             >
-              <Check className="h-5 w-5" />
+              <Archive className="h-5 w-5" />
             </button>
 
             {/* Open Original */}

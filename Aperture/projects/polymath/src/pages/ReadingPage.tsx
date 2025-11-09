@@ -27,7 +27,8 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
-  const { feeds, syncing, fetchFeeds, syncFeeds, autoSyncFeeds } = useRSSStore() as any
+  const rssStoreData = useRSSStore() as any
+  const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -339,20 +340,29 @@ export function ReadingPage() {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
             {tabs.map((tab) => {
               const count = getTabCount(tab.key)
+              const isActive = activeTab === tab.key
 
               return (
                 <button
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap relative"
                   style={{
-                    backgroundColor: activeTab === tab.key ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                    color: activeTab === tab.key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    color: isActive ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
                     backdropFilter: 'blur(12px)'
                   }}
                 >
                   {tab.label}
-                  <span className="text-xs opacity-75">({count})</span>
+                  <span className="text-xs opacity-60">({count})</span>
+                  {isActive && (
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                      style={{
+                        background: 'var(--premium-blue)'
+                      }}
+                    />
+                  )}
                 </button>
               )
             })}
@@ -394,7 +404,7 @@ export function ReadingPage() {
                 <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <p style={{ color: 'var(--premium-text-secondary)' }}>Loading RSS updates...</p>
               </div>
-            ) : (!feeds || feeds.length === 0) ? (
+            ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
               <div className="premium-card p-20 text-center">
                 <div className="flex flex-col items-center justify-center">
                   <Rss className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
@@ -404,7 +414,7 @@ export function ReadingPage() {
                   </p>
                 </div>
               </div>
-            ) : rssItems.length === 0 ? (
+            ) : (!rssItems || !Array.isArray(rssItems) || rssItems.length === 0) ? (
               <div className="premium-card p-20 text-center">
                 <div className="flex flex-col items-center justify-center">
                   <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
@@ -550,7 +560,7 @@ export function ReadingPage() {
       />
 
       {/* Connection Suggestions */}
-      {suggestions.length > 0 && sourceType === 'article' && (
+      {suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
         <ConnectionSuggestion
           suggestions={suggestions}
           sourceType={sourceType}

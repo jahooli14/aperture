@@ -83,7 +83,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+            <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
             <BottomSheetTitle>Save Article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
