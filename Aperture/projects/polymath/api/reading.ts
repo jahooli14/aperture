@@ -138,22 +138,38 @@ async function fetchArticleWithJina(url: string) {
     const description = data.data.description || ''
 
     // Create excerpt from description or first 200 chars of text content
-    const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    // First remove style and script tags and their contents
+    let cleanHtml = html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    const textContent = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
     let excerpt = description || textContent.substring(0, 200) || ''
 
-    // Only show incomplete message if HTML is genuinely short or missing
-    if (!html || html.length < 500) {
+    // Only show incomplete message if text content is genuinely short or missing
+    if (!textContent || textContent.length < 200) {
       excerpt = `Content extraction from ${extractDomain(url)} may be incomplete. Click to view the original article.`
     }
 
+    // Remove the H1 from content to avoid duplication (we display title separately)
+    let contentWithoutH1 = html
+    if (h1Match) {
+      contentWithoutH1 = html.replace(/<h1[^>]*>.*?<\/h1>/i, '')
+    }
+
+    // Calculate word count and reading time from text content (not HTML)
+    const wordCount = textContent.trim().split(/\s+/).length
+    const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 225))
+
     return {
       title: title || 'Untitled',
-      content: html || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
+      content: contentWithoutH1 || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
       author: data.data.author || null,
       publishedDate: data.data.publishedTime || null,
       thumbnailUrl: data.data.image || null,
       faviconUrl: data.data.favicon || null,
+      wordCount,
+      readTimeMinutes,
       url
     }
   } catch (error) {
@@ -572,8 +588,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               published_date: article.publishedDate,
               thumbnail_url: article.thumbnailUrl,
               favicon_url: article.faviconUrl,
-              read_time_minutes: estimateReadTime(article.content),
-              word_count: countWords(article.content),
+              read_time_minutes: article.readTimeMinutes,
+              word_count: article.wordCount,
               processed: true,
             })
             .eq('id', savedArticle.id)
