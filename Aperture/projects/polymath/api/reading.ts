@@ -68,6 +68,8 @@ async function fetchArticleWithJina(url: string) {
     const html = data.data.html || ''
     const jinaTitle = data.data.title || ''
 
+    console.log('[Jina AI] Received response - HTML length:', html.length, 'Jina title:', jinaTitle)
+
     if (!html || html.trim().length === 0) {
       throw new Error('Jina AI returned empty content')
     }
@@ -85,9 +87,9 @@ async function fetchArticleWithJina(url: string) {
       return false
     }
 
-    // Extract H1 from HTML content using regex
+    // Extract H1 from HTML content using regex ([\s\S] matches any char including newlines)
     let title = 'Untitled'
-    const h1Match = html.match(/<h1[^>]*>(.*?)<\/h1>/i)
+    const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
     if (h1Match && h1Match[1]) {
       // Strip HTML tags from the H1 content
       const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim()
@@ -153,12 +155,14 @@ async function fetchArticleWithJina(url: string) {
     // Remove the H1 from content to avoid duplication (we display title separately)
     let contentWithoutH1 = html
     if (h1Match) {
-      contentWithoutH1 = html.replace(/<h1[^>]*>.*?<\/h1>/i, '')
+      contentWithoutH1 = html.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '')
     }
 
     // Calculate word count and reading time from text content (not HTML)
     const wordCount = textContent.trim().split(/\s+/).length
     const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 225))
+
+    console.log('[Jina AI] Final extraction - Title:', title, 'Word count:', wordCount, 'Read time:', readTimeMinutes)
 
     return {
       title: title || 'Untitled',
