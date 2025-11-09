@@ -24,68 +24,65 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
   const [selectedDoor, setSelectedDoor] = useState<any>(null)
   const [doorDialogOpen, setDoorDialogOpen] = useState(false)
 
-  // Pan and zoom state
-  const transformRef = useRef({
+  // Pan and zoom state (using state for reactivity with viewport culling)
+  const [transform, setTransform] = useState({
     x: mapData.viewport.x,
     y: mapData.viewport.y,
     scale: mapData.viewport.scale
   })
 
   // Apply transform to SVG
-  const applyTransform = () => {
+  const applyTransform = (newTransform: { x: number; y: number; scale: number }) => {
     if (svgRef.current) {
-      const { x, y, scale } = transformRef.current
+      const { x, y, scale } = newTransform
       const g = svgRef.current.querySelector('g')
       if (g) {
         g.style.transform = `translate(${x}px, ${y}px) scale(${scale})`
       }
     }
+    setTransform(newTransform) // Update state for viewport culling
   }
 
   // Setup pan and zoom gestures
   useGesture(
     {
       onDrag: ({ offset: [x, y] }) => {
-        transformRef.current.x = x
-        transformRef.current.y = y
-        applyTransform()
+        applyTransform({ ...transform, x, y })
       },
       onPinch: ({ offset: [scale] }) => {
-        transformRef.current.scale = Math.max(0.2, Math.min(3, scale))
-        applyTransform()
+        applyTransform({ ...transform, scale: Math.max(0.2, Math.min(3, scale)) })
       },
       onWheel: ({ delta: [, dy] }) => {
         const scaleDelta = -dy * 0.001
-        const newScale = Math.max(0.2, Math.min(3, transformRef.current.scale + scaleDelta))
-        transformRef.current.scale = newScale
-        applyTransform()
+        const newScale = Math.max(0.2, Math.min(3, transform.scale + scaleDelta))
+        applyTransform({ ...transform, scale: newScale })
       }
     },
     {
       target: containerRef,
       drag: {
-        from: () => [transformRef.current.x, transformRef.current.y]
+        from: () => [transform.x, transform.y]
       },
       pinch: {
-        from: () => [transformRef.current.scale, 0]
+        from: () => [transform.scale, 0]
       }
     }
   )
 
   // Initialize viewport from saved state
   useEffect(() => {
-    transformRef.current = {
+    const newTransform = {
       x: mapData.viewport.x,
       y: mapData.viewport.y,
       scale: mapData.viewport.scale
     }
-    applyTransform()
+    applyTransform(newTransform)
   }, [mapData.viewport])
 
   // Save viewport on unmount or when transform changes
   useEffect(() => {
     const saveViewport = () => {
-      const { x, y, scale } = transformRef.current
+      const { x, y, scale } = transform
       updateViewport(x, y, scale)
     }
 
@@ -95,16 +92,16 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
       clearInterval(interval)
       saveViewport() // Save one last time
     }
-  }, [updateViewport])
+  }, [transform, updateViewport])
 
-  // Viewport culling - only render visible cities
+  // Viewport culling - only render visible cities (now reactive to transform state!)
   const visibleCities = useMemo(() => {
     if (!containerRef.current) return mapData.cities
 
     const containerWidth = containerRef.current.clientWidth || 1920
     const containerHeight = containerRef.current.clientHeight || 1080
 
-    const { x, y, scale } = transformRef.current
+    const { x, y, scale } = transform
 
     // Calculate visible bounds in world coordinates
     const padding = 500 // Extra padding to prevent pop-in
@@ -119,7 +116,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
              city.position.y >= top &&
              city.position.y <= bottom
     })
-  }, [mapData.cities, transformRef.current.x, transformRef.current.y, transformRef.current.scale])
+  }, [mapData.cities, transform.x, transform.y, transform.scale])
 
   // Visible roads (only show if both cities are visible)
   const visibleRoads = useMemo(() => {
@@ -230,39 +227,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             ))}
           </g>
 
-          {/* Semantic regions (territories) */}
-          {mapData.regions?.map(region => (
-            <g key={region.id} opacity={0.4}>
-              {/* Region background circle */}
-              <circle
-                cx={region.center.x}
-                cy={region.center.y}
-                r={region.radius}
-                fill={region.color}
-                stroke={region.color}
-                strokeWidth={2}
-                strokeOpacity={0.3}
-              />
-
-              {/* Region label */}
-              <text
-                x={region.center.x}
-                y={region.center.y - region.radius - 20}
-                textAnchor="middle"
-                fill="rgba(255, 255, 255, 0.3)"
-                fontSize={18}
-                fontWeight={700}
-                letterSpacing={3}
-                className="uppercase"
-                style={{
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  textShadow: '0 2px 10px rgba(0,0,0,0.5)'
-                }}
-              >
-                {region.name}
-              </text>
-            </g>
-          ))}
+          {/* Regions removed - each cluster is already a single city, so regions don't add meaningful grouping */}
 
           {/* Render roads first (so they appear behind cities) */}
           {visibleRoads.map(road => (
@@ -302,8 +267,8 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
       <div className="absolute bottom-4 right-4 flex flex-col gap-2">
         <button
           onClick={() => {
-            transformRef.current.scale = Math.min(3, transformRef.current.scale * 1.2)
-            applyTransform()
+            const newScale = Math.min(3, transform.scale * 1.2)
+            applyTransform({ ...transform, scale: newScale })
           }}
           className="p-3 rounded-lg shadow-lg transition-all"
           style={{
@@ -318,8 +283,8 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </button>
         <button
           onClick={() => {
-            transformRef.current.scale = Math.max(0.2, transformRef.current.scale / 1.2)
-            applyTransform()
+            const newScale = Math.max(0.2, transform.scale / 1.2)
+            applyTransform({ ...transform, scale: newScale })
           }}
           className="p-3 rounded-lg shadow-lg transition-all"
           style={{
@@ -334,8 +299,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         </button>
         <button
           onClick={() => {
-            transformRef.current = { x: 0, y: 0, scale: 1 }
-            applyTransform()
+            applyTransform({ x: 0, y: 0, scale: 1 })
           }}
           className="p-3 rounded-lg shadow-lg transition-all text-xs font-semibold"
           style={{

@@ -14,6 +14,7 @@ export interface City {
   size: CitySize // Computed from population
   topicId?: string // Link to existing topic/capability
   itemIds: string[] // IDs of projects/thoughts/articles in this city
+  items?: Array<{ id: string; type: 'thought' | 'project' | 'article'; title: string }> // Item metadata for display
   founded: string // ISO date of first item
   lastActive: string // ISO date of most recent item
   cluster?: number // Semantic cluster/region ID

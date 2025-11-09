@@ -76,7 +76,7 @@ function extractTopicsFromText(text: string, maxTopics: number = 3): string[] {
 function kMeansClustering(
   embeddings: Array<{ id: string; vector: number[]; topic: string }>,
   k: number,
-  maxIterations: number = 10
+  maxIterations: number = 5 // Reduced from 10 for better performance
 ): Map<number, Array<{ id: string; topic: string; vector: number[] }>> {
   if (embeddings.length === 0 || k === 0) {
     return new Map()
@@ -161,7 +161,7 @@ function forceDirectedLayout(
   cities: Array<{ id: string; topic: string; cluster: number; population: number }>,
   roads: Array<{ fromId: string; toId: string; strength: number }>,
   clusterCenters: Map<number, { x: number; y: number }>,
-  iterations: number = 50
+  iterations: number = 25 // Reduced from 50 for better performance
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>()
   const velocities = new Map<string, { x: number; y: number }>()
@@ -372,35 +372,85 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
   console.log('[map-generation] Items for clustering:', itemsForClustering.length)
 
   // Determine optimal number of clusters (cities) based on item count
-  // More items = more granular clustering
-  const numClusters = Math.max(3, Math.min(20, Math.floor(Math.sqrt(allItems.length) * 2)))
-  console.log('[map-generation] Creating', numClusters, 'semantic clusters')
+  // Avoid too many clusters for small datasets
+  const itemCount = allItems.length
+  const numClusters = itemCount < 10 ? 3 :
+                      itemCount < 30 ? Math.floor(Math.sqrt(itemCount)) :
+                      Math.min(20, Math.floor(Math.sqrt(itemCount) * 1.5))
+
+  console.log('[map-generation] Creating', numClusters, 'semantic clusters for', itemCount, 'items')
 
   const clusters = kMeansClustering(itemsForClustering, numClusters)
 
-  // 4. Generate meaningful labels for each cluster from its members
+  // 4. Generate meaningful 2-3 word labels for each cluster from its members
   function generateClusterLabel(clusterMembers: Array<{ id: string; topic: string }>): string {
     // Get all items in this cluster
     const items = clusterMembers.map(m => allItems.find(i => i.id === m.id)!).filter(Boolean)
 
-    // Extract keywords from titles
-    const allWords: string[] = []
+    if (items.length === 0) return `Cluster ${clusterMembers.length} items`
+
+    // Strategy: Extract 2-3 word noun phrases from titles
+    const phrases: string[] = []
+
     items.forEach(item => {
-      const keywords = extractTopicsFromText(item.title, 5)
-      allWords.push(...keywords)
+      const title = item.title.toLowerCase()
+
+      // Extract potential noun phrases (2-3 consecutive meaningful words)
+      const words = title
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3)
+
+      // Create bigrams and trigrams
+      for (let i = 0; i < words.length - 1; i++) {
+        if (words[i] && words[i+1]) {
+          phrases.push(`${words[i]} ${words[i+1]}`)
+        }
+        if (i < words.length - 2 && words[i+2]) {
+          phrases.push(`${words[i]} ${words[i+1]} ${words[i+2]}`)
+        }
+      }
     })
 
-    // Count frequency
-    const wordFreq = new Map<string, number>()
-    allWords.forEach(word => {
-      wordFreq.set(word, (wordFreq.get(word) || 0) + 1)
+    // Count phrase frequency
+    const phraseFreq = new Map<string, number>()
+    phrases.forEach(phrase => {
+      phraseFreq.set(phrase, (phraseFreq.get(phrase) || 0) + 1)
     })
 
-    // Get most common word as label
-    const topWord = Array.from(wordFreq.entries())
-      .sort((a, b) => b[1] - a[1])[0]
+    // Get most common phrase, preferring longer ones
+    const topPhrases = Array.from(phraseFreq.entries())
+      .sort((a, b) => {
+        // Prefer longer phrases with same frequency
+        if (b[1] === a[1]) {
+          return b[0].split(' ').length - a[0].split(' ').length
+        }
+        return b[1] - a[1]
+      })
 
-    return topWord ? topWord[0] : `Cluster ${clusterMembers.length} items`
+    if (topPhrases.length > 0 && topPhrases[0][1] >= 2) {
+      // At least 2 items share this phrase
+      return topPhrases[0][0]
+        .split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ')
+    }
+
+    // Fallback: use most descriptive individual title
+    const longestTitle = items
+      .map(i => i.title)
+      .sort((a, b) => b.length - a.length)[0]
+
+    // Extract first 2-3 meaningful words
+    const words = longestTitle
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3)
+      .slice(0, 3)
+
+    return words
+      .map(w => w.charAt(0).toUpperCase() + w.toLowerCase().slice(1))
+      .join(' ') || `${items[0].type} Cluster`
   }
 
   // 5. Define cluster centers for geographic layout (regions on map)
@@ -444,6 +494,7 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
       population: members.length,
       size: getSizeFromPopulation(members.length),
       itemIds: members.map(m => m.id),
+      items: items.map(i => ({ id: i.id, type: i.type, title: i.title })), // Include metadata for display
       founded: firstSeen,
       lastActive: lastSeen,
       cluster: clusterId
@@ -491,8 +542,8 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
       // Calculate semantic similarity between clusters
       const similarity = cosineSimilarity(centroidA, centroidB)
 
-      // Only create road if similarity > 0.6 (semantically related)
-      if (similarity > 0.6) {
+      // Only create road if similarity > 0.7 (semantically related, reduced to avoid clutter)
+      if (similarity > 0.7) {
         const strength = Math.round(similarity * 15) // Scale to 0-15 range
         roads.push({
           id: `road-${i}-${j}`,
@@ -508,7 +559,7 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     }
   }
 
-  console.log('[map-generation] Created roads (similarity > 0.6):', roads.length)
+  console.log('[map-generation] Created roads (similarity > 0.7):', roads.length)
 
   // 8. Apply force-directed layout
   const cityLayoutData = cities.map(c => ({
