@@ -27,6 +27,50 @@ function getRoadTypeFromStrength(strength: number): RoadType {
 }
 
 /**
+ * Extract topics from text (simple keyword extraction)
+ * Filters out common words and returns meaningful phrases
+ */
+function extractTopicsFromText(text: string, maxTopics: number = 3): string[] {
+  if (!text) return []
+
+  // Common words to filter out
+  const stopWords = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'be',
+    'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+    'would', 'should', 'could', 'may', 'might', 'can', 'this', 'that',
+    'these', 'those', 'it', 'its', 'i', 'you', 'he', 'she', 'we', 'they',
+    'what', 'which', 'who', 'when', 'where', 'why', 'how', 'my', 'your',
+    'our', 'their'
+  ])
+
+  // Split into words and filter
+  const words = text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+    .split(/\s+/)
+    .filter(word =>
+      word.length > 3 && // At least 4 characters
+      !stopWords.has(word) &&
+      !/^\d+$/.test(word) // Not just numbers
+    )
+
+  // Count word frequency
+  const wordFreq = new Map<string, number>()
+  words.forEach(word => {
+    wordFreq.set(word, (wordFreq.get(word) || 0) + 1
+  })
+
+  // Get top N words by frequency
+  const topWords = Array.from(wordFreq.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxTopics)
+    .map(([word]) => word)
+
+  return topWords
+}
+
+/**
  * K-means clustering implementation for semantic grouping
  */
 function kMeansClustering(
@@ -292,13 +336,22 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     })
   })
 
-  // Process projects - use capabilities + embeddings if available
+  // Process projects - extract topics from title/description if no capabilities
   projects?.forEach(p => {
     const capabilities = p.metadata?.capabilities || []
     const embedding = p.embedding ? (typeof p.embedding === 'string' ? JSON.parse(p.embedding) : p.embedding) : null
 
-    capabilities.forEach((cap: any) => {
-      const topicName = typeof cap === 'string' ? cap : cap.name
+    // Use capabilities if available, otherwise extract from title/description
+    let topics: string[] = []
+    if (capabilities.length > 0) {
+      topics = capabilities.map((cap: any) => typeof cap === 'string' ? cap : cap.name)
+    } else {
+      // Extract topics from project title and description
+      const text = `${p.title} ${p.description || ''}`
+      topics = extractTopicsFromText(text, 3)
+    }
+
+    topics.forEach((topicName: string) => {
       if (!topicMap.has(topicName)) {
         topicMap.set(topicName, {
           items: [],
@@ -321,21 +374,30 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
     })
   })
 
-  // Process articles - use tags (articles have embeddings)
+  // Process articles - extract topics from title if no tags
   articles?.forEach(a => {
     const tags = a.tags || []
     const embedding = a.embedding ? (typeof a.embedding === 'string' ? JSON.parse(a.embedding) : a.embedding) : null
 
-    tags.forEach((tag: string) => {
-      if (!topicMap.has(tag)) {
-        topicMap.set(tag, {
+    // Use tags if available, otherwise extract from title
+    let topics: string[] = []
+    if (tags.length > 0) {
+      topics = tags
+    } else {
+      // Extract topics from article title
+      topics = extractTopicsFromText(a.title, 2)
+    }
+
+    topics.forEach((topicName: string) => {
+      if (!topicMap.has(topicName)) {
+        topicMap.set(topicName, {
           items: [],
           embedding: null,
           firstSeen: a.created_at,
           lastSeen: a.created_at
         })
       }
-      const topicData = topicMap.get(tag)!
+      const topicData = topicMap.get(topicName)!
       topicData.items.push({ id: a.id, type: 'article', timestamp: a.created_at })
 
       if (embedding && !topicData.embedding) {
