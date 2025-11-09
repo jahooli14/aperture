@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical, ChevronDown } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -56,6 +56,7 @@ export function ProjectDetailPage() {
   const [tempDescription, setTempDescription] = useState('')
   const [newPinnedTaskText, setNewPinnedTaskText] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
+  const [showStatusMenu, setShowStatusMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const pinnedTaskInputRef = useRef<HTMLInputElement>(null)
@@ -567,39 +568,65 @@ export function ProjectDetailPage() {
                   >
                     {project.title}
                   </h1>
-                  {/* Status Badge in navbar */}
-                  <div className="mt-1 flex items-center gap-2">
-                    <div className="px-2.5 py-1 rounded-lg flex items-center gap-1.5" style={{
-                      background: 'var(--premium-bg-3)',
-                      backdropFilter: 'blur(12px)',
-                      color: 'var(--premium-blue)'
-                    }}>
-                      <span className="text-xs font-medium">
-                        {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
-                      </span>
-                    </div>
-                    {progress > 0 && (
-                      <>
-                        <div className="h-1 w-16 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                          <div
-                            className="h-full transition-all"
-                            style={{
-                              width: `${progress}%`,
-                              background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs font-semibold" style={{ color: 'var(--premium-blue)' }}>
-                          {progress}%
-                        </span>
-                      </>
-                    )}
-                  </div>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Status Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  className="px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80"
+                  style={{
+                    background: 'var(--premium-bg-3)',
+                    backdropFilter: 'blur(12px)',
+                    color: 'var(--premium-blue)',
+                    border: '1px solid var(--premium-blue)'
+                  }}
+                  title="Change project status"
+                >
+                  <span>
+                    {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
+                  </span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+
+                {showStatusMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowStatusMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-40 rounded-lg py-1 z-20 shadow-lg"
+                      style={{
+                        background: 'var(--premium-bg-2)',
+                        backdropFilter: 'blur(12px)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                      }}
+                    >
+                      {['active', 'upcoming', 'dormant', 'completed', 'on-hold', 'maintaining', 'archived', 'abandoned'].map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            handleStatusChange(status as Project['status'])
+                            setShowStatusMenu(false)
+                          }}
+                          className="w-full px-4 py-2 text-left text-xs font-medium transition-colors hover:opacity-80"
+                          style={{
+                            color: project.status === status ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
+                            backgroundColor: project.status === status ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                            borderLeft: project.status === status ? '2px solid var(--premium-blue)' : '2px solid transparent'
+                          }}
+                        >
+                          {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[status]}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* Pin Button */}
               <PinButton
                 type="project"

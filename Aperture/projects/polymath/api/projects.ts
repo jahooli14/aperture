@@ -744,10 +744,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           query = query.eq('status', 'upcoming')
         } else if (filter === 'active') {
           query = query.eq('status', 'active')
+        } else if (filter === 'dormant') {
+          query = query.in('status', ['dormant', 'on-hold', 'maintaining'])
         } else if (filter === 'completed') {
           query = query.eq('status', 'completed')
         }
-        // Note: 'dormant' filter is handled client-side in the store (line 93-97)
       }
 
       const { data, error } = await query
