@@ -96,7 +96,9 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
       }}>
         <div className="mb-5">
-          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Get inspiration</h2>
+          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+            Get <span style={{ color: 'rgba(100, 180, 255, 1)' }}>inspiration</span>
+          </h2>
         </div>
 
         {loading ? (
@@ -666,7 +668,9 @@ export function HomePage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-5">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Keep the momentum</h2>
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Keep the <span style={{ color: 'rgba(100, 180, 255, 1)' }}>momentum</span>
+              </h2>
             </div>
 
             {projectsLoading ? (
@@ -840,7 +844,9 @@ export function HomePage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-6">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Explore</h2>
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Or just <span style={{ color: 'rgba(100, 180, 255, 1)' }}>explore</span>
+              </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
