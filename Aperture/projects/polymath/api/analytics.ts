@@ -860,13 +860,23 @@ async function getInspiration(excludeProjectIds: string[]) {
     fetchMemories()
   ])
 
+  console.log('[Inspiration] Data fetched:', {
+    projectsCount: projects.length,
+    articlesCount: articles.length,
+    memoriesCount: memories.length,
+    excludedProjectIds: excludeProjectIds
+  })
+
   // Filter out the projects already shown in "Keep Momentum"
   const otherProjects = projects.filter(p => !excludeProjectIds.includes(p.id))
+
+  console.log('[Inspiration] Other projects after exclusion:', otherProjects.length)
 
   const inspirationOptions = []
 
   // Option 1: Unread article
   const unreadArticles = articles.filter(a => a.status === 'unread')
+  console.log('[Inspiration] Unread articles:', unreadArticles.length)
   if (unreadArticles.length > 0) {
     const article = unreadArticles[Math.floor(Math.random() * Math.min(3, unreadArticles.length))]
     inspirationOptions.push({
@@ -904,6 +914,8 @@ async function getInspiration(excludeProjectIds: string[]) {
   }
 
   // Pick one randomly
+  console.log('[Inspiration] Total options available:', inspirationOptions.length)
+
   if (inspirationOptions.length === 0) {
     return {
       type: 'empty',
@@ -913,7 +925,9 @@ async function getInspiration(excludeProjectIds: string[]) {
     }
   }
 
-  return inspirationOptions[Math.floor(Math.random() * inspirationOptions.length)]
+  const selected = inspirationOptions[Math.floor(Math.random() * inspirationOptions.length)]
+  console.log('[Inspiration] Selected:', selected.type, '-', selected.title)
+  return selected
 }
 
 /**
