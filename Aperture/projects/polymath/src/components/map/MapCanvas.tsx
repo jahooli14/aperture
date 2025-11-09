@@ -346,7 +346,7 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
 
       {/* Performance indicator */}
       <div
-        className="absolute top-20 left-4 px-3 py-2 rounded text-xs"
+        className="absolute top-4 right-4 px-3 py-2 rounded text-xs"
         style={{
           background: 'rgba(32, 43, 62, 0.8)',
           color: 'var(--premium-text-tertiary)'

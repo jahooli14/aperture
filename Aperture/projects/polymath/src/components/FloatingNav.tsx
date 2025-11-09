@@ -82,6 +82,12 @@ export function FloatingNav() {
   // Check if we're on a project detail page
   const isProjectDetailPage = location.pathname.startsWith('/projects/') && location.pathname !== '/projects'
 
+  // Hide on Knowledge Map page (has its own controls)
+  const isMapPage = location.pathname === '/map'
+  if (isMapPage) {
+    return null
+  }
+
   const handleCaptureClick = () => {
     console.log('[FloatingNav] Capture clicked, isProjectDetailPage:', isProjectDetailPage)
 
@@ -249,11 +255,15 @@ export function FloatingNav() {
           damping: 20,
           delay: 0.2
         }}
-        className="fixed z-30 w-16 h-16 rounded-2xl premium-glass-strong flex items-center justify-center group"
+        className="fixed z-30 w-16 h-16 rounded-2xl flex items-center justify-center group"
         style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)',
           right: 'max(1rem, env(safe-area-inset-right, 1rem))',
           opacity: !isOnline ? 0.3 : 1,
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.35), rgba(236, 72, 153, 0.25))',
+          backdropFilter: 'blur(32px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+          boxShadow: '0 12px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.2)',
         }}
       >
           {/* Pulsing Glow Effect */}
