@@ -154,7 +154,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               >
                 <div className="flex flex-col items-center gap-2">
                   <Mic className={`h-6 w-6 ${noteType === 'voice' ? '' : 'opacity-50'}`} />
-                  <span className="text-sm">Voice Note</span>
+                  <span className="text-sm">Voice note</span>
                   {noteType === 'voice' && (
                     <span className="text-xs opacity-80">Creates linked thought</span>
                   )}
@@ -178,7 +178,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               >
                 <div className="flex flex-col items-center gap-2">
                   <FileText className={`h-6 w-6 ${noteType === 'text' ? '' : 'opacity-50'}`} />
-                  <span className="text-sm">Text Update</span>
+                  <span className="text-sm">Text update</span>
                   {noteType === 'text' && (
                     <span className="text-xs opacity-80">Project progress notes</span>
                   )}

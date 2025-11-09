@@ -85,7 +85,7 @@ export function EditArticleDialog({ article, open, onOpenChange }: EditArticleDi
       <DialogContent className="sm:max-w-[500px] max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] p-0 flex flex-col overflow-hidden">
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4">
-            <DialogTitle className="text-lg sm:text-2xl">Edit Article</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl">Edit article</DialogTitle>
             <DialogDescription className="text-sm sm:text-base">
               Update article details and add your notes
             </DialogDescription>

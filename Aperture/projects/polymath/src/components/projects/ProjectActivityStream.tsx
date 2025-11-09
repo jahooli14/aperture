@@ -44,7 +44,7 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold premium-text-platinum">Recent Updates</h2>
+          <h2 className="text-lg font-bold premium-text-platinum">Recent updates</h2>
           <button
             onClick={onRefresh}
             className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"

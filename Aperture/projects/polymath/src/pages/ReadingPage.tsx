@@ -437,7 +437,7 @@ export function ReadingPage() {
                     }}
                   >
                     <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
-                    {syncing ? 'Syncing...' : 'Sync Feeds'}
+                    {syncing ? 'Syncing...' : 'Sync feeds'}
                   </button>
                 </div>
               </div>

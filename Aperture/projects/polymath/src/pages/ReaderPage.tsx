@@ -590,7 +590,7 @@ export function ReaderPage() {
         {highlights.length > 0 && (
           <div className="mt-20 pt-12">
             <h2 className="text-2xl font-bold mb-8" style={{ color: '#1a1a1a' }}>
-              Your Highlights
+              Your highlights
             </h2>
             <div className="space-y-4">
               {highlights.map((highlight) => (

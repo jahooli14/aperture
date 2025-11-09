@@ -96,7 +96,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
       }}>
         <div className="mb-5">
-          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Get Inspiration</h2>
+          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Get inspiration</h2>
         </div>
 
         {loading ? (
@@ -599,7 +599,7 @@ export function HomePage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-4">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Add Something New</h2>
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Add something new</h2>
             </div>
 
             <div className="flex items-center gap-3">
@@ -664,7 +664,7 @@ export function HomePage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             <div className="mb-5">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Keep the Momentum</h2>
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>Keep the momentum</h2>
             </div>
 
             {projectsLoading ? (
@@ -904,7 +904,7 @@ export function HomePage() {
                       <Moon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime Ideas</h3>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime ideas</h3>
                       <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                         Creative inspiration for sleep
                       </p>
@@ -947,7 +947,7 @@ export function HomePage() {
                       <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
                     </div>
                     <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
-                      Thought of the Day
+                      Thought of the day
                     </h3>
                   </div>
                   <p className="mb-4 leading-relaxed text-lg" style={{

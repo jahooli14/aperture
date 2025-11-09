@@ -479,7 +479,7 @@ export function ScrollTimelinePage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
-                Knowledge Timeline
+                Knowledge timeline
               </h1>
               <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                 {threadFilter ? 'Viewing connected items only' : 'Scroll to explore your knowledge evolution'}

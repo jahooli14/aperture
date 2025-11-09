@@ -155,7 +155,7 @@ export function CreateMemoryDialog() {
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
               <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              <BottomSheetTitle>Capture Memory</BottomSheetTitle>
+              <BottomSheetTitle>Capture memory</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
               Add a thought, idea, or insight

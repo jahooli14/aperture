@@ -17,7 +17,7 @@ export function EmptyState() {
 
         {/* Heading */}
         <h2 className="text-3xl font-bold text-neutral-900 mb-4">
-          Start Capturing Your Thoughts
+          Start capturing your thoughts
         </h2>
         <p className="text-lg text-neutral-600 mb-8">
           <BrandName size="md" /> works by turning your voice notes into a personal knowledge graph.

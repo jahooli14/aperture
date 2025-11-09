@@ -121,14 +121,14 @@ export function OfflineIndicator() {
                 className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw className="h-4 w-4" />
-                <span className="text-sm font-medium">Sync Now</span>
+                <span className="text-sm font-medium">Sync now</span>
               </button>
               <button
                 onClick={handleClear}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-red-600 transition-colors"
               >
                 <X className="h-4 w-4" />
-                <span className="text-sm font-medium">Clear Queue</span>
+                <span className="text-sm font-medium">Clear queue</span>
               </button>
             </div>
           )}

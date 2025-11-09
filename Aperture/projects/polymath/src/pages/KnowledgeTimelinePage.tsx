@@ -204,7 +204,7 @@ export function KnowledgeTimelinePage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              <h1 className="text-2xl font-bold premium-text-platinum">Knowledge Timeline</h1>
+              <h1 className="text-2xl font-bold premium-text-platinum">Knowledge timeline</h1>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>{items.length} events</span>
@@ -360,7 +360,7 @@ function UnifiedTimeline({ items, connections, onItemClick }: UnifiedTimelinePro
       <div className="premium-glass-subtle border-b px-5 py-3" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-          <h3 className="font-semibold premium-text-platinum">Unified Timeline</h3>
+          <h3 className="font-semibold premium-text-platinum">Unified timeline</h3>
           <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>({items.length} events)</span>
         </div>
       </div>

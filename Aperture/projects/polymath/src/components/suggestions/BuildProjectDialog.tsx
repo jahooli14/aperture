@@ -78,7 +78,7 @@ export function BuildProjectDialog({
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Hammer className="h-5 w-5 text-blue-900" />
               </div>
-              <DialogTitle>Build This Project</DialogTitle>
+              <DialogTitle>Build this project</DialogTitle>
             </div>
             <DialogDescription>
               Review and customize your project details before building. This will create a new active project and strengthen related capabilities.

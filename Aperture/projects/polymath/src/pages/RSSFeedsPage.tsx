@@ -153,7 +153,7 @@ export function RSSFeedsPage() {
                 className="premium-btn-primary rounded-full px-4 py-2 font-medium inline-flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Feed</span>
+                <span className="hidden sm:inline">Add feed</span>
                 <span className="sm:hidden">Add</span>
               </button>
             </div>

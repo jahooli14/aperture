@@ -35,7 +35,7 @@ interface SettingsOption {
 const SETTINGS_OPTIONS: SettingsOption[] = [
   {
     id: 'map',
-    label: 'Knowledge Map',
+    label: 'Knowledge map',
     description: 'Geographic visualization with glowing doors of opportunity',
     icon: Map,
     path: '/map',
@@ -44,7 +44,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
   },
   {
     id: 'suggestions',
-    label: 'Discover Projects',
+    label: 'Discover projects',
     description: 'AI-powered project recommendations from your knowledge',
     icon: Lightbulb,
     path: '/suggestions',
@@ -53,7 +53,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
   },
   {
     id: 'bedtime',
-    label: 'Bedtime Ideas',
+    label: 'Bedtime ideas',
     description: 'Trippy prompts for creative subconscious thinking (9:30pm daily)',
     icon: Moon,
     path: '/bedtime',
@@ -62,7 +62,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
   },
   {
     id: 'rss',
-    label: 'Auto-Import',
+    label: 'Auto-import',
     description: 'RSS feeds & email newsletters auto-added to reading queue',
     icon: Rss,
     path: '/rss',
@@ -80,7 +80,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
   },
   {
     id: 'galaxy',
-    label: 'Galaxy View',
+    label: 'Galaxy view',
     description: 'Explore connections in 3D space',
     icon: Sparkles,
     path: '/constellation',
@@ -140,7 +140,7 @@ export function SettingsPage() {
               textShadow: '0 0 20px rgba(229, 231, 235, 0.2)'
             }}
           >
-            Explore More
+            Explore more
           </h1>
           <p
             style={{
@@ -232,14 +232,14 @@ export function SettingsPage() {
               className="text-2xl font-bold"
               style={{ color: 'var(--premium-text-primary)' }}
             >
-              Theme Customization
+              Theme customization
             </h2>
           </div>
 
           {/* Accent Color */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-              Accent Color
+              Accent color
             </h3>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {getAvailableColors().map((color) => {
@@ -292,7 +292,7 @@ export function SettingsPage() {
           {/* Font Size */}
           <div>
             <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-              Font Size
+              Font size
             </h3>
             <div className="grid grid-cols-3 gap-3">
               {fontSizeOptions.map((option) => (

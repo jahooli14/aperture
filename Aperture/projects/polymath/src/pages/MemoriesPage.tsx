@@ -581,7 +581,7 @@ export function MemoriesPage() {
                       <Brain className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold mb-4 premium-text-platinum">Start Capturing Your Thoughts</h3>
+                      <h3 className="text-2xl font-bold mb-4 premium-text-platinum">Start capturing your thoughts</h3>
                       <p className="text-lg mb-8" style={{ color: 'var(--premium-text-secondary)' }}>
                         Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
                       </p>
@@ -599,7 +599,7 @@ export function MemoriesPage() {
                             <span className="text-white font-bold text-sm">1</span>
                           </div>
                           <div>
-                            <p className="font-semibold premium-text-platinum">Manually Capture</p>
+                            <p className="font-semibold premium-text-platinum">Manually capture</p>
                             <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Click 'New Memory' to manually add thoughts, ideas, or insights</p>
                           </div>
                         </div>

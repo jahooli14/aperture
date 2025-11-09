@@ -23,7 +23,7 @@ export function MapToolbar() {
         title="Refresh door suggestions"
       >
         <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
-        <span className="text-sm font-medium">Refresh Doors</span>
+        <span className="text-sm font-medium">Refresh doors</span>
       </button>
     </div>
   )

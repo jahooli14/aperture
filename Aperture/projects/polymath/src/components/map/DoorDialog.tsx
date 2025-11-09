@@ -52,7 +52,7 @@ export function DoorDialog({ door, open, onClose, onAccept, onDismiss }: DoorDia
                     <Link2 className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold premium-text-platinum">New Connection</h3>
+                    <h3 className="text-xl font-bold premium-text-platinum">New connection</h3>
                     <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       Bridge two cities
                     </p>
@@ -66,7 +66,7 @@ export function DoorDialog({ door, open, onClose, onAccept, onDismiss }: DoorDia
                     <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold premium-text-platinum">New Territory</h3>
+                    <h3 className="text-xl font-bold premium-text-platinum">New territory</h3>
                     <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       Found a new settlement
                     </p>
@@ -80,7 +80,7 @@ export function DoorDialog({ door, open, onClose, onAccept, onDismiss }: DoorDia
                     <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold premium-text-platinum">Project Opportunity</h3>
+                    <h3 className="text-xl font-bold premium-text-platinum">Project opportunity</h3>
                     <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       Cross-domain innovation
                     </p>
@@ -94,7 +94,7 @@ export function DoorDialog({ door, open, onClose, onAccept, onDismiss }: DoorDia
                     <Link2 className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold premium-text-platinum">Bridge Opportunity</h3>
+                    <h3 className="text-xl font-bold premium-text-platinum">Bridge opportunity</h3>
                     <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                       Connect distant domains
                     </p>

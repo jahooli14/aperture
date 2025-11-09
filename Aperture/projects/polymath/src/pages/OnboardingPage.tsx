@@ -241,7 +241,7 @@ export function OnboardingPage() {
               onClick={() => navigate('/')}
               className="btn-primary px-8 py-4 text-lg inline-flex items-center gap-2"
             >
-              Start Capturing Thoughts
+              Start capturing thoughts
               <ArrowRight className="h-5 w-5" />
             </button>
             <p className="text-sm mt-4" style={{ color: 'var(--premium-text-tertiary)' }}>

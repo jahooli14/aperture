@@ -84,7 +84,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
             <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-            <BottomSheetTitle>Save Article</BottomSheetTitle>
+            <BottomSheetTitle>Save article</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
             Paste a URL to save it to your reading queue
