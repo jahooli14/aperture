@@ -11,8 +11,43 @@ class ApiError extends Error {
 }
 
 async function handleResponse(response: Response) {
+  // Handle 204 No Content - no JSON to parse
+  if (response.status === 204) {
+    return null
+  }
+
+  // Read response text first (can only read body once)
+  const text = await response.text()
+
+  // Handle empty responses
+  if (!text) {
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        `Request failed with status ${response.status}`,
+        {}
+      )
+    }
+    return null
+  }
+
+  // Parse JSON
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch (e) {
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        `Request failed with status ${response.status}`,
+        { text }
+      )
+    }
+    throw new Error('Failed to parse response as JSON')
+  }
+
+  // Check if response indicates an error
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}))
     throw new ApiError(
       response.status,
       data.error || data.details || `Request failed with status ${response.status}`,
@@ -20,18 +55,7 @@ async function handleResponse(response: Response) {
     )
   }
 
-  // Handle 204 No Content - no JSON to parse
-  if (response.status === 204) {
-    return null
-  }
-
-  // Handle empty responses
-  const text = await response.text()
-  if (!text) {
-    return null
-  }
-
-  return JSON.parse(text)
+  return data
 }
 
 export const api = {
