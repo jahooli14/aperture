@@ -27,34 +27,29 @@ export function Road({ road, cities }: RoadProps) {
 
   return (
     <g data-road-id={road.id}>
-      {/* Road line */}
+      {/* Road casing (dark outline) - Google Maps style */}
       <line
         x1={fromCity.position.x}
         y1={fromCity.position.y}
         x2={toCity.position.x}
         y2={toCity.position.y}
-        stroke={color}
-        strokeWidth={width}
-        strokeDasharray={dashArray}
+        stroke="#0f1419"
+        strokeWidth={width + 3}
         strokeLinecap="round"
-        className="transition-all"
+        opacity={0.8}
       />
 
-      {/* Optional: Label for connection count on hover */}
-      {road.strength > 5 && (
-        <g className="opacity-0 hover:opacity-100 transition-opacity">
-          <text
-            x={(fromCity.position.x + toCity.position.x) / 2}
-            y={(fromCity.position.y + toCity.position.y) / 2}
-            textAnchor="middle"
-            fill="var(--premium-text-secondary)"
-            fontSize={10}
-            className="pointer-events-none select-none"
-          >
-            {road.strength} connections
-          </text>
-        </g>
-      )}
+      {/* Road center (colored line) */}
+      <line
+        x1={fromCity.position.x}
+        y1={fromCity.position.y}
+        x2={toCity.position.x}
+        y2={toCity.position.y}
+        stroke="#ffa500"
+        strokeWidth={width}
+        strokeLinecap="round"
+        opacity={0.9}
+      />
     </g>
   )
 }

@@ -21,25 +21,25 @@ export function Door({ door, onClick }: DoorProps) {
       onClick={onClick}
       className="cursor-pointer door-portal"
     >
-      {/* Outer glow - subtle pulse */}
+      {/* Suggestion marker - dashed circle like map POI */}
       <circle
         cx={door.position.x}
         cy={door.position.y}
-        r={25}
-        fill="rgba(251, 191, 36, 0.15)"
-        stroke="var(--premium-gold)"
-        strokeWidth={1}
-        opacity={0.6}
+        r={20}
+        fill="none"
+        stroke="#9333EA"
+        strokeWidth={2}
+        strokeDasharray="4,4"
+        opacity={0.8}
       />
 
-      {/* Inner glow - solid center */}
+      {/* Center dot */}
       <circle
         cx={door.position.x}
         cy={door.position.y}
-        r={12}
-        fill="rgba(251, 191, 36, 0.4)"
-        stroke="var(--premium-gold)"
-        strokeWidth={2}
+        r={6}
+        fill="#9333EA"
+        opacity={0.9}
       />
     </g>
   )

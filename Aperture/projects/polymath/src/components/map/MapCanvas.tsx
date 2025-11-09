@@ -125,71 +125,45 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         background: 'var(--premium-bg-1)'
       }}
     >
-      {/* Subtle animated gradient orbs (like homepage) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute rounded-full blur-3xl opacity-10"
-          style={{
-            width: '500px',
-            height: '500px',
-            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%)',
-            top: '-10%',
-            right: '-10%'
-          }}
-        />
-        <div
-          className="absolute rounded-full blur-3xl opacity-10"
-          style={{
-            width: '400px',
-            height: '400px',
-            background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent 70%)',
-            bottom: '-5%',
-            left: '-5%'
-          }}
-        />
-        <div
-          className="absolute rounded-full blur-3xl opacity-10"
-          style={{
-            width: '450px',
-            height: '450px',
-            background: 'radial-gradient(circle, rgba(236, 72, 153, 0.25), transparent 70%)',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)'
-          }}
-        />
-      </div>
+      {/* Map-style background */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: '#1a1f2e' // Dark blue-gray base (like Google Maps dark mode)
+      }} />
+
       <svg
         ref={svgRef}
         className="w-full h-full relative"
         style={{ cursor: 'grab', zIndex: 1 }}
       >
+        <defs>
+          {/* Terrain texture pattern */}
+          <pattern id="terrain-texture" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+            <rect width="100" height="100" fill="#1e2332" />
+            <circle cx="10" cy="10" r="0.5" fill="#2a3142" opacity="0.3" />
+            <circle cx="50" cy="30" r="0.5" fill="#2a3142" opacity="0.2" />
+            <circle cx="80" cy="70" r="0.5" fill="#2a3142" opacity="0.3" />
+          </pattern>
+        </defs>
+
         <g style={{
           transformOrigin: 'center',
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`
         }}>
-          {/* Subtle grid (minimal) */}
-          <g opacity={0.02}>
-            {Array.from({ length: 15 }).map((_, i) => (
+          {/* Terrain base layer */}
+          <rect
+            x={-1000}
+            y={-1000}
+            width={6000}
+            height={5000}
+            fill="url(#terrain-texture)"
+          />
+
+          {/* Map grid lines (latitude/longitude style) */}
+          <g opacity={0.1} stroke="#4a5568" strokeWidth={0.5} strokeDasharray="5,5">
+            {Array.from({ length: 20 }).map((_, i) => (
               <g key={`grid-${i}`}>
-                <line
-                  x1={i * 300}
-                  y1={0}
-                  x2={i * 300}
-                  y2={4500}
-                  stroke="#3b82f6"
-                  strokeWidth={1}
-                  strokeDasharray="10,10"
-                />
-                <line
-                  x1={0}
-                  y1={i * 300}
-                  x2={4500}
-                  y2={i * 300}
-                  stroke="#3b82f6"
-                  strokeWidth={1}
-                  strokeDasharray="10,10"
-                />
+                <line x1={i * 300} y1={-500} x2={i * 300} y2={4500} />
+                <line x1={-500} y1={i * 300} x2={6000} y2={i * 300} />
               </g>
             ))}
           </g>
@@ -230,21 +204,21 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
         onDismiss={handleDoorDismiss}
       />
 
-      {/* Zoom controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2">
+      {/* Zoom controls - Google Maps style */}
+      <div className="absolute bottom-8 right-4 flex flex-col rounded-md overflow-hidden shadow-lg" style={{
+        background: '#ffffff'
+      }}>
         <button
           onClick={() => {
             const newScale = Math.min(3, transform.scale * 1.2)
             applyTransform({ ...transform, scale: newScale })
           }}
-          className="p-3 rounded-lg shadow-lg transition-all"
+          className="p-3 hover:bg-gray-100 transition-colors border-b border-gray-200"
           style={{
-            background: 'rgba(32, 43, 62, 0.95)',
-            color: 'var(--premium-text-primary)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
+            color: '#5f6368'
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
           </svg>
         </button>
@@ -253,60 +227,44 @@ export function MapCanvas({ mapData, onCityClick }: MapCanvasProps) {
             const newScale = Math.max(0.2, transform.scale / 1.2)
             applyTransform({ ...transform, scale: newScale })
           }}
-          className="p-3 rounded-lg shadow-lg transition-all"
+          className="p-3 hover:bg-gray-100 transition-colors"
           style={{
-            background: 'rgba(32, 43, 62, 0.95)',
-            color: 'var(--premium-text-primary)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
+            color: '#5f6368'
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
             <path d="M5 10h10" stroke="currentColor" strokeWidth={2} strokeLinecap="round" />
           </svg>
         </button>
-        <button
-          onClick={() => {
-            applyTransform({ x: 0, y: 0, scale: 1 })
-          }}
-          className="p-3 rounded-lg shadow-lg transition-all text-xs font-semibold"
-          style={{
-            background: 'rgba(32, 43, 62, 0.95)',
-            color: 'var(--premium-text-primary)',
-            border: '1px solid rgba(59, 130, 246, 0.2)'
-          }}
-        >
-          Reset
-        </button>
       </div>
 
-      {/* Map legend (bottom left) */}
+      {/* Map legend - Google Maps style */}
       <div
-        className="absolute bottom-4 left-4 p-4 rounded-lg shadow-lg text-xs"
+        className="absolute bottom-8 left-4 p-3 rounded-md shadow-lg text-xs"
         style={{
-          background: 'rgba(32, 43, 62, 0.95)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
-          color: 'var(--premium-text-secondary)'
+          background: '#ffffff',
+          color: '#202124'
         }}
       >
-        <div className="font-bold mb-2 text-sm" style={{ color: 'var(--premium-text-primary)' }}>
-          Legend
+        <div className="font-semibold mb-2" style={{ color: '#202124', fontSize: '13px' }}>
+          Knowledge Map
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-gold)' }} />
-            <span>Metropolis (50+ items)</span>
+            <div className="w-4 h-4 rounded-full" style={{ background: '#EA4335' }} />
+            <span style={{ color: '#5f6368' }}>Major topic (50+)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-purple)' }} />
-            <span>City (20-49 items)</span>
+            <div className="w-4 h-4 rounded-full" style={{ background: '#FBBC04' }} />
+            <span style={{ color: '#5f6368' }}>Topic (20-49)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-indigo)' }} />
-            <span>Town (10-19 items)</span>
+            <div className="w-4 h-4 rounded-full" style={{ background: '#34A853' }} />
+            <span style={{ color: '#5f6368' }}>Subtopic (10-19)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ background: 'var(--premium-blue)' }} />
-            <span>Village (3-9 items)</span>
+            <div className="w-4 h-4 rounded-full" style={{ background: '#4285F4' }} />
+            <span style={{ color: '#5f6368' }}>Theme (3-9)</span>
           </div>
         </div>
       </div>

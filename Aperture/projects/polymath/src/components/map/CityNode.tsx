@@ -13,112 +13,96 @@ interface CityNodeProps {
 
 export function CityNode({ city, onClick }: CityNodeProps) {
   const radius = getCityRadius(city.size)
-  const fillColor = getCityColor(city.size)
 
-  // Different colors based on size
-  const strokeColor = city.size === 'metropolis' ? 'var(--premium-gold)' :
-                      city.size === 'city' ? 'var(--premium-purple)' :
-                      city.size === 'town' ? 'var(--premium-indigo)' :
-                      'var(--premium-blue)'
+  // Map pin style - consistent red/orange like Google Maps
+  const pinColor = city.size === 'metropolis' ? '#EA4335' :  // Google red
+                   city.size === 'city' ? '#FBBC04' :        // Google yellow
+                   city.size === 'town' ? '#34A853' :        // Google green
+                   '#4285F4'                                 // Google blue
 
   return (
     <g onClick={onClick} className="cursor-pointer group" data-city-id={city.id}>
-      {/* Outer glow ring - static (no animation for performance) */}
-      <circle
+      {/* Map pin shadow */}
+      <ellipse
         cx={city.position.x}
-        cy={city.position.y}
-        r={radius + 10}
-        fill="none"
-        stroke={strokeColor}
-        strokeWidth={1}
-        opacity={0.2}
+        cy={city.position.y + radius + 2}
+        rx={radius * 0.6}
+        ry={radius * 0.3}
+        fill="#000000"
+        opacity={0.3}
       />
 
-      {/* Main city circle with cartographic style */}
-      <circle
-        cx={city.position.x}
-        cy={city.position.y}
-        r={radius}
-        fill={fillColor}
-        stroke={strokeColor}
-        strokeWidth={2}
-        className="transition-all"
-        style={{
-          filter: `drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4))`
-        }}
-      />
-
-      {/* Inner rings for larger cities (like district boundaries) */}
-      {(city.size === 'city' || city.size === 'metropolis') && (
-        <>
-          <circle
-            cx={city.position.x}
-            cy={city.position.y}
-            r={radius * 0.65}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={1}
-            opacity={0.3}
-          />
-          <circle
-            cx={city.position.x}
-            cy={city.position.y}
-            r={radius * 0.35}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={1}
-            opacity={0.4}
-          />
-        </>
-      )}
-
-      {/* Central landmark for major cities */}
-      {(city.size === 'metropolis') && (
+      {/* Map pin body (teardrop shape) */}
+      <g>
+        {/* Pin circle */}
         <circle
           cx={city.position.x}
           cy={city.position.y}
-          r={radius * 0.15}
-          fill={strokeColor}
-          opacity={0.8}
+          r={radius}
+          fill={pinColor}
+          stroke="#ffffff"
+          strokeWidth={2}
+          style={{
+            filter: `drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))`
+          }}
         />
-      )}
 
-      {/* Label - map-style typography */}
+        {/* Pin point (triangle) */}
+        <path
+          d={`M ${city.position.x} ${city.position.y + radius}
+              L ${city.position.x - radius * 0.5} ${city.position.y + radius * 0.3}
+              L ${city.position.x + radius * 0.5} ${city.position.y + radius * 0.3} Z`}
+          fill={pinColor}
+          stroke="#ffffff"
+          strokeWidth={1.5}
+        />
+
+        {/* Pin center dot */}
+        <circle
+          cx={city.position.x}
+          cy={city.position.y}
+          r={radius * 0.35}
+          fill="#ffffff"
+          opacity={0.9}
+        />
+      </g>
+
+      {/* Label - Google Maps style */}
       <text
         x={city.position.x}
-        y={city.position.y - radius - 15}
+        y={city.position.y - radius - 12}
         textAnchor="middle"
-        fill="var(--premium-text-primary)"
-        fontSize={city.size === 'metropolis' ? 15 : city.size === 'city' ? 13 : 12}
-        fontWeight={city.size === 'metropolis' || city.size === 'city' ? 700 : 600}
-        letterSpacing={city.size === 'metropolis' ? 1.5 : city.size === 'city' ? 1 : 0.5}
-        className="pointer-events-none select-none uppercase"
+        fill="#ffffff"
+        fontSize={city.size === 'metropolis' ? 14 : city.size === 'city' ? 12 : 11}
+        fontWeight={600}
+        className="pointer-events-none select-none"
         style={{
-          fontFamily: 'Inter, system-ui, sans-serif',
-          textShadow: '0 2px 8px rgba(0,0,0,0.6), 0 0 4px rgba(0,0,0,0.8)'
+          fontFamily: 'Inter, Roboto, system-ui, sans-serif',
+          textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)',
+          letterSpacing: '0.5px'
         }}
       >
         {city.name}
       </text>
 
-      {/* Population count badge */}
+      {/* Population badge */}
       <g>
         <rect
-          x={city.position.x - 18}
-          y={city.position.y + radius + 8}
-          width={36}
-          height={16}
-          rx={8}
-          fill="rgba(32, 43, 62, 0.9)"
-          stroke={strokeColor}
-          strokeWidth={1}
+          x={city.position.x - 20}
+          y={city.position.y + radius + 10}
+          width={40}
+          height={18}
+          rx={9}
+          fill="#202020"
+          stroke="#ffffff"
+          strokeWidth={1.5}
           opacity={0.95}
         />
         <text
           x={city.position.x}
-          y={city.position.y + radius + 19}
+          y={city.position.y + radius + 22}
           textAnchor="middle"
-          fill="var(--premium-text-primary)"
+          fill="#ffffff"
           fontSize={10}
           fontWeight={600}
           className="pointer-events-none select-none"
@@ -127,19 +111,16 @@ export function CityNode({ city, onClick }: CityNodeProps) {
         </text>
       </g>
 
-      {/* Hover effect ring */}
+      {/* Hover pulse effect */}
       <circle
         cx={city.position.x}
         cy={city.position.y}
-        r={radius + 5}
+        r={radius + 8}
         fill="none"
-        stroke="var(--premium-gold)"
-        strokeWidth={3}
-        opacity={0.8}
-        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-        style={{
-          filter: `drop-shadow(0 0 10px var(--premium-gold))`
-        }}
+        stroke={pinColor}
+        strokeWidth={2}
+        opacity={0}
+        className="group-hover:opacity-60 transition-opacity duration-200"
       />
     </g>
   )
