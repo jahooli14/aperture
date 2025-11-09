@@ -48,13 +48,22 @@ export function CreateProjectDialog() {
     setLoading(true)
 
     try {
+      // Create tasks array if first step is provided
+      const tasks = formData.next_step ? [{
+        id: crypto.randomUUID(),
+        text: formData.next_step,
+        done: false,
+        created_at: new Date().toISOString(),
+        order: 0
+      }] : []
+
       await createProject({
         title: formData.title,
         description: formData.description || '',
         // type is optional - database will default to 'creative'
         status: 'active', // Always start as active
         metadata: {
-          next_step: formData.next_step || undefined,
+          tasks,
           progress: 0,
         },
       })
@@ -165,9 +174,6 @@ export function CreateProjectDialog() {
                 }}
                 autoComplete="off"
               />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Define what to work on first
-              </p>
             </div>
 
             <BottomSheetFooter>
