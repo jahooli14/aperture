@@ -964,7 +964,7 @@ async function handleAISparks(
 }
 
 /**
- * Get connection suggestions for an item (from connection_suggestions table)
+ * Get connection suggestions for an item (from project_suggestions table)
  */
 async function handleGetSuggestions(
   req: VercelRequest,
@@ -978,9 +978,9 @@ async function handleGetSuggestions(
   try {
     console.log('[handleGetSuggestions] Fetching suggestions for:', { itemType, itemId, target_type, limit })
 
-    // Query connection_suggestions table
+    // Query project_suggestions table
     let query = supabase
-      .from('connection_suggestions')
+      .from('project_suggestions')
       .select('*')
       .eq('from_item_type', itemType)
       .eq('from_item_id', itemId)
