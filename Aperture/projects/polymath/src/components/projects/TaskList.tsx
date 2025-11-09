@@ -124,13 +124,12 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const totalCount = tasks.length
 
   return (
-    <Card className="premium-card">
+    <Card className="premium-card" style={{ background: 'var(--premium-bg-3)' }}>
       <CardContent className="p-5">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-semibold premium-text-platinum flex items-center gap-2">
-              <span className="text-lg">✓</span>
+            <h3 className="font-semibold premium-text-platinum">
               Task Checklist
             </h3>
             {totalCount > 0 && (

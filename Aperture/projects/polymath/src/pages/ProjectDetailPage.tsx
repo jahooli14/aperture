@@ -7,7 +7,6 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical, ChevronDown } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
-import { ProjectProperties } from '../components/projects/ProjectProperties'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
@@ -713,15 +712,6 @@ export function ProjectDetailPage() {
             </div>
           )}
         </div>
-
-        {/* Properties */}
-        <ProjectProperties
-          project={project}
-          onUpdate={(updates) => {
-            setProject({ ...project, ...updates })
-            updateProject(project.id, updates)
-          }}
-        />
 
         {/* Task Checklist */}
         <div data-task-list>
