@@ -815,7 +815,7 @@ async function fetchArticles() {
 
   try {
     const { data, error } = await supabase
-      .from('articles')
+      .from('reading_queue')
       .select('*')
       .eq('user_id', userId)
       .in('status', ['unread', 'reading'])
