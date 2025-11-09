@@ -65,11 +65,11 @@ async function fetchArticleWithJina(url: string) {
       throw new Error('Jina AI returned invalid response structure')
     }
 
-    // Extract content from JSON response
-    const content = data.data.content || ''
+    // Extract HTML content from JSON response (Jina uses 'html' field, not 'content')
+    const html = data.data.html || ''
     const jinaTitle = data.data.title || ''
 
-    if (!content || content.trim().length === 0) {
+    if (!html || html.trim().length === 0) {
       throw new Error('Jina AI returned empty content')
     }
 
@@ -88,20 +88,21 @@ async function fetchArticleWithJina(url: string) {
 
     // Extract H1 from HTML content using regex
     let title = 'Untitled'
-    const h1Match = content.match(/<h1[^>]*>(.*?)<\/h1>/i)
+    const h1Match = html.match(/<h1[^>]*>(.*?)<\/h1>/i)
     if (h1Match && h1Match[1]) {
       // Strip HTML tags from the H1 content
       const h1Text = h1Match[1].replace(/<[^>]+>/g, '').trim()
       // Use H1 if it's valid and not generic
       if (h1Text.length > 0 && h1Text.length < 200 && !isUrlLike(h1Text) && !h1Text.toLowerCase().includes('homepage')) {
         title = h1Text
-        console.log('[Jina AI] Found H1 title:', title)
+        console.log('[Jina AI] Found H1 title from HTML:', title)
       }
     }
 
     // Fallback to Jina's title if H1 extraction failed and Jina title is valid
     if (title === 'Untitled' && jinaTitle && jinaTitle.length > 0 && !jinaTitle.toLowerCase().includes('homepage')) {
       title = jinaTitle
+      console.log('[Jina AI] Using Jina metadata title:', title)
     }
 
     // If still using generic title, try to extract from URL
@@ -138,17 +139,17 @@ async function fetchArticleWithJina(url: string) {
     const description = data.data.description || ''
 
     // Create excerpt from description or first 200 chars of text content
-    const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    const textContent = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
     let excerpt = description || textContent.substring(0, 200) || ''
 
-    // Check if content extraction was successful
-    if (!content || content.length < 100) {
+    // Only show incomplete message if HTML is genuinely short or missing
+    if (!html || html.length < 500) {
       excerpt = `Content extraction from ${extractDomain(url)} may be incomplete. Click to view the original article.`
     }
 
     return {
       title: title || 'Untitled',
-      content: content || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
+      content: html || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
       author: data.data.author || null,
       publishedDate: data.data.publishedTime || null,
