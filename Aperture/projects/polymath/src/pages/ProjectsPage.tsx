@@ -228,8 +228,8 @@ export function ProjectsPage() {
           </Card>
         )}
 
-        {/* Loading State */}
-        {loading ? (
+        {/* Loading State - Only show if no data yet (prevent flicker on refresh) */}
+        {loading && projects.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
