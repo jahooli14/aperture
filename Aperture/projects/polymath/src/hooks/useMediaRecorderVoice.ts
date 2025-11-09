@@ -286,47 +286,39 @@ export function useMediaRecorderVoice({
     setIsRecording(false)
     stopTimer()
 
-    // Request final data chunk before stopping
-    if (mediaRecorderRef.current?.state === 'recording') {
-      console.log('[Web] Requesting final data before stop')
-      // Force a dataavailable event to fire with accumulated data
-      mediaRecorderRef.current.requestData()
-      // Wait for the dataavailable event to fire
-      await new Promise(resolve => setTimeout(resolve, 100))
+    if (mediaRecorderRef.current?.state !== 'recording') {
+      console.warn('[Web] MediaRecorder not in recording state:', mediaRecorderRef.current?.state)
+      alert('Recording was not active')
+      return
     }
 
-    // Stop MediaRecorder and wait for final chunks
+    // Stop MediaRecorder and wait for ondataavailable + onstop events
     const waitForStop = new Promise<void>((resolve) => {
-      if (mediaRecorderRef.current?.state === 'recording') {
-        console.log('[Web] Calling stop() on MediaRecorder')
-        // onstop handler is already set during start, just call stop
-        const timeoutId = setTimeout(() => {
-          console.warn('[Web] Stop event timeout - proceeding anyway')
-          resolve()
-        }, 2000)
+      console.log('[Web] Setting up stop handlers')
 
-        const originalOnStop = mediaRecorderRef.current.onstop
-        mediaRecorderRef.current.onstop = (event) => {
-          clearTimeout(timeoutId)
-          if (originalOnStop) {
-            originalOnStop.call(mediaRecorderRef.current, event)
-          }
-          resolve()
-        }
-
-        mediaRecorderRef.current.stop()
-      } else {
-        console.warn('[Web] MediaRecorder not in recording state:', mediaRecorderRef.current?.state)
+      const timeoutId = setTimeout(() => {
+        console.warn('[Web] Stop event timeout after 3s - proceeding anyway')
         resolve()
+      }, 3000)
+
+      const originalOnStop = mediaRecorderRef.current!.onstop
+      mediaRecorderRef.current!.onstop = (event) => {
+        console.log('[Web] onstop fired')
+        clearTimeout(timeoutId)
+        if (originalOnStop) {
+          originalOnStop.call(mediaRecorderRef.current, event)
+        }
+        // Give extra time for final ondataavailable event
+        setTimeout(resolve, 300)
       }
+
+      console.log('[Web] Calling stop() on MediaRecorder')
+      mediaRecorderRef.current!.stop()
     })
 
     try {
-      // Wait for recording to fully stop
+      // Wait for recording to fully stop and all events to fire
       await waitForStop
-
-      // Wait longer for requestData() dataavailable event to fire
-      await new Promise(resolve => setTimeout(resolve, 500))
 
       console.log('[Web] Chunks collected after waiting:', chunksRef.current.length)
 
