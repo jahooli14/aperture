@@ -107,7 +107,7 @@ export function PromptModal({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-32">
+      <div className="flex-1 overflow-y-auto p-4 pb-48">
         <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>{prompt.prompt_text}</h2>
         {prompt.prompt_description && (
           <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
@@ -173,7 +173,8 @@ export function PromptModal({
       </div>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 shadow-lg" style={{
+      <div className="fixed left-0 right-0 p-4 shadow-lg" style={{
+        bottom: '80px',
         backgroundColor: 'var(--premium-bg-2)',
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         zIndex: 60
