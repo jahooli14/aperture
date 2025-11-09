@@ -406,7 +406,7 @@ export interface Project {
   user_id: string
   title: string
   description: string | null
-  type: 'hobby' | 'side-project' | 'learning' // Project category
+  type?: string | null // Project category - optional, defaults to 'creative'
   status: ProjectStatus
   last_active: string // ISO 8601
   created_at: string

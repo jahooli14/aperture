@@ -51,7 +51,7 @@ export function CreateProjectDialog() {
       await createProject({
         title: formData.title,
         description: formData.description || '',
-        type: 'hobby', // Default to hobby type
+        // type is optional - database will default to 'creative'
         status: 'active', // Always start as active
         metadata: {
           next_step: formData.next_step || undefined,

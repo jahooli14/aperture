@@ -785,8 +785,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error.message?.includes('projects_type_check') || error.code === '23514') {
           return res.status(400).json({
             error: 'Invalid project type',
-            details: `Type must be one of: 'hobby', 'side-project', or 'learning'. Received: '${projectData.type}'`,
-            suggestion: 'The database schema may need migration. Run scripts/update-project-types.sql'
+            details: `Type must be one of: 'creative', 'technical', or 'learning'. Received: '${projectData.type}'`,
+            suggestion: 'Valid types: creative (artistic/hobby), technical (coding/building), learning (educational)'
           })
         }
 
