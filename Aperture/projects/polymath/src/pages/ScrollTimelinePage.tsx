@@ -494,7 +494,7 @@ export function ScrollTimelinePage() {
                 return (
                   <div
                     key={type}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full premium-glass border shadow-md"
+                    className="flex items-center gap-2 px-4 py-2 rounded-full premium-glass border shadow-md"
                     style={{ borderColor: `${colors.primary}50` }}
                   >
                     <div
@@ -1073,7 +1073,7 @@ function TimelineScrubber({
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg whitespace-nowrap premium-glass border shadow-lg"
+                className="absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg whitespace-nowrap premium-glass border shadow-lg"
                 style={{ borderColor: 'rgba(59, 130, 246, 0.4)' }}
               >
                 <span className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>

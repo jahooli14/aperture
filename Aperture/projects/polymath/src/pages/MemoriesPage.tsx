@@ -23,9 +23,23 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
-import { Brain, Zap, ArrowLeft, CloudOff, Search } from 'lucide-react'
+import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
+
+const getIconComponent = (name: string) => {
+  const lowerName = name.toLowerCase()
+  if (lowerName.includes('learn')) return Brain
+  if (lowerName.includes('creat')) return Lightbulb
+  if (lowerName.includes('nature')) return Leaf
+  if (lowerName.includes('code') || lowerName.includes('tech')) return Code
+  if (lowerName.includes('art') || lowerName.includes('design')) return Palette
+  if (lowerName.includes('love') || lowerName.includes('relationship')) return Heart
+  if (lowerName.includes('read') || lowerName.includes('book')) return BookOpen
+  if (lowerName.includes('energy') || lowerName.includes('power')) return Zap
+  if (lowerName.includes('social') || lowerName.includes('people')) return Users
+  return Lightbulb // default icon
+}
 
 export function MemoriesPage() {
   const navigate = useNavigate()
@@ -364,10 +378,11 @@ export function MemoriesPage() {
             <div className="flex gap-2 flex-wrap flex-1">
               <button
                 onClick={() => setView('foundational')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
                 style={{
-                  backgroundColor: view === 'foundational' ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                  color: view === 'foundational' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backgroundColor: view === 'foundational' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
+                  color: view === 'foundational' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                  borderColor: view === 'foundational' ? 'var(--premium-blue)' : 'transparent',
                   backdropFilter: 'blur(12px)'
                 }}
               >
@@ -375,10 +390,11 @@ export function MemoriesPage() {
               </button>
               <button
                 onClick={() => setView('all')}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
                 style={{
-                  backgroundColor: view === 'all' ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                  color: view === 'all' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backgroundColor: view === 'all' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
+                  color: view === 'all' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                  borderColor: view === 'all' ? 'var(--premium-blue)' : 'transparent',
                   backdropFilter: 'blur(12px)'
                 }}
               >
@@ -386,10 +402,11 @@ export function MemoriesPage() {
               </button>
               <button
                 onClick={() => setView('resurfacing')}
-                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                className="relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
                 style={{
-                  backgroundColor: view === 'resurfacing' ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                  color: view === 'resurfacing' ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backgroundColor: view === 'resurfacing' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
+                  color: view === 'resurfacing' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                  borderColor: view === 'resurfacing' ? 'var(--premium-blue)' : 'transparent',
                   backdropFilter: 'blur(12px)'
                 }}
               >
@@ -663,16 +680,33 @@ export function MemoriesPage() {
             {/* Theme cluster detail view */}
             {selectedCluster && memoryView === 'themes' && (
               <div className="mb-8">
-                <Button
-                  variant="outline"
+                <button
                   onClick={() => setSelectedCluster(null)}
-                  className="mb-6 flex items-center gap-2"
+                  className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border"
+                  style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    color: 'var(--premium-text-tertiary)',
+                    borderColor: 'transparent',
+                    backdropFilter: 'blur(12px)'
+                  }}
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back to Themes
-                </Button>
+                </button>
                 <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 premium-text-platinum">
-                  <span className="text-3xl">{selectedCluster.icon}</span>
+                  <div
+                    className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}
+                  >
+                    {React.createElement(getIconComponent(selectedCluster.name), {
+                      className: 'h-6 w-6',
+                      style: { color: 'var(--premium-blue)' }
+                    })}
+                  </div>
                   {selectedCluster.name}
                   <span className="text-sm font-normal" style={{ color: 'var(--premium-text-secondary)' }}>
                     ({selectedCluster.memory_count} thoughts)
@@ -700,7 +734,7 @@ export function MemoriesPage() {
                     <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
                   </div>
                 ) : clusters.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-2 gap-6">
                     {clusters.map((cluster) => (
                       <ThemeClusterCard
                         key={cluster.id}

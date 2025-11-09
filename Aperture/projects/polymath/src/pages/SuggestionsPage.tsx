@@ -12,7 +12,7 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
-import { Sparkles, Calendar, Brain, Database, Network, Workflow } from 'lucide-react'
+import { Calendar, Brain, Database, Network, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
@@ -173,18 +173,12 @@ export function SuggestionsPage() {
                 Generating...
               </>
             ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analyze & Generate
-              </>
+              'Analyze & Generate'
             )}
           </button>
         </div>
         {/* Centered header content below button */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4 animate-float">
-            <Sparkles className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
-          </div>
           <h1 className="premium-text-platinum mb-3" style={{
             fontSize: 'var(--premium-text-display-sm)',
             fontWeight: 700,

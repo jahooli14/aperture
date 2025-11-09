@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { motion } from 'framer-motion'
-import { Search, Link as LinkIcon, Brain, Rocket, BookOpen, Lightbulb, Loader2, Sparkles } from 'lucide-react'
+import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2, Sparkles } from 'lucide-react'
 import type { ConnectionSourceType, Project, Memory, ReadingQueueItem, ProjectSuggestion } from '../../types'
 
 interface CreateConnectionDialogProps {
@@ -27,7 +27,7 @@ type SearchableItem = {
 }
 
 const SCHEMA_COLORS = {
-  project: { primary: '#3b82f6', icon: Rocket },
+  project: { primary: '#3b82f6', icon: Layers },
   thought: { primary: '#3b82f6', icon: Brain },
   article: { primary: '#3b82f6', icon: BookOpen },
   suggestion: { primary: '#f59e0b', icon: Lightbulb }

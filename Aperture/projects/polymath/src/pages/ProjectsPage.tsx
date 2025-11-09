@@ -12,7 +12,7 @@ import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton'
-import { Rocket, Sparkles, Search } from 'lucide-react'
+import { Layers, Sparkles, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import type { Project } from '../types'
@@ -108,7 +108,7 @@ export function ProjectsPage() {
             color: 'var(--premium-blue)',
             opacity: 0.7
           }}>
-            <Rocket className="h-7 w-7" />
+            <Layers className="h-7 w-7" />
           </div>
 
           {/* Filter Tabs */}
@@ -123,10 +123,11 @@ export function ProjectsPage() {
               <button
                 key={key}
                 onClick={() => setFilter(key as typeof filter)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
                 style={{
-                  backgroundColor: filter === key ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                  color: filter === key ? 'rgba(100, 180, 255, 1)' : 'var(--premium-text-tertiary)',
+                  backgroundColor: filter === key ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
+                  color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                  borderColor: filter === key ? 'var(--premium-blue)' : 'transparent',
                   backdropFilter: 'blur(12px)'
                 }}
               >
@@ -204,7 +205,7 @@ export function ProjectsPage() {
           }}>
             <CardContent className="pt-6">
               <h3 className="font-semibold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
-                <Rocket className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                <Layers className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                 Demo Projects - Progress Tracking in Action
               </h3>
               <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
@@ -244,7 +245,7 @@ export function ProjectsPage() {
             <CardContent className="py-24">
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center justify-center">
-                  <Rocket className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
+                  <Layers className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
                 </div>
                 <h3 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>No projects yet</h3>
                 <p className="max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>

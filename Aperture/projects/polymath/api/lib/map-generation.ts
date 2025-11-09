@@ -58,7 +58,7 @@ function extractTopicsFromText(text: string, maxTopics: number = 3): string[] {
   // Count word frequency
   const wordFreq = new Map<string, number>()
   words.forEach(word => {
-    wordFreq.set(word, (wordFreq.get(word) || 0) + 1
+    wordFreq.set(word, (wordFreq.get(word) || 0) + 1)
   })
 
   // Get top N words by frequency

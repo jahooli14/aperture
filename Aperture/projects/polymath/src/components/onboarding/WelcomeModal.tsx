@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Brain, Sparkles, Rocket, ArrowRight, X } from 'lucide-react'
+import { Brain, Sparkles, Layers, ArrowRight, X } from 'lucide-react'
 import { BrandName } from '../BrandName'
 
 interface WelcomeModalProps {
@@ -92,7 +92,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
             {/* Step 3 */}
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <Rocket className="h-6 w-6 text-blue-900" />
+                <Layers className="h-6 w-6 text-blue-900" />
               </div>
               <div>
                 <h3 className="font-semibold text-neutral-900 mb-1">

@@ -20,7 +20,7 @@ import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import {
-  Rocket,
+  Layers,
   ArrowRight,
   Plus,
   Mic,
@@ -29,7 +29,7 @@ import {
   Sparkles,
   Search,
   TrendingUp,
-  Network,
+  Moon,
   Calendar,
   Zap,
   Brain,
@@ -83,7 +83,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
       case 'thought':
         return { icon: Brain, color: 'var(--premium-indigo)' }
       case 'project':
-        return { icon: Rocket, color: 'var(--premium-blue)' }
+        return { icon: Layers, color: 'var(--premium-blue)' }
       default:
         return { icon: Sparkles, color: 'var(--premium-amber)' }
     }
@@ -651,7 +651,7 @@ export function HomePage() {
                 }}
                 title="Project"
               >
-                <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
             </div>
           </div>
@@ -803,7 +803,7 @@ export function HomePage() {
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-full mb-3" style={{
                   backgroundColor: 'rgba(59, 130, 246, 0.15)'
                 }}>
-                  <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                  <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
                 </div>
                 <h3 className="font-bold mb-2 premium-text-platinum text-sm">Ready to build something?</h3>
                 <p className="mb-3 text-xs max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
@@ -860,7 +860,13 @@ export function HomePage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <Calendar className="h-6 w-6 mt-1" style={{ color: 'var(--premium-blue)' }} />
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Calendar className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Timeline</h3>
                       <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
@@ -872,9 +878,9 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Constellation */}
+              {/* Bedtime Ideas */}
               <Link
-                to="/constellation"
+                to="/bedtime"
                 className="group p-5 rounded-xl transition-all"
                 style={{
                   background: 'var(--premium-bg-2)',
@@ -890,15 +896,21 @@ export function HomePage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <Network className="h-6 w-6 mt-1" style={{ color: 'var(--premium-blue)' }} />
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Moon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
                     <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Constellation</h3>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime Ideas</h3>
                       <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Explore your knowledge graph
+                        Creative inspiration for sleep
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-indigo)' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
             </div>
@@ -926,8 +938,14 @@ export function HomePage() {
 
                 {/* Content */}
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Zap className="h-6 w-6" style={{ color: 'var(--premium-purple)' }} />
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center" style={{
+                      background: 'rgba(236, 72, 153, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(236, 72, 153, 0.2)'
+                    }}>
+                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
+                    </div>
                     <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
                       Thought of the Day
                     </h3>

@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Rocket } from 'lucide-react'
+import { Plus, Layers } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -97,7 +97,7 @@ export function CreateProjectDialog() {
         <BottomSheetContent>
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
-              <Rocket className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               <BottomSheetTitle>Start a New Project</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
@@ -183,7 +183,7 @@ export function CreateProjectDialog() {
                   </>
                 ) : (
                   <>
-                    <Rocket className="mr-2 h-4 w-4" />
+                    <Layers className="mr-2 h-4 w-4" />
                     Create Project
                   </>
                 )}

@@ -90,10 +90,14 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       let projects = Array.isArray(data) ? data : data.projects || []
 
       // For 'dormant' filter, further filter by last_active date client-side
+      // Exclude projects with explicit status that have their own filters
       if (filter === 'dormant') {
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-        projects = projects.filter((p: Project) => new Date(p.last_active) < sevenDaysAgo)
+        const excludedStatuses = ['active', 'upcoming', 'completed', 'archived', 'abandoned']
+        projects = projects.filter((p: Project) =>
+          new Date(p.last_active) < sevenDaysAgo && !excludedStatuses.includes(p.status)
+        )
       }
 
       // Smart sorting

@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Trash2, Brain, Rocket, BookOpen, Lightbulb, RefreshCw, X, Check, Plus } from 'lucide-react'
+import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Trash2, Brain, Layers, BookOpen, Lightbulb, RefreshCw, X, Check, Plus } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
 
@@ -33,7 +33,7 @@ const SCHEMA_COLORS = {
     primary: '#3b82f6',
     light: 'rgba(59, 130, 246, 0.3)',
     bg: 'rgba(59, 130, 246, 0.15)',
-    icon: Rocket
+    icon: Layers
   },
   thought: {
     primary: '#3b82f6',

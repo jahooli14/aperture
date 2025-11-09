@@ -358,23 +358,16 @@ export function ReadingPage() {
                 <button
                   key={tab.key}
                   onClick={() => handleTabChange(tab.key)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap relative"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border"
                   style={{
-                    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+                    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
                     color: isActive ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
+                    borderColor: isActive ? 'var(--premium-blue)' : 'transparent',
                     backdropFilter: 'blur(12px)'
                   }}
                 >
                   {tab.label}
                   <span className="text-xs opacity-60">({count})</span>
-                  {isActive && (
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                      style={{
-                        background: 'var(--premium-blue)'
-                      }}
-                    />
-                  )}
                 </button>
               )
             })}

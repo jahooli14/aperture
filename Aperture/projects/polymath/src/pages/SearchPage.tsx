@@ -1,14 +1,12 @@
 /**
  * Search Page
  * Universal search across memories, projects, and articles
- * Supports both voice and text input
  */
 
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Mic, Brain, Rocket, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
-import { VoiceSearch } from '../components/VoiceSearch'
+import { motion } from 'framer-motion'
+import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 
@@ -44,7 +42,6 @@ export function SearchPage() {
   const { addToast } = useToast()
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
-  const [showVoiceSearch, setShowVoiceSearch] = useState(false)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResponse | null>(null)
 
@@ -68,7 +65,7 @@ export function SearchPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
       if (!response.ok) {
         throw new Error('Search failed')
       }
@@ -96,12 +93,6 @@ export function SearchPage() {
     }
   }
 
-  const handleVoiceSearch = (voiceQuery: string) => {
-    setQuery(voiceQuery)
-    setSearchParams({ q: voiceQuery })
-    setShowVoiceSearch(false)
-    performSearch(voiceQuery)
-  }
 
   const navigateToResult = (result: SearchResult) => {
     haptic.light()
@@ -136,7 +127,7 @@ export function SearchPage() {
       case 'memory':
         return <Brain className="h-5 w-5" style={{ color: 'var(--premium-indigo)' }} />
       case 'project':
-        return <Rocket className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+        return <Layers className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
       case 'article':
         return <BookOpen className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
       case 'suggestion':
@@ -190,6 +181,7 @@ export function SearchPage() {
                 style={{ color: 'var(--premium-text-tertiary)' }}
               />
               <input
+                autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -212,46 +204,8 @@ export function SearchPage() {
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
             </button>
-            <button
-              type="button"
-              onClick={() => setShowVoiceSearch(true)}
-              className="h-12 w-12 rounded-xl flex items-center justify-center border transition-all"
-              style={{
-                borderColor: 'rgba(59, 130, 246, 0.2)',
-                color: 'var(--premium-blue)'
-              }}
-            >
-              <Mic className="h-5 w-5" />
-            </button>
           </form>
 
-          {/* Voice Search Modal */}
-          <AnimatePresence>
-            {showVoiceSearch && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                onClick={() => setShowVoiceSearch(false)}
-              >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full max-w-lg"
-                >
-                  <VoiceSearch
-                    onSearch={handleVoiceSearch}
-                    onClose={() => setShowVoiceSearch(false)}
-                    placeholder="Say what you're looking for..."
-                    autoStart={true}
-                  />
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 

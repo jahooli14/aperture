@@ -12,11 +12,17 @@
  *   npm run backfill:embeddings --type=all --dry-run
  */
 
+// Load environment variables BEFORE any imports that validate env
+import { config } from 'dotenv'
+import { resolve } from 'path'
+config({ path: resolve(process.cwd(), '.env.local') })
+
 import { createClient } from '@supabase/supabase-js'
 import { generateEmbedding, cosineSimilarity } from '../api/lib/gemini-embeddings.js'
-import { getSupabaseConfig } from '../lib/env.js'
 
-const { url, serviceRoleKey } = getSupabaseConfig()
+// Access env vars directly to avoid validation issues
+const url = process.env.VITE_SUPABASE_URL!
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const supabase = createClient(url, serviceRoleKey)
 
 interface BackfillOptions {

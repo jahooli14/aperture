@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Home,
   Brain,
-  Rocket,
+  Layers,
   FileText,
   Mic,
   Settings
@@ -44,7 +44,7 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'projects', label: 'Projects', icon: Rocket, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'more', label: 'More', icon: Settings, path: '/settings', action: 'navigate', color: 'constellation' },
 ]
 
