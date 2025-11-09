@@ -5,7 +5,6 @@
 
 import { useState } from 'react'
 import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight } from 'lucide-react'
-import { Card, CardContent } from '../ui/card'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
@@ -124,8 +123,12 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const totalCount = tasks.length
 
   return (
-    <Card className="premium-card">
-      <CardContent className="p-5">
+    <div className="rounded-xl" style={{
+      background: 'var(--premium-bg-2)',
+      backdropFilter: 'blur(12px)',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+      padding: '1.25rem'
+    }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -154,7 +157,7 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragEnd={handleDragEnd}
               className="group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move"
               style={{
-                backgroundColor: isNextTask ? 'var(--premium-bg-2)' : 'rgba(255, 255, 255, 0.03)',
+                background: isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
@@ -359,7 +362,6 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
             <p className="text-xs mt-1">Break down your project into steps</p>
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   )
 }

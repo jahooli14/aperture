@@ -853,7 +853,18 @@ async function fetchMemories() {
  * Shows a random project that's DIFFERENT from Keep Momentum projects
  */
 async function getInspiration(excludeProjectIds: string[]) {
-  const projects = await fetchProjects()
+  // Fetch ALL projects (not just active/upcoming) for inspiration
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
+  const { data: allProjects, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['active', 'upcoming', 'next', 'dormant']) // Exclude only 'done' and 'abandoned'
+    .order('created_at', { ascending: false })
+
+  const projects = allProjects || []
 
   console.log('[Inspiration] Data fetched:', {
     projectsCount: projects.length,
