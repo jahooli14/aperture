@@ -82,18 +82,21 @@ export function PromptModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'var(--premium-bg-1)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <button
           onClick={handleSkip}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="p-2 rounded-full transition-colors"
+          style={{ color: 'var(--premium-text-secondary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           disabled={submitting}
         >
           <X className="h-5 w-5" />
         </button>
         {promptNumber && totalPrompts && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
             {promptNumber}/{totalPrompts}
           </span>
         )}
@@ -101,15 +104,15 @@ export function PromptModal({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-32">
-        <h2 className="text-xl font-bold mb-2">{prompt.prompt_text}</h2>
+        <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>{prompt.prompt_text}</h2>
         {prompt.prompt_description && (
-          <p className="text-gray-600 text-sm mb-6">{prompt.prompt_description}</p>
+          <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>{prompt.prompt_description}</p>
         )}
 
         <div className="space-y-3">
           {bullets.map((bullet, index) => (
             <div key={index} className="flex gap-2 items-start">
-              <span className="text-gray-400 mt-3">•</span>
+              <span className="mt-3" style={{ color: 'var(--premium-text-tertiary)' }}>•</span>
               <Textarea
                 value={bullet}
                 onChange={(e) => handleBulletChange(index, e.target.value)}
@@ -120,10 +123,13 @@ export function PromptModal({
               {bullets.length > 3 && (
                 <button
                   onClick={() => handleRemoveBullet(index)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors mt-2"
+                  className="p-2 rounded-full transition-colors mt-2"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   disabled={submitting}
                 >
-                  <Trash2 className="h-4 w-4 text-gray-400" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               )}
             </div>
@@ -132,39 +138,58 @@ export function PromptModal({
 
         <button
           onClick={handleAddBullet}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mt-4 text-sm font-medium"
+          className="flex items-center gap-2 mt-4 text-sm font-medium"
+          style={{ color: 'var(--premium-blue)' }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           disabled={submitting}
         >
           <Plus className="h-4 w-4" />
           Add bullet
         </button>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-900">
+        <div className="mt-6 p-4 rounded-lg" style={{
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          border: '1px solid rgba(59, 130, 246, 0.2)'
+        }}>
+          <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
             💡 <strong>Be specific!</strong> AI can't suggest great projects from vague responses.
             Add concrete details, names, feelings, and examples.
           </p>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-900">{error}</p>
+          <div className="mt-4 p-3 rounded-lg" style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)'
+          }}>
+            <p className="text-sm" style={{ color: '#ef4444' }}>{error}</p>
           </div>
         )}
       </div>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 p-4 shadow-lg" style={{
+        backgroundColor: 'var(--premium-bg-2)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
         <Button
           onClick={handleSubmit}
           disabled={submitting}
           className="w-full py-6 text-lg"
+          style={{
+            backgroundColor: 'var(--premium-blue)',
+            color: 'white'
+          }}
         >
           {submitting ? 'Saving...' : 'Save →'}
         </Button>
         <button
           onClick={handleSkip}
-          className="w-full py-3 text-gray-500 hover:text-gray-700 text-sm mt-2"
+          className="w-full py-3 text-sm mt-2"
+          style={{ color: 'var(--premium-text-tertiary)' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--premium-text-secondary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--premium-text-tertiary)'}
           disabled={submitting}
         >
           Skip for now

@@ -572,7 +572,7 @@ export function HomePage() {
                       </span>
                     </h3>
                     <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Answer 5 foundational questions to unlock personalized suggestions
+                      Answer 10 foundational questions to unlock personalized suggestions
                     </p>
                     <Link
                       to="/onboarding"
