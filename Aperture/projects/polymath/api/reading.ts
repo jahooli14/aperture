@@ -54,19 +54,11 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
-    // Build headers with optional API key for authenticated access
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'X-Return-Format': 'markdown'
-    }
-
-    // Add API key if available (helps bypass rate limits and domain blocks)
-    if (process.env.JINA_API_KEY) {
-      headers['Authorization'] = `Bearer ${process.env.JINA_API_KEY}`
-    }
-
     const response = await fetch(jinaUrl, {
-      headers,
+      headers: {
+        'Accept': 'application/json',
+        'X-Return-Format': 'markdown'
+      },
       signal: controller.signal
     })
 
@@ -77,21 +69,7 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 
     if (!response.ok) {
       console.error('[Jina AI Error]', response.status, text.substring(0, 500))
-
-      // Parse error response for better error messages
-      let errorMessage = `Jina AI returned ${response.status}`
-      try {
-        const errorData = JSON.parse(text)
-        if (errorData.code === 451 || errorData.name === 'SecurityCompromiseError') {
-          errorMessage = `This domain is temporarily blocked by Jina AI. ${errorData.message?.includes('blocked until') ? errorData.message.match(/blocked until ([^:]+)/)?.[1] || 'Try again later.' : 'Try again later.'}`
-        } else if (errorData.message) {
-          errorMessage = errorData.message
-        }
-      } catch {
-        errorMessage = `Jina AI returned ${response.status}: ${text.substring(0, 200)}`
-      }
-
-      throw new Error(errorMessage)
+      throw new Error(`Jina AI returned ${response.status}: ${text.substring(0, 200)}`)
     }
 
     // Handle empty responses
@@ -716,9 +694,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
           let userFriendlyMessage = 'Failed to extract content. '
 
-          if (errorMessage.includes('temporarily blocked') || errorMessage.includes('SecurityCompromiseError')) {
-            userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service. Try again later or view the original article.'
-          } else if (errorMessage.includes('JavaScript-heavy site')) {
+          if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage += 'This site may require JavaScript rendering. Try viewing the original article.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
             userFriendlyMessage += 'Request timed out. Click to retry.'
