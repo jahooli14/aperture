@@ -2,7 +2,7 @@
  * MemoryCard Component - Stunning Visual Design
  */
 
-import { useState, useEffect, memo, useCallback } from 'react'
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card'
@@ -42,8 +42,8 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     threshold: 500,
   })
 
-  // Function to load memory bridges
-  const loadMemoryBridges = useCallback(() => {
+  // Load bridges only when memory.id changes
+  useEffect(() => {
     if (memory.id.startsWith('temp_')) {
       setBridges([])
       return
@@ -51,9 +51,14 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     fetchBridgesForMemory(memory.id).then(setBridges)
   }, [memory.id, fetchBridgesForMemory])
 
-  useEffect(() => {
-    loadMemoryBridges()
-  }, [loadMemoryBridges])
+  // Callback for refreshing bridges after connections change
+  const loadMemoryBridges = useCallback(() => {
+    if (memory.id.startsWith('temp_')) {
+      setBridges([])
+      return
+    }
+    fetchBridgesForMemory(memory.id).then(setBridges)
+  }, [memory.id, fetchBridgesForMemory])
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -121,7 +126,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     }
   }
 
-  const contextMenuItems: ContextMenuItem[] = [
+  const contextMenuItems: ContextMenuItem[] = React.useMemo(() => [
     ...(onEdit ? [{
       label: 'Edit',
       icon: <Edit className="h-5 w-5" />,
@@ -143,7 +148,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: () => onDelete(memory),
       variant: 'destructive' as const,
     }] : []),
-  ]
+  ], [memory.id, memory.title, memory.body, onEdit, onDelete, handleCopyText, handleShare])
 
   return (
     <>
