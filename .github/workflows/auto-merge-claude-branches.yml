@@ -1,0 +1,24 @@
+name: Auto-merge Claude branches to main
+
+on:
+  push:
+    branches:
+      - 'claude/**'
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Merge to main
+        run: |
+          git config user.name "Claude Bot"
+          git config user.email "bot@claude.ai"
+          git merge --ff-only origin/${{ github.ref_name }}
+          git push origin main
