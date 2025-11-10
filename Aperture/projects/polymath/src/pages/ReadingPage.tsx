@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
@@ -533,15 +532,12 @@ export function ReadingPage() {
             </div>
           </div>
         ) : (
-          <Virtuoso
-            style={{ height: '800px' }}
-            totalCount={filteredArticles.length}
-            itemContent={(index) => {
-              const article = filteredArticles[index]
+          <div className="space-y-4">
+            {filteredArticles.map((article) => {
               const isSelected = bulkSelection.isSelected(article.id)
 
               return (
-                <div className="pb-4">
+                <div key={article.id} className="pb-4">
                   <div
                     className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
                     onClick={(e) => {
@@ -569,7 +565,6 @@ export function ReadingPage() {
                     )}
                     <div style={{ pointerEvents: 'auto' }}>
                       <ArticleCard
-                        key={article.id}
                         article={article}
                         onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
                       />
@@ -577,17 +572,8 @@ export function ReadingPage() {
                   </div>
                 </div>
               )
-            }}
-            components={{
-              List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
-                ({ style, children }, ref) => (
-                  <div ref={ref} style={style} className="space-y-4">
-                    {children}
-                  </div>
-                )
-              )
-            }}
-          />
+            })}
+          </div>
         )}
           </>
         )}
