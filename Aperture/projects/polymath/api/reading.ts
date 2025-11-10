@@ -57,7 +57,7 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const response = await fetch(jinaUrl, {
       headers: {
         'Accept': 'application/json',
-        'X-Return-Format': 'html'
+        'X-Return-Format': 'markdown'
       },
       signal: controller.signal
     })
@@ -90,15 +90,18 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       throw new Error('Jina AI returned invalid response structure')
     }
 
-    // Extract HTML content from JSON response (Jina uses 'html' field, not 'content')
-    const html = data.data.html || ''
+    // Extract markdown content from JSON response
+    const markdownContent = data.data.content || ''
     const jinaTitle = data.data.title || ''
 
-    console.log('[Jina AI] Received response - HTML length:', html.length, 'Jina title:', jinaTitle)
+    console.log('[Jina AI] Received response - Markdown length:', markdownContent.length, 'Jina title:', jinaTitle)
 
-    if (!html || html.trim().length === 0) {
+    if (!markdownContent || markdownContent.trim().length === 0) {
       throw new Error('Jina AI returned empty content')
     }
+
+    // Convert markdown to HTML
+    const html = await marked.parse(markdownContent)
 
     // Helper function to check if a string is URL-like
     const isUrlLike = (str: string): boolean => {
@@ -111,6 +114,28 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       // Check for URL fragments and query strings
       if (/[?&#]/.test(str) && str.length > 50) return true
       return false
+    }
+
+    // Validate HTML content quality before proceeding
+    // Remove script, style, and meta tags to check actual content
+    let htmlForValidation = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<meta[^>]*>/gi, '')
+      .replace(/<link[^>]*>/gi, '')
+
+    // Extract text content for validation
+    const textForValidation = htmlForValidation
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    console.log('[Jina AI] Validation - HTML length:', html.length, 'Text content length:', textForValidation.length)
+
+    // If the extracted content is mostly empty or just boilerplate, reject it
+    if (textForValidation.length < 50) {
+      console.error('[Jina AI] Content validation failed - insufficient text content after stripping tags')
+      throw new Error('Jina AI returned insufficient text content (possible JavaScript-heavy site)')
     }
 
     // Extract H1 from HTML content using regex ([\s\S] matches any char including newlines)
@@ -665,11 +690,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .catch(async (extractError) => {
           console.error(`[reading] ❌ Extraction failed for ${savedArticle.id}:`, extractError.message || extractError)
 
-          // Mark as failed but keep the record
+          // Mark as failed but keep the record with helpful error message
+          const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
+          let userFriendlyMessage = 'Failed to extract content. '
+
+          if (errorMessage.includes('JavaScript-heavy site')) {
+            userFriendlyMessage += 'This site may require JavaScript rendering. Try viewing the original article.'
+          } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+            userFriendlyMessage += 'Request timed out. Click to retry.'
+          } else {
+            userFriendlyMessage += 'Click to view the original article.'
+          }
+
           await supabase
             .from('reading_queue')
             .update({
-              excerpt: 'Failed to extract content. Click to retry.',
+              excerpt: userFriendlyMessage,
               processed: false,
             })
             .eq('id', savedArticle.id)
