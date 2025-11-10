@@ -40,7 +40,7 @@ export function PinOverlay() {
 
   if (!isPinned) return null
 
-  // Minimized state - just a bar at the bottom
+  // Minimized state - just a bar at the bottom (draggable to swipe back up)
   if (viewState === 'minimized') {
     return (
       <motion.div
@@ -48,12 +48,15 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 z-50 premium-glass-strong border-t cursor-pointer"
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={0.2}
+        onDragEnd={handleDragEnd}
+        className="fixed inset-x-0 bottom-0 z-20 premium-glass-strong border-t cursor-grab active:cursor-grabbing"
         style={{
           borderColor: 'rgba(255, 255, 255, 0.1)',
           backgroundColor: 'var(--premium-surface-base)'
         }}
-        onClick={() => setViewState('half')}
       >
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -66,6 +69,9 @@ export function PinOverlay() {
             <h3 className="font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
+            <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              (swipe ↕)
+            </span>
           </div>
           <button
             onClick={(e) => {
@@ -91,7 +97,7 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-50 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-20 premium-glass-strong border-t"
         style={{
           top: viewState === 'maximized' ? 0 : '50%',
           borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -141,7 +147,7 @@ export function PinOverlay() {
         <div
           className="overflow-y-auto"
           style={{
-            height: viewState === 'maximized' ? 'calc(100vh - 60px)' : 'calc(50vh - 60px - 8rem)',
+            height: viewState === 'maximized' ? 'calc(100vh - 60px)' : 'calc(50vh - 60px)',
             overscrollBehavior: 'contain'
           }}
         >
