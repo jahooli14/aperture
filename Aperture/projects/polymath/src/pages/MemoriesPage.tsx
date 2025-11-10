@@ -4,11 +4,9 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
-import { useMemoryCache } from '../hooks/useMemoryCache'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
@@ -43,12 +41,11 @@ const getIconComponent = (name: string) => {
 
 export function MemoriesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
-  const setMemories = useMemoryStore((state: any) => state.setMemories)
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
-  const { fetchWithCache, cacheMemories } = useMemoryCache()
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
@@ -57,7 +54,6 @@ export function MemoriesPage() {
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [showingCachedData, setShowingCachedData] = useState(false)
   const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
   const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
 
@@ -68,25 +64,14 @@ export function MemoriesPage() {
   const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
   const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
 
-  const loadMemoriesWithCache = useCallback(async () => {
+  // Use store's fetchMemories directly - it has built-in caching!
+  const loadMemories = useCallback(async (force = false) => {
     try {
-      const { memories: fetchedMemories, fromCache } = await fetchWithCache('/api/memories')
-      setShowingCachedData(fromCache)
-
-      // Update the store with fetched memories (whether from cache or API)
-      setMemories(fetchedMemories)
-
-      if (fromCache) {
-        addToast({
-          title: 'Offline Mode',
-          description: `Showing ${fetchedMemories.length} cached thoughts`,
-          variant: 'default'
-        })
-      }
+      await fetchMemories(force)
     } catch (error) {
       console.error('Failed to load memories:', error)
     }
-  }, [fetchWithCache, addToast, setMemories])
+  }, [fetchMemories])
 
   const fetchThemeClusters = useCallback(async (force = false) => {
     // Check if clusters are still fresh (5 minutes = 300000ms)
@@ -125,20 +110,23 @@ export function MemoriesPage() {
     }
   }, [])
 
+  // Fetch data on mount and when navigating back to this page (like HomePage)
   useEffect(() => {
-    // Clear any stale errors when navigating to this page
-    clearError()
+    const loadData = async () => {
+      clearError()
 
-    if (view === 'resurfacing') {
-      fetchResurfacing()
-    } else {
-      loadMemoriesWithCache()
-      if (view === 'all') {
-        fetchThemeClusters()
+      if (view === 'resurfacing') {
+        await fetchResurfacing()
+      } else {
+        await loadMemories()
+        if (view === 'all') {
+          await fetchThemeClusters()
+        }
       }
     }
+    loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]) // Only re-run when view changes
+  }, [location.key, view]) // Re-run when navigating to page OR when view changes
 
   // Memoize unprocessed count to avoid unnecessary re-renders
   const unprocessedCount = useMemo(() => {
@@ -149,6 +137,7 @@ export function MemoriesPage() {
   const isPollingRef = useRef(false)
 
   // Poll for updates when there are unprocessed memories
+  // Use normal fetch (not forced) so store's smart state updates prevent unnecessary re-renders
   useEffect(() => {
     if (unprocessedCount === 0) {
       isPollingRef.current = false
@@ -161,9 +150,11 @@ export function MemoriesPage() {
     }
 
     const pollInterval = setInterval(async () => {
-      console.log('⏰ Polling tick - fetching fresh data...')
+      console.log('⏰ Polling tick - checking for updates...')
       try {
-        await loadMemoriesWithCache()
+        // Don't force refresh - let store's smart state updates handle it
+        // This prevents flickering by skipping updates when data hasn't changed
+        await loadMemories(false)
       } catch (error) {
         console.error('Polling error:', error)
       }
@@ -284,7 +275,7 @@ export function MemoriesPage() {
 
         console.log('[handleVoiceCapture] Fetching memories list')
         // Refresh memories list (user can navigate away, this just updates the data)
-        await loadMemoriesWithCache()
+        await loadMemories(true) // Force refresh to get the new memory
         console.log('[handleVoiceCapture] Memories fetched successfully')
 
         // Show success toast with the title - they can click to go to memories if they want
@@ -311,7 +302,7 @@ export function MemoriesPage() {
         })
 
         // Still refresh to show queued items
-        await loadMemoriesWithCache()
+        await loadMemories(true)
       }
 
     } catch (error) {
@@ -338,7 +329,7 @@ export function MemoriesPage() {
           variant: 'default',
         })
         console.log('[handleVoiceCapture] ✓ Queued for offline sync')
-        await loadMemoriesWithCache()
+        await loadMemories(true)
       } catch (offlineError) {
         console.error('[handleVoiceCapture] ❌ Offline queue also failed:', offlineError)
         addToast({
@@ -531,38 +522,45 @@ export function MemoriesPage() {
               </Card>
             )}
 
-            {/* Loading State - Only show if no data yet (prevent flicker on refresh) */}
+            {/* Loading State - Show skeleton loaders like HomePage */}
             {isLoading && memories.length === 0 && (
-              <Card style={{
-                background: 'var(--premium-bg-2)',
-                backdropFilter: 'blur(12px)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-              }}>
-                <CardContent className="py-24">
-                  <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <p className="text-lg">Loading thoughts...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
+                    {/* Title skeleton */}
+                    <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
+                    {/* Body skeleton */}
+                    <div className="space-y-2 mb-4">
+                      <div className="h-4 bg-white/10 rounded w-full"></div>
+                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                      <div className="h-4 bg-white/10 rounded w-4/5"></div>
+                    </div>
+                    {/* Tags skeleton */}
+                    <div className="flex gap-2">
+                      <div className="h-6 bg-white/10 rounded-full w-16"></div>
+                      <div className="h-6 bg-white/10 rounded-full w-20"></div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             )}
           </>
         )}
 
-        {/* Resurfacing Tab Loading - Only show if no data yet (prevent flicker on refresh) */}
+        {/* Resurfacing Tab Loading - Show skeleton loaders */}
         {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
-          <Card style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="py-24">
-              <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                <p className="text-lg">Loading memories...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
+                <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
+                <div className="space-y-2 mb-4">
+                  <div className="h-4 bg-white/10 rounded w-full"></div>
+                  <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                </div>
+                <div className="h-10 bg-white/10 rounded-lg w-full"></div>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty State */}
@@ -754,43 +752,26 @@ export function MemoriesPage() {
               </>
             )}
 
-            {/* Recent memories view - Virtualized Grid */}
+            {/* Recent memories view - Simple grid rendering (no Virtuoso to prevent flickering) */}
             {memoryView === 'recent' && (
-              <Virtuoso
-                style={{ height: '800px' }}
-                totalCount={memories.length}
-                overscan={200}
-                computeItemKey={(index) => memories[index]?.id || `item-${index}`}
-                itemContent={(index) => {
-                  const memory = memories[index]
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {memories.map((memory) => {
                   const isNewlyCreated = memory.id === newlyCreatedMemoryId
 
                   return (
-                    <div className="pb-6">
-                      <div className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}>
-                        <MemoryCard
-                          memory={memory}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
-                      </div>
+                    <div
+                      key={memory.id}
+                      className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                    >
+                      <MemoryCard
+                        memory={memory}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
                     </div>
                   )
-                }}
-                components={{
-                  List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
-                    ({ style, children }, ref) => (
-                      <div
-                        ref={ref}
-                        style={style}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                      >
-                        {children}
-                      </div>
-                    )
-                  )
-                }}
-              />
+                })}
+              </div>
             )}
           </>
         )}

@@ -4,8 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
@@ -26,6 +25,7 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 
 export function ReadingPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
@@ -147,17 +147,22 @@ export function ReadingPage() {
     }
   }, [feeds, addToast])
 
+  // Fetch data on mount and when navigating back to this page (like HomePage)
   useEffect(() => {
-    fetchArticles()
-    fetchFeeds()
+    const loadData = async () => {
+      await fetchArticles()
+      await fetchFeeds()
 
-    // Auto-sync RSS feeds in background (throttled to 2 hours)
-    if (autoSyncFeeds) {
-      autoSyncFeeds().catch(() => {
-        // Silently fail - it's a background operation
-      })
+      // Auto-sync RSS feeds in background (throttled to 2 hours)
+      if (autoSyncFeeds) {
+        autoSyncFeeds().catch(() => {
+          // Silently fail - it's a background operation
+        })
+      }
     }
-  }, []) // Run once on mount
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]) // Re-run when navigating to this page
 
   useEffect(() => {
     if (activeTab === 'updates') {
@@ -405,9 +410,21 @@ export function ReadingPage() {
         {activeTab === 'updates' && (
           <>
             {loadingRSS && rssItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
-                <p style={{ color: 'var(--premium-text-secondary)' }}>Loading RSS updates...</p>
+              <div className="space-y-4">
+                {/* Skeleton loaders for RSS items */}
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-4 rounded-xl animate-pulse">
+                    <div className="h-5 bg-white/10 rounded-lg w-3/4 mb-2"></div>
+                    <div className="space-y-2 mb-3">
+                      <div className="h-4 bg-white/10 rounded w-full"></div>
+                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="h-8 bg-white/10 rounded-lg w-20"></div>
+                      <div className="h-8 bg-white/10 rounded-lg w-24"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
               <div className="premium-card p-20 text-center">
@@ -465,9 +482,26 @@ export function ReadingPage() {
         {activeTab !== 'updates' && (
           <>
             {loading && articles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin mb-4" style={{ color: 'var(--premium-blue)' }} />
-                <p style={{ color: 'var(--premium-text-secondary)' }}>Loading articles...</p>
+              <div className="space-y-4">
+                {/* Skeleton loaders like HomePage */}
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
+                    {/* Thumbnail & title skeleton */}
+                    <div className="flex gap-4 mb-4">
+                      <div className="h-24 w-32 bg-white/10 rounded-lg flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-2"></div>
+                        <div className="h-4 bg-white/10 rounded w-1/2 mb-2"></div>
+                        <div className="h-4 bg-white/10 rounded w-2/3"></div>
+                      </div>
+                    </div>
+                    {/* Meta skeleton */}
+                    <div className="flex gap-2">
+                      <div className="h-6 bg-white/10 rounded-full w-20"></div>
+                      <div className="h-6 bg-white/10 rounded-full w-24"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : filteredArticles.length === 0 ? (
           <div className="premium-card p-20 text-center">
@@ -498,15 +532,12 @@ export function ReadingPage() {
             </div>
           </div>
         ) : (
-          <Virtuoso
-            style={{ height: '800px' }}
-            totalCount={filteredArticles.length}
-            itemContent={(index) => {
-              const article = filteredArticles[index]
+          <div className="space-y-4">
+            {filteredArticles.map((article) => {
               const isSelected = bulkSelection.isSelected(article.id)
 
               return (
-                <div className="pb-4">
+                <div key={article.id} className="pb-4">
                   <div
                     className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
                     onClick={(e) => {
@@ -534,7 +565,6 @@ export function ReadingPage() {
                     )}
                     <div style={{ pointerEvents: 'auto' }}>
                       <ArticleCard
-                        key={article.id}
                         article={article}
                         onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
                       />
@@ -542,17 +572,8 @@ export function ReadingPage() {
                   </div>
                 </div>
               )
-            }}
-            components={{
-              List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
-                ({ style, children }, ref) => (
-                  <div ref={ref} style={style} className="space-y-4">
-                    {children}
-                  </div>
-                )
-              )
-            }}
-          />
+            })}
+          </div>
         )}
           </>
         )}

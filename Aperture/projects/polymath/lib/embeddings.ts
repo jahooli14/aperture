@@ -18,12 +18,23 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       }
     )
 
+    // Read response text first (can only read body once)
+    const responseText = await response.text()
+
     if (!response.ok) {
-      console.error('Embedding API error:', await response.text())
+      console.error('Embedding API error:', responseText)
       throw new Error('Failed to generate embedding')
     }
 
-    const result = await response.json()
+    // Parse JSON
+    let result
+    try {
+      result = JSON.parse(responseText)
+    } catch (e) {
+      console.error('Failed to parse embedding response:', responseText.substring(0, 200))
+      throw new Error('Invalid response from embedding API')
+    }
+
     return result.embedding?.values || []
   } catch (error) {
     console.error('Embedding generation error:', error)

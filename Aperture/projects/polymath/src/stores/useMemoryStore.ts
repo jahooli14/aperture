@@ -70,7 +70,32 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
   },
 
   setMemories: (memories: Memory[]) => {
-    set({ memories, loading: false, error: null })
+    const currentMemories = get().memories
+
+    // Skip update if data hasn't changed (prevent unnecessary re-renders)
+    if (currentMemories.length === memories.length && memories.length > 0) {
+      // Create ID maps for efficient lookup
+      const currentById = new Map(currentMemories.map(m => [m.id, m]))
+      const newById = new Map(memories.map(m => [m.id, m]))
+
+      // Check if same IDs exist
+      const sameIds = memories.every(m => currentById.has(m.id))
+
+      if (sameIds) {
+        // Check if processed status changed for any memory
+        const hasProcessedChange = memories.some(m => {
+          const current = currentById.get(m.id)
+          return current && current.processed !== m.processed
+        })
+
+        if (!hasProcessedChange) {
+          console.log('[MemoryStore] Skipping state update - data unchanged')
+          return
+        }
+      }
+    }
+
+    set({ memories, loading: false, error: null, lastFetched: Date.now() })
   },
 
   clearError: () => {

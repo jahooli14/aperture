@@ -122,7 +122,7 @@ async function getRecentMemories(userId: string, days: number) {
 
   // Find consequential themes (appear 2+ times)
   const consequentialThemes = Object.entries(themeCounts)
-    .filter(([_, count]) => count >= 2)
+    .filter(([_, count]) => (count as number) >= 2)
     .map(([theme]) => theme)
 
   // If we have consequential themes, find related memories via vector search
@@ -154,7 +154,7 @@ async function getRecentMemories(userId: string, days: number) {
 async function getActiveProjects(userId: string) {
   const { data } = await supabase
     .from('projects')
-    .select('id, title, description, status, type, metadata')
+    .select('id, title, description, status, type, metadata, last_active')
     .eq('user_id', userId)
     .in('status', ['active', 'dormant', 'upcoming', 'completed'])
     .order('last_active', { ascending: false })
@@ -242,8 +242,8 @@ async function generatePromptsWithAI(
   }, {})
 
   const consequentialThemes = Object.entries(themeCounts)
-    .filter(([_, count]) => count >= 2)
-    .sort(([, a], [, b]) => b - a)
+    .filter(([_, count]) => (count as number) >= 2)
+    .sort(([, a], [, b]) => (b as number) - (a as number))
     .slice(0, 5)
     .map(([theme, count]) => `${theme} (appears ${count}x)`)
 

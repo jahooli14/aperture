@@ -184,7 +184,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     window.open(article.url, '_blank', 'noopener,noreferrer')
   }
 
-  const handleDragEnd = (_: any, info: any) => {
+  const handleDragEnd = React.useCallback((_: any, info: any) => {
     const offset = info.offset.x
     const velocity = info.velocity.x
 
@@ -238,9 +238,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         }
       }, 200)
     }
-  }
+  }, [article.id, updateArticleStatus, deleteArticle, addToast, x])
 
-  const handleCopyLink = () => {
+  const handleCopyLink = React.useCallback(() => {
     navigator.clipboard.writeText(article.url).then(() => {
       haptic.success()
       addToast({
@@ -249,9 +249,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         variant: 'success',
       })
     })
-  }
+  }, [article.url, addToast])
 
-  const handleShare = async () => {
+  const handleShare = React.useCallback(async () => {
     if (navigator.share) {
       try {
         await navigator.share({
@@ -266,32 +266,40 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     } else {
       handleCopyLink()
     }
-  }
+  }, [article.title, article.excerpt, article.url, handleCopyLink])
 
-  const contextMenuItems: ContextMenuItem[] = [
+  // Memoize icon elements to prevent recreation (prevents flickering)
+  const editIcon = React.useMemo(() => <Edit className="h-5 w-5" />, [])
+  const externalLinkIcon = React.useMemo(() => <ExternalLink className="h-5 w-5" />, [])
+  const copyIcon = React.useMemo(() => <Copy className="h-5 w-5" />, [])
+  const shareIcon = React.useMemo(() => <Share2 className="h-5 w-5" />, [])
+  const archiveIcon = React.useMemo(() => <Archive className="h-5 w-5" />, [])
+  const deleteIcon = React.useMemo(() => <Trash2 className="h-5 w-5" />, [])
+
+  const contextMenuItems: ContextMenuItem[] = React.useMemo(() => [
     {
       label: 'Edit',
-      icon: <Edit className="h-5 w-5" />,
+      icon: editIcon,
       onClick: () => setShowEditDialog(true),
     },
     {
       label: 'Open Original',
-      icon: <ExternalLink className="h-5 w-5" />,
+      icon: externalLinkIcon,
       onClick: () => window.open(article.url, '_blank', 'noopener,noreferrer'),
     },
     {
       label: 'Copy Link',
-      icon: <Copy className="h-5 w-5" />,
+      icon: copyIcon,
       onClick: handleCopyLink,
     },
     {
       label: 'Share',
-      icon: <Share2 className="h-5 w-5" />,
+      icon: shareIcon,
       onClick: handleShare,
     },
     {
       label: 'Archive',
-      icon: <Archive className="h-5 w-5" />,
+      icon: archiveIcon,
       onClick: async () => {
         try {
           await updateArticleStatus(article.id, 'archived')
@@ -313,7 +321,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     },
     {
       label: 'Delete',
-      icon: <Trash2 className="h-5 w-5" />,
+      icon: deleteIcon,
       onClick: async () => {
         if (!confirm('Remove this article from your reading queue?')) return
         try {
@@ -333,7 +341,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       },
       variant: 'destructive' as const,
     },
-  ]
+  ], [article.id, article.url, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast])
 
   return (
     <>
