@@ -408,15 +408,50 @@ export const ProjectCard = React.memo(function ProjectCard({
                 id={project.id}
                 title={project.title}
                 content={
-                  <div className="p-6 overflow-y-auto">
-                    <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-                      {project.title}
-                    </h2>
-                    {project.description && (
-                      <p className="text-sm mb-4 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                        {project.description}
-                      </p>
-                    )}
+                  <div className="p-6 pb-32 space-y-6">
+                    {/* Active Tasks Only - Mobile Optimized */}
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                        Tasks ({((project.metadata?.tasks || []) as Array<{done: boolean}>).filter(t => t.done).length}/{(project.metadata?.tasks || []).length})
+                      </h4>
+                      <div className="space-y-1.5 overflow-y-auto">
+                        {/* Incomplete tasks only */}
+                        {((project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>)
+                          .filter(t => !t.done)
+                          .sort((a, b) => a.order - b.order)
+                          .map((task, index) => {
+                            const isNextTask = index === 0
+                            return (
+                              <div
+                                key={task.id}
+                                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left"
+                                style={{
+                                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
+                                }}
+                              >
+                                <div
+                                  className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0"
+                                  style={{
+                                    border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                                    color: 'rgba(59, 130, 246, 0.9)'
+                                  }}
+                                />
+                                <span style={{
+                                  color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                                  fontWeight: isNextTask ? 600 : 400
+                                }}>
+                                  {task.text}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        {((project.metadata?.tasks || []) as Array<{ done: boolean }>).filter(t => !t.done).length === 0 && (
+                          <div className="text-sm text-center py-4" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            No active tasks
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 }
               />
