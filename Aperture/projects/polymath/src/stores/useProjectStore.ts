@@ -59,7 +59,7 @@ interface ProjectState {
   filter: 'all' | 'upcoming' | 'active' | 'dormant' | 'completed'
 
   // Actions
-  fetchProjects: () => Promise<void>
+  fetchProjects: (retryCount?: number) => Promise<void>
   createProject: (data: Partial<Project>) => Promise<void>
   updateProject: (id: string, data: Partial<Project>) => Promise<void>
   deleteProject: (id: string) => Promise<void>
@@ -73,7 +73,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   error: null,
   filter: 'all',
 
-  fetchProjects: async () => {
+  fetchProjects: async (retryCount = 0) => {
+    const MAX_RETRIES = 3
+    const RETRY_DELAYS = [1000, 2000, 4000] // Exponential backoff: 1s, 2s, 4s
+
     // Preserve existing projects during loading to prevent flicker
     set((state) => ({ ...state, loading: true, error: null }))
 
@@ -95,6 +98,20 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({ projects, loading: false })
     } catch (error) {
       logger.error('Failed to fetch projects:', error)
+
+      // Retry logic with exponential backoff
+      if (retryCount < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[retryCount]
+        logger.info(`Retrying fetch in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+        // Retry
+        return get().fetchProjects(retryCount + 1)
+      }
+
+      // All retries exhausted
       set({
         error: error instanceof Error ? error.message : 'Unknown error',
         loading: false

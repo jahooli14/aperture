@@ -30,8 +30,18 @@ export function ProjectsPage() {
   } = useProjectStore()
 
   const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [debouncedSelectedTags, setDebouncedSelectedTags] = useState<string[]>([])
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
+
+  // Debounce tag selection to avoid excessive re-filtering
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSelectedTags(selectedTags)
+    }, 150) // 150ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [selectedTags])
 
   // Extract all unique tags from projects
   const allTags = React.useMemo(() => {
@@ -46,19 +56,19 @@ export function ProjectsPage() {
     return Array.from(tagSet).sort()
   }, [allProjects])
 
-  // Filter projects by selected tags
+  // Filter projects by selected tags (using debounced tags)
   const projects = React.useMemo(() => {
     // Ensure allProjects is always an array
     const safeProjects = Array.isArray(allProjects) ? allProjects : []
     if (safeProjects.length === 0) return []
 
-    if (selectedTags.length === 0) return safeProjects
+    if (debouncedSelectedTags.length === 0) return safeProjects
 
     return safeProjects.filter(project => {
       const projectTags = project.metadata?.tags || []
-      return selectedTags.every(tag => projectTags.includes(tag))
+      return debouncedSelectedTags.every(tag => projectTags.includes(tag))
     })
-  }, [allProjects, selectedTags])
+  }, [allProjects, debouncedSelectedTags])
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -223,7 +233,17 @@ export function ProjectsPage() {
         {error && (
           <Card className="mb-6 bg-red-50">
             <CardContent className="pt-6">
-              <p className="text-sm text-red-600 font-semibold">{error}</p>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm text-red-600 font-semibold">{error}</p>
+                <Button
+                  onClick={() => fetchProjects()}
+                  size="sm"
+                  variant="outline"
+                  className="whitespace-nowrap"
+                >
+                  Retry
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

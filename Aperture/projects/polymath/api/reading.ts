@@ -37,20 +37,32 @@ async function fetchArticle(url: string) {
 }
 
 /**
- * Extract article content using Jina AI Reader API
+ * Extract article content using Jina AI Reader API with retry logic
  * Jina AI provides clean, reader-friendly content
  * Note: Sanitization happens client-side before rendering
  */
-async function fetchArticleWithJina(url: string) {
+async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
+  const MAX_RETRIES = 3
+  const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
+  const TIMEOUT_MS = 15000 // 15 second timeout
+
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
+    console.log(`[Jina AI] Attempt ${retryCount + 1}/${MAX_RETRIES + 1}: Fetching ${jinaUrl}`)
+
+    // Create abort controller for timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
     const response = await fetch(jinaUrl, {
       headers: {
         'Accept': 'application/json',
         'X-Return-Format': 'html'
-      }
+      },
+      signal: controller.signal
     })
+
+    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -183,7 +195,25 @@ async function fetchArticleWithJina(url: string) {
     }
   } catch (error) {
     console.error('[fetchArticleWithJina] Error:', error)
-    throw new Error(error instanceof Error ? error.message : 'Failed to fetch article content')
+
+    // Check if error is due to timeout
+    const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch article content'
+
+    // Retry logic with exponential backoff for network/timeout errors
+    if (retryCount < MAX_RETRIES && (isTimeout || errorMessage.includes('fetch') || errorMessage.includes('network'))) {
+      const delay = RETRY_DELAYS[retryCount]
+      console.log(`[Jina AI] Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay))
+
+      // Retry
+      return fetchArticleWithJina(url, retryCount + 1)
+    }
+
+    // All retries exhausted or non-retryable error
+    throw new Error(errorMessage)
   }
 }
 

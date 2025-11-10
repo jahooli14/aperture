@@ -193,12 +193,11 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Fetch thoughts/memories
+  // Fetch thoughts/memories (memories table has no user_id - single user app)
   if (itemType !== 'thought') {
     const { data: thoughts } = await supabase
       .from('memories')
       .select('id, title, body')
-      .eq('user_id', userId)
       .limit(50)
 
     if (thoughts) {
