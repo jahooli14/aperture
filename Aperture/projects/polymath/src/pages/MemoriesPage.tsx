@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
-import { useMemoryCache } from '../hooks/useMemoryCache'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
@@ -44,11 +43,9 @@ const getIconComponent = (name: string) => {
 export function MemoriesPage() {
   const navigate = useNavigate()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
-  const setMemories = useMemoryStore((state: any) => state.setMemories)
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
-  const { fetchWithCache, cacheMemories } = useMemoryCache()
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
@@ -57,7 +54,6 @@ export function MemoriesPage() {
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [showingCachedData, setShowingCachedData] = useState(false)
   const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
   const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
 
@@ -68,25 +64,14 @@ export function MemoriesPage() {
   const [memoryView, setMemoryView] = useState<'themes' | 'recent'>('recent')
   const [clustersLastFetched, setClustersLastFetched] = useState<number>(0)
 
-  const loadMemoriesWithCache = useCallback(async () => {
+  // Use store's fetchMemories directly - it has built-in caching!
+  const loadMemories = useCallback(async (force = false) => {
     try {
-      const { memories: fetchedMemories, fromCache } = await fetchWithCache('/api/memories')
-      setShowingCachedData(fromCache)
-
-      // Update the store with fetched memories (whether from cache or API)
-      setMemories(fetchedMemories)
-
-      if (fromCache) {
-        addToast({
-          title: 'Offline Mode',
-          description: `Showing ${fetchedMemories.length} cached thoughts`,
-          variant: 'default'
-        })
-      }
+      await fetchMemories(force)
     } catch (error) {
       console.error('Failed to load memories:', error)
     }
-  }, [fetchWithCache, addToast, setMemories])
+  }, [fetchMemories])
 
   const fetchThemeClusters = useCallback(async (force = false) => {
     // Check if clusters are still fresh (5 minutes = 300000ms)
@@ -132,7 +117,7 @@ export function MemoriesPage() {
     if (view === 'resurfacing') {
       fetchResurfacing()
     } else {
-      loadMemoriesWithCache()
+      loadMemories() // Use simplified loader
       if (view === 'all') {
         fetchThemeClusters()
       }
@@ -161,9 +146,10 @@ export function MemoriesPage() {
     }
 
     const pollInterval = setInterval(async () => {
-      console.log('⏰ Polling tick - fetching fresh data...')
+      console.log('⏰ Polling tick - checking for updates...')
       try {
-        await loadMemoriesWithCache()
+        // Force refresh to bypass cache and get latest data
+        await loadMemories(true)
       } catch (error) {
         console.error('Polling error:', error)
       }
@@ -284,7 +270,7 @@ export function MemoriesPage() {
 
         console.log('[handleVoiceCapture] Fetching memories list')
         // Refresh memories list (user can navigate away, this just updates the data)
-        await loadMemoriesWithCache()
+        await loadMemories(true) // Force refresh to get the new memory
         console.log('[handleVoiceCapture] Memories fetched successfully')
 
         // Show success toast with the title - they can click to go to memories if they want
@@ -311,7 +297,7 @@ export function MemoriesPage() {
         })
 
         // Still refresh to show queued items
-        await loadMemoriesWithCache()
+        await loadMemories(true)
       }
 
     } catch (error) {
@@ -338,7 +324,7 @@ export function MemoriesPage() {
           variant: 'default',
         })
         console.log('[handleVoiceCapture] ✓ Queued for offline sync')
-        await loadMemoriesWithCache()
+        await loadMemories(true)
       } catch (offlineError) {
         console.error('[handleVoiceCapture] ❌ Offline queue also failed:', offlineError)
         addToast({

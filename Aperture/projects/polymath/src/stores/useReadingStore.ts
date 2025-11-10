@@ -55,6 +55,21 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
 
       const { articles } = await response.json()
 
+      // Skip update if data hasn't changed (prevent unnecessary re-renders)
+      const currentArticles = get().articles
+      if (currentArticles.length === articles.length) {
+        const hasChanged = articles.some((newArt: any, idx: number) => {
+          const current = currentArticles[idx]
+          return !current || current.id !== newArt.id || current.processed !== newArt.processed
+        })
+
+        if (!hasChanged) {
+          console.log('[ReadingStore] Skipping state update - data unchanged')
+          set({ loading: false }) // Still need to clear loading state
+          return
+        }
+      }
+
       set({ articles, loading: false, lastFetched: now })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
