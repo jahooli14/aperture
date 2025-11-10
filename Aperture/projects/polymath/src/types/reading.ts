@@ -26,6 +26,7 @@ export interface Article {
   tags: string[]
   word_count: number | null
   notes: string | null
+  processed?: boolean // Whether content extraction is complete
 }
 
 export interface ArticleHighlight {

@@ -472,7 +472,18 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     const textContent = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    let excerpt = description || textContent.substring(0, 200) || ''
+
+    // Always limit excerpt to 200 chars max to prevent massive card previews
+    let excerpt = ''
+    if (description && description.length > 0) {
+      excerpt = description.substring(0, 200).trim()
+      // Add ellipsis if truncated
+      if (description.length > 200) {
+        excerpt += '...'
+      }
+    } else if (textContent && textContent.length > 0) {
+      excerpt = textContent.substring(0, 200).trim() + '...'
+    }
 
     // Only show incomplete message if text content is genuinely short or missing
     if (!textContent || textContent.length < 200) {
@@ -489,11 +500,35 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       console.log('[Jina AI] No H1 tags to remove from content')
     }
 
-    console.log('[Jina AI] Final extraction - Title:', title, 'Text content length:', textContent.length)
+    // Additional HTML cleaning to remove ads, navigation, and other junk
+    let cleanedContent = contentWithoutH1
+      // Remove common ad/navigation patterns
+      .replace(/<div[^>]*class="[^"]*ad[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*advertisement[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*navigation[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*nav[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*menu[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*sidebar[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*footer[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*social[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*share[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*cookie[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      .replace(/<div[^>]*class="[^"]*newsletter[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+      // Remove common semantic tags for ads/navigation
+      .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
+      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+      // Remove multiple consecutive line breaks (convert to max 2)
+      .replace(/(<br\s*\/?>[\s\n]*){3,}/gi, '<br><br>')
+      // Remove empty paragraphs
+      .replace(/<p[^>]*>\s*<\/p>/gi, '')
+      // Remove paragraphs with only &nbsp;
+      .replace(/<p[^>]*>(&nbsp;|\s)+<\/p>/gi, '')
+
+    console.log('[Jina AI] Final extraction - Title:', title, 'Original content length:', contentWithoutH1.length, 'Cleaned content length:', cleanedContent.length)
 
     return {
       title: title || 'Untitled',
-      content: contentWithoutH1 || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
+      content: cleanedContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
       author: data.data.author || null,
       publishedDate: data.data.publishedTime || null,

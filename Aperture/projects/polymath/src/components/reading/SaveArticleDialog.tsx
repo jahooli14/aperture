@@ -3,7 +3,7 @@
  * Mobile-optimized bottom sheet for saving URLs to reading queue
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BookmarkPlus, Link as LinkIcon } from 'lucide-react'
 import { Button } from '../ui/button'
 import {
@@ -28,13 +28,74 @@ interface SaveArticleDialogProps {
 export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
-  const { saveArticle } = useReadingStore()
+  const [extracting, setExtracting] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const articleIdRef = useRef<string | null>(null)
+  const { saveArticle, articles } = useReadingStore()
   const { fetchSuggestions } = useConnectionStore()
   const { addToast } = useToast()
 
   const resetForm = () => {
     setUrl('')
+    setElapsedTime(0)
+    setExtracting(false)
+    if (timerRef.current) clearInterval(timerRef.current)
+    if (pollRef.current) clearInterval(pollRef.current)
+    articleIdRef.current = null
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
+  // Poll for article processing completion
+  useEffect(() => {
+    if (!extracting || !articleIdRef.current) return
+
+    const checkArticleProcessed = () => {
+      const article = articles.find(a => a.id === articleIdRef.current)
+
+      if (article?.processed) {
+        // Processing complete!
+        console.log('[SaveArticleDialog] Article extraction complete')
+
+        if (timerRef.current) clearInterval(timerRef.current)
+        if (pollRef.current) clearInterval(pollRef.current)
+
+        addToast({
+          title: 'Article extracted!',
+          description: 'Content processed successfully',
+          variant: 'success',
+        })
+
+        // Trigger connection detection
+        if (article.content || article.excerpt) {
+          fetchSuggestions(
+            'article',
+            article.id,
+            article.content || article.excerpt || '',
+            article.title || undefined
+          )
+        }
+
+        resetForm()
+        onClose()
+      }
+    }
+
+    // Poll every 1 second
+    pollRef.current = setInterval(checkArticleProcessed, 1000)
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [extracting, articles, addToast, fetchSuggestions, onClose])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,30 +103,65 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
     if (!url.trim()) return
 
     setLoading(true)
+    setElapsedTime(0)
 
     try {
       console.log('[SaveArticleDialog] Saving article:', url.trim())
       const article = await saveArticle({ url: url.trim() })
 
-      console.log('[SaveArticleDialog] Article saved successfully')
-      addToast({
-        title: 'Article saved!',
-        description: 'Looking for connections...',
-        variant: 'success',
-      })
+      console.log('[SaveArticleDialog] Article saved, starting extraction monitoring')
+      articleIdRef.current = article.id
 
-      // Trigger connection detection
-      if (article.content || article.excerpt) {
-        fetchSuggestions(
-          'article',
-          article.id,
-          article.content || article.excerpt || '',
-          article.title || undefined
-        )
+      // If already processed (unlikely but possible), close immediately
+      if (article.processed) {
+        addToast({
+          title: 'Article saved!',
+          description: 'Content extracted successfully',
+          variant: 'success',
+        })
+
+        // Trigger connection detection
+        if (article.content || article.excerpt) {
+          fetchSuggestions(
+            'article',
+            article.id,
+            article.content || article.excerpt || '',
+            article.title || undefined
+          )
+        }
+
+        resetForm()
+        onClose()
+        return
       }
 
-      resetForm()
-      onClose()
+      // Start extraction monitoring
+      setLoading(false)
+      setExtracting(true)
+
+      // Start countdown timer (max 30 seconds)
+      timerRef.current = setInterval(() => {
+        setElapsedTime(prev => {
+          const next = prev + 1
+          if (next >= 30) {
+            // Timeout - stop polling
+            if (timerRef.current) clearInterval(timerRef.current)
+            if (pollRef.current) clearInterval(pollRef.current)
+
+            addToast({
+              title: 'Extraction taking longer than expected',
+              description: 'Check back in a moment',
+              variant: 'default',
+            })
+
+            resetForm()
+            onClose()
+            return 30
+          }
+          return next
+        })
+      }, 1000)
+
     } catch (error) {
       console.error('[SaveArticleDialog] Failed to save article:', error)
       addToast({
@@ -73,8 +169,11 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
+      resetForm()
     } finally {
-      setLoading(false)
+      if (!extracting) {
+        setLoading(false)
+      }
     }
   }
 
@@ -121,13 +220,18 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
           <BottomSheetFooter>
             <Button
               type="submit"
-              disabled={loading || !url.trim()}
+              disabled={loading || extracting || !url.trim()}
               className="btn-primary w-full h-12 touch-manipulation"
             >
               {loading ? (
                 <>
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
                   Saving...
+                </>
+              ) : extracting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                  Extracting... {elapsedTime}s / 30s
                 </>
               ) : (
                 <>
@@ -143,7 +247,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
                 resetForm()
                 onClose()
               }}
-              disabled={loading}
+              disabled={loading || extracting}
               className="w-full h-12 touch-manipulation"
             >
               Cancel
