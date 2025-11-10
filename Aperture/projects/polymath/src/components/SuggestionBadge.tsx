@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Link2, X } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useToast } from './ui/toast'
 
 interface SuggestionBadgeProps {
@@ -10,9 +10,14 @@ interface SuggestionBadgeProps {
 }
 
 export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
-  const { pendingSuggestions, acceptSuggestion, dismissSuggestion } = useAutoSuggestion()
+  const { pendingSuggestions, loadExistingSuggestions, acceptSuggestion, dismissSuggestion } = useAutoSuggestion()
   const { addToast } = useToast()
   const [isExpanded, setIsExpanded] = useState(false)
+
+  // Load existing suggestions when component mounts
+  useEffect(() => {
+    loadExistingSuggestions(itemId)
+  }, [itemId, loadExistingSuggestions])
 
   const suggestions = pendingSuggestions[itemId] || []
   const count = suggestions.length
