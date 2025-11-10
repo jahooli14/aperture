@@ -52,13 +52,27 @@ async function fetchArticleWithJina(url: string) {
       }
     })
 
+    // Read response text first (can only read body once)
+    const text = await response.text()
+
     if (!response.ok) {
-      const errorText = await response.text()
-      console.error('[Jina AI Error]', response.status, errorText)
-      throw new Error(`Jina AI returned ${response.status}: ${errorText.substring(0, 200)}`)
+      console.error('[Jina AI Error]', response.status, text.substring(0, 500))
+      throw new Error(`Jina AI returned ${response.status}: ${text.substring(0, 200)}`)
     }
 
-    const data = await response.json()
+    // Handle empty responses
+    if (!text || text.trim().length === 0) {
+      throw new Error('Jina AI returned empty response')
+    }
+
+    // Parse JSON
+    let data
+    try {
+      data = JSON.parse(text)
+    } catch (e) {
+      console.error('[Jina AI] Failed to parse JSON response:', text.substring(0, 500))
+      throw new Error('Jina AI returned invalid JSON')
+    }
 
     if (!data || !data.data) {
       throw new Error('Jina AI returned invalid response structure')
@@ -739,11 +753,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const jinaUrl = `https://r.jina.ai/${item.link}`
               const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
               let content = item.contentSnippet || item.description || ''
-              if (response.ok) {
-                const result = await response.json()
-                const rawContent = result.data?.content || result.content || content
-                // Clean the content before storing
-                content = cleanArticleContent(rawContent)
+
+              const text = await response.text()
+              if (response.ok && text) {
+                try {
+                  const result = JSON.parse(text)
+                  const rawContent = result.data?.content || result.content || content
+                  // Clean the content before storing
+                  content = cleanArticleContent(rawContent)
+                } catch (e) {
+                  console.error('[RSS Sync] Failed to parse Jina response for', item.link)
+                }
               }
 
               await supabase.from('reading_queue').insert([{
@@ -891,10 +911,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const jinaUrl = `https://r.jina.ai/${item.link}`
             const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
             let content = item.contentSnippet || item.description || ''
-            if (response.ok) {
-              const result = await response.json()
-              const rawContent = result.data?.content || result.content || content
-              content = cleanArticleContent(rawContent)
+
+            const text = await response.text()
+            if (response.ok && text) {
+              try {
+                const result = JSON.parse(text)
+                const rawContent = result.data?.content || result.content || content
+                content = cleanArticleContent(rawContent)
+              } catch (e) {
+                console.error('[RSS Subscribe] Failed to parse Jina response for', item.link)
+              }
             }
 
             await supabase.from('reading_queue').insert([{
