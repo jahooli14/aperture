@@ -19,6 +19,10 @@ import { PinButton } from './PinButton'
 import { SuggestionBadge } from './SuggestionBadge'
 import { ConnectionsList } from './connections/ConnectionsList'
 
+// Module-level cache to prevent refetching bridges during Virtuoso scroll remounts
+const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
+const BRIDGE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 interface MemoryCardProps {
   memory: Memory
   onEdit?: (memory: Memory) => void
@@ -30,6 +34,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [showContextMenu, setShowContextMenu] = useState(false)
+  const [bridgesFetched, setBridgesFetched] = useState(false) // Track if we've fetched bridges
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
   const { addToast } = useToast()
 
@@ -42,22 +47,49 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     threshold: 500,
   })
 
-  // Load bridges only when memory.id changes
+  // Load bridges only when memory.id changes, using module-level cache
+  // This prevents constant refetching during Virtuoso scroll remounts
   useEffect(() => {
     if (memory.id.startsWith('temp_')) {
       setBridges([])
+      setBridgesFetched(true)
       return
     }
-    fetchBridgesForMemory(memory.id).then(setBridges)
+
+    // Check cache first
+    const cached = bridgesCache.get(memory.id)
+    const now = Date.now()
+
+    if (cached && (now - cached.timestamp) < BRIDGE_CACHE_TTL) {
+      // Use cached bridges - no network request!
+      setBridges(cached.bridges)
+      setBridgesFetched(true)
+      return
+    }
+
+    // Fetch bridges and update cache
+    fetchBridgesForMemory(memory.id).then((fetchedBridges) => {
+      bridgesCache.set(memory.id, { bridges: fetchedBridges, timestamp: now })
+      setBridges(fetchedBridges)
+      setBridgesFetched(true)
+    })
   }, [memory.id, fetchBridgesForMemory])
 
   // Callback for refreshing bridges after connections change
   const loadMemoryBridges = useCallback(() => {
     if (memory.id.startsWith('temp_')) {
       setBridges([])
+      setBridgesFetched(true)
       return
     }
-    fetchBridgesForMemory(memory.id).then(setBridges)
+    // Invalidate cache and force refetch
+    bridgesCache.delete(memory.id)
+    fetchBridgesForMemory(memory.id).then((fetchedBridges) => {
+      const now = Date.now()
+      bridgesCache.set(memory.id, { bridges: fetchedBridges, timestamp: now })
+      setBridges(fetchedBridges)
+      setBridgesFetched(true)
+    })
   }, [memory.id, fetchBridgesForMemory])
 
   const formatDate = (date: string) => {
@@ -101,14 +133,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
 
   // Swipe gesture removed - users must use explicit buttons
 
-  const handleCopyText = () => {
+  // Memoize handlers to prevent recreation on every render (critical for preventing stack overflow)
+  const handleCopyText = useCallback(() => {
     const textToCopy = `${memory.title}\n\n${memory.body}`
     navigator.clipboard.writeText(textToCopy).then(() => {
       haptic.success()
     })
-  }
+  }, [memory.title, memory.body])
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (navigator.share) {
       try {
         await navigator.share({
@@ -124,9 +157,12 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       // Fallback to copy
       handleCopyText()
     }
-  }
+  }, [memory.title, memory.body, handleCopyText])
 
-  const contextMenuItems: ContextMenuItem[] = React.useMemo(() => [
+  // Memoize content string to prevent ConnectionsList from refetching on every render
+  const memoryContent = useMemo(() => `${memory.title}\n\n${memory.body}`, [memory.title, memory.body])
+
+  const contextMenuItems: ContextMenuItem[] = useMemo(() => [
     ...(onEdit ? [{
       label: 'Edit',
       icon: <Edit className="h-5 w-5" />,
@@ -148,7 +184,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
       onClick: () => onDelete(memory),
       variant: 'destructive' as const,
     }] : []),
-  ], [memory.id, memory.title, memory.body, onEdit, onDelete, handleCopyText, handleShare])
+  ], [memory.id, onEdit, onDelete, handleCopyText, handleShare])
 
   return (
     <>
@@ -332,7 +368,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             <ConnectionsList
               itemType="thought"
               itemId={memory.id}
-              content={`${memory.title}\n\n${memory.body}`}
+              content={memoryContent}
               onConnectionCreated={loadMemoryBridges}
               onConnectionDeleted={loadMemoryBridges}
             />
