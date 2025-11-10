@@ -52,8 +52,9 @@ export function PinOverlay() {
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.2}
         onDragEnd={handleDragEnd}
-        className="fixed inset-x-0 bottom-0 z-50 premium-glass-strong border-t cursor-grab active:cursor-grabbing"
+        className="fixed inset-x-0 z-30 premium-glass-strong border-t cursor-grab active:cursor-grabbing"
         style={{
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
           backgroundColor: 'var(--premium-surface-base)'
         }}
@@ -97,9 +98,10 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-50 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-30 premium-glass-strong border-t"
         style={{
           top: viewState === 'maximized' ? 0 : '50%',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
           backgroundColor: 'var(--premium-surface-base)',
           overscrollBehavior: 'contain'
@@ -147,7 +149,7 @@ export function PinOverlay() {
         <div
           className="overflow-y-auto"
           style={{
-            height: viewState === 'maximized' ? 'calc(100vh - 60px)' : 'calc(50vh - 60px)',
+            height: 'calc(100% - 60px)',
             overscrollBehavior: 'contain'
           }}
         >
