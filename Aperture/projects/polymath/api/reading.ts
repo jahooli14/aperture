@@ -1,7 +1,7 @@
 /**
  * Consolidated Reading API
  * Handles articles, highlights, RSS feeds, and all reading operations
- * Uses Jina AI Reader API for clean article extraction, with Mozilla Readability.js fallback
+ * Uses Jina AI Reader API for clean article extraction, with Cheerio fallback for blocked domains
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -10,86 +10,139 @@ import { getUserId } from './lib/auth.js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
-import { Readability } from '@mozilla/readability'
-import { JSDOM } from 'jsdom'
-import puppeteer from 'puppeteer-core'
-import chromium from 'chrome-aws-lambda'
+import * as cheerio from 'cheerio'
 
 const rssParser = new Parser()
 
 /**
- * Extract article content using Mozilla Readability.js with Puppeteer
+ * Extract article content using Cheerio (lightweight HTML parser)
  * Used as fallback when Jina AI blocks domains or fails
+ * Note: This won't render JavaScript, but provides basic extraction for static HTML
  */
-async function fetchArticleWithReadability(url: string): Promise<any> {
-  console.log('[Readability] Launching headless browser for:', url)
+async function fetchArticleWithCheerio(url: string): Promise<any> {
+  console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
 
-  let browser = null
   try {
-    // Launch Puppeteer with chrome-aws-lambda for Vercel compatibility
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+    // Fetch HTML with timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: controller.signal
     })
 
-    const page = await browser.newPage()
+    clearTimeout(timeoutId)
 
-    // Set user agent to avoid bot detection
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-
-    // Navigate to URL with timeout
-    await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 })
-
-    // Get the page content
-    const html = await page.content()
-
-    await browser.close()
-    browser = null
-
-    console.log('[Readability] Page loaded, HTML length:', html.length)
-
-    // Parse with Readability
-    const dom = new JSDOM(html, { url })
-    const reader = new Readability(dom.window.document)
-    const article = reader.parse()
-
-    if (!article || !article.content) {
-      throw new Error('Readability could not extract article content')
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    console.log('[Readability] Extraction successful - Title:', article.title)
+    const html = await response.text()
+    console.log('[Cheerio] HTML fetched, length:', html.length)
 
-    // Extract domain for source
+    // Load HTML with Cheerio
+    const $ = cheerio.load(html)
+
+    // Remove unwanted elements
+    $('script, style, nav, header, footer, aside, .advertisement, .ads, .social-share, .cookie-notice, .newsletter-signup').remove()
+
+    // Try to extract title from multiple sources
+    let title =
+      $('meta[property="og:title"]').attr('content') ||
+      $('meta[name="twitter:title"]').attr('content') ||
+      $('h1').first().text() ||
+      $('title').text() ||
+      'Untitled'
+
+    title = title.trim().substring(0, 200)
+
+    // Try to find the main content area using common selectors
+    let content = ''
+    const contentSelectors = [
+      'article',
+      '[role="main"]',
+      'main',
+      '.article-content',
+      '.post-content',
+      '.entry-content',
+      '.content',
+      '#content',
+      '.post-body',
+      '.article-body'
+    ]
+
+    for (const selector of contentSelectors) {
+      const element = $(selector)
+      if (element.length > 0 && element.text().trim().length > 100) {
+        content = element.html() || ''
+        console.log('[Cheerio] Found content using selector:', selector)
+        break
+      }
+    }
+
+    // Fallback: if no content found, try to get all paragraphs
+    if (!content || content.length < 100) {
+      console.log('[Cheerio] Using fallback: extracting all paragraphs')
+      const paragraphs = $('p').map((i, el) => $(el).html()).get()
+      content = paragraphs.join('\n\n')
+    }
+
+    // Extract text for validation
+    const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+
+    if (textContent.length < 50) {
+      throw new Error('Cheerio extraction returned insufficient content (site may require JavaScript)')
+    }
+
+    console.log('[Cheerio] Extraction successful - Text length:', textContent.length)
+
+    // Extract metadata
+    const author =
+      $('meta[property="article:author"]').attr('content') ||
+      $('meta[name="author"]').attr('content') ||
+      $('.author').first().text().trim() ||
+      null
+
+    const description =
+      $('meta[property="og:description"]').attr('content') ||
+      $('meta[name="description"]').attr('content') ||
+      ''
+
+    const image =
+      $('meta[property="og:image"]').attr('content') ||
+      $('meta[name="twitter:image"]').attr('content') ||
+      null
+
+    // Extract domain for favicon
     const urlObj = new URL(url)
     const domain = urlObj.hostname.replace('www.', '')
 
-    // Create excerpt from text content
-    const textContent = article.textContent || article.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    const excerpt = textContent.substring(0, 200)
+    // Create excerpt
+    const excerpt = description || textContent.substring(0, 200) + '...'
 
     return {
-      title: article.title || 'Untitled',
-      content: article.content,
+      title,
+      content,
       excerpt,
-      author: article.byline || null,
-      publishedDate: null, // Readability doesn't extract dates
-      thumbnailUrl: null,
+      author,
+      publishedDate: null,
+      thumbnailUrl: image,
       faviconUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
       url
     }
   } catch (error) {
-    if (browser) {
-      await browser.close().catch(() => {})
-    }
-    console.error('[Readability] Extraction failed:', error)
+    console.error('[Cheerio] Extraction failed:', error)
     throw error
   }
 }
 
 /**
- * Extract article content using Jina AI, with Readability fallback
+ * Extract article content using Jina AI, with Cheerio fallback
  * Jina AI provides clean, reader-friendly content extraction
  */
 async function fetchArticle(url: string) {
@@ -109,16 +162,16 @@ async function fetchArticle(url: string) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('[fetchArticle] Jina AI failed:', errorMessage)
 
-    // If Jina blocked the domain (451 error), try Readability fallback
+    // If Jina blocked the domain (451 error), try Cheerio fallback
     if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
-      console.log('[fetchArticle] Domain blocked by Jina, trying Readability fallback...')
+      console.log('[fetchArticle] Domain blocked by Jina, trying Cheerio fallback...')
       try {
-        const result = await fetchArticleWithReadability(url)
-        console.log('[fetchArticle] Readability fallback succeeded')
+        const result = await fetchArticleWithCheerio(url)
+        console.log('[fetchArticle] Cheerio fallback succeeded')
         return result
-      } catch (readabilityError) {
-        console.error('[fetchArticle] Readability fallback also failed:', readabilityError instanceof Error ? readabilityError.message : 'Unknown error')
-        throw new Error(`Failed to extract article: Both Jina (blocked) and Readability failed`)
+      } catch (cheerioError) {
+        console.error('[fetchArticle] Cheerio fallback also failed:', cheerioError instanceof Error ? cheerioError.message : 'Unknown error')
+        throw new Error(`Failed to extract article: Both Jina (blocked) and Cheerio fallback failed`)
       }
     }
 
