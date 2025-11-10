@@ -33,17 +33,17 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
   const loadExistingSuggestions = useCallback(async (itemId: string) => {
     try {
       // Query Supabase for pending suggestions for this item
-      // NOTE: Using correct column names: source_id, target_type, target_id, confidence_score
+      // NOTE: Database schema uses from_item_id/to_item_id/confidence (not source_id/target_id/confidence_score)
       const { data: suggestions, error } = await supabase
         .from('connection_suggestions')
         .select(`
           id,
-          target_type,
-          target_id,
+          to_item_type,
+          to_item_id,
           reasoning,
-          confidence_score
+          confidence
         `)
-        .eq('source_id', itemId)
+        .eq('from_item_id', itemId)
         .eq('status', 'pending')
 
       if (error) {
@@ -60,25 +60,25 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
             let title = 'Unknown'
 
             try {
-              if (s.target_type === 'project') {
+              if (s.to_item_type === 'project') {
                 const { data } = await supabase
                   .from('projects')
                   .select('title')
-                  .eq('id', s.target_id)
+                  .eq('id', s.to_item_id)
                   .single()
                 title = data?.title || 'Unknown Project'
-              } else if (s.target_type === 'thought') {
+              } else if (s.to_item_type === 'thought') {
                 const { data } = await supabase
                   .from('memories')
                   .select('title, body')
-                  .eq('id', s.target_id)
+                  .eq('id', s.to_item_id)
                   .single()
                 title = data?.title || data?.body?.substring(0, 50) + '...' || 'Unknown Thought'
-              } else if (s.target_type === 'article') {
+              } else if (s.to_item_type === 'article') {
                 const { data } = await supabase
                   .from('reading_queue')
                   .select('title')
-                  .eq('id', s.target_id)
+                  .eq('id', s.to_item_id)
                   .single()
                 title = data?.title || 'Unknown Article'
               }
@@ -88,11 +88,11 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
 
             return {
               id: s.id,
-              toItemType: s.target_type,
-              toItemId: s.target_id,
+              toItemType: s.to_item_type,
+              toItemId: s.to_item_id,
               toItemTitle: title,
               reasoning: s.reasoning,
-              confidence: s.confidence_score
+              confidence: s.confidence
             }
           })
         )

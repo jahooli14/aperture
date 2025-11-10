@@ -16,11 +16,14 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
 
   // Load existing suggestions when component mounts
   useEffect(() => {
+    console.log(`[SuggestionBadge] Loading suggestions for ${itemType} ${itemId}`)
     loadExistingSuggestions(itemId)
   }, [itemId, loadExistingSuggestions])
 
   const suggestions = pendingSuggestions[itemId] || []
   const count = suggestions.length
+
+  console.log(`[SuggestionBadge] ${itemType} ${itemId} has ${count} suggestions`, suggestions)
 
   if (count === 0) return null
 

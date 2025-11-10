@@ -304,12 +304,12 @@ async function handleAutoSuggest(req: VercelRequest, res: VercelResponse) {
         const { data: suggestion, error: insertError } = await supabase
           .from('connection_suggestions')
           .insert({
-            source_type: itemType,
-            source_id: itemId,
-            target_type: candidate.type,
-            target_id: candidate.id,
+            from_item_type: itemType,
+            from_item_id: itemId,
+            to_item_type: candidate.type,
+            to_item_id: candidate.id,
             reasoning,
-            confidence_score: candidate.similarity,
+            confidence: candidate.similarity,
             user_id: userId,
             status: 'pending'
           })
