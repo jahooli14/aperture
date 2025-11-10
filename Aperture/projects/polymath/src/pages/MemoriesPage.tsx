@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -753,43 +752,26 @@ export function MemoriesPage() {
               </>
             )}
 
-            {/* Recent memories view - Virtualized Grid */}
+            {/* Recent memories view - Simple grid rendering (no Virtuoso to prevent flickering) */}
             {memoryView === 'recent' && (
-              <Virtuoso
-                style={{ height: '800px' }}
-                totalCount={memories.length}
-                overscan={200}
-                computeItemKey={(index) => memories[index]?.id || `item-${index}`}
-                itemContent={(index) => {
-                  const memory = memories[index]
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {memories.map((memory) => {
                   const isNewlyCreated = memory.id === newlyCreatedMemoryId
 
                   return (
-                    <div className="pb-6">
-                      <div className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}>
-                        <MemoryCard
-                          memory={memory}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
-                      </div>
+                    <div
+                      key={memory.id}
+                      className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                    >
+                      <MemoryCard
+                        memory={memory}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
                     </div>
                   )
-                }}
-                components={{
-                  List: React.forwardRef<HTMLDivElement, { style?: React.CSSProperties; children?: React.ReactNode }>(
-                    ({ style, children }, ref) => (
-                      <div
-                        ref={ref}
-                        style={style}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                      >
-                        {children}
-                      </div>
-                    )
-                  )
-                }}
-              />
+                })}
+              </div>
             )}
           </>
         )}

@@ -162,29 +162,35 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
   // Memoize content string to prevent ConnectionsList from refetching on every render
   const memoryContent = useMemo(() => `${memory.title}\n\n${memory.body}`, [memory.title, memory.body])
 
+  // Memoize icon elements to prevent recreation (THIS is what causes stack overflow)
+  const editIcon = useMemo(() => <Edit className="h-5 w-5" />, [])
+  const copyIcon = useMemo(() => <Copy className="h-5 w-5" />, [])
+  const shareIcon = useMemo(() => <Share2 className="h-5 w-5" />, [])
+  const deleteIcon = useMemo(() => <Trash2 className="h-5 w-5" />, [])
+
   const contextMenuItems: ContextMenuItem[] = useMemo(() => [
     ...(onEdit ? [{
       label: 'Edit',
-      icon: <Edit className="h-5 w-5" />,
+      icon: editIcon,
       onClick: () => onEdit(memory),
     }] : []),
     {
       label: 'Copy Text',
-      icon: <Copy className="h-5 w-5" />,
+      icon: copyIcon,
       onClick: handleCopyText,
     },
     {
       label: 'Share',
-      icon: <Share2 className="h-5 w-5" />,
+      icon: shareIcon,
       onClick: handleShare,
     },
     ...(onDelete ? [{
       label: 'Delete',
-      icon: <Trash2 className="h-5 w-5" />,
+      icon: deleteIcon,
       onClick: () => onDelete(memory),
       variant: 'destructive' as const,
     }] : []),
-  ], [memory.id, onEdit, onDelete, handleCopyText, handleShare])
+  ], [memory.id, onEdit, onDelete, handleCopyText, handleShare, editIcon, copyIcon, shareIcon, deleteIcon])
 
   return (
     <>
