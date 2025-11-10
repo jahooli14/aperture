@@ -1,7 +1,7 @@
 /**
  * Consolidated Reading API
  * Handles articles, highlights, RSS feeds, and all reading operations
- * Uses Jina AI Reader API for clean article extraction
+ * Uses Jina AI Reader API for clean article extraction, with Mozilla Readability.js fallback
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -10,11 +10,86 @@ import { getUserId } from './lib/auth.js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
+import { Readability } from '@mozilla/readability'
+import { JSDOM } from 'jsdom'
+import puppeteer from 'puppeteer-core'
+import chromium from 'chrome-aws-lambda'
 
 const rssParser = new Parser()
 
 /**
- * Extract article content using Jina AI
+ * Extract article content using Mozilla Readability.js with Puppeteer
+ * Used as fallback when Jina AI blocks domains or fails
+ */
+async function fetchArticleWithReadability(url: string): Promise<any> {
+  console.log('[Readability] Launching headless browser for:', url)
+
+  let browser = null
+  try {
+    // Launch Puppeteer with chrome-aws-lambda for Vercel compatibility
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+    })
+
+    const page = await browser.newPage()
+
+    // Set user agent to avoid bot detection
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+
+    // Navigate to URL with timeout
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 })
+
+    // Get the page content
+    const html = await page.content()
+
+    await browser.close()
+    browser = null
+
+    console.log('[Readability] Page loaded, HTML length:', html.length)
+
+    // Parse with Readability
+    const dom = new JSDOM(html, { url })
+    const reader = new Readability(dom.window.document)
+    const article = reader.parse()
+
+    if (!article || !article.content) {
+      throw new Error('Readability could not extract article content')
+    }
+
+    console.log('[Readability] Extraction successful - Title:', article.title)
+
+    // Extract domain for source
+    const urlObj = new URL(url)
+    const domain = urlObj.hostname.replace('www.', '')
+
+    // Create excerpt from text content
+    const textContent = article.textContent || article.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    const excerpt = textContent.substring(0, 200)
+
+    return {
+      title: article.title || 'Untitled',
+      content: article.content,
+      excerpt,
+      author: article.byline || null,
+      publishedDate: null, // Readability doesn't extract dates
+      thumbnailUrl: null,
+      faviconUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+      url
+    }
+  } catch (error) {
+    if (browser) {
+      await browser.close().catch(() => {})
+    }
+    console.error('[Readability] Extraction failed:', error)
+    throw error
+  }
+}
+
+/**
+ * Extract article content using Jina AI, with Readability fallback
  * Jina AI provides clean, reader-friendly content extraction
  */
 async function fetchArticle(url: string) {
@@ -31,8 +106,24 @@ async function fetchArticle(url: string) {
     console.log('[fetchArticle] Jina AI returned insufficient content')
     throw new Error('Jina AI extraction returned insufficient content')
   } catch (error) {
-    console.error('[fetchArticle] Jina AI failed:', error instanceof Error ? error.message : 'Unknown error')
-    throw new Error(`Failed to extract article: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[fetchArticle] Jina AI failed:', errorMessage)
+
+    // If Jina blocked the domain (451 error), try Readability fallback
+    if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
+      console.log('[fetchArticle] Domain blocked by Jina, trying Readability fallback...')
+      try {
+        const result = await fetchArticleWithReadability(url)
+        console.log('[fetchArticle] Readability fallback succeeded')
+        return result
+      } catch (readabilityError) {
+        console.error('[fetchArticle] Readability fallback also failed:', readabilityError instanceof Error ? readabilityError.message : 'Unknown error')
+        throw new Error(`Failed to extract article: Both Jina (blocked) and Readability failed`)
+      }
+    }
+
+    // For other errors, just throw
+    throw new Error(`Failed to extract article: ${errorMessage}`)
   }
 }
 
