@@ -819,7 +819,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
           let userFriendlyMessage = 'Failed to extract content. '
 
-          if (errorMessage.includes('JavaScript-heavy site')) {
+          // Check for Jina AI domain blocks (451 error)
+          if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
+            // Try to extract the blocked-until timestamp
+            const blockedUntilMatch = errorMessage.match(/blocked until ([^)]+)/i)
+            if (blockedUntilMatch && blockedUntilMatch[1]) {
+              try {
+                const blockedUntil = new Date(blockedUntilMatch[1])
+                const blockedUntilStr = blockedUntil.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' })
+                userFriendlyMessage = `This domain is temporarily blocked until ${blockedUntilStr} due to abuse prevention. Try again after that time or view the original article.`
+              } catch {
+                userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+              }
+            } else {
+              userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+            }
+          } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage += 'This site may require JavaScript rendering. Try viewing the original article.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
             userFriendlyMessage += 'Request timed out. Click to retry.'
