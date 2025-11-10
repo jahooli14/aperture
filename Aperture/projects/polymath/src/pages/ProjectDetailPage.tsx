@@ -406,7 +406,7 @@ export function ProjectDetailPage() {
         <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
           Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
         </h4>
-        <div className="space-y-1.5 max-h-64 overflow-y-auto">
+        <div className="space-y-1.5 overflow-y-auto">
           {/* Incomplete tasks only */}
           {tasks.filter(t => !t.done).map((task, index) => {
             const isNextTask = index === 0

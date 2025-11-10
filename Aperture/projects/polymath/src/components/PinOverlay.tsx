@@ -52,7 +52,7 @@ export function PinOverlay() {
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.2}
         onDragEnd={handleDragEnd}
-        className="fixed inset-x-0 bottom-0 z-20 premium-glass-strong border-t cursor-grab active:cursor-grabbing"
+        className="fixed inset-x-0 bottom-0 z-50 premium-glass-strong border-t cursor-grab active:cursor-grabbing"
         style={{
           borderColor: 'rgba(255, 255, 255, 0.1)',
           backgroundColor: 'var(--premium-surface-base)'
@@ -97,7 +97,7 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-20 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-50 premium-glass-strong border-t"
         style={{
           top: viewState === 'maximized' ? 0 : '50%',
           borderColor: 'rgba(255, 255, 255, 0.1)',
