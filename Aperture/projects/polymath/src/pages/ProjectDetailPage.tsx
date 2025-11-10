@@ -417,11 +417,10 @@ export function ProjectDetailPage() {
                 onDragStart={() => handlePinnedDragStart(task.id)}
                 onDragOver={(e) => handlePinnedDragOver(e, task.id)}
                 onDragEnd={handlePinnedDragEnd}
-                className={`group w-full flex items-center gap-2 text-sm p-1.5 rounded transition-colors text-left cursor-move ${
-                  isNextTask ? 'premium-glass-subtle' : 'hover:bg-white/5'
-                }`}
+                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
                 style={{
-                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1
+                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
+                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
                 }}
               >
                 <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
@@ -431,7 +430,13 @@ export function ProjectDetailPage() {
                   onClick={() => togglePinnedTask(task.id)}
                   className="flex items-center gap-2 flex-1"
                 >
-                  <div className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0">
+                  <div
+                    className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
+                    style={{
+                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                      color: 'rgba(59, 130, 246, 0.9)'
+                    }}
+                  >
                   </div>
                   <span style={{
                     color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
@@ -467,6 +472,10 @@ export function ProjectDetailPage() {
                   addPinnedTask()
                 }
               }}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
               className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
               style={{
                 color: 'var(--premium-text-primary)'
