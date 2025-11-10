@@ -37,6 +37,127 @@ async function fetchArticle(url: string) {
 }
 
 /**
+ * Clean markdown content by removing navigation, UI elements, and boilerplate
+ * This runs before HTML conversion to keep processing fast
+ */
+function cleanMarkdownContent(markdown: string): string {
+  const lines = markdown.split('\n')
+  const cleaned: string[] = []
+  let inNavigationBlock = false
+  let navigationLinkCount = 0
+  let consecutiveLinks = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : ''
+
+    // Skip empty lines at the start
+    if (cleaned.length === 0 && line === '') continue
+
+    // Detect navigation blocks (many links in a row)
+    const isLink = /^\*\s+\[/.test(line) || /^\-\s+\[/.test(line) || /^\d+\.\s+\[/.test(line)
+
+    if (isLink) {
+      consecutiveLinks++
+      // If we see 4+ consecutive links, it's likely navigation
+      if (consecutiveLinks >= 4) {
+        inNavigationBlock = true
+        navigationLinkCount++
+        continue
+      }
+    } else {
+      // End of navigation block detection
+      if (inNavigationBlock && consecutiveLinks >= 4) {
+        // Skip the navigation
+        inNavigationBlock = false
+        consecutiveLinks = 0
+        continue
+      }
+      consecutiveLinks = 0
+    }
+
+    // Skip common UI patterns (case-insensitive matching)
+    const lowerLine = line.toLowerCase()
+
+    // Skip subscription/auth prompts
+    if (
+      lowerLine.startsWith('subscribe') ||
+      lowerLine.startsWith('sign in') ||
+      lowerLine.startsWith('sign up') ||
+      lowerLine === 'already have an account?' ||
+      /^by subscribing,? i agree/i.test(line) ||
+      /^over \d+[\d,]* subscribers?$/i.test(line) ||
+      /^discover more from/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip audio/video player UI
+    if (
+      lowerLine.includes('audio playback') ||
+      lowerLine.includes('please upgrade') ||
+      /^\d+:\d+$/.test(line) || // Timestamps like "0:00"
+      lowerLine === 'article voiceover'
+    ) {
+      continue
+    }
+
+    // Skip share/social buttons
+    if (
+      lowerLine === 'share' ||
+      lowerLine.startsWith('share this') ||
+      /^(like|comment|restack|share)$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip common footers
+    if (
+      /^©\s*\d{4}/.test(line) ||
+      lowerLine.includes('all rights reserved') ||
+      lowerLine.includes('privacy policy') ||
+      lowerLine.includes('terms of service') ||
+      lowerLine.includes('cookie policy')
+    ) {
+      continue
+    }
+
+    // Skip image labels without content
+    if (/^image \d+:?$/i.test(line)) {
+      continue
+    }
+
+    // Skip menu/navigation headers
+    if (
+      lowerLine === 'menu' ||
+      lowerLine === 'navigation' ||
+      lowerLine === '[menu]' ||
+      /^\[menu\]\(#\)$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip separators that are too long (likely decorative)
+    if (/^[=\-_*]{10,}$/.test(line)) {
+      continue
+    }
+
+    // If we're past the navigation and see actual content, keep it
+    cleaned.push(lines[i]) // Keep original indentation
+  }
+
+  // Remove leading/trailing empty lines
+  while (cleaned.length > 0 && cleaned[0].trim() === '') {
+    cleaned.shift()
+  }
+  while (cleaned.length > 0 && cleaned[cleaned.length - 1].trim() === '') {
+    cleaned.pop()
+  }
+
+  return cleaned.join('\n')
+}
+
+/**
  * Extract article content using Jina AI Reader API with retry logic
  * Jina AI provides clean, reader-friendly content
  * Note: Sanitization happens client-side before rendering
@@ -100,8 +221,12 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       throw new Error('Jina AI returned empty content')
     }
 
+    // Clean markdown content before conversion (remove navigation, UI elements, etc.)
+    const cleanedMarkdown = cleanMarkdownContent(markdownContent)
+    console.log('[Jina AI] Cleaned markdown - original length:', markdownContent.length, 'cleaned length:', cleanedMarkdown.length)
+
     // Convert markdown to HTML
-    const html = await marked.parse(markdownContent)
+    const html = await marked.parse(cleanedMarkdown)
 
     // Helper function to check if a string is URL-like
     const isUrlLike = (str: string): boolean => {
