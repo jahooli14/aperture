@@ -60,7 +60,8 @@ export const useReadingStore = create<ReadingState>((set, get) => ({
       if (currentArticles.length === articles.length) {
         const hasChanged = articles.some((newArt: any, idx: number) => {
           const current = currentArticles[idx]
-          return !current || current.id !== newArt.id || current.processed !== newArt.processed
+          // Compare ID, status, and title (title can change during processing)
+          return !current || current.id !== newArt.id || current.status !== newArt.status || current.title !== newArt.title
         })
 
         if (!hasChanged) {
