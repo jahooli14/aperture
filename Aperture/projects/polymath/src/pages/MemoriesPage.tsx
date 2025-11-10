@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
@@ -42,6 +42,7 @@ const getIconComponent = (name: string) => {
 
 export function MemoriesPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
@@ -110,20 +111,23 @@ export function MemoriesPage() {
     }
   }, [])
 
+  // Fetch data on mount and when navigating back to this page (like HomePage)
   useEffect(() => {
-    // Clear any stale errors when navigating to this page
-    clearError()
+    const loadData = async () => {
+      clearError()
 
-    if (view === 'resurfacing') {
-      fetchResurfacing()
-    } else {
-      loadMemories() // Use simplified loader
-      if (view === 'all') {
-        fetchThemeClusters()
+      if (view === 'resurfacing') {
+        await fetchResurfacing()
+      } else {
+        await loadMemories()
+        if (view === 'all') {
+          await fetchThemeClusters()
+        }
       }
     }
+    loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view]) // Only re-run when view changes
+  }, [location.key, view]) // Re-run when navigating to page OR when view changes
 
   // Memoize unprocessed count to avoid unnecessary re-renders
   const unprocessedCount = useMemo(() => {
@@ -134,6 +138,7 @@ export function MemoriesPage() {
   const isPollingRef = useRef(false)
 
   // Poll for updates when there are unprocessed memories
+  // Use normal fetch (not forced) so store's smart state updates prevent unnecessary re-renders
   useEffect(() => {
     if (unprocessedCount === 0) {
       isPollingRef.current = false
@@ -148,8 +153,9 @@ export function MemoriesPage() {
     const pollInterval = setInterval(async () => {
       console.log('⏰ Polling tick - checking for updates...')
       try {
-        // Force refresh to bypass cache and get latest data
-        await loadMemories(true)
+        // Don't force refresh - let store's smart state updates handle it
+        // This prevents flickering by skipping updates when data hasn't changed
+        await loadMemories(false)
       } catch (error) {
         console.error('Polling error:', error)
       }
@@ -517,38 +523,45 @@ export function MemoriesPage() {
               </Card>
             )}
 
-            {/* Loading State - Only show if no data yet (prevent flicker on refresh) */}
+            {/* Loading State - Show skeleton loaders like HomePage */}
             {isLoading && memories.length === 0 && (
-              <Card style={{
-                background: 'var(--premium-bg-2)',
-                backdropFilter: 'blur(12px)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-              }}>
-                <CardContent className="py-24">
-                  <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <p className="text-lg">Loading thoughts...</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
+                    {/* Title skeleton */}
+                    <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
+                    {/* Body skeleton */}
+                    <div className="space-y-2 mb-4">
+                      <div className="h-4 bg-white/10 rounded w-full"></div>
+                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                      <div className="h-4 bg-white/10 rounded w-4/5"></div>
+                    </div>
+                    {/* Tags skeleton */}
+                    <div className="flex gap-2">
+                      <div className="h-6 bg-white/10 rounded-full w-16"></div>
+                      <div className="h-6 bg-white/10 rounded-full w-20"></div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             )}
           </>
         )}
 
-        {/* Resurfacing Tab Loading - Only show if no data yet (prevent flicker on refresh) */}
+        {/* Resurfacing Tab Loading - Show skeleton loaders */}
         {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
-          <Card style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="py-24">
-              <div className="text-center" style={{ color: 'var(--premium-text-secondary)' }}>
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                <p className="text-lg">Loading memories...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
+                <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
+                <div className="space-y-2 mb-4">
+                  <div className="h-4 bg-white/10 rounded w-full"></div>
+                  <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                </div>
+                <div className="h-10 bg-white/10 rounded-lg w-full"></div>
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         )}
 
         {/* Empty State */}
