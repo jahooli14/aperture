@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -709,16 +710,21 @@ export function MemoriesPage() {
                     ({selectedCluster.memory_count} thoughts)
                   </span>
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {selectedCluster.memories.map((memory) => (
-                    <MemoryCard
-                      key={memory.id}
-                      memory={memory}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
+                <Virtuoso
+                  style={{ height: 'calc(100vh - 400px)' }}
+                  data={selectedCluster.memories}
+                  overscan={200}
+                  itemContent={(index, memory) => (
+                    <div className="pb-6" style={{ contain: 'layout style paint' }}>
+                      <MemoryCard
+                        key={memory.id}
+                        memory={memory}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  )}
+                />
               </div>
             )}
 
@@ -752,16 +758,22 @@ export function MemoriesPage() {
               </>
             )}
 
-            {/* Recent memories view - Simple grid rendering (no Virtuoso to prevent flickering) */}
+            {/* Recent memories view - Virtualized for smooth scrolling with 100+ items */}
             {memoryView === 'recent' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {memories.map((memory) => {
+              <Virtuoso
+                style={{ height: 'calc(100vh - 280px)' }}
+                data={memories}
+                overscan={200}
+                itemContent={(index, memory) => {
                   const isNewlyCreated = memory.id === newlyCreatedMemoryId
 
                   return (
                     <div
-                      key={memory.id}
-                      className={`transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                      className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                      style={{
+                        contain: 'layout style paint',
+                        willChange: isNewlyCreated ? 'transform' : 'auto'
+                      }}
                     >
                       <MemoryCard
                         memory={memory}
@@ -770,17 +782,20 @@ export function MemoriesPage() {
                       />
                     </div>
                   )
-                })}
-              </div>
+                }}
+              />
             )}
           </>
         )}
 
-        {/* Resurfacing Memories Grid */}
+        {/* Resurfacing Memories Grid - Virtualized */}
         {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-children mt-8">
-            {resurfacing.map((memory) => (
-              <div key={memory.id} className="flex flex-col gap-3">
+          <Virtuoso
+            style={{ height: 'calc(100vh - 280px)' }}
+            data={resurfacing}
+            overscan={200}
+            itemContent={(index, memory) => (
+              <div className="flex flex-col gap-3 pb-6" style={{ contain: 'layout style paint' }}>
                 <MemoryCard
                   memory={memory}
                   onEdit={handleEdit}
@@ -794,8 +809,8 @@ export function MemoriesPage() {
                   Reviewed
                 </Button>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </div>
 

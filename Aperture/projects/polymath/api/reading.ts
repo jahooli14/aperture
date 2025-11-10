@@ -1,7 +1,7 @@
 /**
  * Consolidated Reading API
  * Handles articles, highlights, RSS feeds, and all reading operations
- * Uses Jina AI Reader API for clean article extraction
+ * Uses Jina AI Reader API for clean article extraction, with Mozilla Readability.js fallback
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
@@ -10,11 +10,86 @@ import { getUserId } from './lib/auth.js'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
+import { Readability } from '@mozilla/readability'
+import { JSDOM } from 'jsdom'
+import puppeteer from 'puppeteer-core'
+import chromium from 'chrome-aws-lambda'
 
 const rssParser = new Parser()
 
 /**
- * Extract article content using Jina AI
+ * Extract article content using Mozilla Readability.js with Puppeteer
+ * Used as fallback when Jina AI blocks domains or fails
+ */
+async function fetchArticleWithReadability(url: string): Promise<any> {
+  console.log('[Readability] Launching headless browser for:', url)
+
+  let browser = null
+  try {
+    // Launch Puppeteer with chrome-aws-lambda for Vercel compatibility
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+    })
+
+    const page = await browser.newPage()
+
+    // Set user agent to avoid bot detection
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+
+    // Navigate to URL with timeout
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 15000 })
+
+    // Get the page content
+    const html = await page.content()
+
+    await browser.close()
+    browser = null
+
+    console.log('[Readability] Page loaded, HTML length:', html.length)
+
+    // Parse with Readability
+    const dom = new JSDOM(html, { url })
+    const reader = new Readability(dom.window.document)
+    const article = reader.parse()
+
+    if (!article || !article.content) {
+      throw new Error('Readability could not extract article content')
+    }
+
+    console.log('[Readability] Extraction successful - Title:', article.title)
+
+    // Extract domain for source
+    const urlObj = new URL(url)
+    const domain = urlObj.hostname.replace('www.', '')
+
+    // Create excerpt from text content
+    const textContent = article.textContent || article.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    const excerpt = textContent.substring(0, 200)
+
+    return {
+      title: article.title || 'Untitled',
+      content: article.content,
+      excerpt,
+      author: article.byline || null,
+      publishedDate: null, // Readability doesn't extract dates
+      thumbnailUrl: null,
+      faviconUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+      url
+    }
+  } catch (error) {
+    if (browser) {
+      await browser.close().catch(() => {})
+    }
+    console.error('[Readability] Extraction failed:', error)
+    throw error
+  }
+}
+
+/**
+ * Extract article content using Jina AI, with Readability fallback
  * Jina AI provides clean, reader-friendly content extraction
  */
 async function fetchArticle(url: string) {
@@ -31,9 +106,146 @@ async function fetchArticle(url: string) {
     console.log('[fetchArticle] Jina AI returned insufficient content')
     throw new Error('Jina AI extraction returned insufficient content')
   } catch (error) {
-    console.error('[fetchArticle] Jina AI failed:', error instanceof Error ? error.message : 'Unknown error')
-    throw new Error(`Failed to extract article: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[fetchArticle] Jina AI failed:', errorMessage)
+
+    // If Jina blocked the domain (451 error), try Readability fallback
+    if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
+      console.log('[fetchArticle] Domain blocked by Jina, trying Readability fallback...')
+      try {
+        const result = await fetchArticleWithReadability(url)
+        console.log('[fetchArticle] Readability fallback succeeded')
+        return result
+      } catch (readabilityError) {
+        console.error('[fetchArticle] Readability fallback also failed:', readabilityError instanceof Error ? readabilityError.message : 'Unknown error')
+        throw new Error(`Failed to extract article: Both Jina (blocked) and Readability failed`)
+      }
+    }
+
+    // For other errors, just throw
+    throw new Error(`Failed to extract article: ${errorMessage}`)
   }
+}
+
+/**
+ * Clean markdown content by removing navigation, UI elements, and boilerplate
+ * This runs before HTML conversion to keep processing fast
+ */
+function cleanMarkdownContent(markdown: string): string {
+  const lines = markdown.split('\n')
+  const cleaned: string[] = []
+  let inNavigationBlock = false
+  let navigationLinkCount = 0
+  let consecutiveLinks = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : ''
+
+    // Skip empty lines at the start
+    if (cleaned.length === 0 && line === '') continue
+
+    // Detect navigation blocks (many links in a row)
+    const isLink = /^\*\s+\[/.test(line) || /^\-\s+\[/.test(line) || /^\d+\.\s+\[/.test(line)
+
+    if (isLink) {
+      consecutiveLinks++
+      // If we see 4+ consecutive links, it's likely navigation
+      if (consecutiveLinks >= 4) {
+        inNavigationBlock = true
+        navigationLinkCount++
+        continue
+      }
+    } else {
+      // End of navigation block detection
+      if (inNavigationBlock && consecutiveLinks >= 4) {
+        // Skip the navigation
+        inNavigationBlock = false
+        consecutiveLinks = 0
+        continue
+      }
+      consecutiveLinks = 0
+    }
+
+    // Skip common UI patterns (case-insensitive matching)
+    const lowerLine = line.toLowerCase()
+
+    // Skip subscription/auth prompts
+    if (
+      lowerLine.startsWith('subscribe') ||
+      lowerLine.startsWith('sign in') ||
+      lowerLine.startsWith('sign up') ||
+      lowerLine === 'already have an account?' ||
+      /^by subscribing,? i agree/i.test(line) ||
+      /^over \d+[\d,]* subscribers?$/i.test(line) ||
+      /^discover more from/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip audio/video player UI
+    if (
+      lowerLine.includes('audio playback') ||
+      lowerLine.includes('please upgrade') ||
+      /^\d+:\d+$/.test(line) || // Timestamps like "0:00"
+      lowerLine === 'article voiceover'
+    ) {
+      continue
+    }
+
+    // Skip share/social buttons
+    if (
+      lowerLine === 'share' ||
+      lowerLine.startsWith('share this') ||
+      /^(like|comment|restack|share)$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip common footers
+    if (
+      /^©\s*\d{4}/.test(line) ||
+      lowerLine.includes('all rights reserved') ||
+      lowerLine.includes('privacy policy') ||
+      lowerLine.includes('terms of service') ||
+      lowerLine.includes('cookie policy')
+    ) {
+      continue
+    }
+
+    // Skip image labels without content
+    if (/^image \d+:?$/i.test(line)) {
+      continue
+    }
+
+    // Skip menu/navigation headers
+    if (
+      lowerLine === 'menu' ||
+      lowerLine === 'navigation' ||
+      lowerLine === '[menu]' ||
+      /^\[menu\]\(#\)$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip separators that are too long (likely decorative)
+    if (/^[=\-_*]{10,}$/.test(line)) {
+      continue
+    }
+
+    // If we're past the navigation and see actual content, keep it
+    cleaned.push(lines[i]) // Keep original indentation
+  }
+
+  // Remove leading/trailing empty lines
+  while (cleaned.length > 0 && cleaned[0].trim() === '') {
+    cleaned.shift()
+  }
+  while (cleaned.length > 0 && cleaned[cleaned.length - 1].trim() === '') {
+    cleaned.pop()
+  }
+
+  return cleaned.join('\n')
 }
 
 /**
@@ -100,8 +312,12 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       throw new Error('Jina AI returned empty content')
     }
 
+    // Clean markdown content before conversion (remove navigation, UI elements, etc.)
+    const cleanedMarkdown = cleanMarkdownContent(markdownContent)
+    console.log('[Jina AI] Cleaned markdown - original length:', markdownContent.length, 'cleaned length:', cleanedMarkdown.length)
+
     // Convert markdown to HTML
-    const html = await marked.parse(markdownContent)
+    const html = await marked.parse(cleanedMarkdown)
 
     // Helper function to check if a string is URL-like
     const isUrlLike = (str: string): boolean => {
@@ -694,7 +910,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
           let userFriendlyMessage = 'Failed to extract content. '
 
-          if (errorMessage.includes('JavaScript-heavy site')) {
+          // Check for Jina AI domain blocks (451 error)
+          if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
+            // Try to extract the blocked-until timestamp
+            const blockedUntilMatch = errorMessage.match(/blocked until ([^)]+)/i)
+            if (blockedUntilMatch && blockedUntilMatch[1]) {
+              try {
+                const blockedUntil = new Date(blockedUntilMatch[1])
+                const blockedUntilStr = blockedUntil.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' })
+                userFriendlyMessage = `This domain is temporarily blocked until ${blockedUntilStr} due to abuse prevention. Try again after that time or view the original article.`
+              } catch {
+                userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+              }
+            } else {
+              userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+            }
+          } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage += 'This site may require JavaScript rendering. Try viewing the original article.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
             userFriendlyMessage += 'Request timed out. Click to retry.'

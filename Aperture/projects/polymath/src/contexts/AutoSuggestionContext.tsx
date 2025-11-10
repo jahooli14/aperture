@@ -17,6 +17,7 @@ interface PendingSuggestions {
 interface AutoSuggestionContextType {
   pendingSuggestions: PendingSuggestions
   fetchSuggestions: (itemType: string, itemId: string, content: string) => Promise<void>
+  loadExistingSuggestions: (itemId: string) => Promise<void>
   acceptSuggestion: (fromItemId: string, suggestion: Suggestion) => Promise<void>
   dismissSuggestion: (fromItemId: string, suggestionId: string) => void
   clearSuggestions: (itemId: string) => void
@@ -28,6 +29,82 @@ const AutoSuggestionContext = createContext<AutoSuggestionContextType | undefine
 export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
   const [pendingSuggestions, setPendingSuggestions] = useState<PendingSuggestions>({})
   const [isLoading, setIsLoading] = useState(false)
+
+  const loadExistingSuggestions = useCallback(async (itemId: string) => {
+    try {
+      // Query Supabase for pending suggestions for this item
+      const { data: suggestions, error } = await supabase
+        .from('connection_suggestions')
+        .select(`
+          id,
+          to_item_type,
+          to_item_id,
+          reasoning,
+          confidence
+        `)
+        .eq('from_item_id', itemId)
+        .eq('status', 'pending')
+
+      if (error) {
+        console.error('[AutoSuggestion] Error loading suggestions:', error)
+        return
+      }
+
+      if (suggestions && suggestions.length > 0) {
+        // Fetch titles for each suggested item
+        const enrichedSuggestions = await Promise.all(
+          suggestions.map(async (s) => {
+            let title = 'Unknown'
+
+            try {
+              if (s.to_item_type === 'project') {
+                const { data } = await supabase
+                  .from('projects')
+                  .select('title')
+                  .eq('id', s.to_item_id)
+                  .single()
+                title = data?.title || 'Unknown Project'
+              } else if (s.to_item_type === 'thought') {
+                const { data } = await supabase
+                  .from('memories')
+                  .select('title, body')
+                  .eq('id', s.to_item_id)
+                  .single()
+                title = data?.title || data?.body?.substring(0, 50) + '...' || 'Unknown Thought'
+              } else if (s.to_item_type === 'article') {
+                const { data } = await supabase
+                  .from('reading_queue')
+                  .select('title')
+                  .eq('id', s.to_item_id)
+                  .single()
+                title = data?.title || 'Unknown Article'
+              }
+            } catch (e) {
+              console.error('[AutoSuggestion] Error fetching title:', e)
+            }
+
+            return {
+              id: s.id,
+              toItemType: s.to_item_type,
+              toItemId: s.to_item_id,
+              toItemTitle: title,
+              reasoning: s.reasoning,
+              confidence: s.confidence
+            }
+          })
+        )
+
+        setPendingSuggestions(prev => ({
+          ...prev,
+          [itemId]: enrichedSuggestions
+        }))
+
+        console.log(`[AutoSuggestion] Loaded ${enrichedSuggestions.length} suggestions for item ${itemId}`)
+      }
+    } catch (error) {
+      console.error('[AutoSuggestion] Error loading suggestions:', error)
+    }
+  }, [])
 
   const fetchSuggestions = useCallback(async (
     itemType: string,
@@ -161,6 +238,7 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
       value={{
         pendingSuggestions,
         fetchSuggestions,
+        loadExistingSuggestions,
         acceptSuggestion,
         dismissSuggestion,
         clearSuggestions,
