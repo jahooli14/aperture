@@ -263,7 +263,6 @@ export function FloatingNav() {
             }}
             onClick={() => {
               setIsVoiceOpen(false)
-              setAutoStartRecording(false)
             }}
           >
             <motion.div
