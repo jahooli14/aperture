@@ -5,6 +5,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
@@ -459,21 +460,26 @@ export function ReadingPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {rssItems.map((item) => (
-                  <RSSFeedItem
-                    key={item.guid}
-                    item={item}
-                    onSave={() => handleSaveRSSItem(item)}
-                    onDismiss={() => {
-                      // Add to permanent dismissal log
-                      addToDismissedLog(item.guid)
-                      // Remove from local state
-                      setRssItems(prev => prev.filter(i => i.guid !== item.guid))
-                    }}
-                  />
-                ))}
-              </div>
+              <Virtuoso
+                style={{ height: 'calc(100vh - 280px)' }}
+                data={rssItems}
+                overscan={200}
+                itemContent={(index, item) => (
+                  <div className="pb-4" style={{ contain: 'layout style paint' }}>
+                    <RSSFeedItem
+                      key={item.guid}
+                      item={item}
+                      onSave={() => handleSaveRSSItem(item)}
+                      onDismiss={() => {
+                        // Add to permanent dismissal log
+                        addToDismissedLog(item.guid)
+                        // Remove from local state
+                        setRssItems(prev => prev.filter(i => i.guid !== item.guid))
+                      }}
+                    />
+                  </div>
+                )}
+              />
             )}
           </>
         )}
@@ -532,12 +538,15 @@ export function ReadingPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredArticles.map((article) => {
+          <Virtuoso
+            style={{ height: 'calc(100vh - 240px)' }}
+            data={filteredArticles}
+            overscan={200}
+            itemContent={(index, article) => {
               const isSelected = bulkSelection.isSelected(article.id)
 
               return (
-                <div key={article.id} className="pb-4">
+                <div className="pb-4" style={{ contain: 'layout style paint' }}>
                   <div
                     className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
                     onClick={(e) => {
@@ -572,8 +581,8 @@ export function ReadingPage() {
                   </div>
                 </div>
               )
-            })}
-          </div>
+            }}
+          />
         )}
           </>
         )}

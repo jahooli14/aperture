@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font Loading Optimization - Force swap display for faster perceived load */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+  src: local('Inter');
+}
+
 @layer base {
   :root {
     /* Material You design tokens (from material-you.css) */
@@ -161,34 +168,38 @@
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Raised card - level 1 elevation (default) */
+  /* Raised card - level 1 elevation (default) with GPU acceleration */
   .pro-card, .card-raised {
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface-1);
     color: var(--md-sys-color-on-surface);
     box-shadow: var(--md-sys-shadow-1);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
   }
 
   .pro-card:hover, .card-raised:hover {
     background-color: var(--md-sys-color-surface-2);
     box-shadow: var(--md-sys-shadow-2);
-    transform: translateY(-2px);
+    transform: translateY(-2px) translateZ(0);
   }
 
-  /* Floating card - level 3 elevation */
+  /* Floating card - level 3 elevation with GPU acceleration */
   .card-floating {
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface-3);
     color: var(--md-sys-color-on-surface);
     box-shadow: var(--md-sys-shadow-3);
     transition: all 0.3s cubic-bezier(0, 0, 0.2, 1);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
   }
 
   .card-floating:hover {
     background-color: var(--md-sys-color-surface-4);
     box-shadow: var(--md-sys-shadow-4);
-    transform: translateY(-4px) scale(1.01);
+    transform: translateY(-4px) scale(1.01) translateZ(0);
   }
 
   /* Glass Panel - Material You style */
@@ -320,24 +331,29 @@
     transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    /* GPU acceleration for button presses */
+    transform: translateZ(0);
+    will-change: transform;
   }
 
   button:active, a:active, [role="button"]:active {
-    transform: scale(0.98);
+    transform: scale(0.98) translateZ(0);
     transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Subtle hover lift - Enhanced */
+  /* Subtle hover lift - Enhanced with GPU acceleration */
   .hover-lift {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateZ(0);
+    will-change: transform;
   }
 
   .hover-lift:hover {
-    transform: translateY(-4px) scale(1.01);
+    transform: translateY(-4px) scale(1.01) translateZ(0);
   }
 
   .hover-lift:active {
-    transform: translateY(-1px) scale(1);
+    transform: translateY(-1px) scale(1) translateZ(0);
   }
 
   /* Text styles */
