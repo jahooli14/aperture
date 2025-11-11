@@ -455,12 +455,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 {article.source && (
                   <span className="font-medium text-sm">{article.source}</span>
                 )}
-                {article.author && (
-                  <>
-                    <span>•</span>
-                    <span>{article.author}</span>
-                  </>
-                )}
               </div>
             </>
           )}
