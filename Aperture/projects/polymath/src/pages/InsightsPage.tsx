@@ -5,13 +5,16 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Sparkles, TrendingUp, AlertCircle, Lightbulb } from 'lucide-react'
+import { Sparkles, TrendingUp, AlertCircle, Lightbulb, Search } from 'lucide-react'
+import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 
 export function InsightsPage() {
+  const navigate = useNavigate()
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -54,64 +57,114 @@ export function InsightsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center">
-            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--premium-blue)' }}></div>
-            <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Synthesizing insights...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (insights.length === 0) {
-    return (
-      <div className="min-h-screen py-12" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
-        <div className="max-w-5xl mx-auto px-4">
-          <Card className="premium-card">
-            <CardContent className="py-16 text-center">
-              <Sparkles className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-              <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                Building Your Insights
-              </h2>
-              <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
-                Capture at least 10 thoughts to see evolution patterns and synthesis insights
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen">
-      <motion.div
-        className="py-12"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.1 }}
+    >
+      {/* Subtle Background Effect */}
+      <SubtleBackground />
+
+      {/* Fixed Header Bar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+        }}
       >
-        {/* Header */}
-        <div className="max-w-5xl mx-auto px-4 mb-12">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-            Your Synthesis Insights
-          </h1>
-          <p className="text-xl" style={{ color: 'var(--premium-text-secondary)' }}>
-            How your thinking evolved and patterns emerged
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
+            <h1 className="text-2xl sm:text-3xl" style={{
+              fontWeight: 600,
+              letterSpacing: 'var(--premium-tracking-tight)',
+              color: 'var(--premium-text-secondary)',
+              opacity: 0.7
+            }}>
+              Insights
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate('/search')}
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            style={{
+              color: 'var(--premium-blue)'
+            }}
+            title="Search everything"
+          >
+            <Search className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 space-y-6">
-        {insights.map((insight, index) => (
-          <Card key={index} className="premium-card" style={getInsightStyle(insight.type)}>
-            <CardContent className="pt-6">
+      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
+        {loading ? (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div className="text-center py-12">
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--premium-blue)' }}></div>
+                <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Synthesizing insights...</p>
+              </div>
+            </div>
+          </section>
+        ) : insights.length === 0 ? (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div className="py-16 text-center">
+                <Sparkles className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
+                  Building Your Insights
+                </h2>
+                <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
+                  Capture at least 10 thoughts to see evolution patterns and synthesis insights
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <>
+            {/* Header Section */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+              <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+                background: 'var(--premium-bg-2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              }}>
+                <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                  Your synthesis <span style={{ color: 'rgba(100, 180, 255, 1)' }}>insights</span>
+                </h2>
+                <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+                  How your thinking evolved and patterns emerged
+                </p>
+              </div>
+            </section>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+            {insights.map((insight, index) => (
+              <div
+                key={index}
+                className="p-6 rounded-xl backdrop-blur-xl transition-all duration-300"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  ...getInsightStyle(insight.type)
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+              >
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
                   {getInsightIcon(insight.type)}
@@ -188,33 +241,35 @@ export function InsightsPage() {
                   )}
 
                   {/* Action Button */}
-                  {insight.actionable && insight.action && (
-                    <div className="mt-4 pt-4">
-                      <Button className="btn-primary w-full sm:w-auto">
-                        {insight.action}
-                      </Button>
+                      {insight.actionable && insight.action && (
+                        <div className="mt-4 pt-4">
+                          <Button className="btn-primary w-full sm:w-auto">
+                            {insight.action}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            ))}
 
-        {/* Summary */}
-        <Card className="premium-card">
-          <CardContent className="pt-6">
-            <h3 className="text-lg font-bold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-              Understanding Your Journey
-            </h3>
-            <p style={{ color: 'var(--premium-text-secondary)' }}>
-              These insights show how your thinking evolves over time. Contradictions aren't failures—they're
-              signs of growth. Patterns help you understand your creative process and break unproductive cycles.
-            </p>
-          </CardContent>
-        </Card>
+            {/* Summary */}
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <h3 className="text-lg font-bold mb-3 premium-text-platinum">
+                Understanding Your Journey
+              </h3>
+              <p style={{ color: 'var(--premium-text-secondary)' }}>
+                These insights show how your thinking evolves over time. Contradictions aren't failures—they're
+                signs of growth. Patterns help you understand your creative process and break unproductive cycles.
+              </p>
+            </div>
+          </div>
+        </>
+        )}
       </div>
-      </motion.div>
-    </div>
+    </motion.div>
   )
 }

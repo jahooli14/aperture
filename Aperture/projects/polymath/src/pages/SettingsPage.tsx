@@ -17,10 +17,12 @@ import {
   Palette,
   Check,
   Moon,
-  Map
+  Map,
+  Search
 } from 'lucide-react'
 import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
+import { SubtleBackground } from '../components/SubtleBackground'
 
 interface SettingsOption {
   id: string
@@ -116,116 +118,136 @@ export function SettingsPage() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
-      className="min-h-screen py-12"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.1 }}
     >
-      {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Settings
-              className="h-12 w-12"
-              style={{ color: 'var(--premium-platinum)' }}
-            />
-          </div>
-          <h1
-            className="premium-text-platinum mb-3"
-            style={{
-              fontSize: 'var(--premium-text-h1)',
-              fontWeight: 700,
+      {/* Subtle Background Effect */}
+      <SubtleBackground />
+
+      {/* Fixed Header Bar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Settings className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
+            <h1 className="text-2xl sm:text-3xl" style={{
+              fontWeight: 600,
               letterSpacing: 'var(--premium-tracking-tight)',
-              textShadow: '0 0 20px rgba(229, 231, 235, 0.2)'
-            }}
-          >
-            Explore more
-          </h1>
-          <p
-            style={{
               color: 'var(--premium-text-secondary)',
-              fontSize: 'var(--premium-text-body-lg)'
+              opacity: 0.7
+            }}>
+              Settings
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate('/search')}
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            style={{
+              color: 'var(--premium-blue)'
             }}
+            title="Search everything"
           >
-            Advanced views and analysis tools
-          </p>
+            <Search className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
-      {/* Options Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4">
-          {SETTINGS_OPTIONS.map((option, index) => {
-            const Icon = option.icon
-            return (
-              <motion.button
-                key={option.id}
-                onClick={() => navigate(option.path)}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="premium-card group relative p-6 text-left"
-              >
-                {/* Glow effect on hover */}
-                <div
-                  className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl pointer-events-none"
-                  style={{ backgroundColor: option.glow }}
-                />
+      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
+        {/* Header Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+              Explore <span style={{ color: 'rgba(100, 180, 255, 1)' }}>more</span>
+            </h2>
+            <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+              Advanced views and analysis tools
+            </p>
+          </div>
+        </section>
 
-                <div className="relative z-10 flex items-center gap-4">
-                  {/* Icon */}
+        {/* Options Grid */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="grid grid-cols-1 gap-4">
+            {SETTINGS_OPTIONS.map((option, index) => {
+              const Icon = option.icon
+              return (
+                <motion.button
+                  key={option.id}
+                  onClick={() => navigate(option.path)}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-6 rounded-xl backdrop-blur-xl transition-all duration-300 text-left group relative"
+                  style={{
+                    background: 'var(--premium-bg-2)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--premium-bg-3)'
+                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--premium-bg-2)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+                  }}
+                >
+                  {/* Glow effect on hover */}
                   <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: `linear-gradient(135deg, ${option.glow}, transparent)`
-                    }}
-                  >
-                    <Icon
-                      className="w-7 h-7"
-                      style={{ color: option.color }}
+                    className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl pointer-events-none"
+                    style={{ backgroundColor: option.glow }}
+                  />
+
+                  <div className="relative z-10 flex items-center gap-4">
+                    {/* Icon */}
+                    <div
+                      className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${option.glow}, transparent)`
+                      }}
+                    >
+                      <Icon
+                        className="w-7 h-7"
+                        style={{ color: option.color }}
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-1 premium-text-platinum">
+                        {option.label}
+                      </h3>
+                      <p style={{ color: 'var(--premium-text-secondary)' }}>
+                        {option.description}
+                      </p>
+                    </div>
+
+                    {/* Arrow */}
+                    <ChevronRight
+                      className="w-6 h-6 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+                      style={{ color: 'var(--premium-platinum)' }}
                     />
                   </div>
+                </motion.button>
+              )
+            })}
+          </div>
+        </section>
 
-                  {/* Content */}
-                  <div className="flex-1">
-                    <h3
-                      className="font-semibold mb-1"
-                      style={{
-                        color: 'var(--premium-platinum)',
-                        fontSize: 'var(--premium-text-h4)',
-                        letterSpacing: 'var(--premium-tracking-normal)'
-                      }}
-                    >
-                      {option.label}
-                    </h3>
-                    <p
-                      style={{
-                        color: 'var(--premium-text-secondary)',
-                        fontSize: 'var(--premium-text-body-md)'
-                      }}
-                    >
-                      {option.description}
-                    </p>
-                  </div>
-
-                  {/* Arrow */}
-                  <ChevronRight
-                    className="w-6 h-6 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
-                    style={{ color: 'var(--premium-platinum)' }}
-                  />
-                </div>
-              </motion.button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Theme Customization */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-        <div className="premium-card p-6">
+        {/* Theme Customization */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
           <div className="flex items-center gap-3 mb-6">
             <Palette className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
             <h2
@@ -276,9 +298,13 @@ export function SettingsPage() {
                 <button
                   key={option.value}
                   onClick={() => setIntensity(option.value)}
-                  className="premium-card p-4 text-center transition-all hover:scale-105"
+                  className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
+                  style={{
+                    background: intensity === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  }}
                 >
-                  <div className="font-semibold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                  <div className="font-semibold mb-1 premium-text-platinum">
                     {option.label}
                   </div>
                   <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
@@ -291,7 +317,7 @@ export function SettingsPage() {
 
           {/* Font Size */}
           <div>
-            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+            <h3 className="text-lg font-semibold mb-3 premium-text-platinum">
               Font size
             </h3>
             <div className="grid grid-cols-3 gap-3">
@@ -299,19 +325,22 @@ export function SettingsPage() {
                 <button
                   key={option.value}
                   onClick={() => setFontSize(option.value)}
-                  className="premium-card p-4 text-center transition-all hover:scale-105"
+                  className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
                   style={{
+                    background: fontSize === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
                     fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
                   }}
                 >
-                  <div className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                  <div className="font-semibold premium-text-platinum">
                     {option.label}
                   </div>
                 </button>
               ))}
             </div>
           </div>
-        </div>
+          </div>
+        </section>
       </div>
     </motion.div>
   )

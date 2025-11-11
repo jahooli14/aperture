@@ -9,6 +9,7 @@ import { motion } from 'framer-motion'
 import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
+import { SubtleBackground } from '../components/SubtleBackground'
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article' | 'suggestion'
@@ -152,116 +153,170 @@ export function SearchPage() {
 
   return (
     <motion.div
-      className="min-h-screen py-12"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.1 }}
     >
-      {/* Header */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Search className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
+      {/* Subtle Background Effect */}
+      <SubtleBackground />
+
+      {/* Fixed Header Bar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Search className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
+            <h1 className="text-2xl sm:text-3xl" style={{
+              fontWeight: 600,
+              letterSpacing: 'var(--premium-tracking-tight)',
+              color: 'var(--premium-text-secondary)',
+              opacity: 0.7
+            }}>
+              Search
+            </h1>
           </div>
-          <h1 className="text-4xl font-bold mb-3 premium-text-platinum">
-            Search Everything
-          </h1>
-          <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-            Find memories, projects, articles, and suggestions instantly
-          </p>
-        </div>
-
-        {/* Search Input */}
-        <div className="space-y-4">
-          <form onSubmit={handleTextSearch} className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-              />
-              <input
-                autoFocus
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search your knowledge..."
-                className="w-full h-12 pl-12 pr-4 rounded-xl border premium-glass text-base"
-                style={{
-                  borderColor: 'rgba(59, 130, 246, 0.2)',
-                  color: 'var(--premium-text-primary)'
-                }}
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading || !query.trim()}
-              className="h-12 px-6 rounded-xl font-medium transition-all disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                color: 'white'
-              }}
-            >
-              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
-            </button>
-          </form>
-
         </div>
       </div>
 
-      {/* Results */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {loading && (
-          <div className="text-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-            <p style={{ color: 'var(--premium-text-secondary)' }}>Searching...</p>
+      <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
+        {/* Header Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+              Search <span style={{ color: 'rgba(100, 180, 255, 1)' }}>everything</span>
+            </h2>
+            <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+              Find memories, projects, articles, and suggestions instantly
+            </p>
           </div>
-        )}
+        </section>
 
-        {!loading && results && (
-          <>
-            {/* Results Summary */}
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
-              </h2>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                <span>{results.breakdown.memories} memories</span>
-                <span>•</span>
-                <span>{results.breakdown.projects} projects</span>
-                <span>•</span>
-                <span>{results.breakdown.articles} articles</span>
-                {results.breakdown.suggestions > 0 && (
-                  <>
-                    <span>•</span>
-                    <span>{results.breakdown.suggestions} suggestions</span>
-                  </>
-                )}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Search Input */}
+          <div className="p-6 rounded-xl backdrop-blur-xl mb-8" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <form onSubmit={handleTextSearch} className="flex gap-3">
+              <div className="flex-1 relative">
+                <Search
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                />
+                <input
+                  autoFocus
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search your knowledge..."
+                  className="w-full h-12 pl-12 pr-4 rounded-xl border text-base"
+                  style={{
+                    background: 'var(--premium-bg-3)',
+                    borderColor: 'rgba(59, 130, 246, 0.2)',
+                    color: 'var(--premium-text-primary)'
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !query.trim()}
+                className="h-12 px-6 rounded-xl font-medium transition-all disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                  color: 'white'
+                }}
+              >
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
+              </button>
+            </form>
+          </div>
+
+          {/* Results */}
+          {loading && (
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div className="text-center py-20">
+                <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                <p style={{ color: 'var(--premium-text-secondary)' }}>Searching...</p>
               </div>
             </div>
+          )}
 
-            {/* Results List */}
-            {results.results.length === 0 ? (
-              <div className="premium-card p-20 text-center">
-                <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
-                <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                  No results found
-                </h3>
-                <p style={{ color: 'var(--premium-text-secondary)' }}>
-                  Try a different search term or use voice search
-                </p>
+          {!loading && results && (
+            <>
+              {/* Results Summary */}
+              <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+                background: 'var(--premium-bg-2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              }}>
+                <h2 className="text-xl font-semibold mb-2 premium-text-platinum">
+                  {results.total} {results.total === 1 ? 'result' : 'results'} for "{results.query}"
+                </h2>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <span>{results.breakdown.memories} memories</span>
+                  <span>•</span>
+                  <span>{results.breakdown.projects} projects</span>
+                  <span>•</span>
+                  <span>{results.breakdown.articles} articles</span>
+                  {results.breakdown.suggestions > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{results.breakdown.suggestions} suggestions</span>
+                    </>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {results.results.map((result, index) => (
-                  <motion.div
-                    key={`${result.type}-${result.id}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    onClick={() => navigateToResult(result)}
-                    className="premium-card p-5 cursor-pointer hover:border-blue-500/50 transition-all group"
-                  >
+
+              {/* Results List */}
+              {results.results.length === 0 ? (
+                <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+                  background: 'var(--premium-bg-2)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                }}>
+                  <div className="p-20 text-center">
+                    <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                    <h3 className="text-xl font-semibold mb-2 premium-text-platinum">
+                      No results found
+                    </h3>
+                    <p style={{ color: 'var(--premium-text-secondary)' }}>
+                      Try a different search term or use voice search
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {results.results.map((result, index) => (
+                    <motion.div
+                      key={`${result.type}-${result.id}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => navigateToResult(result)}
+                      className="p-5 rounded-xl backdrop-blur-xl cursor-pointer transition-all duration-300 group"
+                      style={{
+                        background: 'var(--premium-bg-2)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--premium-bg-3)'
+                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--premium-bg-2)'
+                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+                      }}
+                    >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         {/* Type Badge */}
@@ -276,7 +331,7 @@ export function SearchPage() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="text-lg font-semibold mb-1 line-clamp-1" style={{ color: 'var(--premium-text-primary)' }}>
+                        <h3 className="text-lg font-semibold mb-1 line-clamp-1 premium-text-platinum">
                           {result.title}
                         </h3>
 
@@ -310,25 +365,31 @@ export function SearchPage() {
                       <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
-        {!loading && !results && query && (
-          <div className="premium-card p-20 text-center">
-            <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
-            <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-              Ready to search
-            </h3>
-            <p style={{ color: 'var(--premium-text-secondary)' }}>
-              Enter a search term or use voice search to get started
-            </p>
-          </div>
-        )}
+          {!loading && !results && query && (
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div className="p-20 text-center">
+                <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                <h3 className="text-xl font-semibold mb-2 premium-text-platinum">
+                  Ready to search
+                </h3>
+                <p style={{ color: 'var(--premium-text-secondary)' }}>
+                  Enter a search term or use voice search to get started
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   )
