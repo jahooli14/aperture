@@ -220,15 +220,32 @@ export function ReadingPage() {
   // Handle shared URLs from Android Share Sheet
   useShareTarget({
     onShareReceived: async (url: string) => {
+      console.log('[ReadingPage] Share target received URL:', url)
+
       try {
-        await saveArticle({ url })
+        console.log('[ReadingPage] Calling saveArticle...')
+
+        // Show loading toast
         addToast({
-          title: 'Article saved!',
-          description: 'Added to your reading queue from share',
+          title: '📰 Saving shared article...',
+          description: 'Extracting content from ' + new URL(url).hostname,
+          variant: 'default',
+        })
+
+        const article = await saveArticle({ url })
+        console.log('[ReadingPage] Article saved successfully:', article.id)
+
+        addToast({
+          title: '✓ Article saved!',
+          description: 'Added to your reading queue',
           variant: 'success',
         })
-        fetchArticles() // Refresh list
+
+        // Refresh list to show the new article
+        await fetchArticles()
+        console.log('[ReadingPage] Articles refreshed')
       } catch (error) {
+        console.error('[ReadingPage] Failed to save shared article:', error)
         addToast({
           title: 'Failed to save',
           description: error instanceof Error ? error.message : 'Unknown error',
