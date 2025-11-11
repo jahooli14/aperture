@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, lazy, Suspense } from 'react'
 import { ToastProvider } from './components/ui/toast'
 import { OfflineIndicator } from './components/OfflineIndicator'
@@ -61,6 +61,27 @@ function PageLoader() {
       </div>
     </div>
   )
+}
+
+// Component to handle share target redirects
+function ShareTargetHandler() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const shareUrl = params.get('share_url')
+
+    if (shareUrl) {
+      console.log('[ShareTargetHandler] Share URL detected:', shareUrl)
+      console.log('[ShareTargetHandler] Redirecting to /reading with params')
+
+      // Redirect to reading page with the share params
+      navigate(`/reading?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(params.get('share_title') || '')}&text=${encodeURIComponent(params.get('share_text') || '')}`, { replace: true })
+    }
+  }, [location.search, navigate])
+
+  return null
 }
 
 // Navigation component removed - replaced with FloatingNav
@@ -171,6 +192,7 @@ export default function App() {
           <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
 
           <main className="flex-1">
+            <ShareTargetHandler />
             <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
