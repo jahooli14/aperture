@@ -117,13 +117,27 @@
         }, 300)
       } else {
         console.error('[ShareTarget] No URL parameter found')
-        console.error('[ShareTarget] This means the manifest share_target is not working correctly')
-        document.getElementById('status').textContent = 'No URL to save - share target not configured correctly'
+        console.error('[ShareTarget] Current URL:', window.location.href)
+        console.error('[ShareTarget] This means the manifest share_target is not registered with your OS')
+        console.error('[ShareTarget] You need to REINSTALL the PWA to register the new share target')
 
-        // Redirect to reading page anyway
+        document.getElementById('status').innerHTML =
+          '<strong>Share target not working</strong><br>' +
+          '<span style="font-size: 14px;">The PWA needs to be reinstalled to enable sharing.</span>'
+
+        const urlDisplay = document.getElementById('urlDisplay')
+        urlDisplay.innerHTML =
+          '<strong>How to fix:</strong><br>' +
+          '1. Uninstall the PWA from your device<br>' +
+          '2. Reinstall it from the website<br>' +
+          '3. Try sharing again<br><br>' +
+          '<a href="/pwa-reinstall.html" style="color: #60a5fa; text-decoration: underline;">View detailed instructions</a>'
+        urlDisplay.style.display = 'block'
+
+        // Redirect to instructions page
         setTimeout(function() {
-          window.location.href = '/reading'
-        }, 3000)
+          window.location.href = '/pwa-reinstall.html'
+        }, 5000)
       }
     })()
   </script>

@@ -2,7 +2,7 @@
   "name": "Clandestined - Personal Knowledge Graph",
   "short_name": "Clandestined",
   "description": "Voice-to-memory personal knowledge graph & creative project tracker. Capture thoughts, track projects, and build your second brain.",
-  "start_url": "/",
+  "start_url": "/?v=2",
   "scope": "/",
   "display": "standalone",
   "background_color": "#141b26",
