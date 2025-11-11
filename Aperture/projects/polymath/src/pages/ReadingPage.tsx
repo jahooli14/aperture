@@ -220,10 +220,11 @@ export function ReadingPage() {
   // Handle shared URLs from Web Share Target API
   // Using sessionStorage approach to avoid React Router timing issues
   useEffect(() => {
+    console.log('[ReadingPage] Checking for share data...')
     const shareData = consumeShareData()
 
     if (shareData) {
-      console.log('[ReadingPage] Processing shared URL from sessionStorage:', shareData.url)
+      console.log('[ReadingPage] Found share data! Processing URL:', shareData.url)
 
       const handleShare = async () => {
         try {
@@ -234,6 +235,7 @@ export function ReadingPage() {
             variant: 'default',
           })
 
+          console.log('[ReadingPage] Calling saveArticle with URL:', shareData.url)
           const article = await saveArticle({ url: shareData.url })
           console.log('[ReadingPage] Article saved successfully:', article.id)
 
@@ -244,8 +246,9 @@ export function ReadingPage() {
           })
 
           // Refresh list to show the new article
+          console.log('[ReadingPage] Refreshing articles list...')
           await fetchArticles()
-          console.log('[ReadingPage] Articles refreshed')
+          console.log('[ReadingPage] Articles refreshed successfully')
         } catch (error) {
           console.error('[ReadingPage] Failed to save shared article:', error)
           addToast({
@@ -257,8 +260,10 @@ export function ReadingPage() {
       }
 
       handleShare()
+    } else {
+      console.log('[ReadingPage] No share data found in sessionStorage')
     }
-  }, []) // Run once on mount
+  }, [location.key, saveArticle, addToast, fetchArticles]) // Re-run on navigation
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)

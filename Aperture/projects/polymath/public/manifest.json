@@ -53,7 +53,7 @@
     }
   ],
   "share_target": {
-    "action": "/reading",
+    "action": "/share-target.html",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
     "params": {

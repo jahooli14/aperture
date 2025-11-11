@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saving Article...</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1729;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      color: #fff;
+    }
+    p {
+      font-size: 16px;
+      color: #9ca3af;
+      margin: 0;
+    }
+    .url {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 8px;
+      font-size: 14px;
+      color: #60a5fa;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Saving Article...</h1>
+    <p id="status">Preparing to save your article</p>
+    <div id="urlDisplay" class="url" style="display: none;"></div>
+  </div>
+
+  <script>
+    (function() {
+      console.log('[ShareTarget] Static share target page loaded')
+      console.log('[ShareTarget] Full URL:', window.location.href)
+      console.log('[ShareTarget] Search params:', window.location.search)
+
+      // Extract URL params
+      const params = new URLSearchParams(window.location.search)
+      const sharedUrl = params.get('url')
+      const sharedTitle = params.get('title')
+      const sharedText = params.get('text')
+
+      console.log('[ShareTarget] URL param:', sharedUrl)
+      console.log('[ShareTarget] Title param:', sharedTitle)
+      console.log('[ShareTarget] Text param:', sharedText)
+
+      if (sharedUrl) {
+        // Show URL being saved
+        const urlDisplay = document.getElementById('urlDisplay')
+        urlDisplay.textContent = sharedUrl
+        urlDisplay.style.display = 'block'
+
+        document.getElementById('status').textContent = 'Capturing share data...'
+
+        // Store share data in sessionStorage
+        const shareData = {
+          url: sharedUrl,
+          title: sharedTitle || undefined,
+          text: sharedText || undefined,
+          timestamp: Date.now()
+        }
+
+        try {
+          sessionStorage.setItem('polymath_share_data', JSON.stringify(shareData))
+          console.log('[ShareTarget] Share data stored:', shareData)
+
+          document.getElementById('status').textContent = 'Redirecting to app...'
+
+          // Redirect to the main app's reading page
+          // Use setTimeout to ensure storage completes
+          setTimeout(function() {
+            console.log('[ShareTarget] Redirecting to /reading')
+            window.location.href = '/reading'
+          }, 100)
+        } catch (error) {
+          console.error('[ShareTarget] Failed to store share data:', error)
+          document.getElementById('status').textContent = 'Error: ' + error.message
+
+          // Still try to redirect with params in URL as fallback
+          setTimeout(function() {
+            window.location.href = '/reading?url=' + encodeURIComponent(sharedUrl) +
+              (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '') +
+              (sharedText ? '&text=' + encodeURIComponent(sharedText) : '')
+          }, 2000)
+        }
+      } else {
+        console.error('[ShareTarget] No URL parameter found')
+        document.getElementById('status').textContent = 'No URL to save'
+
+        // Redirect to reading page anyway
+        setTimeout(function() {
+          window.location.href = '/reading'
+        }, 2000)
+      }
+    })()
+  </script>
+</body>
+</html>
