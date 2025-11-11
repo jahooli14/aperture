@@ -162,16 +162,20 @@ async function fetchArticle(url: string) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('[fetchArticle] Jina AI failed:', errorMessage)
 
-    // If Jina blocked the domain (451 error), try Cheerio fallback
-    if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
-      console.log('[fetchArticle] Domain blocked by Jina, trying Cheerio fallback...')
+    // If timeout or blocked domain, try Cheerio fallback
+    const isTimeout = errorMessage.includes('aborted') || errorMessage.includes('timeout')
+    const isBlocked = errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')
+
+    if (isTimeout || isBlocked) {
+      const reason = isTimeout ? 'timed out' : 'blocked'
+      console.log(`[fetchArticle] Jina AI ${reason}, trying Cheerio fallback...`)
       try {
         const result = await fetchArticleWithCheerio(url)
         console.log('[fetchArticle] Cheerio fallback succeeded')
         return result
       } catch (cheerioError) {
         console.error('[fetchArticle] Cheerio fallback also failed:', cheerioError instanceof Error ? cheerioError.message : 'Unknown error')
-        throw new Error(`Failed to extract article: Both Jina (blocked) and Cheerio fallback failed`)
+        throw new Error(`Failed to extract article: Jina AI ${reason}, Cheerio fallback also failed`)
       }
     }
 

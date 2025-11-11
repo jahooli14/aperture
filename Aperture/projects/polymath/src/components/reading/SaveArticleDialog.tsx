@@ -108,6 +108,9 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
+      // Close dialog even on error so user isn't stuck
+      resetForm()
+      onClose()
     } finally {
       setLoading(false)
     }
