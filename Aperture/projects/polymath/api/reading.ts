@@ -309,7 +309,7 @@ function cleanMarkdownContent(markdown: string): string {
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
   const MAX_RETRIES = 3
   const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
-  const TIMEOUT_MS = 15000 // 15 second timeout
+  const TIMEOUT_MS = 12000 // 12 second timeout (reduced from 15s for faster failures)
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -473,16 +473,16 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     const textContent = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
-    // Always limit excerpt to 200 chars max to prevent massive card previews
+    // Always limit excerpt to 100 chars max (2 lines on mobile)
     let excerpt = ''
     if (description && description.length > 0) {
-      excerpt = description.substring(0, 200).trim()
+      excerpt = description.substring(0, 100).trim()
       // Add ellipsis if truncated
-      if (description.length > 200) {
+      if (description.length > 100) {
         excerpt += '...'
       }
     } else if (textContent && textContent.length > 0) {
-      excerpt = textContent.substring(0, 200).trim() + '...'
+      excerpt = textContent.substring(0, 100).trim() + '...'
     }
 
     // Only show incomplete message if text content is genuinely short or missing
@@ -984,12 +984,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
           } else {
             console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id} - Title: "${article.title}"`)
-
-            // Generate embedding and auto-connect (async, non-blocking)
-            generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
-              .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
-              .catch(err => console.error('[reading] Async embedding/connection error:', err))
           }
+
+          // Generate embedding and auto-connect (async, run after article is marked processed)
+          // This way UI gets updated faster, connections happen in background
+          generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
+            .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
+            .catch(err => console.error('[reading] Async embedding/connection error:', err))
         })
         .catch(async (extractError) => {
           console.error(`[reading] ❌ Extraction failed for ${savedArticle.id}:`, extractError.message || extractError)
