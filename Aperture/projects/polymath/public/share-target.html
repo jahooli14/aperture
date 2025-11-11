@@ -85,9 +85,10 @@
         urlDisplay.textContent = sharedUrl
         urlDisplay.style.display = 'block'
 
-        document.getElementById('status').textContent = 'Capturing share data...'
+        document.getElementById('status').textContent = 'Redirecting to app...'
 
-        // Store share data in sessionStorage
+        // Store share data in BOTH sessionStorage AND pass via URL params
+        // This double approach ensures we don't lose the data
         const shareData = {
           url: sharedUrl,
           title: sharedTitle || undefined,
@@ -97,35 +98,32 @@
 
         try {
           sessionStorage.setItem('polymath_share_data', JSON.stringify(shareData))
-          console.log('[ShareTarget] Share data stored:', shareData)
-
-          document.getElementById('status').textContent = 'Redirecting to app...'
-
-          // Redirect to the main app's reading page
-          // Use setTimeout to ensure storage completes
-          setTimeout(function() {
-            console.log('[ShareTarget] Redirecting to /reading')
-            window.location.href = '/reading'
-          }, 100)
+          console.log('[ShareTarget] Share data stored in sessionStorage:', shareData)
         } catch (error) {
-          console.error('[ShareTarget] Failed to store share data:', error)
-          document.getElementById('status').textContent = 'Error: ' + error.message
-
-          // Still try to redirect with params in URL as fallback
-          setTimeout(function() {
-            window.location.href = '/reading?url=' + encodeURIComponent(sharedUrl) +
-              (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '') +
-              (sharedText ? '&text=' + encodeURIComponent(sharedText) : '')
-          }, 2000)
+          console.error('[ShareTarget] Failed to store in sessionStorage:', error)
         }
+
+        // ALWAYS redirect with URL params as primary mechanism
+        // This is more reliable than sessionStorage with PWA navigate-existing mode
+        const redirectUrl = '/reading?url=' + encodeURIComponent(sharedUrl) +
+          (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '') +
+          (sharedText ? '&text=' + encodeURIComponent(sharedText) : '')
+
+        console.log('[ShareTarget] Redirecting to:', redirectUrl)
+
+        // Use a longer timeout to ensure everything is stable
+        setTimeout(function() {
+          window.location.href = redirectUrl
+        }, 300)
       } else {
         console.error('[ShareTarget] No URL parameter found')
-        document.getElementById('status').textContent = 'No URL to save'
+        console.error('[ShareTarget] This means the manifest share_target is not working correctly')
+        document.getElementById('status').textContent = 'No URL to save - share target not configured correctly'
 
         // Redirect to reading page anyway
         setTimeout(function() {
           window.location.href = '/reading'
-        }, 2000)
+        }, 3000)
       }
     })()
   </script>
