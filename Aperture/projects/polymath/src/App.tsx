@@ -69,17 +69,34 @@ function ShareTargetHandler() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const shareUrl = params.get('share_url')
+    console.log('[ShareTargetHandler] Running check...')
+    console.log('[ShareTargetHandler] Current pathname:', location.pathname)
+    console.log('[ShareTargetHandler] Current search:', location.search)
 
-    if (shareUrl) {
-      console.log('[ShareTargetHandler] Share URL detected:', shareUrl)
+    const params = new URLSearchParams(location.search)
+    console.log('[ShareTargetHandler] All params:', Array.from(params.entries()))
+
+    const shareUrl = params.get('share_url')
+    const url = params.get('url')
+    const title = params.get('title') || params.get('share_title')
+    const text = params.get('text') || params.get('share_text')
+
+    console.log('[ShareTargetHandler] share_url:', shareUrl)
+    console.log('[ShareTargetHandler] url:', url)
+
+    // Check for either share_url (new) or url (old) param
+    const targetUrl = shareUrl || url
+
+    if (targetUrl) {
+      console.log('[ShareTargetHandler] ✓ Share URL detected:', targetUrl)
       console.log('[ShareTargetHandler] Redirecting to /reading with params')
 
       // Redirect to reading page with the share params
-      navigate(`/reading?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(params.get('share_title') || '')}&text=${encodeURIComponent(params.get('share_text') || '')}`, { replace: true })
+      navigate(`/reading?url=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(title || '')}&text=${encodeURIComponent(text || '')}`, { replace: true })
+    } else {
+      console.log('[ShareTargetHandler] No share URL found in params')
     }
-  }, [location.search, navigate])
+  }, [location.pathname, location.search, navigate])
 
   return null
 }
