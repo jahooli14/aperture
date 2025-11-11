@@ -48,8 +48,18 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
     // Load HTML with Cheerio
     const $ = cheerio.load(html)
 
-    // Remove unwanted elements
-    $('script, style, nav, header, footer, aside, .advertisement, .ads, .social-share, .cookie-notice, .newsletter-signup').remove()
+    // Remove unwanted elements - extensive list for clean extraction
+    $('script, style, nav, header, footer, aside, iframe, noscript').remove()
+    $('.advertisement, .ads, .ad, .advert, [class*="ad-"], [id*="ad-"]').remove()
+    $('.social-share, .share-buttons, .social-buttons, [class*="share"], [class*="social"]').remove()
+    $('.cookie-notice, .cookie-banner, .gdpr, [class*="cookie"], [class*="consent"]').remove()
+    $('.newsletter-signup, .newsletter, .email-signup, [class*="newsletter"]').remove()
+    $('.comments, .comment-section, [class*="comment"]').remove()
+    $('.related-articles, .recommended, .trending, .popular, [class*="related"]').remove()
+    $('.subscribe, .subscription, [class*="subscribe"], [class*="paywall"]').remove()
+    $('.navigation, .nav-drawer, .sidebar, [class*="drawer"]').remove()
+    $('.privacy, .legal, [class*="privacy"], [class*="terms"]').remove()
+    $('[role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]').remove()
 
     // Try to extract title from multiple sources
     let title =
@@ -235,7 +245,12 @@ function cleanMarkdownContent(markdown: string): string {
       lowerLine === 'already have an account?' ||
       /^by subscribing,? i agree/i.test(line) ||
       /^over \d+[\d,]* subscribers?$/i.test(line) ||
-      /^discover more from/i.test(line)
+      /^discover more from/i.test(line) ||
+      /^continue reading with/i.test(line) ||
+      /^get unlimited access/i.test(line) ||
+      lowerLine.includes('daily digest') ||
+      lowerLine.includes('homepage feed') ||
+      lowerLine.includes('posts from')
     ) {
       continue
     }
@@ -250,22 +265,44 @@ function cleanMarkdownContent(markdown: string): string {
       continue
     }
 
-    // Skip share/social buttons
+    // Skip share/social buttons and follow prompts
     if (
       lowerLine === 'share' ||
+      lowerLine === 'follow' ||
+      lowerLine === 'comments' ||
       lowerLine.startsWith('share this') ||
-      /^(like|comment|restack|share)$/i.test(line)
+      /^(like|comment|restack|share|follow|comments drawer)$/i.test(line) ||
+      /^posts from this (author|topic)/i.test(line) ||
+      lowerLine.includes('will be added to your') ||
+      lowerLine.includes('navigation drawer')
     ) {
       continue
     }
 
-    // Skip common footers
+    // Skip privacy/legal UI
     if (
       /^©\s*\d{4}/.test(line) ||
       lowerLine.includes('all rights reserved') ||
       lowerLine.includes('privacy policy') ||
       lowerLine.includes('terms of service') ||
-      lowerLine.includes('cookie policy')
+      lowerLine.includes('cookie policy') ||
+      lowerLine.includes('privacy center') ||
+      lowerLine.includes('do not sell') ||
+      lowerLine.includes('opt out') ||
+      lowerLine.includes('manage consent') ||
+      lowerLine.includes('your preference signal')
+    ) {
+      continue
+    }
+
+    // Skip "Most Popular" / "More in" / "Top Stories" sections
+    if (
+      lowerLine === 'most popular' ||
+      lowerLine === 'more in' ||
+      lowerLine === 'top stories' ||
+      lowerLine === 'related' ||
+      lowerLine === 'trending' ||
+      lowerLine.startsWith('more from')
     ) {
       continue
     }
@@ -279,8 +316,26 @@ function cleanMarkdownContent(markdown: string): string {
     if (
       lowerLine === 'menu' ||
       lowerLine === 'navigation' ||
+      lowerLine === 'close' ||
       lowerLine === '[menu]' ||
-      /^\[menu\]\(#\)$/i.test(line)
+      /^\[menu\]\(#\)$/i.test(line) ||
+      lowerLine === 'search'
+    ) {
+      continue
+    }
+
+    // Skip category/section labels that are just single words
+    if (
+      /^(tech|reviews|science|entertainment|cars|videos|podcasts|newsletters)$/i.test(line) ||
+      /^(column|entertainment|music)$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip action buttons
+    if (
+      /^(apply|cancel|confirm|clear|allow all)$/i.test(line) ||
+      /^(back to|view vendor|checkbox label|switch label)$/i.test(line)
     ) {
       continue
     }
