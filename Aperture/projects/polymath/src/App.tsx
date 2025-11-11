@@ -9,6 +9,7 @@ import { PinProvider } from './contexts/PinContext'
 import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
+import { DebugPanel } from './components/DebugPanel'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -240,6 +241,9 @@ export default function App() {
 
           {/* Pin Overlay - Split Screen */}
           <PinOverlay />
+
+          {/* Debug Panel - Shows console logs on screen */}
+          <DebugPanel />
         </div>
         </Router>
       </ToastProvider>
