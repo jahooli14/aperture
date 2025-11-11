@@ -221,40 +221,23 @@ export function ReadingPage() {
   }
 
   // Handle shared URLs from Web Share Target API
-  // Using sessionStorage approach with URL param fallback
+  // Using sessionStorage approach to avoid React Router timing issues
   useEffect(() => {
-    console.log('[ReadingPage] Checking for share data...')
-    console.log('[ReadingPage] Current URL:', location.pathname + location.search)
+    const shareData = consumeShareData()
 
-    // First try sessionStorage
-    let shareUrl: string | undefined = consumeShareData()?.url
-
-    // Fallback: check URL params directly (in case sessionStorage failed)
-    if (!shareUrl) {
-      const params = new URLSearchParams(location.search)
-      const urlParam = params.get('url')
-      if (urlParam) {
-        console.log('[ReadingPage] Found URL in query params (fallback):', urlParam)
-        shareUrl = urlParam
-        // Clean up params
-        navigate('/reading', { replace: true })
-      }
-    }
-
-    if (shareUrl) {
-      console.log('[ReadingPage] Processing shared URL:', shareUrl)
+    if (shareData) {
+      console.log('[ReadingPage] Processing shared URL from sessionStorage:', shareData.url)
 
       const handleShare = async () => {
         try {
           // Show loading toast
           addToast({
             title: '📰 Saving shared article...',
-            description: 'Extracting content',
+            description: 'Extracting content from ' + new URL(shareData.url).hostname,
             variant: 'default',
           })
 
-          console.log('[ReadingPage] Calling saveArticle with URL:', shareUrl)
-          const article = await saveArticle({ url: shareUrl! })
+          const article = await saveArticle({ url: shareData.url })
           console.log('[ReadingPage] Article saved successfully:', article.id)
 
           addToast({
@@ -264,9 +247,8 @@ export function ReadingPage() {
           })
 
           // Refresh list to show the new article
-          console.log('[ReadingPage] Refreshing articles list...')
           await fetchArticles()
-          console.log('[ReadingPage] Articles refreshed successfully')
+          console.log('[ReadingPage] Articles refreshed')
         } catch (error) {
           console.error('[ReadingPage] Failed to save shared article:', error)
           addToast({
@@ -278,11 +260,8 @@ export function ReadingPage() {
       }
 
       handleShare()
-    } else {
-      console.log('[ReadingPage] No share data found')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]) // Re-run on navigation
+  }, []) // Run once on mount
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
