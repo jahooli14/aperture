@@ -12,7 +12,7 @@ import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
-import { useShareTarget } from '../hooks/useShareTarget'
+import { consumeShareData } from '../lib/shareHandler'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -217,43 +217,48 @@ export function ReadingPage() {
     }
   }
 
-  // Handle shared URLs from Android Share Sheet
-  useShareTarget({
-    onShareReceived: async (url: string) => {
-      console.log('[ReadingPage] Share target received URL:', url)
+  // Handle shared URLs from Web Share Target API
+  // Using sessionStorage approach to avoid React Router timing issues
+  useEffect(() => {
+    const shareData = consumeShareData()
 
-      try {
-        console.log('[ReadingPage] Calling saveArticle...')
+    if (shareData) {
+      console.log('[ReadingPage] Processing shared URL from sessionStorage:', shareData.url)
 
-        // Show loading toast
-        addToast({
-          title: '📰 Saving shared article...',
-          description: 'Extracting content from ' + new URL(url).hostname,
-          variant: 'default',
-        })
+      const handleShare = async () => {
+        try {
+          // Show loading toast
+          addToast({
+            title: '📰 Saving shared article...',
+            description: 'Extracting content from ' + new URL(shareData.url).hostname,
+            variant: 'default',
+          })
 
-        const article = await saveArticle({ url })
-        console.log('[ReadingPage] Article saved successfully:', article.id)
+          const article = await saveArticle({ url: shareData.url })
+          console.log('[ReadingPage] Article saved successfully:', article.id)
 
-        addToast({
-          title: '✓ Article saved!',
-          description: 'Added to your reading queue',
-          variant: 'success',
-        })
+          addToast({
+            title: '✓ Article saved!',
+            description: 'Added to your reading queue',
+            variant: 'success',
+          })
 
-        // Refresh list to show the new article
-        await fetchArticles()
-        console.log('[ReadingPage] Articles refreshed')
-      } catch (error) {
-        console.error('[ReadingPage] Failed to save shared article:', error)
-        addToast({
-          title: 'Failed to save',
-          description: error instanceof Error ? error.message : 'Unknown error',
-          variant: 'destructive',
-        })
+          // Refresh list to show the new article
+          await fetchArticles()
+          console.log('[ReadingPage] Articles refreshed')
+        } catch (error) {
+          console.error('[ReadingPage] Failed to save shared article:', error)
+          addToast({
+            title: 'Failed to save',
+            description: error instanceof Error ? error.message : 'Unknown error',
+            variant: 'destructive',
+          })
+        }
       }
+
+      handleShare()
     }
-  })
+  }, []) // Run once on mount
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
