@@ -4,7 +4,7 @@
  * Enhanced with intelligent caching strategies and performance optimizations
  */
 
-const CACHE_VERSION = 'polymath-v4'
+const CACHE_VERSION = 'polymath-v5'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
@@ -128,12 +128,63 @@ async function cleanExpiredCaches() {
   }
 }
 
+// Handle Web Share Target requests
+async function handleShareTarget(request) {
+  console.log('[SW] Processing share target request')
+
+  try {
+    // Parse the form data
+    const formData = await request.formData()
+    const sharedUrl = formData.get('url')
+    const sharedTitle = formData.get('title')
+    const sharedText = formData.get('text')
+
+    console.log('[SW] Share data received:', { url: sharedUrl, title: sharedTitle, text: sharedText })
+
+    // Store in cache for the app to retrieve
+    const shareData = {
+      url: sharedUrl,
+      title: sharedTitle,
+      text: sharedText,
+      timestamp: Date.now()
+    }
+
+    // Store in cache with a specific key
+    const cache = await caches.open(RUNTIME_CACHE)
+    const shareDataResponse = new Response(JSON.stringify(shareData), {
+      headers: { 'Content-Type': 'application/json' }
+    })
+    await cache.put('/share-data', shareDataResponse)
+    console.log('[SW] Share data cached')
+
+    // Redirect to reading page with URL params as fallback
+    const redirectUrl = sharedUrl
+      ? `/reading?url=${encodeURIComponent(sharedUrl)}&title=${encodeURIComponent(sharedTitle || '')}&text=${encodeURIComponent(sharedText || '')}`
+      : '/reading'
+
+    console.log('[SW] Redirecting to:', redirectUrl)
+
+    return Response.redirect(redirectUrl, 303)
+  } catch (error) {
+    console.error('[SW] Error handling share target:', error)
+    // Redirect to reading page even on error
+    return Response.redirect('/reading', 303)
+  }
+}
+
 // Fetch event - intelligent caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip non-GET requests
+  // Handle Web Share Target POST requests
+  if (request.method === 'POST' && url.pathname === '/share-receiver') {
+    console.log('[SW] Share target POST request received')
+    event.respondWith(handleShareTarget(request))
+    return
+  }
+
+  // Skip other non-GET requests
   if (request.method !== 'GET') {
     return
   }
