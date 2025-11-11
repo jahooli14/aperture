@@ -7,7 +7,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Layers, FolderKanban, FileText, Filter, Calendar } from 'lucide-react'
+import { Layers, FolderKanban, FileText, Filter, Calendar, Search } from 'lucide-react'
+import { SubtleBackground } from '../components/SubtleBackground'
 import { Button } from '../components/ui/button'
 
 interface TimelineItem {
@@ -192,22 +193,30 @@ export function KnowledgeTimelinePage() {
 
   return (
     <motion.div
-      className="min-h-screen pb-20"
-      style={{ backgroundColor: 'var(--premium-surface-base)' }}
+      className="min-h-screen"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header */}
-      <div className="premium-glass-strong border-b sticky top-0 z-10" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+      <SubtleBackground />
+
+      {/* Fixed Header */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        style={{ backgroundColor: 'rgba(15, 24, 41, 0.7)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Calendar className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              <h1 className="text-2xl font-bold premium-text-platinum">Knowledge timeline</h1>
+              <h1 className="text-xl font-bold premium-text-platinum">Knowledge Timeline</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>{items.length} events</span>
+              <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <Search className="h-5 w-5 premium-text-platinum" />
+              </button>
             </div>
           </div>
 
@@ -256,8 +265,9 @@ export function KnowledgeTimelinePage() {
         </div>
       </div>
 
-      {/* Timeline Tracks */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      {/* Main Content */}
+      <div className="pt-24 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Unified Timeline View (when 'all' is selected) */}
         {activeTrack === 'all' && filteredItems.length > 0 && (
           <UnifiedTimeline
@@ -312,12 +322,19 @@ export function KnowledgeTimelinePage() {
           </div>
         )}
 
-        {filteredItems.length === 0 && (
-          <div className="premium-card p-16 text-center">
-            <Calendar className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
-            <p style={{ color: 'var(--premium-text-secondary)' }}>No events in timeline</p>
-          </div>
-        )}
+          {filteredItems.length === 0 && (
+            <div
+              className="p-6 rounded-xl backdrop-blur-xl text-center"
+              style={{
+                background: 'var(--premium-bg-2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <Calendar className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+              <p style={{ color: 'var(--premium-text-secondary)' }}>No events in timeline</p>
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   )
@@ -355,7 +372,13 @@ function UnifiedTimeline({ items, connections, onItemClick }: UnifiedTimelinePro
   }
 
   return (
-    <div className="premium-card overflow-hidden">
+    <div
+      className="rounded-xl backdrop-blur-xl overflow-hidden"
+      style={{
+        background: 'var(--premium-bg-2)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+      }}
+    >
       {/* Header */}
       <div className="premium-glass-subtle border-b px-5 py-3" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         <div className="flex items-center gap-2">
@@ -463,7 +486,13 @@ function TimelineTrack({ title, icon: Icon, items, connections, color, onItemCli
     return { outgoing, incoming }
   }
   return (
-    <div className="premium-card overflow-hidden">
+    <div
+      className="rounded-xl backdrop-blur-xl overflow-hidden"
+      style={{
+        background: 'var(--premium-bg-2)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+      }}
+    >
       {/* Track Header */}
       <div className="premium-glass-subtle border-b px-5 py-3" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
         <div className="flex items-center gap-2">

@@ -6,8 +6,9 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2 } from 'lucide-react'
+import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
+import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
 
 interface BedtimePrompt {
@@ -113,22 +114,52 @@ export function BedtimePage() {
   }
 
   return (
-    <div className="min-h-screen premium-bg p-4 pb-24 relative overflow-hidden">
-      {/* Ambient starfield background */}
-      <div className="fixed inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-10 left-10 w-1 h-1 rounded-full bg-white animate-pulse" />
-        <div className="absolute top-20 right-20 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-40 left-1/4 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute bottom-40 right-1/3 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1.5s' }} />
+    <motion.div
+      className="min-h-screen relative overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <SubtleBackground />
+
+      {/* Fixed Header */}
+      <div
+        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        style={{ backgroundColor: 'rgba(15, 24, 41, 0.7)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Moon className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
+              <h1 className="text-xl font-bold premium-text-platinum">
+                Bedtime Ideas
+              </h1>
+            </div>
+            <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+              <Search className="h-5 w-5 premium-text-platinum" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : -20 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="max-w-2xl mx-auto mb-8 relative z-10"
-      >
+      {/* Main Content */}
+      <div className="pt-24 pb-24 px-4 relative">
+        {/* Ambient starfield background */}
+        <div className="fixed inset-0 pointer-events-none opacity-30">
+          <div className="absolute top-10 left-10 w-1 h-1 rounded-full bg-white animate-pulse" />
+          <div className="absolute top-20 right-20 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-40 left-1/4 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-40 right-1/3 w-1 h-1 rounded-full bg-white animate-pulse" style={{ animationDelay: '1.5s' }} />
+        </div>
+
+        {/* Header Info */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: showWelcome ? 1 : 0, y: showWelcome ? 0 : -20 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="max-w-2xl mx-auto mb-8 relative z-10"
+        >
         <div className="flex items-center gap-4 mb-4">
           <motion.div
             className="p-4 rounded-2xl premium-glass-subtle relative"
@@ -141,12 +172,12 @@ export function BedtimePage() {
             }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Moon className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
+            <Sparkles className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
           </motion.div>
           <div>
-            <h1 className="premium-text-platinum text-2xl font-bold">
+            <h2 className="premium-text-platinum text-2xl font-bold">
               Thoughts Before Bed
-            </h1>
+            </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
               Let your mind wander into tomorrow's inspiration
             </p>
@@ -353,6 +384,7 @@ export function BedtimePage() {
           onMarkViewed={markViewed}
         />
       )}
-    </div>
+      </div>
+    </motion.div>
   )
 }
