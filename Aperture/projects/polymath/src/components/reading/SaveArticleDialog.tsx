@@ -62,7 +62,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       // Background polling for extraction completion
       const articleId = article.id
       let attempts = 0
-      const maxAttempts = 25 // 25 seconds max (increased timeout to 20s)
+      const maxAttempts = 120 // 2 minutes max (backend can take up to ~2min with retries)
 
       const checkInterval = setInterval(async () => {
         attempts++
@@ -97,7 +97,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
           }
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval)
-          console.log('[SaveArticleDialog] Extraction timeout after 25s')
+          console.log('[SaveArticleDialog] Extraction polling stopped after 2 minutes - article may still be processing')
         }
       }, 1000)
 

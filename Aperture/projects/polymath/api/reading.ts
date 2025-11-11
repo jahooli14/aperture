@@ -23,9 +23,9 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
   console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
 
   try {
-    // Fetch HTML with timeout
+    // Fetch HTML with timeout (generous timeout for robustness)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
 
     const response = await fetch(url, {
       headers: {
@@ -311,9 +311,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 1 // Reduced from 3 - only retry once
-  const RETRY_DELAYS = [2000] // Only one retry, 2s delay
-  const TIMEOUT_MS = 20000 // 20 second timeout (some sites are just slow)
+  const MAX_RETRIES = 3 // Increased for robustness - quality over speed
+  const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
+  const TIMEOUT_MS = 45000 // 45 second timeout (sites can be slow, Jina AI can be slow)
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -547,13 +547,15 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch article content'
 
-    // Retry logic - only for actual network errors, not timeouts
-    // Timeouts mean the site is just slow, retrying won't help
+    // Retry logic - retry both network errors and timeouts for robustness
+    // Timeouts can mean either the site is slow OR Jina AI is slow - worth retrying
     const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')
+    const shouldRetry = isNetworkError || isTimeout
 
-    if (retryCount < MAX_RETRIES && isNetworkError && !isTimeout) {
+    if (retryCount < MAX_RETRIES && shouldRetry) {
       const delay = RETRY_DELAYS[retryCount]
-      console.log(`[Jina AI] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+      const reason = isTimeout ? 'Timeout' : 'Network error'
+      console.log(`[Jina AI] ${reason}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay))
@@ -562,12 +564,12 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       return fetchArticleWithJina(url, retryCount + 1)
     }
 
-    // For timeouts, fail fast - the site is just slow
+    // All retries exhausted
     if (isTimeout) {
-      console.log(`[Jina AI] Timeout after ${TIMEOUT_MS}ms - site may be slow or blocking extraction`)
+      console.log(`[Jina AI] All retries exhausted after timeout - site or Jina AI may be slow/blocking`)
     }
 
-    // All retries exhausted or non-retryable error
+    // Throw error to trigger Cheerio fallback
     throw new Error(errorMessage)
   }
 }
