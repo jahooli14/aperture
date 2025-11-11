@@ -336,7 +336,31 @@ function cleanMarkdownContent(markdown: string): string {
     if (
       /^(apply|cancel|confirm|clear|allow all)$/i.test(line) ||
       /^(back to|view vendor|checkbox label|switch label)$/i.test(line) ||
-      /^(arrow|filters?|category|brand|processor|showing \d+ of)$/i.test(line)
+      /^(arrow|filters?|category|brand|processor|showing \d+ of)$/i.test(line) ||
+      /^arrow$/i.test(line) ||
+      /^filters?[☰✕✖✗]/i.test(line) ||
+      /^sort\s*by/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip e-commerce/product listing UI
+    if (
+      /^(any price|deals|price \(|product name \(|retailer name \()/i.test(line) ||
+      /^showing \d+ of \d+/i.test(line) ||
+      /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i.test(line) ||
+      /^\(\d+[.\d]*-inch/i.test(line) ||
+      /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i.test(line) ||
+      /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip review ratings and numbers
+    if (
+      /^[☆★]{3,5}$/i.test(line) ||
+      /^our review$/i.test(line) ||
+      /^\d+$/.test(line)  // Standalone numbers (product list indexes)
     ) {
       continue
     }
@@ -358,18 +382,8 @@ function cleanMarkdownContent(markdown: string): string {
       continue
     }
 
-    // Skip product specs and e-commerce content
-    if (
-      /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i.test(line) ||
-      /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i.test(line) ||
-      /^[☆★]{3,5}$/i.test(line) ||
-      /^our review$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip "Latest Articles" sections with just numbers
-    if (/^latest articles?$/i.test(line) || /^\d+$/.test(line)) {
+    // Skip "Latest Articles" sections
+    if (/^latest articles?$/i.test(line)) {
       continue
     }
 
@@ -395,7 +409,31 @@ function cleanMarkdownContent(markdown: string): string {
     cleaned.pop()
   }
 
-  return cleaned.join('\n')
+  // Join and do final inline cleanup for concatenated patterns
+  let result = cleaned.join('\n')
+
+  // Remove inline e-commerce patterns that might be concatenated
+  const inlinePatterns = [
+    /Filters?[☰✕✖✗]/gi,
+    /SORT\s*BY.{0,15}?(low to high|high to low|A to Z|Z to A)/gi,  // Sort options
+    /Price \((low to high|high to low)\)/gi,
+    /Product Name \([AZ]+ to [AZ]+\)/gi,
+    /Retailer name \([AZ]+ to [AZ]+\)/gi,
+    /\(Image credit:[^)]{0,100}\)/gi,  // Limited to prevent backtracking
+    /Our Review\s*[☆★]{3,5}/gi
+  ]
+
+  inlinePatterns.forEach(pattern => {
+    result = result.replace(pattern, '')
+  })
+
+  // Clean up any resulting double spaces or empty lines
+  result = result
+    .replace(/  +/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+
+  return result
 }
 
 /**
