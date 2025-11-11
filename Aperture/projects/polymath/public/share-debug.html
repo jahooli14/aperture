@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Share Target Debug</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .info { margin: 10px 0; padding: 10px; background: #2a2a2a; border-radius: 4px; }
+    .label { color: #3b82f6; font-weight: bold; }
+    .value { color: #10b981; }
+  </style>
+</head>
+<body>
+  <h1>Share Target Debug Page</h1>
+  <p>This page shows what parameters were received from the share:</p>
+
+  <div class="info">
+    <span class="label">Full URL:</span><br>
+    <span class="value" id="fullUrl"></span>
+  </div>
+
+  <div class="info">
+    <span class="label">Search Params:</span><br>
+    <span class="value" id="searchParams"></span>
+  </div>
+
+  <div class="info">
+    <span class="label">url param:</span><br>
+    <span class="value" id="urlParam"></span>
+  </div>
+
+  <div class="info">
+    <span class="label">title param:</span><br>
+    <span class="value" id="titleParam"></span>
+  </div>
+
+  <div class="info">
+    <span class="label">text param:</span><br>
+    <span class="value" id="textParam"></span>
+  </div>
+
+  <button onclick="redirectToMain()" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+    Go to Main App
+  </button>
+
+  <script>
+    const params = new URLSearchParams(window.location.search)
+
+    document.getElementById('fullUrl').textContent = window.location.href
+    document.getElementById('searchParams').textContent = window.location.search || '(none)'
+    document.getElementById('urlParam').textContent = params.get('url') || '(none)'
+    document.getElementById('titleParam').textContent = params.get('title') || '(none)'
+    document.getElementById('textParam').textContent = params.get('text') || '(none)'
+
+    console.log('[ShareDebug] Full URL:', window.location.href)
+    console.log('[ShareDebug] Search params:', window.location.search)
+    console.log('[ShareDebug] URL param:', params.get('url'))
+    console.log('[ShareDebug] Title param:', params.get('title'))
+    console.log('[ShareDebug] Text param:', params.get('text'))
+
+    function redirectToMain() {
+      // Redirect to main app with params preserved
+      window.location.href = '/reading' + window.location.search
+    }
+
+    // Auto-redirect after 3 seconds
+    setTimeout(() => {
+      console.log('[ShareDebug] Auto-redirecting to main app with params')
+      redirectToMain()
+    }, 3000)
+  </script>
+</body>
+</html>
