@@ -307,9 +307,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 3
-  const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
-  const TIMEOUT_MS = 15000 // 15 second timeout
+  const MAX_RETRIES = 1 // Reduced from 3 - only retry once
+  const RETRY_DELAYS = [2000] // Only one retry, 2s delay
+  const TIMEOUT_MS = 20000 // 20 second timeout (some sites are just slow)
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -473,16 +473,16 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     const textContent = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
-    // Always limit excerpt to 200 chars max to prevent massive card previews
+    // Always limit excerpt to 100 chars max (2 lines on mobile)
     let excerpt = ''
     if (description && description.length > 0) {
-      excerpt = description.substring(0, 200).trim()
+      excerpt = description.substring(0, 100).trim()
       // Add ellipsis if truncated
-      if (description.length > 200) {
+      if (description.length > 100) {
         excerpt += '...'
       }
     } else if (textContent && textContent.length > 0) {
-      excerpt = textContent.substring(0, 200).trim() + '...'
+      excerpt = textContent.substring(0, 100).trim() + '...'
     }
 
     // Only show incomplete message if text content is genuinely short or missing
@@ -543,16 +543,24 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch article content'
 
-    // Retry logic with exponential backoff for network/timeout errors
-    if (retryCount < MAX_RETRIES && (isTimeout || errorMessage.includes('fetch') || errorMessage.includes('network'))) {
+    // Retry logic - only for actual network errors, not timeouts
+    // Timeouts mean the site is just slow, retrying won't help
+    const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')
+
+    if (retryCount < MAX_RETRIES && isNetworkError && !isTimeout) {
       const delay = RETRY_DELAYS[retryCount]
-      console.log(`[Jina AI] Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+      console.log(`[Jina AI] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay))
 
       // Retry
       return fetchArticleWithJina(url, retryCount + 1)
+    }
+
+    // For timeouts, fail fast - the site is just slow
+    if (isTimeout) {
+      console.log(`[Jina AI] Timeout after ${TIMEOUT_MS}ms - site may be slow or blocking extraction`)
     }
 
     // All retries exhausted or non-retryable error
@@ -984,12 +992,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
           } else {
             console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id} - Title: "${article.title}"`)
-
-            // Generate embedding and auto-connect (async, non-blocking)
-            generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
-              .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
-              .catch(err => console.error('[reading] Async embedding/connection error:', err))
           }
+
+          // Generate embedding and auto-connect (async, run after article is marked processed)
+          // This way UI gets updated faster, connections happen in background
+          generateArticleEmbeddingAndConnect(savedArticle.id, article.title, article.excerpt, userId)
+            .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
+            .catch(err => console.error('[reading] Async embedding/connection error:', err))
         })
         .catch(async (extractError) => {
           console.error(`[reading] ❌ Extraction failed for ${savedArticle.id}:`, extractError.message || extractError)
