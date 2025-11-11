@@ -738,10 +738,13 @@ function cleanArticleContent(content: string): string {
     /^(category|brand|processor|ram|storage size|screen size|colou?r|condition|price)/i,
     /^(any price|our review|deals|showing \d+ of \d+)/i,
     /^(compare prices?|buy now|add to cart|in stock)/i,
+    /^filters?[☰✕✖✗]/i,  // Filter buttons with icons
+    /^sort\s*by/i,  // Sort options
     /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i,  // Technical specs
     /^[☆★]{3,5}$/,  // Star ratings
     /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i,  // Product specs like "(13.3-inch 64GB)"
     /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i,  // Product specs in parentheses
+    /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/,  // Standalone prices like "$799" or "€1,299"
 
     // Author bio indicators
     /^.{0,50}\b(editor|journalist|author|writer|contributor|reporter)\b/i,
@@ -833,15 +836,6 @@ function cleanArticleContent(content: string): string {
 
   // Join lines back together
   let cleaned = lines.join('\n')
-
-  // Remove author bio blocks (multi-line pattern matching)
-  // Pattern: Name + title + long bio text
-  cleaned = cleaned.replace(/([A-Z][a-z]+ [A-Z][a-z]+[A-Z][a-z]+ (Editor|Writer|Journalist|Author|Contributor)[A-Z][a-z]+ [A-Z][a-z]+[\s\S]{100,800}?(lives in|mom of|dad of|parent of)[\s\S]{0,100}?\n)/gi, '\n')
-
-  // Remove product listing sections
-  cleaned = cleaned.replace(/Category\s*Arrow[\s\S]*?Price\s*Arrow[\s\S]*?$/gi, '')
-  cleaned = cleaned.replace(/More from [A-Z][a-z' ]+\s*Category[\s\S]*$/gi, '')
-  cleaned = cleaned.replace(/LATEST ARTICLES?\s*\d+\s*\d+\s*\d+[\s\S]*$/gi, '')
 
   // Remove common inline phrases that sneak through
   const phrasePatterns = [
