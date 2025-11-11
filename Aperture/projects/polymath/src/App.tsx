@@ -77,25 +77,58 @@ function ShareTargetHandler() {
     const params = new URLSearchParams(location.search)
     console.log('[ShareTargetHandler] All params:', Array.from(params.entries()))
 
+    // Get all potential parameters
     const shareUrl = params.get('share_url')
+    const shareText = params.get('share_text')  // CRITICAL: Android puts URL here!
+    const shareTitle = params.get('share_title')
     const url = params.get('url')
-    const title = params.get('title') || params.get('share_title')
-    const text = params.get('text') || params.get('share_text')
+    const text = params.get('text')  // Fallback if unmapped
+    const title = params.get('title')
 
     console.log('[ShareTargetHandler] share_url:', shareUrl)
+    console.log('[ShareTargetHandler] share_text:', shareText)
     console.log('[ShareTargetHandler] url:', url)
+    console.log('[ShareTargetHandler] text:', text)
 
-    // Check for either share_url (new) or url (old) param
-    const targetUrl = shareUrl || url
+    // Helper to validate URL
+    const isValidUrl = (str: string | null): boolean => {
+      if (!str) return false
+      try {
+        const urlObj = new URL(str)
+        return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+      } catch {
+        return false
+      }
+    }
+
+    // ANDROID QUIRK: Check 'text' parameter FIRST, as Android puts URLs there
+    let targetUrl: string | null = null
+
+    if (isValidUrl(shareText)) {
+      // Priority 1: share_text (Android behavior)
+      targetUrl = shareText
+      console.log('[ShareTargetHandler] ✓ Found valid URL in share_text (Android):', targetUrl)
+    } else if (isValidUrl(text)) {
+      // Priority 2: text (unmapped fallback)
+      targetUrl = text
+      console.log('[ShareTargetHandler] ✓ Found valid URL in text:', targetUrl)
+    } else if (isValidUrl(shareUrl)) {
+      // Priority 3: share_url (spec-compliant)
+      targetUrl = shareUrl
+      console.log('[ShareTargetHandler] ✓ Found valid URL in share_url:', targetUrl)
+    } else if (isValidUrl(url)) {
+      // Priority 4: url (unmapped fallback)
+      targetUrl = url
+      console.log('[ShareTargetHandler] ✓ Found valid URL in url:', targetUrl)
+    }
 
     if (targetUrl) {
-      console.log('[ShareTargetHandler] ✓ Share URL detected:', targetUrl)
-      console.log('[ShareTargetHandler] Redirecting to /reading with params')
+      console.log('[ShareTargetHandler] Redirecting to /reading with URL:', targetUrl)
 
-      // Redirect to reading page with the share params
-      navigate(`/reading?url=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(title || '')}&text=${encodeURIComponent(text || '')}`, { replace: true })
+      // Redirect to reading page with the URL
+      navigate(`/reading?url=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(shareTitle || title || '')}`, { replace: true })
     } else {
-      console.log('[ShareTargetHandler] No share URL found in params')
+      console.log('[ShareTargetHandler] No valid URL found in any parameter')
     }
   }, [location.pathname, location.search, navigate])
 
