@@ -67,9 +67,10 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
     document.head?.appendChild(base)
 
     // Use Mozilla Readability to extract article content
+    // Settings based on Omnivore's production config
     const reader = new Readability(document, {
       debug: false,
-      maxElemsToParse: 0, // No limit
+      maxElemsToParse: 8000, // Limit to prevent hanging on huge pages
       nbTopCandidates: 5,
       charThreshold: 500,
       classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
@@ -83,14 +84,13 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 
     console.log('[Readability] Extracted:', article.title)
 
-    // Extract metadata
-    const metaTags = Array.from(document.querySelectorAll('meta'))
+    // Extract metadata efficiently (limit querySelector scope)
+    const head = document.head
     const getMetaContent = (names: string[]) => {
+      if (!head) return null
       for (const name of names) {
-        const tag = metaTags.find(t =>
-          t.getAttribute('property') === name ||
-          t.getAttribute('name') === name
-        )
+        const selector = `meta[property="${name}"], meta[name="${name}"]`
+        const tag = head.querySelector(selector)
         if (tag) return tag.getAttribute('content')
       }
       return null
