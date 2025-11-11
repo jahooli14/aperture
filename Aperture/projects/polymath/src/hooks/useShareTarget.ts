@@ -4,7 +4,7 @@
  * Detects when a link is shared to the app and processes it
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 interface UseShareTargetOptions {
@@ -13,6 +13,14 @@ interface UseShareTargetOptions {
 
 export function useShareTarget({ onShareReceived }: UseShareTargetOptions) {
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Use ref to avoid re-running effect when callback changes
+  const callbackRef = useRef(onShareReceived)
+
+  // Keep ref up to date
+  useEffect(() => {
+    callbackRef.current = onShareReceived
+  }, [onShareReceived])
 
   useEffect(() => {
     // Check if we have shared content via URL params
@@ -23,8 +31,15 @@ export function useShareTarget({ onShareReceived }: UseShareTargetOptions) {
     if (sharedUrl) {
       console.log('[useShareTarget] Received shared URL:', sharedUrl)
 
-      // Call the handler
-      const result = onShareReceived(sharedUrl, sharedTitle || undefined, sharedText || undefined)
+      // Clean up the URL params FIRST to prevent re-processing
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('url')
+      newParams.delete('title')
+      newParams.delete('text')
+      setSearchParams(newParams, { replace: true })
+
+      // Then call the handler with the stored values
+      const result = callbackRef.current(sharedUrl, sharedTitle || undefined, sharedText || undefined)
 
       // Handle async callbacks
       if (result instanceof Promise) {
@@ -32,16 +47,6 @@ export function useShareTarget({ onShareReceived }: UseShareTargetOptions) {
           console.error('[useShareTarget] Error processing shared URL:', error)
         })
       }
-
-      // Clean up the URL params after processing
-      // This prevents re-processing on subsequent renders
-      const newParams = new URLSearchParams(searchParams)
-      newParams.delete('url')
-      newParams.delete('title')
-      newParams.delete('text')
-
-      // Update URL without reloading the page
-      setSearchParams(newParams, { replace: true })
     }
-  }, [searchParams, setSearchParams, onShareReceived])
+  }, [searchParams, setSearchParams])
 }
