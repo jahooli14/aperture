@@ -62,12 +62,16 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       // Background polling for extraction completion
       const articleId = article.id
       let attempts = 0
-      const maxAttempts = 30 // 30 seconds max
+      const maxAttempts = 25 // 25 seconds max (increased timeout to 20s)
 
       const checkInterval = setInterval(async () => {
         attempts++
 
-        // Re-fetch articles to check if processed
+        // Force refresh to get latest data from server
+        const { fetchArticles } = useReadingStore.getState()
+        await fetchArticles(undefined, true) // Force refresh bypasses cache
+
+        // Check if processed
         const { articles } = useReadingStore.getState()
         const updatedArticle = articles.find(a => a.id === articleId)
 
@@ -93,7 +97,7 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
           }
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval)
-          console.log('[SaveArticleDialog] Extraction timeout after 30s')
+          console.log('[SaveArticleDialog] Extraction timeout after 25s')
         }
       }, 1000)
 

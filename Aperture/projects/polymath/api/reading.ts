@@ -307,9 +307,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 3
-  const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
-  const TIMEOUT_MS = 12000 // 12 second timeout (reduced from 15s for faster failures)
+  const MAX_RETRIES = 1 // Reduced from 3 - only retry once
+  const RETRY_DELAYS = [2000] // Only one retry, 2s delay
+  const TIMEOUT_MS = 20000 // 20 second timeout (some sites are just slow)
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -543,16 +543,24 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     const isTimeout = error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch article content'
 
-    // Retry logic with exponential backoff for network/timeout errors
-    if (retryCount < MAX_RETRIES && (isTimeout || errorMessage.includes('fetch') || errorMessage.includes('network'))) {
+    // Retry logic - only for actual network errors, not timeouts
+    // Timeouts mean the site is just slow, retrying won't help
+    const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')
+
+    if (retryCount < MAX_RETRIES && isNetworkError && !isTimeout) {
       const delay = RETRY_DELAYS[retryCount]
-      console.log(`[Jina AI] Retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+      console.log(`[Jina AI] Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay))
 
       // Retry
       return fetchArticleWithJina(url, retryCount + 1)
+    }
+
+    // For timeouts, fail fast - the site is just slow
+    if (isTimeout) {
+      console.log(`[Jina AI] Timeout after ${TIMEOUT_MS}ms - site may be slow or blocking extraction`)
     }
 
     // All retries exhausted or non-retryable error
