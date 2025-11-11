@@ -406,21 +406,56 @@ export function ReaderPage() {
 
   const fontSizeSettings = {
     compact: {
-      article: 'text-[17px] leading-[1.6]',
+      article: 'text-[17px] leading-[1.65]',
       title: 'text-3xl sm:text-4xl',
       meta: 'text-sm'
     },
     comfortable: {
-      article: 'text-[19px] leading-[1.7]',
+      article: 'text-[19px] leading-[1.75]',
       title: 'text-4xl sm:text-5xl',
       meta: 'text-sm'
     },
     spacious: {
-      article: 'text-[21px] leading-[1.8]',
+      article: 'text-[21px] leading-[1.85]',
       title: 'text-5xl sm:text-6xl',
       meta: 'text-base'
     }
   }
+
+  // Keyboard shortcuts for better UX
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Archive with 'a' key
+      if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
+        const target = e.target as HTMLElement
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          e.preventDefault()
+          handleArchive()
+        }
+      }
+      // Back with Escape key
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        navigate('/reading')
+      }
+      // Font size shortcuts
+      if (e.key === '1' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setFontSize('compact')
+      }
+      if (e.key === '2' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setFontSize('comfortable')
+      }
+      if (e.key === '3' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        setFontSize('spacious')
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [article])
 
   if (loading) {
     return (
@@ -515,23 +550,25 @@ export function ReaderPage() {
       <motion.article
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="max-w-[720px] mx-auto px-6 sm:px-8 md:px-12 py-12 sm:py-16 md:py-20"
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="max-w-[680px] mx-auto px-6 sm:px-8 md:px-12 py-12 sm:py-16 md:py-20"
         style={{
-          backgroundColor: '#f8f6f1',
+          backgroundColor: '#fefdfb',
           minHeight: '100vh',
-          boxShadow: '0 0 60px rgba(0, 0, 0, 0.3)'
+          boxShadow: '0 0 80px rgba(0, 0, 0, 0.25), 0 20px 40px rgba(0, 0, 0, 0.15)'
         }}
       >
         {/* Article Header */}
         <header className="mb-12">
           {/* Title */}
           <h1
-            className={`font-serif font-bold mb-6 ${settings.title}`}
+            className={`font-serif font-bold mb-8 ${settings.title}`}
             style={{
-              color: '#1a1a1a',
-              lineHeight: '1.2',
-              letterSpacing: '-0.02em'
+              color: '#0a0a0a',
+              lineHeight: '1.15',
+              letterSpacing: '-0.025em',
+              fontFamily: '"Charter", "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, serif',
+              fontWeight: 700
             }}
           >
             {article.title}
@@ -540,10 +577,13 @@ export function ReaderPage() {
           {/* Metadata */}
           <div
             className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${settings.meta}`}
-            style={{ color: '#6b6b6b' }}
+            style={{
+              color: '#737373',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+            }}
           >
             {article.author && (
-              <span className="font-medium" style={{ color: '#4a4a4a' }}>
+              <span className="font-medium" style={{ color: '#404040' }}>
                 {article.author}
               </span>
             )}
@@ -581,8 +621,12 @@ export function ReaderPage() {
             __html: article.content ? getContentWithCachedImages(article.content) : ''
           }}
           style={{
-            color: '#2a2a2a',
-            fontFamily: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif'
+            color: '#1a1a1a',
+            fontFamily: '"Charter", "Iowan Old Style", "Palatino Linotype", "URW Palladio L", Georgia, "Times New Roman", serif',
+            fontFeatureSettings: '"liga" 1, "kern" 1',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
+            textRendering: 'optimizeLegibility'
           }}
         />
 
@@ -620,40 +664,53 @@ export function ReaderPage() {
       <AnimatePresence>
         {showHighlightMenu && (
           <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            initial={{ opacity: 0, y: 8, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            transition={{ duration: 0.15 }}
-            className="fixed z-50 premium-glass-strong rounded-xl shadow-2xl p-2 flex gap-1"
+            exit={{ opacity: 0, y: 8, scale: 0.92 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed z-50 premium-glass-strong rounded-xl shadow-2xl p-1.5 flex gap-1"
             style={{
               left: `${menuPosition.x}px`,
               top: `${menuPosition.y}px`,
-              transform: 'translate(-50%, -100%)'
+              transform: 'translate(-50%, calc(-100% - 12px))',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              backgroundColor: 'rgba(20, 27, 38, 0.92)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2)'
             }}
           >
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => handleHighlight('yellow')}
-              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              className="p-2.5 rounded-lg transition-colors"
               title="Highlight"
+              style={{ color: 'var(--premium-gold)' }}
             >
-              <Highlighter className="h-5 w-5" style={{ color: 'var(--premium-gold)' }} />
-            </button>
-            <button
+              <Highlighter className="h-5 w-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
               onClick={handleSaveAsMemory}
-              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              className="p-2.5 rounded-lg transition-colors"
               title="Save as thought"
+              style={{ color: 'var(--premium-blue)' }}
             >
-              <BookmarkPlus className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-            </button>
-            <button
+              <BookmarkPlus className="h-5 w-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => {
                 setShowHighlightMenu(false)
               }}
-              className="p-2.5 hover:bg-white/10 rounded-lg transition-all"
+              className="p-2.5 rounded-lg transition-colors"
               title="Add note"
+              style={{ color: 'var(--premium-text-secondary)' }}
             >
-              <MessageSquare className="h-5 w-5" style={{ color: 'var(--premium-text-secondary)' }} />
-            </button>
+              <MessageSquare className="h-5 w-5" />
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>

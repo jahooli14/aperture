@@ -332,11 +332,49 @@ function cleanMarkdownContent(markdown: string): string {
       continue
     }
 
-    // Skip action buttons
+    // Skip action buttons and navigation
     if (
       /^(apply|cancel|confirm|clear|allow all)$/i.test(line) ||
-      /^(back to|view vendor|checkbox label|switch label)$/i.test(line)
+      /^(back to|view vendor|checkbox label|switch label)$/i.test(line) ||
+      /^(arrow|filters?|category|brand|processor|showing \d+ of)$/i.test(line)
     ) {
+      continue
+    }
+
+    // Skip author bio lines (long descriptive sentences about people)
+    if (
+      line.length > 100 &&
+      (/\b(editor|journalist|author|writer|contributor|reporter)\b/i.test(line) &&
+       /\b(is an?|has been|known for)\b/i.test(line))
+    ) {
+      continue
+    }
+
+    // Skip domain names and read time indicators
+    if (
+      /^\w+\.(com|net|org|io|co|ai)$/i.test(line) ||
+      /^\d+\s+min$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip product specs and e-commerce content
+    if (
+      /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i.test(line) ||
+      /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i.test(line) ||
+      /^[☆★]{3,5}$/i.test(line) ||
+      /^our review$/i.test(line)
+    ) {
+      continue
+    }
+
+    // Skip "Latest Articles" sections with just numbers
+    if (/^latest articles?$/i.test(line) || /^\d+$/.test(line)) {
+      continue
+    }
+
+    // Skip image credits
+    if (/^\(image credit:/i.test(line)) {
       continue
     }
 
@@ -647,11 +685,13 @@ function cleanArticleContent(content: string): string {
     /^(home|about|contact|privacy|terms|cookies?|legal|help|support)/i,
     /^(view all|see all|show all|browse|explore)/i,
     /^(back to|return to|previous|next page)/i,
+    /^(arrow|filters?|sort by|showing \d+)/i,
 
     // Social media and sharing
     /^(share|share on|follow us|connect with|like us|follow|tweet|pin)/i,
     /^(facebook|twitter|instagram|linkedin|youtube|tiktok|whatsapp|reddit)/i,
     /^(social media|social|connect|join us)/i,
+    /^follow\s+.+\s+to get\b/i,
 
     // Newsletter and subscription
     /^(newsletter|email|subscribe|sign up|get updates|stay updated)/i,
@@ -677,7 +717,8 @@ function cleanArticleContent(content: string): string {
     /^(related:?|you may also|you might like|recommended|more from)/i,
     /^(read (more|next)|continue reading|keep reading)/i,
     /^(check out|discover|explore more|learn more)/i,
-    /^(popular|trending|latest|recent articles)/i,
+    /^(popular|trending|latest|recent articles?)/i,
+    /^latest articles?$/i,
 
     // Footer and metadata
     /^(copyright|©|all rights reserved|\(c\))/i,
@@ -693,17 +734,74 @@ function cleanArticleContent(content: string): string {
     /^(toggle|expand|collapse|show|hide|more|less)/i,
     /^(loading|please wait|redirecting)/i,
 
+    // Product/e-commerce patterns
+    /^(category|brand|processor|ram|storage size|screen size|colou?r|condition|price)/i,
+    /^(any price|our review|deals|showing \d+ of \d+)/i,
+    /^(compare prices?|buy now|add to cart|in stock)/i,
+    /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i,  // Technical specs
+    /^[☆★]{3,5}$/,  // Star ratings
+    /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i,  // Product specs like "(13.3-inch 64GB)"
+    /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i,  // Product specs in parentheses
+
+    // Author bio indicators
+    /^.{0,50}\b(editor|journalist|author|writer|contributor|reporter)\b/i,
+    /\b(is an? (award-winning|celebrated|bestselling|leading|certified))\b/i,
+    /\b(earned (a|her|his|their) (loyal|readership))\b/i,
+    /\blives in\b.*$/i,  // Common bio ending
+    /\b(mom|dad|parent) of \d+\b/i,  // Personal bio details
+
     // List/link dumps (common pattern: just a link text with no context)
     /^[\[\(]?https?:\/\//i,  // Lines starting with URLs
     /^(source|via|link|url):/i,
 
+    // Website domain names (often appear at start of articles)
+    /^\w+\.(com|net|org|io|co|ai)$/i,
+    /^\d+\s+min$/i,  // Read time estimates like "6 min"
+
     // Short non-content lines (likely UI elements)
     /^[\w\s]{1,3}$/,  // 1-3 character lines (buttons like "OK", "Yes", etc)
+    /^\d+$/,  // Lines with just numbers
   ]
 
+  // Track if we're in an author bio section
+  let inAuthorBio = false
+  let bioStartIndex = -1
+
+  // First pass: identify and mark author bio sections
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+
+    // Start of author bio detection
+    if (!inAuthorBio && (
+      /\b(editor|journalist|author|writer|contributor)\b/i.test(line) &&
+      /\b(is an?|has been)\b/i.test(line) &&
+      line.length > 100  // Bio lines tend to be long
+    )) {
+      inAuthorBio = true
+      bioStartIndex = i
+    }
+
+    // End of author bio (usually after 3-5 lines or hitting next section)
+    if (inAuthorBio && (
+      i - bioStartIndex > 5 ||
+      /^#{1,3}\s/.test(line) ||  // Markdown heading
+      (line.length > 0 && !line.match(/\b(she|he|they|her|his|their)\b/i) && line.match(/^[A-Z]/))
+    )) {
+      inAuthorBio = false
+    }
+
+    // Mark bio lines for removal
+    if (inAuthorBio) {
+      lines[i] = '__REMOVE_BIO__'
+    }
+  }
+
   // Filter out lines matching removal patterns
-  lines = lines.filter(line => {
+  lines = lines.filter((line, index) => {
     const trimmed = line.trim()
+
+    // Remove marked bio lines
+    if (line === '__REMOVE_BIO__') return false
 
     // Keep empty lines for paragraph breaks
     if (trimmed === '') return true
@@ -724,12 +822,26 @@ function cleanArticleContent(content: string): string {
       return false
     }
 
+    // Remove image credit lines
+    if (/^\(image credit:/i.test(trimmed)) {
+      return false
+    }
+
     // Keep lines that seem like content (have punctuation, reasonable length)
     return true
   })
 
   // Join lines back together
   let cleaned = lines.join('\n')
+
+  // Remove author bio blocks (multi-line pattern matching)
+  // Pattern: Name + title + long bio text
+  cleaned = cleaned.replace(/([A-Z][a-z]+ [A-Z][a-z]+[A-Z][a-z]+ (Editor|Writer|Journalist|Author|Contributor)[A-Z][a-z]+ [A-Z][a-z]+[\s\S]{100,800}?(lives in|mom of|dad of|parent of)[\s\S]{0,100}?\n)/gi, '\n')
+
+  // Remove product listing sections
+  cleaned = cleaned.replace(/Category\s*Arrow[\s\S]*?Price\s*Arrow[\s\S]*?$/gi, '')
+  cleaned = cleaned.replace(/More from [A-Z][a-z' ]+\s*Category[\s\S]*$/gi, '')
+  cleaned = cleaned.replace(/LATEST ARTICLES?\s*\d+\s*\d+\s*\d+[\s\S]*$/gi, '')
 
   // Remove common inline phrases that sneak through
   const phrasePatterns = [
@@ -739,6 +851,8 @@ function cleanArticleContent(content: string): string {
     /\b(view (all|more)|see (all|more)|show (all|more))\b/gi,
     /\b(download (the |our )?app|get (the |our )?app)\b/gi,
     /\[\d+\]/g,  // Remove citation numbers like [1], [2], etc.
+    /\(Image credit:.*?\)/gi,  // Remove image credits
+    /Our Review\s*[☆★]{3,5}/gi,  // Remove review ratings
   ]
 
   phrasePatterns.forEach(pattern => {

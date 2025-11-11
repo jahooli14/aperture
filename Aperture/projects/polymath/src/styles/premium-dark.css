@@ -425,13 +425,29 @@
 
 /* Paragraphs */
 .reader-content p {
-  margin-bottom: 1.5em;
+  margin-bottom: 1.6em;
   line-height: inherit;
   color: inherit;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  -moz-hyphens: auto;
+  hyphenate-limit-chars: 12 6 4;
 }
 
 .reader-content p:last-child {
   margin-bottom: 0;
+}
+
+/* First paragraph - slight emphasis */
+.reader-content > p:first-of-type {
+  font-size: 1.05em;
+  line-height: 1.7;
+}
+
+/* Drop cap for first letter (optional elegant touch) */
+.reader-content > p:first-of-type::first-letter {
+  font-size: 1.2em;
+  font-weight: 600;
 }
 
 /* Headings */
@@ -553,21 +569,28 @@
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 2.5em auto;
-  border-radius: var(--premium-radius-lg);
-  box-shadow: var(--premium-shadow-2);
+  margin: 3em auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.reader-content img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .reader-content figure {
-  margin: 2.5em 0;
+  margin: 3em 0;
 }
 
 .reader-content figcaption {
-  margin-top: 1em;
+  margin-top: 1.2em;
   text-align: center;
   font-size: 0.875em;
-  color: var(--premium-text-tertiary);
+  color: #737373;
   font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Tables */
@@ -665,8 +688,10 @@
 
 /* Blockquotes on light background */
 .reader-content blockquote {
-  background: rgba(59, 130, 246, 0.08);
-  color: #4a4a4a;
+  background: rgba(59, 130, 246, 0.06);
+  border-left: 4px solid rgba(59, 130, 246, 0.5);
+  color: #3a3a3a;
+  padding-left: 1.8em;
 }
 
 /* Code on light background */
