@@ -20,6 +20,7 @@ const ToastContext = React.createContext<ToastContextValue | undefined>(undefine
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([])
+  const [removingIds, setRemovingIds] = React.useState<Set<string>>(new Set())
 
   const addToast = React.useCallback((toast: Omit<Toast, "id">) => {
     const id = Math.random().toString(36).substring(2, 9)
@@ -27,9 +28,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
     setToasts((prev) => [...prev, newToast])
 
-    // Auto remove after duration (default 4.5s for better readability)
-    // Success messages with actionable info get longer duration (6s)
-    const defaultDuration = toast.variant === 'success' && toast.description ? 6000 : 4500
+    // Auto remove after duration (default 3s for quicker feedback)
+    // Success messages with actionable info get slightly longer (4s)
+    const defaultDuration = toast.variant === 'success' && toast.description ? 4000 : 3000
     const duration = toast.duration ?? defaultDuration
     if (duration > 0) {
       setTimeout(() => {
@@ -39,13 +40,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const removeToast = React.useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
+    // Mark as removing to trigger fade-out animation
+    setRemovingIds((prev) => new Set(prev).add(id))
+
+    // Actually remove after animation completes (500ms)
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== id))
+      setRemovingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }, 500)
   }, [])
 
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} removingIds={removingIds} removeToast={removeToast} />
     </ToastContext.Provider>
   )
 }
@@ -58,43 +70,56 @@ export function useToast() {
   return context
 }
 
-function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast: (id: string) => void }) {
+function ToastContainer({ toasts, removingIds, removeToast }: { toasts: Toast[]; removingIds: Set<string>; removeToast: (id: string) => void }) {
   return (
-    <div className="fixed bottom-0 right-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
+    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col items-center justify-center pointer-events-none">
       {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+        <ToastItem key={toast.id} toast={toast} isRemoving={removingIds.has(toast.id)} onClose={() => removeToast(toast.id)} />
       ))}
     </div>
   )
 }
 
-function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
+function ToastItem({ toast, isRemoving, onClose }: { toast: Toast; isRemoving: boolean; onClose: () => void }) {
+  const [isVisible, setIsVisible] = React.useState(false)
+
+  React.useEffect(() => {
+    // Trigger fade in animation
+    requestAnimationFrame(() => {
+      setIsVisible(true)
+    })
+  }, [])
+
   const getVariantStyles = () => {
     switch (toast.variant) {
       case "destructive":
         return {
-          backgroundColor: 'var(--premium-bg-3)',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
           color: '#ef4444',
-          border: 'none'
+          border: '1px solid rgba(239, 68, 68, 0.2)'
         }
       case "success":
         return {
-          backgroundColor: 'var(--premium-bg-3)',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
           color: 'var(--premium-text-primary)',
-          border: 'none'
+          border: '1px solid rgba(16, 185, 129, 0.2)'
         }
       default:
         return {
-          backgroundColor: 'var(--premium-bg-2)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
           color: 'var(--premium-text-primary)',
-          border: 'none'
+          border: '1px solid rgba(255, 255, 255, 0.15)'
         }
     }
   }
 
   return (
     <div
-      className="group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full mb-2"
+      className={cn(
+        "group pointer-events-auto relative flex items-center justify-between space-x-4 rounded-2xl p-6 pr-8 mb-2 min-w-[280px] max-w-[420px]",
+        "backdrop-blur-xl shadow-2xl transition-all duration-500 ease-out",
+        isVisible && !isRemoving ? "opacity-100 scale-100" : "opacity-0 scale-95"
+      )}
       style={getVariantStyles()}
     >
       <div className="grid gap-1">
