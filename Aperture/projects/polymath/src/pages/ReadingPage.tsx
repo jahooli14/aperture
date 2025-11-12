@@ -303,7 +303,7 @@ export function ReadingPage() {
     } else {
       console.log('[ReadingPage] No share data found in sessionStorage or URL params')
     }
-  }, []) // Run once on mount
+  }, [location.search, saveArticle, fetchArticles, addToast]) // Re-run when URL params change (for PWA navigate-existing mode)
 
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
