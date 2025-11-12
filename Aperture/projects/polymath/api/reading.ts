@@ -25,7 +25,7 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
   try {
     // Fetch HTML with timeout
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000)
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
 
     const response = await fetch(url, {
       headers: {
@@ -111,9 +111,9 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
   console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
 
   try {
-    // Fetch HTML with timeout (generous timeout for robustness)
+    // Fetch HTML with timeout
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
     const response = await fetch(url, {
       headers: {
@@ -551,9 +551,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 3 // Increased for robustness - quality over speed
-  const RETRY_DELAYS = [2000, 4000, 8000] // Exponential backoff: 2s, 4s, 8s
-  const TIMEOUT_MS = 45000 // 45 second timeout (sites can be slow, Jina AI can be slow)
+  const MAX_RETRIES = 1 // One retry for faster fallback to next tier
+  const RETRY_DELAYS = [2000] // 2 second delay before retry
+  const TIMEOUT_MS = 15000 // 15 second timeout per attempt
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
