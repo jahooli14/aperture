@@ -417,48 +417,41 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
 }
 
 /**
- * Extract article content - Optimized approach
- * Try fast simple fetch first, use Puppeteer only for JS-heavy sites
- * This gives best of both worlds: speed for simple sites + robustness for complex ones
+ * Extract article content with timeout protection
+ * Currently using simple Readability only (fast and reliable)
+ * Puppeteer disabled temporarily - enable after verifying Vercel environment
  */
 async function fetchArticle(url: string) {
   console.log('[fetchArticle] Starting article extraction:', url)
 
+  // Wrap in timeout to prevent hanging (50s timeout, leave 10s for db updates)
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Extraction timeout after 50 seconds')), 50000)
+  })
+
   try {
-    // Try simple Readability first (fast - 1-2 seconds for most sites)
-    console.log('[fetchArticle] Attempting fast Readability extraction...')
-    const result = await fetchArticleWithReadability(url)
+    // Try simple Readability (fast - 1-2 seconds for most sites)
+    console.log('[fetchArticle] Attempting Readability extraction...')
+    const result = await Promise.race([
+      fetchArticleWithReadability(url),
+      timeoutPromise
+    ])
 
     // Check if extraction returned meaningful content
     if (result.content && result.content.length > 100) {
-      console.log('[fetchArticle] ✅ Fast Readability extraction succeeded')
+      console.log('[fetchArticle] ✅ Readability extraction succeeded')
       return result
     }
 
-    console.log('[fetchArticle] Readability returned insufficient content, trying Puppeteer...')
-    throw new Error('Readability extraction returned insufficient content')
-  } catch (readabilityError) {
-    const errorMessage = readabilityError instanceof Error ? readabilityError.message : 'Unknown error'
-    console.error('[fetchArticle] Simple fetch failed:', errorMessage)
+    console.log('[fetchArticle] Readability returned insufficient content')
+    throw new Error('Readability extraction returned insufficient content - site may require JavaScript rendering')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[fetchArticle] Extraction failed:', errorMessage)
 
-    // Try Puppeteer as fallback (for JS-heavy sites, SPAs, etc.)
-    try {
-      console.log('[fetchArticle] Attempting Puppeteer extraction for JS-heavy site...')
-      const result = await fetchArticleWithPuppeteer(url)
-
-      if (result.content && result.content.length > 100) {
-        console.log('[fetchArticle] ✅ Puppeteer extraction succeeded')
-        return result
-      }
-
-      throw new Error('Puppeteer extraction returned insufficient content')
-    } catch (puppeteerError) {
-      const puppeteerMessage = puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'
-      console.error('[fetchArticle] All extraction methods failed')
-
-      // Return combined error message
-      throw new Error(`Failed to extract article. Simple fetch: ${errorMessage}. Puppeteer: ${puppeteerMessage}`)
-    }
+    // TODO: Re-enable Puppeteer fallback once Vercel environment is verified
+    // For now, just throw the error so the user sees what's happening
+    throw new Error(`Failed to extract article: ${errorMessage}`)
   }
 }
 
