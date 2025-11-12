@@ -138,7 +138,7 @@ export function InsightsPage() {
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
               }}>
                 <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                  Your synthesis <span style={{ color: 'rgba(100, 180, 255, 1)' }}>insights</span>
+                  Your synthesis <span style={{ color: 'var(--premium-blue)' }}>insights</span>
                 </h2>
                 <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
                   How your thinking evolved and patterns emerged

@@ -12,6 +12,9 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { Select } from '../components/ui/select'
 import { Label } from '../components/ui/label'
+import { PremiumTabs } from '../components/ui/premium-tabs'
+import { SkeletonCard } from '../components/ui/skeleton-card'
+import { EmptyState } from '../components/ui/empty-state'
 import { Calendar, Brain, Database, Network, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
@@ -151,7 +154,8 @@ export function SuggestionsPage() {
         }} />
       </div>
       <motion.div
-        className="min-h-screen pt-12 pb-24 relative z-10"
+        className="min-h-screen pb-24 relative z-10"
+        style={{ paddingTop: '5.5rem' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
@@ -215,31 +219,18 @@ export function SuggestionsPage() {
 
       {/* Controls */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap gap-2 justify-center mb-10">
-            {[
-              { key: 'pending', label: 'New' },
-              { key: 'spark', label: 'Sparks' },
-              { key: 'saved', label: 'Saved' },
-              { key: 'built', label: 'Built' },
-              { key: 'all', label: 'All' }
-            ].map(({ key, label }) => (
-              <Button
-                key={key}
-                variant={filter === key ? 'default' : 'outline'}
-                onClick={() => setFilter(key as typeof filter)}
-                className={`whitespace-nowrap px-4 py-2.5 rounded-full font-medium transition-all ${
-                  filter === key
-                    ? 'premium-btn-primary shadow-md'
-                    : 'premium-glass border-2'
-                }`}
-                style={filter !== key ? {
-                  color: 'var(--premium-text-secondary)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)'
-                } : undefined}
-              >
-                {label}
-              </Button>
-            ))}
+        <div className="flex justify-center mb-10">
+          <PremiumTabs
+            tabs={[
+              { id: 'pending', label: 'New' },
+              { id: 'spark', label: 'Sparks' },
+              { id: 'saved', label: 'Saved' },
+              { id: 'built', label: 'Built' },
+              { id: 'all', label: 'All' }
+            ]}
+            activeTab={filter}
+            onChange={(tabId) => setFilter(tabId as typeof filter)}
+          />
         </div>
 
         {/* Error Banner */}
@@ -249,27 +240,24 @@ export function SuggestionsPage() {
             background: 'rgba(220, 38, 38, 0.1)'
           }}>
             <CardContent className="pt-6">
-              <p className="text-sm font-semibold" style={{ color: '#fca5a5' }}>{error}</p>
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-semibold" style={{ color: '#fca5a5' }}>{error}</p>
+                <Button
+                  onClick={() => fetchSuggestions()}
+                  size="sm"
+                  variant="outline"
+                  className="whitespace-nowrap"
+                >
+                  Retry
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {/* Loading State */}
         {loading ? (
-          <Card className="premium-card">
-            <CardContent className="py-24">
-              <div className="text-center">
-                <div
-                  className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4"
-                  style={{
-                    borderColor: 'var(--premium-blue)',
-                    borderRightColor: 'transparent'
-                  }}
-                ></div>
-                <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Loading suggestions...</p>
-              </div>
-            </CardContent>
-          </Card>
+          <SkeletonCard variant="grid" count={6} />
         ) : suggestions.length === 0 ? (
           /* Empty State */
           <Card className="premium-card">

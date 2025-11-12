@@ -19,6 +19,8 @@ import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
+import { SkeletonCard } from '../components/ui/skeleton-card'
+import { EmptyState } from '../components/ui/empty-state'
 import {
   Layers,
   ArrowRight,
@@ -107,22 +109,12 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
       }}>
         <div className="mb-5">
           <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-            Get <span style={{ color: 'rgba(100, 180, 255, 1)' }}>inspiration</span>
+            Get <span style={{ color: 'var(--premium-blue)' }}>inspiration</span>
           </h2>
         </div>
 
         {loading ? (
-          <div className="premium-glass-subtle p-3 rounded-xl animate-pulse">
-            {/* Skeleton loader - compact */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-5 w-5 rounded bg-white/10"></div>
-                <div className="h-5 bg-white/10 rounded w-2/3"></div>
-              </div>
-              <div className="h-4 bg-white/10 rounded w-full"></div>
-              <div className="h-4 bg-white/10 rounded w-4/5"></div>
-            </div>
-          </div>
+          <SkeletonCard variant="list" count={1} />
         ) : inspiration && inspiration.type !== 'empty' ? (
           <div className="space-y-3">
             <Link
@@ -196,12 +188,11 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             )}
           </div>
         ) : (
-          <div className="premium-glass-subtle p-4 rounded-xl text-center">
-            <Sparkles className="h-8 w-8 mx-auto mb-3" style={{ color: 'var(--premium-amber)', opacity: 0.5 }} />
-            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-              No content to inspire from yet. Add thoughts, articles, or projects!
-            </p>
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            title="No inspiration yet"
+            description="No content to inspire from yet. Add thoughts, articles, or projects!"
+          />
         )}
       </div>
     </section>
@@ -621,7 +612,7 @@ export function HomePage() {
           }}>
             <div className="mb-4">
               <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Add something <span style={{ color: 'rgba(100, 180, 255, 1)' }}>new</span>
+                Add something <span style={{ color: 'var(--premium-blue)' }}>new</span>
               </h2>
             </div>
 
@@ -688,24 +679,12 @@ export function HomePage() {
           }}>
             <div className="mb-5">
               <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Keep the <span style={{ color: 'rgba(100, 180, 255, 1)' }}>momentum</span>
+                Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
               </h2>
             </div>
 
             {projectsLoading ? (
-              <div className="space-y-3">
-                {/* Skeleton loaders - compact */}
-                {[1, 2].map((i) => (
-                  <div key={i} className="premium-glass-subtle p-3 rounded-xl animate-pulse">
-                    {/* Title skeleton */}
-                    <div className="h-5 bg-white/10 rounded-lg w-2/3 mb-2"></div>
-                    {/* Next Action box skeleton */}
-                    <div className="rounded-lg p-2 border border-white/10 bg-white/5">
-                      <div className="h-3 bg-white/10 rounded w-4/5"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SkeletonCard variant="list" count={2} />
             ) : projectsToShow.length > 0 ? (
               <div className="space-y-3">
                 {projectsToShow.map((project) => {
@@ -824,27 +803,23 @@ export function HomePage() {
                 </Link>
               </div>
             ) : (
-              <div className="premium-glass-subtle p-4 rounded-xl text-center">
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-full mb-3" style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)'
-                }}>
-                  <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-                <h3 className="font-bold mb-2 premium-text-platinum text-sm">Ready to build something?</h3>
-                <p className="mb-3 text-xs max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Projects are where ideas become reality.
-                </p>
-                <Link
-                  to="/projects"
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                  style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    color: 'var(--premium-blue)'
-                  }}
-                >
-                  Create Project <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
+              <EmptyState
+                icon={Layers}
+                title="Ready to build something?"
+                description="Projects are where ideas become reality."
+                action={
+                  <Link
+                    to="/projects"
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                      color: 'var(--premium-blue)'
+                    }}
+                  >
+                    Create Project <ArrowRight className="h-4 w-4" />
+                  </Link>
+                }
+              />
             )}
           </div>
         </section>
@@ -865,7 +840,7 @@ export function HomePage() {
           }}>
             <div className="mb-6">
               <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Or just <span style={{ color: 'rgba(100, 180, 255, 1)' }}>explore</span>
+                Or just <span style={{ color: 'var(--premium-blue)' }}>explore</span>
               </h2>
             </div>
 

@@ -143,7 +143,7 @@ export function ProjectsPage() {
               onClick={() => navigate('/search')}
               className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                color: 'rgba(100, 180, 255, 1)'
+                color: 'var(--premium-blue)'
               }}
               title="Search everything"
             >
@@ -154,7 +154,8 @@ export function ProjectsPage() {
       </div>
 
       <motion.div
-        className="pt-20 pb-24 relative z-10"
+        className="pb-24 relative z-10"
+        style={{ paddingTop: '5.5rem' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}

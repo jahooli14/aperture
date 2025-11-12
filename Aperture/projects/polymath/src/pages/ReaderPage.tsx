@@ -477,7 +477,7 @@ export function ReaderPage() {
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="sticky top-0 z-50 premium-glass-strong"
+        className="sticky top-0 z-40 premium-glass-strong"
       >
         {/* Progress Bar */}
         <div className="h-0.5" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>

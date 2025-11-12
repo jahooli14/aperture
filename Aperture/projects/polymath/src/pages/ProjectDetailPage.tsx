@@ -530,7 +530,7 @@ export function ProjectDetailPage() {
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Sticky Header */}
-      <div className="premium-glass-strong sticky top-0 z-10">
+      <div className="premium-glass-strong sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
             <button

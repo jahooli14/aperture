@@ -389,7 +389,7 @@ export function MemoriesPage() {
                 onClick={() => navigate('/search')}
                 className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
                 style={{
-                  color: 'rgba(100, 180, 255, 1)'
+                  color: 'var(--premium-blue)'
                 }}
                 title="Search everything"
               >
@@ -399,7 +399,7 @@ export function MemoriesPage() {
           </div>
         </div>
 
-        <div className="pt-20 pb-24 relative z-10">
+        <div className="pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}

@@ -413,7 +413,7 @@ export function ReadingPage() {
               onClick={() => setShowSaveDialog(true)}
               className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                color: 'rgba(100, 180, 255, 1)'
+                color: 'var(--premium-blue)'
               }}
               title="New Article"
             >
@@ -424,7 +424,7 @@ export function ReadingPage() {
               onClick={() => navigate('/search')}
               className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
               style={{
-                color: 'rgba(100, 180, 255, 1)'
+                color: 'var(--premium-blue)'
               }}
               title="Search everything"
             >
