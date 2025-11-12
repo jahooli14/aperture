@@ -228,6 +228,13 @@ export function ReadingPage() {
     if (shareData) {
       console.log('[ReadingPage] Processing shared URL from sessionStorage:', shareData.url)
 
+      // Clean URL params to prevent confusion (avoid reload loop by using replace)
+      if (window.location.search) {
+        const cleanUrl = window.location.pathname
+        window.history.replaceState({}, '', cleanUrl)
+        console.log('[ReadingPage] Cleaned URL params from address bar')
+      }
+
       const handleShare = async () => {
         try {
           // Show loading toast
