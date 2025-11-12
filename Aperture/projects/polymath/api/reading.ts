@@ -16,6 +16,18 @@ import { parseHTML } from 'linkedom'
 const rssParser = new Parser()
 
 /**
+ * Decode HTML entities in text
+ * Converts &rsquo; to ', &mdash; to —, &amp; to &, etc.
+ */
+function decodeHTMLEntities(text: string): string {
+  if (!text) return text
+
+  // Use linkedom's HTML parsing to decode entities
+  const { document } = parseHTML(`<div>${text}</div>`)
+  return document.querySelector('div')?.textContent || text
+}
+
+/**
  * Extract article content using Mozilla Readability (same as Omnivore)
  * This is the industry-standard, battle-tested extraction library
  */
@@ -86,7 +98,7 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 
     // Return in format expected by rest of codebase
     return {
-      title: article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled',
+      title: decodeHTMLEntities(article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled'),
       content: article.content || '',
       excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
       author: article.byline || getMetaContent(['author', 'article:author']) || null,
@@ -157,7 +169,7 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
       $('title').text() ||
       'Untitled'
 
-    title = title.trim().substring(0, 200)
+    title = decodeHTMLEntities(title.trim().substring(0, 200))
 
     // Try to find the main content area using common selectors
     let content = ''
@@ -771,7 +783,7 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     console.log('[Jina AI] Final extraction - Title:', title, 'Original content length:', contentWithoutH1.length, 'Cleaned content length:', cleanedContent.length)
 
     return {
-      title: title || 'Untitled',
+      title: decodeHTMLEntities(title || 'Untitled'),
       content: cleanedContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
       author: data.data.author || null,
@@ -1479,7 +1491,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               await supabase.from('reading_queue').insert([{
                 user_id: userId,
                 url: item.link || '',
-                title: item.title || 'Untitled',
+                title: decodeHTMLEntities(item.title || 'Untitled'),
                 author: item.creator || item.author || null,
                 content,
                 excerpt: content.substring(0, 200),
@@ -1530,7 +1542,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const items = feedData.items.slice(0, 20).map(item => ({
           guid: item.guid || item.link,
           feed_id: feed.id,
-          title: item.title || 'Untitled',
+          title: decodeHTMLEntities(item.title || 'Untitled'),
           link: item.link || '',
           description: item.contentSnippet || item.description || null,
           published_at: item.pubDate || item.isoDate || null,
@@ -1636,7 +1648,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             await supabase.from('reading_queue').insert([{
               user_id: userId,
               url: item.link || '',
-              title: item.title || 'Untitled',
+              title: decodeHTMLEntities(item.title || 'Untitled'),
               author: item.creator || item.author || null,
               content,
               excerpt: content.substring(0, 200),
