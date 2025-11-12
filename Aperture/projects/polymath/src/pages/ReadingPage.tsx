@@ -18,6 +18,9 @@ import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
 import { useBulkSelection } from '../hooks/useBulkSelection'
 import { BulkActionsBar } from '../components/BulkActionsBar'
+import { PremiumTabs } from '../components/ui/premium-tabs'
+import { EmptyState } from '../components/ui/empty-state'
+import { SkeletonCard } from '../components/ui/skeleton-card'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
@@ -288,12 +291,6 @@ export function ReadingPage() {
     }
   }
 
-  const tabs: { key: FilterTab; label: string; icon: any }[] = [
-    { key: 'queue', label: 'Queue', icon: List },
-    { key: 'updates', label: 'Updates', icon: Rss },
-    { key: 'archived', label: 'Archived', icon: Archive },
-  ]
-
   // Memoize safe articles to prevent useMemo dependency issues
   const safeArticles = React.useMemo(() => {
     return Array.isArray(articles) ? articles : []
@@ -329,6 +326,12 @@ export function ReadingPage() {
     }
     return safeArticles.filter(a => a.status === tab).length
   }
+
+  const tabs = [
+    { id: 'queue', label: 'Queue', count: getTabCount('queue') },
+    { id: 'updates', label: 'Updates', count: getTabCount('updates') },
+    { id: 'archived', label: 'Archived', count: getTabCount('archived') },
+  ]
 
   // Bulk actions handlers
   const handleBulkArchive = async () => {
@@ -398,29 +401,12 @@ export function ReadingPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-1 flex-nowrap">
-            {tabs.map((tab) => {
-              const count = getTabCount(tab.key)
-              const isActive = activeTab === tab.key
-
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => handleTabChange(tab.key)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
-                  style={{
-                    backgroundColor: isActive ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
-                    color: isActive ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
-                    borderColor: isActive ? 'var(--premium-blue)' : 'transparent',
-                    backdropFilter: 'blur(12px)'
-                  }}
-                >
-                  {tab.label}
-                  <span className="opacity-60">({count})</span>
-                </button>
-              )
-            })}
-          </div>
+          <PremiumTabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            className="flex-nowrap"
+          />
 
           <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             <button
@@ -454,40 +440,19 @@ export function ReadingPage() {
         {activeTab === 'updates' && (
           <>
             {loadingRSS && rssItems.length === 0 ? (
-              <div className="space-y-4">
-                {/* Skeleton loaders for RSS items */}
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="premium-glass-subtle p-4 rounded-xl animate-pulse">
-                    <div className="h-5 bg-white/10 rounded-lg w-3/4 mb-2"></div>
-                    <div className="space-y-2 mb-3">
-                      <div className="h-4 bg-white/10 rounded w-full"></div>
-                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="h-8 bg-white/10 rounded-lg w-20"></div>
-                      <div className="h-8 bg-white/10 rounded-lg w-24"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SkeletonCard variant="list" count={5} />
             ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
-              <div className="premium-card p-20 text-center">
-                <div className="flex flex-col items-center justify-center">
-                  <Rss className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
-                  <h3 className="text-xl font-semibold premium-text-platinum mb-2">No RSS feeds yet</h3>
-                  <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-                    Subscribe to RSS feeds in Settings to see updates here
-                  </p>
-                </div>
-              </div>
+              <EmptyState
+                icon={Rss}
+                title="No RSS feeds yet"
+                description="Subscribe to RSS feeds in Settings to see updates here"
+              />
             ) : (!rssItems || !Array.isArray(rssItems) || rssItems.length === 0) ? (
-              <div className="premium-card p-20 text-center">
-                <div className="flex flex-col items-center justify-center">
-                  <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
-                  <h3 className="text-xl font-semibold premium-text-platinum mb-2">No updates yet</h3>
-                  <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-                    Click "Sync Feeds" to fetch latest articles from your RSS feeds
-                  </p>
+              <EmptyState
+                icon={BookOpen}
+                title="No updates yet"
+                description='Click "Sync Feeds" to fetch latest articles from your RSS feeds'
+                action={
                   <button
                     onClick={handleRSSSync}
                     disabled={syncing}
@@ -500,8 +465,8 @@ export function ReadingPage() {
                     <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
                     {syncing ? 'Syncing...' : 'Sync feeds'}
                   </button>
-                </div>
-              </div>
+                }
+              />
             ) : (
               <Virtuoso
                 style={{ height: 'calc(100vh - 280px)' }}
@@ -531,55 +496,31 @@ export function ReadingPage() {
         {activeTab !== 'updates' && (
           <>
             {loading && articles.length === 0 ? (
-              <div className="space-y-4">
-                {/* Skeleton loaders like HomePage */}
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
-                    {/* Thumbnail & title skeleton */}
-                    <div className="flex gap-4 mb-4">
-                      <div className="h-24 w-32 bg-white/10 rounded-lg flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-2"></div>
-                        <div className="h-4 bg-white/10 rounded w-1/2 mb-2"></div>
-                        <div className="h-4 bg-white/10 rounded w-2/3"></div>
-                      </div>
-                    </div>
-                    {/* Meta skeleton */}
-                    <div className="flex gap-2">
-                      <div className="h-6 bg-white/10 rounded-full w-20"></div>
-                      <div className="h-6 bg-white/10 rounded-full w-24"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SkeletonCard variant="default" count={4} />
             ) : filteredArticles.length === 0 ? (
-          <div className="premium-card p-20 text-center">
-            <div className="flex flex-col items-center justify-center">
-              <BookOpen className="h-16 w-16 mb-4" style={{ color: 'var(--premium-blue)' }} />
-              <h3 className="text-xl font-semibold premium-text-platinum mb-2">
-                {activeTab === 'queue'
-                  ? 'No articles yet'
-                  : `No ${activeTab} articles`}
-              </h3>
-              <p className="text-center max-w-md mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-                {activeTab === 'queue'
-                  ? 'Save your first article to start building your reading queue'
-                  : `You don't have any ${activeTab} articles yet`}
-              </p>
-              {activeTab === 'queue' && (
-                <button
-                  onClick={() => setShowSaveDialog(true)}
-                  className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
-                  style={{
-                    color: 'var(--premium-blue)'
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                  Save Your First Article
-                </button>
-              )}
-            </div>
-          </div>
+              <EmptyState
+                icon={BookOpen}
+                title={activeTab === 'queue' ? 'No articles yet' : `No ${activeTab} articles`}
+                description={
+                  activeTab === 'queue'
+                    ? 'Save your first article to start building your reading queue'
+                    : `You don't have any ${activeTab} articles yet`
+                }
+                action={
+                  activeTab === 'queue' ? (
+                    <button
+                      onClick={() => setShowSaveDialog(true)}
+                      className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
+                      style={{
+                        color: 'var(--premium-blue)'
+                      }}
+                    >
+                      <Plus className="h-5 w-5" />
+                      Save Your First Article
+                    </button>
+                  ) : undefined
+                }
+              />
         ) : (
           <Virtuoso
             style={{ height: 'calc(100vh - 240px)' }}

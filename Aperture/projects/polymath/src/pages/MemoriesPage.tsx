@@ -22,6 +22,8 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
+import { PremiumTabs } from '../components/ui/premium-tabs'
+import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
@@ -367,50 +369,19 @@ export function MemoriesPage() {
             </div>
 
             {/* View Toggle */}
-            <div className="flex gap-1 flex-nowrap">
-              <button
-                onClick={() => setView('foundational')}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
-                style={{
-                  backgroundColor: view === 'foundational' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
-                  color: view === 'foundational' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
-                  borderColor: view === 'foundational' ? 'var(--premium-blue)' : 'transparent',
-                  backdropFilter: 'blur(12px)'
-                }}
-              >
-                Core {progress && `(${progress.completed_required}/${progress.total_required})`}
-              </button>
-              <button
-                onClick={() => setView('all')}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
-                style={{
-                  backgroundColor: view === 'all' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
-                  color: view === 'all' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
-                  borderColor: view === 'all' ? 'var(--premium-blue)' : 'transparent',
-                  backdropFilter: 'blur(12px)'
-                }}
-              >
-                All ({memories.length})
-              </button>
-              <button
-                onClick={() => setView('resurfacing')}
-                className="relative flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
-                style={{
-                  backgroundColor: view === 'resurfacing' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
-                  color: view === 'resurfacing' ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
-                  borderColor: view === 'resurfacing' ? 'var(--premium-blue)' : 'transparent',
-                  backdropFilter: 'blur(12px)'
-                }}
-              >
-                {resurfacing.length > 0 && view !== 'resurfacing' && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full animate-ping" style={{ backgroundColor: 'var(--premium-amber)' }} />
-                )}
-                {resurfacing.length > 0 && view !== 'resurfacing' && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full" style={{ backgroundColor: 'var(--premium-amber)' }} />
-                )}
-                Resurface ({resurfacing.length})
-              </button>
-            </div>
+            <PremiumTabs
+              tabs={[
+                {
+                  id: 'foundational',
+                  label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
+                },
+                { id: 'all', label: `All (${memories.length})` },
+                { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
+              ]}
+              activeTab={view}
+              onChange={(tabId) => setView(tabId as typeof view)}
+              className="flex-nowrap"
+            />
 
             <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
               {view === 'all' && <CreateMemoryDialog />}
@@ -526,23 +497,7 @@ export function MemoriesPage() {
             {/* Loading State - Show skeleton loaders like HomePage */}
             {isLoading && memories.length === 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
-                    {/* Title skeleton */}
-                    <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
-                    {/* Body skeleton */}
-                    <div className="space-y-2 mb-4">
-                      <div className="h-4 bg-white/10 rounded w-full"></div>
-                      <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                      <div className="h-4 bg-white/10 rounded w-4/5"></div>
-                    </div>
-                    {/* Tags skeleton */}
-                    <div className="flex gap-2">
-                      <div className="h-6 bg-white/10 rounded-full w-16"></div>
-                      <div className="h-6 bg-white/10 rounded-full w-20"></div>
-                    </div>
-                  </div>
-                ))}
+                <SkeletonCard variant="grid" count={6} />
               </div>
             )}
           </>
@@ -551,16 +506,7 @@ export function MemoriesPage() {
         {/* Resurfacing Tab Loading - Show skeleton loaders */}
         {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="premium-glass-subtle p-6 rounded-xl animate-pulse">
-                <div className="h-6 bg-white/10 rounded-lg w-3/4 mb-3"></div>
-                <div className="space-y-2 mb-4">
-                  <div className="h-4 bg-white/10 rounded w-full"></div>
-                  <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                </div>
-                <div className="h-10 bg-white/10 rounded-lg w-full"></div>
-              </div>
-            ))}
+            <SkeletonCard variant="grid" count={3} />
           </div>
         )}
 
@@ -652,27 +598,15 @@ export function MemoriesPage() {
         {view === 'all' && !isLoading && memories.length > 0 && (
           <>
             {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
-            <div className="flex gap-1 mb-6">
-              {[
-                { key: 'recent', label: 'Recent' },
-                { key: 'themes', label: 'By Theme' }
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setMemoryView(key as typeof memoryView)}
-                  className={`px-4 py-1.5 text-sm font-medium transition-all rounded-lg ${
-                    memoryView === key
-                      ? ''
-                      : 'opacity-50 hover:opacity-75'
-                  }`}
-                  style={{
-                    backgroundColor: memoryView === key ? 'var(--premium-bg-3)' : 'transparent',
-                    color: memoryView === key ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="mb-6">
+              <PremiumTabs
+                tabs={[
+                  { id: 'recent', label: 'Recent' },
+                  { id: 'themes', label: 'By Theme' }
+                ]}
+                activeTab={memoryView}
+                onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
+              />
             </div>
 
             {/* Theme cluster detail view */}

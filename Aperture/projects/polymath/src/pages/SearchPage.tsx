@@ -10,6 +10,8 @@ import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb } from 
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { EmptyState } from '../components/ui/empty-state'
+import { PremiumCard } from '../components/ui/premium-card'
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article' | 'suggestion'
@@ -280,20 +282,11 @@ export function SearchPage() {
 
               {/* Results List */}
               {results.results.length === 0 ? (
-                <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-                  background: 'var(--premium-bg-2)',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-                }}>
-                  <div className="p-20 text-center">
-                    <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
-                    <h3 className="text-xl font-semibold mb-2 premium-text-platinum">
-                      No results found
-                    </h3>
-                    <p style={{ color: 'var(--premium-text-secondary)' }}>
-                      Try a different search term or use voice search
-                    </p>
-                  </div>
-                </div>
+                <EmptyState
+                  icon={Search}
+                  title="No results found"
+                  description="Try a different search term or use voice search"
+                />
               ) : (
                 <div className="space-y-3">
                   {results.results.map((result, index) => (
@@ -374,20 +367,11 @@ export function SearchPage() {
           )}
 
           {!loading && !results && query && (
-            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-              background: 'var(--premium-bg-2)',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-            }}>
-              <div className="p-20 text-center">
-                <Search className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
-                <h3 className="text-xl font-semibold mb-2 premium-text-platinum">
-                  Ready to search
-                </h3>
-                <p style={{ color: 'var(--premium-text-secondary)' }}>
-                  Enter a search term or use voice search to get started
-                </p>
-              </div>
-            </div>
+            <EmptyState
+              icon={Search}
+              title="Ready to search"
+              description="Enter a search term or use voice search to get started"
+            />
           )}
         </div>
       </div>

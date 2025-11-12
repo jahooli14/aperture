@@ -11,7 +11,9 @@ import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { SkeletonCard } from '../components/ui/skeleton'
+import { SkeletonCard } from '../components/ui/skeleton-card'
+import { PremiumTabs } from '../components/ui/premium-tabs'
+import { EmptyState } from '../components/ui/empty-state'
 import { Layers, Sparkles, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
@@ -122,29 +124,18 @@ export function ProjectsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-1 flex-nowrap">
-            {[
-              { key: 'all', label: 'All' },
-              { key: 'upcoming', label: 'Next' },
-              { key: 'active', label: 'Active' },
-              { key: 'dormant', label: 'Dormant' },
-              { key: 'completed', label: 'Done' }
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key as typeof filter)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap border"
-                style={{
-                  backgroundColor: filter === key ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.08)',
-                  color: filter === key ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
-                  borderColor: filter === key ? 'var(--premium-blue)' : 'transparent',
-                  backdropFilter: 'blur(12px)'
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <PremiumTabs
+            tabs={[
+              { id: 'all', label: 'All' },
+              { id: 'upcoming', label: 'Next' },
+              { id: 'active', label: 'Active' },
+              { id: 'dormant', label: 'Dormant' },
+              { id: 'completed', label: 'Done' }
+            ]}
+            activeTab={filter}
+            onChange={(tabId) => setFilter(tabId as typeof filter)}
+            className="flex-nowrap"
+          />
 
           <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             <CreateProjectDialog />
@@ -251,29 +242,15 @@ export function ProjectsPage() {
         {/* Loading State - Only show if no data yet (prevent flicker on refresh) */}
         {loading && projects.length === 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <SkeletonCard key={i} />
-            ))}
+            <SkeletonCard variant="grid" count={6} />
           </div>
         ) : projects.length === 0 ? (
           /* Empty State */
-          <Card style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="py-24">
-              <div className="text-center space-y-6">
-                <div className="inline-flex items-center justify-center">
-                  <Layers className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-                <h3 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>No projects yet</h3>
-                <p className="max-w-md mx-auto" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Build a project from a suggestion or create one manually to get started on your creative journey
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Layers}
+            title="No projects yet"
+            description="Build a project from a suggestion or create one manually to get started on your creative journey"
+          />
         ) : (
           /* Grid View - Virtualized Compact/Expandable Cards */
           <div className="w-full max-w-full overflow-hidden mt-8">
