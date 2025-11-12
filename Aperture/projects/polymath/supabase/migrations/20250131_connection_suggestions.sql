@@ -68,7 +68,7 @@ SELECT
   'thought_created' AS event_type,
   m.id AS event_id,
   m.created_at AS event_time,
-  m.user_id,
+  NULL::UUID AS user_id,
   jsonb_build_object(
     'type', 'thought',
     'id', m.id,
