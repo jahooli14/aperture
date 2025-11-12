@@ -56,16 +56,20 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
 
     console.log('[Puppeteer] Navigating to URL...')
 
-    // Navigate to page with 30 second timeout, wait for network to be mostly idle
+    // Navigate to page with faster timeout and less strict wait condition
+    // domcontentloaded is faster than networkidle2 for most sites
     await page.goto(url, {
-      waitUntil: 'networkidle2',
-      timeout: 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 20000
     })
+
+    // Wait a bit for any immediate JS to run
+    await page.waitForTimeout(1000)
 
     console.log('[Puppeteer] Page loaded, scrolling to trigger lazy content...')
 
-    // Scroll page to trigger lazy-loaded content (Omnivore's approach)
-    // Scroll in 500px increments with 10ms intervals, with 5 second max timeout
+    // Scroll page to trigger lazy-loaded content (faster than Omnivore's 5s timeout)
+    // Scroll in 500px increments with 10ms intervals, with 2 second max timeout
     await Promise.race([
       page.evaluate(async () => {
         await new Promise<void>((resolve) => {
@@ -83,7 +87,7 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
           }, 10)
         })
       }),
-      new Promise(resolve => setTimeout(resolve, 5000))
+      new Promise(resolve => setTimeout(resolve, 2000))
     ])
 
     console.log('[Puppeteer] Scrolling complete, applying DOM transformations...')
@@ -413,47 +417,47 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
 }
 
 /**
- * Extract article content - Omnivore's robust approach
- * Tries Puppeteer (browser rendering) first, falls back to simple fetch if needed
- * This is how Omnivore achieves 95%+ success rate vs 50% with simple fetch
+ * Extract article content - Optimized approach
+ * Try fast simple fetch first, use Puppeteer only for JS-heavy sites
+ * This gives best of both worlds: speed for simple sites + robustness for complex ones
  */
 async function fetchArticle(url: string) {
-  console.log('[fetchArticle] Starting article extraction with Omnivore approach:', url)
+  console.log('[fetchArticle] Starting article extraction:', url)
 
   try {
-    // Try Puppeteer first (most robust - handles JS, SPAs, lazy loading)
-    console.log('[fetchArticle] Attempting Puppeteer extraction (Omnivore method)...')
-    const result = await fetchArticleWithPuppeteer(url)
+    // Try simple Readability first (fast - 1-2 seconds for most sites)
+    console.log('[fetchArticle] Attempting fast Readability extraction...')
+    const result = await fetchArticleWithReadability(url)
 
     // Check if extraction returned meaningful content
     if (result.content && result.content.length > 100) {
-      console.log('[fetchArticle] ✅ Puppeteer extraction succeeded')
+      console.log('[fetchArticle] ✅ Fast Readability extraction succeeded')
       return result
     }
 
-    console.log('[fetchArticle] Puppeteer returned insufficient content, trying fallback...')
-    throw new Error('Puppeteer extraction returned insufficient content')
-  } catch (puppeteerError) {
-    const errorMessage = puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'
-    console.error('[fetchArticle] Puppeteer failed:', errorMessage)
+    console.log('[fetchArticle] Readability returned insufficient content, trying Puppeteer...')
+    throw new Error('Readability extraction returned insufficient content')
+  } catch (readabilityError) {
+    const errorMessage = readabilityError instanceof Error ? readabilityError.message : 'Unknown error'
+    console.error('[fetchArticle] Simple fetch failed:', errorMessage)
 
-    // Try simple Readability as fallback (for static HTML sites)
+    // Try Puppeteer as fallback (for JS-heavy sites, SPAs, etc.)
     try {
-      console.log('[fetchArticle] Attempting simple Readability fallback...')
-      const result = await fetchArticleWithReadability(url)
+      console.log('[fetchArticle] Attempting Puppeteer extraction for JS-heavy site...')
+      const result = await fetchArticleWithPuppeteer(url)
 
       if (result.content && result.content.length > 100) {
-        console.log('[fetchArticle] ✅ Fallback Readability extraction succeeded')
+        console.log('[fetchArticle] ✅ Puppeteer extraction succeeded')
         return result
       }
 
-      throw new Error('Readability extraction returned insufficient content')
-    } catch (fallbackError) {
-      const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error'
+      throw new Error('Puppeteer extraction returned insufficient content')
+    } catch (puppeteerError) {
+      const puppeteerMessage = puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'
       console.error('[fetchArticle] All extraction methods failed')
 
-      // Return the original Puppeteer error as it's more informative
-      throw new Error(`Failed to extract article: ${errorMessage}`)
+      // Return combined error message
+      throw new Error(`Failed to extract article. Simple fetch: ${errorMessage}. Puppeteer: ${puppeteerMessage}`)
     }
   }
 }
