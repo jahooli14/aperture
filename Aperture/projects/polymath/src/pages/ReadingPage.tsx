@@ -221,12 +221,45 @@ export function ReadingPage() {
   }
 
   // Handle shared URLs from Web Share Target API
-  // Using sessionStorage approach to avoid React Router timing issues
+  // Using sessionStorage approach with URL param fallback
   useEffect(() => {
-    const shareData = consumeShareData()
+    console.log('[ReadingPage] Checking for share data...')
+    console.log('[ReadingPage] Current URL:', location.pathname + location.search)
 
-    if (shareData) {
-      console.log('[ReadingPage] Processing shared URL from sessionStorage:', shareData.url)
+    // First try sessionStorage
+    let shareUrl: string | undefined = consumeShareData()?.url
+
+    // Fallback: check URL params directly (in case sessionStorage failed)
+    if (!shareUrl) {
+      const params = new URLSearchParams(location.search)
+
+      // Check all possible parameter names
+      const textParam = params.get('text')
+      const urlParam = params.get('url')
+      const shareTextParam = params.get('share_text')
+      const shareUrlParam = params.get('share_url')
+
+      console.log('[ReadingPage] Checking URL params - text:', textParam, 'url:', urlParam)
+      console.log('[ReadingPage] Checking URL params - share_text:', shareTextParam, 'share_url:', shareUrlParam)
+
+      // Check text parameter first (Android puts URL here)
+      if (textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
+        console.log('[ReadingPage] Found URL in text parameter (Android behavior):', textParam)
+        shareUrl = textParam
+      } else if (urlParam) {
+        console.log('[ReadingPage] Found URL in url parameter:', urlParam)
+        shareUrl = urlParam
+      } else if (shareTextParam && (shareTextParam.startsWith('http://') || shareTextParam.startsWith('https://'))) {
+        console.log('[ReadingPage] Found URL in share_text parameter:', shareTextParam)
+        shareUrl = shareTextParam
+      } else if (shareUrlParam) {
+        console.log('[ReadingPage] Found URL in share_url parameter:', shareUrlParam)
+        shareUrl = shareUrlParam
+      }
+    }
+
+    if (shareUrl) {
+      console.log('[ReadingPage] Processing shared URL:', shareUrl)
 
       // Clean URL params to prevent confusion (avoid reload loop by using replace)
       if (window.location.search) {
@@ -240,11 +273,11 @@ export function ReadingPage() {
           // Show loading toast
           addToast({
             title: '📰 Saving shared article...',
-            description: 'Extracting content from ' + new URL(shareData.url).hostname,
+            description: 'Extracting content from ' + new URL(shareUrl).hostname,
             variant: 'default',
           })
 
-          const article = await saveArticle({ url: shareData.url })
+          const article = await saveArticle({ url: shareUrl })
           console.log('[ReadingPage] Article saved successfully:', article.id)
 
           addToast({
@@ -267,6 +300,8 @@ export function ReadingPage() {
       }
 
       handleShare()
+    } else {
+      console.log('[ReadingPage] No share data found in sessionStorage or URL params')
     }
   }, []) // Run once on mount
 
