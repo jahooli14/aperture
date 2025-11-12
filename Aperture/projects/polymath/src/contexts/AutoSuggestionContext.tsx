@@ -47,6 +47,10 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
         .eq('status', 'pending')
 
       if (error) {
+        // If table doesn't exist yet (PGRST205), fail silently
+        if (error.code === 'PGRST205') {
+          return
+        }
         console.error('[AutoSuggestion] Error loading suggestions:', error)
         return
       }
