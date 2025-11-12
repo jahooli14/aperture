@@ -12,185 +12,8 @@ import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
-import puppeteer from 'puppeteer-core'
-import chromium from '@sparticuz/chromium'
-import * as cheerio from 'cheerio'
 
 const rssParser = new Parser()
-
-/**
- * Extract article content using Puppeteer + Mozilla Readability (Omnivore's approach)
- * This renders JavaScript, waits for content to load, and scrolls to trigger lazy-loading
- * Most robust method - works for 95%+ of sites including SPAs and JS-heavy sites
- */
-async function fetchArticleWithPuppeteer(url: string): Promise<any> {
-  console.log('[Puppeteer] Fetching article with browser rendering:', url)
-
-  let browser = null
-
-  try {
-    // Launch browser with Chromium for serverless
-    browser = await puppeteer.launch({
-      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
-      defaultViewport: { width: 1920, height: 1080 },
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    })
-
-    const page = await browser.newPage()
-
-    // Set realistic user agent
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-
-    // Block unnecessary resources to speed up loading
-    await page.setRequestInterception(true)
-    page.on('request', (req) => {
-      const resourceType = req.resourceType()
-      // Block fonts, images in some cases can be blocked too, but we want thumbnails
-      if (resourceType === 'font' || resourceType === 'stylesheet') {
-        req.abort()
-      } else {
-        req.continue()
-      }
-    })
-
-    console.log('[Puppeteer] Navigating to URL...')
-
-    // Navigate to page with faster timeout and less strict wait condition
-    // domcontentloaded is faster than networkidle2 for most sites
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000
-    })
-
-    // Wait a bit for any immediate JS to run
-    await page.waitForTimeout(1000)
-
-    console.log('[Puppeteer] Page loaded, scrolling to trigger lazy content...')
-
-    // Scroll page to trigger lazy-loaded content (faster than Omnivore's 5s timeout)
-    // Scroll in 500px increments with 10ms intervals, with 2 second max timeout
-    await Promise.race([
-      page.evaluate(async () => {
-        await new Promise<void>((resolve) => {
-          let totalHeight = 0
-          const distance = 500
-          const timer = setInterval(() => {
-            const scrollHeight = document.body.scrollHeight
-            window.scrollBy(0, distance)
-            totalHeight += distance
-
-            if (totalHeight >= scrollHeight) {
-              clearInterval(timer)
-              resolve()
-            }
-          }, 10)
-        })
-      }),
-      new Promise(resolve => setTimeout(resolve, 2000))
-    ])
-
-    console.log('[Puppeteer] Scrolling complete, applying DOM transformations...')
-
-    // Apply DOM transformations (Omnivore's approach)
-    await page.evaluate(() => {
-      // Remove blurred images
-      document.querySelectorAll('img').forEach(img => {
-        const style = window.getComputedStyle(img)
-        if (style.filter && style.filter.includes('blur')) {
-          img.remove()
-        }
-      })
-
-      // Convert background images to img elements
-      document.querySelectorAll('[style*="background-image"]').forEach(el => {
-        const style = window.getComputedStyle(el)
-        const bgImage = style.backgroundImage
-        if (bgImage && bgImage !== 'none') {
-          const match = bgImage.match(/url\(['"]?([^'"]+)['"]?\)/)
-          if (match && match[1]) {
-            const img = document.createElement('img')
-            img.src = match[1]
-            img.alt = el.getAttribute('aria-label') || ''
-            el.appendChild(img)
-          }
-        }
-      })
-    })
-
-    // Get the fully-rendered HTML
-    const html = await page.content()
-    console.log('[Puppeteer] HTML extracted, length:', html.length)
-
-    await browser.close()
-    browser = null
-
-    // Parse HTML with linkedom (DOM implementation for Node.js)
-    const { document } = parseHTML(html)
-
-    // Set base URL for relative links
-    const baseURL = new URL(url)
-    const base = document.createElement('base')
-    base.href = baseURL.origin
-    document.head?.appendChild(base)
-
-    // Use Mozilla Readability to extract article content
-    const reader = new Readability(document, {
-      debug: false,
-      maxElemsToParse: 0, // No limit
-      nbTopCandidates: 5,
-      charThreshold: 500,
-      classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
-    })
-
-    const article = reader.parse()
-
-    if (!article) {
-      throw new Error('Readability failed to extract article content')
-    }
-
-    console.log('[Puppeteer] Extracted:', article.title)
-
-    // Extract metadata
-    const metaTags = Array.from(document.querySelectorAll('meta'))
-    const getMetaContent = (names: string[]) => {
-      for (const name of names) {
-        const tag = metaTags.find(t =>
-          t.getAttribute('property') === name ||
-          t.getAttribute('name') === name
-        )
-        if (tag) return tag.getAttribute('content')
-      }
-      return null
-    }
-
-    // Return in format expected by rest of codebase
-    return {
-      title: article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled',
-      content: article.content || '',
-      excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
-      author: article.byline || getMetaContent(['author', 'article:author']) || null,
-      source: article.siteName || getMetaContent(['og:site_name']) || extractDomain(url),
-      publishedDate: getMetaContent(['article:published_time']),
-      thumbnailUrl: getMetaContent(['og:image', 'twitter:image']),
-      faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
-      length: article.length || 0
-    }
-  } catch (error: any) {
-    console.error('[Puppeteer] Error:', error.message)
-
-    // Clean up browser if it's still running
-    if (browser) {
-      try {
-        await browser.close()
-      } catch (closeError) {
-        console.error('[Puppeteer] Failed to close browser:', closeError)
-      }
-    }
-
-    throw error
-  }
-}
 
 /**
  * Extract article content using Mozilla Readability (same as Omnivore)
@@ -417,40 +240,28 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
 }
 
 /**
- * Extract article content with timeout protection
- * Currently using simple Readability only (fast and reliable)
- * Puppeteer disabled temporarily - enable after verifying Vercel environment
+ * Extract article content using Mozilla Readability (same as Omnivore)
+ * This is the industry-standard approach used by Firefox, Omnivore, and others
  */
 async function fetchArticle(url: string) {
-  console.log('[fetchArticle] Starting article extraction:', url)
-
-  // Wrap in timeout to prevent hanging (50s timeout, leave 10s for db updates)
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Extraction timeout after 50 seconds')), 50000)
-  })
+  console.log('[fetchArticle] Extracting article with Mozilla Readability:', url)
 
   try {
-    // Try simple Readability (fast - 1-2 seconds for most sites)
-    console.log('[fetchArticle] Attempting Readability extraction...')
-    const result = await Promise.race([
-      fetchArticleWithReadability(url),
-      timeoutPromise
-    ])
+    const result = await fetchArticleWithReadability(url)
 
     // Check if extraction returned meaningful content
     if (result.content && result.content.length > 100) {
-      console.log('[fetchArticle] ✅ Readability extraction succeeded')
+      console.log('[fetchArticle] Readability extraction succeeded')
       return result
     }
 
     console.log('[fetchArticle] Readability returned insufficient content')
-    throw new Error('Readability extraction returned insufficient content - site may require JavaScript rendering')
+    throw new Error('Readability extraction returned insufficient content')
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[fetchArticle] Extraction failed:', errorMessage)
+    console.error('[fetchArticle] Readability failed:', errorMessage)
 
-    // TODO: Re-enable Puppeteer fallback once Vercel environment is verified
-    // For now, just throw the error so the user sees what's happening
+    // For other errors, just throw
     throw new Error(`Failed to extract article: ${errorMessage}`)
   }
 }
@@ -593,63 +404,11 @@ function cleanMarkdownContent(markdown: string): string {
       continue
     }
 
-    // Skip action buttons and navigation
+    // Skip action buttons
     if (
       /^(apply|cancel|confirm|clear|allow all)$/i.test(line) ||
-      /^(back to|view vendor|checkbox label|switch label)$/i.test(line) ||
-      /^(arrow|filters?|category|brand|processor|showing \d+ of)$/i.test(line) ||
-      /^arrow$/i.test(line) ||
-      /^filters?[☰✕✖✗]/i.test(line) ||
-      /^sort\s*by/i.test(line)
+      /^(back to|view vendor|checkbox label|switch label)$/i.test(line)
     ) {
-      continue
-    }
-
-    // Skip e-commerce/product listing UI
-    if (
-      /^(any price|deals|price \(|product name \(|retailer name \()/i.test(line) ||
-      /^showing \d+ of \d+/i.test(line) ||
-      /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i.test(line) ||
-      /^\(\d+[.\d]*-inch/i.test(line) ||
-      /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i.test(line) ||
-      /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip review ratings and numbers
-    if (
-      /^[☆★]{3,5}$/i.test(line) ||
-      /^our review$/i.test(line) ||
-      /^\d+$/.test(line)  // Standalone numbers (product list indexes)
-    ) {
-      continue
-    }
-
-    // Skip author bio lines (long descriptive sentences about people)
-    if (
-      line.length > 100 &&
-      (/\b(editor|journalist|author|writer|contributor|reporter)\b/i.test(line) &&
-       /\b(is an?|has been|known for)\b/i.test(line))
-    ) {
-      continue
-    }
-
-    // Skip domain names and read time indicators
-    if (
-      /^\w+\.(com|net|org|io|co|ai)$/i.test(line) ||
-      /^\d+\s+min$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip "Latest Articles" sections
-    if (/^latest articles?$/i.test(line)) {
-      continue
-    }
-
-    // Skip image credits
-    if (/^\(image credit:/i.test(line)) {
       continue
     }
 
@@ -670,31 +429,7 @@ function cleanMarkdownContent(markdown: string): string {
     cleaned.pop()
   }
 
-  // Join and do final inline cleanup for concatenated patterns
-  let result = cleaned.join('\n')
-
-  // Remove inline e-commerce patterns that might be concatenated
-  const inlinePatterns = [
-    /Filters?[☰✕✖✗]/gi,
-    /SORT\s*BY.{0,15}?(low to high|high to low|A to Z|Z to A)/gi,  // Sort options
-    /Price \((low to high|high to low)\)/gi,
-    /Product Name \([AZ]+ to [AZ]+\)/gi,
-    /Retailer name \([AZ]+ to [AZ]+\)/gi,
-    /\(Image credit:[^)]{0,100}\)/gi,  // Limited to prevent backtracking
-    /Our Review\s*[☆★]{3,5}/gi
-  ]
-
-  inlinePatterns.forEach(pattern => {
-    result = result.replace(pattern, '')
-  })
-
-  // Clean up any resulting double spaces or empty lines
-  result = result
-    .replace(/  +/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-
-  return result
+  return cleaned.join('\n')
 }
 
 /**
@@ -984,13 +719,11 @@ function cleanArticleContent(content: string): string {
     /^(home|about|contact|privacy|terms|cookies?|legal|help|support)/i,
     /^(view all|see all|show all|browse|explore)/i,
     /^(back to|return to|previous|next page)/i,
-    /^(arrow|filters?|sort by|showing \d+)/i,
 
     // Social media and sharing
     /^(share|share on|follow us|connect with|like us|follow|tweet|pin)/i,
     /^(facebook|twitter|instagram|linkedin|youtube|tiktok|whatsapp|reddit)/i,
     /^(social media|social|connect|join us)/i,
-    /^follow\s+.+\s+to get\b/i,
 
     // Newsletter and subscription
     /^(newsletter|email|subscribe|sign up|get updates|stay updated)/i,
@@ -1016,8 +749,7 @@ function cleanArticleContent(content: string): string {
     /^(related:?|you may also|you might like|recommended|more from)/i,
     /^(read (more|next)|continue reading|keep reading)/i,
     /^(check out|discover|explore more|learn more)/i,
-    /^(popular|trending|latest|recent articles?)/i,
-    /^latest articles?$/i,
+    /^(popular|trending|latest|recent articles)/i,
 
     // Footer and metadata
     /^(copyright|©|all rights reserved|\(c\))/i,
@@ -1033,77 +765,17 @@ function cleanArticleContent(content: string): string {
     /^(toggle|expand|collapse|show|hide|more|less)/i,
     /^(loading|please wait|redirecting)/i,
 
-    // Product/e-commerce patterns
-    /^(category|brand|processor|ram|storage size|screen size|colou?r|condition|price)/i,
-    /^(any price|our review|deals|showing \d+ of \d+)/i,
-    /^(compare prices?|buy now|add to cart|in stock)/i,
-    /^filters?[☰✕✖✗]/i,  // Filter buttons with icons
-    /^sort\s*by/i,  // Sort options
-    /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i,  // Technical specs
-    /^[☆★]{3,5}$/,  // Star ratings
-    /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i,  // Product specs like "(13.3-inch 64GB)"
-    /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i,  // Product specs in parentheses
-    /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/,  // Standalone prices like "$799" or "€1,299"
-
-    // Author bio indicators
-    /^.{0,50}\b(editor|journalist|author|writer|contributor|reporter)\b/i,
-    /\b(is an? (award-winning|celebrated|bestselling|leading|certified))\b/i,
-    /\b(earned (a|her|his|their) (loyal|readership))\b/i,
-    /\blives in\b.*$/i,  // Common bio ending
-    /\b(mom|dad|parent) of \d+\b/i,  // Personal bio details
-
     // List/link dumps (common pattern: just a link text with no context)
     /^[\[\(]?https?:\/\//i,  // Lines starting with URLs
     /^(source|via|link|url):/i,
 
-    // Website domain names (often appear at start of articles)
-    /^\w+\.(com|net|org|io|co|ai)$/i,
-    /^\d+\s+min$/i,  // Read time estimates like "6 min"
-
     // Short non-content lines (likely UI elements)
     /^[\w\s]{1,3}$/,  // 1-3 character lines (buttons like "OK", "Yes", etc)
-    /^\d+$/,  // Lines with just numbers
   ]
 
-  // Track if we're in an author bio section
-  let inAuthorBio = false
-  let bioStartIndex = -1
-
-  // First pass: identify and mark author bio sections
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    // Start of author bio detection
-    if (!inAuthorBio && (
-      /\b(editor|journalist|author|writer|contributor)\b/i.test(line) &&
-      /\b(is an?|has been)\b/i.test(line) &&
-      line.length > 100  // Bio lines tend to be long
-    )) {
-      inAuthorBio = true
-      bioStartIndex = i
-    }
-
-    // End of author bio (usually after 3-5 lines or hitting next section)
-    if (inAuthorBio && (
-      i - bioStartIndex > 5 ||
-      /^#{1,3}\s/.test(line) ||  // Markdown heading
-      (line.length > 0 && !line.match(/\b(she|he|they|her|his|their)\b/i) && line.match(/^[A-Z]/))
-    )) {
-      inAuthorBio = false
-    }
-
-    // Mark bio lines for removal
-    if (inAuthorBio) {
-      lines[i] = '__REMOVE_BIO__'
-    }
-  }
-
   // Filter out lines matching removal patterns
-  lines = lines.filter((line, index) => {
+  lines = lines.filter(line => {
     const trimmed = line.trim()
-
-    // Remove marked bio lines
-    if (line === '__REMOVE_BIO__') return false
 
     // Keep empty lines for paragraph breaks
     if (trimmed === '') return true
@@ -1124,11 +796,6 @@ function cleanArticleContent(content: string): string {
       return false
     }
 
-    // Remove image credit lines
-    if (/^\(image credit:/i.test(trimmed)) {
-      return false
-    }
-
     // Keep lines that seem like content (have punctuation, reasonable length)
     return true
   })
@@ -1144,8 +811,6 @@ function cleanArticleContent(content: string): string {
     /\b(view (all|more)|see (all|more)|show (all|more))\b/gi,
     /\b(download (the |our )?app|get (the |our )?app)\b/gi,
     /\[\d+\]/g,  // Remove citation numbers like [1], [2], etc.
-    /\(Image credit:.*?\)/gi,  // Remove image credits
-    /Our Review\s*[☆★]{3,5}/gi,  // Remove review ratings
   ]
 
   phrasePatterns.forEach(pattern => {
