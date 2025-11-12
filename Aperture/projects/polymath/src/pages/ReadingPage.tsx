@@ -12,7 +12,6 @@ import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
-import { consumeShareData } from '../lib/shareHandler'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -221,64 +220,23 @@ export function ReadingPage() {
   }
 
   // Handle shared URLs from Web Share Target API
-  // Using sessionStorage approach with URL param fallback
+  // Service worker intercepts POST and redirects to /reading?shared=URL
   useEffect(() => {
     console.log('='.repeat(80))
     console.log('[ReadingPage] SHARE DETECTION START')
-    console.log('[ReadingPage] Checking for share data...')
     console.log('[ReadingPage] Current URL:', location.pathname + location.search)
-    console.log('[ReadingPage] window.location.href:', window.location.href)
-    console.log('[ReadingPage] window.location.search:', window.location.search)
-    console.log('[ReadingPage] location.search from router:', location.search)
 
-    // First try sessionStorage
-    const shareData = consumeShareData()
-    console.log('[ReadingPage] sessionStorage data:', shareData)
-    let shareUrl: string | undefined = shareData?.url
+    const params = new URLSearchParams(location.search)
+    const sharedParam = params.get('shared')
 
-    // Fallback: check URL params directly (in case sessionStorage failed)
-    if (!shareUrl) {
-      console.log('[ReadingPage] sessionStorage was empty, checking URL params fallback...')
-      const params = new URLSearchParams(location.search)
+    console.log('[ReadingPage] Shared parameter:', sharedParam)
 
-      // Also check window.location.search to see if React Router is stripping params
-      const windowParams = new URLSearchParams(window.location.search)
-
-      // Check all possible parameter names
-      const textParam = params.get('text')
-      const urlParam = params.get('url')
-      const shareTextParam = params.get('share_text')
-      const shareUrlParam = params.get('share_url')
-
-      const windowTextParam = windowParams.get('text')
-      const windowUrlParam = windowParams.get('url')
-
-      console.log('[ReadingPage] Router params - text:', textParam, 'url:', urlParam)
-      console.log('[ReadingPage] Router params - share_text:', shareTextParam, 'share_url:', shareUrlParam)
-      console.log('[ReadingPage] Window params - text:', windowTextParam, 'url:', windowUrlParam)
-      console.log('[ReadingPage] All router params:', Array.from(params.entries()))
-      console.log('[ReadingPage] All window params:', Array.from(windowParams.entries()))
-
-      // Check text parameter first (Android puts URL here)
-      if (textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
-        console.log('[ReadingPage] Found URL in text parameter (Android behavior):', textParam)
-        shareUrl = textParam
-      } else if (urlParam) {
-        console.log('[ReadingPage] Found URL in url parameter:', urlParam)
-        shareUrl = urlParam
-      } else if (shareTextParam && (shareTextParam.startsWith('http://') || shareTextParam.startsWith('https://'))) {
-        console.log('[ReadingPage] Found URL in share_text parameter:', shareTextParam)
-        shareUrl = shareTextParam
-      } else if (shareUrlParam) {
-        console.log('[ReadingPage] Found URL in share_url parameter:', shareUrlParam)
-        shareUrl = shareUrlParam
-      }
-    }
+    const shareUrl: string | undefined = sharedParam || undefined
 
     if (shareUrl) {
-      console.log('[ReadingPage] Processing shared URL:', shareUrl)
+      console.log('[ReadingPage] ✓ Processing shared URL:', shareUrl)
 
-      // Clean URL params to prevent confusion (avoid reload loop by using replace)
+      // Clean URL params to prevent re-processing on refresh
       if (window.location.search) {
         const cleanUrl = window.location.pathname
         window.history.replaceState({}, '', cleanUrl)
@@ -318,11 +276,7 @@ export function ReadingPage() {
 
       handleShare()
     } else {
-      console.log('[ReadingPage] ❌ NO SHARE DATA FOUND')
-      console.log('[ReadingPage] - sessionStorage was:', shareData)
-      console.log('[ReadingPage] - location.search was:', location.search)
-      console.log('[ReadingPage] - window.location.search was:', window.location.search)
-      console.log('[ReadingPage] This means the URL extraction failed at some point in the chain')
+      console.log('[ReadingPage] No shared URL parameter found')
     }
     console.log('[ReadingPage] SHARE DETECTION END')
     console.log('='.repeat(80))

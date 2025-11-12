@@ -42,6 +42,49 @@ self.addEventListener('activate', (event) => {
 // Fetch event - network first, fall back to cache
 self.addEventListener('fetch', (event) => {
   const { request } = event
+  const url = new URL(request.url)
+
+  // Handle share target POST requests
+  if (url.pathname === '/share-target' && request.method === 'POST') {
+    console.log('[ServiceWorker] Intercepting share target POST request')
+    event.respondWith(
+      (async () => {
+        try {
+          const formData = await request.formData()
+
+          // Extract shared data - Android puts URL in 'text', spec-compliant in 'url'
+          const urlParam = formData.get('url') || ''
+          const textParam = formData.get('text') || ''
+          const titleParam = formData.get('title') || ''
+
+          console.log('[ServiceWorker] FormData - url:', urlParam)
+          console.log('[ServiceWorker] FormData - text:', textParam)
+          console.log('[ServiceWorker] FormData - title:', titleParam)
+
+          // Determine shared URL (prioritize text for Android)
+          let sharedUrl = textParam || urlParam
+
+          // If text is not a URL but url param exists, use url param
+          if (textParam && !textParam.startsWith('http')) {
+            sharedUrl = urlParam
+          }
+
+          console.log('[ServiceWorker] Final shared URL:', sharedUrl)
+
+          // Redirect to reading page with the shared URL
+          const redirectUrl = `/reading?shared=${encodeURIComponent(sharedUrl)}`
+          console.log('[ServiceWorker] Redirecting to:', redirectUrl)
+
+          return Response.redirect(redirectUrl, 303)
+        } catch (error) {
+          console.error('[ServiceWorker] Error processing share target:', error)
+          // Fallback to reading page on error
+          return Response.redirect('/reading', 303)
+        }
+      })()
+    )
+    return
+  }
 
   // Skip non-GET requests
   if (request.method !== 'GET') return

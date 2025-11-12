@@ -1,6 +1,5 @@
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import { initShareHandler } from './lib/shareHandler'
 
 // Import Inter font
 import '@fontsource/inter/400.css' // Regular
@@ -11,10 +10,6 @@ import '@fontsource/inter/700.css' // Bold
 // Import Premium Dark design system
 import './styles/premium-dark.css'
 import './styles/ripple.css'
-
-// CRITICAL: Initialize share handler BEFORE React renders
-// This captures Web Share Target params before React Router can lose them
-initShareHandler()
 
 // Register service worker for PWA support
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
