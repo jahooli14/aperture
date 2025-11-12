@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search } from 'lucide-react'
+import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
@@ -15,8 +15,11 @@ interface BedtimePrompt {
   id: string
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
+  format?: 'question' | 'statement' | 'visualization' | 'scenario'
   metaphor?: string
   viewed: boolean
+  rating?: number
+  resulted_in_breakthrough?: boolean
   created_at: string
 }
 
@@ -90,6 +93,71 @@ export function BedtimePage() {
       })
     } catch (error) {
       console.error('Failed to mark viewed:', error)
+    }
+  }
+
+  const ratePrompt = async (id: string, rating: number) => {
+    // Update local state optimistically
+    setPrompts(prev => prev.map(p =>
+      p.id === id ? { ...p, rating } : p
+    ))
+
+    try {
+      await fetch('/api/projects?resource=bedtime', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          rating
+        })
+      })
+
+      addToast({
+        title: 'Rating saved',
+        description: `${rating} star${rating !== 1 ? 's' : ''}`,
+        variant: 'success'
+      })
+    } catch (error) {
+      console.error('Failed to rate prompt:', error)
+      // Revert on error
+      setPrompts(prev => prev.map(p =>
+        p.id === id ? { ...p, rating: undefined } : p
+      ))
+    }
+  }
+
+  const toggleBreakthrough = async (id: string) => {
+    const prompt = prompts.find(p => p.id === id)
+    const newValue = !prompt?.resulted_in_breakthrough
+
+    // Update local state optimistically
+    setPrompts(prev => prev.map(p =>
+      p.id === id ? { ...p, resulted_in_breakthrough: newValue } : p
+    ))
+
+    try {
+      await fetch('/api/projects?resource=bedtime', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          resulted_in_breakthrough: newValue
+        })
+      })
+
+      if (newValue) {
+        addToast({
+          title: '⚡ Breakthrough!',
+          description: 'This prompt will help improve future suggestions',
+          variant: 'success'
+        })
+      }
+    } catch (error) {
+      console.error('Failed to toggle breakthrough:', error)
+      // Revert on error
+      setPrompts(prev => prev.map(p =>
+        p.id === id ? { ...p, resulted_in_breakthrough: !newValue } : p
+      ))
     }
   }
 
@@ -312,6 +380,73 @@ export function BedtimePage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Feedback Section */}
+                    <div className="mt-6 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
+                      <div className="flex items-center justify-between">
+                        {/* Star Rating */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs mr-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            Rate:
+                          </span>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                ratePrompt(prompt.id, star)
+                              }}
+                              className="p-1 rounded hover:scale-110 transition-transform"
+                              title={`${star} star${star !== 1 ? 's' : ''}`}
+                            >
+                              <Star
+                                className="h-4 w-4"
+                                style={{
+                                  color: (prompt.rating && star <= prompt.rating)
+                                    ? 'var(--premium-gold)'
+                                    : 'rgba(255, 255, 255, 0.2)',
+                                  fill: (prompt.rating && star <= prompt.rating)
+                                    ? 'var(--premium-gold)'
+                                    : 'transparent'
+                                }}
+                              />
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Breakthrough Toggle */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleBreakthrough(prompt.id)
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                            prompt.resulted_in_breakthrough
+                              ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40'
+                              : 'border border-white/10 hover:border-yellow-500/30'
+                          }`}
+                          title={prompt.resulted_in_breakthrough ? 'Led to a breakthrough!' : 'Mark as breakthrough'}
+                        >
+                          <Zap
+                            className="h-3.5 w-3.5"
+                            style={{
+                              color: prompt.resulted_in_breakthrough
+                                ? 'var(--premium-gold)'
+                                : 'var(--premium-text-tertiary)'
+                            }}
+                          />
+                          <span
+                            style={{
+                              color: prompt.resulted_in_breakthrough
+                                ? 'var(--premium-gold)'
+                                : 'var(--premium-text-tertiary)'
+                            }}
+                          >
+                            {prompt.resulted_in_breakthrough ? 'Breakthrough' : 'Breakthrough?'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )

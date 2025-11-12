@@ -11,6 +11,7 @@ interface BedtimePrompt {
   id: string
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
+  format?: 'question' | 'statement' | 'visualization' | 'scenario'
   metaphor?: string
   viewed: boolean
 }
