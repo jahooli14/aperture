@@ -223,15 +223,26 @@ export function ReadingPage() {
   // Handle shared URLs from Web Share Target API
   // Using sessionStorage approach with URL param fallback
   useEffect(() => {
+    console.log('='.repeat(80))
+    console.log('[ReadingPage] SHARE DETECTION START')
     console.log('[ReadingPage] Checking for share data...')
     console.log('[ReadingPage] Current URL:', location.pathname + location.search)
+    console.log('[ReadingPage] window.location.href:', window.location.href)
+    console.log('[ReadingPage] window.location.search:', window.location.search)
+    console.log('[ReadingPage] location.search from router:', location.search)
 
     // First try sessionStorage
-    let shareUrl: string | undefined = consumeShareData()?.url
+    const shareData = consumeShareData()
+    console.log('[ReadingPage] sessionStorage data:', shareData)
+    let shareUrl: string | undefined = shareData?.url
 
     // Fallback: check URL params directly (in case sessionStorage failed)
     if (!shareUrl) {
+      console.log('[ReadingPage] sessionStorage was empty, checking URL params fallback...')
       const params = new URLSearchParams(location.search)
+
+      // Also check window.location.search to see if React Router is stripping params
+      const windowParams = new URLSearchParams(window.location.search)
 
       // Check all possible parameter names
       const textParam = params.get('text')
@@ -239,8 +250,14 @@ export function ReadingPage() {
       const shareTextParam = params.get('share_text')
       const shareUrlParam = params.get('share_url')
 
-      console.log('[ReadingPage] Checking URL params - text:', textParam, 'url:', urlParam)
-      console.log('[ReadingPage] Checking URL params - share_text:', shareTextParam, 'share_url:', shareUrlParam)
+      const windowTextParam = windowParams.get('text')
+      const windowUrlParam = windowParams.get('url')
+
+      console.log('[ReadingPage] Router params - text:', textParam, 'url:', urlParam)
+      console.log('[ReadingPage] Router params - share_text:', shareTextParam, 'share_url:', shareUrlParam)
+      console.log('[ReadingPage] Window params - text:', windowTextParam, 'url:', windowUrlParam)
+      console.log('[ReadingPage] All router params:', Array.from(params.entries()))
+      console.log('[ReadingPage] All window params:', Array.from(windowParams.entries()))
 
       // Check text parameter first (Android puts URL here)
       if (textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
@@ -301,8 +318,14 @@ export function ReadingPage() {
 
       handleShare()
     } else {
-      console.log('[ReadingPage] No share data found in sessionStorage or URL params')
+      console.log('[ReadingPage] ❌ NO SHARE DATA FOUND')
+      console.log('[ReadingPage] - sessionStorage was:', shareData)
+      console.log('[ReadingPage] - location.search was:', location.search)
+      console.log('[ReadingPage] - window.location.search was:', window.location.search)
+      console.log('[ReadingPage] This means the URL extraction failed at some point in the chain')
     }
+    console.log('[ReadingPage] SHARE DETECTION END')
+    console.log('='.repeat(80))
   }, [location.search, saveArticle, fetchArticles, addToast]) // Re-run when URL params change (for PWA navigate-existing mode)
 
   const handleTabChange = (tab: FilterTab) => {

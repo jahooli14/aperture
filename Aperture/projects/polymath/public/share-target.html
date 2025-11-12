@@ -65,19 +65,38 @@
 
   <script>
     (function() {
-      console.log('[ShareTarget] Static share target page loaded')
+      console.log('='.repeat(80))
+      console.log('[ShareTarget] STATIC PAGE LOADED')
       console.log('[ShareTarget] Full URL:', window.location.href)
       console.log('[ShareTarget] Search params:', window.location.search)
 
       // Extract URL params
       const params = new URLSearchParams(window.location.search)
-      const sharedUrl = params.get('url')
+      const urlParam = params.get('url')
       const sharedTitle = params.get('title')
-      const sharedText = params.get('text')
+      const textParam = params.get('text')
 
-      console.log('[ShareTarget] URL param:', sharedUrl)
+      console.log('[ShareTarget] All params:', Array.from(params.entries()))
+      console.log('[ShareTarget] URL param:', urlParam)
       console.log('[ShareTarget] Title param:', sharedTitle)
-      console.log('[ShareTarget] Text param:', sharedText)
+      console.log('[ShareTarget] Text param:', textParam)
+
+      // Android puts URL in 'text' parameter, not 'url' parameter
+      // Check both with correct priority
+      let sharedUrl = null
+
+      // Priority 1: Check if text param is a URL (Android behavior)
+      if (textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
+        sharedUrl = textParam
+        console.log('[ShareTarget] ✓ Found URL in text parameter (Android):', sharedUrl)
+      }
+      // Priority 2: Check url param (spec-compliant browsers)
+      else if (urlParam) {
+        sharedUrl = urlParam
+        console.log('[ShareTarget] ✓ Found URL in url parameter (spec-compliant):', sharedUrl)
+      }
+
+      console.log('[ShareTarget] Final extracted URL:', sharedUrl)
 
       if (sharedUrl) {
         // Show URL being saved
@@ -105,14 +124,17 @@
 
         // ALWAYS redirect with URL params as primary mechanism
         // This is more reliable than sessionStorage with PWA navigate-existing mode
+        // IMPORTANT: Pass the URL in BOTH 'url' and 'text' parameters to ensure compatibility
         const redirectUrl = '/reading?url=' + encodeURIComponent(sharedUrl) +
-          (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '') +
-          (sharedText ? '&text=' + encodeURIComponent(sharedText) : '')
+          '&text=' + encodeURIComponent(sharedUrl) +
+          (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '')
 
         console.log('[ShareTarget] Redirecting to:', redirectUrl)
+        console.log('[ShareTarget] URL will be available in both url and text parameters')
 
         // Use a longer timeout to ensure everything is stable
         setTimeout(function() {
+          console.log('[ShareTarget] Executing redirect now...')
           window.location.href = redirectUrl
         }, 300)
       } else {
@@ -139,6 +161,9 @@
           window.location.href = '/pwa-reinstall.html'
         }, 5000)
       }
+
+      console.log('[ShareTarget] STATIC PAGE END')
+      console.log('='.repeat(80))
     })()
   </script>
 </body>
