@@ -39,13 +39,13 @@ CREATE POLICY "Users can delete their own suggestions"
   ON connection_suggestions FOR DELETE
   USING (auth.uid() = user_id);
 
--- Update item_connections table to track connection source
-ALTER TABLE item_connections
-ADD COLUMN IF NOT EXISTS connection_type TEXT DEFAULT 'user_created' CHECK (connection_type IN ('user_created', 'ai_suggested')),
+-- Update connections table to track connection source
+ALTER TABLE connections
+ADD COLUMN IF NOT EXISTS connection_source TEXT DEFAULT 'user_created' CHECK (connection_source IN ('user_created', 'ai_suggested')),
 ADD COLUMN IF NOT EXISTS suggestion_id UUID REFERENCES connection_suggestions(id) ON DELETE SET NULL;
 
--- Create index for connection_type
-CREATE INDEX IF NOT EXISTS idx_item_connections_type ON item_connections(connection_type);
+-- Create index for connection_source
+CREATE INDEX IF NOT EXISTS idx_connections_source ON connections(connection_source);
 
 -- Create a view for timeline events that includes connections
 CREATE OR REPLACE VIEW timeline_events AS
@@ -96,21 +96,21 @@ UNION ALL
 
 SELECT
   'connection_created' AS event_type,
-  ic.id AS event_id,
-  ic.created_at AS event_time,
-  ic.user_id,
+  c.id AS event_id,
+  c.created_at AS event_time,
+  cs.user_id,
   jsonb_build_object(
     'type', 'connection',
-    'id', ic.id,
-    'from_item_type', ic.item_type,
-    'from_item_id', ic.item_id,
-    'to_item_type', ic.related_item_type,
-    'to_item_id', ic.related_item_id,
-    'connection_type', ic.connection_type,
+    'id', c.id,
+    'from_item_type', c.source_type,
+    'from_item_id', c.source_id,
+    'to_item_type', c.target_type,
+    'to_item_id', c.target_id,
+    'connection_type', c.connection_source,
     'reasoning', cs.reasoning
   ) AS event_data
-FROM item_connections ic
-LEFT JOIN connection_suggestions cs ON ic.suggestion_id = cs.id
+FROM connections c
+LEFT JOIN connection_suggestions cs ON c.suggestion_id = cs.id
 
 ORDER BY event_time DESC;
 
