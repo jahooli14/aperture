@@ -96,6 +96,22 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
       return null
     }
 
+    // Extract thumbnail - try multiple sources
+    let thumbnailUrl = getMetaContent(['og:image', 'twitter:image', 'og:image:url', 'twitter:image:src'])
+
+    // If no meta tag image, try to extract first image from article content
+    if (!thumbnailUrl && article.content) {
+      const imgMatch = article.content.match(/<img[^>]+src=["']([^"']+)["']/i)
+      if (imgMatch && imgMatch[1]) {
+        thumbnailUrl = imgMatch[1]
+        // Make relative URLs absolute
+        if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+          const baseURL = new URL(url)
+          thumbnailUrl = new URL(thumbnailUrl, baseURL.origin).toString()
+        }
+      }
+    }
+
     // Return in format expected by rest of codebase
     return {
       title: decodeHTMLEntities(article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled'),
@@ -104,7 +120,7 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
       author: article.byline || getMetaContent(['author', 'article:author']) || null,
       source: article.siteName || getMetaContent(['og:site_name']) || extractDomain(url),
       publishedDate: getMetaContent(['article:published_time']),
-      thumbnailUrl: getMetaContent(['og:image', 'twitter:image']),
+      thumbnailUrl,
       faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
       length: article.length || 0
     }
@@ -223,10 +239,25 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
       $('meta[name="description"]').attr('content') ||
       ''
 
-    const image =
+    // Extract image - try meta tags first, then first img in content
+    let image =
       $('meta[property="og:image"]').attr('content') ||
       $('meta[name="twitter:image"]').attr('content') ||
+      $('meta[property="og:image:url"]').attr('content') ||
       null
+
+    // If no meta tag image, try to extract first image from content
+    if (!image && content) {
+      const firstImg = $('img').first().attr('src')
+      if (firstImg) {
+        image = firstImg
+        // Make relative URLs absolute
+        if (image && !image.startsWith('http')) {
+          const baseURL = new URL(url)
+          image = new URL(image, baseURL.origin).toString()
+        }
+      }
+    }
 
     // Extract domain for favicon
     const urlObj = new URL(url)
@@ -782,13 +813,33 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 
     console.log('[Jina AI] Final extraction - Title:', title, 'Original content length:', contentWithoutH1.length, 'Cleaned content length:', cleanedContent.length)
 
+    // Extract thumbnail - use Jina's image or extract from content
+    let thumbnailUrl = data.data.image || null
+
+    // If Jina didn't provide an image, try to extract from content
+    if (!thumbnailUrl && cleanedContent) {
+      const imgMatch = cleanedContent.match(/<img[^>]+src=["']([^"']+)["']/i)
+      if (imgMatch && imgMatch[1]) {
+        thumbnailUrl = imgMatch[1]
+        // Make relative URLs absolute
+        if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+          try {
+            const baseURL = new URL(url)
+            thumbnailUrl = new URL(thumbnailUrl, baseURL.origin).toString()
+          } catch (e) {
+            thumbnailUrl = null
+          }
+        }
+      }
+    }
+
     return {
       title: decodeHTMLEntities(title || 'Untitled'),
       content: cleanedContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
       excerpt,
       author: data.data.author || null,
       publishedDate: data.data.publishedTime || null,
-      thumbnailUrl: data.data.image || null,
+      thumbnailUrl,
       faviconUrl: data.data.favicon || null,
       url
     }
