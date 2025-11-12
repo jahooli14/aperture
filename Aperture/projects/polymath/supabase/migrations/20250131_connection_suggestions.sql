@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS connection_suggestions (
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'dismissed')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   resolved_at TIMESTAMP WITH TIME ZONE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   UNIQUE(from_item_id, to_item_id, user_id)
 );
 
@@ -81,16 +81,16 @@ UNION ALL
 
 SELECT
   'article_added' AS event_type,
-  a.id AS event_id,
-  a.created_at AS event_time,
-  a.user_id,
+  rq.id AS event_id,
+  rq.created_at AS event_time,
+  rq.user_id,
   jsonb_build_object(
     'type', 'article',
-    'id', a.id,
-    'title', a.title,
-    'url', a.url
+    'id', rq.id,
+    'title', rq.title,
+    'url', rq.url
   ) AS event_data
-FROM articles a
+FROM reading_queue rq
 
 UNION ALL
 
