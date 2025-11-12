@@ -4,7 +4,7 @@
  */
 
 // Update this version when you want to trigger a new service worker
-const VERSION = '1.0.2-share-post'
+const VERSION = '1.0.3-android-share-fix'
 const CACHE_NAME = `polymath-v${VERSION}`
 const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
@@ -60,21 +60,16 @@ self.addEventListener('fetch', (event) => {
           const formData = await request.formData()
 
           // Extract shared data - Android puts URL in 'text', spec-compliant in 'url'
-          const urlParam = formData.get('url') || ''
           const textParam = formData.get('text') || ''
+          const urlParam = formData.get('url') || ''
           const titleParam = formData.get('title') || ''
 
-          console.log('[ServiceWorker] FormData - url:', urlParam)
           console.log('[ServiceWorker] FormData - text:', textParam)
+          console.log('[ServiceWorker] FormData - url:', urlParam)
           console.log('[ServiceWorker] FormData - title:', titleParam)
 
-          // Determine shared URL (prioritize text for Android)
-          let sharedUrl = textParam || urlParam
-
-          // If text is not a URL but url param exists, use url param
-          if (textParam && !textParam.startsWith('http')) {
-            sharedUrl = urlParam
-          }
+          // Determine shared URL (prioritize text for Android, fallback to url)
+          const sharedUrl = textParam || urlParam
 
           console.log('[ServiceWorker] Final shared URL:', sharedUrl)
 
@@ -82,11 +77,41 @@ self.addEventListener('fetch', (event) => {
           const redirectUrl = `/reading?shared=${encodeURIComponent(sharedUrl)}`
           console.log('[ServiceWorker] Redirecting to:', redirectUrl)
 
-          return Response.redirect(redirectUrl, 303)
+          // Use HTML/JS redirect instead of Response.redirect to force full app reload
+          // This ensures React remounts and extraction logic fires on Android
+          return new Response(`
+            <html>
+              <head>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <script>
+                  location.href = "${redirectUrl}";
+                </script>
+              </head>
+              <body></body>
+            </html>`,
+            {
+              status: 200,
+              headers: { "Content-Type": "text/html" }
+            }
+          )
         } catch (error) {
           console.error('[ServiceWorker] Error processing share target:', error)
-          // Fallback to reading page on error
-          return Response.redirect('/reading', 303)
+          // Fallback to reading page on error with JS redirect
+          return new Response(`
+            <html>
+              <head>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <script>
+                  location.href = "/reading";
+                </script>
+              </head>
+              <body></body>
+            </html>`,
+            {
+              status: 200,
+              headers: { "Content-Type": "text/html" }
+            }
+          )
         }
       })()
     )
