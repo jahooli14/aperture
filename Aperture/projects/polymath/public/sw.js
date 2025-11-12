@@ -4,7 +4,7 @@
  */
 
 // Update this version when you want to trigger a new service worker
-const VERSION = '1.0.1'
+const VERSION = '1.0.2-share-post'
 const CACHE_NAME = `polymath-v${VERSION}`
 const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
@@ -44,9 +44,16 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
+  // Log POST requests and share-target for debugging
+  if (request.method === 'POST' || url.pathname.includes('share')) {
+    console.log('[ServiceWorker] Fetch:', request.method, url.pathname, url.href)
+  }
+
   // Handle share target POST requests
   if (url.pathname === '/share-target' && request.method === 'POST') {
-    console.log('[ServiceWorker] Intercepting share target POST request')
+    console.log('[ServiceWorker] ✓✓✓ INTERCEPTING SHARE TARGET POST REQUEST ✓✓✓')
+    console.log('[ServiceWorker] Request URL:', request.url)
+    console.log('[ServiceWorker] Request method:', request.method)
     event.respondWith(
       (async () => {
         try {
