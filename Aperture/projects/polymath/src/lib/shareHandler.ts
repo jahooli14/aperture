@@ -22,15 +22,15 @@ export function initShareHandler() {
   if (typeof window === 'undefined') return
 
   const params = new URLSearchParams(window.location.search)
-  const sharedUrl = params.get('url')
+  const sharedUrl = params.get('share_url')
 
   if (sharedUrl) {
     console.log('[ShareHandler] Detected share target URL:', sharedUrl)
 
     const shareData: ShareData = {
       url: sharedUrl,
-      title: params.get('title') || undefined,
-      text: params.get('text') || undefined,
+      title: params.get('share_title') || undefined,
+      text: params.get('share_text') || undefined,
       timestamp: Date.now()
     }
 
