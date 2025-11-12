@@ -1449,28 +1449,62 @@ async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelRespo
 
 async function handleMarkBedtimeViewed(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   try {
-    const { ids } = req.body
+    const { ids, id, rating, resulted_in_breakthrough } = req.body
 
-    if (!ids || !Array.isArray(ids)) {
-      return res.status(400).json({ error: 'ids array required' })
+    // Handle bulk "mark as viewed" (legacy support)
+    if (ids && Array.isArray(ids)) {
+      const { error } = await supabase
+        .from('bedtime_prompts')
+        .update({
+          viewed: true,
+          viewed_at: new Date().toISOString()
+        })
+        .in('id', ids)
+        .eq('user_id', userId)
+
+      if (error) throw error
+
+      return res.status(200).json({ success: true, updated: ids.length })
+    }
+
+    // Handle single prompt update (rating or breakthrough)
+    if (!id) {
+      return res.status(400).json({ error: 'id or ids required' })
+    }
+
+    const updates: any = {}
+
+    if (rating !== undefined) {
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'rating must be a number between 1 and 5' })
+      }
+      updates.rating = rating
+    }
+
+    if (resulted_in_breakthrough !== undefined) {
+      if (typeof resulted_in_breakthrough !== 'boolean') {
+        return res.status(400).json({ error: 'resulted_in_breakthrough must be a boolean' })
+      }
+      updates.resulted_in_breakthrough = resulted_in_breakthrough
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No updates provided' })
     }
 
     const { error } = await supabase
       .from('bedtime_prompts')
-      .update({
-        viewed: true,
-        viewed_at: new Date().toISOString()
-      })
-      .in('id', ids)
+      .update(updates)
+      .eq('id', id)
       .eq('user_id', userId)
 
     if (error) throw error
 
-    return res.status(200).json({ success: true, updated: ids.length })
+    return res.status(200).json({ success: true, updated: updates })
   } catch (error) {
     console.error('[bedtime] Error:', error)
     return res.status(500).json({
-      error: 'Failed to mark bedtime prompts as viewed',
+      error: 'Failed to update bedtime prompt',
       details: error instanceof Error ? error.message : 'Unknown error'
     })
   }
