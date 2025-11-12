@@ -240,29 +240,66 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
 }
 
 /**
- * Extract article content using Mozilla Readability (same as Omnivore)
- * This is the industry-standard approach used by Firefox, Omnivore, and others
+ * Extract article content with three-tier fallback system
+ * 1. Mozilla Readability (fast, works for most sites)
+ * 2. Jina Reader (handles JS-heavy sites)
+ * 3. Cheerio (guaranteed to get something)
  */
 async function fetchArticle(url: string) {
-  console.log('[fetchArticle] Extracting article with Mozilla Readability:', url)
+  console.log('[fetchArticle] Starting three-tier extraction:', url)
 
+  // Tier 1: Try Mozilla Readability (fast - 1-2 seconds for most sites)
   try {
+    console.log('[fetchArticle] Tier 1: Attempting Readability extraction...')
     const result = await fetchArticleWithReadability(url)
 
     // Check if extraction returned meaningful content
     if (result.content && result.content.length > 100) {
-      console.log('[fetchArticle] Readability extraction succeeded')
+      console.log('[fetchArticle] ✅ Tier 1 succeeded (Readability)')
       return result
     }
 
-    console.log('[fetchArticle] Readability returned insufficient content')
+    console.log('[fetchArticle] Readability returned insufficient content, trying Tier 2...')
     throw new Error('Readability extraction returned insufficient content')
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[fetchArticle] Readability failed:', errorMessage)
+  } catch (readabilityError) {
+    const errorMessage = readabilityError instanceof Error ? readabilityError.message : 'Unknown error'
+    console.error('[fetchArticle] Tier 1 failed:', errorMessage)
 
-    // For other errors, just throw
-    throw new Error(`Failed to extract article: ${errorMessage}`)
+    // Tier 2: Try Jina Reader (handles JS-heavy sites better)
+    try {
+      console.log('[fetchArticle] Tier 2: Attempting Jina Reader extraction...')
+      const result = await fetchArticleWithJina(url)
+
+      if (result.content && result.content.length > 100) {
+        console.log('[fetchArticle] ✅ Tier 2 succeeded (Jina Reader)')
+        return result
+      }
+
+      console.log('[fetchArticle] Jina returned insufficient content, trying Tier 3...')
+      throw new Error('Jina extraction returned insufficient content')
+    } catch (jinaError) {
+      const jinaMessage = jinaError instanceof Error ? jinaError.message : 'Unknown error'
+      console.error('[fetchArticle] Tier 2 failed:', jinaMessage)
+
+      // Tier 3: Try Cheerio (last resort - will get something even if not perfect)
+      try {
+        console.log('[fetchArticle] Tier 3: Attempting Cheerio extraction (last resort)...')
+        const result = await fetchArticleWithCheerio(url)
+
+        if (result.content && result.content.length > 100) {
+          console.log('[fetchArticle] ✅ Tier 3 succeeded (Cheerio)')
+          return result
+        }
+
+        throw new Error('Cheerio extraction returned insufficient content')
+      } catch (cheerioError) {
+        const cheerioMessage = cheerioError instanceof Error ? cheerioError.message : 'Unknown error'
+        console.error('[fetchArticle] All three tiers failed')
+
+        // All tiers exhausted - return comprehensive error
+        throw new Error(`Failed to extract article after trying all methods. Readability: ${errorMessage}. Jina: ${jinaMessage}. Cheerio: ${cheerioMessage}`)
+      }
+    }
   }
 }
 
