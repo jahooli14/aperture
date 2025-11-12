@@ -200,7 +200,7 @@ export class DocumentationScanner {
   async updateDocumentationIndex(docs: DocFile[]): Promise<void> {
     console.log('📝 Updating documentation index...')
 
-    const startupPath = join(this.repoRoot, '.claude', 'startup.md')
+    const startupPath = join(this.repoRoot, 'Aperture', '.claude', 'startup.md')
     const startupContent = readFileSync(startupPath, 'utf-8')
 
     // Generate new index section

@@ -178,7 +178,7 @@ class AutonomousDocumentationSystem {
 
   private loadConfig(): SourceConfig {
     try {
-      const configPath = join(this.repoRoot, 'knowledge-base', 'sources.json')
+      const configPath = join(this.repoRoot, 'Aperture', 'knowledge-base', 'sources.json')
       const configContent = readFileSync(configPath, 'utf-8')
       return JSON.parse(configContent)
     } catch (error) {
