@@ -12,8 +12,8 @@ const API_CACHE = `${CACHE_VERSION}-api`
 
 // Cache expiration times
 const CACHE_EXPIRATION = {
-  images: 30 * 24 * 60 * 60 * 1000, // 30 days
-  api: 24 * 60 * 60 * 1000,          // 24 hours
+  images: 90 * 24 * 60 * 60 * 1000, // 90 days
+  api: 7 * 24 * 60 * 60 * 1000,      // 7 days
   runtime: 7 * 24 * 60 * 60 * 1000,  // 7 days
 }
 

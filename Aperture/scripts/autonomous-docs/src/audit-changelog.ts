@@ -7,7 +7,7 @@ export class AuditTrail {
   private auditDir: string
 
   constructor(repoRoot: string) {
-    this.auditDir = join(repoRoot, 'knowledge-base', 'audit-trail')
+    this.auditDir = join(repoRoot, 'Aperture', 'knowledge-base', 'audit-trail')
     this.ensureDirectoryExists(this.auditDir)
   }
 
@@ -136,7 +136,7 @@ export class ChangelogGenerator {
   private changelogDir: string
 
   constructor(repoRoot: string) {
-    this.changelogDir = join(repoRoot, 'knowledge-base', 'changelogs')
+    this.changelogDir = join(repoRoot, 'Aperture', 'knowledge-base', 'changelogs')
     this.ensureDirectoryExists(this.changelogDir)
   }
 
