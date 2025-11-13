@@ -10,13 +10,33 @@ interface ProcessingArticle {
   startTime: number
   attempts: number
   pollInterval?: number
+  lastLog?: string
 }
+
+type LogCallback = (message: string, level: 'info' | 'error' | 'success') => void
 
 class ArticleProcessor {
   private processing: Map<string, ProcessingArticle> = new Map()
   private pollInterval: number = 2000 // 2 seconds
   private maxAttempts: number = 180 // 6 minutes (2s * 180 = 360s)
   private retryDelay: number = 5000 // 5 seconds between retries
+  private logCallbacks: Set<LogCallback> = new Set()
+
+  /**
+   * Register a log callback to receive processing logs
+   */
+  onLog(callback: LogCallback): () => void {
+    this.logCallbacks.add(callback)
+    return () => this.logCallbacks.delete(callback)
+  }
+
+  /**
+   * Internal log method
+   */
+  private log(message: string, level: 'info' | 'error' | 'success' = 'info') {
+    console.log(`[ArticleProcessor] ${message}`)
+    this.logCallbacks.forEach(cb => cb(message, level))
+  }
 
   /**
    * Start processing an article with automatic polling and retry
@@ -26,11 +46,11 @@ class ArticleProcessor {
     url: string,
     onProgress?: (status: 'extracting' | 'retrying' | 'complete' | 'failed', article?: any) => void
   ): Promise<void> {
-    console.log('[ArticleProcessor] Starting processing for:', articleId)
+    this.log(`Starting processing for ${articleId.slice(0, 8)}...`, 'info')
 
     // Prevent duplicate processing
     if (this.processing.has(articleId)) {
-      console.log('[ArticleProcessor] Already processing:', articleId)
+      this.log(`Already processing ${articleId.slice(0, 8)}`, 'info')
       return
     }
 
@@ -39,6 +59,7 @@ class ArticleProcessor {
       url,
       startTime: Date.now(),
       attempts: 0,
+      lastLog: 'Starting extraction...'
     })
 
     onProgress?.('extracting')
@@ -58,8 +79,11 @@ class ArticleProcessor {
     if (!processing) return
 
     processing.attempts++
+    const elapsed = Math.floor((Date.now() - processing.startTime) / 1000)
 
     try {
+      this.log(`Poll attempt ${processing.attempts} for ${articleId.slice(0, 8)} (${elapsed}s elapsed)`, 'info')
+
       // Fetch latest article state
       const response = await fetch(`/api/reading?id=${articleId}`)
 
@@ -71,15 +95,19 @@ class ArticleProcessor {
 
       // Check if extraction is complete
       if (article.processed) {
-        console.log('[ArticleProcessor] Extraction complete:', articleId)
+        this.log(`✓ Extraction complete for ${articleId.slice(0, 8)}: "${article.title}"`, 'success')
         this.processing.delete(articleId)
         onProgress?.('complete', article)
         return
       }
 
+      // Log current state
+      processing.lastLog = article.excerpt || 'Processing...'
+      this.log(`Status: ${processing.lastLog.slice(0, 60)}`, 'info')
+
       // Check if we've exceeded max attempts
       if (processing.attempts >= this.maxAttempts) {
-        console.error('[ArticleProcessor] Max attempts reached, triggering retry:', articleId)
+        this.log(`Max attempts (${this.maxAttempts}) reached for ${articleId.slice(0, 8)}, triggering retry`, 'error')
         await this.retryExtraction(articleId, processing.url, onProgress)
         return
       }
@@ -89,7 +117,8 @@ class ArticleProcessor {
       setTimeout(() => this.poll(articleId, onProgress), backoff)
 
     } catch (error) {
-      console.error('[ArticleProcessor] Polling error:', error)
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      this.log(`Polling error for ${articleId.slice(0, 8)}: ${errorMsg}`, 'error')
 
       // If polling fails, retry after delay
       if (processing.attempts < this.maxAttempts) {
@@ -109,10 +138,11 @@ class ArticleProcessor {
     url: string,
     onProgress?: (status: 'extracting' | 'retrying' | 'complete' | 'failed', article?: any) => void
   ): Promise<void> {
-    console.log('[ArticleProcessor] Retrying extraction:', articleId)
+    this.log(`Retrying extraction for ${articleId.slice(0, 8)}`, 'info')
     onProgress?.('retrying')
 
     try {
+      this.log('Deleting stuck article...', 'info')
       // Delete the stuck article
       await fetch(`/api/reading?id=${articleId}`, {
         method: 'DELETE',
@@ -121,6 +151,7 @@ class ArticleProcessor {
       // Wait a bit for deletion to complete
       await new Promise(resolve => setTimeout(resolve, 1000))
 
+      this.log('Re-creating article with fresh extraction...', 'info')
       // Re-create the article
       const response = await fetch('/api/reading', {
         method: 'POST',
@@ -137,11 +168,13 @@ class ArticleProcessor {
       // Remove old processing entry
       this.processing.delete(articleId)
 
+      this.log(`Starting fresh processing with new ID ${newArticle.id.slice(0, 8)}`, 'info')
       // Start processing the new article
       this.startProcessing(newArticle.id, url, onProgress)
 
     } catch (error) {
-      console.error('[ArticleProcessor] Retry failed:', error)
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      this.log(`Retry failed: ${errorMsg}`, 'error')
       this.processing.delete(articleId)
       onProgress?.('failed')
     }

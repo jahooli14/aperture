@@ -12,6 +12,7 @@ import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
+import { ProcessingDebugPanel } from '../components/reading/ProcessingDebugPanel'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -41,6 +42,7 @@ export function ReadingPage() {
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
   const [processingArticles, setProcessingArticles] = useState<Map<string, { status: string; url: string }>>(new Map())
   const processingRef = useRef<Set<string>>(new Set()) // Track processed URLs to prevent duplicates
+  const autoRecoveryDone = useRef(false) // Track if we've done auto-recovery
 
   // Load lastKnownUpdatesCount from localStorage on mount
   const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState<number>(() => {
@@ -152,6 +154,53 @@ export function ReadingPage() {
       setLoadingRSS(false)
     }
   }, [feeds, addToast])
+
+  // Auto-recovery: Find and retry stuck articles on mount
+  useEffect(() => {
+    if (!autoRecoveryDone.current && articles.length > 0) {
+      autoRecoveryDone.current = true
+
+      const stuckArticles = articles.filter(a => !a.processed)
+      if (stuckArticles.length > 0) {
+        console.log(`[ReadingPage] Auto-recovery: Found ${stuckArticles.length} stuck article(s)`)
+
+        stuckArticles.forEach(article => {
+          const age = Date.now() - new Date(article.created_at).getTime()
+          const ageMinutes = Math.floor(age / 60000)
+
+          // Only auto-recover articles that are more than 1 minute old
+          if (ageMinutes >= 1) {
+            console.log(`[ReadingPage] Auto-recovery: Retrying ${article.id} (${ageMinutes}min old)`)
+
+            setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: article.url }))
+
+            articleProcessor.startProcessing(article.id, article.url, (status, updatedArticle) => {
+              setProcessingArticles(prev => {
+                const next = new Map(prev)
+                if (status === 'complete') {
+                  next.delete(article.id)
+                  addToast({
+                    title: '✓ Article recovered!',
+                    description: updatedArticle?.title || 'Stuck article has been processed',
+                    variant: 'success',
+                  })
+                  fetchArticles()
+                } else if (status === 'retrying') {
+                  next.set(article.id, { status: 'retrying', url: article.url })
+                } else if (status === 'failed') {
+                  next.delete(article.id)
+                  fetchArticles()
+                } else {
+                  next.set(article.id, { status, url: article.url })
+                }
+                return next
+              })
+            })
+          }
+        })
+      }
+    }
+  }, [articles, fetchArticles, addToast])
 
   // Fetch data on mount and when navigating back to this page (like HomePage)
   useEffect(() => {
@@ -793,6 +842,42 @@ export function ReadingPage() {
             loading: bulkActionLoading,
           },
         ]}
+      />
+
+      {/* Processing Debug Panel */}
+      <ProcessingDebugPanel
+        articles={safeArticles}
+        onRetry={(articleId, url) => {
+          setProcessingArticles(prev => new Map(prev).set(articleId, { status: 'extracting', url }))
+
+          articleProcessor.startProcessing(articleId, url, (status, updatedArticle) => {
+            setProcessingArticles(prev => {
+              const next = new Map(prev)
+              if (status === 'complete') {
+                next.delete(articleId)
+                addToast({
+                  title: '✓ Article ready!',
+                  description: updatedArticle?.title || 'Content extracted successfully',
+                  variant: 'success',
+                })
+                fetchArticles()
+              } else if (status === 'retrying') {
+                next.set(articleId, { status: 'retrying', url })
+              } else if (status === 'failed') {
+                next.delete(articleId)
+                addToast({
+                  title: 'Extraction failed',
+                  description: 'Could not extract content after retries',
+                  variant: 'destructive',
+                })
+                fetchArticles()
+              } else {
+                next.set(articleId, { status, url })
+              }
+              return next
+            })
+          })
+        }}
       />
     </div>
   )
