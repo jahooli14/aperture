@@ -884,6 +884,39 @@ export function ReadingPage() {
             })
           })
         }}
+        onFlushAll={async () => {
+          const stuckArticles = safeArticles.filter(a =>
+            !a.processed &&
+            !a.tags?.includes('rss') &&
+            !a.tags?.includes('auto-imported')
+          )
+
+          addToast({
+            title: 'Flushing stuck articles...',
+            description: `Deleting ${stuckArticles.length} article(s)`,
+            variant: 'default',
+          })
+
+          try {
+            await Promise.all(
+              stuckArticles.map(article => deleteArticle(article.id))
+            )
+
+            addToast({
+              title: '✓ Queue flushed!',
+              description: `Deleted ${stuckArticles.length} stuck article(s)`,
+              variant: 'success',
+            })
+
+            await fetchArticles()
+          } catch (error) {
+            addToast({
+              title: 'Failed to flush',
+              description: error instanceof Error ? error.message : 'Unknown error',
+              variant: 'destructive',
+            })
+          }
+        }}
       />
     </div>
   )

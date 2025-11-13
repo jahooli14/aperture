@@ -5,16 +5,17 @@
  */
 
 import { useState, useEffect } from 'react'
-import { AlertCircle, RotateCw, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { AlertCircle, RotateCw, X, ChevronDown, ChevronUp, Loader2, Trash2 } from 'lucide-react'
 import { articleProcessor } from '../../lib/articleProcessor'
 import type { Article } from '../../types/reading'
 
 interface ProcessingDebugPanelProps {
   articles: Article[]
   onRetry: (articleId: string, url: string) => void
+  onFlushAll: () => void
 }
 
-export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanelProps) {
+export function ProcessingDebugPanel({ articles, onRetry, onFlushAll }: ProcessingDebugPanelProps) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [logs, setLogs] = useState<Array<{ time: string; message: string; level: 'info' | 'error' | 'success' }>>([])
 
@@ -96,11 +97,13 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between p-4 border-b cursor-pointer"
+          className="flex items-center justify-between p-4 border-b"
           style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}
-          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3 flex-1 cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
             <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-red)' }} />
             <div>
               <p className="font-semibold text-sm" style={{ color: 'var(--premium-text-primary)' }}>
@@ -110,11 +113,33 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
                 {unprocessedArticles.length > 0 ? 'Tap to expand details' : 'All clear'}
               </p>
             </div>
+            <div className="ml-auto">
+              {isExpanded ? (
+                <ChevronDown className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+              ) : (
+                <ChevronUp className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+              )}
+            </div>
           </div>
-          {isExpanded ? (
-            <ChevronDown className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
-          ) : (
-            <ChevronUp className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+
+          {unprocessedArticles.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (confirm(`Delete all ${unprocessedArticles.length} stuck article(s)?`)) {
+                  onFlushAll()
+                }
+              }}
+              className="ml-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                color: 'var(--premium-red)',
+                border: '1px solid rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              <Trash2 className="h-3 w-3" />
+              Flush All
+            </button>
           )}
         </div>
 

@@ -106,17 +106,21 @@ class ArticleProcessor {
       // Log current state and parse backend message for stage
       processing.lastLog = article.excerpt || 'Processing...'
 
-      // Detect which stage based on backend message
-      if (processing.lastLog.includes('Extracting')) {
-        processing.currentStage = 'Backend: Extracting (Tier 1→2→3)'
-      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('take a moment')) {
-        processing.currentStage = 'Backend: Timed out, retrying'
+      // Detect which stage based on backend message - check failures first
+      if (processing.lastLog.includes('failed') || processing.lastLog.includes('Failed')) {
+        processing.currentStage = '❌ Backend: Extraction Failed'
       } else if (processing.lastLog.includes('blocked')) {
-        processing.currentStage = 'Backend: Domain blocked'
+        processing.currentStage = '🚫 Backend: Domain Blocked'
+      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('take a moment')) {
+        processing.currentStage = '⏱️ Backend: Timed Out'
       } else if (processing.lastLog.includes('JavaScript')) {
-        processing.currentStage = 'Backend: JS rendering needed'
+        processing.currentStage = '⚠️ Backend: Needs JS Rendering'
+      } else if (processing.lastLog.includes('Extracting') || processing.lastLog.includes('extraction')) {
+        processing.currentStage = '🔄 Backend: Extracting (Tier 1→2→3)'
+      } else if (processing.lastLog.includes('progress')) {
+        processing.currentStage = '🔄 Backend: In Progress'
       } else {
-        processing.currentStage = 'Backend: Processing'
+        processing.currentStage = '🔄 Backend: Processing'
       }
 
       this.log(`Stage: ${processing.currentStage} | ${processing.lastLog.slice(0, 40)}`, 'info')
