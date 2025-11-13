@@ -282,6 +282,53 @@ export function ReadingPage() {
     console.log('='.repeat(80))
   }, [location.search, saveArticle, fetchArticles, addToast]) // Re-run when URL params change (for PWA navigate-existing mode)
 
+  // Listen for custom event from main.tsx when SW sends postMessage
+  // This handles the case where the app is already on the reading page
+  useEffect(() => {
+    const handlePWAShare = (event: CustomEvent) => {
+      const sharedUrl = event.detail?.shared
+      if (sharedUrl) {
+        console.log('[ReadingPage] Custom event received, processing shared URL:', sharedUrl)
+
+        const processShare = async () => {
+          try {
+            addToast({
+              title: '📰 Saving shared article...',
+              description: 'Extracting content from ' + new URL(sharedUrl).hostname,
+              variant: 'default',
+            })
+
+            const article = await saveArticle({ url: sharedUrl })
+            console.log('[ReadingPage] Article saved successfully:', article.id)
+
+            addToast({
+              title: '✓ Article saved!',
+              description: 'Added to your reading queue',
+              variant: 'success',
+            })
+
+            await fetchArticles()
+            console.log('[ReadingPage] Articles refreshed')
+          } catch (error) {
+            console.error('[ReadingPage] Failed to save shared article:', error)
+            addToast({
+              title: 'Failed to save',
+              description: error instanceof Error ? error.message : 'Unknown error',
+              variant: 'destructive',
+            })
+          }
+        }
+
+        processShare()
+      }
+    }
+
+    window.addEventListener('pwa-share', handlePWAShare as EventListener)
+    return () => {
+      window.removeEventListener('pwa-share', handlePWAShare as EventListener)
+    }
+  }, [saveArticle, fetchArticles, addToast])
+
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
     if (tab !== 'queue' && tab !== 'updates') {

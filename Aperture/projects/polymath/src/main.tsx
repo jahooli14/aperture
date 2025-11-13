@@ -27,6 +27,49 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
         console.error('[Main] Service Worker registration failed:', error)
       })
   })
+
+  // Listen for messages from service worker (share-target handling)
+  navigator.serviceWorker.addEventListener('message', (evt) => {
+    console.log('[Main] Service Worker message received:', evt.data)
+    const d = evt.data
+    if (d && d.type === 'web-share-target' && d.shared) {
+      console.log('[Main] Processing shared content from SW message:', d.shared)
+      handleSharedUrl(d.shared)
+    }
+  })
+}
+
+// BroadcastChannel fallback for share-target (optional, supports older browsers)
+try {
+  const bc = new BroadcastChannel('pwa-share-channel')
+  bc.onmessage = (e) => {
+    console.log('[Main] BroadcastChannel message received:', e.data)
+    if (e.data?.type === 'web-share-target') {
+      console.log('[Main] Processing shared content from BroadcastChannel:', e.data.shared)
+      handleSharedUrl(e.data.shared)
+    }
+  }
+} catch (e) {
+  console.log('[Main] BroadcastChannel not available')
+}
+
+// Handle shared URLs (from postMessage or query params)
+function handleSharedUrl(sharedUrl: string) {
+  if (!sharedUrl) return
+
+  console.log('[Main] handleSharedUrl called with:', sharedUrl)
+
+  // Navigate to reading page with the shared URL as a query param
+  // This will trigger the existing ReadingPage useEffect that handles ?shared=
+  const currentPath = window.location.pathname
+  if (currentPath !== '/reading') {
+    console.log('[Main] Navigating to /reading with shared URL')
+    window.location.href = `/reading?shared=${encodeURIComponent(sharedUrl)}`
+  } else {
+    console.log('[Main] Already on /reading, triggering custom event')
+    // Already on reading page, trigger a custom event to process the share
+    window.dispatchEvent(new CustomEvent('pwa-share', { detail: { shared: sharedUrl } }))
+  }
 }
 
 // Global error handlers for debugging mobile crashes

@@ -4,7 +4,7 @@
  */
 
 // Update this version when you want to trigger a new service worker
-const VERSION = '1.0.3-android-share-fix'
+const VERSION = '1.0.4-robust-share-target'
 const CACHE_NAME = `polymath-v${VERSION}`
 const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
@@ -49,7 +49,7 @@ self.addEventListener('fetch', (event) => {
     console.log('[ServiceWorker] Fetch:', request.method, url.pathname, url.href)
   }
 
-  // Handle share target POST requests
+  // Handle share target POST requests with robust multi-strategy approach
   if (url.pathname === '/share-target' && request.method === 'POST') {
     console.log('[ServiceWorker] ✓✓✓ INTERCEPTING SHARE TARGET POST REQUEST ✓✓✓')
     console.log('[ServiceWorker] Request URL:', request.url)
@@ -69,23 +69,86 @@ self.addEventListener('fetch', (event) => {
           console.log('[ServiceWorker] FormData - title:', titleParam)
 
           // Determine shared URL (prioritize text for Android, fallback to url)
-          const sharedUrl = textParam || urlParam
+          const shared = (textParam || urlParam || titleParam || '').trim()
 
-          console.log('[ServiceWorker] Final shared URL:', sharedUrl)
+          console.log('[ServiceWorker] Final shared content:', shared)
 
-          // Redirect to reading page with the shared URL
-          const redirectUrl = `/reading?shared=${encodeURIComponent(sharedUrl)}`
-          console.log('[ServiceWorker] Redirecting to:', redirectUrl)
+          // Make sure we have something
+          if (!shared) {
+            console.warn('[ServiceWorker] No content shared')
+            return new Response('<html><body>Nothing shared</body></html>', {
+              headers: { 'Content-Type': 'text/html' }
+            })
+          }
 
-          // Use HTML/JS redirect instead of Response.redirect to force full app reload
-          // This ensures React remounts and extraction logic fires on Android
+          // Strategy 1: Try to find an existing window client and message it
+          const allClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          console.log('[ServiceWorker] Found', allClients.length, 'window clients')
+
+          if (allClients && allClients.length > 0) {
+            // Prefer focused client, fallback to first available
+            const targetClient = allClients.find(c => c.focused) || allClients[0]
+            console.log('[ServiceWorker] Attempting to message existing client:', targetClient.url)
+
+            try {
+              // Send message to existing client
+              targetClient.postMessage({ type: 'web-share-target', shared })
+              console.log('[ServiceWorker] Message sent to existing client')
+
+              // Try to focus the client
+              await targetClient.focus()
+              console.log('[ServiceWorker] Client focused')
+
+              // Return a simple response to close the share UI
+              return new Response('<html><body><script>window.close?.()</script></body></html>', {
+                headers: { 'Content-Type': 'text/html' }
+              })
+            } catch (messageError) {
+              console.warn('[ServiceWorker] Failed to message client:', messageError)
+
+              // Strategy 2: Try to navigate the client
+              try {
+                const navUrl = `/reading?shared=${encodeURIComponent(shared)}`
+                console.log('[ServiceWorker] Attempting to navigate client to:', navUrl)
+                await targetClient.navigate(navUrl)
+                await targetClient.focus()
+                console.log('[ServiceWorker] Client navigated successfully')
+
+                return new Response('<html><body><script>window.close?.()</script></body></html>', {
+                  headers: { 'Content-Type': 'text/html' }
+                })
+              } catch (navError) {
+                console.warn('[ServiceWorker] Failed to navigate client:', navError)
+                // Fall through to openWindow strategy
+              }
+            }
+          }
+
+          // Strategy 3: Try to open a new window
+          try {
+            const openUrl = `/reading?shared=${encodeURIComponent(shared)}`
+            console.log('[ServiceWorker] Attempting to open new window:', openUrl)
+            const opened = await self.clients.openWindow(openUrl)
+            if (opened) {
+              console.log('[ServiceWorker] New window opened successfully')
+              return new Response('<html><body><script>/* opened */</script></body></html>', {
+                headers: { 'Content-Type': 'text/html' }
+              })
+            }
+          } catch (openError) {
+            console.warn('[ServiceWorker] Failed to open window:', openError)
+            // Fall through to HTML redirect
+          }
+
+          // Strategy 4: Fallback to HTML/JS redirect (most reliable for Android)
+          const redirectUrl = `/reading?shared=${encodeURIComponent(shared)}`
+          console.log('[ServiceWorker] Using HTML redirect fallback to:', redirectUrl)
+
           return new Response(`
             <html>
               <head>
                 <meta name="viewport" content="width=device-width,initial-scale=1">
-                <script>
-                  location.href = "${redirectUrl}";
-                </script>
+                <script>location.replace('${redirectUrl}');</script>
               </head>
               <body></body>
             </html>`,
@@ -101,9 +164,7 @@ self.addEventListener('fetch', (event) => {
             <html>
               <head>
                 <meta name="viewport" content="width=device-width,initial-scale=1">
-                <script>
-                  location.href = "/reading";
-                </script>
+                <script>location.replace('/reading');</script>
               </head>
               <body></body>
             </html>`,
