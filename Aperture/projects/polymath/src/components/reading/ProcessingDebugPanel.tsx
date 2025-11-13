@@ -18,8 +18,12 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
   const [isExpanded, setIsExpanded] = useState(true)
   const [logs, setLogs] = useState<Array<{ time: string; message: string; level: 'info' | 'error' | 'success' }>>([])
 
-  // Find all unprocessed articles
-  const unprocessedArticles = articles.filter(a => !a.processed)
+  // Find all unprocessed articles that are NOT RSS (filter out RSS articles)
+  const unprocessedArticles = articles.filter(a =>
+    !a.processed &&
+    !a.tags?.includes('rss') &&
+    !a.tags?.includes('auto-imported')
+  )
 
   // Add log entry
   const addLog = (message: string, level: 'info' | 'error' | 'success' = 'info') => {
@@ -35,11 +39,13 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
   // Log unprocessed articles on mount
   useEffect(() => {
     if (unprocessedArticles.length > 0) {
-      addLog(`Found ${unprocessedArticles.length} unprocessed article(s)`, 'info')
+      addLog(`Found ${unprocessedArticles.length} stuck share sheet article(s) (RSS filtered out)`, 'info')
       unprocessedArticles.forEach(article => {
         const age = Date.now() - new Date(article.created_at).getTime()
         const ageMinutes = Math.floor(age / 60000)
-        addLog(`Article ${article.id.slice(0, 8)}: ${ageMinutes}min old - "${article.excerpt?.slice(0, 50)}"`, 'info')
+        const ageSeconds = Math.floor(age / 1000)
+        const ageDisplay = ageMinutes >= 1 ? `${ageMinutes}min` : `${ageSeconds}s`
+        addLog(`${article.id.slice(0, 8)}: ${ageDisplay} old - "${article.excerpt?.slice(0, 50)}"`, 'info')
       })
     }
   }, [])
@@ -98,10 +104,10 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
             <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-red)' }} />
             <div>
               <p className="font-semibold text-sm" style={{ color: 'var(--premium-text-primary)' }}>
-                Processing Debug ({unprocessedArticles.length} stuck)
+                Share Sheet Debug ({unprocessedArticles.length} stuck)
               </p>
               <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Tap to {isExpanded ? 'collapse' : 'expand'}
+                {unprocessedArticles.length > 0 ? 'Tap to expand details' : 'All clear'}
               </p>
             </div>
           </div>
@@ -118,7 +124,7 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
             {/* Unprocessed Articles */}
             <div className="p-4 space-y-3">
               <p className="text-xs font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
-                STUCK ARTICLES
+                STUCK SHARE SHEET ARTICLES (RSS FILTERED)
               </p>
               {unprocessedArticles.map(article => {
                 const processing = isBeingProcessed(article.id)
@@ -177,19 +183,38 @@ export function ProcessingDebugPanel({ articles, onRetry }: ProcessingDebugPanel
                       </div>
 
                       {processing && processingState && (
-                        <div className="flex items-center justify-between text-xs">
-                          <span style={{ color: 'var(--premium-text-tertiary)' }}>Attempts:</span>
-                          <span style={{ color: 'var(--premium-blue)' }}>
-                            {processingState.attempts} / 180
-                          </span>
-                        </div>
+                        <>
+                          <div className="text-xs p-2 rounded mb-1" style={{
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderLeft: '2px solid var(--premium-blue)',
+                            color: 'var(--premium-blue)'
+                          }}>
+                            <div className="font-semibold">🔄 ACTIVE PROCESSING</div>
+                            <div className="mt-1">Stage: {processingState.currentStage || 'Unknown'}</div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span style={{ color: 'var(--premium-text-tertiary)' }}>Poll Attempts:</span>
+                            <span style={{ color: 'var(--premium-blue)' }}>
+                              {processingState.attempts} / 180
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span style={{ color: 'var(--premium-text-tertiary)' }}>Time Elapsed:</span>
+                            <span style={{ color: 'var(--premium-blue)' }}>
+                              {Math.floor((Date.now() - processingState.startTime) / 1000)}s
+                            </span>
+                          </div>
+                        </>
                       )}
 
-                      <div className="text-xs p-2 rounded" style={{
+                      <div className="text-xs p-2 rounded mt-1" style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
                         color: 'var(--premium-text-tertiary)'
                       }}>
-                        Status: {article.excerpt || 'No status message'}
+                        <div className="font-semibold mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
+                          Backend Status:
+                        </div>
+                        {article.excerpt || 'No status message from backend'}
                       </div>
                     </div>
                   </div>

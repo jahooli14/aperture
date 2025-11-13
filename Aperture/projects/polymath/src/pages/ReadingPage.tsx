@@ -155,14 +155,20 @@ export function ReadingPage() {
     }
   }, [feeds, addToast])
 
-  // Auto-recovery: Find and retry stuck articles on mount
+  // Auto-recovery: Find and retry stuck articles on mount (excluding RSS)
   useEffect(() => {
     if (!autoRecoveryDone.current && articles.length > 0) {
       autoRecoveryDone.current = true
 
-      const stuckArticles = articles.filter(a => !a.processed)
+      // Filter out RSS articles - only auto-recover share sheet / manually saved articles
+      const stuckArticles = articles.filter(a =>
+        !a.processed &&
+        !a.tags?.includes('rss') &&
+        !a.tags?.includes('auto-imported')
+      )
+
       if (stuckArticles.length > 0) {
-        console.log(`[ReadingPage] Auto-recovery: Found ${stuckArticles.length} stuck article(s)`)
+        console.log(`[ReadingPage] Auto-recovery: Found ${stuckArticles.length} stuck share sheet article(s) (RSS filtered)`)
 
         stuckArticles.forEach(article => {
           const age = Date.now() - new Date(article.created_at).getTime()

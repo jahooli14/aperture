@@ -11,6 +11,7 @@ interface ProcessingArticle {
   attempts: number
   pollInterval?: number
   lastLog?: string
+  currentStage?: string
 }
 
 type LogCallback = (message: string, level: 'info' | 'error' | 'success') => void
@@ -59,7 +60,8 @@ class ArticleProcessor {
       url,
       startTime: Date.now(),
       attempts: 0,
-      lastLog: 'Starting extraction...'
+      lastLog: 'Starting extraction...',
+      currentStage: 'Backend: Initializing'
     })
 
     onProgress?.('extracting')
@@ -101,9 +103,23 @@ class ArticleProcessor {
         return
       }
 
-      // Log current state
+      // Log current state and parse backend message for stage
       processing.lastLog = article.excerpt || 'Processing...'
-      this.log(`Status: ${processing.lastLog.slice(0, 60)}`, 'info')
+
+      // Detect which stage based on backend message
+      if (processing.lastLog.includes('Extracting')) {
+        processing.currentStage = 'Backend: Extracting (Tier 1→2→3)'
+      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('take a moment')) {
+        processing.currentStage = 'Backend: Timed out, retrying'
+      } else if (processing.lastLog.includes('blocked')) {
+        processing.currentStage = 'Backend: Domain blocked'
+      } else if (processing.lastLog.includes('JavaScript')) {
+        processing.currentStage = 'Backend: JS rendering needed'
+      } else {
+        processing.currentStage = 'Backend: Processing'
+      }
+
+      this.log(`Stage: ${processing.currentStage} | ${processing.lastLog.slice(0, 40)}`, 'info')
 
       // Check if we've exceeded max attempts
       if (processing.attempts >= this.maxAttempts) {
