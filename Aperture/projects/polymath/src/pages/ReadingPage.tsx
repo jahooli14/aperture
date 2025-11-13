@@ -3,10 +3,10 @@
  * Displays saved articles with filtering and save functionality
  */
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
-import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText } from 'lucide-react'
+import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useRSSStore } from '../stores/useRSSStore'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -20,6 +20,7 @@ import { BulkActionsBar } from '../components/BulkActionsBar'
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { EmptyState } from '../components/ui/empty-state'
 import { SkeletonCard } from '../components/ui/skeleton-card'
+import { articleProcessor } from '../lib/articleProcessor'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
@@ -38,6 +39,8 @@ export function ReadingPage() {
   const [rssItems, setRssItems] = useState<RSSItem[]>([])
   const [loadingRSS, setLoadingRSS] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
+  const [processingArticles, setProcessingArticles] = useState<Map<string, { status: string; url: string }>>(new Map())
+  const processingRef = useRef<Set<string>>(new Set()) // Track processed URLs to prevent duplicates
 
   // Load lastKnownUpdatesCount from localStorage on mount
   const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState<number>(() => {
@@ -219,8 +222,7 @@ export function ReadingPage() {
     }
   }
 
-  // Handle shared URLs from Web Share Target API
-  // Service worker intercepts POST and redirects to /reading?shared=URL
+  // Handle shared URLs from Web Share Target API with robust processing
   useEffect(() => {
     console.log('='.repeat(80))
     console.log('[ReadingPage] SHARE DETECTION START')
@@ -233,8 +235,11 @@ export function ReadingPage() {
 
     const shareUrl: string | undefined = sharedParam || undefined
 
-    if (shareUrl) {
+    if (shareUrl && !processingRef.current.has(shareUrl)) {
       console.log('[ReadingPage] ✓ Processing shared URL:', shareUrl)
+
+      // Mark as processing to prevent duplicates
+      processingRef.current.add(shareUrl)
 
       // Clean URL params to prevent re-processing on refresh
       if (window.location.search) {
@@ -255,9 +260,45 @@ export function ReadingPage() {
           const article = await saveArticle({ url: shareUrl })
           console.log('[ReadingPage] Article saved successfully:', article.id)
 
+          // Start robust background processing with retry
+          setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: shareUrl }))
+
+          articleProcessor.startProcessing(article.id, shareUrl, (status, updatedArticle) => {
+            setProcessingArticles(prev => {
+              const next = new Map(prev)
+              if (status === 'complete') {
+                next.delete(article.id)
+                addToast({
+                  title: '✓ Article ready!',
+                  description: updatedArticle?.title || 'Content extracted successfully',
+                  variant: 'success',
+                })
+                fetchArticles() // Refresh to show completed article
+              } else if (status === 'retrying') {
+                next.set(article.id, { status: 'retrying', url: shareUrl })
+                addToast({
+                  title: '🔄 Retrying extraction...',
+                  description: 'First attempt timed out, trying again',
+                  variant: 'default',
+                })
+              } else if (status === 'failed') {
+                next.delete(article.id)
+                addToast({
+                  title: 'Extraction failed',
+                  description: 'Could not extract content. You can still view the original URL.',
+                  variant: 'destructive',
+                })
+                fetchArticles()
+              } else {
+                next.set(article.id, { status, url: shareUrl })
+              }
+              return next
+            })
+          })
+
           addToast({
             title: '✓ Article saved!',
-            description: 'Added to your reading queue',
+            description: 'Extracting content in background...',
             variant: 'success',
           })
 
@@ -266,6 +307,7 @@ export function ReadingPage() {
           console.log('[ReadingPage] Articles refreshed')
         } catch (error) {
           console.error('[ReadingPage] Failed to save shared article:', error)
+          processingRef.current.delete(shareUrl)
           addToast({
             title: 'Failed to save',
             description: error instanceof Error ? error.message : 'Unknown error',
@@ -275,20 +317,25 @@ export function ReadingPage() {
       }
 
       handleShare()
+    } else if (shareUrl) {
+      console.log('[ReadingPage] URL already being processed, skipping duplicate')
     } else {
       console.log('[ReadingPage] No shared URL parameter found')
     }
     console.log('[ReadingPage] SHARE DETECTION END')
     console.log('='.repeat(80))
-  }, [location.search, saveArticle, fetchArticles, addToast]) // Re-run when URL params change (for PWA navigate-existing mode)
+  }, [location.search, saveArticle, fetchArticles, addToast])
 
   // Listen for custom event from main.tsx when SW sends postMessage
   // This handles the case where the app is already on the reading page
   useEffect(() => {
     const handlePWAShare = (event: CustomEvent) => {
       const sharedUrl = event.detail?.shared
-      if (sharedUrl) {
+      if (sharedUrl && !processingRef.current.has(sharedUrl)) {
         console.log('[ReadingPage] Custom event received, processing shared URL:', sharedUrl)
+
+        // Mark as processing to prevent duplicates
+        processingRef.current.add(sharedUrl)
 
         const processShare = async () => {
           try {
@@ -301,9 +348,45 @@ export function ReadingPage() {
             const article = await saveArticle({ url: sharedUrl })
             console.log('[ReadingPage] Article saved successfully:', article.id)
 
+            // Start robust background processing with retry
+            setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: sharedUrl }))
+
+            articleProcessor.startProcessing(article.id, sharedUrl, (status, updatedArticle) => {
+              setProcessingArticles(prev => {
+                const next = new Map(prev)
+                if (status === 'complete') {
+                  next.delete(article.id)
+                  addToast({
+                    title: '✓ Article ready!',
+                    description: updatedArticle?.title || 'Content extracted successfully',
+                    variant: 'success',
+                  })
+                  fetchArticles()
+                } else if (status === 'retrying') {
+                  next.set(article.id, { status: 'retrying', url: sharedUrl })
+                  addToast({
+                    title: '🔄 Retrying extraction...',
+                    description: 'First attempt timed out, trying again',
+                    variant: 'default',
+                  })
+                } else if (status === 'failed') {
+                  next.delete(article.id)
+                  addToast({
+                    title: 'Extraction failed',
+                    description: 'Could not extract content. You can still view the original URL.',
+                    variant: 'destructive',
+                  })
+                  fetchArticles()
+                } else {
+                  next.set(article.id, { status, url: sharedUrl })
+                }
+                return next
+              })
+            })
+
             addToast({
               title: '✓ Article saved!',
-              description: 'Added to your reading queue',
+              description: 'Extracting content in background...',
               variant: 'success',
             })
 
@@ -311,6 +394,7 @@ export function ReadingPage() {
             console.log('[ReadingPage] Articles refreshed')
           } catch (error) {
             console.error('[ReadingPage] Failed to save shared article:', error)
+            processingRef.current.delete(sharedUrl)
             addToast({
               title: 'Failed to save',
               description: error instanceof Error ? error.message : 'Unknown error',
@@ -320,6 +404,8 @@ export function ReadingPage() {
         }
 
         processShare()
+      } else if (sharedUrl) {
+        console.log('[ReadingPage] Custom event URL already being processed, skipping duplicate')
       }
     }
 
@@ -479,8 +565,56 @@ export function ReadingPage() {
         </div>
       </div>
 
+      {/* Processing Indicator */}
+      {processingArticles.size > 0 && (
+        <div className="fixed top-24 left-0 right-0 z-30 px-4 sm:px-6">
+          <div className="max-w-4xl mx-auto">
+            {Array.from(processingArticles.entries()).map(([articleId, { status, url }]) => (
+              <div
+                key={articleId}
+                className="premium-glass rounded-xl p-4 mb-2 flex items-center gap-3"
+                style={{
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  borderColor: status === 'retrying' ? 'var(--premium-amber)' : 'var(--premium-blue)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid'
+                }}
+              >
+                {status === 'retrying' ? (
+                  <RotateCw className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-amber)' }} />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-blue)' }} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+                    {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
+                  </p>
+                  <p className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    {new URL(url).hostname}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    articleProcessor.cancelProcessing(articleId)
+                    setProcessingArticles(prev => {
+                      const next = new Map(prev)
+                      next.delete(articleId)
+                      return next
+                    })
+                  }}
+                  className="text-xs px-3 py-1 rounded-lg hover:bg-white/5 transition-colors"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
         {/* Updates Tab - RSS Feed Items */}
         {activeTab === 'updates' && (
           <>

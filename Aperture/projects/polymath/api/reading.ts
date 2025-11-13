@@ -12,6 +12,7 @@ import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
+import * as cheerio from 'cheerio'
 
 const rssParser = new Parser()
 
@@ -35,9 +36,9 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
   console.log('[Readability] Fetching article:', url)
 
   try {
-    // Fetch HTML with timeout
+    // Fetch HTML with timeout (reduced from 15s to 8s for faster fallback)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
 
     const response = await fetch(url, {
       headers: {
@@ -139,9 +140,9 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
   console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
 
   try {
-    // Fetch HTML with timeout
+    // Fetch HTML with timeout (reduced from 15s to 8s for faster fallback)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
 
     const response = await fetch(url, {
       headers: {
@@ -594,9 +595,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 1 // One retry for faster fallback to next tier
-  const RETRY_DELAYS = [2000] // 2 second delay before retry
-  const TIMEOUT_MS = 15000 // 15 second timeout per attempt
+  const MAX_RETRIES = 0 // No retries in Jina tier - fail fast to Cheerio
+  const RETRY_DELAYS = [] // No retries
+  const TIMEOUT_MS = 8000 // 8 second timeout (reduced from 15s for faster fallback)
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -1348,8 +1349,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`[reading] Article placeholder saved, ID: ${savedArticle.id}`)
 
       // Process article content in background (start promise chain before returning)
+      const extractionStartTime = Date.now()
+      console.log(`[reading] Starting background extraction for ${savedArticle.id} at ${new Date().toISOString()}`)
+
       fetchArticle(url)
         .then(async (article) => {
+          const extractionTime = Date.now() - extractionStartTime
+          console.log(`[reading] Extraction successful in ${extractionTime}ms for ${savedArticle.id}`)
+
           // Update with extracted content
           const { error: updateError } = await supabase
             .from('reading_queue')
@@ -1370,7 +1377,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (updateError) {
             console.error(`[reading] Failed to update article ${savedArticle.id}:`, updateError)
           } else {
-            console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id} - Title: "${article.title}"`)
+            console.log(`[reading] ✅ Article extraction complete for ${savedArticle.id} - Title: "${article.title}" (took ${extractionTime}ms)`)
           }
 
           // Generate embedding and auto-connect (async, run after article is marked processed)
@@ -1380,11 +1387,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .catch(err => console.error('[reading] Async embedding/connection error:', err))
         })
         .catch(async (extractError) => {
-          console.error(`[reading] ❌ Extraction failed for ${savedArticle.id}:`, extractError.message || extractError)
+          const extractionTime = Date.now() - extractionStartTime
+          console.error(`[reading] ❌ Extraction failed for ${savedArticle.id} after ${extractionTime}ms:`, extractError.message || extractError)
 
           // Mark as failed but keep the record with helpful error message
           const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
-          let userFriendlyMessage = 'Failed to extract content. '
+          let userFriendlyMessage = 'Extraction in progress. '
 
           // Check for Jina AI domain blocks (451 error)
           if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
@@ -1402,11 +1410,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
             }
           } else if (errorMessage.includes('JavaScript-heavy site')) {
-            userFriendlyMessage += 'This site may require JavaScript rendering. Try viewing the original article.'
-          } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
-            userFriendlyMessage += 'Request timed out. Click to retry.'
+            userFriendlyMessage = 'This site requires JavaScript rendering. Content extraction may be incomplete.'
+          } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
+            // Don't mark as failed on timeout - leave it processing for client retry
+            userFriendlyMessage = 'Extracting content... This may take a moment.'
           } else {
-            userFriendlyMessage += 'Click to view the original article.'
+            userFriendlyMessage = 'Content extraction failed. You can still view the original URL.'
           }
 
           await supabase

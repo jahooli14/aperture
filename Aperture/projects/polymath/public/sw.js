@@ -4,7 +4,7 @@
  */
 
 // Update this version when you want to trigger a new service worker
-const VERSION = '1.0.4-robust-share-target'
+const VERSION = '1.0.5-bulletproof-share'
 const CACHE_NAME = `polymath-v${VERSION}`
 const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
@@ -54,6 +54,7 @@ self.addEventListener('fetch', (event) => {
     console.log('[ServiceWorker] ✓✓✓ INTERCEPTING SHARE TARGET POST REQUEST ✓✓✓')
     console.log('[ServiceWorker] Request URL:', request.url)
     console.log('[ServiceWorker] Request method:', request.method)
+    console.log('[ServiceWorker] Timestamp:', new Date().toISOString())
     event.respondWith(
       (async () => {
         try {
@@ -68,15 +69,33 @@ self.addEventListener('fetch', (event) => {
           console.log('[ServiceWorker] FormData - url:', urlParam)
           console.log('[ServiceWorker] FormData - title:', titleParam)
 
-          // Determine shared URL (prioritize text for Android, fallback to url)
-          const shared = (textParam || urlParam || titleParam || '').trim()
+          // Determine shared URL (prioritize URL param first, then text for Android compatibility)
+          let shared = urlParam ? urlParam.toString().trim() : textParam.toString().trim()
+
+          // If we got a title but no URL/text, check if title is actually a URL
+          if (!shared && titleParam) {
+            const titleStr = titleParam.toString().trim()
+            if (titleStr.startsWith('http://') || titleStr.startsWith('https://')) {
+              shared = titleStr
+            }
+          }
 
           console.log('[ServiceWorker] Final shared content:', shared)
 
-          // Make sure we have something
+          // Make sure we have something and it looks like a URL
           if (!shared) {
             console.warn('[ServiceWorker] No content shared')
-            return new Response('<html><body>Nothing shared</body></html>', {
+            return new Response('<html><body><h1>Error</h1><p>No URL was shared</p></body></html>', {
+              headers: { 'Content-Type': 'text/html' }
+            })
+          }
+
+          // Validate it's a URL
+          try {
+            new URL(shared)
+          } catch (e) {
+            console.error('[ServiceWorker] Invalid URL:', shared)
+            return new Response(`<html><body><h1>Error</h1><p>Invalid URL: ${shared}</p></body></html>`, {
               headers: { 'Content-Type': 'text/html' }
             })
           }
