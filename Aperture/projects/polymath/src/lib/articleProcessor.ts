@@ -106,6 +106,20 @@ class ArticleProcessor {
       // Log current state and parse backend message for stage
       processing.lastLog = article.excerpt || 'Processing...'
 
+      // Check if article is a "zombie" - created long ago but never processed
+      // This happens when backend times out and never updates the status
+      const articleAge = Date.now() - new Date(article.created_at).getTime()
+      const articleAgeMinutes = Math.floor(articleAge / 60000)
+      const isZombie = articleAgeMinutes >= 5 && processing.lastLog.includes('Extracting')
+
+      if (isZombie) {
+        this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeMinutes}min old but status never updated - backend died!`, 'error')
+        processing.currentStage = '🧟 Backend: Died (Zombie - Retriggering)'
+        // Immediately trigger retry without waiting for max attempts
+        await this.retryExtraction(articleId, processing.url, onProgress)
+        return
+      }
+
       // Detect which stage based on backend message - check failures first
       if (processing.lastLog.includes('failed') || processing.lastLog.includes('Failed')) {
         processing.currentStage = '❌ Backend: Extraction Failed'

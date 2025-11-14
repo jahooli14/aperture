@@ -36,9 +36,9 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
   console.log('[Readability] Fetching article:', url)
 
   try {
-    // Fetch HTML with timeout (reduced from 15s to 8s for faster fallback)
+    // Fetch HTML with timeout (15s - we have 60s total, be patient)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
 
     const response = await fetch(url, {
       headers: {
@@ -140,9 +140,9 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
   console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
 
   try {
-    // Fetch HTML with timeout (reduced from 15s to 8s for faster fallback)
+    // Fetch HTML with timeout (15s - we have 60s total, be patient)
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
 
     const response = await fetch(url, {
       headers: {
@@ -597,7 +597,7 @@ function cleanMarkdownContent(markdown: string): string {
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
   const MAX_RETRIES = 0 // No retries in Jina tier - fail fast to Cheerio
   const RETRY_DELAYS = [] // No retries
-  const TIMEOUT_MS = 8000 // 8 second timeout (reduced from 15s for faster fallback)
+  const TIMEOUT_MS = 15000 // 15 second timeout - we have 60s total budget
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -1412,8 +1412,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage = 'This site requires JavaScript rendering. Content extraction may be incomplete.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
-            // Don't mark as failed on timeout - leave it processing for client retry
-            userFriendlyMessage = 'Extracting content... This may take a moment.'
+            // Backend extraction timed out - client will auto-retry via zombie detection
+            userFriendlyMessage = 'Extraction timed out - will auto-retry. Page may be slow to load.'
+          } else if (errorMessage.includes('Failed to extract article after trying all methods')) {
+            userFriendlyMessage = 'All extraction methods failed. Site may require JavaScript or have anti-bot protection.'
           } else {
             userFriendlyMessage = 'Content extraction failed. You can still view the original URL.'
           }

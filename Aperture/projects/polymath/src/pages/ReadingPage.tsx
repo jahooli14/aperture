@@ -174,9 +174,9 @@ export function ReadingPage() {
           const age = Date.now() - new Date(article.created_at).getTime()
           const ageMinutes = Math.floor(age / 60000)
 
-          // Only auto-recover articles that are more than 1 minute old
-          if (ageMinutes >= 1) {
-            console.log(`[ReadingPage] Auto-recovery: Retrying ${article.id} (${ageMinutes}min old)`)
+          // Auto-recover all stuck articles (even if < 1min old, they're clearly stuck)
+          // Zombie detection in ArticleProcessor will handle old articles immediately
+          console.log(`[ReadingPage] Auto-recovery: Retrying ${article.id} (${ageMinutes}min old)`)
 
             setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: article.url }))
 
@@ -202,7 +202,7 @@ export function ReadingPage() {
                 return next
               })
             })
-          }
+          })
         })
       }
     }
