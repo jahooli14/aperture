@@ -1352,8 +1352,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const extractionStartTime = Date.now()
       console.log(`[reading] Starting background extraction for ${savedArticle.id} at ${new Date().toISOString()}`)
 
-      fetchArticle(url)
-        .then(async (article) => {
+      // Wrap extraction in a timeout to catch failures BEFORE Vercel kills us at 60s
+      // This ensures .catch() runs and updates article status (prevents zombies)
+      const INTERNAL_TIMEOUT_MS = 50000 // 50 seconds - gives 10s buffer before Vercel's 60s limit
+
+      const extractionPromise = fetchArticle(url)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Internal timeout: Extraction took longer than 50s')), INTERNAL_TIMEOUT_MS)
+      )
+
+      Promise.race([extractionPromise, timeoutPromise])
+        .then(async (article: any) => {
           const extractionTime = Date.now() - extractionStartTime
           console.log(`[reading] Extraction successful in ${extractionTime}ms for ${savedArticle.id}`)
 
