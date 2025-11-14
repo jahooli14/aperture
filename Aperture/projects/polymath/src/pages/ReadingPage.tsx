@@ -202,7 +202,6 @@ export function ReadingPage() {
                 return next
               })
             })
-          })
         })
       }
     }
