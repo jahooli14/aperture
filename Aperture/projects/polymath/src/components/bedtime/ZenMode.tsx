@@ -11,7 +11,7 @@ interface BedtimePrompt {
   id: string
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
-  format?: 'question' | 'statement' | 'visualization' | 'scenario'
+  format?: 'question' | 'statement' | 'visualization' | 'scenario' | 'incubation'
   metaphor?: string
   viewed: boolean
 }
@@ -23,11 +23,27 @@ interface ZenModeProps {
 }
 
 export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
+  // Sort prompts by depth for progressive trance induction
+  // Start concrete, end with deepest subconscious penetration
+  const depthOrder: Record<string, number> = {
+    'question': 1,      // Most concrete/rational
+    'statement': 2,     // Declarative suggestions
+    'scenario': 3,      // Dreamlike exploration
+    'visualization': 4, // Multi-sensory immersion
+    'incubation': 5     // Deepest - pure dream seeding
+  }
+
+  const sortedPrompts = [...prompts].sort((a, b) => {
+    const depthA = depthOrder[a.format || 'question'] || 1
+    const depthB = depthOrder[b.format || 'question'] || 1
+    return depthA - depthB
+  })
+
   const [currentIndex, setCurrentIndex] = useState(0)
-  const currentPrompt = prompts[currentIndex]
+  const currentPrompt = sortedPrompts[currentIndex]
 
   const handleNext = () => {
-    if (currentIndex < prompts.length - 1) {
+    if (currentIndex < sortedPrompts.length - 1) {
       if (!currentPrompt.viewed) {
         onMarkViewed(currentPrompt.id)
       }
@@ -107,7 +123,7 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
 
       {/* Progress dots */}
       <div className="absolute top-8 left-1/2 transform -translate-x-1/2 flex gap-2">
-        {prompts.map((_, index) => (
+        {sortedPrompts.map((_, index) => (
           <div
             key={index}
             className="h-2 rounded-full transition-all duration-300"
@@ -134,15 +150,25 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
             transition={{ duration: 0.5, ease: 'easeOut' }}
             className="text-center space-y-8"
           >
-            {/* Type badge */}
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-4xl">{getTypeIcon(currentPrompt.type)}</span>
-              <span
-                className="text-sm font-semibold uppercase tracking-wider"
-                style={{ color: getTypeColor(currentPrompt.type) }}
-              >
-                {currentPrompt.type}
-              </span>
+            {/* Type badge with format indicator */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{getTypeIcon(currentPrompt.type)}</span>
+                <span
+                  className="text-sm font-semibold uppercase tracking-wider"
+                  style={{ color: getTypeColor(currentPrompt.type) }}
+                >
+                  {currentPrompt.type}
+                </span>
+              </div>
+              {currentPrompt.format && (
+                <span
+                  className="text-xs uppercase tracking-wide opacity-60"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                >
+                  {currentPrompt.format}
+                </span>
+              )}
             </div>
 
             {/* Prompt text */}
@@ -186,9 +212,9 @@ export function ZenMode({ prompts, onClose, onMarkViewed }: ZenModeProps) {
 
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
-              {currentIndex + 1} of {prompts.length}
+              {currentIndex + 1} of {sortedPrompts.length}
             </p>
-            {currentIndex === prompts.length - 1 && (
+            {currentIndex === sortedPrompts.length - 1 && (
               <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
                 Tap → to close
               </p>

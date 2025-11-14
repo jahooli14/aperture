@@ -27,7 +27,7 @@ interface BedtimePrompt {
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
   relatedIds: string[] // Memory/project/article IDs that inspired this
   metaphor?: string // Optional poetic framing for enhanced contemplation
-  format?: 'question' | 'statement' | 'visualization' | 'scenario' // Prompt variety
+  format?: 'question' | 'statement' | 'visualization' | 'scenario' | 'incubation' // Prompt variety
 }
 
 /**
@@ -348,46 +348,89 @@ ${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : '
 4. **transform** - Personal growth through pattern synthesis
 
 **PROMPT FORMATS:**
-1. **question** - Classic open-ended inquiry (most versatile)
-2. **statement** - Contemplative assertion to ponder (confident, declarative)
-3. **visualization** - Guided imagery exercise (spatial, metaphorical)
-4. **scenario** - What-if exploration (future-oriented, imaginative)
+1. **question** - Create productive cognitive tension (open loops for sleeping mind to resolve)
+2. **statement** - Declarative with embedded suggestions (use present progressive tense)
+3. **visualization** - Multi-sensory guided imagery (spatial, kinesthetic, transformative)
+4. **scenario** - Dreamlike what-if exploration (non-linear, symbolic, archetypal)
+5. **incubation** - Dream seeding structure: brief seed + sensory anchor + permission to release
 
-Use a MIX of formats (not all questions). Match format to content: visualizations for spatial/metaphorical thinking, scenarios for future possibilities, statements for bold reframes, questions for open exploration.
+Use a MIX of formats (not all questions). Favor visualization and incubation for deepest subconscious penetration. Match format to content depth.
 
 **CRAFTING RULES:**
 
 MUST DO:
 ✅ Reference SPECIFIC titles, projects, or themes from their actual knowledge
-✅ Create open-ended questions (not action items or yes/no)
-✅ Connect 2+ pieces of their knowledge in unexpected ways
-✅ Bridge time: past insights → current projects, or dormant → active
-✅ Leave room for dream-logic and metaphorical thinking
+✅ Create OPEN LOOPS (unresolved cognitive tension the sleeping brain MUST process)
+✅ Connect 2+ pieces in unexpected ways using archetypal/mythological metaphors
+✅ Bridge time with fluidity: "The answer tomorrow needs the question tonight"
+✅ Use PRESENT PROGRESSIVE tense ("is forming", "is connecting", "is emerging")
+✅ Include SENSORY details (visual, kinesthetic, auditory, spatial)
+✅ Embed PERMISSION for unconscious processing ("Your dreaming mind already knows...")
+✅ Use GENTLE REPETITION for trance induction where natural
+✅ End with paradoxical permission to forget/let go
 
 NEVER DO:
 ❌ Generic prompts with no specific references
-❌ Direct action items ("Go do X")
+❌ Direct action items ("Go do X") or simple yes/no questions
 ❌ Abstract philosophy disconnected from their knowledge
-❌ Forced poetic language
-❌ Questions requiring facts/data
+❌ Purely rational/waking-brain logic
+❌ Questions requiring facts/data lookup
+
+**HYPNAGOGIC LANGUAGE PATTERNS:**
+
+Use these techniques to make prompts "take over" the sleeping mind:
+
+1. **OPEN LOOPS (Zeigarnik Effect)**: Create unresolved tension
+   - "There's a hidden bridge between X and Y that only appears when you stop looking..."
+   - "Your mind has been quietly connecting X across 15 thoughts. Tonight it completes the pattern..."
+
+2. **EMBEDDED COMMANDS**: Weave suggestions into structure
+   - "As you drift into sleep, notice how..."
+   - "Your sleeping mind will show you..."
+   - "By morning, this will feel obvious..."
+
+3. **TEMPORAL FLUIDITY**: Mirror dream logic with non-linear time
+   - "The insight you'll have tomorrow is already forming..."
+   - "Past and future are meeting tonight in your dreams..."
+
+4. **SENSORY ANCHORS**: Multi-sensory activation
+   - "Picture [concept] as a shape... Feel its weight... Hear its rhythm..."
+   - "Imagine walking through a space where every object is one of your thoughts..."
+
+5. **ARCHETYPAL FRAMES**: Tap Jungian universals
+   - The Journey, The Threshold, The Hidden Treasure, The Guide, The Shadow, The Return
+   - "The Guardian protecting [project] is actually showing you what [theme] needs..."
+
+6. **PERMISSION STRUCTURES**: Give unconscious permission
+   - "You don't need to solve this now..."
+   - "Let go of trying to understand..."
+   - "Your body knows what to do with this while you sleep..."
+
+7. **QUANTUM THINKING**: Embrace dream logic paradox
+   - "X and Y were always the same thing. You just couldn't see it while awake..."
+   - "The answer exists in the space between [A] and [B]..."
 
 **EXCELLENT EXAMPLES (By Format):**
 
-**Questions** (classic open-ended):
-✅ "Your thought '${topMemories[0]?.title || '[memory title]'}' and that article '${topArticles[0]?.title || '[article title]'}'—what invisible thread connects them?"
-✅ "Dormant project '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}'—what if it went dormant because it's pointing you toward something deeper about ${consequentialThemes[0] || '[theme]'}?"
+**Questions** (open loops with embedded commands):
+✅ "There's a hidden bridge between '${topMemories[0]?.title || '[memory]'}' and '${topArticles[0]?.title || '[article]'}' that only appears when you stop looking for it. As you drift into sleep tonight, notice when the connection reveals itself..."
+✅ "What if '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}' went dormant because it's been waiting for you to understand ${consequentialThemes[0] || '[theme]'} first? Your sleeping mind already knows the answer..."
 
-**Statements** (contemplative assertions):
-✅ "There's a pattern between your reading on '${topArticles[0]?.title || '[article]'}' and that thought '${topMemories[0]?.title || '[memory]'}' that wants to become a project."
-✅ "The reason '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}' went dormant holds the key to unlocking '${activeProjects[0]?.title || '[current project]'}'."
+**Statements** (present progressive with permission):
+✅ "Right now, as you read this, a pattern is forming between '${topArticles[0]?.title || '[article]'}' and '${topMemories[0]?.title || '[memory]'}'. It's becoming a project. You don't need to force it—by morning, it will feel obvious."
+✅ "The reason '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}' went dormant is the same reason '${activeProjects[0]?.title || '[current project]'}' exists. Past and future are meeting tonight. Let them merge."
 
-**Visualizations** (guided imagery):
-✅ "Picture ${consequentialThemes[0] || '[theme]'} as a thread weaving through your thoughts on '${topMemories[0]?.title || '[memory]'}', your reading of '${topArticles[0]?.title || '[article]'}', and project '${activeProjects[0]?.title || '[project]'}'. Where does the thread lead next?"
-✅ "Imagine '${activeProjects[0]?.title || '[project]'}' as a door. Your insight '${oldInsights[0]?.title || '[old insight]'}' is the key. What's on the other side?"
+**Visualizations** (multi-sensory with archetypal frames):
+✅ "Picture ${consequentialThemes[0] || '[theme]'} as a golden thread. Feel it weaving through your thought '${topMemories[0]?.title || '[memory]'}', pulling tight around '${topArticles[0]?.title || '[article]'}', then leading toward '${activeProjects[0]?.title || '[project]'}'. As you fall asleep, follow where the thread is pulling you. Your hands already know the way."
+✅ "Imagine '${activeProjects[0]?.title || '[project]'}' as a threshold you've been approaching. Your insight '${oldInsights[0]?.title || '[old insight]'}' is the guardian showing you it's safe to cross. Step through tonight. You don't need to remember this—your dreaming self will walk through anyway."
 
-**Scenarios** (what-if explorations):
-✅ "If you could only work on '${activeProjects[0]?.title || '[project]'}' for 20 minutes a day, guided by the insight in '${topMemories[0]?.title || '[memory]'}', what would emerge in 30 days?"
-✅ "Imagine waking up tomorrow with complete clarity on ${consequentialThemes[0] || '[theme]'}. What would you understand about '${topArticles[0]?.title || '[article]'}' that you don't see now?"
+**Scenarios** (dreamlike, temporal fluidity):
+✅ "In the dream you're about to have, you've already completed '${activeProjects[0]?.title || '[project]'}'. Look back from that future and see how '${topMemories[0]?.title || '[memory]'}' was always pointing the way. When you wake, you'll remember the path."
+✅ "Tomorrow morning, you'll have clarity on ${consequentialThemes[0] || '[theme]'}. That future-you is already whispering back through '${topArticles[0]?.title || '[article]'}'. Tonight, in the space between waking and sleep, listen."
+
+**Incubation** (dream seeding: seed + anchor + release):
+✅ "Tonight your mind will work on: How does '${topMemories[0]?.title || '[memory]'}' unlock '${activeProjects[0]?.title || '[project]'}'? Picture it as a locked box that opens by itself. You don't need to remember this question—your dreams will answer it anyway. By morning, it will feel like you always knew."
+✅ "Seed for tonight: '${topArticles[0]?.title || '[article]'}' and '${consequentialThemes[0] || '[theme]'}' are two parts of the same thing. Visualize them as puzzle pieces slowly rotating. Let go. Your sleeping mind will click them together."
 
 **CONTEXT SIGNALS:**
 ${context.hasNoProjects && context.hasRichInput ? '→ Rich input, no projects: Suggest CONNECTION prompts showing project possibilities' : ''}
@@ -410,15 +453,21 @@ ${Object.entries(performance.typeStats).map(([type, stats]: [string, any]) =>
 Return ONLY valid JSON:
 [
   {
-    "prompt": "Specific question using actual titles/names from their knowledge...",
+    "prompt": "Full prompt text with hypnagogic language patterns, embedded commands, sensory details, using actual titles/names from their knowledge. Apply techniques: open loops, present progressive tense, temporal fluidity, permission structures, archetypal frames.",
     "type": "connection|divergent|revisit|transform",
     "relatedIds": ["IDs of items referenced"],
-    "metaphor": "Optional 1-sentence poetic framing (only if genuinely enhancing)",
-    "format": "question|statement|visualization|scenario"
+    "metaphor": "Optional 1-sentence poetic/archetypal framing (only if genuinely enhancing depth)",
+    "format": "question|statement|visualization|scenario|incubation"
   }
 ]
 
-CRITICAL: Use actual titles, project names, and themes. Generic = failure.`
+CRITICAL:
+- Use actual titles, project names, and themes. Generic = failure.
+- Apply MULTIPLE hypnagogic language techniques per prompt
+- End prompts with permission to let go/forget
+- Include sensory and temporal elements
+- Create unresolved cognitive tension (open loops)
+- Favor visualization and incubation formats for depth`
 
   const result = await model.generateContent(prompt)
   const text = result.response.text()
