@@ -190,12 +190,12 @@ export function ReadingPage() {
                     description: updatedArticle?.title || 'Stuck article has been processed',
                     variant: 'success',
                   })
-                  fetchArticles()
+                  fetchArticles(undefined, true) // Force refresh for auto-recovery
                 } else if (status === 'retrying') {
                   next.set(article.id, { status: 'retrying', url: article.url })
                 } else if (status === 'failed') {
                   next.delete(article.id)
-                  fetchArticles()
+                  fetchArticles(undefined, true) // Force refresh for failed auto-recovery
                 } else {
                   next.set(article.id, { status, url: article.url })
                 }
@@ -328,7 +328,7 @@ export function ReadingPage() {
                   description: updatedArticle?.title || 'Content extracted successfully',
                   variant: 'success',
                 })
-                fetchArticles() // Refresh to show completed article
+                fetchArticles(undefined, true) // Force refresh to show completed article (bypass cache)
               } else if (status === 'retrying') {
                 next.set(article.id, { status: 'retrying', url: shareUrl })
                 addToast({
@@ -343,7 +343,7 @@ export function ReadingPage() {
                   description: 'Could not extract content. You can still view the original URL.',
                   variant: 'destructive',
                 })
-                fetchArticles()
+                fetchArticles(undefined, true) // Force refresh to show failed article status
               } else {
                 next.set(article.id, { status, url: shareUrl })
               }
@@ -416,7 +416,7 @@ export function ReadingPage() {
                     description: updatedArticle?.title || 'Content extracted successfully',
                     variant: 'success',
                   })
-                  fetchArticles()
+                  fetchArticles(undefined, true) // Force refresh for postMessage share
                 } else if (status === 'retrying') {
                   next.set(article.id, { status: 'retrying', url: sharedUrl })
                   addToast({
@@ -431,7 +431,7 @@ export function ReadingPage() {
                     description: 'Could not extract content. You can still view the original URL.',
                     variant: 'destructive',
                   })
-                  fetchArticles()
+                  fetchArticles(undefined, true) // Force refresh for failed postMessage share
                 } else {
                   next.set(article.id, { status, url: sharedUrl })
                 }
