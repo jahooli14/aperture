@@ -200,7 +200,12 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
       '.content',
       '#content',
       '.post-body',
-      '.article-body'
+      '.article-body',
+      // Guardian-specific selectors
+      '.content__article-body',
+      '.article-body-commercial-selector',
+      '[data-gu-name="body"]',
+      '.dcr-1qn1jd8', // Guardian's DCR (Dotcom Rendering) classes
     ]
 
     for (const selector of contentSelectors) {
@@ -222,7 +227,7 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
     // Extract text for validation
     const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
-    if (textContent.length < 50) {
+    if (textContent.length < 300) {
       throw new Error('Cheerio extraction returned insufficient content (site may require JavaScript)')
     }
 
@@ -297,8 +302,8 @@ async function fetchArticle(url: string) {
     console.log('[fetchArticle] Tier 1: Attempting Readability extraction...')
     const result = await fetchArticleWithReadability(url)
 
-    // Check if extraction returned meaningful content
-    if (result.content && result.content.length > 100) {
+    // Check if extraction returned meaningful content (300 chars minimum to avoid metadata-only)
+    if (result.content && result.content.length > 300) {
       console.log('[fetchArticle] ✅ Tier 1 succeeded (Readability)')
       return result
     }
@@ -314,7 +319,7 @@ async function fetchArticle(url: string) {
       console.log('[fetchArticle] Tier 2: Attempting Jina Reader extraction...')
       const result = await fetchArticleWithJina(url)
 
-      if (result.content && result.content.length > 100) {
+      if (result.content && result.content.length > 300) {
         console.log('[fetchArticle] ✅ Tier 2 succeeded (Jina Reader)')
         return result
       }
@@ -330,7 +335,7 @@ async function fetchArticle(url: string) {
         console.log('[fetchArticle] Tier 3: Attempting Cheerio extraction (last resort)...')
         const result = await fetchArticleWithCheerio(url)
 
-        if (result.content && result.content.length > 100) {
+        if (result.content && result.content.length > 300) {
           console.log('[fetchArticle] ✅ Tier 3 succeeded (Cheerio)')
           return result
         }
