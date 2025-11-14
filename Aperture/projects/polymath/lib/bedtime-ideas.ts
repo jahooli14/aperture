@@ -52,23 +52,35 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   const recentMemories = await getRecentMemories(userId, 7) // Last week of thoughts
   const activeProjects = await getActiveProjects(userId) // Current outputs
   const currentInterests = await getCurrentInterests(userId)
-  const oldInsights = await getOldInsights(userId, 90) // 14-90 days old
+  const oldInsights = await getOldInsights(userId, 90, recentMemories) // Semantically related old content
+  const oldArticles = await getOldArticles(userId, recentMemories) // Forgotten reading material
 
   // 2. Get past prompt performance for personalization
   const performance = await getPromptPerformance(userId)
 
-  // 3. Analyze gaps: Do they have inputs but no outputs? Stuck projects?
+  // 3. NEW: Find exploration areas - themes with temporal depth
+  const explorationAreas = await findExplorationAreas(
+    userId,
+    recentMemories,
+    recentArticles,
+    oldInsights,
+    oldArticles
+  )
+
+  // 4. Analyze gaps: Do they have inputs but no outputs? Stuck projects?
   const hasRichInput = recentArticles.length > 0 || recentMemories.length > 5
   const hasBlockedProjects = activeProjects.some(p => p.status === 'active' && !p.last_active)
   const hasNoProjects = activeProjects.length === 0
 
-  // 4. Generate prompts optimized for input → output synthesis
+  // 5. Generate prompts optimized for input → output synthesis
   const prompts = await generatePromptsWithAI(
     recentArticles,
     recentMemories,
     activeProjects,
     currentInterests,
     oldInsights,
+    oldArticles,
+    explorationAreas,
     { hasRichInput, hasBlockedProjects, hasNoProjects },
     performance
   )
@@ -81,6 +93,7 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
 
 /**
  * Get recent articles/reading (INPUT layer)
+ * Enhanced to include embedding data for semantic matching
  */
 async function getRecentArticles(userId: string, days: number) {
   const cutoff = new Date()
@@ -88,13 +101,57 @@ async function getRecentArticles(userId: string, days: number) {
 
   const { data } = await supabase
     .from('reading_items')
-    .select('id, title, summary, url, tags, completed_at, created_at')
+    .select('id, title, summary, url, tags, completed_at, created_at, embedding')
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(15)
 
   return data || []
+}
+
+/**
+ * NEW: Get old articles (from 2+ weeks ago) semantically related to current thinking
+ * Surfaces forgotten reading material that's relevant to current themes
+ */
+async function getOldArticles(userId: string, recentMemories: any[]) {
+  const twoWeeksAgo = new Date()
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+  // If we have recent memory embeddings, find related old articles
+  const recentWithEmbeddings = recentMemories.filter(m => m.embedding)
+
+  if (recentWithEmbeddings.length === 0) {
+    return []
+  }
+
+  // Note: This assumes reading_items has embeddings. If not, this will return empty.
+  // Check if match_reading_items function exists, otherwise skip
+  try {
+    const { data: semanticMatches } = await supabase.rpc('match_reading_items', {
+      query_embedding: recentWithEmbeddings[0].embedding,
+      match_threshold: 0.65,
+      match_count: 10,
+      filter_user_id: userId
+    })
+
+    if (semanticMatches && semanticMatches.length > 0) {
+      // Filter to old articles only
+      const oldArticles = semanticMatches.filter((a: any) => {
+        const createdAt = new Date(a.created_at)
+        return createdAt <= twoWeeksAgo && createdAt >= ninetyDaysAgo
+      })
+
+      return oldArticles.slice(0, 5)
+    }
+  } catch (error) {
+    // If match_reading_items doesn't exist, silently fail
+    logger.warn('match_reading_items RPC not available - skipping old article matching')
+  }
+
+  return []
 }
 
 /**
@@ -199,25 +256,130 @@ async function getCurrentInterests(userId: string) {
 
 /**
  * Get old insights that might resurface
- * Returns insights from 14-90 days ago (not too recent, not too old)
+ * NOW USES EMBEDDINGS: Finds older content semantically related to recent themes
+ * This creates powerful temporal bridges between current thinking and forgotten insights
  */
-async function getOldInsights(userId: string, daysAgo: number) {
+async function getOldInsights(userId: string, daysAgo: number, recentMemories: any[]) {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - daysAgo) // 90 days ago
   const recent = new Date()
   recent.setDate(recent.getDate() - 14) // 14 days ago
 
+  // Strategy 1: If we have recent memory embeddings, find semantically related old content
+  const recentWithEmbeddings = recentMemories.filter(m => m.embedding)
+
+  if (recentWithEmbeddings.length > 0) {
+    // Use the most recent memory's embedding to find old related content
+    const { data: semanticMatches } = await supabase.rpc('match_memories', {
+      query_embedding: recentWithEmbeddings[0].embedding,
+      match_threshold: 0.65, // Slightly lower threshold to catch broader connections
+      match_count: 10,
+      filter_user_id: userId
+    })
+
+    if (semanticMatches && semanticMatches.length > 0) {
+      // Filter to only old memories (14-90 days ago)
+      const oldMatches = semanticMatches.filter((m: any) => {
+        const createdAt = new Date(m.created_at)
+        return createdAt <= recent && createdAt >= cutoff
+      })
+
+      if (oldMatches.length > 0) {
+        return oldMatches.slice(0, 5)
+      }
+    }
+  }
+
+  // Strategy 2: Fallback to date-based insights if no embeddings
   const { data } = await supabase
     .from('memories')
-    .select('id, title, body, themes')
+    .select('id, title, body, themes, created_at')
     .eq('user_id', userId)
     .eq('memory_type', 'insight')
-    .lte('created_at', recent.toISOString()) // Older than 14 days
-    .gte('created_at', cutoff.toISOString()) // But within 90 days
+    .lte('created_at', recent.toISOString())
+    .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
     .limit(5)
 
   return data || []
+}
+
+/**
+ * NEW: Find "exploration areas" - themes that bridge recent and old content
+ * Uses embeddings to discover what's "etched in the back of your mind"
+ * Returns themes with temporal depth (recent surface + old echoes)
+ */
+async function findExplorationAreas(
+  userId: string,
+  recentMemories: any[],
+  recentArticles: any[],
+  oldInsights: any[],
+  oldArticles: any[]
+): Promise<Array<{
+  theme: string
+  recentMentions: number
+  oldConnections: any[]
+  explorationPotential: string
+}>> {
+  const areas: Array<{
+    theme: string
+    recentMentions: number
+    oldConnections: any[]
+    explorationPotential: string
+  }> = []
+
+  // Extract themes from recent content
+  const recentThemes = new Map<string, number>()
+  for (const memory of recentMemories) {
+    for (const theme of memory.themes || []) {
+      recentThemes.set(theme, (recentThemes.get(theme) || 0) + 1)
+    }
+  }
+  for (const article of recentArticles) {
+    for (const tag of article.tags || []) {
+      recentThemes.set(tag, (recentThemes.get(tag) || 0) + 1)
+    }
+  }
+
+  // Find themes that appear multiple times recently (high current interest)
+  const consequentialThemes = Array.from(recentThemes.entries())
+    .filter(([_, count]) => count >= 2)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+
+  // For each consequential theme, find old connections (from both insights AND articles)
+  for (const [theme, recentCount] of consequentialThemes) {
+    const oldConnectionsForTheme = [
+      ...oldInsights.filter(insight => {
+        const insightText = `${insight.title} ${insight.body || ''}`.toLowerCase()
+        return insightText.includes(theme.toLowerCase())
+      }),
+      ...oldArticles.filter(article => {
+        const articleText = `${article.title} ${article.summary || ''}`.toLowerCase()
+        const tags = (article.tags || []).map((t: string) => t.toLowerCase())
+        return articleText.includes(theme.toLowerCase()) || tags.includes(theme.toLowerCase())
+      })
+    ]
+
+    if (oldConnectionsForTheme.length > 0) {
+      // This theme has temporal depth - it's both current AND historical
+      let potential = ''
+      if (oldConnectionsForTheme.length === 1) {
+        potential = 'rediscovery'
+      } else if (oldConnectionsForTheme.length >= 2) {
+        potential = 'deep pattern'
+      }
+
+      areas.push({
+        theme,
+        recentMentions: recentCount,
+        oldConnections: oldConnectionsForTheme.slice(0, 2),
+        explorationPotential: potential
+      })
+    }
+  }
+
+  return areas
 }
 
 /**
@@ -269,6 +431,7 @@ function detectConnections(
 
 /**
  * Generate prompts using Gemini - focused on input → output synthesis
+ * NOW ENHANCED: Uses temporal exploration areas to surface forgotten connections
  */
 async function generatePromptsWithAI(
   recentArticles: any[],
@@ -276,6 +439,8 @@ async function generatePromptsWithAI(
   activeProjects: any[],
   currentInterests: any[],
   oldInsights: any[],
+  oldArticles: any[],
+  explorationAreas: any[],
   context: {
     hasRichInput: boolean
     hasBlockedProjects: boolean
@@ -338,8 +503,21 @@ ${connections.length > 0 ? connections.map(c => `- ${c}`).join('\n') : 'No obvio
 
 **Recurring Themes:** ${consequentialThemes.length > 0 ? consequentialThemes.join(', ') : 'None'}
 
-**Old Insights (14-90 days ago):**
-${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : 'None'}
+**Old Insights (14-90 days ago, semantically related to recent themes):**
+${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}" ${i.body ? `(${i.body.substring(0, 100)}...)` : ''}`).join('\n') : 'None'}
+
+**Old Articles (2+ weeks ago, semantically related to recent thinking):**
+${oldArticles.length > 0 ? oldArticles.map(a => `- "${a.title}" ${a.summary ? `(${a.summary.substring(0, 100)}...)` : ''}`).join('\n') : 'None found (articles may not have embeddings yet)'}
+
+**🌊 EXPLORATION AREAS (Themes with Temporal Depth):**
+${explorationAreas.length > 0 ? explorationAreas.map(area => `
+- **${area.theme}** (${area.explorationPotential})
+  - Recent: Mentioned ${area.recentMentions}x in past week
+  - Historical echoes: ${area.oldConnections.map((c: any) => `"${c.title}"`).join(', ')}
+  - 💡 This theme has roots in your past thinking - powerful for temporal bridging!
+`).join('\n') : 'No themes with temporal depth detected yet'}
+
+These exploration areas are GOLD for prompts - they represent ideas "etched in the back of your mind" that are resurfacing. Use them to create prompts that bridge past and present insights.
 
 **PROMPT TYPES:**
 1. **connection** - Bridge disparate knowledge pieces
@@ -432,12 +610,24 @@ Use these techniques to make prompts "take over" the sleeping mind:
 ✅ "Tonight your mind will work on: How does '${topMemories[0]?.title || '[memory]'}' unlock '${activeProjects[0]?.title || '[project]'}'? Picture it as a locked box that opens by itself. You don't need to remember this question—your dreams will answer it anyway. By morning, it will feel like you always knew."
 ✅ "Seed for tonight: '${topArticles[0]?.title || '[article]'}' and '${consequentialThemes[0] || '[theme]'}' are two parts of the same thing. Visualize them as puzzle pieces slowly rotating. Let go. Your sleeping mind will click them together."
 
+**🌊 EXPLORATION AREA EXAMPLES (temporal bridging):**
+When exploration areas exist, PRIORITIZE prompts that bridge past and present:
+
+✅ **Temporal Bridge (Revisit):** "Three months ago, you thought about '${explorationAreas[0]?.oldConnections[0]?.title || '[old insight]'}'. This week, ${explorationAreas[0]?.theme || '[theme]'} appeared ${explorationAreas[0]?.recentMentions || 'X'}x in your thinking. The thread connecting them has been growing in your subconscious. Tonight, as you sleep, it completes the pattern. By morning, you'll see what past-you was preparing for present-you."
+
+✅ **Deep Pattern (Transform):** "'${explorationAreas[0]?.theme || '[theme]'}' keeps returning to you. It appeared in '${explorationAreas[0]?.oldConnections[0]?.title || '[old insight 1]}', then '${explorationAreas[0]?.oldConnections[1]?.title || '[old insight 2]'}', and now it's back in '${topMemories[0]?.title || '[recent memory]'}'. Picture it as a spiral descending through time. Each loop reveals something new. As you drift into sleep, ride the spiral down. Your dreaming mind knows where it leads."
+
+✅ **Rediscovery (Connection + Incubation):** "You almost forgot about '${explorationAreas[0]?.oldConnections[0]?.title || '[old insight]'}'. But ${explorationAreas[0]?.theme || '[theme]'} is pulling it back to the surface through '${topArticles[0]?.title || '[recent article]'}'. Tonight, imagine your old insight as a seed planted months ago. It's been growing underground. Feel it breaking through the soil. You don't need to dig—your sleeping mind will harvest what's ready."
+
 **CONTEXT SIGNALS:**
+${explorationAreas.length > 0 ? `→ 🌊 **${explorationAreas.length} EXPLORATION AREAS DETECTED** - PRIORITIZE temporal bridging prompts! These themes have deep roots.` : ''}
+${explorationAreas.length > 0 ? explorationAreas.map(a => `  • ${a.theme}: ${a.explorationPotential} (recent: ${a.recentMentions}x, historical: ${a.oldConnections.length} connections)`).join('\n') : ''}
 ${context.hasNoProjects && context.hasRichInput ? '→ Rich input, no projects: Suggest CONNECTION prompts showing project possibilities' : ''}
 ${context.hasBlockedProjects ? '→ Blocked projects: Try REVISIT prompts using old insights to unlock' : ''}
 ${consequentialThemes.length > 0 ? `→ Recurring themes detected: TRANSFORM prompts on "${consequentialThemes.slice(0, 2).join('", "')}"` : ''}
 ${connections.length > 0 ? `→ Connections found: Leverage these in CONNECTION prompts` : ''}
 ${activeProjects.filter(p => p.status === 'dormant').length > 0 ? `→ ${activeProjects.filter(p => p.status === 'dormant').length} dormant projects: DIVERGENT prompts for fresh angles` : ''}
+${oldInsights.length > 0 ? `→ ${oldInsights.length} old insights semantically related to recent thinking - use for temporal bridges` : ''}
 
 ${performance ? `**WHAT WORKS FOR THIS USER (Past Performance):**
 ${performance.totalRated >= 5 ? `
@@ -463,11 +653,17 @@ Return ONLY valid JSON:
 
 CRITICAL:
 - Use actual titles, project names, and themes. Generic = failure.
+- **IF EXPLORATION AREAS EXIST**: Generate at least 2 prompts that bridge temporal gaps (old insights → recent themes)
 - Apply MULTIPLE hypnagogic language techniques per prompt
 - End prompts with permission to let go/forget
 - Include sensory and temporal elements
 - Create unresolved cognitive tension (open loops)
-- Favor visualization and incubation formats for depth`
+- Favor visualization and incubation formats for depth
+- When using exploration areas, explicitly reference:
+  1. The old insight/memory by title
+  2. The theme that's resurfacing
+  3. The time gap ("months ago", "you almost forgot")
+  4. Use metaphors of seeds, spirals, threads, echoes, depths`
 
   const result = await model.generateContent(prompt)
   const text = result.response.text()
