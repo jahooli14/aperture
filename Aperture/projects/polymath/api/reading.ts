@@ -327,15 +327,31 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
   let browser = null
   try {
     // Configure Chromium for serverless environment (Vercel)
+    // @sparticuz/chromium provides optimized args and binary for Lambda/Vercel
+    const executablePath = await chromium.executablePath()
+    console.log('[Puppeteer] Chromium executable path:', executablePath)
+
     const options = {
-      args: chromium.args,
+      args: [
+        ...chromium.args,
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--no-sandbox',
+        '--single-process', // Important for serverless
+        '--no-zygote',
+      ],
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     }
+
+    console.log('[Puppeteer] Launching browser with options:', JSON.stringify({ ...options, executablePath: '...' }))
 
     // Launch browser
     browser = await puppeteer.launch(options)
+    console.log('[Puppeteer] Browser launched successfully')
     const page = await browser.newPage()
 
     // Set realistic browser headers to avoid detection
@@ -345,12 +361,16 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     })
 
-    // Navigate to the page with timeout (30s for page load)
+    // Navigate to the page with more relaxed timeout
+    // Use domcontentloaded instead of networkidle2 for faster extraction
     console.log('[Puppeteer] Navigating to:', url)
     await page.goto(url, {
-      waitUntil: 'networkidle2', // Wait until network is idle (no more than 2 connections for 500ms)
-      timeout: 30000
+      waitUntil: 'domcontentloaded', // Faster than networkidle2, sufficient for content extraction
+      timeout: 25000 // 25s timeout to stay within Vercel's limits
     })
+
+    // Wait a bit for any dynamic content to load
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
     console.log('[Puppeteer] Page loaded, extracting content...')
 
@@ -430,7 +450,19 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
     }
   } catch (error: any) {
     console.error('[Puppeteer] Error:', error.message)
-    throw error
+    console.error('[Puppeteer] Error stack:', error.stack)
+
+    // Provide more helpful error messages
+    let errorMsg = error.message
+    if (errorMsg.includes('Could not find Chrome') || errorMsg.includes('ENOENT')) {
+      errorMsg = 'Chromium binary not found in serverless environment. This may be a deployment issue.'
+    } else if (errorMsg.includes('timeout') || errorMsg.includes('Navigation timeout')) {
+      errorMsg = 'Page took too long to load (timeout). Site may be slow or blocking automated access.'
+    } else if (errorMsg.includes('net::ERR_')) {
+      errorMsg = `Network error accessing site: ${errorMsg}`
+    }
+
+    throw new Error(`Puppeteer extraction failed: ${errorMsg}`)
   } finally {
     // Ensure browser is always closed, even on error
     if (browser) {
