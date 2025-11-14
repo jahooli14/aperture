@@ -51,7 +51,20 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 
     clearTimeout(timeoutId)
 
+    // Check for anti-bot protection (DataDome, Cloudflare, etc.)
     if (!response.ok) {
+      const server = response.headers.get('server') || ''
+      const dataDome = response.headers.get('x-datadome') || ''
+      const cfRay = response.headers.get('cf-ray') || ''
+
+      if (response.status === 403 && (dataDome || server.toLowerCase().includes('datadome'))) {
+        throw new Error('Site blocked by DataDome anti-bot protection. Try viewing the original article.')
+      }
+
+      if (response.status === 403 && cfRay) {
+        throw new Error('Site blocked by Cloudflare anti-bot protection. Try viewing the original article.')
+      }
+
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
@@ -155,7 +168,20 @@ async function fetchArticleWithCheerio(url: string): Promise<any> {
 
     clearTimeout(timeoutId)
 
+    // Check for anti-bot protection (DataDome, Cloudflare, etc.)
     if (!response.ok) {
+      const server = response.headers.get('server') || ''
+      const dataDome = response.headers.get('x-datadome') || ''
+      const cfRay = response.headers.get('cf-ray') || ''
+
+      if (response.status === 403 && (dataDome || server.toLowerCase().includes('datadome'))) {
+        throw new Error('Site blocked by DataDome anti-bot protection. Try viewing the original article.')
+      }
+
+      if (response.status === 403 && cfRay) {
+        throw new Error('Site blocked by Cloudflare anti-bot protection. Try viewing the original article.')
+      }
+
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
@@ -1423,6 +1449,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } else {
               userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
             }
+          } else if (errorMessage.includes('DataDome') || errorMessage.includes('Cloudflare')) {
+            // Anti-bot protection detected
+            userFriendlyMessage = errorMessage // Use the specific message from extraction (already user-friendly)
           } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage = 'This site requires JavaScript rendering. Content extraction may be incomplete.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
@@ -1434,11 +1463,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             userFriendlyMessage = 'Content extraction failed. You can still view the original URL.'
           }
 
+          // Determine if error is permanent (don't retry anti-bot blocks)
+          const isPermanentFailure = errorMessage.includes('DataDome') || errorMessage.includes('Cloudflare')
+
           await supabase
             .from('reading_queue')
             .update({
               excerpt: userFriendlyMessage,
-              processed: false,
+              processed: isPermanentFailure, // Mark anti-bot blocks as processed to prevent retries
             })
             .eq('id', savedArticle.id)
         })
