@@ -12,11 +12,12 @@ import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
-import * as cheerio from 'cheerio'
-import puppeteer from 'puppeteer-core'
-import chromium from '@sparticuz/chromium'
 
 const rssParser = new Parser()
+
+// API Keys for third-party extraction services (Strategy B: Orchestrator Pattern)
+const DIFFBOT_API_KEY = process.env.DIFFBOT_API_KEY || '' // 10k credits/month free
+const SCRAPERAPI_KEY = process.env.SCRAPERAPI_KEY || '' // 1k credits/month free
 
 /**
  * Decode HTML entities in text
@@ -147,551 +148,234 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 }
 
 /**
- * Extract article content using Cheerio (lightweight HTML parser)
- * Used as fallback when Jina AI blocks domains or fails
- * Note: This won't render JavaScript, but provides basic extraction for static HTML
+ * Extract article content using Diffbot Article API
+ * Tier 4: Specialized structured data extractor (10k free credits/month)
+ * Returns clean JSON (title, author, text, images)
  */
-async function fetchArticleWithCheerio(url: string): Promise<any> {
-  console.log('[Cheerio] Fetching article with basic HTML extraction:', url)
+async function fetchArticleWithDiffbot(url: string): Promise<any> {
+  if (!DIFFBOT_API_KEY) {
+    throw new Error('DIFFBOT_API_KEY not configured')
+  }
+
+  console.log('[Diffbot] Fetching article:', url)
 
   try {
-    // Fetch HTML with timeout (15s - we have 60s total, be patient)
+    const diffbotUrl = `https://api.diffbot.com/v3/article?token=${DIFFBOT_API_KEY}&url=${encodeURIComponent(url)}`
+
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      signal: controller.signal
-    })
-
+    const response = await fetch(diffbotUrl, { signal: controller.signal })
     clearTimeout(timeoutId)
 
-    // Check for anti-bot protection (DataDome, Cloudflare, etc.)
     if (!response.ok) {
-      const server = response.headers.get('server') || ''
-      const dataDome = response.headers.get('x-datadome') || ''
-      const cfRay = response.headers.get('cf-ray') || ''
-
-      if (response.status === 403 && (dataDome || server.toLowerCase().includes('datadome'))) {
-        throw new Error('Site blocked by DataDome anti-bot protection. Try viewing the original article.')
-      }
-
-      if (response.status === 403 && cfRay) {
-        throw new Error('Site blocked by Cloudflare anti-bot protection. Try viewing the original article.')
-      }
-
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      throw new Error(`Diffbot API returned ${response.status}`)
     }
 
-    const html = await response.text()
-    console.log('[Cheerio] HTML fetched, length:', html.length)
+    const data = await response.json()
 
-    // Load HTML with Cheerio
-    const $ = cheerio.load(html)
-
-    // Remove unwanted elements - extensive list for clean extraction
-    $('script, style, nav, header, footer, aside, iframe, noscript').remove()
-    $('.advertisement, .ads, .ad, .advert, [class*="ad-"], [id*="ad-"]').remove()
-    $('.social-share, .share-buttons, .social-buttons, [class*="share"], [class*="social"]').remove()
-    $('.cookie-notice, .cookie-banner, .gdpr, [class*="cookie"], [class*="consent"]').remove()
-    $('.newsletter-signup, .newsletter, .email-signup, [class*="newsletter"]').remove()
-    $('.comments, .comment-section, [class*="comment"]').remove()
-    $('.related-articles, .recommended, .trending, .popular, [class*="related"]').remove()
-    $('.subscribe, .subscription, [class*="subscribe"], [class*="paywall"]').remove()
-    $('.navigation, .nav-drawer, .sidebar, [class*="drawer"]').remove()
-    $('.privacy, .legal, [class*="privacy"], [class*="terms"]').remove()
-    $('[role="navigation"], [role="banner"], [role="contentinfo"], [role="complementary"]').remove()
-
-    // Try to extract title from multiple sources
-    let title =
-      $('meta[property="og:title"]').attr('content') ||
-      $('meta[name="twitter:title"]').attr('content') ||
-      $('h1').first().text() ||
-      $('title').text() ||
-      'Untitled'
-
-    title = decodeHTMLEntities(title.trim().substring(0, 200))
-
-    // Try to find the main content area using common selectors
-    let content = ''
-    const contentSelectors = [
-      'article',
-      '[role="main"]',
-      'main',
-      '.article-content',
-      '.post-content',
-      '.entry-content',
-      '.content',
-      '#content',
-      '.post-body',
-      '.article-body',
-      // Guardian-specific selectors
-      '.content__article-body',
-      '.article-body-commercial-selector',
-      '[data-gu-name="body"]',
-      '.dcr-1qn1jd8', // Guardian's DCR (Dotcom Rendering) classes
-    ]
-
-    for (const selector of contentSelectors) {
-      const element = $(selector)
-      if (element.length > 0 && element.text().trim().length > 100) {
-        content = element.html() || ''
-        console.log('[Cheerio] Found content using selector:', selector)
-        break
-      }
+    if (!data.objects || data.objects.length === 0) {
+      throw new Error('Diffbot returned no article data')
     }
 
-    // Fallback: if no content found, try to get all paragraphs
-    if (!content || content.length < 100) {
-      console.log('[Cheerio] Using fallback: extracting all paragraphs')
-      const paragraphs = $('p').map((i, el) => $(el).html()).get()
-      content = paragraphs.join('\n\n')
-    }
+    const article = data.objects[0]
 
-    // Extract text for validation
-    const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-
-    if (textContent.length < 300) {
-      throw new Error('Cheerio extraction returned insufficient content (site may require JavaScript)')
-    }
-
-    console.log('[Cheerio] Extraction successful - Text length:', textContent.length)
-
-    // Extract metadata
-    const author =
-      $('meta[property="article:author"]').attr('content') ||
-      $('meta[name="author"]').attr('content') ||
-      $('.author').first().text().trim() ||
-      null
-
-    const description =
-      $('meta[property="og:description"]').attr('content') ||
-      $('meta[name="description"]').attr('content') ||
-      ''
-
-    // Extract image - try meta tags first, then first img in content
-    let image =
-      $('meta[property="og:image"]').attr('content') ||
-      $('meta[name="twitter:image"]').attr('content') ||
-      $('meta[property="og:image:url"]').attr('content') ||
-      null
-
-    // If no meta tag image, try to extract first image from content
-    if (!image && content) {
-      const firstImg = $('img').first().attr('src')
-      if (firstImg) {
-        image = firstImg
-        // Make relative URLs absolute
-        if (image && !image.startsWith('http')) {
-          const baseURL = new URL(url)
-          image = new URL(image, baseURL.origin).toString()
-        }
-      }
-    }
-
-    // Extract domain for favicon
-    const urlObj = new URL(url)
-    const domain = urlObj.hostname.replace('www.', '')
-
-    // Create excerpt
-    const excerpt = description || textContent.substring(0, 200) + '...'
+    console.log('[Diffbot] Extracted:', article.title)
 
     return {
-      title,
-      content,
-      excerpt,
-      author,
-      publishedDate: null,
-      thumbnailUrl: image,
-      faviconUrl: `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
-      url
+      title: decodeHTMLEntities(article.title || 'Untitled'),
+      content: article.html || article.text || '',
+      excerpt: article.text?.substring(0, 200) + '...' || '',
+      author: article.author || null,
+      source: article.siteName || extractDomain(url),
+      publishedDate: article.date || null,
+      thumbnailUrl: article.images?.[0]?.url || null,
+      faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
+      length: article.text?.length || 0
     }
-  } catch (error) {
-    console.error('[Cheerio] Extraction failed:', error)
+  } catch (error: any) {
+    console.error('[Diffbot] Error:', error.message)
     throw error
   }
 }
 
 /**
- * Extract article content using Puppeteer (headless browser)
- * Bypasses anti-bot protection by acting like a real browser
- * Used when DataDome, Cloudflare, or other anti-bot services are detected
+ * Extract article content using ScraperAPI
+ * Tier 5: Anti-bot specialist (1k free credits/month)
+ * Use ONLY for sites that block all other methods (DataDome, Cloudflare)
  */
-async function fetchArticleWithPuppeteer(url: string): Promise<any> {
-  console.log('[Puppeteer] Fetching article with headless browser:', url)
+async function fetchArticleWithScraperAPI(url: string): Promise<any> {
+  if (!SCRAPERAPI_KEY) {
+    throw new Error('SCRAPERAPI_KEY not configured')
+  }
 
-  let browser = null
+  console.log('[ScraperAPI] Fetching article (anti-bot bypass):', url)
+
   try {
-    // Configure Chromium for serverless environment (Vercel)
-    // @sparticuz/chromium provides optimized args and binary for Lambda/Vercel
-    const executablePath = await chromium.executablePath()
-    console.log('[Puppeteer] Chromium executable path:', executablePath)
+    // ScraperAPI proxies the request through rotating residential IPs
+    const scraperUrl = `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}&render=true`
 
-    const options = {
-      args: [
-        ...chromium.args,
-        '--disable-gpu',
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--no-sandbox',
-        '--single-process', // Important for serverless
-        '--no-zygote',
-      ],
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout for slow sites
+
+    const response = await fetch(scraperUrl, { signal: controller.signal })
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      throw new Error(`ScraperAPI returned ${response.status}`)
     }
 
-    console.log('[Puppeteer] Launching browser with options:', JSON.stringify({ ...options, executablePath: '...' }))
+    const html = await response.text()
+    console.log('[ScraperAPI] HTML fetched, length:', html.length)
 
-    // Launch browser
-    browser = await puppeteer.launch(options)
-    console.log('[Puppeteer] Browser launched successfully')
-    const page = await browser.newPage()
-
-    // Set realistic browser headers to avoid detection
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    })
-
-    // Navigate to the page with more relaxed timeout
-    // Use domcontentloaded instead of networkidle2 for faster extraction
-    console.log('[Puppeteer] Navigating to:', url)
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded', // Faster than networkidle2, sufficient for content extraction
-      timeout: 25000 // 25s timeout to stay within Vercel's limits
-    })
-
-    // Wait a bit for any dynamic content to load
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    console.log('[Puppeteer] Page loaded, extracting content...')
-
-    // Get the full HTML after JavaScript execution
-    let html = await page.content()
-    console.log('[Puppeteer] HTML extracted, length:', html.length)
-
-    // Check if we're still on an anti-bot challenge page
-    const htmlLower = html.toLowerCase()
-    if (
-      htmlLower.includes('checking your browser') ||
-      htmlLower.includes('please wait') ||
-      htmlLower.includes('datadome') ||
-      htmlLower.includes('cloudflare') ||
-      (htmlLower.includes('challenge') && htmlLower.includes('verify'))
-    ) {
-      console.log('[Puppeteer] Detected anti-bot challenge page, waiting longer...')
-      // Wait additional time for challenge to complete
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      html = await page.content() // Update html variable
-      console.log('[Puppeteer] Re-extracted HTML after challenge wait, length:', html.length)
-
-      // Check if still showing challenge
-      const updatedLower = html.toLowerCase()
-      if (updatedLower.includes('checking your browser') || updatedLower.includes('datadome')) {
-        throw new Error('Site is still showing anti-bot challenge page. This site may be blocking all automated access.')
-      }
-    }
-
-    // Close browser before processing (to free resources quickly)
-    await browser.close()
-    browser = null
-
-    // Parse HTML with linkedom (DOM implementation for Node.js)
+    // Parse with linkedom + Readability
     const { document } = parseHTML(html)
 
-    // Set base URL for relative links
     const baseURL = new URL(url)
     const base = document.createElement('base')
     base.href = baseURL.origin
     document.head?.appendChild(base)
 
-    // Use Mozilla Readability to extract article content
-    // Lower charThreshold for edge cases where content is shorter
     const reader = new Readability(document, {
       debug: false,
       maxElemsToParse: 8000,
       nbTopCandidates: 5,
-      charThreshold: 200, // Lowered from 500 to handle shorter articles
+      charThreshold: 200,
       classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
     })
 
     const article = reader.parse()
 
-    // If Readability fails, fall back to Cheerio parsing of the browser-rendered HTML
     if (!article) {
-      console.log('[Puppeteer] Readability failed, using Cheerio fallback on browser-rendered HTML...')
-
-      // Load the browser-rendered HTML with Cheerio
-      const $ = cheerio.load(html)
-
-      // Remove unwanted elements
-      $('script, style, nav, header, footer, aside, iframe, noscript').remove()
-      $('.advertisement, .ads, .ad, [class*="ad-"], [id*="ad-"]').remove()
-      $('.cookie-notice, .gdpr, [class*="cookie"]').remove()
-      $('.social-share, .share-buttons, [class*="share"]').remove()
-
-      // Extract title
-      let title =
-        $('meta[property="og:title"]').attr('content') ||
-        $('meta[name="twitter:title"]').attr('content') ||
-        $('h1').first().text() ||
-        $('title').text() ||
-        'Untitled'
-
-      title = decodeHTMLEntities(title.trim().substring(0, 200))
-
-      // Extract content using common selectors
-      let content = ''
-      const contentSelectors = [
-        'article',
-        '[role="main"]',
-        'main',
-        '.article-content',
-        '.post-content',
-        '.entry-content',
-        '.content',
-        '.post-body',
-        '.article-body',
-      ]
-
-      for (const selector of contentSelectors) {
-        const element = $(selector)
-        if (element.length > 0 && element.text().trim().length > 100) {
-          content = element.html() || ''
-          console.log('[Puppeteer/Cheerio] Found content using selector:', selector)
-          break
-        }
-      }
-
-      // Fallback: get all paragraphs
-      if (!content || content.length < 100) {
-        const paragraphs = $('p').map((i, el) => $(el).html()).get()
-        content = paragraphs.join('\n\n')
-      }
-
-      const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-
-      if (textContent.length < 200) {
-        throw new Error('Puppeteer+Cheerio extraction returned insufficient content. Page structure may be incompatible.')
-      }
-
-      // Extract metadata
-      const description =
-        $('meta[property="og:description"]').attr('content') ||
-        $('meta[name="description"]').attr('content') ||
-        ''
-
-      const thumbnailUrl =
-        $('meta[property="og:image"]').attr('content') ||
-        $('meta[name="twitter:image"]').attr('content') ||
-        null
-
-      const author =
-        $('meta[property="article:author"]').attr('content') ||
-        $('meta[name="author"]').attr('content') ||
-        null
-
-      console.log('[Puppeteer/Cheerio] Extraction successful - Title:', title, 'Content length:', textContent.length)
-
-      return {
-        title: decodeHTMLEntities(title),
-        content,
-        excerpt: description || textContent.substring(0, 200) + '...',
-        author,
-        source: extractDomain(url),
-        publishedDate: null,
-        thumbnailUrl,
-        faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
-        length: textContent.length
-      }
+      throw new Error('ScraperAPI: Readability failed to extract article content')
     }
 
-    console.log('[Puppeteer/Readability] Extracted:', article.title)
+    console.log('[ScraperAPI] Extracted:', article.title)
 
-    // Extract metadata efficiently (limit querySelector scope)
+    // Extract metadata
     const head = document.head
     const getMetaContent = (names: string[]) => {
       if (!head) return null
       for (const name of names) {
-        const selector = `meta[property="${name}"], meta[name="${name}"]`
-        const tag = head.querySelector(selector)
+        const tag = head.querySelector(`meta[property="${name}"], meta[name="${name}"]`)
         if (tag) return tag.getAttribute('content')
       }
       return null
     }
 
-    // Extract thumbnail - try multiple sources
-    let thumbnailUrl = getMetaContent(['og:image', 'twitter:image', 'og:image:url', 'twitter:image:src'])
+    const thumbnailUrl = getMetaContent(['og:image', 'twitter:image']) || null
 
-    // If no meta tag image, try to extract first image from article content
-    if (!thumbnailUrl && article.content) {
-      const imgMatch = article.content.match(/<img[^>]+src=["']([^"']+)["']/i)
-      if (imgMatch && imgMatch[1]) {
-        thumbnailUrl = imgMatch[1]
-        // Make relative URLs absolute
-        if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
-          const baseURL = new URL(url)
-          thumbnailUrl = new URL(thumbnailUrl, baseURL.origin).toString()
-        }
-      }
-    }
-
-    // Return in format expected by rest of codebase
     return {
-      title: decodeHTMLEntities(article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled'),
+      title: decodeHTMLEntities(article.title || 'Untitled'),
       content: article.content || '',
       excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
-      author: article.byline || getMetaContent(['author', 'article:author']) || null,
-      source: article.siteName || getMetaContent(['og:site_name']) || extractDomain(url),
+      author: article.byline || getMetaContent(['author']) || null,
+      source: article.siteName || extractDomain(url),
       publishedDate: getMetaContent(['article:published_time']),
       thumbnailUrl,
       faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
       length: article.length || 0
     }
   } catch (error: any) {
-    console.error('[Puppeteer] Error:', error.message)
-    console.error('[Puppeteer] Error stack:', error.stack)
-
-    // Provide more helpful error messages
-    let errorMsg = error.message
-    if (errorMsg.includes('Could not find Chrome') || errorMsg.includes('ENOENT')) {
-      errorMsg = 'Chromium binary not found in serverless environment. This may be a deployment issue.'
-    } else if (errorMsg.includes('timeout') || errorMsg.includes('Navigation timeout')) {
-      errorMsg = 'Page took too long to load (timeout). Site may be slow or blocking automated access.'
-    } else if (errorMsg.includes('net::ERR_')) {
-      errorMsg = `Network error accessing site: ${errorMsg}`
-    }
-
-    throw new Error(`Puppeteer extraction failed: ${errorMsg}`)
-  } finally {
-    // Ensure browser is always closed, even on error
-    if (browser) {
-      try {
-        await browser.close()
-        console.log('[Puppeteer] Browser closed')
-      } catch (closeError) {
-        console.error('[Puppeteer] Error closing browser:', closeError)
-      }
-    }
+    console.error('[ScraperAPI] Error:', error.message)
+    throw error
   }
 }
 
 /**
- * Extract article content with four-tier fallback system
- * 1. Mozilla Readability (fast, works for most sites)
- * 2. Jina Reader (handles JS-heavy sites)
- * 3. Cheerio (guaranteed to get something)
- * 4. Puppeteer (headless browser for anti-bot protected sites)
+ * Extract article content with 4-tier Free API Alliance (Strategy B: Orchestrator Pattern)
+ * Shifts from CPU-bound (Puppeteer) to I/O-bound (API calls)
+ * Stays within Vercel Hobby plan limits: 4 CPU-hours, 250MB bundle, 300s timeout
+ *
+ * Tier 1: Mozilla Readability (local, fast, 0 cost)
+ * Tier 2: Jina Reader API (10M free tokens/month)
+ * Tier 3: Diffbot Article API (10k free credits/month)
+ * Tier 4: ScraperAPI (1k free credits/month - anti-bot specialist)
  */
 async function fetchArticle(url: string) {
-  console.log('[fetchArticle] Starting four-tier extraction:', url)
+  console.log('[fetchArticle] Starting 4-tier orchestrator extraction:', url)
 
-  let isAntiBotProtected = false
+  const errors: string[] = []
 
-  // Tier 1: Try Mozilla Readability (fast - 1-2 seconds for most sites)
+  // Tier 1: Try Mozilla Readability (fastest, works for 80% of sites)
   try {
-    console.log('[fetchArticle] Tier 1: Attempting Readability extraction...')
+    console.log('[fetchArticle] Tier 1: Mozilla Readability (local)...')
     const result = await fetchArticleWithReadability(url)
 
-    // Check if extraction returned meaningful content (300 chars minimum to avoid metadata-only)
     if (result.content && result.content.length > 300) {
       console.log('[fetchArticle] ✅ Tier 1 succeeded (Readability)')
       return result
     }
 
-    console.log('[fetchArticle] Readability returned insufficient content, trying Tier 2...')
-    throw new Error('Readability extraction returned insufficient content')
-  } catch (readabilityError) {
-    const errorMessage = readabilityError instanceof Error ? readabilityError.message : 'Unknown error'
-    console.error('[fetchArticle] Tier 1 failed:', errorMessage)
+    throw new Error('Readability: Insufficient content')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    errors.push(`Tier 1: ${msg}`)
+    console.error('[fetchArticle] Tier 1 failed:', msg)
+  }
 
-    // Check if anti-bot protection was detected
-    if (errorMessage.includes('DataDome') || errorMessage.includes('Cloudflare')) {
-      console.log('[fetchArticle] Anti-bot protection detected, will use Puppeteer')
-      isAntiBotProtected = true
+  // Tier 2: Try Jina Reader API (handles JS-rendered sites, largest free tier)
+  try {
+    console.log('[fetchArticle] Tier 2: Jina Reader API...')
+    const result = await fetchArticleWithJina(url)
+
+    if (result.content && result.content.length > 300) {
+      console.log('[fetchArticle] ✅ Tier 2 succeeded (Jina)')
+      return result
     }
 
-    // Tier 2: Try Jina Reader (handles JS-heavy sites better) - skip if anti-bot detected
-    if (!isAntiBotProtected) {
-      try {
-        console.log('[fetchArticle] Tier 2: Attempting Jina Reader extraction...')
-        const result = await fetchArticleWithJina(url)
+    throw new Error('Jina: Insufficient content')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown error'
+    errors.push(`Tier 2: ${msg}`)
+    console.error('[fetchArticle] Tier 2 failed:', msg)
+  }
 
-        if (result.content && result.content.length > 300) {
-          console.log('[fetchArticle] ✅ Tier 2 succeeded (Jina Reader)')
-          return result
-        }
-
-        console.log('[fetchArticle] Jina returned insufficient content, trying Tier 3...')
-        throw new Error('Jina extraction returned insufficient content')
-      } catch (jinaError) {
-        const jinaMessage = jinaError instanceof Error ? jinaError.message : 'Unknown error'
-        console.error('[fetchArticle] Tier 2 failed:', jinaMessage)
-
-        // Check if anti-bot protection was detected
-        if (jinaMessage.includes('DataDome') || jinaMessage.includes('Cloudflare')) {
-          console.log('[fetchArticle] Anti-bot protection detected in Jina, will use Puppeteer')
-          isAntiBotProtected = true
-        }
-      }
-    }
-
-    // Tier 3: Try Cheerio (last resort - will get something even if not perfect) - skip if anti-bot detected
-    if (!isAntiBotProtected) {
-      try {
-        console.log('[fetchArticle] Tier 3: Attempting Cheerio extraction...')
-        const result = await fetchArticleWithCheerio(url)
-
-        if (result.content && result.content.length > 300) {
-          console.log('[fetchArticle] ✅ Tier 3 succeeded (Cheerio)')
-          return result
-        }
-
-        throw new Error('Cheerio extraction returned insufficient content')
-      } catch (cheerioError) {
-        const cheerioMessage = cheerioError instanceof Error ? cheerioError.message : 'Unknown error'
-        console.error('[fetchArticle] Tier 3 failed:', cheerioMessage)
-
-        // Check if anti-bot protection was detected
-        if (cheerioMessage.includes('DataDome') || cheerioMessage.includes('Cloudflare')) {
-          console.log('[fetchArticle] Anti-bot protection detected in Cheerio, will use Puppeteer')
-          isAntiBotProtected = true
-        }
-      }
-    }
-
-    // Tier 4: Try Puppeteer (headless browser) - used when anti-bot protection detected or all else failed
-    if (isAntiBotProtected) {
-      console.log('[fetchArticle] Tier 4: Using Puppeteer to bypass anti-bot protection...')
-    } else {
-      console.log('[fetchArticle] Tier 4: Last resort - trying Puppeteer...')
-    }
-
+  // Tier 3: Try Diffbot Article API (structured data extractor, high quality)
+  if (DIFFBOT_API_KEY) {
     try {
-      const result = await fetchArticleWithPuppeteer(url)
+      console.log('[fetchArticle] Tier 3: Diffbot Article API...')
+      const result = await fetchArticleWithDiffbot(url)
 
-      if (result.content && result.content.length > 300) {
-        console.log('[fetchArticle] ✅ Tier 4 succeeded (Puppeteer)')
+      if (result.content && result.content.length > 200) {
+        console.log('[fetchArticle] ✅ Tier 3 succeeded (Diffbot)')
         return result
       }
 
-      throw new Error('Puppeteer extraction returned insufficient content')
-    } catch (puppeteerError) {
-      const puppeteerMessage = puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'
-      console.error('[fetchArticle] All four tiers failed')
-
-      // All tiers exhausted - return comprehensive error
-      throw new Error(`Failed to extract article after trying all methods including headless browser. Last error: ${puppeteerMessage}`)
+      throw new Error('Diffbot: Insufficient content')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      errors.push(`Tier 3: ${msg}`)
+      console.error('[fetchArticle] Tier 3 failed:', msg)
     }
+  } else {
+    console.log('[fetchArticle] Tier 3 skipped: DIFFBOT_API_KEY not configured')
   }
+
+  // Tier 4: Try ScraperAPI (anti-bot specialist, last resort - most expensive)
+  if (SCRAPERAPI_KEY) {
+    try {
+      console.log('[fetchArticle] Tier 4: ScraperAPI (anti-bot bypass)...')
+      const result = await fetchArticleWithScraperAPI(url)
+
+      if (result.content && result.content.length > 200) {
+        console.log('[fetchArticle] ✅ Tier 4 succeeded (ScraperAPI)')
+        return result
+      }
+
+      throw new Error('ScraperAPI: Insufficient content')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      errors.push(`Tier 4: ${msg}`)
+      console.error('[fetchArticle] Tier 4 failed:', msg)
+    }
+  } else {
+    console.log('[fetchArticle] Tier 4 skipped: SCRAPERAPI_KEY not configured')
+  }
+
+  // All tiers exhausted
+  console.error('[fetchArticle] All extraction tiers failed')
+  throw new Error(`All extraction methods failed. ${errors.join(' | ')}`)
 }
 
 /**
