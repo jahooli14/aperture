@@ -107,13 +107,14 @@ class ArticleProcessor {
       processing.lastLog = article.excerpt || 'Processing...'
 
       // Check if article is a "zombie" - created long ago but never processed
-      // This happens when backend times out and never updates the status
+      // This happens when backend times out (60s Vercel limit) and never updates the status
       const articleAge = Date.now() - new Date(article.created_at).getTime()
-      const articleAgeMinutes = Math.floor(articleAge / 60000)
-      const isZombie = articleAgeMinutes >= 5 && processing.lastLog.includes('Extracting')
+      const articleAgeSeconds = Math.floor(articleAge / 1000)
+      // If still "Extracting" after 90s, backend definitely died (worst case: 3 tiers * 15s + overhead = ~50s)
+      const isZombie = articleAgeSeconds >= 90 && processing.lastLog.includes('Extracting')
 
       if (isZombie) {
-        this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeMinutes}min old but status never updated - backend died!`, 'error')
+        this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeSeconds}s old but status never updated - backend died!`, 'error')
         processing.currentStage = '🧟 Backend: Died (Zombie - Retriggering)'
         // Immediately trigger retry without waiting for max attempts
         await this.retryExtraction(articleId, processing.url, onProgress)
