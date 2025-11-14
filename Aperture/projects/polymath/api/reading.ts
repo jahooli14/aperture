@@ -375,8 +375,30 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
     console.log('[Puppeteer] Page loaded, extracting content...')
 
     // Get the full HTML after JavaScript execution
-    const html = await page.content()
+    let html = await page.content()
     console.log('[Puppeteer] HTML extracted, length:', html.length)
+
+    // Check if we're still on an anti-bot challenge page
+    const htmlLower = html.toLowerCase()
+    if (
+      htmlLower.includes('checking your browser') ||
+      htmlLower.includes('please wait') ||
+      htmlLower.includes('datadome') ||
+      htmlLower.includes('cloudflare') ||
+      (htmlLower.includes('challenge') && htmlLower.includes('verify'))
+    ) {
+      console.log('[Puppeteer] Detected anti-bot challenge page, waiting longer...')
+      // Wait additional time for challenge to complete
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      html = await page.content() // Update html variable
+      console.log('[Puppeteer] Re-extracted HTML after challenge wait, length:', html.length)
+
+      // Check if still showing challenge
+      const updatedLower = html.toLowerCase()
+      if (updatedLower.includes('checking your browser') || updatedLower.includes('datadome')) {
+        throw new Error('Site is still showing anti-bot challenge page. This site may be blocking all automated access.')
+      }
+    }
 
     // Close browser before processing (to free resources quickly)
     await browser.close()
@@ -392,21 +414,107 @@ async function fetchArticleWithPuppeteer(url: string): Promise<any> {
     document.head?.appendChild(base)
 
     // Use Mozilla Readability to extract article content
+    // Lower charThreshold for edge cases where content is shorter
     const reader = new Readability(document, {
       debug: false,
       maxElemsToParse: 8000,
       nbTopCandidates: 5,
-      charThreshold: 500,
+      charThreshold: 200, // Lowered from 500 to handle shorter articles
       classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
     })
 
     const article = reader.parse()
 
+    // If Readability fails, fall back to Cheerio parsing of the browser-rendered HTML
     if (!article) {
-      throw new Error('Readability failed to extract article content from browser-rendered page')
+      console.log('[Puppeteer] Readability failed, using Cheerio fallback on browser-rendered HTML...')
+
+      // Load the browser-rendered HTML with Cheerio
+      const $ = cheerio.load(html)
+
+      // Remove unwanted elements
+      $('script, style, nav, header, footer, aside, iframe, noscript').remove()
+      $('.advertisement, .ads, .ad, [class*="ad-"], [id*="ad-"]').remove()
+      $('.cookie-notice, .gdpr, [class*="cookie"]').remove()
+      $('.social-share, .share-buttons, [class*="share"]').remove()
+
+      // Extract title
+      let title =
+        $('meta[property="og:title"]').attr('content') ||
+        $('meta[name="twitter:title"]').attr('content') ||
+        $('h1').first().text() ||
+        $('title').text() ||
+        'Untitled'
+
+      title = decodeHTMLEntities(title.trim().substring(0, 200))
+
+      // Extract content using common selectors
+      let content = ''
+      const contentSelectors = [
+        'article',
+        '[role="main"]',
+        'main',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.content',
+        '.post-body',
+        '.article-body',
+      ]
+
+      for (const selector of contentSelectors) {
+        const element = $(selector)
+        if (element.length > 0 && element.text().trim().length > 100) {
+          content = element.html() || ''
+          console.log('[Puppeteer/Cheerio] Found content using selector:', selector)
+          break
+        }
+      }
+
+      // Fallback: get all paragraphs
+      if (!content || content.length < 100) {
+        const paragraphs = $('p').map((i, el) => $(el).html()).get()
+        content = paragraphs.join('\n\n')
+      }
+
+      const textContent = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+
+      if (textContent.length < 200) {
+        throw new Error('Puppeteer+Cheerio extraction returned insufficient content. Page structure may be incompatible.')
+      }
+
+      // Extract metadata
+      const description =
+        $('meta[property="og:description"]').attr('content') ||
+        $('meta[name="description"]').attr('content') ||
+        ''
+
+      const thumbnailUrl =
+        $('meta[property="og:image"]').attr('content') ||
+        $('meta[name="twitter:image"]').attr('content') ||
+        null
+
+      const author =
+        $('meta[property="article:author"]').attr('content') ||
+        $('meta[name="author"]').attr('content') ||
+        null
+
+      console.log('[Puppeteer/Cheerio] Extraction successful - Title:', title, 'Content length:', textContent.length)
+
+      return {
+        title: decodeHTMLEntities(title),
+        content,
+        excerpt: description || textContent.substring(0, 200) + '...',
+        author,
+        source: extractDomain(url),
+        publishedDate: null,
+        thumbnailUrl,
+        faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
+        length: textContent.length
+      }
     }
 
-    console.log('[Puppeteer] Extracted:', article.title)
+    console.log('[Puppeteer/Readability] Extracted:', article.title)
 
     // Extract metadata efficiently (limit querySelector scope)
     const head = document.head
