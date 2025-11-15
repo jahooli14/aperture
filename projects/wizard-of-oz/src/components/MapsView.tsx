@@ -231,9 +231,7 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
                   glyphColor="#ffffff"
                   borderColor="#ffffff"
                   scale={selectedPlace?.id === place.id ? 1.3 : 1}
-                >
-                  <span className="text-white text-xs font-bold">{place.photo_count}</span>
-                </Pin>
+                />
               </AdvancedMarker>
             ))}
           </Map>
@@ -299,13 +297,12 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
             <tr>
               <th className="text-left px-4 py-2 font-semibold text-gray-700">Place</th>
               <th className="text-center px-4 py-2 font-semibold text-gray-700">Visits</th>
-              <th className="text-center px-4 py-2 font-semibold text-gray-700">Photos</th>
             </tr>
           </thead>
           <tbody>
             {placesWithStats.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-gray-500">
+                <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
                   No places yet. Click the + button to add your first place.
                 </td>
               </tr>
@@ -334,11 +331,6 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
                   <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
                       {place.visit_count || 0}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                      {place.photo_count}
                     </span>
                   </td>
                 </tr>
