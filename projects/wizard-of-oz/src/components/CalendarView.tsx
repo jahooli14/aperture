@@ -525,21 +525,19 @@ function TimelineView({
               {/* Items for this date - grouped in card */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="divide-y divide-gray-100">
-                  {/* Photos */}
+                  {/* Photos - condensed */}
                   {photosByDate.has(date) && (
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="px-4 py-3 hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2.5 hover:bg-gray-50 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">📷</span>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900">Photo</p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {photosByDate.get(date)?.eye_coordinates ? '✓ Face aligned' : 'Original photo'}
-                          </p>
-                        </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-xl">📷</span>
+                        <span className="text-gray-900 font-medium">Photo</span>
+                        <span className="text-xs text-gray-500">
+                          {photosByDate.get(date)?.eye_coordinates ? '✓ Face aligned' : 'Original'}
+                        </span>
                       </div>
                     </motion.div>
                   )}
