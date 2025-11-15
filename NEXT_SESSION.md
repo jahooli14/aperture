@@ -127,7 +127,7 @@ git status
 - [ ] Query type classified (debugging, implementation, continuation)
 - [ ] Project auto-detected (which NEXT_SESSION.md to read)
 - [ ] Project-specific NEXT_SESSION.md reviewed
-- [ ] If debugging: Read META_DEBUGGING_PROTOCOL.md first
+- [ ] If debugging: Read `.process/META_DEBUGGING_PROTOCOL.md` first
 
 ---
 

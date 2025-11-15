@@ -887,7 +887,7 @@ Found 247 files containing "upload"...
 
 ### Debugging First Principles
 
-> **Source**: [META_DEBUGGING_PROTOCOL.md](/META_DEBUGGING_PROTOCOL.md) - Universal debugging methodology
+> **Source**: [META_DEBUGGING_PROTOCOL.md](.process/META_DEBUGGING_PROTOCOL.md) - Universal debugging methodology
 >
 > **Core insight**: 80% of bugs are input/assumption issues, not algorithm issues
 
@@ -896,7 +896,7 @@ Found 247 files containing "upload"...
 1. **Verify Inputs First** (10 min) - Check infrastructure, logs, and input assumptions
 2. **Systematic Reduction** (variable) - Find repro → Narrow → Remove → Root cause
 
-**See** [`META_DEBUGGING_PROTOCOL.md`](/META_DEBUGGING_PROTOCOL.md) for complete methodology.
+**See** [`META_DEBUGGING_PROTOCOL.md`](.process/META_DEBUGGING_PROTOCOL.md) for complete methodology.
 
 ### Separation of Concerns
 
