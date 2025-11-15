@@ -61,7 +61,7 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
           }
           return prevIndex + 1;
         });
-      }, 1000); // 1 second per photo
+      }, 500); // 0.5 seconds per photo
     }
 
     // Cleanup on unmount or when dependencies change

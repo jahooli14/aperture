@@ -1,6 +1,5 @@
 import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { X, Calendar } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { PhotoBottomSheet } from './PhotoBottomSheet';
@@ -30,11 +29,6 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
   const [privacyMode, setPrivacyMode] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<string | null>(null);
-  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
-  const [dateRangeStart, setDateRangeStart] = useState<string>('');
-  const [dateRangeEnd, setDateRangeEnd] = useState<string>('');
 
   // Load privacy mode setting
   useEffect(() => {
@@ -49,41 +43,11 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     }
   }, [photos.length, loading, fetchPhotos]);
 
-  // Calculate milestone dates for filtering
-  const milestoneDateMap = useMemo(() => {
-    const map = new Map<string, any[]>();
-    return map;
-  }, []);
-
-  // Filter photos based on selected criteria
+  // All photos are displayed without filtering
   const filteredPhotos = useMemo(() => {
-    return photos.filter(photo => {
-      const photoDate = new Date(photo.upload_date).toISOString().split('T')[0];
+    return photos;
+  }, [photos]);
 
-      // Filter by milestone
-      if (selectedMilestone) {
-        const hasMilestone = Array.from(milestoneDateMap.get(photoDate) || []).some(
-          m => m.id === selectedMilestone
-        );
-        if (!hasMilestone) return false;
-      }
-
-      // Filter by date range
-      if (dateRangeStart && photoDate < dateRangeStart) return false;
-      if (dateRangeEnd && photoDate > dateRangeEnd) return false;
-
-      return true;
-    });
-  }, [photos, selectedMilestone, dateRangeStart, dateRangeEnd, milestoneDateMap]);
-
-  const clearFilters = () => {
-    setSelectedPlace(null);
-    setSelectedMilestone(null);
-    setDateRangeStart('');
-    setDateRangeEnd('');
-  };
-
-  const hasActiveFilters = selectedPlace || selectedMilestone || dateRangeStart || dateRangeEnd;
 
   const handlePhotoClick = (photo: Photo, e: React.MouseEvent) => {
     e.preventDefault();
@@ -184,18 +148,6 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
         <div className="flex items-center gap-3">
-          <motion.button
-            onClick={() => setShowFilters(!showFilters)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 font-medium text-sm rounded-lg transition-colors ${
-              hasActiveFilters
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-            }`}
-          >
-            🔍 Filters {hasActiveFilters && `(${Object.values({ selectedPlace, selectedMilestone, dateRangeStart, dateRangeEnd }).filter(Boolean).length})`}
-          </motion.button>
           {hasPhotos && photos.length > 1 && (
             <motion.button
               onClick={handleViewAll}
@@ -209,90 +161,6 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
           <p className="text-gray-600">{filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'}</p>
         </div>
       </div>
-
-      {/* Filters Panel */}
-      <motion.div
-        initial={{ opacity: 0, height: 0 }}
-        animate={{ opacity: showFilters ? 1 : 0, height: showFilters ? 'auto' : 0 }}
-        transition={{ duration: 0.2 }}
-        className="overflow-hidden"
-      >
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-900">Filter Photos</h3>
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-              >
-                <X className="w-4 h-4" />
-                Clear All
-              </button>
-            )}
-          </div>
-
-          {/* Milestone Filter */}
-          {false && (
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">By Milestone</label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedMilestone(null)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    selectedMilestone === null
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  All Milestones
-                </button>
-                {[].map((milestone: any) => (
-                  <button
-                    key={milestone.id}
-                    onClick={() => setSelectedMilestone(milestone.id)}
-                    className={`px-3 py-1.5 rounded-full text-sm transition-colors flex items-center gap-1 ${
-                      selectedMilestone === milestone.id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span>🎉</span>
-                    <span>{milestone.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Date Range Filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              By Date Range
-            </label>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <input
-                  type="date"
-                  value={dateRangeStart}
-                  onChange={(e) => setDateRangeStart(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Start date"
-                />
-              </div>
-              <div className="flex-1">
-                <input
-                  type="date"
-                  value={dateRangeEnd}
-                  onChange={(e) => setDateRangeEnd(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="End date"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
         {filteredPhotos.map((photo, index) => (
