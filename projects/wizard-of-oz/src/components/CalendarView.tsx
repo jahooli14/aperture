@@ -446,15 +446,19 @@ function TimelineView({
   places: any[];
   onUploadClick?: () => void;
 }) {
-  // Get all unique dates in reverse chronological order
+  // Get all unique dates with milestones and visits only (not every photo)
   const allDates = useMemo(() => {
     const dateSet = new Set<string>();
-    photosByDate.forEach((_, date) => dateSet.add(date));
     milestonesByDate.forEach((_, date) => dateSet.add(date));
     placesByDate.forEach((_, date) => dateSet.add(date));
     visitsByDate.forEach((_, date) => dateSet.add(date));
     return Array.from(dateSet).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [photosByDate, milestonesByDate, placesByDate, visitsByDate]);
+  }, [milestonesByDate, placesByDate, visitsByDate]);
+
+  // Get all dates with photos for condensed display
+  const photoDates = useMemo(() => {
+    return Array.from(photosByDate.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  }, [photosByDate]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -484,6 +488,17 @@ function TimelineView({
     return icons[category] || '📍';
   };
 
+  // Helper function to count photos between two dates
+  const getPhotoCountBetweenDates = (fromDate: string, toDate: string): number => {
+    const from = new Date(fromDate).getTime();
+    const to = new Date(toDate).getTime();
+
+    return Array.from(photosByDate.keys()).filter(photoDate => {
+      const photoTime = new Date(photoDate).getTime();
+      return photoTime > from && photoTime < to;
+    }).length;
+  };
+
   return (
     <div className="relative">
       {allDates.length === 0 ? (
@@ -503,120 +518,129 @@ function TimelineView({
           {/* Timeline vertical line */}
           <div className="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-300 via-primary-500 to-primary-300" />
 
-          {allDates.map((date, index) => (
-            <motion.div
-              key={date}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="relative pl-20"
-            >
-              {/* Timeline dot with pulse effect */}
-              <div className="absolute -left-2 top-6 flex items-center justify-center">
-                <div className="absolute w-5 h-5 bg-primary-400 rounded-full animate-pulse" />
-                <div className="relative w-5 h-5 bg-primary-600 rounded-full border-4 border-white shadow-lg" />
-              </div>
+          {allDates.map((date, index) => {
+            // Calculate photos between this date and the next one
+            const nextDate = allDates[index + 1];
+            const photoCount = nextDate ? getPhotoCountBetweenDates(nextDate, date) : 0;
 
-              {/* Date heading */}
-              <h3 className="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
-                {formatDate(date)}
-              </h3>
+            return (
+              <motion.div key={date}>
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="relative pl-20"
+                >
+                  {/* Timeline dot with pulse effect */}
+                  <div className="absolute -left-2 top-6 flex items-center justify-center">
+                    <div className="absolute w-5 h-5 bg-primary-400 rounded-full animate-pulse" />
+                    <div className="relative w-5 h-5 bg-primary-600 rounded-full border-4 border-white shadow-lg" />
+                  </div>
 
-              {/* Items for this date - grouped in card */}
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                <div className="divide-y divide-gray-100">
-                  {/* Photos - condensed */}
-                  {photosByDate.has(date) && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="px-4 py-2.5 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-xl">📷</span>
-                        <span className="text-gray-900 font-medium">Photo</span>
-                        <span className="text-xs text-gray-500">
-                          {photosByDate.get(date)?.eye_coordinates ? '✓ Face aligned' : 'Original'}
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
+                  {/* Date heading */}
+                  <h3 className="font-bold text-gray-900 text-base mb-4 flex items-center gap-2">
+                    {formatDate(date)}
+                  </h3>
 
-                  {/* Visits */}
-                  {visitsByDate.has(date) &&
-                    visitsByDate.get(date).map((visit: any, visitIndex: number) => {
-                      const place = places.find((p) => p.id === visit.place_id);
-                      return (
-                        <motion.div
-                          key={visit.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: visitIndex * 0.05 }}
-                          className="px-4 py-3 hover:bg-yellow-50 transition-colors"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span className="text-2xl">{place ? getCategoryIcon(place.category) : '📍'}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900">
-                                {place?.name || 'Unknown place'}
-                              </p>
-                              {visit.notes && (
-                                <p className="text-xs text-gray-600 mt-1 italic">"{visit.notes}"</p>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                  {/* Items for this date - grouped in card */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="divide-y divide-gray-100">
 
-                  {/* Places from photos */}
-                  {placesByDate.has(date) &&
-                    !visitsByDate.has(date) &&
-                    placesByDate.get(date).map((place: any, placeIndex: number) => (
-                      <motion.div
-                        key={place.id}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: placeIndex * 0.05 }}
-                        className="px-4 py-3 hover:bg-blue-50 transition-colors"
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="text-2xl">{getCategoryIcon(place.category)}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900">{place.name}</p>
-                            <p className="text-xs text-gray-600">Photographed</p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-
-                  {/* Milestones */}
-                  {milestonesByDate.has(date) && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="px-4 py-3 hover:bg-yellow-50 transition-colors"
-                    >
-                      <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span className="text-lg">🎉</span> Milestones
-                      </p>
-                      <ul className="text-xs text-gray-700 space-y-1 pl-6">
-                        {milestonesByDate.get(date)!.map((achievement: any) => {
-                          const milestone = milestones.find((m) => m.id === achievement.milestone_id);
+                      {/* Visits */}
+                      {visitsByDate.has(date) &&
+                        visitsByDate.get(date).map((visit: any, visitIndex: number) => {
+                          const place = places.find((p) => p.id === visit.place_id);
                           return (
-                            <li key={achievement.id} className="flex items-center gap-2">
-                              <span>{milestone?.icon}</span>
-                              <span>{milestone?.title || achievement.milestone_id}</span>
-                            </li>
+                            <motion.div
+                              key={visit.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: visitIndex * 0.05 }}
+                              className="px-4 py-3 hover:bg-yellow-50 transition-colors"
+                            >
+                              <div className="flex items-start gap-3">
+                                <span className="text-2xl">{place ? getCategoryIcon(place.category) : '📍'}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {place?.name || 'Unknown place'}
+                                  </p>
+                                  {visit.notes && (
+                                    <p className="text-xs text-gray-600 mt-1 italic">"{visit.notes}"</p>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
                           );
                         })}
-                      </ul>
-                    </motion.div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+
+                      {/* Places from photos */}
+                      {placesByDate.has(date) &&
+                        !visitsByDate.has(date) &&
+                        placesByDate.get(date).map((place: any, placeIndex: number) => (
+                          <motion.div
+                            key={place.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: placeIndex * 0.05 }}
+                            className="px-4 py-3 hover:bg-blue-50 transition-colors"
+                          >
+                            <div className="flex items-start gap-3">
+                              <span className="text-2xl">{getCategoryIcon(place.category)}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900">{place.name}</p>
+                                <p className="text-xs text-gray-600">Photographed</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+
+                      {/* Milestones */}
+                      {milestonesByDate.has(date) && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="px-4 py-3 hover:bg-yellow-50 transition-colors"
+                        >
+                          <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                            <span className="text-lg">🎉</span> Milestones
+                          </p>
+                          <ul className="text-xs text-gray-700 space-y-1 pl-6">
+                            {milestonesByDate.get(date)!.map((achievement: any) => {
+                              const milestone = milestones.find((m) => m.id === achievement.milestone_id);
+                              return (
+                                <li key={achievement.id} className="flex items-center gap-2">
+                                  <span>{milestone?.icon}</span>
+                                  <span>{milestone?.title || achievement.milestone_id}</span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Photo count between dates */}
+                {photoCount > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 + 0.1 }}
+                    className="relative pl-20 my-3"
+                  >
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
+                      <span className="px-2 py-1 bg-gray-50 rounded-full text-xs font-medium">
+                        📷 {photoCount} {photoCount === 1 ? 'photo' : 'photos'}
+                      </span>
+                      <div className="flex-1 h-px bg-gradient-to-l from-gray-200 to-transparent" />
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>
