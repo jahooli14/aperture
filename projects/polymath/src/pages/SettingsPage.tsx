@@ -18,7 +18,10 @@ import {
   Check,
   Moon,
   Map,
-  Search
+  Search,
+  Bug,
+  ToggleRight,
+  ToggleLeft
 } from 'lucide-react'
 import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
@@ -102,7 +105,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
 
 export function SettingsPage() {
   const navigate = useNavigate()
-  const { accentColor, intensity, fontSize, setAccentColor, setIntensity, setFontSize } = useThemeStore()
+  const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
 
   const intensityOptions: { value: ThemeIntensity; label: string; description: string }[] = [
     { value: 'subtle', label: 'Subtle', description: 'Muted colors' },
@@ -316,7 +319,7 @@ export function SettingsPage() {
           </div>
 
           {/* Font Size */}
-          <div>
+          <div className="mb-8">
             <h3 className="text-lg font-semibold mb-3 premium-text-platinum">
               Font size
             </h3>
@@ -338,6 +341,39 @@ export function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Bug Tracker Toggle */}
+          <div className="pt-6 border-t border-white/10">
+            <button
+              onClick={() => setShowBugTracker(!showBugTracker)}
+              className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left"
+              style={{
+                background: 'var(--premium-bg-2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+              }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                background: 'rgba(239, 68, 68, 0.2)'
+              }}>
+                <Bug className="w-6 h-6" style={{ color: '#ef4444' }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold premium-text-platinum">
+                  Bug Tracker
+                </h3>
+                <p style={{ color: 'var(--premium-text-secondary)', fontSize: '0.875rem' }}>
+                  {showBugTracker ? 'Enabled' : 'Disabled'}
+                </p>
+              </div>
+              <div>
+                {showBugTracker ? (
+                  <ToggleRight className="w-6 h-6" style={{ color: '#10b981' }} />
+                ) : (
+                  <ToggleLeft className="w-6 h-6" style={{ color: 'var(--premium-text-secondary)' }} />
+                )}
+              </div>
+            </button>
           </div>
           </div>
         </section>

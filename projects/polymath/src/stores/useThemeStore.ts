@@ -14,11 +14,13 @@ interface ThemeState {
   accentColor: AccentColor
   intensity: ThemeIntensity
   fontSize: FontSize
+  showBugTracker: boolean
 
   // Actions
   setAccentColor: (color: AccentColor) => void
   setIntensity: (intensity: ThemeIntensity) => void
   setFontSize: (size: FontSize) => void
+  setShowBugTracker: (show: boolean) => void
 }
 
 export const useThemeStore = create<ThemeState>()(
@@ -27,10 +29,12 @@ export const useThemeStore = create<ThemeState>()(
       accentColor: 'blue',
       intensity: 'normal',
       fontSize: 'normal',
+      showBugTracker: false,
 
       setAccentColor: (color) => set({ accentColor: color }),
       setIntensity: (intensity) => set({ intensity }),
       setFontSize: (size) => set({ fontSize: size }),
+      setShowBugTracker: (show) => set({ showBugTracker: show }),
     }),
     {
       name: 'polymath-theme',
