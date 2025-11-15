@@ -290,52 +290,88 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
         </button>
       </div>
 
-      {/* Places List - Table View */}
+      {/* Places List - Grouped by Category */}
       <div className="bg-white border-t border-gray-200 overflow-y-auto max-h-48">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-            <tr>
-              <th className="text-left px-4 py-2 font-semibold text-gray-700">Place</th>
-              <th className="text-left px-4 py-2 font-semibold text-gray-700">First Visit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {placesWithStats.length === 0 ? (
-              <tr>
-                <td colSpan={2} className="px-4 py-6 text-center text-gray-500">
-                  No places yet. Click the + button to add your first place.
-                </td>
-              </tr>
-            ) : (
-              placesWithStats.map((place) => (
-                <tr
-                  key={place.id}
-                  onClick={() => handleMarkerClick(place)}
-                  className={`border-b border-gray-100 cursor-pointer transition-colors ${
-                    selectedPlace?.id === place.id
-                      ? 'bg-blue-50'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-gray-900">{place.name}</p>
-                        {place.description && (
-                          <p className="text-xs text-gray-500 truncate">{place.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {formatDate(place.first_visit_date)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {placesWithStats.length === 0 ? (
+          <div className="px-4 py-6 text-center text-gray-500 text-sm">
+            No places yet. Click the + button to add your first place.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {(() => {
+              // Group places by category
+              const categoryLabels: Record<string, { label: string; icon: string }> = {
+                pub: { label: 'Pubs', icon: '🍺' },
+                restaurant: { label: 'Restaurants', icon: '🍽️' },
+                cafe: { label: 'Cafes', icon: '☕' },
+                park: { label: 'Parks', icon: '🌳' },
+                beach: { label: 'Beaches', icon: '🏖️' },
+                relative_house: { label: 'Relatives\' Houses', icon: '👨‍👩‍👧' },
+                nursery: { label: 'Nurseries', icon: '👶' },
+                playgroup: { label: 'Playgroups', icon: '🎨' },
+                soft_play: { label: 'Soft Play', icon: '🎪' },
+                attraction: { label: 'Attractions', icon: '🎡' },
+                landmark: { label: 'Landmarks', icon: '🏛️' },
+                other: { label: 'Other', icon: '📍' },
+              };
+
+              const grouped = placesWithStats.reduce((acc, place) => {
+                const cat = place.category || 'other';
+                if (!acc[cat]) acc[cat] = [];
+                acc[cat].push(place);
+                return acc;
+              }, {} as Record<string, typeof placesWithStats>);
+
+              // Sort groups by category order, then places by name
+              const sortedCategories = Object.keys(grouped).sort((a, b) => {
+                const aIndex = Object.keys(categoryLabels).indexOf(a);
+                const bIndex = Object.keys(categoryLabels).indexOf(b);
+                return aIndex - bIndex;
+              });
+
+              return sortedCategories.map((category) => (
+                <div key={category} className="border-b border-gray-100 last:border-b-0">
+                  <div className="bg-gray-50 px-4 py-2 sticky top-0 flex items-center gap-2">
+                    <span className="text-base">{categoryLabels[category]?.icon || '📍'}</span>
+                    <h4 className="font-semibold text-gray-700 text-sm">
+                      {categoryLabels[category]?.label || category}
+                    </h4>
+                    <span className="ml-auto text-xs text-gray-500">
+                      {grouped[category].length}
+                    </span>
+                  </div>
+                  <div className="space-y-0">
+                    {grouped[category]
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((place) => (
+                        <div
+                          key={place.id}
+                          onClick={() => handleMarkerClick(place)}
+                          className={`px-4 py-2 border-t border-gray-100 first:border-t-0 cursor-pointer transition-colors text-xs ${
+                            selectedPlace?.id === place.id
+                              ? 'bg-blue-50'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 truncate">{place.name}</p>
+                              {place.description && (
+                                <p className="text-xs text-gray-500 truncate">{place.description}</p>
+                              )}
+                            </div>
+                            <p className="text-gray-600 whitespace-nowrap ml-2">
+                              {formatDate(place.first_visit_date)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        )}
       </div>
 
       {/* Add Place Modal */}
