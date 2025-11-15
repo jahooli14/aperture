@@ -19,7 +19,6 @@ import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
-import { ProjectCarousel } from '../components/projects/ProjectCarousel'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
 import {
@@ -631,23 +630,28 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* 2. KEEP THE MOMENTUM - Project Carousel */}
+        {/* 2. KEEP THE MOMENTUM */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <div className="mb-5">
-            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
-            </h2>
-          </div>
-
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <ProjectCarousel
-              projects={projects}
-              loading={projectsLoading}
-              onUpdateProject={updateProject}
-            />
+            <div className="mb-5">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
+              </h2>
+            </div>
+
+            <Link
+              to="/projects"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all hover:opacity-90"
+              style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                color: 'var(--premium-blue)'
+              }}
+            >
+              View all projects <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </section>
 
