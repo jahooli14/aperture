@@ -14,7 +14,7 @@ interface AddVisitModalProps {
 }
 
 export function AddVisitModal({ isOpen, selectedPlace, onClose, onSuccess }: AddVisitModalProps) {
-  const { placesWithStats, addPlaceVisit, loading } = usePlaceStore();
+  const { placesWithStats, addPlaceVisit } = usePlaceStore();
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [visitDate, setVisitDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
@@ -165,7 +165,7 @@ export function AddVisitModal({ isOpen, selectedPlace, onClose, onSuccess }: Add
                               <p className="text-xs text-blue-700 mt-1">{place.address}</p>
                             )}
                             <p className="text-xs text-blue-600 mt-1">
-                              {place?.visit_count || 0} visit{place?.visit_count === 1 ? '' : 's'} recorded
+                              {place?.visit_dates?.length || 0} visit{place?.visit_dates?.length === 1 ? '' : 's'} recorded
                             </p>
                           </div>
                         </div>

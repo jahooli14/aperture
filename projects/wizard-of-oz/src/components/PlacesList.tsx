@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Plus, Trash2, Calendar, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Plus, Trash2, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import type { Database } from '../types/database';

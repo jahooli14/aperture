@@ -1,0 +1,36 @@
+{
+  "name": "agentic-swarm",
+  "version": "0.1.0",
+  "description": "A swarm of autonomous agents based on Anthropic best practices",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test-setup": "tsx test-setup.ts",
+    "demo": "tsx demo-swarm-vs-single.ts",
+    "overnight": "tsx overnight-mega-research.ts",
+    "overnight-pro": "tsx overnight-mega-research-gemini.ts",
+    "overnight-ultra": "tsx overnight-ultra-deep.ts",
+    "overnight-10hrs": "tsx overnight-guaranteed-10hrs.ts",
+    "overnight-free": "tsx overnight-microtask-swarm.ts",
+    "overnight-prod": "tsx overnight-production.ts",
+    "builder-test": "tsx builder-test.ts"
+  },
+  "keywords": ["ai", "agents", "swarm", "autonomous", "multi-provider", "anthropic", "google", "gemini", "glm"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  }
+}

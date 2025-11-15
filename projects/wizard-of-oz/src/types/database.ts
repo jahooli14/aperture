@@ -153,6 +153,7 @@ export interface Database {
           latitude: number;
           longitude: number;
           address: string | null;
+          category: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -164,6 +165,7 @@ export interface Database {
           latitude: number;
           longitude: number;
           address?: string | null;
+          category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -175,6 +177,7 @@ export interface Database {
           latitude?: number;
           longitude?: number;
           address?: string | null;
+          category?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -213,10 +216,12 @@ export interface Database {
           latitude: number;
           longitude: number;
           address: string | null;
+          category: string | null;
           created_at: string;
           updated_at: string;
           first_visit_date: string | null;
           photo_count: number;
+          visit_count: number;
           visit_dates: string[];
         };
       };
