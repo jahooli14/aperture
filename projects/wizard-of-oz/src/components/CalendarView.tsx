@@ -418,7 +418,6 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
       ) : (
         // Timeline view
         <TimelineView
-          photos={photos}
           photosByDate={photosByDate}
           milestonesByDate={milestonesByDate}
           placesByDate={placesByDate}
@@ -433,7 +432,6 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
 
 // Timeline view component
 function TimelineView({
-  photos,
   photosByDate,
   milestonesByDate,
   placesByDate,
@@ -441,7 +439,6 @@ function TimelineView({
   places,
   onUploadClick,
 }: {
-  photos: any[];
   photosByDate: Map<string, any>;
   milestonesByDate: Map<string, any>;
   placesByDate: Map<string, any>;
