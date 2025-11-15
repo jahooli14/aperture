@@ -92,10 +92,14 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
         throw new Error('Not authenticated');
       }
 
+      // Note: Removed .eq('user_id', user.id) filter to allow RLS policies to include shared places
+      // RLS policies now handle showing places from:
+      // 1. The current user's own places (user_id = auth.uid())
+      // 2. Places from accounts this user has joined
+      // 3. Places from accounts that have joined this user's account
       const { data, error } = await supabase
         .from('places')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -125,10 +129,14 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
       }
 
       console.log('[usePlaceStore] Querying places_with_stats view...');
+      // Note: Removed .eq('user_id', user.id) filter to allow RLS policies to include shared places
+      // The view's WHERE clause now handles showing places from:
+      // 1. The current user's own places (user_id = auth.uid())
+      // 2. Places from accounts this user has joined
+      // 3. Places from accounts that have joined this user's account
       const { data, error } = await supabase
         .from('places_with_stats')
         .select('*')
-        .eq('user_id', user.id)
         .order('first_visit_date', { ascending: true, nullsFirst: false });
 
       console.log('[usePlaceStore] Query result:', { dataLength: data?.length, error: error?.message });
