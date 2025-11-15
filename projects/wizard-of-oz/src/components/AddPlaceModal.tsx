@@ -64,7 +64,7 @@ function PlacePickerMap({
           if (place.name) {
             // Dispatch a custom event to communicate the place name
             const event = new CustomEvent('placeSelected', {
-              detail: { placeName: place.name, address: place.formatted_address }
+              detail: { placeName: place.name }
             });
             window.dispatchEvent(event);
           }
