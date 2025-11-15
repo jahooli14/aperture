@@ -595,28 +595,26 @@ function TimelineView({
                         ))}
 
                       {/* Milestones */}
-                      {milestonesByDate.has(date) && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="px-4 py-3 hover:bg-yellow-50 transition-colors"
-                        >
-                          <p className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                            <span className="text-lg">🎉</span> Milestones
-                          </p>
-                          <ul className="text-xs text-gray-700 space-y-1 pl-6">
-                            {milestonesByDate.get(date)!.map((achievement: any) => {
-                              const milestone = milestones.find((m) => m.id === achievement.milestone_id);
-                              return (
-                                <li key={achievement.id} className="flex items-center gap-2">
-                                  <span>{milestone?.icon}</span>
-                                  <span>{milestone?.title || achievement.milestone_id}</span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </motion.div>
-                      )}
+                      {milestonesByDate.has(date) &&
+                        milestonesByDate.get(date)!.map((achievement: any, milestoneIndex: number) => {
+                          const milestone = milestones.find((m) => m.id === achievement.milestone_id);
+                          return (
+                            <motion.div
+                              key={achievement.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: milestoneIndex * 0.05 }}
+                              className="px-4 py-3 bg-yellow-50 hover:bg-yellow-100 transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-2xl">{milestone?.icon}</span>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {milestone?.title || achievement.milestone_id}
+                                </p>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                     </div>
                   </div>
                 </motion.div>
