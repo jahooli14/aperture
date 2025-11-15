@@ -1462,14 +1462,14 @@ async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResp
     if (!inputs || !Array.isArray(inputs)) {
       return res.status(400).json({
         error: 'Invalid request',
-        details: 'Request body must include "inputs" array with 2-3 items'
+        details: 'Request body must include "inputs" array'
       })
     }
 
-    if (inputs.length < 2 || inputs.length > 3) {
+    if (inputs.length === 0) {
       return res.status(400).json({
         error: 'Invalid inputs',
-        details: 'Catalyst prompts require 2-3 inputs (project, article, or thought)'
+        details: 'At least one input required'
       })
     }
 
@@ -1495,7 +1495,7 @@ async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResp
     return res.status(201).json({
       prompts,
       generated: true,
-      message: `Generated ${prompts.length} catalyst prompts from ${inputs.length} inputs`,
+      message: `Generated ${prompts.length} catalyst prompts`,
       inputs
     })
   } catch (error) {
