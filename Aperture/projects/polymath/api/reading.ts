@@ -17,7 +17,6 @@ const rssParser = new Parser()
 
 // API Keys for third-party extraction services (Strategy B: Orchestrator Pattern)
 const DIFFBOT_API_KEY = process.env.DIFFBOT_API_KEY || '' // 10k credits/month free
-const SCRAPERAPI_KEY = process.env.SCRAPERAPI_KEY || '' // 1k credits/month free
 
 /**
  * Decode HTML entities in text
@@ -200,100 +199,16 @@ async function fetchArticleWithDiffbot(url: string): Promise<any> {
 }
 
 /**
- * Extract article content using ScraperAPI
- * Tier 5: Anti-bot specialist (1k free credits/month)
- * Use ONLY for sites that block all other methods (DataDome, Cloudflare)
- */
-async function fetchArticleWithScraperAPI(url: string): Promise<any> {
-  if (!SCRAPERAPI_KEY) {
-    throw new Error('SCRAPERAPI_KEY not configured')
-  }
-
-  console.log('[ScraperAPI] Fetching article (anti-bot bypass):', url)
-
-  try {
-    // ScraperAPI proxies the request through rotating residential IPs
-    const scraperUrl = `https://api.scraperapi.com?api_key=${SCRAPERAPI_KEY}&url=${encodeURIComponent(url)}&render=true`
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60s timeout for slow sites
-
-    const response = await fetch(scraperUrl, { signal: controller.signal })
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new Error(`ScraperAPI returned ${response.status}`)
-    }
-
-    const html = await response.text()
-    console.log('[ScraperAPI] HTML fetched, length:', html.length)
-
-    // Parse with linkedom + Readability
-    const { document } = parseHTML(html)
-
-    const baseURL = new URL(url)
-    const base = document.createElement('base')
-    base.href = baseURL.origin
-    document.head?.appendChild(base)
-
-    const reader = new Readability(document, {
-      debug: false,
-      maxElemsToParse: 8000,
-      nbTopCandidates: 5,
-      charThreshold: 200,
-      classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
-    })
-
-    const article = reader.parse()
-
-    if (!article) {
-      throw new Error('ScraperAPI: Readability failed to extract article content')
-    }
-
-    console.log('[ScraperAPI] Extracted:', article.title)
-
-    // Extract metadata
-    const head = document.head
-    const getMetaContent = (names: string[]) => {
-      if (!head) return null
-      for (const name of names) {
-        const tag = head.querySelector(`meta[property="${name}"], meta[name="${name}"]`)
-        if (tag) return tag.getAttribute('content')
-      }
-      return null
-    }
-
-    const thumbnailUrl = getMetaContent(['og:image', 'twitter:image']) || null
-
-    return {
-      title: decodeHTMLEntities(article.title || 'Untitled'),
-      content: article.content || '',
-      excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
-      author: article.byline || getMetaContent(['author']) || null,
-      source: article.siteName || extractDomain(url),
-      publishedDate: getMetaContent(['article:published_time']),
-      thumbnailUrl,
-      faviconUrl: `https://www.google.com/s2/favicons?domain=${extractDomain(url)}&sz=128`,
-      length: article.length || 0
-    }
-  } catch (error: any) {
-    console.error('[ScraperAPI] Error:', error.message)
-    throw error
-  }
-}
-
-/**
- * Extract article content with 4-tier Free API Alliance (Strategy B: Orchestrator Pattern)
+ * Extract article content with 3-tier Free API Alliance (Strategy B: Orchestrator Pattern)
  * Shifts from CPU-bound (Puppeteer) to I/O-bound (API calls)
  * Stays within Vercel Hobby plan limits: 4 CPU-hours, 250MB bundle, 300s timeout
  *
- * Tier 1: Mozilla Readability (local, fast, 0 cost)
- * Tier 2: Jina Reader API (10M free tokens/month)
- * Tier 3: Diffbot Article API (10k free credits/month)
- * Tier 4: ScraperAPI (1k free credits/month - anti-bot specialist)
+ * Tier 1: Mozilla Readability (local, fast, 0 cost) - static HTML sites
+ * Tier 2: Jina Reader API (10M free tokens/month) - JS-rendered sites
+ * Tier 3: Diffbot Article API (10k free credits/month) - anti-bot bypass + structured extraction
  */
 async function fetchArticle(url: string) {
-  console.log('[fetchArticle] Starting 4-tier orchestrator extraction:', url)
+  console.log('[fetchArticle] Starting 3-tier orchestrator extraction:', url)
 
   const errors: string[] = []
 
@@ -331,10 +246,10 @@ async function fetchArticle(url: string) {
     console.error('[fetchArticle] Tier 2 failed:', msg)
   }
 
-  // Tier 3: Try Diffbot Article API (structured data extractor, high quality)
+  // Tier 3: Try Diffbot Article API (anti-bot bypass + structured data extractor)
   if (DIFFBOT_API_KEY) {
     try {
-      console.log('[fetchArticle] Tier 3: Diffbot Article API...')
+      console.log('[fetchArticle] Tier 3: Diffbot Article API (final attempt)...')
       const result = await fetchArticleWithDiffbot(url)
 
       if (result.content && result.content.length > 200) {
@@ -350,27 +265,7 @@ async function fetchArticle(url: string) {
     }
   } else {
     console.log('[fetchArticle] Tier 3 skipped: DIFFBOT_API_KEY not configured')
-  }
-
-  // Tier 4: Try ScraperAPI (anti-bot specialist, last resort - most expensive)
-  if (SCRAPERAPI_KEY) {
-    try {
-      console.log('[fetchArticle] Tier 4: ScraperAPI (anti-bot bypass)...')
-      const result = await fetchArticleWithScraperAPI(url)
-
-      if (result.content && result.content.length > 200) {
-        console.log('[fetchArticle] ✅ Tier 4 succeeded (ScraperAPI)')
-        return result
-      }
-
-      throw new Error('ScraperAPI: Insufficient content')
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Unknown error'
-      errors.push(`Tier 4: ${msg}`)
-      console.error('[fetchArticle] Tier 4 failed:', msg)
-    }
-  } else {
-    console.log('[fetchArticle] Tier 4 skipped: SCRAPERAPI_KEY not configured')
+    errors.push('Tier 3: DIFFBOT_API_KEY not configured')
   }
 
   // All tiers exhausted
