@@ -1,6 +1,6 @@
 /**
  * Clandestined Brand Name Component
- * Displays "Clandestined" with "destined" highlighted
+ * Displays the app name with styling
  */
 
 interface BrandNameProps {
