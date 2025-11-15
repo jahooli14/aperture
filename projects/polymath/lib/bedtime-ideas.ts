@@ -44,6 +44,23 @@ interface BedtimePrompt {
  * Focus: Leverage hypnagogic state for pattern recognition, creative insights,
  * and subconscious processing of accumulated knowledge
  */
+/**
+ * Generate Catalyst prompts from 2-3 specific inputs (Project, Article, or Thought)
+ * Each prompt approaches the inputs from a different angle with varied perspectives
+ * Perfect for focused bedtime contemplation of specific items
+ *
+ * @param inputs - Array of 2-3 items with title, type, and id
+ * @param userId - User ID for logging
+ * @returns Array of 2-3 catalyst prompts
+ */
+export async function generateCatalystPrompts(
+  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
+  userId: string
+): Promise<BedtimePrompt[]> {
+  logger.info({ userId, inputCount: inputs.length }, 'Generating catalyst prompts')
+  return generateCatalystPromptsWithAI(inputs, userId)
+}
+
 export async function generateBedtimePrompts(userId: string): Promise<BedtimePrompt[]> {
   logger.info({ userId }, 'Generating bedtime prompts')
 
@@ -265,6 +282,107 @@ function detectConnections(
   }
 
   return connections.slice(0, 3)
+}
+
+/**
+ * Nightly Catalyst: Generate 2-3 focused prompts from specific inputs
+ * Takes concrete items (projects, articles, thoughts) and creates varied-angle prompts
+ * Each prompt uses a different perspective (object, problem, environment, etc.)
+ * Each ends with a request for one specific sensory detail
+ */
+async function generateCatalystPromptsWithAI(
+  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
+  userId: string
+): Promise<BedtimePrompt[]> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+
+  // Validate we have 2-3 inputs
+  if (inputs.length < 2 || inputs.length > 3) {
+    throw new Error('Catalyst prompts require 2-3 inputs (project, article, or thought)')
+  }
+
+  const inputsList = inputs
+    .map(
+      input =>
+        `${input.type.toUpperCase()}: "${input.title}"`
+    )
+    .join('\n')
+
+  const prompt = `You are a master of creative incubation. Your task: Take these 2-3 specific inputs and generate 2-3 vivid, concrete prompts that approach them from DIFFERENT ANGLES.
+
+**INPUTS:**
+${inputsList}
+
+**YOUR CONSTRAINTS:**
+
+1. **Vary the Angles** - Each prompt uses a different perspective:
+   - ANGLE 1: Something as a PHYSICAL OBJECT or DEVICE (tangible, can be held/seen/manipulated)
+   - ANGLE 2: Something as a PROBLEM or CHALLENGE (stuck state, puzzle, constraint)
+   - ANGLE 3 (optional): Something as an ENVIRONMENT or SPACE (a room, landscape, or atmosphere where things happen)
+
+2. **Make It Concrete** - Turn abstract inputs into tangible scenes:
+   - Use specific sensory details (color, texture, sound, weight, temperature)
+   - Create a scenario or interaction that feels physically real
+   - Place things in relationship to each other in space or causation
+   - Avoid abstract philosophy or generic advice
+
+3. **Keep It Brief** - 2-3 sentences per prompt (not paragraphs)
+
+4. **End with ONE Sensory Question** - Each prompt must end with a concrete sensory question:
+   - Ask about a SPECIFIC visual detail ("What color is it?", "Which fox's color is casting the shadow?")
+   - Ask about a SPECIFIC tactile/kinesthetic detail ("What does it feel like to tap it?", "How much weight does it have?")
+   - Ask about a SPECIFIC auditory detail ("What sound does it make?", "What's the rhythm you hear?")
+   - Ask about a SPECIFIC spatial detail ("Where is it pointing?", "What's the first thing you touch?")
+   - Make the question SPECIFIC to your scenario, not generic
+
+5. **No Clichés** - Avoid:
+   - ❌ Portals, whispers, shadows as metaphor
+   - ❌ Identity-based prompts ("As a PM..." or "As a designer...")
+   - ❌ Generic templates
+   - ❌ Trying too hard to be "deep"
+
+6. **Be Weird & Specific** - Let the connection between inputs create unexpected scenarios:
+   - Don't make a generic prompt about all three items equally
+   - Let one item influence how you present another
+   - Create productive cognitive tension by combining them in surprising ways
+
+**TONE:** Dreamlike but grounded. Curious but concrete. Suggestive but not mystical.
+
+**RETURN FORMAT:**
+Return ONLY valid JSON (no markdown, no explanation):
+[
+  {
+    "prompt": "The full 2-3 sentence prompt with the sensory question at the end",
+    "type": "connection|divergent|revisit|transform",
+    "format": "visualization|scenario|incubation",
+    "relatedIds": ["id1", "id2", "id3"]
+  }
+]
+
+**CRITICAL:**
+- Use the ACTUAL titles/names from the inputs (not "the project" but "'${inputs[0]?.title}'" etc.)
+- End EVERY prompt with a concrete, specific sensory question
+- Each prompt should feel like a mini-scene or interaction, not abstract advice
+- Vary your approaches—don't use the same angle twice`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+
+  // Parse JSON
+  const jsonMatch = text.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) {
+    logger.error({ text }, 'Failed to parse catalyst prompts JSON')
+    throw new Error('Failed to parse catalyst prompts')
+  }
+
+  const parsed = JSON.parse(jsonMatch[0])
+  return parsed.map((p: any) => ({
+    prompt: p.prompt,
+    type: p.type || 'connection',
+    format: p.format || 'visualization',
+    relatedIds: inputs.map(i => i.id),
+    metaphor: undefined
+  }))
 }
 
 /**
