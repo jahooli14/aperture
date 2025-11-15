@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-14T22:02:15.030Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "MCP Streaming HTTP Deep Dive",
+    "url": "https://dev.to/varungujarathi9/mcp-streaming-http-deep-dive-1n5e",
+    "publishDate": "2025-10-14T21:32:55.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

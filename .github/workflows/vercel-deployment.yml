@@ -1,0 +1,59 @@
+name: Vercel Deployment Status
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  deployment-status:
+    runs-on: ubuntu-latest
+    name: Check Vercel Deployment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for Vercel Deployment
+        uses: UnlyEd/github-action-await-vercel@v1.3.16
+        id: await-vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        with:
+          deployment-url: ${{ github.event.pull_request.head.sha || github.sha }}
+          timeout: 300
+          poll-interval: 5
+
+      - name: Display deployment URL
+        run: |
+          echo "### 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "Deployment URL: ${{ steps.await-vercel.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ steps.await-vercel.outputs.deployment-status }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with deployment URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deploymentUrl = '${{ steps.await-vercel.outputs.url }}';
+            const status = '${{ steps.await-vercel.outputs.deployment-status }}';
+
+            const emoji = status === 'READY' ? '✅' : '❌';
+
+            const comment = `${emoji} **Vercel Deployment**
+
+            **Status:** ${status}
+            **Preview URL:** ${deploymentUrl}
+
+            ${status === 'READY' ?
+              '🎉 Deployment successful! Click the link above to preview your changes.' :
+              '⚠️ Deployment failed. Check the Vercel dashboard for details.'}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

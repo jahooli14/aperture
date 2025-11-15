@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-16T16:26:32.342Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Auth0 for AI Agents Challenge",
+    "url": "https://dev.to/pt67/auth0-for-ai-agents-challenge-fhi",
+    "publishDate": "2025-10-16T16:02:01.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

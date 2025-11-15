@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Share Debug Info</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1729;
+      color: #fff;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #3b82f6;
+      margin-bottom: 20px;
+    }
+    .section {
+      background: #1a1a1a;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #60a5fa;
+      font-size: 18px;
+    }
+    pre {
+      background: #0a0a0a;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .status.success { background: #10b981; color: white; }
+    .status.error { background: #ef4444; color: white; }
+    .status.warning { background: #f59e0b; color: white; }
+    button {
+      padding: 12px 24px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Share Target Debugger</h1>
+
+    <div class="section">
+      <h2>Service Worker Status</h2>
+      <div id="sw-status">Checking...</div>
+      <button onclick="checkServiceWorker()">Refresh Status</button>
+      <button onclick="unregisterSW()">Unregister SW</button>
+      <button onclick="updateSW()">Force Update</button>
+    </div>
+
+    <div class="section">
+      <h2>Share Data Detection</h2>
+      <div id="share-data">Checking...</div>
+    </div>
+
+    <div class="section">
+      <h2>URL Parameters</h2>
+      <pre id="url-params"></pre>
+    </div>
+
+    <div class="section">
+      <h2>SessionStorage</h2>
+      <pre id="session-storage"></pre>
+    </div>
+
+    <div class="section">
+      <h2>Console Logs</h2>
+      <div style="margin-bottom: 10px;">
+        <button onclick="exportLogs()">Export Logs</button>
+        <button onclick="clearLogs()">Clear</button>
+      </div>
+      <pre id="console-logs" style="max-height: 300px; overflow-y: auto;"></pre>
+    </div>
+
+    <div class="section">
+      <h2>Actions</h2>
+      <button onclick="testShare()">Test Share Flow</button>
+      <button onclick="location.href='/reading?shared=https://example.com'">Test Shared Param</button>
+      <button onclick="clearAllData()">Clear All Data</button>
+    </div>
+  </div>
+
+  <script>
+    const logs = [];
+
+    // Intercept console logs
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = function(...args) {
+      logs.push({ type: 'log', time: new Date().toISOString(), message: args });
+      updateLogDisplay();
+      originalLog.apply(console, args);
+    };
+
+    console.error = function(...args) {
+      logs.push({ type: 'error', time: new Date().toISOString(), message: args });
+      updateLogDisplay();
+      originalError.apply(console, args);
+    };
+
+    console.warn = function(...args) {
+      logs.push({ type: 'warn', time: new Date().toISOString(), message: args });
+      updateLogDisplay();
+      originalWarn.apply(console, args);
+    };
+
+    function updateLogDisplay() {
+      const display = document.getElementById('console-logs');
+      display.textContent = logs.map(log =>
+        `[${log.time.split('T')[1]}] [${log.type.toUpperCase()}] ${log.message.map(m =>
+          typeof m === 'object' ? JSON.stringify(m) : String(m)
+        ).join(' ')}`
+      ).join('\n');
+      display.scrollTop = display.scrollHeight;
+    }
+
+    function exportLogs() {
+      const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `share-debug-${Date.now()}.json`;
+      a.click();
+    }
+
+    function clearLogs() {
+      logs.length = 0;
+      updateLogDisplay();
+    }
+
+    async function checkServiceWorker() {
+      const statusDiv = document.getElementById('sw-status');
+
+      if (!('serviceWorker' in navigator)) {
+        statusDiv.innerHTML = '<div class="status error">Service Worker not supported</div>';
+        return;
+      }
+
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+
+        if (!registration) {
+          statusDiv.innerHTML = '<div class="status error">No Service Worker registered</div>';
+          return;
+        }
+
+        let status = '';
+
+        if (registration.active) {
+          status += '<div class="status success">Active Service Worker</div><br>';
+          status += `<pre>Scope: ${registration.scope}\nScript: ${registration.active.scriptURL}</pre>`;
+        }
+
+        if (registration.waiting) {
+          status += '<div class="status warning">Service Worker waiting to activate</div>';
+        }
+
+        if (registration.installing) {
+          status += '<div class="status warning">Service Worker installing</div>';
+        }
+
+        statusDiv.innerHTML = status;
+
+        console.log('[Debug] Service Worker registration:', registration);
+      } catch (error) {
+        statusDiv.innerHTML = `<div class="status error">Error: ${error.message}</div>`;
+        console.error('[Debug] Service Worker check error:', error);
+      }
+    }
+
+    async function unregisterSW() {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.unregister();
+          alert('Service Worker unregistered. Reload the page.');
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    async function updateSW() {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.update();
+          alert('Update requested. Check status.');
+          checkServiceWorker();
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    }
+
+    function checkShareData() {
+      const params = new URLSearchParams(window.location.search);
+      const shareDataDiv = document.getElementById('share-data');
+
+      let html = '';
+
+      // Check for shared parameter
+      const shared = params.get('shared');
+      if (shared) {
+        html += `<div class="status success">Found 'shared' parameter</div><br>`;
+        html += `<pre>URL: ${shared}</pre>`;
+      } else {
+        html += `<div class="status warning">No 'shared' parameter found</div>`;
+      }
+
+      shareDataDiv.innerHTML = html;
+    }
+
+    function updateURLParams() {
+      const params = new URLSearchParams(window.location.search);
+      const display = document.getElementById('url-params');
+
+      if (params.toString()) {
+        const allParams = {};
+        params.forEach((value, key) => {
+          allParams[key] = value;
+        });
+        display.textContent = JSON.stringify(allParams, null, 2);
+      } else {
+        display.textContent = '(no parameters)';
+      }
+    }
+
+    function updateSessionStorage() {
+      const display = document.getElementById('session-storage');
+      const data = {};
+
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        try {
+          data[key] = JSON.parse(sessionStorage.getItem(key));
+        } catch {
+          data[key] = sessionStorage.getItem(key);
+        }
+      }
+
+      display.textContent = Object.keys(data).length > 0
+        ? JSON.stringify(data, null, 2)
+        : '(empty)';
+    }
+
+    function testShare() {
+      // Simulate what service worker should do
+      const testUrl = 'https://example.com/test-article';
+      console.log('[Test] Simulating share with URL:', testUrl);
+      window.location.href = `/reading?shared=${encodeURIComponent(testUrl)}`;
+    }
+
+    function clearAllData() {
+      if (confirm('Clear all data (localStorage, sessionStorage, cache)?')) {
+        localStorage.clear();
+        sessionStorage.clear();
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+        alert('All data cleared. Reload the page.');
+      }
+    }
+
+    // Initial checks
+    checkServiceWorker();
+    checkShareData();
+    updateURLParams();
+    updateSessionStorage();
+
+    console.log('[Debug] Debug page loaded');
+    console.log('[Debug] Current URL:', window.location.href);
+  </script>
+</body>
+</html>

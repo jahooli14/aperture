@@ -1,0 +1,153 @@
+{
+  "sources": [
+    {
+      "id": "google-ai-blog",
+      "name": "Google AI Blog",
+      "type": "rss",
+      "url": "https://blog.research.google/feeds/posts/default",
+      "keywords": ["gemini", "palm", "ai", "llm", "agents"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "hackernews",
+      "name": "Hacker News",
+      "type": "rss",
+      "url": "https://news.ycombinator.com/rss",
+      "keywords": ["anthropic", "claude", "gemini", "ai agents", "llm"],
+      "authority": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "medium-ai",
+      "name": "Medium AI Tag",
+      "type": "rss",
+      "url": "https://medium.com/feed/tag/artificial-intelligence",
+      "keywords": ["ai agents", "anthropic", "claude", "development patterns"],
+      "authority": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "devto-ai",
+      "name": "Dev.to AI Tag",
+      "type": "rss",
+      "url": "https://dev.to/feed/tag/ai",
+      "keywords": ["ai development", "claude", "agents", "tools"],
+      "authority": 0.6,
+      "enabled": true
+    },
+    {
+      "id": "reddit-claude",
+      "name": "Reddit r/ClaudeAI",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/ClaudeAI/.rss",
+      "keywords": ["claude", "anthropic", "tips", "patterns"],
+      "authority": 0.4,
+      "enabled": true
+    },
+    {
+      "id": "arxiv-ai",
+      "name": "arXiv AI/ML/SE Papers",
+      "type": "rss",
+      "url": "https://rss.arxiv.org/rss/cs.AI+cs.LG+cs.SE",
+      "keywords": ["ai agents", "llm", "machine learning", "software engineering", "ai safety"],
+      "authority": 0.9,
+      "enabled": false
+    },
+    {
+      "id": "deepseek-research",
+      "name": "DeepSeek Research",
+      "type": "rss",
+      "url": "http://export.arxiv.org/api/query?search_query=all:DeepSeek&sortBy=submittedDate&sortOrder=descending",
+      "keywords": ["deepseek", "ai models", "research", "llm"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "microsoft-research",
+      "name": "Microsoft Research AI",
+      "type": "rss",
+      "url": "https://www.microsoft.com/en-us/research/feed/",
+      "keywords": ["ai research", "microsoft", "copilot", "agents"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "stanford-ai",
+      "name": "Stanford AI Lab (SAIL)",
+      "type": "rss",
+      "url": "https://ai.stanford.edu/blog/feed.xml",
+      "keywords": ["ai research", "stanford", "foundation models", "agents"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "autogen-blog",
+      "name": "AutoGen Framework",
+      "type": "rss",
+      "url": "https://devblogs.microsoft.com/autogen/feed/",
+      "keywords": ["autogen", "multi-agent", "framework", "microsoft"],
+      "authority": 0.7,
+      "enabled": true
+    },
+    {
+      "id": "crewai-blog",
+      "name": "CrewAI Framework",
+      "type": "rss",
+      "url": "https://blog.crewai.com/feed/",
+      "keywords": ["crewai", "ai agents", "framework", "orchestration"],
+      "authority": 0.6,
+      "enabled": true
+    },
+    {
+      "id": "import-ai",
+      "name": "Import AI Newsletter",
+      "type": "rss",
+      "url": "https://importai.substack.com/feed",
+      "keywords": ["ai policy", "research", "industry", "jack clark"],
+      "authority": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "karpathy-new",
+      "name": "Andrej Karpathy (New Blog)",
+      "type": "rss",
+      "url": "https://karpathy.bearblog.dev/feed/",
+      "keywords": ["karpathy", "ai", "neural networks", "training"],
+      "authority": 0.9,
+      "enabled": true
+    },
+    {
+      "id": "karpathy-archive",
+      "name": "Andrej Karpathy (Archive)",
+      "type": "rss",
+      "url": "http://karpathy.github.io/feed.xml",
+      "keywords": ["karpathy", "ai", "neural networks", "deep learning"],
+      "authority": 0.9,
+      "enabled": false
+    },
+    {
+      "id": "reddit-llmdevs",
+      "name": "Reddit r/LLMDevs",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/LLMDevs.rss",
+      "keywords": ["llm development", "api", "tools", "frameworks"],
+      "authority": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "reddit-ai-agents",
+      "name": "Reddit r/AI_Agents",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/AI_Agents.rss",
+      "keywords": ["ai agents", "autonomous", "multi-agent", "frameworks"],
+      "authority": 0.5,
+      "enabled": true
+    }
+  ],
+  "relevanceThreshold": 0.7,
+  "qualityThreshold": 0.75,
+  "maxDailyChanges": 5,
+  "maxSectionGrowth": 1.2,
+  "maxArticlesPerSource": 3
+}

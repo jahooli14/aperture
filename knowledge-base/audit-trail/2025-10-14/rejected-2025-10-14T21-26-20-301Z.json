@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-14T21:26:20.300Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "The RAG Debugging Playbook: A Step-by-Step Guide to Trace-Level Failures and Fixes",
+    "url": "https://dev.to/kuldeep_paul/the-rag-debugging-playbook-a-step-by-step-guide-to-trace-level-failures-and-fixes-56pa",
+    "publishDate": "2025-10-14T19:49:18.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

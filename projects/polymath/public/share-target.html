@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saving Article...</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f1729;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 40px;
+      max-width: 500px;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      color: #fff;
+    }
+    p {
+      font-size: 16px;
+      color: #9ca3af;
+      margin: 0;
+    }
+    .url {
+      margin-top: 20px;
+      padding: 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 8px;
+      font-size: 14px;
+      color: #60a5fa;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <h1>Saving Article...</h1>
+    <p id="status">Preparing to save your article</p>
+    <div id="urlDisplay" class="url" style="display: none;"></div>
+  </div>
+
+  <script>
+    (function() {
+      console.log('='.repeat(80))
+      console.log('[ShareTarget] STATIC PAGE LOADED')
+      console.log('[ShareTarget] Full URL:', window.location.href)
+      console.log('[ShareTarget] Search params:', window.location.search)
+
+      // Extract URL params
+      const params = new URLSearchParams(window.location.search)
+      const urlParam = params.get('url')
+      const sharedTitle = params.get('title')
+      const textParam = params.get('text')
+
+      console.log('[ShareTarget] All params:', Array.from(params.entries()))
+      console.log('[ShareTarget] URL param:', urlParam)
+      console.log('[ShareTarget] Title param:', sharedTitle)
+      console.log('[ShareTarget] Text param:', textParam)
+
+      // Android puts URL in 'text' parameter, not 'url' parameter
+      // Check both with correct priority
+      let sharedUrl = null
+
+      // Priority 1: Check if text param is a URL (Android behavior)
+      if (textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
+        sharedUrl = textParam
+        console.log('[ShareTarget] ✓ Found URL in text parameter (Android):', sharedUrl)
+      }
+      // Priority 2: Check url param (spec-compliant browsers)
+      else if (urlParam) {
+        sharedUrl = urlParam
+        console.log('[ShareTarget] ✓ Found URL in url parameter (spec-compliant):', sharedUrl)
+      }
+
+      console.log('[ShareTarget] Final extracted URL:', sharedUrl)
+
+      if (sharedUrl) {
+        // Show URL being saved
+        const urlDisplay = document.getElementById('urlDisplay')
+        urlDisplay.textContent = sharedUrl
+        urlDisplay.style.display = 'block'
+
+        document.getElementById('status').textContent = 'Redirecting to app...'
+
+        // Store share data in BOTH sessionStorage AND pass via URL params
+        // This double approach ensures we don't lose the data
+        const shareData = {
+          url: sharedUrl,
+          title: sharedTitle || undefined,
+          text: sharedText || undefined,
+          timestamp: Date.now()
+        }
+
+        try {
+          sessionStorage.setItem('polymath_share_data', JSON.stringify(shareData))
+          console.log('[ShareTarget] Share data stored in sessionStorage:', shareData)
+        } catch (error) {
+          console.error('[ShareTarget] Failed to store in sessionStorage:', error)
+        }
+
+        // ALWAYS redirect with URL params as primary mechanism
+        // This is more reliable than sessionStorage with PWA navigate-existing mode
+        // IMPORTANT: Pass the URL in BOTH 'url' and 'text' parameters to ensure compatibility
+        const redirectUrl = '/reading?url=' + encodeURIComponent(sharedUrl) +
+          '&text=' + encodeURIComponent(sharedUrl) +
+          (sharedTitle ? '&title=' + encodeURIComponent(sharedTitle) : '')
+
+        console.log('[ShareTarget] Redirecting to:', redirectUrl)
+        console.log('[ShareTarget] URL will be available in both url and text parameters')
+
+        // Use a longer timeout to ensure everything is stable
+        setTimeout(function() {
+          console.log('[ShareTarget] Executing redirect now...')
+          window.location.href = redirectUrl
+        }, 300)
+      } else {
+        console.error('[ShareTarget] No URL parameter found')
+        console.error('[ShareTarget] Current URL:', window.location.href)
+        console.error('[ShareTarget] This means the manifest share_target is not registered with your OS')
+        console.error('[ShareTarget] You need to REINSTALL the PWA to register the new share target')
+
+        document.getElementById('status').innerHTML =
+          '<strong>Share target not working</strong><br>' +
+          '<span style="font-size: 14px;">The PWA needs to be reinstalled to enable sharing.</span>'
+
+        const urlDisplay = document.getElementById('urlDisplay')
+        urlDisplay.innerHTML =
+          '<strong>How to fix:</strong><br>' +
+          '1. Uninstall the PWA from your device<br>' +
+          '2. Reinstall it from the website<br>' +
+          '3. Try sharing again<br><br>' +
+          '<a href="/pwa-reinstall.html" style="color: #60a5fa; text-decoration: underline;">View detailed instructions</a>'
+        urlDisplay.style.display = 'block'
+
+        // Redirect to instructions page
+        setTimeout(function() {
+          window.location.href = '/pwa-reinstall.html'
+        }, 5000)
+      }
+
+      console.log('[ShareTarget] STATIC PAGE END')
+      console.log('='.repeat(80))
+    })()
+  </script>
+</body>
+</html>

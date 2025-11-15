@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verify Eye Detection</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 1800px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .photo-box {
+      border: 3px solid #ddd;
+      padding: 15px;
+      text-align: center;
+    }
+    .photo-box.oct10 {
+      border-color: #ff0000;
+      background: #fff5f5;
+    }
+    .photo-box h3 {
+      margin: 0 0 10px 0;
+    }
+    canvas {
+      max-width: 100%;
+      border: 2px solid #ccc;
+    }
+    .info {
+      font-size: 12px;
+      text-align: left;
+      margin-top: 10px;
+      padding: 10px;
+      background: #f0f0f0;
+      font-family: monospace;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Eye Detection Verification</h1>
+  <p>Green circles = detected eye positions. Check if they're actually on the eyes!</p>
+
+  <button onclick="loadPhotos()">Load & Verify All Photos</button>
+
+  <div class="grid" id="grid"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://kzejnzxexgagoujdrmhd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZWpuenhleGdhZ291amRybWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxMDI2NDIsImV4cCI6MjA0OTY3ODY0Mn0.b-zVJlb1_Oqnko_CoCWmZD8I7SvksDiH9sOfRCnOPL4';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    window.loadPhotos = async function() {
+      try {
+        const { data: photos, error } = await supabase
+          .from('photos')
+          .select('*')
+          .not('eye_coordinates', 'is', null)
+          .order('upload_date', { ascending: true});
+
+        if (error) throw error;
+
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+
+        for (const photo of photos) {
+          await visualizeEyes(photo, grid);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+      }
+    };
+
+    async function visualizeEyes(photo, container) {
+      const date = new Date(photo.upload_date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      const coords = photo.eye_coordinates;
+      const centerY = (coords.leftEye.y + coords.rightEye.y) / 2;
+      const percentFromTop = (centerY / coords.imageHeight * 100).toFixed(1);
+      const isOct10 = percentFromTop === '23.6';
+
+      const box = document.createElement('div');
+      box.className = 'photo-box' + (isOct10 ? ' oct10' : '');
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 600;
+      canvas.height = 800;
+
+      box.innerHTML = `
+        <h3>${date} ${isOct10 ? '🔍 OCT 10 - PROBLEM PHOTO' : ''}</h3>
+        <div></div>
+        <div class="info"></div>
+      `;
+
+      box.querySelector('div').appendChild(canvas);
+      container.appendChild(box);
+
+      // Load and draw image with eye markers
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = photo.original_url;
+      });
+
+      const ctx = canvas.getContext('2d');
+
+      // Calculate scaling to fit canvas
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      const offsetX = (canvas.width - scaledWidth) / 2;
+      const offsetY = (canvas.height - scaledHeight) / 2;
+
+      // Draw image
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+
+      // Draw eye markers
+      const leftX = coords.leftEye.x * scale + offsetX;
+      const leftY = coords.leftEye.y * scale + offsetY;
+      const rightX = coords.rightEye.x * scale + offsetX;
+      const rightY = coords.rightEye.y * scale + offsetY;
+      const centerX = (leftX + rightX) / 2;
+      const centerYScaled = (leftY + rightY) / 2;
+
+      // Draw circles on detected eyes
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(leftX, leftY, 30, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(rightX, rightY, 30, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Draw center line
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, centerYScaled);
+      ctx.lineTo(canvas.width, centerYScaled);
+      ctx.stroke();
+
+      // Draw crosshair at center
+      ctx.beginPath();
+      ctx.moveTo(centerX - 20, centerYScaled);
+      ctx.lineTo(centerX + 20, centerYScaled);
+      ctx.moveTo(centerX, centerYScaled - 20);
+      ctx.lineTo(centerX, centerYScaled + 20);
+      ctx.stroke();
+
+      // Update info
+      box.querySelector('.info').innerHTML = `
+Eye Center Y: ${Math.round(centerY)} (${percentFromTop}% from top)<br>
+Left Eye:  (${Math.round(coords.leftEye.x)}, ${Math.round(coords.leftEye.y)})<br>
+Right Eye: (${Math.round(coords.rightEye.x)}, ${Math.round(coords.rightEye.y)})<br>
+Swapped: ${coords.leftEye.x > coords.rightEye.x ? 'YES (upside-down)' : 'NO'}<br>
+<br>
+<strong>${isOct10 ? '⚠️ Check if eye markers are accurate!' : 'Green=Left, Red=Right, Yellow=Center line'}</strong>
+      `;
+    }
+  </script>
+</body>
+</html>

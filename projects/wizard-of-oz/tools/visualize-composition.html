@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Photo Composition Visualization</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 1600px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .photo-box {
+      border: 2px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    .photo-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+    }
+    .canvas-container {
+      position: relative;
+      background: #f0f0f0;
+    }
+    canvas {
+      width: 100%;
+      border: 1px solid #ccc;
+    }
+    .info {
+      font-size: 11px;
+      text-align: left;
+      margin-top: 5px;
+      padding: 5px;
+      background: #f9f9f9;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+  </style>
+</head>
+<body>
+  <h1>Photo Composition Visualization</h1>
+  <p>Shows where the eyes are positioned in each original photo</p>
+
+  <button onclick="loadPhotos()">Load Photos</button>
+
+  <div class="grid" id="grid"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://kzejnzxexgagoujdrmhd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZWpuenhleGdhZ291amRybWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxMDI2NDIsImV4cCI6MjA0OTY3ODY0Mn0.b-zVJlb1_Oqnko_CoCWmZD8I7SvksDiH9sOfRCnOPL4';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    window.loadPhotos = async function() {
+      try {
+        const { data: photos, error } = await supabase
+          .from('photos')
+          .select('*')
+          .not('eye_coordinates', 'is', null)
+          .order('upload_date', { ascending: true });
+
+        if (error) throw error;
+
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+
+        for (const photo of photos) {
+          await visualizePhoto(photo, grid);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+      }
+    };
+
+    async function visualizePhoto(photo, container) {
+      const date = new Date(photo.upload_date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+
+      const coords = photo.eye_coordinates;
+      const centerY = (coords.leftEye.y + coords.rightEye.y) / 2;
+      const percentFromTop = (centerY / coords.imageHeight * 100).toFixed(1);
+
+      const box = document.createElement('div');
+      box.className = 'photo-box';
+
+      const canvas = document.createElement('canvas');
+      const canvasId = `canvas-${photo.id}`;
+      canvas.id = canvasId;
+      canvas.width = 300;
+      canvas.height = 400;
+
+      box.innerHTML = `
+        <h3>${date} ${percentFromTop === '23.6' ? '⚠️' : ''}</h3>
+        <div class="canvas-container"></div>
+        <div class="info">
+          Eyes at ${percentFromTop}% from top<br>
+          Y: ${Math.round(centerY)} / ${coords.imageHeight}
+        </div>
+      `;
+
+      box.querySelector('.canvas-container').appendChild(canvas);
+      container.appendChild(box);
+
+      // Draw visualization
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = photo.original_url;
+      });
+
+      const ctx = canvas.getContext('2d');
+
+      // Draw scaled-down image
+      const scale = canvas.width / img.width;
+      const scaledHeight = img.height * scale;
+      const offsetY = (canvas.height - scaledHeight) / 2;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(img, 0, offsetY, canvas.width, scaledHeight);
+
+      // Draw eye markers
+      const scaledLeftX = coords.leftEye.x * scale;
+      const scaledLeftY = coords.leftEye.y * scale + offsetY;
+      const scaledRightX = coords.rightEye.x * scale;
+      const scaledRightY = coords.rightEye.y * scale + offsetY;
+
+      // Draw lines for eye level
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, scaledLeftY);
+      ctx.lineTo(canvas.width, scaledLeftY);
+      ctx.stroke();
+
+      // Draw eye circles
+      ctx.fillStyle = '#ff0000';
+      ctx.beginPath();
+      ctx.arc(scaledLeftX, scaledLeftY, 5, 0, Math.PI * 2);
+      ctx.arc(scaledRightX, scaledRightY, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw reference lines for composition
+      const third1 = canvas.height / 3;
+      const third2 = (canvas.height / 3) * 2;
+
+      ctx.strokeStyle = 'rgba(255,255,0,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(0, third1);
+      ctx.lineTo(canvas.width, third1);
+      ctx.moveTo(0, third2);
+      ctx.lineTo(canvas.width, third2);
+      ctx.stroke();
+    }
+  </script>
+</body>
+</html>

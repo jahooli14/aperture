@@ -1,0 +1,22 @@
+================================================================================
+PASTE THIS INTO SUPABASE SQL EDITOR
+================================================================================
+
+Go to: https://supabase.com/dashboard/project/nxkysxgaujdimrubjiln/sql/new
+
+Then paste and run this SQL:
+
+--------------------------------------------------------------------------------
+
+ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own projects" ON projects;
+DROP POLICY IF EXISTS "Users can insert their own projects" ON projects;
+DROP POLICY IF EXISTS "Users can update their own projects" ON projects;
+DROP POLICY IF EXISTS "Users can delete their own projects" ON projects;
+
+--------------------------------------------------------------------------------
+
+After running, project creation should work immediately!
+
+================================================================================

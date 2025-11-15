@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-10-14T22:02:59.223Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Krish Naik: Advanced Agentic RAG And Its Types New Series-Generative AI",
+    "url": "https://dev.to/vibe_youtube/krish-naik-advanced-agentic-rag-and-its-types-new-series-generative-ai-3i68",
+    "publishDate": "2025-10-14T20:08:52.000Z"
+  },
+  "qualityScores": {
+    "specificity": 0,
+    "implementability": 0,
+    "evidence": 0,
+    "overall": 0
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "The new article is a promotional piece for a course, not a technical guide or documentation.",
+    "It provides no specific examples, code, or actionable advice relevant to tool design philosophy.",
+    "It lacks any quantifiable benefits or detailed evidence to support its general claims.",
+    "The content does not add any concrete value or technical depth to the existing, highly specific and well-sourced documentation."
+  ]
+}
