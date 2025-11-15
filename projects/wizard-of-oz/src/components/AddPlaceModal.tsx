@@ -180,7 +180,7 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
   useEffect(() => {
     const handlePlaceSelected = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const { placeName, address } = customEvent.detail;
+      const { placeName } = customEvent.detail;
       if (placeName) {
         setPlaceName(placeName);
         console.log('[AddPlaceModal] Place name set from autocomplete:', placeName);

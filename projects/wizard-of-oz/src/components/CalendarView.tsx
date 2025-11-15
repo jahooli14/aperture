@@ -455,10 +455,6 @@ function TimelineView({
     return Array.from(dateSet).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   }, [milestonesByDate, placesByDate, visitsByDate]);
 
-  // Get all dates with photos for condensed display
-  const photoDates = useMemo(() => {
-    return Array.from(photosByDate.keys()).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-  }, [photosByDate]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');

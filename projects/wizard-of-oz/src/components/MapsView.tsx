@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { usePlaceStore } from '../stores/usePlaceStore';
-import { MapPin, Calendar, Image, Plus } from 'lucide-react';
+import { MapPin, Calendar, Plus } from 'lucide-react';
 import { AddPlaceModal } from './AddPlaceModal';
 import type { Database } from '../types/database';
 
