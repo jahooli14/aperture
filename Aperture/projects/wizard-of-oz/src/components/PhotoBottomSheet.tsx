@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check } from 'lucide-react';
+import { X, Calendar, Image, Trash2, Eye, EyeOff, Baby, MessageSquare, Edit2, Check, MapPin } from 'lucide-react';
 import type { Database } from '../types/database';
 import { calculateAge, formatAge } from '../lib/ageUtils';
 import { getPhotoDisplayUrl, isPhotoAligned } from '../lib/photoUtils';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { usePlaceStore } from '../stores/usePlaceStore';
+import { AddPlaceModal } from './AddPlaceModal';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
 
@@ -21,6 +23,9 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
 
   const { settings } = useSettingsStore();
   const { updatePhotoNote } = usePhotoStore();
+  const { fetchPlaces, fetchPhotoPlaces } = usePlaceStore();
+
+  const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
 
   // Get existing note and emoji from metadata
   const existingNote = (() => {
@@ -380,6 +385,14 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
               {/* Actions */}
               <div className="space-y-3">
                 <button
+                  onClick={() => setIsAddPlaceModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-blue-50 hover:bg-blue-100 active:bg-blue-100 text-blue-600 font-semibold rounded-xl transition-colors min-h-[56px]"
+                >
+                  <MapPin className="w-5 h-5" />
+                  <span>Tag Location</span>
+                </button>
+
+                <button
                   onClick={() => {
                     onDelete();
                     onClose();
@@ -397,6 +410,16 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
           </motion.div>
         </>
       )}
+      <AddPlaceModal
+        photo={photo}
+        isOpen={isAddPlaceModalOpen}
+        onClose={() => setIsAddPlaceModalOpen(false)}
+        onSuccess={() => {
+          // Refresh places and photo_places
+          fetchPlaces();
+          fetchPhotoPlaces();
+        }}
+      />
     </AnimatePresence>
   );
 }

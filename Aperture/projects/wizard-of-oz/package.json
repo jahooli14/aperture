@@ -20,6 +20,7 @@
     "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
     "@supabase/supabase-js": "^2.75.0",
     "@use-gesture/react": "^10.3.1",
+    "@vis.gl/react-google-maps": "^1.7.1",
     "framer-motion": "^12.23.22",
     "lucide-react": "^0.545.0",
     "react": "^19.1.1",

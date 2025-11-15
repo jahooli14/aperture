@@ -21,8 +21,9 @@ import { UpdateNotification } from './components/UpdateNotification';
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
 const ComparisonView = lazy(() => import('./components/ComparisonView').then(m => ({ default: m.ComparisonView })));
 const MilestonesView = lazy(() => import('./components/MilestonesView').then(m => ({ default: m.MilestonesView })));
+const MapsView = lazy(() => import('./components/MapsView').then(m => ({ default: m.default })));
 
-type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones';
+type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones' | 'maps';
 
 const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
 const JOIN_CODE_PROMPTED_KEY = 'wizard-join-code-prompted';
@@ -251,8 +252,8 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Milestone Banner - hide on milestones view */}
-        {view !== 'milestones' && <MilestoneBanner />}
+        {/* Milestone Banner - hide on milestones and maps views */}
+        {view !== 'milestones' && view !== 'maps' && <MilestoneBanner />}
 
         {/* View Toggle */}
         <div className="flex justify-center mb-6 md:mb-8">
@@ -321,6 +322,22 @@ function App() {
             >
               🌱 Milestones
             </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setView('maps')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              className={`
+                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation
+                ${view === 'maps'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              🗺️ Maps
+            </motion.button>
           </div>
         </div>
 
@@ -347,6 +364,7 @@ function App() {
               {view === 'calendar' && <CalendarView onUploadClick={() => setView('gallery')} />}
               {view === 'compare' && <ComparisonView />}
               {view === 'milestones' && <MilestonesView />}
+              {view === 'maps' && <MapsView />}
             </Suspense>
           </motion.div>
         </AnimatePresence>

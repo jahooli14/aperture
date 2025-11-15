@@ -144,6 +144,82 @@ export interface Database {
           updated_at?: string;
         };
       };
+      places: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          latitude: number;
+          longitude: number;
+          address: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description?: string | null;
+          latitude: number;
+          longitude: number;
+          address?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string | null;
+          latitude?: number;
+          longitude?: number;
+          address?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      photo_places: {
+        Row: {
+          id: string;
+          photo_id: string;
+          place_id: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          photo_id: string;
+          place_id: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          photo_id?: string;
+          place_id?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+    };
+    Views: {
+      places_with_stats: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string | null;
+          latitude: number;
+          longitude: number;
+          address: string | null;
+          created_at: string;
+          updated_at: string;
+          first_visit_date: string | null;
+          photo_count: number;
+          visit_dates: string[];
+        };
+      };
     };
   };
 }

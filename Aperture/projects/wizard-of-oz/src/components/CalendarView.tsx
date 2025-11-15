@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Upload, Sparkles } from 'lucide-react';
+import { Upload, Sparkles, MapPin } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
+import { usePlaceStore } from '../stores/usePlaceStore';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import { milestones } from '../data/milestones';
 
@@ -13,8 +14,15 @@ interface CalendarViewProps {
 export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
   const { photos } = usePhotoStore();
   const { achievements } = useMilestoneStore();
+  const { photoPlaces, places, fetchPhotoPlaces, fetchPlaces } = usePlaceStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Fetch places and photo_places on mount
+  useEffect(() => {
+    fetchPhotoPlaces();
+    fetchPlaces();
+  }, [fetchPhotoPlaces, fetchPlaces]);
 
   // Get milestones by date
   const milestonesByDate = useMemo(() => {
@@ -37,6 +45,25 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
     });
     return map;
   }, [photos]);
+
+  // Get places by date (based on photo_places)
+  const placesByDate = useMemo(() => {
+    const map = new Map<string, typeof places>();
+    photoPlaces.forEach(photoPlace => {
+      const photo = photos.find(p => p.id === photoPlace.photo_id);
+      if (photo) {
+        const date = photo.upload_date;
+        const place = places.find(p => p.id === photoPlace.place_id);
+        if (place) {
+          if (!map.has(date)) {
+            map.set(date, []);
+          }
+          map.get(date)!.push(place);
+        }
+      }
+    });
+    return map;
+  }, [photoPlaces, photos, places]);
 
   // Get calendar data for current month
   const calendarData = useMemo(() => {
@@ -200,6 +227,7 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
             const isSelected = day.dateString === selectedDate;
             const hasPhoto = day.hasPhoto;
             const hasMilestone = milestonesByDate.has(day.dateString);
+            const hasPlace = placesByDate.has(day.dateString);
 
             return (
               <motion.button
@@ -224,6 +252,11 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
                 {hasMilestone && (
                   <div className="absolute top-0.5 right-0.5">
                     <Sparkles className="w-3 h-3 text-yellow-500" fill="currentColor" />
+                  </div>
+                )}
+                {hasPlace && (
+                  <div className="absolute top-0.5 left-0.5">
+                    <MapPin className="w-3 h-3 text-blue-600" fill="currentColor" />
                   </div>
                 )}
               </motion.button>
@@ -298,6 +331,21 @@ export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
                           </li>
                         );
                       })}
+                    </ul>
+                  </div>
+                )}
+                {placesByDate.has(selectedPhoto.upload_date) && (
+                  <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="flex items-center gap-1 font-medium text-blue-800 mb-1">
+                      <MapPin className="w-4 h-4" fill="currentColor" />
+                      Places
+                    </p>
+                    <ul className="text-xs text-blue-700 space-y-0.5">
+                      {placesByDate.get(selectedPhoto.upload_date)!.map(place => (
+                        <li key={place.id}>
+                          📍 {place.name}
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
