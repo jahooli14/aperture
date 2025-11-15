@@ -65,7 +65,7 @@ That file handles:
 | Your Task | Files to Read | Time | When to Use |
 |-----------|---------------|------|-------------|
 | **Continue current work** | NEXT_SESSION.md only | 1 min | You know the project, picking up where you left off |
-| **Debugging issue** | META_DEBUGGING_PROTOCOL.md + NEXT_SESSION.md | 6 min | **ALWAYS read protocol first** |
+| **Debugging issue** | `.process/META_DEBUGGING_PROTOCOL.md` + NEXT_SESSION.md | 6 min | **ALWAYS read protocol first** |
 | **Simple bug fix** | NEXT_SESSION.md | 1 min | Quick fix, familiar codebase |
 | **New feature (familiar)** | NEXT_SESSION.md + plan.md | 2 min | Know the project, adding to existing code |
 | **Unfamiliar/Complex** | Full sequence below | 5 min | First time on project, major architectural work |
@@ -80,7 +80,7 @@ That file handles:
 
 ```markdown
 1. Read NEXT_SESSION.md (1 min) - What's the current status?
-2. If debugging → Read META_DEBUGGING_PROTOCOL.md summary (50 lines)
+2. If debugging → Read `.process/META_DEBUGGING_PROTOCOL.md` summary (50 lines)
 3. Start work
 
 Skip everything else unless your specific task requires it.
@@ -219,7 +219,7 @@ Any blockers: [yes/no]
 aperture/
 ├── START_HERE.md           ← You are here
 ├── NEXT_SESSION.md         ← Read this FIRST
-├── SESSION_CHECKLIST.md    ← Session workflow
+├── `.process/SESSION_CHECKLIST.md`    ← Session workflow
 ├── CONTRIBUTING.md         ← How to start new projects
 ├── .process/               ← Process documentation
 │   ├── ARCHITECTURE.md     ← Tech decisions, "Start Minimal" philosophy

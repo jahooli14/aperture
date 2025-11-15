@@ -204,7 +204,7 @@ This creates a "choose your own adventure" experience where you always know:
 ```
 START: Something's broken
 │
-├─ Read META_DEBUGGING_PROTOCOL.md (5 min)
+├─ Read `.process/META_DEBUGGING_PROTOCOL.md` (5 min)
 │  └─ Verify inputs FIRST
 │
 ├─ Run /verify-infra [project]

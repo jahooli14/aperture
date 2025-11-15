@@ -1,10 +1,12 @@
 name: Vercel Deployment Status
 
+# NOTE: This workflow is disabled because Vercel provides its own GitHub integration
+# that automatically deploys on push. This workflow was causing failures because it was
+# trying to wait for a deployment that should be handled by Vercel directly.
+# If you need to monitor deployments, use Vercel's own GitHub integration and comments.
+
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deployment-status:
