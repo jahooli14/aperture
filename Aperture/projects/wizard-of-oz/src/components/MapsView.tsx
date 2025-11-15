@@ -8,6 +8,10 @@ type PlaceWithStats = Database['public']['Views']['places_with_stats']['Row'];
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
+// Debug: Log the API key status
+console.log('[MapsView] Google Maps API Key:', GOOGLE_MAPS_API_KEY ? `Present (${GOOGLE_MAPS_API_KEY.substring(0, 10)}...)` : 'Missing');
+console.log('[MapsView] All env vars:', import.meta.env);
+
 // Default center (London, UK) - will be replaced by user's places
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 };
 const DEFAULT_ZOOM = 12;
