@@ -430,19 +430,32 @@ export function MilestonesView() {
               <h3 className="font-semibold text-gray-900 mb-4">{selectedMilestone.title}</h3>
 
               <div className="space-y-4">
-                {/* Info about auto-linking */}
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
+                {/* Date picker */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     <Calendar className="w-4 h-4 inline mr-1" />
-                    This milestone will be marked as achieved today
-                    {selectedPhotoId && (
-                      <>
-                        {' '}and linked to today's photo
-                        <Camera className="w-4 h-4 inline ml-1" />
-                      </>
-                    )}
+                    Date achieved
+                  </label>
+                  <input
+                    type="date"
+                    value={achievementDate}
+                    onChange={(e) => setAchievementDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    In case you're marking it after the fact
                   </p>
                 </div>
+
+                {/* Info about auto-linking */}
+                {selectedPhotoId && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <Camera className="w-4 h-4 inline mr-1" />
+                      Linked to a photo from {new Date(achievementDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                )}
 
                 {/* Notes */}
                 <div>
