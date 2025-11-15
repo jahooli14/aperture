@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD projects/polymath/ && exit 0 || exit 1'",
+  "ignoreCommand": "exit 1",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
