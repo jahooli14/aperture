@@ -125,6 +125,7 @@ SELECT
   p.latitude,
   p.longitude,
   p.address,
+  p.category,
   p.created_at,
   p.updated_at,
   -- First visit date: use place_visits if available, otherwise use photo dates
@@ -151,7 +152,7 @@ WHERE
     -- Places from accounts joined by this user
     SELECT shared_user_id FROM user_shares WHERE owner_user_id = p.user_id
   )
-GROUP BY p.id, p.user_id, p.name, p.description, p.latitude, p.longitude, p.address, p.created_at, p.updated_at;
+GROUP BY p.id, p.user_id, p.name, p.description, p.latitude, p.longitude, p.address, p.category, p.created_at, p.updated_at;
 
 ALTER VIEW places_with_stats SET (security_invoker = true);
 
