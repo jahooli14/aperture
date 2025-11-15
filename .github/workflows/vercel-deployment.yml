@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Wait for Vercel Deployment
-        uses: UnlyEd/github-action-await-vercel@v1.3.16
+        uses: UnlyEd/github-action-await-vercel@v2.0.0
         id: await-vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
