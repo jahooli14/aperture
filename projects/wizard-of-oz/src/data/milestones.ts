@@ -19,6 +19,26 @@ export interface Milestone {
 }
 
 export const milestones: Milestone[] = [
+  // Special Life Events
+  {
+    id: 'born',
+    category: 'social',
+    title: 'Born',
+    description: 'Welcome to the world! Your baby has arrived.',
+    ageRangeWeeks: { start: 0, end: 0 },
+    icon: '👶',
+    advanceNoticeWeeks: 0,
+  },
+  {
+    id: 'coming-home',
+    category: 'social',
+    title: 'Coming Home',
+    description: 'Welcome home! Your baby is settling into their new home.',
+    ageRangeWeeks: { start: 0, end: 2 },
+    icon: '🏠',
+    advanceNoticeWeeks: 0,
+  },
+
   // 0-3 Months
   {
     id: 'social-smile',
