@@ -145,21 +145,24 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
-        <div className="flex items-center gap-3">
-          {hasPhotos && photos.length > 1 && (
-            <motion.button
-              onClick={handleViewAll}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium text-sm rounded-lg transition-colors shadow-md"
-            >
-              View All
-            </motion.button>
-          )}
-          <p className="text-gray-600">{filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'}</p>
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Your Journey</h2>
+            <p className="text-sm text-gray-600 mt-1">{filteredPhotos.length} {filteredPhotos.length === 1 ? 'day' : 'days'} captured</p>
+          </div>
         </div>
+
+        {hasPhotos && photos.length > 1 && (
+          <motion.button
+            onClick={handleViewAll}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full mb-6 py-3 px-6 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all shadow-lg"
+          >
+            📸 View All {filteredPhotos.length} Photos
+          </motion.button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
