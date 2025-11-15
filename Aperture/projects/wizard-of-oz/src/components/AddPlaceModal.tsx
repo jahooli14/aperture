@@ -34,29 +34,41 @@ function PlacePickerMap({
 }) {
   const places = useMapsLibrary('places');
   const [searchValue, setSearchValue] = useState('');
+  const [autocompleteError, setAutocompleteError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   useEffect(() => {
-    if (!places || !inputRef.current) return;
+    if (!places || !inputRef.current) {
+      console.log('[AddPlaceModal] Places library not loaded yet:', { places, hasInput: !!inputRef.current });
+      return;
+    }
 
-    const autocomplete = new places.Autocomplete(inputRef.current, {
-      fields: ['geometry', 'name', 'formatted_address'],
-    });
+    try {
+      console.log('[AddPlaceModal] Setting up autocomplete...');
+      const autocomplete = new places.Autocomplete(inputRef.current, {
+        fields: ['geometry', 'name', 'formatted_address'],
+      });
 
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (place.geometry?.location) {
-        const newPos = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        };
-        onCenterChange(newPos);
-        onMarkerChange(newPos);
-      }
-    });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        console.log('[AddPlaceModal] Place selected:', place);
+        if (place.geometry?.location) {
+          const newPos = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          };
+          onCenterChange(newPos);
+          onMarkerChange(newPos);
+        }
+      });
 
-    autocompleteRef.current = autocomplete;
+      autocompleteRef.current = autocomplete;
+      console.log('[AddPlaceModal] Autocomplete setup complete');
+    } catch (error) {
+      console.error('[AddPlaceModal] Error setting up autocomplete:', error);
+      setAutocompleteError(true);
+    }
 
     return () => {
       if (autocompleteRef.current) {
@@ -67,6 +79,14 @@ function PlacePickerMap({
 
   return (
     <div className="space-y-2">
+      {/* Warning if autocomplete failed */}
+      {autocompleteError && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
+          <p className="font-semibold text-yellow-900">Places API not enabled</p>
+          <p className="text-yellow-800">Enable "Places API" in Google Cloud Console for address search.</p>
+        </div>
+      )}
+
       {/* Search box */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -75,8 +95,9 @@ function PlacePickerMap({
           type="text"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          placeholder="Search for an address or place..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          placeholder={places ? "Search for an address or place..." : "Loading search... (enable Places API)"}
+          disabled={!places}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
         />
       </div>
 

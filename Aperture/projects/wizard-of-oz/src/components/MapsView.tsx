@@ -27,10 +27,23 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
   const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
+  const [mapsError, setMapsError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPlacesWithStats();
   }, [fetchPlacesWithStats]);
+
+  // Listen for Google Maps errors
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      if (e.message && e.message.includes('Google Maps')) {
+        console.error('Google Maps Error:', e);
+        setMapsError('Google Maps failed to load. Please check your API key and enabled APIs.');
+      }
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
 
   // Auto-center map on places
   useEffect(() => {
@@ -71,19 +84,30 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
           <p className="text-gray-600 mb-4">
             To use the Maps feature, you need to add a Google Maps API key to your environment variables.
           </p>
-          <div className="text-left bg-gray-100 p-4 rounded-lg text-sm">
-            <p className="font-mono mb-2">VITE_GOOGLE_MAPS_API_KEY=your-key-here</p>
-            <p className="text-xs text-gray-600">
-              Get your API key from{' '}
-              <a
-                href="https://developers.google.com/maps/documentation/javascript/get-api-key"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                Google Cloud Console
-              </a>
-            </p>
+          <div className="text-left bg-gray-100 p-4 rounded-lg text-sm space-y-3">
+            <div>
+              <p className="font-semibold mb-1">1. Add environment variable:</p>
+              <p className="font-mono text-xs bg-white p-2 rounded">VITE_GOOGLE_MAPS_API_KEY=your-key-here</p>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">2. Enable required APIs in Google Cloud:</p>
+              <ul className="text-xs text-gray-600 list-disc list-inside space-y-1">
+                <li>Maps JavaScript API</li>
+                <li>Places API</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">3. Set up billing:</p>
+              <p className="text-xs text-gray-600">Google Maps requires a billing account (has free tier)</p>
+            </div>
+            <a
+              href="https://console.cloud.google.com/google/maps-apis"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-blue-600 hover:underline text-sm mt-2"
+            >
+              Open Google Cloud Console →
+            </a>
           </div>
         </div>
       </div>
@@ -101,13 +125,35 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
     );
   }
 
-  if (error) {
+  if (error || mapsError) {
     return (
       <div className="flex items-center justify-center h-full p-8">
         <div className="text-center max-w-md">
           <MapPin className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h2 className="text-xl font-semibold mb-2 text-red-600">Error Loading Places</h2>
-          <p className="text-gray-600">{error}</p>
+          <h2 className="text-xl font-semibold mb-2 text-red-600">
+            {mapsError ? 'Google Maps Error' : 'Error Loading Places'}
+          </h2>
+          <p className="text-gray-600 mb-4">{mapsError || error}</p>
+          {mapsError && (
+            <div className="text-left bg-red-50 p-4 rounded-lg text-sm space-y-2">
+              <p className="font-semibold text-red-900">Common fixes:</p>
+              <ul className="text-xs text-red-800 list-disc list-inside space-y-1">
+                <li>Enable "Maps JavaScript API" in Google Cloud Console</li>
+                <li>Enable "Places API" in Google Cloud Console</li>
+                <li>Set up billing (required, but has free tier)</li>
+                <li>Check API key restrictions (HTTP referrers)</li>
+                <li>Verify the API key is correct in environment variables</li>
+              </ul>
+              <a
+                href="https://console.cloud.google.com/google/maps-apis/api-list"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block text-red-600 hover:underline text-sm mt-2 font-medium"
+              >
+                Check API Status in Google Cloud →
+              </a>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -115,17 +161,33 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
 
   if (placesWithStats.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full p-8">
-        <div className="text-center max-w-md">
-          <MapPin className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-xl font-semibold mb-2">No Places Yet</h2>
-          <p className="text-gray-600 mb-4">
-            Start tagging photos with special places you've visited with your baby!
-          </p>
-          <p className="text-sm text-gray-500">
-            Open any photo and tap "Tag Location" to add your first place.
-          </p>
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center max-w-md">
+            <MapPin className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h2 className="text-xl font-semibold mb-2">No Places Yet</h2>
+            <p className="text-gray-600 mb-4">
+              Start tracking special places you've visited with your baby!
+            </p>
+            <button
+              onClick={() => setIsAddPlaceModalOpen(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add Your First Place
+            </button>
+          </div>
         </div>
+
+        {/* Add Place Modal */}
+        <AddPlaceModal
+          isOpen={isAddPlaceModalOpen}
+          onClose={() => setIsAddPlaceModalOpen(false)}
+          onSuccess={() => {
+            fetchPlacesWithStats();
+            setIsAddPlaceModalOpen(false);
+          }}
+        />
       </div>
     );
   }
