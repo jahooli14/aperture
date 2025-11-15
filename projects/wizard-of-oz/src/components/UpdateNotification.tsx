@@ -44,7 +44,7 @@ export function UpdateNotification() {
                     Update Available
                   </h3>
                   <p className="text-sm text-gray-600 mb-3">
-                    A new version of Pupils is ready. Update now for the latest features and improvements.
+                    A new version is ready. Update now for the latest features and improvements.
                   </p>
                   <div className="flex gap-2">
                     <button
