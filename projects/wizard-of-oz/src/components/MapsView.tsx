@@ -296,7 +296,7 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>
               <th className="text-left px-4 py-2 font-semibold text-gray-700">Place</th>
-              <th className="text-center px-4 py-2 font-semibold text-gray-700">Visits</th>
+              <th className="text-left px-4 py-2 font-semibold text-gray-700">First Visit</th>
             </tr>
           </thead>
           <tbody>
@@ -328,10 +328,8 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
-                      {place.visit_count || 0}
-                    </span>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatDate(place.first_visit_date)}
                   </td>
                 </tr>
               ))
