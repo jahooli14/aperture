@@ -41,12 +41,23 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   const loadingRef = useRef(loading);
   const unlockedThisSession = useRef(false); // Track if user unlocked passcode this session
+  const tabScrollRef = useRef<HTMLDivElement>(null); // Ref to scroll active tab into view
   const { toast, showToast, hideToast } = useToast();
 
   // Keep ref in sync with loading state
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
+
+  // Scroll active tab into view when view changes
+  useEffect(() => {
+    if (tabScrollRef.current) {
+      const activeButton = tabScrollRef.current.querySelector('[data-active="true"]');
+      if (activeButton) {
+        activeButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [view]);
 
   // Check for passcode on mount - but only lock if not already unlocked this session
   useEffect(() => {
@@ -269,13 +280,15 @@ function App() {
 
         {/* View Toggle */}
         <div className="flex justify-center mb-6 md:mb-8">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
-            <motion.button
+          <div ref={tabScrollRef} className="overflow-x-auto">
+            <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
+              <motion.button
               type="button"
               onClick={() => setView('gallery')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'gallery'}
               className={`
                 px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'gallery'
@@ -292,6 +305,7 @@ function App() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'calendar'}
               className={`
                 px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'calendar'
@@ -308,6 +322,7 @@ function App() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'compare'}
               className={`
                 px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'compare'
@@ -324,6 +339,7 @@ function App() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'milestones'}
               className={`
                 px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'milestones'
@@ -340,6 +356,7 @@ function App() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'places'}
               className={`
                 px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'places'
@@ -350,6 +367,7 @@ function App() {
             >
               📍 Places
             </motion.button>
+            </div>
           </div>
         </div>
 
