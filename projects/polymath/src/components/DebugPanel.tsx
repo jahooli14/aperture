@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useThemeStore } from '../stores/useThemeStore'
 
 export function DebugPanel() {
   const [logs, setLogs] = useState<string[]>([])
   const [isVisible, setIsVisible] = useState(false)
+  const { showBugTracker } = useThemeStore()
 
   useEffect(() => {
     // Intercept console.log
@@ -31,6 +33,11 @@ export function DebugPanel() {
       console.error = originalError
     }
   }, [])
+
+  // Hide debug panel if bug tracker is disabled
+  if (!showBugTracker) {
+    return null
+  }
 
   if (!isVisible) {
     return (
