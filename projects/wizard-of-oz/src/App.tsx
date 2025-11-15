@@ -268,8 +268,8 @@ function App() {
         {view !== 'milestones' && view !== 'places' && <MilestoneBanner />}
 
         {/* View Toggle */}
-        <div className="flex justify-center mb-6 md:mb-8 overflow-x-auto">
-          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 w-full max-w-none md:w-auto shadow-sm">
+        <div className="flex justify-center mb-6 md:mb-8">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1 shadow-sm gap-1">
             <motion.button
               type="button"
               onClick={() => setView('gallery')}
@@ -277,7 +277,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'gallery'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -293,7 +293,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'calendar'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -309,7 +309,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'compare'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -325,7 +325,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'milestones'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -341,7 +341,7 @@ function App() {
               whileTap={{ scale: 0.98 }}
               transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               className={`
-                flex-1 md:flex-none px-3 md:px-5 py-3 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
                 ${view === 'places'
                   ? 'bg-primary-600 text-white shadow-md'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
