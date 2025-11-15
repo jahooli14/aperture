@@ -25,13 +25,11 @@ const PlacesView = lazy(() => import('./components/PlacesView').then(m => ({ def
 
 type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones' | 'places';
 
-const ONBOARDING_KEY = 'wizard-of-oz-onboarding-completed';
-const JOIN_CODE_PROMPTED_KEY = 'wizard-join-code-prompted';
 const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
-  const { fetchSettings } = useSettingsStore();
+  const { settings, updateSettings } = useSettingsStore();
   const { fetchPhotos } = usePhotoStore();
   const [view, setView] = useState<ViewType>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -66,36 +64,41 @@ function App() {
 
   // Check if user has completed onboarding & join code prompt & fetch settings + photos
   useEffect(() => {
-    if (user) {
-      const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
-      const hasSeenJoinCodePrompt = localStorage.getItem(JOIN_CODE_PROMPTED_KEY);
-
-      if (!hasSeenJoinCodePrompt) {
+    if (user && settings) {
+      if (!settings.join_code_prompted) {
         setShowJoinCodePrompt(true);
-      } else if (!hasCompletedOnboarding) {
+      } else if (!settings.onboarding_completed) {
         setShowOnboarding(true);
       }
 
-      // Fetch user settings and photos once on login
-      fetchSettings();
+      // Fetch photos once on login
       fetchPhotos();
     }
-  }, [user, fetchSettings, fetchPhotos]);
+  }, [user, settings, fetchPhotos]);
 
-  const handleJoinCodeComplete = () => {
-    localStorage.setItem(JOIN_CODE_PROMPTED_KEY, 'true');
-    setShowJoinCodePrompt(false);
+  const handleJoinCodeComplete = async () => {
+    try {
+      await updateSettings({ join_code_prompted: true });
+      setShowJoinCodePrompt(false);
 
-    // Show onboarding if they haven't seen it
-    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_KEY);
-    if (!hasCompletedOnboarding) {
-      setShowOnboarding(true);
+      // Show onboarding if they haven't completed it
+      if (settings && !settings.onboarding_completed) {
+        setShowOnboarding(true);
+      }
+    } catch (error) {
+      console.error('Failed to update join code prompt:', error);
+      showToast('Failed to save progress. Please try again.', 'error');
     }
   };
 
-  const handleOnboardingComplete = () => {
-    localStorage.setItem(ONBOARDING_KEY, 'true');
-    setShowOnboarding(false);
+  const handleOnboardingComplete = async () => {
+    try {
+      await updateSettings({ onboarding_completed: true });
+      setShowOnboarding(false);
+    } catch (error) {
+      console.error('Failed to update onboarding:', error);
+      showToast('Failed to save progress. Please try again.', 'error');
+    }
   };
 
   // Check if online

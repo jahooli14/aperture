@@ -62,6 +62,8 @@ export interface Database {
           reminders_enabled: boolean;
           push_subscription: Record<string, unknown> | null;
           invite_code: string | null;
+          onboarding_completed: boolean;
+          join_code_prompted: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -75,6 +77,8 @@ export interface Database {
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
           invite_code?: string | null;
+          onboarding_completed?: boolean;
+          join_code_prompted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -88,6 +92,8 @@ export interface Database {
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
           invite_code?: string | null;
+          onboarding_completed?: boolean;
+          join_code_prompted?: boolean;
           created_at?: string;
           updated_at?: string;
         };
