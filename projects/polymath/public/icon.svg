@@ -1,57 +1,78 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background with subtle gradient -->
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0f1829;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1a2638;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
-    </linearGradient>
-    <filter id="glow">
+    <!-- Glow effects -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+
+    <!-- Gradients for 3D effect -->
+    <linearGradient id="topGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:0.8" />
+    </linearGradient>
+
+    <linearGradient id="sideGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0099cc;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#006699;stop-opacity:0.6" />
+    </linearGradient>
+
+    <linearGradient id="centerGlow" x1="50%" y1="50%" r="50%">
+      <stop offset="0%" style="stop-color:#00ffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0099cc;stop-opacity:0" />
+    </linearGradient>
   </defs>
 
-  <!-- Rounded square background -->
-  <rect width="512" height="512" rx="100" fill="url(#bgGrad)"/>
+  <!-- Background glow aura -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#00d9ff" stroke-width="1" opacity="0.3"/>
 
-  <!-- Hidden/clandestine keyhole symbol combined with neural network -->
-  <!-- Central keyhole representing "hidden knowledge" -->
-  <circle cx="256" cy="200" r="50" fill="none" stroke="url(#blueGrad)" stroke-width="8" opacity="0.8" filter="url(#glow)"/>
-  <path d="M 256 250 L 256 340 L 226 370 L 286 370 L 256 340 Z" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
+  <!-- Central glow area -->
+  <circle cx="100" cy="100" r="60" fill="url(#centerGlow)" opacity="0.6" filter="url(#strongGlow)"/>
 
-  <!-- Neural network connections emanating from keyhole -->
-  <!-- Top connections -->
-  <line x1="256" y1="150" x2="160" y2="100" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
-  <line x1="256" y1="150" x2="352" y2="100" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <!-- Isometric cube - top face -->
+  <polygon points="70,70 100,50 130,70 100,90" fill="url(#topGradient)" filter="url(#glow)"/>
 
-  <!-- Side connections -->
-  <line x1="206" y1="200" x2="120" y2="200" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
-  <line x1="306" y1="200" x2="392" y2="200" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <!-- Isometric cube - left face -->
+  <polygon points="70,70 100,90 100,130 70,110" fill="url(#sideGradient)" filter="url(#glow)"/>
 
-  <!-- Bottom connections -->
-  <line x1="226" y1="370" x2="140" y2="420" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
-  <line x1="286" y1="370" x2="372" y2="420" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
-  <line x1="256" y1="390" x2="256" y2="450" stroke="url(#blueGrad)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <!-- Isometric cube - right face -->
+  <polygon points="130,70 160,90 160,130 130,110" fill="#0088bb" opacity="0.7" filter="url(#glow)"/>
 
-  <!-- Knowledge nodes (dots at connection endpoints) -->
-  <circle cx="160" cy="100" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="352" cy="100" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="120" cy="200" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="392" cy="200" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="140" cy="420" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="372" cy="420" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
-  <circle cx="256" cy="450" r="10" fill="url(#blueGrad)" opacity="0.9" filter="url(#glow)"/>
+  <!-- Bottom section - left -->
+  <polygon points="100,90 130,110 100,130 70,110" fill="#0077aa" opacity="0.6" filter="url(#glow)"/>
 
-  <!-- Additional subtle nodes for depth -->
-  <circle cx="200" cy="140" r="6" fill="url(#blueGrad)" opacity="0.5"/>
-  <circle cx="312" cy="140" r="6" fill="url(#blueGrad)" opacity="0.5"/>
-  <circle cx="180" cy="280" r="6" fill="url(#blueGrad)" opacity="0.5"/>
-  <circle cx="332" cy="280" r="6" fill="url(#blueGrad)" opacity="0.5"/>
+  <!-- Bottom section - right -->
+  <polygon points="130,110 160,130 160,130 130,110" fill="#0066aa" opacity="0.5" filter="url(#glow)"/>
+
+  <!-- Central bright star/sparkle -->
+  <g filter="url(#strongGlow)">
+    <!-- Star shape -->
+    <g transform="translate(100, 100)">
+      <!-- Main bright core -->
+      <circle cx="0" cy="0" r="8" fill="#00ffff" opacity="1"/>
+      <circle cx="0" cy="0" r="6" fill="#ffffff" opacity="0.9"/>
+
+      <!-- Star points -->
+      <polygon points="0,-12 3,-3 12,0 3,3 0,12 -3,3 -12,0 -3,-3" fill="#00d9ff" opacity="0.8"/>
+
+      <!-- Glow rings -->
+      <circle cx="0" cy="0" r="15" fill="none" stroke="#00ffff" stroke-width="1" opacity="0.4"/>
+      <circle cx="0" cy="0" r="22" fill="none" stroke="#00d9ff" stroke-width="1" opacity="0.2"/>
+    </g>
+  </g>
+
+  <!-- Additional accent lines for geometric detail -->
+  <line x1="100" y1="50" x2="100" y2="150" stroke="#00d9ff" stroke-width="0.5" opacity="0.3"/>
+  <line x1="50" y1="100" x2="150" y2="100" stroke="#00d9ff" stroke-width="0.5" opacity="0.3"/>
 </svg>
