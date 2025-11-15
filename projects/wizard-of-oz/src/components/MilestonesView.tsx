@@ -8,7 +8,7 @@ import { milestones, calculateAgeInWeeks, formatAgeRange, type Milestone } from 
 
 export function MilestonesView() {
   const { settings } = useSettingsStore();
-  const { fetchAchievements, addAchievement, deleteAchievement, isAchieved, getAchievement, error: milestoneError } = useMilestoneStore();
+  const { fetchAchievements, addAchievement, updateAchievement, deleteAchievement, isAchieved, getAchievement, error: milestoneError } = useMilestoneStore();
   const { photos } = usePhotoStore();
   const [showInfo, setShowInfo] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('all');
