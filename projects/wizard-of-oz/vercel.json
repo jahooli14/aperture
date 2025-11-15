@@ -1,11 +1,11 @@
 {
+  "buildCommand": "npm run build",
+  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD . && exit 0 || exit 1'",
+  "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60,
       "memory": 2048
     }
-  },
-  "buildCommand": "npm run build",
-  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD . && exit 0 || exit 1'",
-  "outputDirectory": "dist"
+  }
 }
