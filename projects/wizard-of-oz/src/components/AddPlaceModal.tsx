@@ -140,7 +140,7 @@ function PlacePickerMap({
 }
 
 export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceModalProps) {
-  const { places, fetchPlaces, addPlace, linkPhotoToPlace, getPlacesByPhoto } = usePlaceStore();
+  const { places, addPlace, linkPhotoToPlace, getPlacesByPhoto } = usePlaceStore();
   const [mode, setMode] = useState<'select' | 'create'>(photo ? 'select' : 'create');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);

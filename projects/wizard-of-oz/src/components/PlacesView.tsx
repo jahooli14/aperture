@@ -47,7 +47,6 @@ const createMarkerIcon = (emoji: string, isSelected: boolean) => {
 const getMarkerIcon = (category: string | null, isSelected: boolean) => {
   const emoji = CATEGORY_ICONS[category || 'other'] || '📍';
   const iconSvg = createMarkerIcon(emoji, isSelected);
-  const size = isSelected ? 40 : 32;
 
   // Return just the URL if Google Maps isn't loaded yet
   // The actual Size and Point will be created inside the component

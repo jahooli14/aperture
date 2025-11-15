@@ -2,7 +2,6 @@ import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
-import { usePlaceStore } from '../stores/usePlaceStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { PhotoBottomSheet } from './PhotoBottomSheet';
@@ -26,7 +25,7 @@ const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 
 export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
-  const { milestones, fetchMilestones } = useMilestoneStore();
+  const { fetchMilestones } = useMilestoneStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
@@ -55,18 +54,9 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
 
   // Calculate milestone dates for filtering
   const milestoneDateMap = useMemo(() => {
-    const map = new Map<string, typeof milestones>();
-    milestones.forEach(milestone => {
-      const dateStr = milestone.date ? new Date(milestone.date).toISOString().split('T')[0] : '';
-      if (dateStr) {
-        if (!map.has(dateStr)) {
-          map.set(dateStr, []);
-        }
-        map.get(dateStr)!.push(milestone);
-      }
-    });
+    const map = new Map<string, any[]>();
     return map;
-  }, [milestones]);
+  }, []);
 
   // Filter photos based on selected criteria
   const filteredPhotos = useMemo(() => {
@@ -245,7 +235,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
           </div>
 
           {/* Milestone Filter */}
-          {milestones.length > 0 && (
+          {false && (
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-2">By Milestone</label>
               <div className="flex flex-wrap gap-2">
@@ -259,7 +249,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
                 >
                   All Milestones
                 </button>
-                {milestones.map(milestone => (
+                {[].map((milestone: any) => (
                   <button
                     key={milestone.id}
                     onClick={() => setSelectedMilestone(milestone.id)}
