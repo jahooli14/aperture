@@ -59,6 +59,15 @@ function PlacePickerMap({
           };
           onCenterChange(newPos);
           onMarkerChange(newPos);
+
+          // Pass the place name back to parent if available
+          if (place.name) {
+            // Dispatch a custom event to communicate the place name
+            const event = new CustomEvent('placeSelected', {
+              detail: { placeName: place.name, address: place.formatted_address }
+            });
+            window.dispatchEvent(event);
+          }
         }
       });
 
@@ -166,6 +175,21 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
       setHasInitialized(false);
     }
   }, [isOpen, photo?.id, hasInitialized]);
+
+  // Listen for place selection from autocomplete
+  useEffect(() => {
+    const handlePlaceSelected = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { placeName, address } = customEvent.detail;
+      if (placeName) {
+        setPlaceName(placeName);
+        console.log('[AddPlaceModal] Place name set from autocomplete:', placeName);
+      }
+    };
+
+    window.addEventListener('placeSelected', handlePlaceSelected);
+    return () => window.removeEventListener('placeSelected', handlePlaceSelected);
+  }, []);
 
   // Check if photo is already linked to places
   const linkedPlaces = photo ? getPlacesByPhoto(photo.id) : [];
