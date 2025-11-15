@@ -58,7 +58,16 @@ function App() {
         if (!unlockedThisSession.current) {
           setIsLocked(true);
         }
+      } else {
+        // No passcode set, ensure not locked
+        setIsLocked(false);
+        setPasscode(null);
       }
+    } else {
+      // User logged out, reset lock state
+      setIsLocked(false);
+      setPasscode(null);
+      unlockedThisSession.current = false;
     }
   }, [user]);
 
