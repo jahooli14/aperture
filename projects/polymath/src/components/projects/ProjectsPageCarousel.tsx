@@ -11,11 +11,8 @@ import {
   Clock,
   AlertCircle,
   Sparkles,
-  Check,
   ChevronRight
 } from 'lucide-react'
-import { useToast } from '../ui/toast'
-import { haptic } from '../../utils/haptics'
 import type { Project } from '../../types'
 
 interface ProjectsPageCarouselProps {
@@ -24,20 +21,36 @@ interface ProjectsPageCarouselProps {
   resurfaceProjects: Project[]
   suggestedProjects: Project[]
   loading?: boolean
-  onUpdateProject?: (id: string, data: Partial<Project>) => Promise<void>
 }
 
-function ProjectCard({ project, onUpdateProject }: {
+interface Task {
+  text: string
+  done: boolean
+  order: number
+}
+
+const CARD_HOVER_STYLES = {
+  enter: { background: 'var(--premium-bg-3)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)' },
+  leave: { background: 'var(--premium-bg-2)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)' }
+}
+
+function ProjectCard({ project }: {
   project: Project
-  onUpdateProject?: (id: string, data: Partial<Project>) => Promise<void>
 }) {
-  const { addToast } = useToast()
-  const tasks = (project.metadata?.tasks || []) as any[]
+  const tasks = (project.metadata?.tasks || []) as Task[]
   const nextTask = tasks
     .sort((a, b) => a.order - b.order)
     .find(task => !task.done)
   const totalTasks = tasks.length
   const completedTasks = tasks.filter(t => t.done).length
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)
+  }
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.leave)
+  }
 
   return (
     <Link
@@ -47,14 +60,8 @@ function ProjectCard({ project, onUpdateProject }: {
         background: 'var(--premium-bg-2)',
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'var(--premium-bg-3)'
-        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'var(--premium-bg-2)'
-        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -176,8 +183,7 @@ export function ProjectsPageCarousel({
   recentProjects,
   resurfaceProjects,
   suggestedProjects,
-  loading = false,
-  onUpdateProject
+  loading = false
 }: ProjectsPageCarouselProps) {
   return (
     <div className="space-y-0">
@@ -209,14 +215,8 @@ export function ProjectsPageCarousel({
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
               border: '1px solid rgba(59, 130, 246, 0.3)'
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--premium-bg-3)'
-              e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--premium-bg-2)'
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-            }}
+            onMouseEnter={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)}
+            onMouseLeave={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.leave)}
           >
             <h4 className="premium-text-platinum font-bold text-xl mb-2">
               {pinnedProject.title}
