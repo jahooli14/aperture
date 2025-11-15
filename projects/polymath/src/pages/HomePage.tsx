@@ -19,6 +19,7 @@ import { SmartSuggestionWidget } from '../components/SmartSuggestionWidget'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
+import { ProjectCarousel } from '../components/projects/ProjectCarousel'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
 import {
@@ -304,48 +305,7 @@ export function HomePage() {
 
   // Safe filtering with error handling - compute during render so it updates when store changes
   const pendingSuggestions = Array.isArray(suggestions) ? suggestions.filter(s => s.status === 'pending') : []
-  const activeProjects = Array.isArray(projects) ? projects.filter(p => p.status === 'active') : []
 
-  // Find priority project and most recent project
-  const priorityProject = activeProjects.find(p => p.is_priority) || null
-
-  // Most recently updated (excluding priority if it exists)
-  const recentProject = activeProjects
-    .filter(p => p.id !== priorityProject?.id)
-    .sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.last_active).getTime()
-      const bTime = new Date(b.updated_at || b.last_active).getTime()
-      return bTime - aTime
-    })[0] || null
-
-  // Projects to show in "Keep Momentum" section
-  const projectsToShow = [priorityProject, recentProject].filter(Boolean) as Project[]
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'hot_streak': return 'linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(239, 68, 68, 0.9))'
-      case 'needs_attention': return 'linear-gradient(135deg, rgba(251, 191, 36, 0.9), rgba(59, 130, 246, 0.9))'
-      case 'fresh_energy': return 'linear-gradient(135deg, rgba(139, 92, 246, 0.9), rgba(236, 72, 153, 0.9))'
-      default: return 'linear-gradient(135deg, rgba(107, 114, 128, 0.7), rgba(156, 163, 175, 0.7))'
-    }
-  }
-
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'hot_streak': return 'Streak'
-      case 'needs_attention': return 'Attention'
-      case 'fresh_energy': return 'Fresh'
-      default: return 'Available'
-    }
-  }
-
-  const formatTime = (minutes?: number) => {
-    if (!minutes) return '~1 hour'
-    if (minutes < 60) return `${minutes} min`
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours} hour${hours > 1 ? 's' : ''}`
-  }
 
   // Get stored errors from localStorage
   const getStoredErrors = () => {
@@ -671,162 +631,29 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* 2. KEEP THE MOMENTUM (Compact) */}
+        {/* 2. KEEP THE MOMENTUM - Project Carousel */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <div className="mb-5">
+            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+              Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
+            </h2>
+          </div>
+
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <div className="mb-5">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
-              </h2>
-            </div>
-
-            {projectsLoading ? (
-              <SkeletonCard variant="list" count={2} />
-            ) : projectsToShow.length > 0 ? (
-              <div className="space-y-3">
-                {projectsToShow.map((project) => {
-                  // Get first incomplete task from the tasks array
-                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; created_at: string; order: number }>
-                  const nextTask = tasks
-                    .sort((a, b) => a.order - b.order)
-                    .find(task => !task.done)
-                  const nextStep = nextTask?.text
-
-                  // Calculate progress
-                  const totalTasks = tasks.length
-                  const completedTasks = tasks.filter(t => t.done).length
-                  const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-
-                  return (
-                    <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
-                      className="group block p-4 rounded-xl transition-all duration-300"
-                      style={{
-                        background: 'var(--premium-bg-2)',
-                        backdropFilter: 'blur(12px)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-3)'
-                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-2)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
-                    >
-                      {/* Project Title & Priority Badge */}
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="premium-text-platinum font-bold text-base flex-1">
-                          {project.title}
-                        </h3>
-
-                        {project.is_priority && (
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="h-2 w-2 rounded-full" style={{
-                              backgroundColor: 'var(--premium-blue)',
-                              boxShadow: '0 0 8px rgba(59, 130, 246, 0.5)'
-                            }} />
-                            <span className="text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
-                              Priority
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Next Step - Interactive with Checkbox */}
-                      <div
-                        className="rounded-lg p-2.5 flex items-center justify-between gap-2"
-                        style={{
-                          background: 'var(--premium-bg-3)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {nextTask ? (
-                          <div className="flex items-start gap-2.5 flex-1">
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                const updatedTasks = tasks.map(t =>
-                                  t.id === nextTask.id ? { ...t, done: true } : t
-                                )
-                                try {
-                                  await updateProject(project.id, {
-                                    metadata: { ...project.metadata, tasks: updatedTasks }
-                                  })
-                                  addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
-                                  haptic.success()
-                                } catch (error) {
-                                  console.error('Failed to complete task:', error)
-                                  addToast({ title: 'Failed to complete task', variant: 'destructive' })
-                                }
-                              }}
-                              className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
-                              style={{
-                                color: 'rgba(59, 130, 246, 0.9)',
-                                border: '2px solid rgba(255, 255, 255, 0.3)'
-                              }}
-                              title="Mark as complete"
-                            >
-                              <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
-                            </button>
-                            <div className="premium-text-platinum font-medium text-sm flex-1">
-                              {nextStep}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="premium-text-platinum font-medium text-sm flex-1">
-                            No tasks yet - click to add one
-                          </div>
-                        )}
-                        {totalTasks > 0 && (
-                          <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
-                            {completedTasks}/{totalTasks}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
-
-                <Link
-                  to="/projects"
-                  className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                  style={{ color: 'var(--premium-blue)' }}
-                >
-                  View All Projects <ArrowRight className="inline h-4 w-4 ml-1" />
-                </Link>
-              </div>
-            ) : (
-              <EmptyState
-                icon={Layers}
-                title="Ready to build something?"
-                description="Projects are where ideas become reality."
-                action={
-                  <Link
-                    to="/projects"
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                    style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      color: 'var(--premium-blue)'
-                    }}
-                  >
-                    Create Project <ArrowRight className="h-4 w-4" />
-                  </Link>
-                }
-              />
-            )}
+            <ProjectCarousel
+              projects={projects}
+              loading={projectsLoading}
+              onUpdateProject={updateProject}
+            />
           </div>
         </section>
 
         {/* 3. GET INSPIRATION */}
         <GetInspirationSection
-          excludeProjectIds={projectsToShow.map(p => p.id)}
+          excludeProjectIds={projects.filter(p => p.status === 'active').map(p => p.id)}
           hasPendingSuggestions={pendingSuggestions.length > 0}
           pendingSuggestionsCount={pendingSuggestions.length}
           projectsLoading={projectsLoading}
