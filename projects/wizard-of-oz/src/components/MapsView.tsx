@@ -259,20 +259,7 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-blue-600 font-medium">
                 <Calendar className="w-4 h-4" />
-                <span>First visit: {formatDate(selectedPlace.first_visit_date)}</span>
-              </div>
-
-              <div className="flex items-center gap-2 text-gray-600">
-                <Image className="w-4 h-4" />
-                <span>
-                  {selectedPlace.photo_count} {selectedPlace.photo_count === 1 ? 'photo' : 'photos'}
-                  {selectedPlace.visit_dates && selectedPlace.visit_dates.length > 1 && (
-                    <span className="ml-1">
-                      from {selectedPlace.visit_dates.length}{' '}
-                      {selectedPlace.visit_dates.length === 1 ? 'visit' : 'visits'}
-                    </span>
-                  )}
-                </span>
+                <span>{formatDate(selectedPlace.first_visit_date)}</span>
               </div>
 
               {selectedPlace.address && (
@@ -311,8 +298,8 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>
               <th className="text-left px-4 py-2 font-semibold text-gray-700">Place</th>
+              <th className="text-center px-4 py-2 font-semibold text-gray-700">Visits</th>
               <th className="text-center px-4 py-2 font-semibold text-gray-700">Photos</th>
-              <th className="text-left px-4 py-2 font-semibold text-gray-700">First Visit</th>
             </tr>
           </thead>
           <tbody>
@@ -345,12 +332,14 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
+                    <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                      {place.visit_count || 0}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                       {place.photo_count}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {formatDate(place.first_visit_date)}
                   </td>
                 </tr>
               ))
