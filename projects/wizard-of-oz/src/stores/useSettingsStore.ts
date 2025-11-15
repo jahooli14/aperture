@@ -9,6 +9,7 @@ interface SettingsState {
   settings: UserSettings | null;
   loading: boolean;
   fetchSettings: () => Promise<void>;
+  updateSettings: (updates: Partial<Omit<UserSettings, 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   updateBirthdate: (birthdate: string) => Promise<void>;
   updateReminderSettings: (settings: {
     reminder_email: string;
@@ -69,6 +70,36 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
       set({ loading: false, settings: null });
+    }
+  },
+
+  updateSettings: async (updates) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('user_settings')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        } as never)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Error updating settings', { error: error.message }, 'SettingsStore');
+        throw error;
+      }
+
+      set({ settings: data as UserSettings });
+      logger.info('Settings updated', { updates }, 'SettingsStore');
+    } catch (error) {
+      logger.error('Unexpected error updating settings', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'SettingsStore');
+      throw error;
     }
   },
 
