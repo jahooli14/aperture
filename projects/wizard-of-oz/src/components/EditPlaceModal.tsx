@@ -56,12 +56,20 @@ export function EditPlaceModal({ isOpen, place, onClose, onSuccess }: EditPlaceM
       setIsSubmitting(true);
       setError('');
 
+      console.log('[EditPlaceModal] Submitting place update:', {
+        id: place!.id,
+        name: name.trim(),
+        description: description.trim() || null,
+        category,
+      });
+
       await updatePlace(place!.id, {
         name: name.trim(),
         description: description.trim() || null,
         category: category as any,
       });
 
+      console.log('[EditPlaceModal] Place updated successfully');
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update place');

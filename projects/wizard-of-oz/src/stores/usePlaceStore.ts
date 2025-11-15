@@ -214,6 +214,7 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
   updatePlace: async (id: string, updates: PlaceUpdate) => {
     set({ error: null });
     try {
+      console.log('[usePlaceStore] Updating place:', { id, updates });
       const { error } = await (supabase as any)
         .from('places')
         .update(updates)
@@ -224,6 +225,8 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
         throw error;
       }
 
+      console.log('[usePlaceStore] Place updated successfully');
+
       set((state) => ({
         places: state.places.map((place) =>
           place.id === id ? { ...place, ...updates } : place
@@ -231,7 +234,8 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
       }));
 
       // Refresh places with stats to reflect changes in the view
-      get().fetchPlacesWithStats();
+      console.log('[usePlaceStore] Refreshing placesWithStats after update');
+      await get().fetchPlacesWithStats();
     } catch (error) {
       console.error('Error updating place:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update place';
