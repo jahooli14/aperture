@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Wait for Vercel Deployment
         uses: UnlyEd/github-action-await-vercel@v1.3.16
