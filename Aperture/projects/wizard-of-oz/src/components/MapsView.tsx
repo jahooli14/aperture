@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
 import { usePlaceStore } from '../stores/usePlaceStore';
-import { MapPin, Calendar, Image } from 'lucide-react';
+import { MapPin, Calendar, Image, Plus } from 'lucide-react';
+import { AddPlaceModal } from './AddPlaceModal';
 import type { Database } from '../types/database';
 
 type PlaceWithStats = Database['public']['Views']['places_with_stats']['Row'];
@@ -25,6 +26,7 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithStats | null>(null);
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
+  const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
 
   useEffect(() => {
     fetchPlacesWithStats();
@@ -217,6 +219,15 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
             </button>
           </div>
         )}
+
+        {/* Floating Add Button */}
+        <button
+          onClick={() => setIsAddPlaceModalOpen(true)}
+          className="absolute bottom-24 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all hover:scale-110 active:scale-95"
+          aria-label="Add new place"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
       </div>
 
       {/* Places List - Compact View */}
@@ -242,6 +253,16 @@ export default function MapsView({ onPlaceSelect }: MapsViewProps) {
           ))}
         </div>
       </div>
+
+      {/* Add Place Modal */}
+      <AddPlaceModal
+        isOpen={isAddPlaceModalOpen}
+        onClose={() => setIsAddPlaceModalOpen(false)}
+        onSuccess={() => {
+          fetchPlacesWithStats();
+          setIsAddPlaceModalOpen(false);
+        }}
+      />
     </div>
   );
 }

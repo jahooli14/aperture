@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, MapPin, Plus, Check, Navigation } from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps';
+import { X, MapPin, Plus, Check, Navigation, Search } from 'lucide-react';
+import { APIProvider, Map, AdvancedMarker, Pin, useMapsLibrary } from '@vis.gl/react-google-maps';
 import type { MapMouseEvent } from '@vis.gl/react-google-maps';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import type { Database } from '../types/database';
@@ -12,15 +12,109 @@ const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 const DEFAULT_CENTER = { lat: 51.5074, lng: -0.1278 }; // London, UK
 
 interface AddPlaceModalProps {
-  photo: Photo | null;
+  photo?: Photo | null; // Made optional
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
+// Separate component for the map with autocomplete
+function PlacePickerMap({
+  center,
+  markerPosition,
+  onMapClick,
+  onCenterChange,
+  onMarkerChange
+}: {
+  center: { lat: number; lng: number };
+  markerPosition: { lat: number; lng: number };
+  onMapClick: (e: MapMouseEvent) => void;
+  onCenterChange: (pos: { lat: number; lng: number }) => void;
+  onMarkerChange: (pos: { lat: number; lng: number }) => void;
+}) {
+  const places = useMapsLibrary('places');
+  const [searchValue, setSearchValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  useEffect(() => {
+    if (!places || !inputRef.current) return;
+
+    const autocomplete = new places.Autocomplete(inputRef.current, {
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (place.geometry?.location) {
+        const newPos = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        };
+        onCenterChange(newPos);
+        onMarkerChange(newPos);
+      }
+    });
+
+    autocompleteRef.current = autocomplete;
+
+    return () => {
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+    };
+  }, [places, onCenterChange, onMarkerChange]);
+
+  return (
+    <div className="space-y-2">
+      {/* Search box */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          placeholder="Search for an address or place..."
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+        />
+      </div>
+
+      {/* Map */}
+      <div
+        className="h-64 rounded-lg overflow-hidden border border-gray-300 relative touch-none"
+        onTouchMove={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+      >
+        <Map
+          mapId="add-place-map"
+          center={center}
+          zoom={15}
+          onClick={onMapClick}
+          gestureHandling="greedy"
+          disableDefaultUI={false}
+          zoomControl={true}
+          mapTypeControl={false}
+          streetViewControl={false}
+          fullscreenControl={false}
+          clickableIcons={false}
+        >
+          <AdvancedMarker position={markerPosition}>
+            <Pin background="#3b82f6" glyphColor="#ffffff" borderColor="#ffffff" scale={1.2} />
+          </AdvancedMarker>
+        </Map>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Search for an address, click on the map, or use your current location
+      </p>
+    </div>
+  );
+}
+
 export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceModalProps) {
   const { places, fetchPlaces, addPlace, linkPhotoToPlace, getPlacesByPhoto } = usePlaceStore();
-  const [mode, setMode] = useState<'select' | 'create'>('select');
+  const [mode, setMode] = useState<'select' | 'create'>(photo ? 'select' : 'create');
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -35,14 +129,23 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
   useEffect(() => {
     if (isOpen) {
       fetchPlaces();
+      // Reset mode based on whether photo is provided
+      setMode(photo ? 'select' : 'create');
     }
-  }, [isOpen, fetchPlaces]);
+  }, [isOpen, fetchPlaces, photo]);
 
   // Check if photo is already linked to places
   const linkedPlaces = photo ? getPlacesByPhoto(photo.id) : [];
 
   const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+
     setIsLoadingLocation(true);
+    setError('');
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
@@ -50,11 +153,31 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
         setMapCenter(newCenter);
         setMarkerPosition(newCenter);
         setIsLoadingLocation(false);
+        console.log('Location obtained:', newCenter);
       },
       (error) => {
-        console.error('Error getting location:', error);
-        setError('Could not get your location. Please select manually on the map.');
+        console.error('Geolocation error:', error);
+        let errorMessage = 'Could not get your location. ';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += 'Please allow location access in your browser settings.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += 'Location information is unavailable.';
+            break;
+          case error.TIMEOUT:
+            errorMessage += 'Location request timed out.';
+            break;
+          default:
+            errorMessage += 'Please select manually on the map.';
+        }
+        setError(errorMessage);
         setIsLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
@@ -79,7 +202,7 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
         place_id: selectedPlaceId,
       });
       if (onSuccess) onSuccess();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to link photo to place');
     } finally {
@@ -88,7 +211,7 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
   };
 
   const handleCreateNewPlace = async () => {
-    if (!placeName.trim() || !photo) return;
+    if (!placeName.trim()) return;
 
     try {
       setIsSubmitting(true);
@@ -102,14 +225,16 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
         longitude: markerPosition.lng,
       });
 
-      // Link the photo to the new place
-      await linkPhotoToPlace({
-        photo_id: photo.id,
-        place_id: newPlace.id,
-      });
+      // Link the photo to the new place if photo is provided
+      if (photo) {
+        await linkPhotoToPlace({
+          photo_id: photo.id,
+          place_id: newPlace.id,
+        });
+      }
 
       if (onSuccess) onSuccess();
-      onClose();
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create place');
     } finally {
@@ -118,7 +243,7 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
   };
 
   const handleClose = () => {
-    setMode('select');
+    setMode(photo ? 'select' : 'create');
     setSelectedPlaceId(null);
     setPlaceName('');
     setPlaceDescription('');
@@ -128,7 +253,9 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
     onClose();
   };
 
-  if (!photo) return null;
+  if (!isOpen) return null;
+
+  const hasPhoto = !!photo;
 
   return (
     <AnimatePresence>
@@ -153,14 +280,18 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Tag Location</h2>
-                <p className="text-sm text-gray-600">
-                  {new Date(photo.upload_date).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {hasPhoto ? 'Tag Location' : 'Add New Place'}
+                </h2>
+                {hasPhoto && photo && (
+                  <p className="text-sm text-gray-600">
+                    {new Date(photo.upload_date).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                )}
               </div>
               <button
                 onClick={handleClose}
@@ -171,34 +302,36 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
               </button>
             </div>
 
-            {/* Mode Toggle */}
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => setMode('select')}
-                className={`flex-1 px-6 py-3 font-medium transition-colors ${
-                  mode === 'select'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                Existing Places
-              </button>
-              <button
-                onClick={() => setMode('create')}
-                className={`flex-1 px-6 py-3 font-medium transition-colors ${
-                  mode === 'create'
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Plus className="w-4 h-4 inline mr-1" />
-                New Place
-              </button>
-            </div>
+            {/* Mode Toggle - only show if photo is provided */}
+            {hasPhoto && (
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setMode('select')}
+                  className={`flex-1 px-6 py-3 font-medium transition-colors ${
+                    mode === 'select'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Existing Places
+                </button>
+                <button
+                  onClick={() => setMode('create')}
+                  className={`flex-1 px-6 py-3 font-medium transition-colors ${
+                    mode === 'create'
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Plus className="w-4 h-4 inline mr-1" />
+                  New Place
+                </button>
+              </div>
+            )}
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              {mode === 'select' ? (
+              {mode === 'select' && hasPhoto ? (
                 <>
                   {/* Already linked places */}
                   {linkedPlaces.length > 0 && (
@@ -302,7 +435,7 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
                         <button
                           onClick={handleGetCurrentLocation}
                           disabled={isLoadingLocation || !GOOGLE_MAPS_API_KEY}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 disabled:opacity-50"
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Navigation className="w-3 h-3" />
                           {isLoadingLocation ? 'Getting location...' : 'Use my location'}
@@ -310,36 +443,20 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
                       </div>
 
                       {GOOGLE_MAPS_API_KEY ? (
-                        <div className="h-64 rounded-lg overflow-hidden border border-gray-300">
-                          <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                            <Map
-                              mapId="add-place-map"
-                              defaultCenter={mapCenter}
-                              center={mapCenter}
-                              defaultZoom={15}
-                              onClick={handleMapClick}
-                              gestureHandling="greedy"
-                              disableDefaultUI={false}
-                              zoomControl={true}
-                              mapTypeControl={false}
-                              streetViewControl={false}
-                              fullscreenControl={false}
-                            >
-                              <AdvancedMarker position={markerPosition}>
-                                <Pin background="#3b82f6" glyphColor="#ffffff" borderColor="#ffffff" />
-                              </AdvancedMarker>
-                            </Map>
-                          </APIProvider>
-                        </div>
+                        <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places']}>
+                          <PlacePickerMap
+                            center={mapCenter}
+                            markerPosition={markerPosition}
+                            onMapClick={handleMapClick}
+                            onCenterChange={setMapCenter}
+                            onMarkerChange={setMarkerPosition}
+                          />
+                        </APIProvider>
                       ) : (
                         <div className="h-64 rounded-lg border border-gray-300 bg-gray-50 flex items-center justify-center">
                           <p className="text-sm text-gray-500">Google Maps API key required</p>
                         </div>
                       )}
-
-                      <p className="text-xs text-gray-500 mt-2">
-                        Click on the map to set the location, or use your current location
-                      </p>
                     </div>
                   </div>
                 </>
@@ -370,7 +487,14 @@ export function AddPlaceModal({ photo, isOpen, onClose, onSuccess }: AddPlaceMod
                 }
                 className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Saving...' : mode === 'select' ? 'Link to Place' : 'Create & Link'}
+                {isSubmitting
+                  ? 'Saving...'
+                  : mode === 'select'
+                    ? 'Link to Place'
+                    : hasPhoto
+                      ? 'Create & Link'
+                      : 'Create Place'
+                }
               </button>
             </div>
           </motion.div>
