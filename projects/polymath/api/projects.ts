@@ -381,13 +381,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // BEDTIME IDEAS RESOURCE (merged from bedtime.ts)
   if (resource === 'bedtime') {
+    const action = req.query.action as string
+
     // GET - Fetch today's prompts (or latest)
     if (req.method === 'GET') {
       return handleGetBedtimePrompts(req, res, supabase, userId)
     }
 
-    // POST - Generate new prompts (manual trigger)
+    // POST - Generate new prompts (manual trigger or catalyst prompts)
     if (req.method === 'POST') {
+      // Catalyst prompts endpoint: POST with inputs array
+      if (action === 'catalyst') {
+        return handleGenerateCatalystPrompts(req, res, supabase, userId)
+      }
+      // Standard bedtime prompts
       return handleGenerateBedtimePrompts(req, res, supabase, userId)
     }
 
@@ -1442,6 +1449,59 @@ async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelRespo
     console.error('[bedtime] Error:', error)
     return res.status(500).json({
       error: 'Failed to generate bedtime prompts',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}
+
+async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+  try {
+    const { inputs } = req.body
+
+    // Validate inputs
+    if (!inputs || !Array.isArray(inputs)) {
+      return res.status(400).json({
+        error: 'Invalid request',
+        details: 'Request body must include "inputs" array with 2-3 items'
+      })
+    }
+
+    if (inputs.length < 2 || inputs.length > 3) {
+      return res.status(400).json({
+        error: 'Invalid inputs',
+        details: 'Catalyst prompts require 2-3 inputs (project, article, or thought)'
+      })
+    }
+
+    // Validate each input
+    for (const input of inputs) {
+      if (!input.title || !input.type || !input.id) {
+        return res.status(400).json({
+          error: 'Invalid input format',
+          details: 'Each input must have: title (string), type (project|article|thought), id (string)'
+        })
+      }
+      if (!['project', 'article', 'thought'].includes(input.type)) {
+        return res.status(400).json({
+          error: 'Invalid input type',
+          details: 'Input type must be one of: project, article, thought'
+        })
+      }
+    }
+
+    const { generateCatalystPrompts } = await import('../lib/bedtime-ideas.js')
+    const prompts = await generateCatalystPrompts(inputs, userId)
+
+    return res.status(201).json({
+      prompts,
+      generated: true,
+      message: `Generated ${prompts.length} catalyst prompts from ${inputs.length} inputs`,
+      inputs
+    })
+  } catch (error) {
+    console.error('[catalyst] Error:', error)
+    return res.status(500).json({
+      error: 'Failed to generate catalyst prompts',
       details: error instanceof Error ? error.message : 'Unknown error'
     })
   }
