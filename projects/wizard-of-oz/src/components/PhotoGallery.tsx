@@ -160,7 +160,7 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
             whileTap={{ scale: 0.98 }}
             className="w-full mb-6 py-3 px-6 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold rounded-lg transition-all shadow-lg"
           >
-            📸 View All {filteredPhotos.length} Photos
+            🎬 Watch Their Growth
           </motion.button>
         )}
       </div>
