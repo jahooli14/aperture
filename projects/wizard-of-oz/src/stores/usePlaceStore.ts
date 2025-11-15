@@ -229,6 +229,9 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
           place.id === id ? { ...place, ...updates } : place
         ),
       }));
+
+      // Refresh places with stats to reflect changes in the view
+      get().fetchPlacesWithStats();
     } catch (error) {
       console.error('Error updating place:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update place';
