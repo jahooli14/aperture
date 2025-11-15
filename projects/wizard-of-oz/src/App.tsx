@@ -234,26 +234,26 @@ function App() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 md:py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Pupils</h1>
-              <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Your baby's growth journey</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold text-gray-900">Pupils</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-3">
               <motion.button
                 type="button"
                 onClick={() => setShowSettings(true)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="p-2 text-gray-600 hover:text-gray-900 transition-colors rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                aria-label="Privacy settings"
+                aria-label="Settings"
+                title="Settings"
               >
                 <Settings className="w-5 h-5" />
               </motion.button>
               <button
                 type="button"
                 onClick={signOut}
-                className="text-sm text-gray-600 active:text-gray-900 md:hover:text-gray-900 transition-colors min-h-[44px] px-3 touch-manipulation"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors min-h-[44px] px-3 touch-manipulation rounded-lg hover:bg-gray-100"
               >
                 Sign out
               </button>
