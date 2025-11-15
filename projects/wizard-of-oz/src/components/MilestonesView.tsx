@@ -57,13 +57,17 @@ export function MilestonesView() {
 
   const handleMilestoneClick = (milestone: Milestone) => {
     if (isAchieved(milestone.id)) {
-      // If already achieved, allow user to uncheck
+      // If already achieved, allow user to edit or unmark
       const achievement = getAchievement(milestone.id);
-      if (achievement && confirm(`Unmark "${milestone.title}"?`)) {
-        deleteAchievement(achievement.id);
+      if (achievement) {
+        // Open dialog to edit the achievement
+        setSelectedMilestone(milestone);
+        setAchievementDate(achievement.achieved_date);
+        setAchievementNotes(achievement.notes || '');
+        setSelectedPhotoId(achievement.photo_id || null);
       }
     } else {
-      // Open achievement dialog
+      // Open achievement dialog to mark as new
       const today = new Date().toISOString().split('T')[0];
       const todayPhoto = photos.find(photo => photo.upload_date === today);
 
@@ -82,12 +86,24 @@ export function MilestonesView() {
       const photoId = selectedPhotoId && selectedPhotoId !== '' ? selectedPhotoId : null;
       const milestoneNotes = achievementNotes?.trim();
 
-      await addAchievement({
-        milestone_id: selectedMilestone.id,
-        achieved_date: achievementDate,
-        photo_id: photoId,
-        notes: milestoneNotes || null,
-      });
+      const existingAchievement = getAchievement(selectedMilestone.id);
+
+      if (existingAchievement) {
+        // Update existing achievement
+        await updateAchievement(existingAchievement.id, {
+          achieved_date: achievementDate,
+          photo_id: photoId,
+          notes: milestoneNotes || null,
+        });
+      } else {
+        // Create new achievement
+        await addAchievement({
+          milestone_id: selectedMilestone.id,
+          achieved_date: achievementDate,
+          photo_id: photoId,
+          notes: milestoneNotes || null,
+        });
+      }
 
       // Success - close dialog and reset form
       setSelectedMilestone(null);
@@ -472,20 +488,37 @@ export function MilestonesView() {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setSelectedMilestone(null)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveAchievement}
-                  disabled={!achievementDate}
-                  className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
+              <div className="mt-6 space-y-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setSelectedMilestone(null)}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAchievement}
+                    disabled={!achievementDate}
+                    className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
+                {/* Delete button only for existing achievements */}
+                {isAchieved(selectedMilestone.id) && (
+                  <button
+                    onClick={() => {
+                      const achievement = getAchievement(selectedMilestone.id);
+                      if (achievement && confirm(`Unmark "${selectedMilestone.title}"?`)) {
+                        deleteAchievement(achievement.id);
+                        setSelectedMilestone(null);
+                      }
+                    }}
+                    className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                  >
+                    Unmark Milestone
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
