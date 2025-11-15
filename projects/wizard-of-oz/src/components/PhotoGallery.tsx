@@ -2,7 +2,6 @@ import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { X, Calendar } from 'lucide-react';
 import { usePhotoStore } from '../stores/usePhotoStore';
-import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
@@ -25,7 +24,6 @@ const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 
 export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
-  const { fetchMilestones } = useMilestoneStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
@@ -44,13 +42,12 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     setPrivacyMode(savedPrivacyMode);
   }, []);
 
-  // Fetch photos and milestones on mount
+  // Fetch photos on mount
   useEffect(() => {
     if (photos.length === 0 && !loading) {
       fetchPhotos();
     }
-    fetchMilestones();
-  }, [photos.length, loading]);
+  }, [photos.length, loading, fetchPhotos]);
 
   // Calculate milestone dates for filtering
   const milestoneDateMap = useMemo(() => {
