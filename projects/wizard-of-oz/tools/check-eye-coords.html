@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check Eye Coordinates</title>
+  <style>
+    body {
+      font-family: monospace;
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    h1 {
+      color: #4ec9b0;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 10px 0;
+      background: #0e639c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #1177bb;
+    }
+    .photo {
+      border: 2px solid #3e3e3e;
+      padding: 15px;
+      margin: 15px 0;
+      background: #252526;
+    }
+    .photo.problem {
+      border-color: #f48771;
+      background: #3a2c2c;
+    }
+    .photo h3 {
+      margin: 0 0 10px 0;
+      color: #569cd6;
+    }
+    .photo.problem h3 {
+      color: #f48771;
+    }
+    .data {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px 20px;
+      margin: 10px 0;
+    }
+    .label {
+      color: #9cdcfe;
+      text-align: right;
+    }
+    .value {
+      color: #ce9178;
+    }
+    .warning {
+      color: #f48771;
+      font-weight: bold;
+    }
+    .ok {
+      color: #4ec9b0;
+    }
+    .image-link {
+      display: inline-block;
+      margin: 10px 10px 10px 0;
+      padding: 8px 12px;
+      background: #0e639c;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .image-link:hover {
+      background: #1177bb;
+    }
+  </style>
+</head>
+<body>
+  <h1>Eye Coordinates Analysis</h1>
+  <p>Analyzing eye detection data from database...</p>
+
+  <button onclick="loadData()">Load Eye Coordinates</button>
+
+  <div id="results"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://kzejnzxexgagoujdrmhd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZWpuenhleGdhZ291amRybWhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQxMDI2NDIsImV4cCI6MjA0OTY3ODY0Mn0.b-zVJlb1_Oqnko_CoCWmZD8I7SvksDiH9sOfRCnOPL4';
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    window.loadData = async function() {
+      try {
+        const { data: photos, error } = await supabase
+          .from('photos')
+          .select('*')
+          .not('eye_coordinates', 'is', null)
+          .order('upload_date', { ascending: true });
+
+        if (error) {
+          document.getElementById('results').innerHTML =
+            `<div class="warning">Error: ${error.message}</div>`;
+          return;
+        }
+
+        let html = `<h2>Found ${photos.length} photos with eye coordinates</h2>`;
+
+        photos.forEach(photo => {
+          const date = new Date(photo.upload_date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+
+          const coords = photo.eye_coordinates;
+          const { leftEye, rightEye, imageWidth, imageHeight, confidence } = coords;
+
+          const centerY = (leftEye.y + rightEye.y) / 2;
+          const percentFromTop = (centerY / imageHeight * 100).toFixed(1);
+          const eyesSwapped = leftEye.x > rightEye.x;
+
+          const dx = rightEye.x - leftEye.x;
+          const dy = rightEye.y - leftEye.y;
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          const isProblem = parseFloat(percentFromTop) < 30;
+
+          html += `
+            <div class="photo ${isProblem ? 'problem' : ''}">
+              <h3>${date} ${isProblem ? '⚠️ OCT 10 - UNUSUAL COMPOSITION' : ''}</h3>
+
+              <div class="data">
+                <div class="label">Image Size:</div>
+                <div class="value">${imageWidth} x ${imageHeight}</div>
+
+                <div class="label">Left Eye (x,y):</div>
+                <div class="value">${Math.round(leftEye.x)}, ${Math.round(leftEye.y)}</div>
+
+                <div class="label">Right Eye (x,y):</div>
+                <div class="value">${Math.round(rightEye.x)}, ${Math.round(rightEye.y)}</div>
+
+                <div class="label">Eye Center Y:</div>
+                <div class="value ${isProblem ? 'warning' : ''}">${Math.round(centerY)} (${percentFromTop}% from top)</div>
+
+                <div class="label">Eye Distance:</div>
+                <div class="value">${Math.round(distance)}px</div>
+
+                <div class="label">Angle:</div>
+                <div class="value">${angle.toFixed(2)}°</div>
+
+                <div class="label">Eyes Swapped:</div>
+                <div class="value ${eyesSwapped ? 'warning' : 'ok'}">${eyesSwapped ? 'YES (upside-down)' : 'NO'}</div>
+
+                <div class="label">Confidence:</div>
+                <div class="value">${confidence}</div>
+              </div>
+
+              <div>
+                <a href="${photo.original_url}" target="_blank" class="image-link">📷 View Original</a>
+                <a href="${photo.aligned_url}" target="_blank" class="image-link">✨ View Aligned</a>
+              </div>
+
+              ${isProblem ? `
+                <div style="margin-top: 15px; padding: 10px; background: #4a3030; border-left: 3px solid #f48771;">
+                  <strong>Analysis:</strong><br>
+                  Eyes at ${percentFromTop}% from top is unusually high compared to other photos (38-52%).<br>
+                  This means baby's head is positioned much higher in the frame.<br>
+                  <br>
+                  <strong>Click "View Original" above to manually verify the eye detection is accurate!</strong>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        });
+
+        document.getElementById('results').innerHTML = html;
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('results').innerHTML =
+          `<div class="warning">Error: ${err.message}<br><br>Check console for details</div>`;
+      }
+    };
+  </script>
+</body>
+</html>

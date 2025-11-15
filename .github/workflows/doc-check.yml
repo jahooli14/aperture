@@ -1,0 +1,142 @@
+name: Documentation Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  check-docs-freshness:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history to check file ages
+
+    - name: Check NEXT_SESSION.md freshness
+      run: |
+        echo "🔍 Checking documentation freshness..."
+
+        # Get last modification time of NEXT_SESSION.md
+        NEXT_SESSION_AGE=$(git log -1 --format=%cd --date=relative NEXT_SESSION.md 2>/dev/null || echo "never updated")
+
+        echo "📝 NEXT_SESSION.md last updated: $NEXT_SESSION_AGE"
+
+        # Get recent code changes (last 7 days)
+        CODE_CHANGES=$(git log --since="7 days ago" --name-only --pretty=format: | grep -E "\.(ts|tsx|js|jsx)$" | sort -u | wc -l || echo 0)
+
+        echo "📊 Code files changed in last 7 days: $CODE_CHANGES"
+
+        if [ "$CODE_CHANGES" -gt 10 ]; then
+          # Check if NEXT_SESSION.md was updated in last 7 days
+          NEXT_SESSION_UPDATED=$(git log --since="7 days ago" --name-only --pretty=format: NEXT_SESSION.md | wc -l || echo 0)
+
+          if [ "$NEXT_SESSION_UPDATED" -eq 0 ]; then
+            echo "⚠️  WARNING: Significant code changes detected but NEXT_SESSION.md not updated in 7 days"
+            echo "Consider updating NEXT_SESSION.md to reflect recent work"
+            # Don't fail - just warn
+          else
+            echo "✅ NEXT_SESSION.md is up to date"
+          fi
+        else
+          echo "✅ No significant code changes requiring doc update"
+        fi
+
+    - name: Check for broken documentation links
+      run: |
+        echo "🔗 Checking for broken internal links..."
+
+        # Check for common broken reference patterns
+        BROKEN_REFS=0
+
+        # Check for references to deleted files
+        if grep -r '`CHEATSHEET\.md`' *.md 2>/dev/null; then
+          echo "❌ Found references to deleted CHEATSHEET.md"
+          BROKEN_REFS=$((BROKEN_REFS + 1))
+        fi
+
+        # Check for references to moved files (without .process/ prefix)
+        if grep -r '`SESSION_CHECKLIST\.md`' *.md 2>/dev/null | grep -v "\.process/"; then
+          echo "❌ Found references to SESSION_CHECKLIST.md without .process/ prefix"
+          BROKEN_REFS=$((BROKEN_REFS + 1))
+        fi
+
+        if grep -r '`META_DEBUGGING_PROTOCOL\.md`' *.md 2>/dev/null | grep -v "\.process/"; then
+          echo "❌ Found references to META_DEBUGGING_PROTOCOL.md without .process/ prefix"
+          BROKEN_REFS=$((BROKEN_REFS + 1))
+        fi
+
+        if [ $BROKEN_REFS -gt 0 ]; then
+          echo "⚠️  Found $BROKEN_REFS potential broken references"
+          echo "Run: grep -r 'SESSION_CHECKLIST\.md' *.md to find and fix"
+          exit 1
+        else
+          echo "✅ No broken references detected"
+        fi
+
+    - name: Validate documentation structure
+      run: |
+        echo "📁 Validating documentation structure..."
+
+        # Check that essential docs exist
+        REQUIRED_DOCS=(
+          "README.md"
+          "CLAUDE.md"
+          "CLAUDE-APERTURE.md"
+          "NAVIGATION.md"
+          "DOCUMENTATION_INDEX.md"
+          "NEXT_SESSION.md"
+          "START_HERE.md"
+          ".claude/startup.md"
+          ".process/SESSION_CHECKLIST.md"
+          ".process/META_DEBUGGING_PROTOCOL.md"
+          ".process/CAPABILITIES.md"
+        )
+
+        MISSING=0
+        for doc in "${REQUIRED_DOCS[@]}"; do
+          if [ ! -f "$doc" ]; then
+            echo "❌ Missing required documentation: $doc"
+            MISSING=$((MISSING + 1))
+          fi
+        done
+
+        if [ $MISSING -gt 0 ]; then
+          echo "⚠️  $MISSING required documentation files missing"
+          exit 1
+        else
+          echo "✅ All required documentation files present"
+        fi
+
+    - name: Check documentation consistency
+      run: |
+        echo "🔄 Checking documentation consistency..."
+
+        # Verify startup.md references correct paths
+        if grep -q '`SESSION_CHECKLIST\.md`' .claude/startup.md 2>/dev/null; then
+          echo "❌ startup.md contains incorrect path to SESSION_CHECKLIST.md"
+          echo "Should be: .process/SESSION_CHECKLIST.md"
+          exit 1
+        fi
+
+        echo "✅ Documentation paths are consistent"
+
+    - name: Summary
+      if: always()
+      run: |
+        echo ""
+        echo "============================================"
+        echo "📋 Documentation Check Summary"
+        echo "============================================"
+        echo "✅ Documentation structure validated"
+        echo "✅ Broken links checked"
+        echo "✅ Path consistency verified"
+        echo "✅ Freshness checked"
+        echo ""
+        echo "For documentation updates, use:"
+        echo "  - Manual: Update NEXT_SESSION.md"
+        echo "  - Command: /update-docs (in Claude Code)"
+        echo "============================================"

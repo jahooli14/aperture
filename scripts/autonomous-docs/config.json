@@ -1,0 +1,96 @@
+{
+  "$schema": "./config.schema.json",
+  "version": "1.0.0",
+
+  "optimizationGoal": "minimize-tokens-maximize-value",
+  "description": "Documentation optimizer that replaces outdated content and consolidates for efficiency",
+
+  "integrationModes": {
+    "replace": {
+      "description": "Delete obsolete content and replace with new (e.g., Claude 3.5 → Claude 4)",
+      "minEvidenceScore": 0.85,
+      "validation": {
+        "minFactPreservation": 1.0,
+        "maxGrowth": 1.0,
+        "allowTokenReduction": true
+      }
+    },
+    "merge": {
+      "description": "Consolidate similar content efficiently, combine examples",
+      "minEvidenceScore": 0.75,
+      "validation": {
+        "minFactPreservation": 1.0,
+        "maxGrowth": 0.4,
+        "allowTokenReduction": true
+      }
+    },
+    "refactor": {
+      "description": "Reorganize for density without information loss",
+      "minEvidenceScore": 0.9,
+      "validation": {
+        "minFactPreservation": 1.0,
+        "maxGrowth": 0.0,
+        "allowTokenReduction": true,
+        "requireTokenReduction": true
+      }
+    },
+    "newSection": {
+      "description": "Add entirely new content/section",
+      "minEvidenceScore": 0.8,
+      "validation": {
+        "maxGrowth": 1.0
+      }
+    },
+    "skip": {
+      "description": "Content already covered adequately - no changes needed",
+      "minEvidenceScore": 0.0,
+      "validation": {
+        "maxGrowth": 0.0
+      }
+    }
+  },
+
+  "supersessionDetection": {
+    "enabled": true,
+    "patterns": {
+      "versionUpgrade": ["Claude 3", "Claude 4", "Claude 5", "API v1", "API v2"],
+      "officialUpdate": ["Anthropic announces", "Anthropic releases", "official guidance"],
+      "quantifiableImprovement": ["faster", "reduction", "improvement", "%", "x"]
+    }
+  },
+
+  "crossReferencing": {
+    "enabled": true,
+    "minRepetitionLength": 50,
+    "preferLinkOver": "duplication"
+  },
+
+  "budget": {
+    "dailyCapUSD": 0.25,
+    "tokenLimits": {
+      "relevanceFilter": 8000,
+      "qualityComparison": 6000,
+      "integration": 8000
+    }
+  },
+
+  "thresholds": {
+    "relevance": 0.7,
+    "quality": 0.75,
+    "minHighDimensions": 2
+  },
+
+  "documentationTargets": [
+    "Aperture/CLAUDE-APERTURE.md",
+    "Aperture/.claude/startup.md",
+    "Aperture/.process/COMMON_MISTAKES.md",
+    "Aperture/NAVIGATION.md"
+  ],
+
+  "metrics": {
+    "trackTokenDelta": true,
+    "trackInformationDensity": true,
+    "trackSourceConsolidation": true,
+    "reportingEnabled": true
+  }
+}

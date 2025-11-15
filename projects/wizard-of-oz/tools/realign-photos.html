@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Re-align Photos</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .photo {
+      border: 1px solid #ddd;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    .photo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .image-container {
+      text-align: center;
+    }
+    .image-container img {
+      max-width: 100%;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 8px 16px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+  </style>
+</head>
+<body>
+  <h1>Re-align Photos with Fixed Logic</h1>
+  <div id="status"></div>
+  <button onclick="loadPhotos()">Load Photos from Supabase</button>
+  <div id="photos"></div>
+
+  <script type="module">
+    // Import Supabase
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = prompt('Enter Supabase URL:');
+    const SUPABASE_KEY = prompt('Enter Supabase Anon Key:');
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Target dimensions and positions
+    const TARGET_WIDTH = 1080;
+    const TARGET_HEIGHT = 1350;
+    const TARGET_LEFT_EYE = { x: TARGET_WIDTH * 0.33, y: TARGET_HEIGHT * 0.40 };
+    const TARGET_RIGHT_EYE = { x: TARGET_WIDTH * 0.67, y: TARGET_HEIGHT * 0.40 };
+
+    window.loadPhotos = async function() {
+      showStatus('Loading photos...', 'info');
+
+      const { data: photos, error } = await supabase
+        .from('photos')
+        .select('*')
+        .not('eye_coordinates', 'is', null)
+        .order('upload_date', { ascending: true });
+
+      if (error) {
+        showStatus('Error: ' + error.message, 'error');
+        return;
+      }
+
+      showStatus(`Loaded ${photos.length} photos`, 'success');
+
+      const photosDiv = document.getElementById('photos');
+      photosDiv.innerHTML = '';
+
+      for (const photo of photos) {
+        const photoDiv = document.createElement('div');
+        photoDiv.className = 'photo';
+        photoDiv.id = `photo-${photo.id}`;
+
+        const date = new Date(photo.upload_date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        const coords = photo.eye_coordinates;
+        const centerY = (coords.leftEye.y + coords.rightEye.y) / 2;
+        const threshold = coords.imageHeight * 0.3;
+        const willFlip = centerY >= threshold;
+
+        photoDiv.innerHTML = `
+          <div class="photo-header">
+            <div>
+              <strong>${date}</strong> (${photo.id.substring(0, 8)}...)
+              <br>
+              <small>Eyes at y=${Math.round(centerY)}, threshold=${Math.round(threshold)}</small>
+              <br>
+              <small><strong>${willFlip ? '🔄 Will flip 180°' : '✓ No flip needed'}</strong></small>
+            </div>
+            <button onclick="realignPhoto('${photo.id}')">Re-align</button>
+          </div>
+          <div class="images">
+            <div class="image-container">
+              <div>Current Aligned</div>
+              <img src="${photo.aligned_url}" alt="Current aligned">
+            </div>
+            <div class="image-container">
+              <div>New Aligned (will appear here)</div>
+              <canvas id="canvas-${photo.id}" style="max-width: 100%; border: 1px solid #ccc;"></canvas>
+            </div>
+          </div>
+          <div id="status-${photo.id}"></div>
+        `;
+
+        photosDiv.appendChild(photoDiv);
+      }
+    };
+
+    window.realignPhoto = async function(photoId) {
+      const statusDiv = document.getElementById(`status-${photoId}`);
+      statusDiv.innerHTML = '<div class="status info">Re-aligning...</div>';
+
+      try {
+        // Get photo data
+        const { data: photo, error } = await supabase
+          .from('photos')
+          .select('*')
+          .eq('id', photoId)
+          .single();
+
+        if (error) throw error;
+
+        // Load original image
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = photo.original_url;
+        });
+
+        // Perform alignment with new logic
+        const canvas = document.getElementById(`canvas-${photoId}`);
+        const ctx = canvas.getContext('2d');
+        canvas.width = TARGET_WIDTH;
+        canvas.height = TARGET_HEIGHT;
+
+        const eyeCoords = photo.eye_coordinates;
+        const { leftEye, rightEye } = eyeCoords;
+
+        // Calculate transformation parameters
+        const dx = rightEye.x - leftEye.x;
+        const dy = rightEye.y - leftEye.y;
+        const angle = Math.atan2(dy, dx);
+
+        const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
+        const targetEyeDistance = TARGET_RIGHT_EYE.x - TARGET_LEFT_EYE.x;
+        const scale = targetEyeDistance / currentEyeDistance;
+
+        const sourceCenterX = (leftEye.x + rightEye.x) / 2;
+        const sourceCenterY = (leftEye.y + rightEye.y) / 2;
+
+        const targetCenterX = (TARGET_LEFT_EYE.x + TARGET_RIGHT_EYE.x) / 2;
+        const targetCenterY = (TARGET_LEFT_EYE.y + TARGET_RIGHT_EYE.y) / 2;
+
+        // NEW LOGIC: Determine if flip is needed
+        const isVeryTop = sourceCenterY < eyeCoords.imageHeight * 0.3;
+        const needsFlip = !isVeryTop;
+
+        // Fill white background
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Apply transformation
+        ctx.save();
+        ctx.translate(targetCenterX, targetCenterY);
+        ctx.rotate(-angle);
+        ctx.scale(scale, scale);
+
+        // Conditional flip based on new logic
+        if (needsFlip) {
+          ctx.rotate(Math.PI);
+        }
+
+        ctx.drawImage(img, -sourceCenterX, -sourceCenterY);
+        ctx.restore();
+
+        statusDiv.innerHTML = `
+          <div class="status success">
+            ✓ Re-aligned successfully!
+            <br>
+            <small>Eye center Y: ${Math.round(sourceCenterY)}, Image height: ${eyeCoords.imageHeight}, Threshold: ${Math.round(eyeCoords.imageHeight * 0.3)}</small>
+            <br>
+            <small><strong>${needsFlip ? 'Applied 180° flip' : 'No flip applied'}</strong></small>
+          </div>
+        `;
+      } catch (err) {
+        statusDiv.innerHTML = `<div class="status error">Error: ${err.message}</div>`;
+        console.error(err);
+      }
+    };
+
+    function showStatus(message, type) {
+      document.getElementById('status').innerHTML =
+        `<div class="status ${type}">${message}</div>`;
+    }
+
+    window.supabase = supabase;
+  </script>
+</body>
+</html>

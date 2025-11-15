@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-16T16:26:02.271Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Tech With Tim: How to Build AI Agents in Python",
+    "url": "https://dev.to/vibe_youtube/tech-with-tim-how-to-build-ai-agents-in-python-fc9",
+    "publishDate": "2025-10-16T16:09:08.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

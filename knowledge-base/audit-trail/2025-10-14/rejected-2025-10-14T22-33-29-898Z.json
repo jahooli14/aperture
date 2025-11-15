@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-10-14T22:33:29.898Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "DeepResearchGuard: Deep Research with Open-Domain Evaluation and\n  Multi-Stage Guardrails for Safety",
+    "url": "http://arxiv.org/abs/2510.10994v1",
+    "publishDate": "2025-10-13T04:11:21.000Z"
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "No relevant documentation section found"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-10-14T22:22:31.748Z",
+  "type": "rejected",
+  "sourceArticle": {
+    "title": "Tech With Tim: How to Build AI Agents in Python",
+    "url": "https://dev.to/vibe_youtube/tech-with-tim-how-to-build-ai-agents-in-python-142f",
+    "publishDate": "2025-10-14T22:10:27.000Z"
+  },
+  "qualityScores": {
+    "specificity": 0.1,
+    "implementability": 0,
+    "evidence": 0.4,
+    "overall": 0.2
+  },
+  "decision": "rejected",
+  "reasoning": [
+    "The new article's excerpt is highly generic, discussing what the guide 'will cover' rather than providing specific design principles, code examples, or actionable advice relevant to 'Tool Design Philosophy'.",
+    "It lacks concrete examples, quantifiable benefits, or specific implementation details that would enhance the existing, highly specific documentation.",
+    "The source (devto-ai, Tech With Tim) is not considered as authoritative for design philosophy as the existing Anthropic source.",
+    "None of the scores meet the 0.7 threshold for merging, and it does not add concrete value to the existing content."
+  ]
+}

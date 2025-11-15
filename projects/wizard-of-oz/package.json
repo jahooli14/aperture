@@ -1,0 +1,50 @@
+{
+  "name": "aperture",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "analyze": "npm run build && npx vite-bundle-analyzer dist",
+    "health": "curl -f http://localhost:5175/api/health || curl -f https://wizard-of-ngsh70dke-daniels-projects-ca7c7923.vercel.app/api/health",
+    "check-migrations": "tsx scripts/check-migrations.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "@react-google-maps/api": "^2.20.7",
+    "@supabase/supabase-js": "^2.75.0",
+    "@use-gesture/react": "^10.3.1",
+    "@vis.gl/react-google-maps": "^1.7.1",
+    "framer-motion": "^12.23.22",
+    "lucide-react": "^0.545.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "resend": "^4.0.3",
+    "sharp": "^0.34.4",
+    "web-push": "^3.6.7",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.1.16",
+    "@types/react-dom": "^19.1.9",
+    "@vercel/node": "^5.3.26",
+    "@vitejs/plugin-react": "^5.0.4",
+    "eslint": "^9.36.0",
+    "jsdom": "^27.0.0",
+    "rollup-plugin-visualizer": "^6.0.4",
+    "tailwindcss": "^3.4.18",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.1.0",
+    "vitest": "^3.2.4",
+    "workbox-window": "^7.3.0"
+  }
+}
