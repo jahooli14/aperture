@@ -13,12 +13,16 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
   const { pendingSuggestions, loadExistingSuggestions, acceptSuggestion, dismissSuggestion } = useAutoSuggestion()
   const { addToast } = useToast()
   const [isExpanded, setIsExpanded] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
-  // Load existing suggestions when component mounts
+  // Load existing suggestions when component mounts (only once per itemId)
   useEffect(() => {
-    console.log(`[SuggestionBadge] Loading suggestions for ${itemType} ${itemId}`)
-    loadExistingSuggestions(itemId)
-  }, [itemId, loadExistingSuggestions])
+    if (!hasLoaded) {
+      console.log(`[SuggestionBadge] Loading suggestions for ${itemType} ${itemId}`)
+      loadExistingSuggestions(itemId)
+      setHasLoaded(true)
+    }
+  }, [itemId]) // Only depend on itemId, not loadExistingSuggestions
 
   const suggestions = pendingSuggestions[itemId] || []
   const count = suggestions.length
