@@ -7,6 +7,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
+import { ProjectListRow } from '../components/projects/ProjectListRow'
+import { SpotlightCard } from '../components/projects/SpotlightCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
@@ -239,33 +241,49 @@ export function ProjectsPage() {
           </Card>
         )}
 
-        {/* Projects Grid - Shows all projects based on filter */}
+        {/* Two-Column Layout: Spotlight (left) + Scrollable List (right) */}
         {loading && projects.length === 0 ? (
           <div className="animate-pulse space-y-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-40 bg-white/5 rounded-xl" />
+              <div key={i} className="h-32 bg-white/5 rounded-xl" />
             ))}
           </div>
         ) : projects.length === 0 ? (
-          /* Empty State */
           <EmptyState
             icon={Layers}
             title={filter === 'all' ? "No projects yet" : `No ${filter} projects`}
             description="Build a project from a suggestion or create one manually to get started on your creative journey"
           />
         ) : (
-          /* Grid View - All projects */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {projects.map((project, idx) => (
-              <motion.div
-                key={project.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-              >
-                <ProjectCard project={project} />
-              </motion.div>
-            ))}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column: Spotlight (sticky on desktop, scrollable on mobile) */}
+            <div className="lg:sticky lg:top-24 lg:h-fit space-y-3">
+              <SpotlightSection projects={projects} />
+            </div>
+
+            {/* Right Column: Scrollable List (2 columns on mobile, 1 on desktop for density) */}
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-2 gap-2">
+                {projects.map((project, idx) => {
+                  const isSpotlighted = isProjectSpotlighted(project, projects)
+                  const spotlightColor = getSpotlightColor(project, projects)
+                  return (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                    >
+                      <ProjectListRow
+                        project={project}
+                        isSpotlighted={isSpotlighted}
+                        spotlightColor={spotlightColor}
+                      />
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -291,4 +309,84 @@ function formatRelativeTime(isoString: string): string {
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`
   if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`
   return `${Math.floor(diffDays / 365)}y`
+}
+
+function isProjectSpotlighted(project: Project, allProjects: Project[]): boolean {
+  const spotlighted = getSpotlightProjects(allProjects)
+  return spotlighted.some(p => p.project.id === project.id)
+}
+
+function getSpotlightColor(project: Project, allProjects: Project[]): string {
+  const spotlighted = getSpotlightProjects(allProjects)
+  const spot = spotlighted.find(p => p.project.id === project.id)
+  if (!spot) return 'rgba(255, 255, 255, 0.02)'
+
+  switch (spot.type) {
+    case 'pinned':
+      return 'rgba(59, 130, 246, 0.15)'
+    case 'recent':
+      return 'rgba(168, 85, 247, 0.15)'
+    case 'resurfaced':
+      return 'rgba(251, 191, 36, 0.15)'
+    default:
+      return 'rgba(255, 255, 255, 0.02)'
+  }
+}
+
+interface SpotlightProject {
+  project: Project
+  type: 'pinned' | 'recent' | 'resurfaced'
+}
+
+function getSpotlightProjects(projects: Project[]): SpotlightProject[] {
+  const result: SpotlightProject[] = []
+
+  // 1. Pinned project
+  const pinned = projects.find(p => p.is_priority && p.status === 'active')
+  if (pinned) {
+    result.push({ project: pinned, type: 'pinned' })
+  }
+
+  // 2. Recent projects (1-2)
+  const recent = projects
+    .filter(p => p.status === 'active' && !p.is_priority)
+    .sort((a, b) => {
+      const aTime = new Date(a.updated_at || a.last_active).getTime()
+      const bTime = new Date(b.updated_at || b.last_active).getTime()
+      return bTime - aTime
+    })
+    .slice(0, 2)
+  recent.forEach(p => result.push({ project: p, type: 'recent' }))
+
+  // 3. Resurfaced (dormant) projects (1-2)
+  const resurfaced = projects
+    .filter(p => p.status === 'dormant')
+    .sort((a, b) => {
+      // Prioritize ones that haven't been suggested recently
+      const aTime = new Date((a as any).last_suggested_at || a.created_at).getTime()
+      const bTime = new Date((b as any).last_suggested_at || b.created_at).getTime()
+      return aTime - bTime
+    })
+    .slice(0, 2)
+  resurfaced.forEach(p => result.push({ project: p, type: 'resurfaced' }))
+
+  return result
+}
+
+function SpotlightSection({ projects }: { projects: Project[] }) {
+  const spotlighted = getSpotlightProjects(projects)
+
+  if (spotlighted.length === 0) return null
+
+  return (
+    <>
+      {spotlighted.map(({ project, type }) => (
+        <SpotlightCard
+          key={project.id}
+          project={project}
+          type={type}
+        />
+      ))}
+    </>
+  )
 }
