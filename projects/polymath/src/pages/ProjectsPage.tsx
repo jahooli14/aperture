@@ -5,10 +5,8 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Virtuoso } from 'react-virtuoso'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
-import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
@@ -241,57 +239,34 @@ export function ProjectsPage() {
           </Card>
         )}
 
-        {/* Carousel View - Shows sections with auto-scrolling */}
+        {/* Projects Grid - Shows all projects based on filter */}
         {loading && projects.length === 0 ? (
-          <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map(i => (
-              <div key={i}>
-                <div className="h-6 w-24 bg-white/10 rounded mb-4" />
-                <div className="h-48 bg-white/5 rounded" />
-              </div>
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="h-40 bg-white/5 rounded-xl" />
             ))}
           </div>
         ) : projects.length === 0 ? (
           /* Empty State */
           <EmptyState
             icon={Layers}
-            title="No projects yet"
+            title={filter === 'all' ? "No projects yet" : `No ${filter} projects`}
             description="Build a project from a suggestion or create one manually to get started on your creative journey"
           />
         ) : (
-          /* Carousel View with auto-scrolling sections */
-          <ProjectsPageCarousel
-            pinnedProject={projects.find(p => p.is_priority && p.status === 'active') || null}
-            recentProjects={projects
-              .filter(p => p.status === 'active' && !p.is_priority)
-              .sort((a, b) => {
-                const aTime = new Date(a.updated_at || a.last_active).getTime()
-                const bTime = new Date(b.updated_at || b.last_active).getTime()
-                return bTime - aTime
-              })
-              .slice(0, 5)}
-            resurfaceProjects={projects
-              .filter(p => {
-                const lastActive = new Date(p.updated_at || p.last_active)
-                const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                return p.status === 'active' && !p.is_priority && lastActive < oneWeekAgo
-              })
-              .sort((a, b) => {
-                const aTime = new Date(a.updated_at || a.last_active).getTime()
-                const bTime = new Date(b.updated_at || b.last_active).getTime()
-                return aTime - bTime
-              })
-              .slice(0, 5)}
-            suggestedProjects={projects
-              .filter(p => p.status === 'active' && !p.is_priority)
-              .sort((a, b) => {
-                const aTime = new Date(a.created_at).getTime()
-                const bTime = new Date(b.created_at).getTime()
-                return bTime - aTime
-              })
-              .slice(0, 5)}
-            loading={loading}
-          />
+          /* Grid View - All projects */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {projects.map((project, idx) => (
+              <motion.div
+                key={project.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
+                <ProjectCard project={project} />
+              </motion.div>
+            ))}
+          </div>
         )}
       </div>
 
