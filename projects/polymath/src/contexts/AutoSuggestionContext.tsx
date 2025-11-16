@@ -212,26 +212,24 @@ export function AutoSuggestionProvider({ children }: { children: ReactNode }) {
     }
   }, [pendingSuggestions])
 
-  const dismissSuggestion = useCallback(async (
+  const dismissSuggestion = useCallback((
     fromItemId: string,
     suggestionId: string
   ) => {
-    try {
-      // Update suggestion status
-      await fetch(`/api/connections?action=update-suggestion&id=${suggestionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'dismissed' })
-      })
+    // Optimistically remove from UI first
+    setPendingSuggestions(prev => ({
+      ...prev,
+      [fromItemId]: prev[fromItemId]?.filter(s => s.id !== suggestionId) || []
+    }))
 
-      // Remove from pending suggestions
-      setPendingSuggestions(prev => ({
-        ...prev,
-        [fromItemId]: prev[fromItemId]?.filter(s => s.id !== suggestionId) || []
-      }))
-    } catch (error) {
+    // Then update server in background
+    fetch(`/api/connections?action=update-suggestion&id=${suggestionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'dismissed' })
+    }).catch(error => {
       console.error('[AutoSuggestion] Error dismissing suggestion:', error)
-    }
+    })
   }, [])
 
   const clearSuggestions = useCallback((itemId: string) => {
