@@ -33,9 +33,9 @@ const typeConfig = {
   resurfaced: {
     label: 'Resurface',
     icon: null,
-    color: 'rgba(251, 191, 36, 0.1)',
-    borderColor: 'rgba(251, 191, 36, 0.3)',
-    textColor: 'rgba(251, 191, 36, 0.8)'
+    color: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    textColor: 'var(--premium-emerald)'
   }
 }
 

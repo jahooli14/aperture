@@ -327,7 +327,7 @@ function getSpotlightColor(project: Project, allProjects: Project[]): string {
     case 'recent':
       return 'rgba(168, 85, 247, 0.15)'
     case 'resurfaced':
-      return 'rgba(251, 191, 36, 0.15)'
+      return 'rgba(16, 185, 129, 0.15)'
     default:
       return 'rgba(255, 255, 255, 0.02)'
   }
