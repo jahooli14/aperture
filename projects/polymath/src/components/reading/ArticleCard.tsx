@@ -363,309 +363,327 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         className="relative"
         {...longPressHandlers}
       >
-      {/* Archive Indicator (Swipe Right) */}
-      <motion.div
-        style={{ opacity: archiveIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
-      >
-        <div className="flex items-center gap-2">
-          <Check className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-          <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>ARCHIVE</span>
-        </div>
-      </motion.div>
+        {/* Archive Indicator (Swipe Right) */}
+        <motion.div
+          style={{ opacity: archiveIndicatorOpacity }}
+          className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <Check className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
+            <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>ARCHIVE</span>
+          </div>
+        </motion.div>
 
-      {/* Delete Indicator (Swipe Left) */}
-      <motion.div
-        style={{ opacity: deleteIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10 rounded-xl"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-red-500">DELETE</span>
-          <Trash2 className="h-6 w-6 text-red-500" />
-        </div>
-      </motion.div>
+        {/* Delete Indicator (Swipe Left) */}
+        <motion.div
+          style={{ opacity: deleteIndicatorOpacity }}
+          className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10 rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-red-500">DELETE</span>
+            <Trash2 className="h-6 w-6 text-red-500" />
+          </div>
+        </motion.div>
 
-      <motion.div
-        style={{ backgroundColor }}
-        className="rounded-xl"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -6, scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        transition={{
-          type: "spring",
-          stiffness: 400,
-          damping: 28,
-          mass: 0.6,
-          opacity: { duration: 0.3 },
-          scale: { duration: 0.3 }
-        }}
-      >
-        <div
-          onClick={onClick}
-          className="group premium-card rounded-xl p-4 sm:p-5 transition-all cursor-pointer relative overflow-hidden"
-          style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--premium-bg-3)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--premium-bg-2)'
-            ;(e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+        <motion.div
+          style={{ backgroundColor }}
+          className="rounded-xl"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          whileHover={{ y: -6, scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{
+            type: "spring",
+            stiffness: 400,
+            damping: 28,
+            mass: 0.6,
+            opacity: { duration: 0.3 },
+            scale: { duration: 0.3 }
           }}
         >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
-        {/* Thumbnail (if available) */}
-        {article.thumbnail_url && (
-          <div className="flex-shrink-0">
-            <Thumbnail
-              src={article.thumbnail_url}
-              alt={article.title || 'Article thumbnail'}
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg"
-              aspectRatio="1/1"
-            />
-          </div>
-        )}
+          <div
+            onClick={onClick}
+            className="group premium-card rounded-xl p-4 sm:p-5 transition-all cursor-pointer relative overflow-hidden"
+            style={{
+              background: 'var(--premium-bg-2)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--premium-bg-3)'
+                ; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'var(--premium-bg-2)'
+                ; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
+              {/* Thumbnail (if available) */}
+              {article.thumbnail_url && (
+                <div className="flex-shrink-0">
+                  <Thumbnail
+                    src={article.thumbnail_url}
+                    alt={article.title || 'Article thumbnail'}
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg"
+                    aspectRatio="1/1"
+                  />
+                </div>
+              )}
 
-        <div className="flex-1 min-w-0">
-          {/* Check if article is still loading (URL as title indicates extraction in progress) */}
-          {article.title?.startsWith('http') ? (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
-                <h3 className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Extracting article...
-                </h3>
-              </div>
-              <div className="text-xs line-clamp-1" style={{ color: 'var(--premium-text-tertiary)' }}>
-                {article.url}
-              </div>
-            </>
-          ) : (
-            <>
-              <h3 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                {article.title || 'Untitled'}
-              </h3>
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-muted)' }}>
-                {article.source && (
-                  <span className="font-medium text-sm">{article.source}</span>
+              <div className="flex-1 min-w-0">
+                {/* Check if article is still loading (URL as title indicates extraction in progress) */}
+                {article.title?.startsWith('http') ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
+                      <h3 className="text-lg sm:text-xl font-semibold" style={{ color: 'var(--premium-text-secondary)' }}>
+                        Extracting article...
+                      </h3>
+                    </div>
+                    <div className="text-xs line-clamp-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {article.url}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                      {article.title || 'Untitled'}
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--premium-text-muted)' }}>
+                      {article.source && (
+                        <span className="font-medium text-sm">{article.source}</span>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
-            </>
-          )}
-        </div>
 
-        {/* Status Badges */}
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <SuggestionBadge itemId={article.id} itemType="article" />
-            <PinButton
-              type="article"
-              id={article.id}
-              title={article.title || 'Article'}
-              content={
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-                    {article.title}
-                  </h2>
-                  {article.excerpt && (
-                    <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {article.excerpt}
-                    </p>
+              {/* Status Badges */}
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <SuggestionBadge itemId={article.id} itemType="article" />
+                  <PinButton
+                    type="article"
+                    id={article.id}
+                    title={article.title || 'Article'}
+                    content={
+                      <div className="p-6">
+                        <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                          {article.title}
+                        </h2>
+                        {article.excerpt && (
+                          <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                            {article.excerpt}
+                          </p>
+                        )}
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm"
+                          style={{ color: 'var(--premium-blue)' }}
+                        >
+                          Open original →
+                        </a>
+                      </div>
+                    }
+                  />
+                  {isOffline && (
+                    <div className="p-1.5 rounded-full flex items-center justify-center" style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      color: 'var(--premium-blue)'
+                    }} title="Saved for offline">
+                      <WifiOff className="h-3.5 w-3.5" />
+                    </div>
                   )}
-                  <a
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm"
-                    style={{ color: 'var(--premium-blue)' }}
-                  >
-                    Open original →
-                  </a>
                 </div>
-              }
-            />
-            {isOffline && (
-              <div className="p-1.5 rounded-full flex items-center justify-center" style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)'
-              }} title="Saved for offline">
-                <WifiOff className="h-3.5 w-3.5" />
+                {/* Connection Badge */}
+                {connectionCount > 0 && (
+                  <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    color: 'var(--premium-blue)'
+                  }}>
+                    <Link2 className="h-3 w-3" />
+                    {connectionCount} link{connectionCount > 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Reading Progress Bar */}
+            {progress > 0 && (
+              <div className="mb-3">
+                <div className="flex items-center justify-between text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <span>Reading progress</span>
+                  <span>{progress}%</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                  <div
+                    className="h-full transition-all duration-300"
+                    style={{
+                      width: `${progress}%`,
+                      background: 'var(--premium-blue)'
+                    }}
+                  />
+                </div>
               </div>
             )}
-          </div>
-          {/* Connection Badge */}
-          {connectionCount > 0 && (
-            <div className="px-2 py-1 text-xs font-medium rounded-full flex items-center gap-1" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.2)',
-              color: 'var(--premium-blue)'
-            }}>
-              <Link2 className="h-3 w-3" />
-              {connectionCount} link{connectionCount > 1 ? 's' : ''}
+
+            {/* Visual Separator */}
+            <div className="h-px my-4" style={{
+              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)'
+            }} />
+
+            {/* Excerpt */}
+            {cleanExcerpt(article.excerpt) && (
+              <p className="text-sm sm:text-base line-clamp-2 mb-3" style={{
+                color: 'var(--premium-text-secondary)',
+                lineHeight: '1.6'
+              }}>
+                {cleanExcerpt(article.excerpt)}
+              </p>
+            )}
+
+            {/* Tags */}
+            {article.tags && article.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {article.tags.slice(0, 3).map((tag, index) => (
+                  <span
+                    key={index}
+                    className="px-2 py-1 text-xs rounded-full"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      color: 'var(--premium-blue)'
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {article.tags.length > 3 && (
+                  <span className="px-2 py-1 text-xs rounded-full" style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--premium-blue)'
+                  }}>
+                    +{article.tags.length - 3}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Connected To - The "So What" */}
+            {connectionCount > 0 && (
+              <div className="mb-3 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--premium-purple)' }}>
+                    Knowledge Graph Impact
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-purple-200/80">
+                  <Link2 className="h-3 w-3" />
+                  <span>
+                    Connected to <span className="text-white font-medium">{connectionCount} items</span> in your graph
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-3">
+              <div className="flex items-center gap-2 text-xs sm:text-sm">
+                {article.read_time_minutes && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
+                    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    color: 'var(--premium-blue)'
+                  }}>
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="font-medium">{article.read_time_minutes} min</span>
+                  </div>
+                )}
+                {article.created_at && (
+                  <span className="px-2.5 py-1 rounded-full font-medium" style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    color: 'var(--premium-text-tertiary)'
+                  }}>
+                    {(() => {
+                      try {
+                        const date = new Date(article.created_at)
+                        if (isNaN(date.getTime())) return 'Recently'
+                        return format(date, 'MMM d')
+                      } catch {
+                        return 'Recently'
+                      }
+                    })()}
+                  </span>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowEditDialog(true)
+                  }}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                  title="Edit"
+                >
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={openOriginal}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                  title="Open original"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleMarkAsRead}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                  title="Archive"
+                >
+                  <Archive className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="p-1.5 rounded-lg transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" style={{ color: '#ef4444' }} />
+                </button>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Reading Progress Bar */}
-      {progress > 0 && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
-            <span>Reading progress</span>
-            <span>{progress}%</span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
-            <div
-              className="h-full transition-all duration-300"
-              style={{
-                width: `${progress}%`,
-                background: 'var(--premium-blue)'
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Visual Separator */}
-      <div className="h-px my-4" style={{
-        background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)'
-      }} />
-
-      {/* Excerpt */}
-      {cleanExcerpt(article.excerpt) && (
-        <p className="text-sm sm:text-base line-clamp-2 mb-3" style={{
-          color: 'var(--premium-text-secondary)',
-          lineHeight: '1.6'
-        }}>
-          {cleanExcerpt(article.excerpt)}
-        </p>
-      )}
-
-      {/* Tags */}
-      {article.tags && article.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          {article.tags.slice(0, 3).map((tag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 text-xs rounded-full"
-              style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)'
-              }}
-            >
-              {tag}
-            </span>
-          ))}
-          {article.tags.length > 3 && (
-            <span className="px-2 py-1 text-xs rounded-full" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              color: 'var(--premium-blue)'
-            }}>
-              +{article.tags.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-3">
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          {article.read_time_minutes && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full" style={{
-              backgroundColor: 'rgba(59, 130, 246, 0.15)',
-              color: 'var(--premium-blue)'
-            }}>
-              <Clock className="h-3.5 w-3.5" />
-              <span className="font-medium">{article.read_time_minutes} min</span>
-            </div>
-          )}
-          {article.created_at && (
-            <span className="px-2.5 py-1 rounded-full font-medium" style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              color: 'var(--premium-text-tertiary)'
-            }}>
-              {(() => {
-                try {
-                  const date = new Date(article.created_at)
-                  if (isNaN(date.getTime())) return 'Recently'
-                  return format(date, 'MMM d')
-                } catch {
-                  return 'Recently'
-                }
-              })()}
-            </span>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowEditDialog(true)
-            }}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--premium-text-secondary)' }}
-            title="Edit"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button
-            onClick={openOriginal}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--premium-text-secondary)' }}
-            title="Open original"
-          >
-            <ExternalLink className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleMarkAsRead}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: 'var(--premium-text-secondary)' }}
-            title="Archive"
-          >
-            <Archive className="h-4 w-4" />
-          </button>
-          <button
-            onClick={handleDelete}
-            className="p-1.5 rounded-lg transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" style={{ color: '#ef4444' }} />
-          </button>
-        </div>
-      </div>
-      </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
 
-    {/* Edit Dialog */}
-    <EditArticleDialog
-      article={article}
-      open={showEditDialog}
-      onOpenChange={setShowEditDialog}
-    />
+      {/* Edit Dialog */}
+      <EditArticleDialog
+        article={article}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+      />
 
-    {/* Connections Dialog */}
-    <ArticleConnectionsDialog
-      article={{
-        id: article.id,
-        title: article.title || 'Untitled',
-        content: article.content || '',
-        excerpt: article.excerpt || undefined
-      }}
-      isOpen={showConnectionsDialog}
-      onClose={() => setShowConnectionsDialog(false)}
-      onConnectionsCreated={() => {
-        // Refresh connection count if needed
-        console.log('Connections created for article:', article.id)
-      }}
-    />
+      {/* Connections Dialog */}
+      <ArticleConnectionsDialog
+        article={{
+          id: article.id,
+          title: article.title || 'Untitled',
+          content: article.content || '',
+          excerpt: article.excerpt || undefined
+        }}
+        isOpen={showConnectionsDialog}
+        onClose={() => setShowConnectionsDialog(false)}
+        onConnectionsCreated={() => {
+          // Refresh connection count if needed
+          console.log('Connections created for article:', article.id)
+        }}
+      />
     </>
   )
 })

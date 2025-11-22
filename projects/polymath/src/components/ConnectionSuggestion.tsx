@@ -120,10 +120,10 @@ export function ConnectionSuggestion({
               </div>
               <div>
                 <h3 className="premium-text-platinum font-bold text-base">
-                  Connections Found!
+                  Graph Connection Found
                 </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  This relates to {suggestions.length} {suggestions.length === 1 ? 'item' : 'items'} in your knowledge
+                <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Linking this {sourceType} to related content strengthens your AI's ability to generate creative insights.
                 </p>
               </div>
             </div>
@@ -224,7 +224,7 @@ export function ConnectionSuggestion({
           {/* Footer tip */}
           <div className="mt-4 pt-3">
             <p className="text-xs text-center" style={{ color: 'var(--premium-text-tertiary)' }}>
-              💡 Linking related content helps build your knowledge graph
+              💡 <strong>Why link?</strong> Connected nodes allow the AI to find non-obvious patterns between your projects and reading list.
             </p>
           </div>
         </div>

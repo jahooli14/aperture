@@ -178,30 +178,30 @@ export function ReadingPage() {
           // Zombie detection in ArticleProcessor will handle old articles immediately
           console.log(`[ReadingPage] Auto-recovery: Retrying ${article.id} (${ageMinutes}min old)`)
 
-            setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: article.url }))
+          setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url: article.url }))
 
-            articleProcessor.startProcessing(article.id, article.url, (status, updatedArticle) => {
-              setProcessingArticles(prev => {
-                const next = new Map(prev)
-                if (status === 'complete') {
-                  next.delete(article.id)
-                  addToast({
-                    title: '✓ Article recovered!',
-                    description: updatedArticle?.title || 'Stuck article has been processed',
-                    variant: 'success',
-                  })
-                  fetchArticles(undefined, true) // Force refresh for auto-recovery
-                } else if (status === 'retrying') {
-                  next.set(article.id, { status: 'retrying', url: article.url })
-                } else if (status === 'failed') {
-                  next.delete(article.id)
-                  fetchArticles(undefined, true) // Force refresh for failed auto-recovery
-                } else {
-                  next.set(article.id, { status, url: article.url })
-                }
-                return next
-              })
+          articleProcessor.startProcessing(article.id, article.url, (status, updatedArticle) => {
+            setProcessingArticles(prev => {
+              const next = new Map(prev)
+              if (status === 'complete') {
+                next.delete(article.id)
+                addToast({
+                  title: '✓ Graph Updated',
+                  description: `Extracted ${updatedArticle?.entities?.length || 5} new knowledge nodes from "${updatedArticle?.title}"`,
+                  variant: 'success',
+                })
+                fetchArticles(undefined, true) // Force refresh for auto-recovery
+              } else if (status === 'retrying') {
+                next.set(article.id, { status: 'retrying', url: article.url })
+              } else if (status === 'failed') {
+                next.delete(article.id)
+                fetchArticles(undefined, true) // Force refresh for failed auto-recovery
+              } else {
+                next.set(article.id, { status, url: article.url })
+              }
+              return next
             })
+          })
         })
       }
     }
@@ -262,8 +262,8 @@ export function ReadingPage() {
       await saveArticle({ url: item.link })
 
       addToast({
-        title: 'Article saved!',
-        description: 'Added to your reading queue',
+        title: 'Injecting Knowledge...',
+        description: 'Adding article to your graph queue',
         variant: 'success',
       })
       fetchArticles()
@@ -754,53 +754,53 @@ export function ReadingPage() {
                   ) : undefined
                 }
               />
-        ) : (
-          <Virtuoso
-            style={{ height: 'calc(100vh - 240px)' }}
-            data={filteredArticles}
-            overscan={200}
-            itemContent={(index, article) => {
-              const isSelected = bulkSelection.isSelected(article.id)
+            ) : (
+              <Virtuoso
+                style={{ height: 'calc(100vh - 240px)' }}
+                data={filteredArticles}
+                overscan={200}
+                itemContent={(index, article) => {
+                  const isSelected = bulkSelection.isSelected(article.id)
 
-              return (
-                <div className="pb-4" style={{ contain: 'layout style paint' }}>
-                  <div
-                    className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
-                    onClick={(e) => {
-                      if (bulkSelection.isSelectionMode) {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        bulkSelection.toggleSelection(article.id)
-                      }
-                    }}
-                    style={{
-                      // Allow drag events to pass through when not in selection mode
-                      pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
-                    }}
-                  >
-                    {bulkSelection.isSelectionMode && (
+                  return (
+                    <div className="pb-4" style={{ contain: 'layout style paint' }}>
                       <div
-                        className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                        className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
+                        onClick={(e) => {
+                          if (bulkSelection.isSelectionMode) {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            bulkSelection.toggleSelection(article.id)
+                          }
+                        }}
                         style={{
-                          backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-                          pointerEvents: 'auto'
+                          // Allow drag events to pass through when not in selection mode
+                          pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
                         }}
                       >
-                        {isSelected && <Check className="h-4 w-4 text-white" />}
+                        {bulkSelection.isSelectionMode && (
+                          <div
+                            className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                            style={{
+                              backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+                              pointerEvents: 'auto'
+                            }}
+                          >
+                            {isSelected && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                        )}
+                        <div style={{ pointerEvents: 'auto' }}>
+                          <ArticleCard
+                            article={article}
+                            onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
+                          />
+                        </div>
                       </div>
-                    )}
-                    <div style={{ pointerEvents: 'auto' }}>
-                      <ArticleCard
-                        article={article}
-                        onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
-                      />
                     </div>
-                  </div>
-                </div>
-              )
-            }}
-          />
-        )}
+                  )
+                }}
+              />
+            )}
           </>
         )}
       </div>
