@@ -512,6 +512,18 @@ export const ProjectCard = React.memo(function ProjectCard({
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setShowDropdown(false)
+                                handleTogglePriority(e)
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-white/10"
+                              style={{ color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-primary)' }}
+                            >
+                              <Star className="h-4 w-4" fill={project.is_priority ? 'currentColor' : 'none'} />
+                              <span className="text-sm font-medium">{project.is_priority ? 'Remove Priority' : 'Set Priority'}</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setShowDropdown(false)
                                 onDelete(project.id)
                               }}
                               className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-red-500/20"
