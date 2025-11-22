@@ -19,6 +19,7 @@ import {
   Check,
   Download,
   WifiOff,
+  X,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import DOMPurify from 'dompurify'
@@ -29,6 +30,9 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
+import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { ProjectPickerDialog } from '../components/projects/ProjectPickerDialog'
+import { Layers } from 'lucide-react'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -37,6 +41,7 @@ export function ReaderPage() {
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
   const { progress, restoreProgress } = useReadingProgress(id || '')
+  const { setContext, clearContext } = useContextEngineStore()
 
   const [article, setArticle] = useState<Article | null>(null)
   const [highlights, setHighlights] = useState<ArticleHighlight[]>([])
@@ -49,13 +54,25 @@ export function ReaderPage() {
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
 
   useEffect(() => {
     if (!id) return
     fetchArticle()
     checkOfflineStatus()
     fetchSuggestions()
+
+    return () => {
+      clearContext()
+    }
   }, [id])
+
+  // Update context when article loads
+  useEffect(() => {
+    if (article) {
+      setContext('article', article.id, article.title, { url: article.url })
+    }
+  }, [article])
 
   const fetchSuggestions = async () => {
     if (!id) return
@@ -332,6 +349,48 @@ export function ReaderPage() {
     }
   }
 
+  const handleAddToProject = async (project: any) => {
+    if (!selectedText || !article) return
+
+    try {
+      // 1. Create highlight first
+      await handleHighlight('purple')
+
+      // 2. Create connection
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_type: 'project',
+          source_id: project.id,
+          target_type: 'article',
+          target_id: article.id,
+          connection_type: 'manual_link',
+          reasoning: `User saved snippet: "${selectedText.substring(0, 50)}..."`,
+          snippet: selectedText
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to link to project')
+
+      addToast({
+        title: 'Added to Project',
+        description: `Saved to "${project.title}"`,
+        variant: 'success',
+      })
+
+      setShowProjectPicker(false)
+      setShowHighlightMenu(false)
+      window.getSelection()?.removeAllRanges()
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to add to project',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleArchive = async () => {
     if (!article) return
     setShowCompletionDialog(true)
@@ -510,9 +569,8 @@ export function ReaderPage() {
                 <button
                   key={size}
                   onClick={() => setFontSize(size)}
-                  className={`p-1.5 rounded transition-all ${
-                    fontSize === size ? 'bg-white/10' : 'opacity-50 hover:opacity-100'
-                  }`}
+                  className={`p-1.5 rounded transition-all ${fontSize === size ? 'bg-white/10' : 'opacity-50 hover:opacity-100'
+                    }`}
                   title={`${size.charAt(0).toUpperCase() + size.slice(1)} text`}
                   style={{ color: 'var(--premium-text-primary)' }}
                 >
@@ -703,13 +761,26 @@ export function ReaderPage() {
               whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
+                setShowProjectPicker(true)
+                // Don't close menu yet, wait for selection
+              }}
+              className="p-2.5 rounded-lg transition-colors"
+              title="Add to Project"
+              style={{ color: 'var(--premium-purple)' }}
+            >
+              <Layers className="h-5 w-5" />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
                 setShowHighlightMenu(false)
               }}
               className="p-2.5 rounded-lg transition-colors"
-              title="Add note"
+              title="Close"
               style={{ color: 'var(--premium-text-secondary)' }}
             >
-              <MessageSquare className="h-5 w-5" />
+              <X className="h-5 w-5" />
             </motion.button>
           </motion.div>
         )}
@@ -722,6 +793,16 @@ export function ReaderPage() {
         onOpenChange={setShowCompletionDialog}
         onCapture={handleCaptureThought}
         onSkip={handleSkipThought}
+      />
+
+      {/* Project Picker Dialog */}
+      <ProjectPickerDialog
+        open={showProjectPicker}
+        onOpenChange={(open) => {
+          setShowProjectPicker(open)
+          if (!open) setShowHighlightMenu(false)
+        }}
+        onSelect={handleAddToProject}
       />
 
       {/* Connection Suggestions - Floating */}

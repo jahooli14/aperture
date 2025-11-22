@@ -199,45 +199,21 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   )
 }
 
+import { useContextEngineStore } from '../stores/useContextEngineStore'
+
 export function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Wrap store hooks in try-catch for safety
-  let suggestions: any[] = []
-  let fetchSuggestions = () => {}
-  let projects: any[] = []
-  let projectsLoading = false
-  let fetchProjects = () => {}
-  let updateProject = async (_id: string, _data: Partial<Project>) => {}
-  let memories: any[] = []
-  let fetchMemories = () => {}
-  let progress: any = null
-  let requiredPrompts: any[] = []
-  let fetchPrompts = () => {}
+  const { suggestions, fetchSuggestions } = useSuggestionStore()
+  const { projects, fetchProjects, loading: projectsLoading, updateProject } = useProjectStore()
+  const { memories, fetchMemories } = useMemoryStore()
+  const { progress, requiredPrompts, fetchPrompts } = useOnboardingStore()
+  const { setContext } = useContextEngineStore()
 
-  try {
-    const suggestionStore = useSuggestionStore()
-    suggestions = suggestionStore.suggestions || []
-    fetchSuggestions = suggestionStore.fetchSuggestions
-
-    const projectStore = useProjectStore()
-    projects = projectStore.projects || []
-    projectsLoading = projectStore.loading
-    fetchProjects = projectStore.fetchProjects
-    updateProject = projectStore.updateProject
-
-    const memoryStore = useMemoryStore()
-    memories = memoryStore.memories || []
-    fetchMemories = memoryStore.fetchMemories
-
-    const onboardingStore = useOnboardingStore()
-    progress = onboardingStore.progress
-    requiredPrompts = onboardingStore.requiredPrompts || []
-    fetchPrompts = onboardingStore.fetchPrompts
-  } catch (err) {
-    console.error('[HomePage] Store initialization error:', err)
-  }
+  useEffect(() => {
+    setContext('home', 'home', 'Home')
+  }, [])
 
   const { addToast } = useToast()
 

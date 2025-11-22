@@ -21,6 +21,9 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
 import type { Project } from '../types'
 
+import { PremiumTabs } from '../components/ui/premium-tabs'
+import { useContextEngineStore } from '../stores/useContextEngineStore'
+
 interface ProjectNote {
   id: string
   bullets: string[]
@@ -32,6 +35,8 @@ export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { projects, fetchProjects, deleteProject, updateProject } = useProjectStore()
+  const { setContext, clearContext } = useContextEngineStore()
+
   const [project, setProject] = useState<Project | null>(null)
   const [notes, setNotes] = useState<ProjectNote[]>([])
   const [loading, setLoading] = useState(true)
@@ -39,6 +44,7 @@ export function ProjectDetailPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState('overview')
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {
@@ -64,7 +70,14 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     loadProjectDetails()
+    return () => clearContext()
   }, [id])
+
+  useEffect(() => {
+    if (project) {
+      setContext('project', project.id, project.title)
+    }
+  }, [project])
 
   // Fetch connection suggestions
   useEffect(() => {
@@ -675,165 +688,168 @@ export function ProjectDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Tabs */}
+          <PremiumTabs
+            tabs={[
+              { id: 'overview', label: 'Overview' },
+              { id: 'brain', label: 'Brain' },
+              { id: 'activity', label: 'Activity' }
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Description */}
-        <div className="premium-card p-4">
-          {editingDescription ? (
-            <div className="space-y-2">
-              <textarea
-                ref={descriptionInputRef}
-                value={tempDescription}
-                onChange={(e) => setTempDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') cancelEdit()
-                }}
-                rows={3}
-                placeholder="Add a description..."
-                className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
-                style={{
-                  color: 'var(--premium-text-primary)'
-                }}
-              />
-              <div className="flex gap-2 justify-end">
-                <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Cancel
-                </button>
-                <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
-                  Save
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
-              onClick={startEditDescription}
-              title="Click to edit"
-            >
-              {project.description ? (
-                <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+        {activeTab === 'overview' && (
+          <>
+            {/* Description */}
+            <div className="premium-card p-4">
+              {editingDescription ? (
+                <div className="space-y-2">
+                  <textarea
+                    ref={descriptionInputRef}
+                    value={tempDescription}
+                    onChange={(e) => setTempDescription(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') cancelEdit()
+                    }}
+                    rows={3}
+                    placeholder="Add a description..."
+                    className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
+                    style={{
+                      color: 'var(--premium-text-primary)'
+                    }}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                      Cancel
+                    </button>
+                    <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
+                      Save
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+                <div
+                  className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
+                  onClick={startEditDescription}
+                  title="Click to edit"
+                >
+                  {project.description ? (
+                    <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+                  ) : (
+                    <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Motivation - The "So What" */}
-        {project.metadata?.motivation && (
-          <div className="premium-card p-4 border-l-4 border-blue-500">
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
-              Motivation
+            {/* Motivation - The "So What" */}
+            {project.metadata?.motivation && (
+              <div className="premium-card p-4 border-l-4 border-blue-500">
+                <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
+                  Motivation
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                  {project.metadata.motivation}
+                </p>
+              </div>
+            )}
+
+            {/* AI Strategy - The "So What" */}
+            <div className="premium-card p-6 relative overflow-hidden">
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-3 rounded-lg bg-purple-500/20">
+                  <Target className="h-6 w-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">AI Strategic Analysis</h3>
+                  <p className="text-purple-200/80 text-sm leading-relaxed mb-3">
+                    Based on your recent thoughts about <span className="text-white font-medium">{project.title}</span>, this project is high impact.
+                  </p>
+                  <div className="flex gap-2">
+                    <div className="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200">
+                      High Momentum
+                    </div>
+                    <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                      Strong Alignment
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+            </div>
+
+            {/* Task Checklist */}
+            <div data-task-list>
+              <TaskList
+                tasks={project.metadata?.tasks || []}
+                onUpdate={async (tasks) => {
+                  console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
+
+                  // Ensure metadata is properly structured
+                  const newMetadata = {
+                    ...project.metadata,
+                    tasks: tasks,
+                    progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
+                  }
+
+                  const updated = {
+                    ...project,
+                    metadata: newMetadata,
+                    last_active: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  }
+
+                  console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
+
+                  // Update local state
+                  setProject(updated)
+
+                  console.log('[ProjectDetail] Calling updateProject API...')
+                  try {
+                    await updateProject(project.id, {
+                      metadata: newMetadata,
+                      last_active: updated.last_active,
+                      updated_at: updated.updated_at
+                    })
+                    console.log('[ProjectDetail] Update successful!')
+                    // Don't reload - local state is already correct and reloading causes stale data
+                  } catch (error) {
+                    console.error('[ProjectDetail] Update failed:', error)
+                    // Revert local state on error
+                    setProject(project)
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {activeTab === 'brain' && (
+          <div className="premium-card p-6">
+            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+              Knowledge Graph
             </h3>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.metadata.motivation}
-            </p>
+            <ConnectionsList
+              itemType="project"
+              itemId={project.id}
+              content={`${project.title}\n${project.description || ''}`}
+            />
           </div>
         )}
 
-        {/* AI Strategy - The "So What" */}
-        <div className="premium-card p-6 relative overflow-hidden">
-          <div className="flex items-start gap-4 relative z-10">
-            <div className="p-3 rounded-lg bg-purple-500/20">
-              <Target className="h-6 w-6 text-purple-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-white mb-1">AI Strategic Analysis</h3>
-              <p className="text-purple-200/80 text-sm leading-relaxed mb-3">
-                Based on your recent thoughts about <span className="text-white font-medium">{project.title}</span>, this project is high impact.
-              </p>
-              <div className="flex gap-2">
-                <div className="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200">
-                  High Momentum
-                </div>
-                <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
-                  Strong Alignment
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-        </div>
-
-        {/* Task Checklist */}
-        <div data-task-list>
-          <TaskList
-            tasks={project.metadata?.tasks || []}
-            onUpdate={async (tasks) => {
-              console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
-
-              // Ensure metadata is properly structured
-              const newMetadata = {
-                ...project.metadata,
-                tasks: tasks,
-                progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
-              }
-
-              const updated = {
-                ...project,
-                metadata: newMetadata,
-                last_active: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-
-              console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
-
-              // Update local state
-              setProject(updated)
-
-              console.log('[ProjectDetail] Calling updateProject API...')
-              try {
-                await updateProject(project.id, {
-                  metadata: newMetadata,
-                  last_active: updated.last_active,
-                  updated_at: updated.updated_at
-                })
-                console.log('[ProjectDetail] Update successful!')
-                // Don't reload - local state is already correct and reloading causes stale data
-              } catch (error) {
-                console.error('[ProjectDetail] Update failed:', error)
-                // Revert local state on error
-                setProject(project)
-              }
-            }}
+        {activeTab === 'activity' && (
+          <ProjectActivityStream
+            notes={notes}
+            onRefresh={loadProjectDetails}
           />
-        </div>
-
-        {/* Connections - Unified section showing both manual and AI-suggested connections */}
-        <div className="premium-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2 premium-text-platinum">
-              <Target className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-              Connections
-            </h3>
-            <button
-              onClick={() => setShowCreateConnection(true)}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-            >
-              Link Item
-            </button>
-          </div>
-          <ConnectionsList
-            itemType="project"
-            itemId={project.id}
-            content={`${project.title}\n\n${project.description || ''}`}
-            onConnectionDeleted={loadProjectDetails}
-            onConnectionCreated={loadProjectDetails}
-          />
-        </div>
-
-        {/* Activity Stream */}
-        <ProjectActivityStream
-          notes={notes}
-          onRefresh={loadProjectDetails}
-        />
+        )}
       </div>
 
       {/* Add Note Dialog */}
@@ -858,19 +874,21 @@ export function ProjectDetailPage() {
       {confirmDialog}
 
       {/* Connection Suggestions - Floating */}
-      {suggestions.length > 0 && (
-        <ConnectionSuggestion
-          suggestions={suggestions}
-          sourceId={project.id}
-          sourceType="project"
-          onLinkCreated={() => {
-            loadProjectDetails()
-            setSuggestions([]) // Clear suggestions after linking
-          }}
-          onDismiss={() => setSuggestions([])}
-        />
-      )}
-    </div>
+      {
+        suggestions.length > 0 && (
+          <ConnectionSuggestion
+            suggestions={suggestions}
+            sourceId={project.id}
+            sourceType="project"
+            onLinkCreated={() => {
+              loadProjectDetails()
+              setSuggestions([]) // Clear suggestions after linking
+            }}
+            onDismiss={() => setSuggestions([])}
+          />
+        )
+      }
+    </div >
   )
 }
 

@@ -49,6 +49,11 @@ export function MemoriesPage() {
   const { memories, fetchMemories, loading, error, deleteMemory, clearError } = useMemoryStore()
   const { progress } = useOnboardingStore()
   const { addToast } = useToast()
+  const { setContext } = useContextEngineStore()
+
+  useEffect(() => {
+    setContext('page', 'memories', 'Thoughts')
+  }, [])
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
