@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical, ChevronDown, Sparkles } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
