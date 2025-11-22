@@ -148,7 +148,7 @@ async function incrementTagUsage(tag: string): Promise<void> {
  * Infer category for a new tag using Gemini
  */
 async function inferCategory(tag: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `Categorize this tag into ONE of these categories:
 - Technology
