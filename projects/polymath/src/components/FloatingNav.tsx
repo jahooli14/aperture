@@ -111,12 +111,21 @@ export function FloatingNav() {
     // IMMEDIATELY show optimistic memory
     const tempId = addOptimisticMemory(text)
 
+    // Show immediate feedback
+    addToast({
+      title: 'Saving thought...',
+      description: 'Processing your voice note',
+      variant: 'default',
+    })
+
     // Detect if we're on a project page
     const projectMatch = location.pathname.match(/^\/projects\/([^/]+)$/)
     const projectId = projectMatch ? projectMatch[1] : null
 
     try {
       if (isOnline) {
+        console.log('[FloatingNav] Sending to API:', { textLength: text.length, projectId })
+
         // Online: send to memories API for parsing
         const response = await fetch('/api/memories?capture=true', {
           method: 'POST',
@@ -268,16 +277,16 @@ export function FloatingNav() {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
         }}
       >
-          {/* Icon */}
-          <Mic
-            className="relative z-10 w-8 h-8"
-            style={{
-              color: 'var(--premium-blue)'
-            }}
-          />
+        {/* Icon */}
+        <Mic
+          className="relative z-10 w-8 h-8"
+          style={{
+            color: 'var(--premium-blue)'
+          }}
+        />
 
-          {/* No label needed for bottom-right position */}
-        </motion.button>
+        {/* No label needed for bottom-right position */}
+      </motion.button>
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
