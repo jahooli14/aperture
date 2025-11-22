@@ -194,7 +194,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   try {
     // Parse transcript with Gemini FIRST (should be < 5 seconds)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 300,
@@ -1104,7 +1104,7 @@ async function handleTranscribe(req: VercelRequest, res: VercelResponse) {
     })
 
     // Use Gemini 2.5 Flash for audio transcription
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     console.log('[transcribe] Sending to Gemini with mimetype:', file.mimetype || 'audio/aac')
 
