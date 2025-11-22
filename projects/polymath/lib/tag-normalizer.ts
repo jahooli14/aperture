@@ -227,3 +227,52 @@ export async function generateSeedEmbeddings(): Promise<void> {
 
   logger.info({ processed, total: seedTags.length }, 'Completed seed embedding generation')
 }
+
+/**
+ * Identify similar tags that should be merged (Graph Hygiene)
+ */
+export async function identifyTagMerges(): Promise<any[]> {
+  const { data: tags } = await supabase
+    .from('canonical_tags')
+    .select('id, tag, usage_count')
+    .order('usage_count', { ascending: false })
+    .limit(500)
+
+  if (!tags || tags.length < 5) return []
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const tagList = tags.map(t => t.tag).join('\n')
+
+  const prompt = `Identify clusters of tags that mean the exact same thing and should be merged.
+  
+  TAGS:
+  ${tagList}
+  
+  Rules:
+  - Only group tags that are semantically IDENTICAL (e.g. "ai" and "artificial intelligence", "ux" and "user experience").
+  - Ignore related but distinct concepts.
+  - Select the best "canonical" name for the group (usually the most common or shortest).
+  
+  Return JSON:
+  [
+    { "canonical": "ai", "merge_candidates": ["artificial intelligence", "ai models"] },
+    ...
+  ]`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return []
+
+    const clusters = JSON.parse(jsonMatch[0])
+    
+    return clusters.map((c: any) => ({
+      ...c,
+      ids: tags.filter(t => c.merge_candidates.includes(t.tag) || t.tag === c.canonical).map(t => t.id)
+    })).filter((c: any) => c.ids.length > 1)
+  } catch (e) {
+    logger.error({ error: e }, 'Failed to identify tag merges')
+    return []
+  }
+}

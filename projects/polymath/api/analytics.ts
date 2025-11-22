@@ -5,7 +5,8 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { generateSeedEmbeddings } from '../lib/tag-normalizer.js'
+import { generateSeedEmbeddings, identifyTagMerges } from '../lib/tag-normalizer.js'
+import { generateMorningBriefing } from '../lib/bedtime-ideas.js'
 import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
 import { getUsageStats } from './lib/gemini-embeddings.js'
@@ -215,22 +216,21 @@ async function getSynthesisEvolution() {
         .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
         .join('\n\n')
 
-      const evolutionPrompt = `Analyze how this person's thinking evolved on the topic "${topic}":
+      const evolutionPrompt = `Analyze the evolution of the user's BELIEFS and OPINIONS on the topic "${topic}":
 
 ${memoryTexts}
 
-Detect:
-1. **Evolution type**: growth (learning/maturing), contradiction (changed mind), or refinement (same view, more nuanced)
-2. **Key shifts**: When did their thinking change? What triggered it?
-3. **Summary**: One sentence capturing the evolution
+Detect shifts in stance, opinion, or mental models.
+1. **Evolution type**: growth (learning), contradiction (changed mind), refinement (nuance), or reinforcement (conviction).
+2. **Stance Tracking**: What did they believe before? What do they believe now?
 
 Return JSON:
 {
-  "evolution_type": "growth|contradiction|refinement",
-  "summary": "Their thinking evolved from X to Y because Z",
+  "evolution_type": "growth|contradiction|refinement|reinforcement",
+  "summary": "Stance shifted from X to Y...",
   "timeline": [
-    {"date": "2024-01-15", "stance": "Initial view", "quote": "exact quote from memory"},
-    {"date": "2024-03-20", "stance": "Shifted view", "quote": "exact quote"}
+    {"date": "2024-01-15", "stance": "Believed X", "quote": "..."},
+    {"date": "2024-03-20", "stance": "Now believes Y", "quote": "..."}
   ]
 }`
 
@@ -542,6 +542,81 @@ Return JSON array (2-3 opportunities max):
   }))
 
   return { opportunities: opportunitiesWithMeta }
+}
+
+/**
+ * SHADOW PROJECT DETECTOR
+ * Finds clusters of activity that aren't yet projects
+ */
+async function getShadowProjects() {
+  const supabase = getSupabaseClient()
+  const userId = getUserId()
+
+  // Get recent memories and articles (last 30 days)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 30)
+
+  const { data: memories } = await supabase
+    .from('memories')
+    .select('id, title, tags, themes, created_at')
+    .eq('user_id', userId)
+    .gte('created_at', cutoff.toISOString())
+
+  const { data: articles } = await supabase
+    .from('reading_queue')
+    .select('id, title, tags, themes, created_at')
+    .eq('user_id', userId)
+    .gte('created_at', cutoff.toISOString())
+
+  if (!memories?.length && !articles?.length) return { shadow_projects: [] }
+
+  // Get existing projects to exclude
+  const { data: projects } = await supabase
+    .from('projects')
+    .select('title, tags')
+    .eq('user_id', userId)
+
+  const projectTitles = new Set(projects?.map(p => p.title.toLowerCase()) || [])
+
+  // Use Gemini to cluster and identify
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  const items = [
+    ...(memories || []).map(m => `Memory: ${m.title} [${m.themes?.join(', ')}]`),
+    ...(articles || []).map(a => `Article: ${a.title} [${a.themes?.join(', ')}]`)
+  ].join('\n')
+
+  const prompt = `Analyze these recent inputs and identify "Shadow Projects" - topics the user is heavily researching or thinking about but hasn't made a project for.
+
+  INPUTS:
+  ${items}
+
+  EXISTING PROJECTS (Ignore these topics):
+  ${Array.from(projectTitles).join(', ')}
+
+  Identify clusters of 3+ items that form a coherent project concept.
+  
+  Return JSON:
+  [
+    {
+      "title": "Suggested Project Title",
+      "description": "What they are working on",
+      "item_count": 5,
+      "reasoning": "You saved 3 articles and 2 notes about Hydroponics"
+    }
+  ]`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (!jsonMatch) return { shadow_projects: [] }
+    
+    const shadows = JSON.parse(jsonMatch[0])
+    return { shadow_projects: shadows }
+  } catch (e) {
+    return { shadow_projects: [] }
+  }
 }
 
 /**
@@ -1155,6 +1230,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // MORNING MOMENTUM
+  if (resource === 'morning') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const result = await generateMorningBriefing(getUserId())
+      return res.status(200).json(result)
+    } catch {
+      return res.status(500).json({ error: 'Briefing generation failed' })
+    }
+  }
+
+  // SHADOW PROJECTS
+  if (resource === 'shadow-projects') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const result = await getShadowProjects()
+      return res.status(200).json(result)
+    } catch {
+      return res.status(500).json({ error: 'Shadow project detection failed' })
+    }
+  }
+
+  // GRAPH HYGIENE
+  if (resource === 'hygiene') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+    try {
+      const result = await identifyTagMerges()
+      return res.status(200).json({ merges: result })
+    } catch {
+      return res.status(500).json({ error: 'Hygiene check failed' })
+    }
+  }
+
   // INIT TAGS (Admin utility - one-time setup)
   if (resource === 'init-tags') {
     if (req.method !== 'POST') {
@@ -1175,5 +1289,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  return res.status(400).json({ error: 'Invalid resource. Use ?resource=monitoring, ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, or ?resource=init-tags' })
+  return res.status(400).json({ error: 'Invalid resource. Use ?resource=monitoring, ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, ?resource=morning, ?resource=shadow-projects, ?resource=hygiene, or ?resource=init-tags' })
 }

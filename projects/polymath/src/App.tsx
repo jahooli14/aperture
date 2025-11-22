@@ -10,6 +10,7 @@ import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { DebugPanel } from './components/DebugPanel'
+import { ContextSidebar } from './components/context/ContextSidebar'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -204,6 +205,9 @@ export default function App() {
 
               {/* Floating Navigation */}
               <FloatingNav />
+
+              {/* Context Engine Sidebar */}
+              <ContextSidebar />
 
               {/* Pin Overlay - Split Screen */}
               <PinOverlay />

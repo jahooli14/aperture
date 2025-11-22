@@ -12,13 +12,16 @@ import {
   Layers,
   FileText,
   Mic,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
+
+import { useContextEngineStore } from '../stores/useContextEngineStore'
 
 // Schema colors for each section - unified blue theme
 const SCHEMA_COLORS = {
@@ -27,7 +30,8 @@ const SCHEMA_COLORS = {
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  constellation: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' }
+  constellation: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' }
 } as const
 
 interface NavOption {
@@ -35,7 +39,7 @@ interface NavOption {
   label: string
   icon: any
   path?: string
-  action?: 'navigate'
+  action?: 'navigate' | 'toggle-sidebar'
   color: keyof typeof SCHEMA_COLORS
 }
 
@@ -43,9 +47,9 @@ interface NavOption {
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
-  { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'context', label: 'Context', icon: Sparkles, action: 'toggle-sidebar', color: 'context' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'more', label: 'More', icon: Settings, path: '/settings', action: 'navigate', color: 'constellation' },
+  { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
 ]
 
 export function FloatingNav() {
@@ -53,6 +57,7 @@ export function FloatingNav() {
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
+  const { toggleSidebar, sidebarOpen } = useContextEngineStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -72,10 +77,13 @@ export function FloatingNav() {
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
       navigate(option.path)
+    } else if (option.action === 'toggle-sidebar') {
+      toggleSidebar()
     }
   }
 
   const isActive = (option: NavOption): boolean => {
+    if (option.action === 'toggle-sidebar') return sidebarOpen
     return location.pathname === option.path
   }
 
@@ -325,8 +333,9 @@ export function FloatingNav() {
                       layoutId="activeTab"
                       className="absolute inset-0 rounded-xl"
                       style={{
-                        background: 'rgba(59, 130, 246, 0.15)',
-                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        background: colors.glow,
+                        border: `1px solid ${colors.primary}`,
+                        opacity: 0.2
                       }}
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
