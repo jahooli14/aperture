@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ContextType = 'article' | 'project' | 'memory' | 'home' | 'search'
+export type ContextType = 'article' | 'project' | 'memory' | 'home' | 'search' | 'page'
 
 export interface ContextItem {
     id: string

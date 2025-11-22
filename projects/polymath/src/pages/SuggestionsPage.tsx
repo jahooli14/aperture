@@ -5,6 +5,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
+import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SuggestionCard } from '../components/suggestions/SuggestionCard'
 import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { BuildProjectDialog } from '../components/suggestions/BuildProjectDialog'
