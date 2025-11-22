@@ -23,6 +23,9 @@ import type { Project } from '../types'
 
 import { PremiumTabs } from '../components/ui/premium-tabs'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { SynthesisDialog } from '../components/ghostwriter/SynthesisDialog'
+import { DraftViewer } from '../components/ghostwriter/DraftViewer'
+import { useGhostwriterStore } from '../stores/useGhostwriterStore'
 
 interface ProjectNote {
   id: string
@@ -45,6 +48,12 @@ export function ProjectDetailPage() {
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('overview')
+
+  // Ghostwriter State
+  const { generateDraft, draft, isSynthesizing, saveDraft, clearDraft } = useGhostwriterStore()
+  const [showSynthesisDialog, setShowSynthesisDialog] = useState(false)
+  const [showDraftViewer, setShowDraftViewer] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
 
   // Listen for custom event from FloatingNav to open AddNote dialog
   useEffect(() => {
@@ -75,7 +84,7 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     if (project) {
-      setContext('project', project.id, project.title)
+      setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
     }
   }, [project])
 
@@ -393,6 +402,45 @@ export function ProjectDetailPage() {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleSynthesize = async (format: 'brief' | 'blog' | 'outline') => {
+    setShowSynthesisDialog(false)
+    if (!project) return
+
+    // Get all connection IDs (mock logic for now, ideally pass real IDs)
+    const contextIds = ['mock-id-1', 'mock-id-2']
+
+    await generateDraft(project.id, contextIds, format)
+    setShowDraftViewer(true)
+  }
+
+  const handleSaveDraft = async () => {
+    if (!project || !draft) return
+
+    setIsSavingDraft(true)
+    try {
+      // Extract title from draft (first line)
+      const titleMatch = draft.match(/^#\s+(.+)$/m)
+      const title = titleMatch ? titleMatch[1] : 'Ghostwriter Draft'
+
+      await saveDraft(project.id, draft, title)
+      addToast({
+        title: 'Draft saved',
+        description: 'Saved to project notes',
+        variant: 'success'
+      })
+      setShowDraftViewer(false)
+      clearDraft()
+      loadProjectDetails() // Refresh notes
+    } catch (error) {
+      addToast({
+        title: 'Failed to save',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSavingDraft(false)
     }
   }
 
@@ -833,9 +881,23 @@ export function ProjectDetailPage() {
 
         {activeTab === 'brain' && (
           <div className="premium-card p-6">
-            <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-              Knowledge Graph
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                Knowledge Graph
+              </h3>
+              <button
+                onClick={() => setShowSynthesisDialog(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.1))',
+                  border: '1px solid rgba(168, 85, 247, 0.2)',
+                  color: '#d8b4fe'
+                }}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Synthesize
+              </button>
+            </div>
             <ConnectionsList
               itemType="project"
               itemId={project.id}
@@ -869,6 +931,43 @@ export function ProjectDetailPage() {
         sourceContent={`${project.title}\n\n${project.description || ''}`}
         onConnectionCreated={loadProjectDetails}
       />
+
+      {/* Ghostwriter Dialogs */}
+      <SynthesisDialog
+        open={showSynthesisDialog}
+        onOpenChange={setShowSynthesisDialog}
+        onSynthesize={handleSynthesize}
+        contextCount={5} // Mock count for now
+      />
+
+      {draft && (
+        <DraftViewer
+          open={showDraftViewer}
+          onOpenChange={(open) => {
+            setShowDraftViewer(open)
+            if (!open) clearDraft()
+          }}
+          draft={draft}
+          onSave={handleSaveDraft}
+          isSaving={isSavingDraft}
+        />
+      )}
+
+      {/* Loading Overlay for Synthesis */}
+      {isSynthesizing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="premium-card p-8 flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-purple-500 blur-xl opacity-20 animate-pulse" />
+              <Sparkles className="h-12 w-12 text-purple-400 animate-spin-slow relative z-10" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-white mb-1">Ghostwriter is thinking...</h3>
+              <p className="text-sm text-slate-400">Connecting dots and drafting content</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       {confirmDialog}

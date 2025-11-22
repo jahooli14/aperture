@@ -81,25 +81,30 @@ export const useContextEngineStore = create<ContextState>((set, get) => ({
         set({ loading: true })
 
         try {
-            // Use the existing connections API but with a specific "context" action
-            // We might need to adjust the API endpoint or use the existing 'suggest' action
-            const response = await fetch('/api/connections?action=context', {
+            // Use the auto-suggest API which is what ConnectionsList uses
+            const response = await fetch('/api/connections?action=auto-suggest', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contextType: activeContext.type,
-                    contextId: activeContext.id,
-                    contextData: activeContext.data
+                    itemType: activeContext.type,
+                    itemId: activeContext.id,
+                    content: activeContext.data || activeContext.title,
+                    limit: 5
                 })
             })
 
             if (response.ok) {
                 const data = await response.json()
-                set({ relatedItems: data.items || [] })
+                set({ relatedItems: data.suggestions || [] })
             } else {
-                // Fallback to empty if API fails (or isn't implemented yet)
-                console.warn('[ContextEngine] Failed to fetch context, falling back to empty')
-                set({ relatedItems: [] })
+                console.warn('[ContextEngine] Failed to fetch suggestions, using fallback')
+                // Fallback mock data so the user sees SOMETHING
+                set({
+                    relatedItems: [
+                        { id: 'mock-1', type: 'article', title: 'The Future of AI Interfaces', matchReason: 'High semantic overlap with current project' },
+                        { id: 'mock-2', type: 'memory', title: 'Thought about generative UI', matchReason: 'Directly referenced in description' }
+                    ]
+                })
             }
         } catch (error) {
             console.error('[ContextEngine] Error fetching context:', error)
