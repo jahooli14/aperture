@@ -26,7 +26,66 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST requests
+  // Handle GET requests for listing connections
+  if (req.method === 'GET') {
+    const { action, id, type } = req.query
+
+    if (action === 'list-sparks') {
+      try {
+        // Get connections where this item is either source or target
+        const { data: connections, error } = await supabase
+          .from('connections')
+          .select('*')
+          .or(`and(source_type.eq.${type},source_id.eq.${id}),and(target_type.eq.${type},target_id.eq.${id})`)
+
+        if (error) {
+          console.error('[connections] Error fetching:', error)
+          return res.status(500).json({ error: 'Failed to fetch connections' })
+        }
+
+        // Transform connections to include related item info
+        const enrichedConnections = await Promise.all((connections || []).map(async (conn) => {
+          // Determine which side is the "related" item
+          const isSource = conn.source_type === type && conn.source_id === id
+          const relatedType = isSource ? conn.target_type : conn.source_type
+          const relatedId = isSource ? conn.target_id : conn.source_id
+
+          // Fetch related item details
+          let relatedTitle = 'Unknown'
+          if (relatedType === 'thought') {
+            const { data } = await supabase.from('memories').select('title, body').eq('id', relatedId).single()
+            relatedTitle = data?.title || data?.body?.slice(0, 50) + '...' || 'Untitled'
+          } else if (relatedType === 'project') {
+            const { data } = await supabase.from('projects').select('title').eq('id', relatedId).single()
+            relatedTitle = data?.title || 'Untitled'
+          } else if (relatedType === 'article') {
+            const { data } = await supabase.from('reading_queue').select('title').eq('id', relatedId).single()
+            relatedTitle = data?.title || 'Untitled'
+          }
+
+          return {
+            id: conn.id,
+            related_type: relatedType,
+            related_id: relatedId,
+            related_title: relatedTitle,
+            connection_type: conn.connection_type,
+            created_by: conn.created_by,
+            ai_reasoning: conn.ai_reasoning,
+            created_at: conn.created_at
+          }
+        }))
+
+        return res.status(200).json({ connections: enrichedConnections })
+      } catch (error) {
+        console.error('[connections] Error:', error)
+        return res.status(500).json({ error: 'Failed to list connections' })
+      }
+    }
+
+    return res.status(400).json({ error: 'Invalid action' })
+  }
+
+  // Only allow POST requests for creating connections
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
