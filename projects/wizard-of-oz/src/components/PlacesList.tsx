@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import type { Database } from '../types/database';
 import { AddVisitModal } from './AddVisitModal';
+import { formatDateForDisplay } from '../lib/dateUtils';
 
 type PlaceWithStats = Database['public']['Views']['places_with_stats']['Row'];
 
@@ -87,9 +88,7 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Unknown';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateForDisplay(dateString);
   };
 
   if (loading && placesWithStats.length === 0) {
@@ -139,21 +138,19 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
         <div className="flex gap-2 mb-3">
           <button
             onClick={() => setSortBy('first-visit')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'first-visit'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${sortBy === 'first-visit'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             First Visit
           </button>
           <button
             onClick={() => setSortBy('name')}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              sortBy === 'name'
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${sortBy === 'name'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             By Name
           </button>
@@ -164,11 +161,10 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === null
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${selectedCategory === null
+                ? 'bg-green-100 text-green-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               All Places
             </button>
@@ -176,11 +172,10 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                  selectedCategory === category
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${selectedCategory === category
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 <span>{CATEGORY_ICONS[category] || '📍'}</span>
                 {CATEGORY_LABELS[category] || category}

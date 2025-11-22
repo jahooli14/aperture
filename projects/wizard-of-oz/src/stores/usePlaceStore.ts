@@ -384,7 +384,8 @@ export const usePlaceStore = create<PlaceStore>((set, get) => ({
       const { data, error } = await (supabase as any)
         .from('place_visits')
         .select('*')
-        .eq('user_id', user.id)
+        // Note: Removed .eq('user_id', user.id) to allow fetching shared visits
+        // RLS policies now handle the filtering
         .order('visit_date', { ascending: false });
 
       if (error) {

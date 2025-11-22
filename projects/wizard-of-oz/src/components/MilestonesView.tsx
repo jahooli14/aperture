@@ -5,6 +5,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 import { useMilestoneStore } from '../stores/useMilestoneStore';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { milestones, calculateAgeInWeeks, formatAgeRange, type Milestone } from '../data/milestones';
+import { formatDateForDisplay } from '../lib/dateUtils';
 
 export function MilestonesView() {
   const { settings } = useSettingsStore();
@@ -172,19 +173,17 @@ export function MilestonesView() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         onClick={() => handleMilestoneClick(milestone)}
-        className={`${colors.bg} ${colors.border} border rounded-lg p-4 ${colors.opacity} w-full text-left transition-all hover:shadow-md ${
-          achieved ? 'ring-2 ring-green-500' : ''
-        }`}
+        className={`${colors.bg} ${colors.border} border rounded-lg p-4 ${colors.opacity} w-full text-left transition-all hover:shadow-md ${achieved ? 'ring-2 ring-green-500' : ''
+          }`}
       >
         <div className="flex items-start gap-3">
           {/* Checkbox */}
           <div className="flex-shrink-0 mt-1">
             <div
-              className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
-                achieved
-                  ? 'bg-green-500 border-green-500'
-                  : 'border-gray-300 hover:border-gray-400'
-              }`}
+              className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${achieved
+                ? 'bg-green-500 border-green-500'
+                : 'border-gray-300 hover:border-gray-400'
+                }`}
             >
               {achieved && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
             </div>
@@ -206,7 +205,7 @@ export function MilestonesView() {
               )}
               {achieved && achievement && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                  ✓ Achieved {new Date(achievement.achieved_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  ✓ Achieved {formatDateForDisplay(achievement.achieved_date)}
                 </span>
               )}
             </div>
@@ -286,11 +285,10 @@ export function MilestonesView() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setExpandedCategory('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              expandedCategory === 'all'
-                ? 'bg-primary-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${expandedCategory === 'all'
+              ? 'bg-primary-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             All Milestones
           </button>
@@ -298,11 +296,10 @@ export function MilestonesView() {
             <button
               key={key}
               onClick={() => setExpandedCategory(expandedCategory === key ? null : key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                expandedCategory === key
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${expandedCategory === key
+                ? 'bg-primary-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               {info.label}
             </button>
