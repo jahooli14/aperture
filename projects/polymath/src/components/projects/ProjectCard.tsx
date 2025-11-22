@@ -212,6 +212,11 @@ export const ProjectCard = React.memo(function ProjectCard({
       icon: <Share2 className="h-5 w-5" />,
       onClick: handleShare,
     },
+    {
+      label: project.is_priority ? 'Remove Priority' : 'Set Priority',
+      icon: <Star className="h-5 w-5" fill={project.is_priority ? 'currentColor' : 'none'} />,
+      onClick: (e: any) => handleTogglePriority(e),
+    },
     ...(project.status !== 'completed' ? [{
       label: 'Mark Complete',
       icon: <Archive className="h-5 w-5" />,
@@ -387,371 +392,371 @@ export const ProjectCard = React.memo(function ProjectCard({
             }}
           >
 
-      {/* Compact View - Simplified to match homepage design */}
-        <CardContent className="relative z-10 p-4">
-          {/* Title Row with Actions */}
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <h3 className="font-bold text-lg flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.title}
-            </h3>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {project.is_priority && (
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  color: 'var(--premium-blue)'
-                }}>
-                  ● Priority
-                </span>
-              )}
-              <PinButton
-                type="project"
-                id={project.id}
-                title={project.title}
-                content={
-                  <div className="p-6 pb-32 space-y-6">
-                    {/* Active Tasks Only - Mobile Optimized */}
-                    <div>
-                      <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                        Tasks ({((project.metadata?.tasks || []) as Array<{done: boolean}>).filter(t => t.done).length}/{(project.metadata?.tasks || []).length})
-                      </h4>
-                      <div className="space-y-1.5 overflow-y-auto">
-                        {/* Incomplete tasks only */}
-                        {((project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>)
-                          .filter(t => !t.done)
-                          .sort((a, b) => a.order - b.order)
-                          .map((task, index) => {
-                            const isNextTask = index === 0
-                            return (
-                              <div
-                                key={task.id}
-                                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left"
-                                style={{
-                                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
-                                }}
-                              >
-                                <div
-                                  className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0"
-                                  style={{
-                                    border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                                    color: 'rgba(59, 130, 246, 0.9)'
-                                  }}
-                                />
-                                <span style={{
-                                  color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
-                                  fontWeight: isNextTask ? 600 : 400
-                                }}>
-                                  {task.text}
-                                </span>
+            {/* Compact View - Simplified to match homepage design */}
+            <CardContent className="relative z-10 p-4">
+              {/* Title Row with Actions */}
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h3 className="font-bold text-lg flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                  {project.title}
+                </h3>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {project.is_priority && (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1" style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                      color: 'var(--premium-blue)'
+                    }}>
+                      ● Priority
+                    </span>
+                  )}
+                  <PinButton
+                    type="project"
+                    id={project.id}
+                    title={project.title}
+                    content={
+                      <div className="p-6 pb-32 space-y-6">
+                        {/* Active Tasks Only - Mobile Optimized */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                            Tasks ({((project.metadata?.tasks || []) as Array<{ done: boolean }>).filter(t => t.done).length}/{(project.metadata?.tasks || []).length})
+                          </h4>
+                          <div className="space-y-1.5 overflow-y-auto">
+                            {/* Incomplete tasks only */}
+                            {((project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>)
+                              .filter(t => !t.done)
+                              .sort((a, b) => a.order - b.order)
+                              .map((task, index) => {
+                                const isNextTask = index === 0
+                                return (
+                                  <div
+                                    key={task.id}
+                                    className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left"
+                                    style={{
+                                      background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
+                                    }}
+                                  >
+                                    <div
+                                      className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                                        color: 'rgba(59, 130, 246, 0.9)'
+                                      }}
+                                    />
+                                    <span style={{
+                                      color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                                      fontWeight: isNextTask ? 600 : 400
+                                    }}>
+                                      {task.text}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            {((project.metadata?.tasks || []) as Array<{ done: boolean }>).filter(t => !t.done).length === 0 && (
+                              <div className="text-sm text-center py-4" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                No active tasks
                               </div>
-                            )
-                          })}
-                        {((project.metadata?.tasks || []) as Array<{ done: boolean }>).filter(t => !t.done).length === 0 && (
-                          <div className="text-sm text-center py-4" style={{ color: 'var(--premium-text-tertiary)' }}>
-                            No active tasks
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
+                    }
+                  />
+                  {showActions && onDelete && (
+                    <div className="relative">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowDropdown(!showDropdown)
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-white/10 transition-colors"
+                        style={{ color: 'var(--premium-text-tertiary)' }}
+                        aria-label="Project actions"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+
+                      {/* Dropdown Menu */}
+                      {showDropdown && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setShowDropdown(false)
+                            }}
+                          />
+
+                          <div
+                            className="absolute right-0 top-full mt-1 z-50 rounded-lg overflow-hidden"
+                            style={{
+                              backgroundColor: 'var(--premium-surface-2)',
+                              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                              minWidth: '140px'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setShowDropdown(false)
+                                onClick?.(project.id)
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-white/10"
+                              style={{ color: 'var(--premium-text-primary)' }}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="text-sm font-medium">Edit</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setShowDropdown(false)
+                                onDelete(project.id)
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-red-500/20"
+                              style={{ color: '#ef4444' }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="text-sm font-medium">Delete</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Next Task - Simplified */}
+              {(() => {
+                const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
+                const completedCount = tasks.filter(t => t.done).length
+                const totalCount = tasks.length
+
+                return nextTask ? (
+                  <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{
+                    background: 'var(--premium-bg-3)'
+                  }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-start gap-2.5 flex-1">
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const updatedTasks = tasks.map(t =>
+                            t.id === nextTask.id ? { ...t, done: true } : t
+                          ) as any
+                          try {
+                            await updateProject(project.id, {
+                              metadata: { ...project.metadata, tasks: updatedTasks } as any
+                            })
+                            addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
+                            haptic.success()
+                          } catch (error) {
+                            console.error('Failed to complete task:', error)
+                            addToast({ title: 'Failed to complete task', variant: 'destructive' })
+                          }
+                        }}
+                        className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                        style={{
+                          color: 'rgba(59, 130, 246, 0.9)',
+                          border: '1.5px solid rgba(255, 255, 255, 0.3)'
+                        }}
+                        title="Complete this task"
+                      />
+
+                      <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                        {nextTask.text}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--premium-blue)' }}>
+                      {completedCount}/{totalCount}
+                    </span>
+                  </div>
+                ) : null
+              })()}
+            </CardContent>
+            {/* Removed expanded view - navigate to detail page instead */}
+            {false && (
+              <>
+                <CardHeader className="relative z-10 pb-4">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <CardTitle className="text-2xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
+                      {project.title}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <SuggestionBadge itemId={project.id} itemType="project" />
+                      {showActions && (
+                        <Button
+                          onClick={handleTogglePriority}
+                          variant="ghost"
+                          size="sm"
+                          className="h-11 w-11 p-0 touch-manipulation"
+                          style={{
+                            color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)'
+                          }}
+                          aria-label={project.is_priority ? "Remove priority" : "Set as priority"}
+                          title={project.is_priority ? "Remove priority" : "Set as priority"}
+                        >
+                          <Star
+                            className="h-5 w-5"
+                            fill={project.is_priority ? 'currentColor' : 'none'}
+                          />
+                        </Button>
+                      )}
+                      {showActions && onDelete && (
+                        <Button
+                          onClick={() => onDelete(project.id)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-11 w-11 p-0 touch-manipulation"
+                          style={{ color: 'var(--premium-text-tertiary)' }}
+                          aria-label="Delete project"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
-                }
-              />
-              {showActions && onDelete && (
-                <div className="relative">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowDropdown(!showDropdown)
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 hover:bg-white/10 transition-colors"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                  aria-label="Project actions"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                  {project.description && (
+                    <CardDescription className="line-clamp-3 text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {project.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
 
-                {/* Dropdown Menu */}
-                {showDropdown && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowDropdown(false)
-                      }}
-                    />
+                <CardContent className="relative z-10 flex-1 space-y-4">
+                  {/* Next Step - Prominent Display (first incomplete task) */}
+                  {(() => {
+                    const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
+                    const nextTask = tasks
+                      .sort((a, b) => a.order - b.order)
+                      .find(t => !t.done)
+                    return nextTask && (
+                      <div
+                        className="rounded-xl p-4"
+                        style={{
+                          backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+                        }}
+                      >
+                        <div
+                          className="text-xs font-semibold uppercase tracking-wide mb-2"
+                          style={{ color: 'var(--premium-amber)' }}
+                        >
+                          Next Step
+                        </div>
+                        <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                          {nextTask.text}
+                        </p>
+                      </div>
+                    )
+                  })()}
 
-                    <div
-                      className="absolute right-0 top-full mt-1 z-50 rounded-lg overflow-hidden"
-                      style={{
-                        backgroundColor: 'var(--premium-surface-2)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-                        minWidth: '140px'
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowDropdown(false)
-                          onClick?.(project.id)
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-white/10"
-                        style={{ color: 'var(--premium-text-primary)' }}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="text-sm font-medium">Edit</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowDropdown(false)
-                          onDelete(project.id)
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 transition-colors hover:bg-red-500/20"
-                        style={{ color: '#ef4444' }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="text-sm font-medium">Delete</span>
-                      </button>
+                  {/* Progress Bar - Optional */}
+                  {typeof project.metadata?.progress === 'number' && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-text-secondary)' }}>Progress</span>
+                        <span className="font-bold" style={{ color: 'var(--premium-blue)' }}>{project.metadata.progress}%</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                        <div
+                          className="h-full transition-all duration-500"
+                          style={{
+                            width: `${project.metadata.progress}%`,
+                            background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
+                          }}
+                        />
+                      </div>
                     </div>
-                  </>
-                )}
-              </div>
-              )}
-            </div>
-          </div>
+                  )}
 
-          {/* Next Task - Simplified */}
-          {(() => {
-            const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-            const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
-            const completedCount = tasks.filter(t => t.done).length
-            const totalCount = tasks.length
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    <Clock className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                    <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{relativeTime}</span></span>
+                  </div>
 
-            return nextTask ? (
-              <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{
-                background: 'var(--premium-bg-3)'
-              }}
-              onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-start gap-2.5 flex-1">
-                  <button
-                    onClick={async (e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      const updatedTasks = tasks.map(t =>
-                        t.id === nextTask.id ? { ...t, done: true } : t
-                      ) as any
-                      try {
-                        await updateProject(project.id, {
-                          metadata: { ...project.metadata, tasks: updatedTasks } as any
-                        })
-                        addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
-                        haptic.success()
-                      } catch (error) {
-                        console.error('Failed to complete task:', error)
-                        addToast({ title: 'Failed to complete task', variant: 'destructive' })
-                      }
-                    }}
-                    className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
-                    style={{
-                      color: 'rgba(59, 130, 246, 0.9)',
-                      border: '1.5px solid rgba(255, 255, 255, 0.3)'
-                    }}
-                    title="Complete this task"
-                  />
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="px-4 py-2 rounded-xl flex-1"
+                      style={statusConfig[project.status].bgStyle}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="px-3 py-1 rounded-md text-xs font-medium"
+                          style={statusConfig[project.status].style}
+                        >
+                          {statusConfig[project.status].label}
+                        </div>
+                      </div>
+                    </div>
 
-                  <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
-                    {nextTask.text}
-                  </p>
-                </div>
-                <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--premium-blue)' }}>
-                  {completedCount}/{totalCount}
-                </span>
-              </div>
-            ) : null
-          })()}
-        </CardContent>
-      {/* Removed expanded view - navigate to detail page instead */}
-      {false && (
-        <>
-          <CardHeader className="relative z-10 pb-4">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <CardTitle className="text-2xl font-bold flex-1" style={{ color: 'var(--premium-text-primary)' }}>
-                {project.title}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <SuggestionBadge itemId={project.id} itemType="project" />
-                {showActions && (
-                  <Button
-                    onClick={handleTogglePriority}
-                    variant="ghost"
-                    size="sm"
-                    className="h-11 w-11 p-0 touch-manipulation"
-                    style={{
-                      color: project.is_priority ? 'var(--premium-amber)' : 'var(--premium-text-tertiary)'
-                    }}
-                    aria-label={project.is_priority ? "Remove priority" : "Set as priority"}
-                    title={project.is_priority ? "Remove priority" : "Set as priority"}
-                  >
-                    <Star
-                      className="h-5 w-5"
-                      fill={project.is_priority ? 'currentColor' : 'none'}
-                    />
-                  </Button>
-                )}
-                {showActions && onDelete && (
-                  <Button
-                    onClick={() => onDelete(project.id)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-11 w-11 p-0 touch-manipulation"
-                    style={{ color: 'var(--premium-text-tertiary)' }}
-                    aria-label="Delete project"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            {project.description && (
-              <CardDescription className="line-clamp-3 text-base leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                {project.description}
-              </CardDescription>
-            )}
-          </CardHeader>
-
-          <CardContent className="relative z-10 flex-1 space-y-4">
-        {/* Next Step - Prominent Display (first incomplete task) */}
-        {(() => {
-          const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
-          const nextTask = tasks
-            .sort((a, b) => a.order - b.order)
-            .find(t => !t.done)
-          return nextTask && (
-            <div
-              className="rounded-xl p-4"
-              style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
-              }}
-            >
-              <div
-                className="text-xs font-semibold uppercase tracking-wide mb-2"
-                style={{ color: 'var(--premium-amber)' }}
-              >
-                Next Step
-              </div>
-              <p className="text-sm font-medium leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                {nextTask.text}
-              </p>
-            </div>
-          )
-        })()}
-
-        {/* Progress Bar - Optional */}
-        {typeof project.metadata?.progress === 'number' && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-text-secondary)' }}>Progress</span>
-              <span className="font-bold" style={{ color: 'var(--premium-blue)' }}>{project.metadata.progress}%</span>
-            </div>
-            <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-              <div
-                className="h-full transition-all duration-500"
-                style={{
-                  width: `${project.metadata.progress}%`,
-                  background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-indigo))'
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-          <Clock className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-          <span title={new Date(project.last_active).toLocaleString()}>Last active <span className="font-semibold" style={{ color: 'var(--premium-text-primary)' }}>{relativeTime}</span></span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div
-            className="px-4 py-2 rounded-xl flex-1"
-            style={statusConfig[project.status].bgStyle}
-          >
-            <div className="flex items-center gap-2">
-              <div
-                className="px-3 py-1 rounded-md text-xs font-medium"
-                style={statusConfig[project.status].style}
-              >
-                {statusConfig[project.status].label}
-              </div>
-            </div>
-          </div>
-
-          {/* Connection Badge */}
-          {connectionCount > 0 && (
-            <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2" style={{
-              background: 'var(--premium-bg-3)',
-              backdropFilter: 'blur(12px)',
-              color: 'var(--premium-blue)'
-            }}>
-              <Link2 className="h-3.5 w-3.5" />
-              <span className="font-bold">{connectionCount}</span>
-            </div>
-          )}
-        </div>
-
-        {project.metadata?.tags && project.metadata.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {project.metadata.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 rounded-md text-xs font-medium"
-                style={{
-                  background: 'var(--premium-bg-3)',
-                  backdropFilter: 'blur(12px)',
-                  color: 'var(--premium-blue)'
-                }}
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {project.metadata?.energy_level && (
-          <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
-            <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Energy:</span>
-            <span
-              className="px-3 py-1 rounded-md text-xs font-medium"
-              style={
-                project.metadata.energy_level === 'high'
-                  ? {
-                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      color: '#ef4444'
-                    }
-                  : project.metadata.energy_level === 'low'
-                    ? {
-                        backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                    {/* Connection Badge */}
+                    {connectionCount > 0 && (
+                      <div className="px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-2" style={{
+                        background: 'var(--premium-bg-3)',
+                        backdropFilter: 'blur(12px)',
                         color: 'var(--premium-blue)'
-                      }
-                    : {
-                        backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                        color: 'var(--premium-amber)'
-                      }
-              }
-            >
-              {project.metadata.energy_level}
-            </span>
-          </div>
-        )}
-          </CardContent>
-        </>
-      )}
-    </Card>
+                      }}>
+                        <Link2 className="h-3.5 w-3.5" />
+                        <span className="font-bold">{connectionCount}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {project.metadata?.tags && project.metadata.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {project.metadata.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-3 py-1 rounded-md text-xs font-medium"
+                          style={{
+                            background: 'var(--premium-bg-3)',
+                            backdropFilter: 'blur(12px)',
+                            color: 'var(--premium-blue)'
+                          }}
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {project.metadata?.energy_level && (
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" style={{ color: 'var(--premium-amber)' }} />
+                      <span className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Energy:</span>
+                      <span
+                        className="px-3 py-1 rounded-md text-xs font-medium"
+                        style={
+                          project.metadata.energy_level === 'high'
+                            ? {
+                              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                              color: '#ef4444'
+                            }
+                            : project.metadata.energy_level === 'low'
+                              ? {
+                                backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                                color: 'var(--premium-blue)'
+                              }
+                              : {
+                                backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                                color: 'var(--premium-amber)'
+                              }
+                        }
+                      >
+                        {project.metadata.energy_level}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </>
+            )}
+          </Card>
         </motion.div>
       </motion.div>
     </>

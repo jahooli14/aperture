@@ -41,6 +41,8 @@ const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ defaul
 const KnowledgeMapPage = lazy(() => import('./pages/KnowledgeMapPage').then(m => ({ default: m.KnowledgeMapPage })))
 
 // Loading fallback component with skeleton
+import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
+
 function PageLoader() {
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
@@ -166,51 +168,51 @@ export default function App() {
       <AutoSuggestionProvider>
         <ToastProvider>
           <Router>
-          <ScrollToTop />
-          <div className="min-h-screen flex flex-col">
-            <OfflineIndicator />
-            <PWAInstallBanner />
+            <ScrollToTop />
+            <div className="min-h-screen flex flex-col">
+              <OfflineIndicator />
+              <PWAInstallBanner />
 
-          {/* Safe area spacer for mobile status bar */}
-          <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
+              {/* Safe area spacer for mobile status bar */}
+              <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
 
-          <main className="flex-1">
-            <ErrorBoundary>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/onboarding" element={<OnboardingPage />} />
-                  <Route path="/memories" element={<MemoriesPage />} />
-                  <Route path="/reading" element={<ReadingPage />} />
-                  <Route path="/reading/:id" element={<ReaderPage />} />
-                  <Route path="/suggestions" element={<SuggestionsPage />} />
-                  <Route path="/projects" element={<ProjectsPage />} />
-                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                  <Route path="/timeline" element={<TimelinePage />} />
-                  <Route path="/knowledge-timeline" element={<KnowledgeTimelinePage />} />
-                  <Route path="/insights" element={<InsightsPage />} />
-                  <Route path="/constellation" element={<ConstellationView />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/rss" element={<RSSFeedsPage />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/bedtime" element={<BedtimePage />} />
-                  <Route path="/map" element={<KnowledgeMapPage />} />
-                </Routes>
-              </Suspense>
-            </ErrorBoundary>
-          </main>
+              <main className="flex-1">
+                <ErrorBoundary>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/" element={<HomePage />} />
+                      <Route path="/onboarding" element={<OnboardingPage />} />
+                      <Route path="/memories" element={<MemoriesPage />} />
+                      <Route path="/reading" element={<ReadingPage />} />
+                      <Route path="/reading/:id" element={<ReaderPage />} />
+                      <Route path="/suggestions" element={<SuggestionsPage />} />
+                      <Route path="/projects" element={<ProjectsPage />} />
+                      <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                      <Route path="/timeline" element={<TimelinePage />} />
+                      <Route path="/knowledge-timeline" element={<KnowledgeTimelinePage />} />
+                      <Route path="/insights" element={<InsightsPage />} />
+                      <Route path="/constellation" element={<ConstellationView />} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/rss" element={<RSSFeedsPage />} />
+                      <Route path="/search" element={<SearchPage />} />
+                      <Route path="/bedtime" element={<BedtimePage />} />
+                      <Route path="/map" element={<KnowledgeMapPage />} />
+                    </Routes>
+                  </Suspense>
+                </ErrorBoundary>
+              </main>
 
-          {/* Floating Navigation */}
-          <FloatingNav />
+              {/* Floating Navigation */}
+              <FloatingNav />
 
-          {/* Pin Overlay - Split Screen */}
-          <PinOverlay />
+              {/* Pin Overlay - Split Screen */}
+              <PinOverlay />
 
-          {/* Debug Panel - Shows console logs on screen */}
-          <DebugPanel />
-        </div>
-        </Router>
-      </ToastProvider>
+              {/* Debug Panel - Shows console logs on screen */}
+              <DebugPanel />
+            </div>
+          </Router>
+        </ToastProvider>
       </AutoSuggestionProvider>
     </PinProvider>
   )
