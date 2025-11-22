@@ -174,8 +174,8 @@ export const ProjectCard = React.memo(function ProjectCard({
     }
   }
 
-  const handleTogglePriority = async (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click
+  const handleTogglePriority = async (e?: React.MouseEvent) => {
+    e?.stopPropagation() // Prevent card click
 
     try {
       await setPriority(project.id)
@@ -215,7 +215,7 @@ export const ProjectCard = React.memo(function ProjectCard({
     {
       label: project.is_priority ? 'Remove Priority' : 'Set Priority',
       icon: <Star className="h-5 w-5" fill={project.is_priority ? 'currentColor' : 'none'} />,
-      onClick: (e: any) => handleTogglePriority(e),
+      onClick: () => handleTogglePriority(),
     },
     ...(project.status !== 'completed' ? [{
       label: 'Mark Complete',
