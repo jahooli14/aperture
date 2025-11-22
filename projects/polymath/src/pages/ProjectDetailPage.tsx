@@ -400,106 +400,106 @@ export function ProjectDetailPage() {
     if (!project) return null
 
     return (
-    <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
-      {/* Active Tasks Only - Mobile Optimized */}
-      <div>
-        <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
-        </h4>
-        <div className="space-y-1.5 overflow-y-auto">
-          {/* Incomplete tasks only */}
-          {tasks.filter(t => !t.done).map((task, index) => {
-            const isNextTask = index === 0
-            return (
-              <div
-                key={task.id}
-                draggable
-                onDragStart={() => handlePinnedDragStart(task.id)}
-                onDragOver={(e) => handlePinnedDragOver(e, task.id)}
-                onDragEnd={handlePinnedDragEnd}
-                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
+      <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
+        {/* Active Tasks Only - Mobile Optimized */}
+        <div>
+          <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+            Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
+          </h4>
+          <div className="space-y-1.5 overflow-y-auto">
+            {/* Incomplete tasks only */}
+            {tasks.filter(t => !t.done).map((task, index) => {
+              const isNextTask = index === 0
+              return (
+                <div
+                  key={task.id}
+                  draggable
+                  onDragStart={() => handlePinnedDragStart(task.id)}
+                  onDragOver={(e) => handlePinnedDragOver(e, task.id)}
+                  onDragEnd={handlePinnedDragEnd}
+                  className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
+                  style={{
+                    opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
+                    background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
+                  }}
+                >
+                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <GripVertical className="h-3 w-3" />
+                  </div>
+                  <button
+                    onClick={() => togglePinnedTask(task.id)}
+                    className="flex items-center gap-2 flex-1"
+                  >
+                    <div
+                      className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
+                      style={{
+                        border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                        color: 'rgba(59, 130, 246, 0.9)'
+                      }}
+                    >
+                    </div>
+                    <span style={{
+                      color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                      fontWeight: isNextTask ? 600 : 400
+                    }}>
+                      {task.text}
+                    </span>
+                  </button>
+                </div>
+              )
+            })}
+
+            {/* Add task row with + button */}
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                ref={pinnedTaskInputRef}
+                type="text"
+                placeholder="Add a task..."
+                value={newPinnedTaskText}
+                onChange={(e) => {
+                  console.log('[Pinned Input] onChange:', e.target.value)
+                  setNewPinnedTaskText(e.target.value)
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  pinnedTaskInputRef.current?.focus()
+                }}
+                onFocus={handleInputFocus}
+                onKeyDown={(e) => {
+                  console.log('[Pinned Input] onKeyDown:', e.key)
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addPinnedTask()
+                  }
+                }}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
                 style={{
-                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
-                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
+                  color: 'var(--premium-text-primary)'
+                }}
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  console.log('[Add Button] Clicked')
+                  addPinnedTask()
+                }}
+                disabled={!newPinnedTaskText.trim()}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+                style={{
+                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                  color: 'white'
                 }}
               >
-                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  <GripVertical className="h-3 w-3" />
-                </div>
-                <button
-                  onClick={() => togglePinnedTask(task.id)}
-                  className="flex items-center gap-2 flex-1"
-                >
-                  <div
-                    className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
-                    style={{
-                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                      color: 'rgba(59, 130, 246, 0.9)'
-                    }}
-                  >
-                  </div>
-                  <span style={{
-                    color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
-                    fontWeight: isNextTask ? 600 : 400
-                  }}>
-                    {task.text}
-                  </span>
-                </button>
-              </div>
-            )
-          })}
-
-          {/* Add task row with + button */}
-          <div className="flex items-center gap-2 mt-2">
-            <input
-              ref={pinnedTaskInputRef}
-              type="text"
-              placeholder="Add a task..."
-              value={newPinnedTaskText}
-              onChange={(e) => {
-                console.log('[Pinned Input] onChange:', e.target.value)
-                setNewPinnedTaskText(e.target.value)
-              }}
-              onClick={(e) => {
-                e.stopPropagation()
-                pinnedTaskInputRef.current?.focus()
-              }}
-              onFocus={handleInputFocus}
-              onKeyDown={(e) => {
-                console.log('[Pinned Input] onKeyDown:', e.key)
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addPinnedTask()
-                }
-              }}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
-              style={{
-                color: 'var(--premium-text-primary)'
-              }}
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                console.log('[Add Button] Clicked')
-                addPinnedTask()
-              }}
-              disabled={!newPinnedTaskText.trim()}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                color: 'white'
-              }}
-            >
-              Add
-            </button>
+                Add
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     )
   }, [tasks.length, project?.status, progress, togglePinnedTask, addPinnedTask, project, handlePinnedDragStart, handlePinnedDragOver, handlePinnedDragEnd, draggedPinnedTaskId])
 
@@ -720,6 +720,43 @@ export function ProjectDetailPage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Motivation - The "So What" */}
+        {project.metadata?.motivation && (
+          <div className="premium-card p-4 border-l-4 border-blue-500">
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
+              Motivation
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+              {project.metadata.motivation}
+            </p>
+          </div>
+        )}
+
+        {/* AI Strategy - The "So What" */}
+        <div className="premium-card p-6 relative overflow-hidden">
+          <div className="flex items-start gap-4 relative z-10">
+            <div className="p-3 rounded-lg bg-purple-500/20">
+              <Target className="h-6 w-6 text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">AI Strategic Analysis</h3>
+              <p className="text-purple-200/80 text-sm leading-relaxed mb-3">
+                Based on your recent thoughts about <span className="text-white font-medium">{project.title}</span>, this project is high impact.
+              </p>
+              <div className="flex gap-2">
+                <div className="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200">
+                  High Momentum
+                </div>
+                <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                  Strong Alignment
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
         </div>
 
         {/* Task Checklist */}

@@ -553,7 +553,7 @@ function cleanMarkdownContent(markdown: string): string {
     if (
       line.length > 100 &&
       (/\b(editor|journalist|author|writer|contributor|reporter)\b/i.test(line) &&
-       /\b(is an?|has been|known for)\b/i.test(line))
+        /\b(is an?|has been|known for)\b/i.test(line))
     ) {
       continue
     }
@@ -1529,6 +1529,93 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
     } catch (error) {
       return res.status(500).json({ error: 'Failed to update article' })
+    }
+  }
+
+  // ANALYZE RESOURCE - Extract entities/themes from article
+  if (resource === 'analyze' && req.method === 'POST') {
+    try {
+      const articleId = id
+      if (!articleId) {
+        return res.status(400).json({ error: 'Article ID required' })
+      }
+
+      const { data: article, error: fetchError } = await supabase
+        .from('reading_queue')
+        .select('*')
+        .eq('id', articleId)
+        .single()
+
+      if (fetchError || !article) {
+        throw new Error('Article not found')
+      }
+
+      // Use Gemini to extract entities/themes
+      // We use the same model config as memories for consistency
+      const { GoogleGenerativeAI } = await import('@google/generative-ai')
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+
+      const prompt = `Analyze this article and extract key information.
+
+Title: ${article.title}
+Content: ${article.content.substring(0, 10000)} // First 10k chars
+
+Extract:
+{
+  "entities": {
+    "people": ["names"],
+    "topics": ["specific technologies, concepts, or subjects discussed"],
+    "organizations": ["companies, institutions mentioned"]
+  },
+  "themes": ["high-level themes - max 3"],
+  "key_insights": ["2-3 key takeaways"]
+}
+
+Return ONLY the JSON, no other text.`
+
+      const result = await model.generateContent(prompt)
+      const text = result.response.text()
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0])
+
+        // Update article with analysis
+        const { error: updateError } = await supabase
+          .from('reading_queue')
+          .update({
+            entities: analysis.entities,
+            themes: analysis.themes,
+            metadata: {
+              ...article.metadata,
+              key_insights: analysis.key_insights,
+              analyzed_at: new Date().toISOString()
+            },
+            processed: true
+          })
+          .eq('id', articleId)
+
+        if (updateError) throw updateError
+
+        // Also trigger embedding generation if not already done
+        if (!article.embedding) {
+          // Fire and forget
+          generateArticleEmbeddingAndConnect(articleId, article.title, article.excerpt, userId)
+            .catch(err => console.error('Background embedding failed:', err))
+        }
+
+        return res.status(200).json({ success: true, analysis })
+      }
+
+      throw new Error('Failed to generate analysis JSON')
+
+    } catch (error) {
+      console.error('[article analyze] Error:', error)
+      return res.status(500).json({
+        error: 'Analysis failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 

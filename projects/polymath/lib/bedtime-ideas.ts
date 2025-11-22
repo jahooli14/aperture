@@ -400,6 +400,13 @@ async function generatePromptsWithAI(
     themes: m.themes?.slice(0, 3) || []
   }))
 
+  const projectContext = activeProjects.length > 0
+    ? activeProjects.map(p => {
+      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : '';
+      return `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}${motivation}`;
+    }).join('\n')
+    : 'No projects yet';
+
   const prompt = `You are a hypnagogic thought catalyst. Generate 3-5 prompts for the pre-sleep state when the brain excels at pattern recognition and creative synthesis.
 
 **HYPNAGOGIC STATE POWERS:**
@@ -413,8 +420,8 @@ ${topArticles.length > 0 ? topArticles.map(a => `- "${a.title}" [${a.tags.join('
 **Recent Thoughts (top 8 of last 7 days):**
 ${topMemories.length > 0 ? topMemories.map(m => `- "${m.title}" [${m.themes.join(', ')}]\n  ${m.body}`).join('\n\n') : 'No recent thoughts'}
 
-**Projects:**
-${activeProjects.length > 0 ? activeProjects.map(p => `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}`).join('\n') : 'No projects yet'}
+**Projects (Outputs):**
+${projectContext}
 
 **Detected Connections:**
 ${connections.length > 0 ? connections.map(c => `- ${c}`).join('\n') : 'No obvious connections yet'}
@@ -429,6 +436,7 @@ ${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : '
 2. **divergent** - Unlock new angles via pattern disruption
 3. **revisit** - Resurface dormant insights for current relevance
 4. **transform** - Personal growth through pattern synthesis
+5. **strategic_insight** - Connect a project's deep MOTIVATION with a recent thought/article
 
 **PROMPT FORMATS:**
 1. **question** - Create productive cognitive tension (open loops for sleeping mind to resolve)
@@ -437,120 +445,41 @@ ${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : '
 4. **scenario** - Dreamlike what-if exploration (non-linear, symbolic, archetypal)
 5. **incubation** - Dream seeding structure: brief seed + sensory anchor + permission to release
 
-Use a MIX of formats (not all questions). Favor visualization and incubation for deepest subconscious penetration. Match format to content depth.
-
-**CRAFTING RULES:**
-
-MUST DO:
-✅ Reference SPECIFIC titles, projects, or themes from their actual knowledge
-✅ Create OPEN LOOPS (unresolved cognitive tension the sleeping brain MUST process)
-✅ Connect 2+ pieces in unexpected ways using archetypal/mythological metaphors
-✅ Bridge time with fluidity: "The answer tomorrow needs the question tonight"
-✅ Use PRESENT PROGRESSIVE tense ("is forming", "is connecting", "is emerging")
-✅ Include SENSORY details (visual, kinesthetic, auditory, spatial)
-✅ Embed PERMISSION for unconscious processing ("Your dreaming mind already knows...")
-✅ Use GENTLE REPETITION for trance induction where natural
-✅ End with paradoxical permission to forget/let go
-
-NEVER DO:
-❌ Generic prompts with no specific references
-❌ Direct action items ("Go do X") or simple yes/no questions
-❌ Abstract philosophy disconnected from their knowledge
-❌ Purely rational/waking-brain logic
-❌ Questions requiring facts/data lookup
+**CRAFTING RULES (CRITICAL):**
+- **NO FORMULAIC COMBINATIONS**: Do NOT just say "Combine Project X and Article Y". That is boring.
+- **FOCUS ON THE "WHY"**: Use the project MOTIVATION. If they want to "build a legacy", connect *that* desire to a recent article about "long-term thinking", not just the project title.
+- **USE METAPHOR**: Instead of "combine", use words like "weaving", "echoing", "colliding", "fertilizing".
+- **BE SPECIFIC**: Reference actual details from the summaries/bodies, not just titles.
 
 **HYPNAGOGIC LANGUAGE PATTERNS:**
+1. **OPEN LOOPS**: "There's a hidden bridge between X and Y that only appears when you stop looking..."
+2. **TEMPORAL FLUIDITY**: "The answer tomorrow needs the question tonight..."
+3. **SENSORY ANCHORS**: "Picture [concept] as a shape... Feel its weight..."
+4. **PERMISSION**: "You don't need to solve this now... Your dreaming mind knows what to do."
 
-Use these techniques to make prompts "take over" the sleeping mind:
-
-1. **OPEN LOOPS (Zeigarnik Effect)**: Create unresolved tension
-   - "There's a hidden bridge between X and Y that only appears when you stop looking..."
-   - "Your mind has been quietly connecting X across 15 thoughts. Tonight it completes the pattern..."
-
-2. **EMBEDDED COMMANDS**: Weave suggestions into structure
-   - "As you drift into sleep, notice how..."
-   - "Your sleeping mind will show you..."
-   - "By morning, this will feel obvious..."
-
-3. **TEMPORAL FLUIDITY**: Mirror dream logic with non-linear time
-   - "The insight you'll have tomorrow is already forming..."
-   - "Past and future are meeting tonight in your dreams..."
-
-4. **SENSORY ANCHORS**: Multi-sensory activation
-   - "Picture [concept] as a shape... Feel its weight... Hear its rhythm..."
-   - "Imagine walking through a space where every object is one of your thoughts..."
-
-5. **ARCHETYPAL FRAMES**: Tap Jungian universals
-   - The Journey, The Threshold, The Hidden Treasure, The Guide, The Shadow, The Return
-   - "The Guardian protecting [project] is actually showing you what [theme] needs..."
-
-6. **PERMISSION STRUCTURES**: Give unconscious permission
-   - "You don't need to solve this now..."
-   - "Let go of trying to understand..."
-   - "Your body knows what to do with this while you sleep..."
-
-7. **QUANTUM THINKING**: Embrace dream logic paradox
-   - "X and Y were always the same thing. You just couldn't see it while awake..."
-   - "The answer exists in the space between [A] and [B]..."
-
-**EXCELLENT EXAMPLES (By Format):**
-
-**Questions** (open loops with embedded commands):
-✅ "There's a hidden bridge between '${topMemories[0]?.title || '[memory]'}' and '${topArticles[0]?.title || '[article]'}' that only appears when you stop looking for it. As you drift into sleep tonight, notice when the connection reveals itself..."
-✅ "What if '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}' went dormant because it's been waiting for you to understand ${consequentialThemes[0] || '[theme]'} first? Your sleeping mind already knows the answer..."
-
-**Statements** (present progressive with permission):
-✅ "Right now, as you read this, a pattern is forming between '${topArticles[0]?.title || '[article]'}' and '${topMemories[0]?.title || '[memory]'}'. It's becoming a project. You don't need to force it—by morning, it will feel obvious."
-✅ "The reason '${activeProjects.find(p => p.status === 'dormant')?.title || '[project]'}' went dormant is the same reason '${activeProjects[0]?.title || '[current project]'}' exists. Past and future are meeting tonight. Let them merge."
-
-**Visualizations** (multi-sensory with archetypal frames):
-✅ "Picture ${consequentialThemes[0] || '[theme]'} as a golden thread. Feel it weaving through your thought '${topMemories[0]?.title || '[memory]'}', pulling tight around '${topArticles[0]?.title || '[article]'}', then leading toward '${activeProjects[0]?.title || '[project]'}'. As you fall asleep, follow where the thread is pulling you. Your hands already know the way."
-✅ "Imagine '${activeProjects[0]?.title || '[project]'}' as a threshold you've been approaching. Your insight '${oldInsights[0]?.title || '[old insight]'}' is the guardian showing you it's safe to cross. Step through tonight. You don't need to remember this—your dreaming self will walk through anyway."
-
-**Scenarios** (dreamlike, temporal fluidity):
-✅ "In the dream you're about to have, you've already completed '${activeProjects[0]?.title || '[project]'}'. Look back from that future and see how '${topMemories[0]?.title || '[memory]'}' was always pointing the way. When you wake, you'll remember the path."
-✅ "Tomorrow morning, you'll have clarity on ${consequentialThemes[0] || '[theme]'}. That future-you is already whispering back through '${topArticles[0]?.title || '[article]'}'. Tonight, in the space between waking and sleep, listen."
-
-**Incubation** (dream seeding: seed + anchor + release):
-✅ "Tonight your mind will work on: How does '${topMemories[0]?.title || '[memory]'}' unlock '${activeProjects[0]?.title || '[project]'}'? Picture it as a locked box that opens by itself. You don't need to remember this question—your dreams will answer it anyway. By morning, it will feel like you always knew."
-✅ "Seed for tonight: '${topArticles[0]?.title || '[article]'}' and '${consequentialThemes[0] || '[theme]'}' are two parts of the same thing. Visualize them as puzzle pieces slowly rotating. Let go. Your sleeping mind will click them together."
+**EXCELLENT EXAMPLES:**
+✅ "You wrote that you want to '${activeProjects[0]?.metadata?.motivation || 'change the world'}' with '${activeProjects[0]?.title || 'Project A'}'. That feeling is the same shape as the idea in '${topArticles[0]?.title || 'Article B'}'. Tonight, let them overlap."
+✅ "The reason '${activeProjects.find(p => p.status === 'dormant')?.title || 'Project X'}' is stuck isn't technical. It's waiting for the insight you had in '${topMemories[0]?.title || 'Memory Y'}'. As you sleep, watch the blockage dissolve."
 
 **CONTEXT SIGNALS:**
 ${context.hasNoProjects && context.hasRichInput ? '→ Rich input, no projects: Suggest CONNECTION prompts showing project possibilities' : ''}
 ${context.hasBlockedProjects ? '→ Blocked projects: Try REVISIT prompts using old insights to unlock' : ''}
-${consequentialThemes.length > 0 ? `→ Recurring themes detected: TRANSFORM prompts on "${consequentialThemes.slice(0, 2).join('", "')}"` : ''}
-${connections.length > 0 ? `→ Connections found: Leverage these in CONNECTION prompts` : ''}
-${activeProjects.filter(p => p.status === 'dormant').length > 0 ? `→ ${activeProjects.filter(p => p.status === 'dormant').length} dormant projects: DIVERGENT prompts for fresh angles` : ''}
 
-${performance ? `**WHAT WORKS FOR THIS USER (Past Performance):**
-${performance.totalRated >= 5 ? `
-- Best prompt type: "${performance.bestType}" (avg rating: ${performance.typeStats[performance.bestType]?.avgRating.toFixed(1)}/5)
-- Best format: "${performance.bestFormat}" (avg rating: ${performance.formatStats[performance.bestFormat]?.avgRating.toFixed(1)}/5)
-- Overall breakthrough rate: ${(performance.breakthroughRate * 100).toFixed(0)}%
-- Favor "${performance.bestType}" type and "${performance.bestFormat}" format in your generation
-${Object.entries(performance.typeStats).map(([type, stats]: [string, any]) =>
-  `- ${type}: ${stats.avgRating.toFixed(1)}/5 avg, ${(stats.breakthroughRate * 100).toFixed(0)}% breakthroughs`
-).join('\n')}` : '→ Not enough feedback yet (less than 5 ratings). Use balanced mix of all types.'}
+${performance ? `**WHAT WORKS FOR THIS USER:**
+- Best type: "${performance.bestType}"
+- Best format: "${performance.bestFormat}"
 ` : ''}
 
 Return ONLY valid JSON:
 [
   {
-    "prompt": "Full prompt text with hypnagogic language patterns, embedded commands, sensory details, using actual titles/names from their knowledge. Apply techniques: open loops, present progressive tense, temporal fluidity, permission structures, archetypal frames.",
-    "type": "connection|divergent|revisit|transform",
+    "prompt": "Full prompt text...",
+    "type": "connection|divergent|revisit|transform|strategic_insight",
     "relatedIds": ["IDs of items referenced"],
-    "metaphor": "Optional 1-sentence poetic/archetypal framing (only if genuinely enhancing depth)",
+    "metaphor": "Optional 1-sentence poetic framing",
     "format": "question|statement|visualization|scenario|incubation"
   }
-]
-
-CRITICAL:
-- Use actual titles, project names, and themes. Generic = failure.
-- Apply MULTIPLE hypnagogic language techniques per prompt
-- End prompts with permission to let go/forget
-- Include sensory and temporal elements
-- Create unresolved cognitive tension (open loops)
-- Favor visualization and incubation formats for depth`
+]`
 
   const result = await model.generateContent(prompt)
   const text = result.response.text()

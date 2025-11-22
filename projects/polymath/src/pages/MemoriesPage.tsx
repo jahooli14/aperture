@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -356,408 +357,442 @@ export function MemoriesPage() {
 
   return (
     <>
-        {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
-        }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-            <div className="flex items-center" style={{
-              color: 'var(--premium-blue)',
-              opacity: 0.7
-            }}>
-              <Brain className="h-7 w-7" />
-            </div>
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)'
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          <div className="flex items-center" style={{
+            color: 'var(--premium-blue)',
+            opacity: 0.7
+          }}>
+            <Brain className="h-7 w-7" />
+          </div>
 
-            {/* View Toggle */}
-            <PremiumTabs
-              tabs={[
-                {
-                  id: 'foundational',
-                  label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
-                },
-                { id: 'all', label: `All (${memories.length})` },
-                { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
-              ]}
-              activeTab={view}
-              onChange={(tabId) => setView(tabId as typeof view)}
-              className="flex-nowrap"
-            />
+          {/* View Toggle */}
+          <PremiumTabs
+            tabs={[
+              {
+                id: 'foundational',
+                label: `Core${progress ? ` (${progress.completed_required}/${progress.total_required})` : ''}`,
+              },
+              { id: 'all', label: `All (${memories.length})` },
+              { id: 'resurfacing', label: `Resurface (${resurfacing.length})` },
+            ]}
+            activeTab={view}
+            onChange={(tabId) => setView(tabId as typeof view)}
+            className="flex-nowrap"
+          />
 
-            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-              {view === 'all' && <CreateMemoryDialog />}
-              <button
-                onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{
-                  color: 'var(--premium-blue)'
-                }}
-                title="Search everything"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+            {view === 'all' && <CreateMemoryDialog />}
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{
+                color: 'var(--premium-blue)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
           </div>
         </div>
+      </div>
 
-        <div className="pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
-        {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-          <Card className="mb-8" style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="pt-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                Demo Thoughts - Cross-Domain Examples
-              </h3>
-              <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
-                Notice how they span <strong>technical skills AND hobbies</strong> - this is the key to powerful synthesis.
-              </p>
-              <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                💡 <strong>Tip:</strong> Real-world usage works best with 5-10 thoughts covering both your professional expertise and personal interests.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {/* Knowledge Pulse - "So What" Context */}
+          {view === 'all' && memories.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 p-6 rounded-xl relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="p-3 rounded-lg bg-blue-500/20">
+                  <Zap className="h-6 w-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">Knowledge Pulse</h3>
+                  <p className="text-blue-200/80 leading-relaxed">
+                    Your <span className="text-white font-semibold">{memories.length} thoughts</span> are fueling your personal knowledge engine.
+                    {clusters.length > 0 && (
+                      <>
+                        {' '}They have strengthened <span className="text-white font-semibold">{clusters.length} key themes</span> including
+                        {' '}<span className="text-blue-300 italic">{clusters.slice(0, 2).map(c => c.name).join(', ')}</span>.
+                      </>
+                    )}
+                    {' '}Keep capturing to reveal hidden connections.
+                  </p>
+                </div>
+              </div>
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+            </motion.div>
+          )}
 
-        {/* Resurfacing Info Banner */}
-        {view === 'resurfacing' && resurfacing.length > 0 && (
-          <Card className="mb-8" style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="pt-6">
-              <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                Up for review
-              </h3>
-              <p className="leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                These thoughts are ready for review based on spaced repetition.
-                Reviewing strengthens your memory and extends the next review interval.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
+          {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
+            <Card className="mb-8" style={{
+              background: 'var(--premium-bg-2)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                  <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                  Demo Thoughts - Cross-Domain Examples
+                </h3>
+                <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                  These 8 thoughts demonstrate <strong>diverse interests</strong>: React development, woodworking, parenting, photography, ML, meditation, cooking, and design.
+                  Notice how they span <strong>technical skills AND hobbies</strong> - this is the key to powerful synthesis.
+                </p>
+                <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  💡 <strong>Tip:</strong> Real-world usage works best with 5-10 thoughts covering both your professional expertise and personal interests.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Error Banner */}
-        {error && (
-          <Card className="mb-6 border-red-300 bg-red-50">
-            <CardContent className="pt-6">
-              <p className="text-sm text-red-600">{error}</p>
-            </CardContent>
-          </Card>
-        )}
+          {/* Resurfacing Info Banner */}
+          {view === 'resurfacing' && resurfacing.length > 0 && (
+            <Card className="mb-8" style={{
+              background: 'var(--premium-bg-2)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                  Up for review
+                </h3>
+                <p className="leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+                  These thoughts are ready for review based on spaced repetition.
+                  Reviewing strengthens your memory and extends the next review interval.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Foundational Tab */}
-        {view === 'foundational' && <FoundationalPrompts />}
+          {/* Error Banner */}
+          {error && (
+            <Card className="mb-6 border-red-300 bg-red-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-red-600">{error}</p>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* My Memories Tab */}
-        {view === 'all' && (
-          <>
-            <SuggestedPrompts />
+          {/* Foundational Tab */}
+          {view === 'foundational' && <FoundationalPrompts />}
 
-            {/* Voice Note Processing Banner */}
-            {processingVoiceNote && (
-              <Card className="mb-6 animate-pulse" style={{
-                backgroundColor: 'var(--premium-bg-4)',
-                backdropFilter: 'blur(12px)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-              }}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4">
-                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg premium-text-platinum flex items-center gap-2">
-                        <span>✓</span> Voice note saved - AI processing...
-                      </h3>
-                      <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                        Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
-                      </p>
-                      <div className="mt-3 flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                          <div className="h-full rounded-full animate-pulse" style={{
-                            backgroundColor: 'var(--premium-blue)',
-                            width: '60%',
-                            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                          }}></div>
+          {/* My Memories Tab */}
+          {view === 'all' && (
+            <>
+              <SuggestedPrompts />
+
+              {/* Voice Note Processing Banner */}
+              {processingVoiceNote && (
+                <Card className="mb-6 animate-pulse" style={{
+                  backgroundColor: 'var(--premium-bg-4)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg premium-text-platinum flex items-center gap-2">
+                          <span>✓</span> Voice note saved - AI processing...
+                        </h3>
+                        <p className="text-sm mt-1" style={{ color: 'var(--premium-text-secondary)' }}>
+                          Your recording is safe. Creating a formatted thought from your transcript (this may take up to 30 seconds)
+                        </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                            <div className="h-full rounded-full animate-pulse" style={{
+                              backgroundColor: 'var(--premium-blue)',
+                              width: '60%',
+                              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                            }}></div>
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>Processing...</span>
                         </div>
-                        <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>Processing...</span>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Loading State - Show skeleton loaders like HomePage */}
-            {isLoading && memories.length === 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <SkeletonCard variant="grid" count={6} />
-              </div>
-            )}
-          </>
-        )}
+              {/* Loading State - Show skeleton loaders like HomePage */}
+              {isLoading && memories.length === 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <SkeletonCard variant="grid" count={6} />
+                </div>
+              )}
+            </>
+          )}
 
-        {/* Resurfacing Tab Loading - Show skeleton loaders */}
-        {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <SkeletonCard variant="grid" count={3} />
-          </div>
-        )}
+          {/* Resurfacing Tab Loading - Show skeleton loaders */}
+          {view === 'resurfacing' && isLoading && resurfacing.length === 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SkeletonCard variant="grid" count={3} />
+            </div>
+          )}
 
-        {/* Empty State */}
-        {!isLoading && displayMemories.length === 0 && (
-          <Card style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="py-16">
-              <div className="max-w-2xl mx-auto text-center space-y-8">
-                {view === 'all' ? (
-                  <>
-                    <div className="inline-flex items-center justify-center mb-4">
-                      <Brain className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-bold mb-4 premium-text-platinum">Start capturing your thoughts</h3>
-                      <p className="text-lg mb-8" style={{ color: 'var(--premium-text-secondary)' }}>
-                        Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
+          {/* Empty State */}
+          {!isLoading && displayMemories.length === 0 && (
+            <Card style={{
+              background: 'var(--premium-bg-2)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}>
+              <CardContent className="py-16">
+                <div className="max-w-2xl mx-auto text-center space-y-8">
+                  {view === 'all' ? (
+                    <>
+                      <div className="inline-flex items-center justify-center mb-4">
+                        <Brain className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-bold mb-4 premium-text-platinum">Start capturing your thoughts</h3>
+                        <p className="text-lg mb-8" style={{ color: 'var(--premium-text-secondary)' }}>
+                          Thoughts are the foundation of your personal knowledge graph. Capture your ideas, insights, and interests to power AI-generated project suggestions.
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl p-8" style={{
+                        background: 'var(--premium-bg-2)',
+                        backdropFilter: 'blur(12px)',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                      }}>
+                        <h4 className="font-bold mb-6 text-lg premium-text-platinum">How to Capture Thoughts</h4>
+                        <div className="space-y-4 text-left">
+                          <div className="flex gap-4">
+                            <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
+                              <span className="text-white font-bold text-sm">1</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold premium-text-platinum">Manually capture</p>
+                              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Click 'New thought' to manually add ideas, insights, or observations</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
+                              <span className="text-white font-bold text-sm">2</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold premium-text-platinum">Connect Audiopen</p>
+                              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Link your Audiopen account to automatically capture voice notes as thoughts</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
+                              <span className="text-white font-bold text-sm">3</span>
+                            </div>
+                            <div>
+                              <p className="font-semibold premium-text-platinum">AI Extracts Insights</p>
+                              <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}><BrandName size="sm" /> automatically identifies entities, topics, and connections</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-center px-4 sm:px-0">
+                        <div className="w-full sm:w-auto">
+                          <CreateMemoryDialog />
+                        </div>
+                      </div>
+
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Tip: The more thoughts you capture, the better your AI-generated suggestions will be
                       </p>
-                    </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="inline-flex items-center justify-center mb-4">
+                        <Zap className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
+                      </div>
+                      <h3 className="text-2xl font-bold premium-text-platinum">Nothing to review right now</h3>
+                      <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
+                        Check back later for memories ready to resurface. Spaced repetition helps strengthen your knowledge over time.
+                      </p>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-                    <div className="rounded-xl p-8" style={{
+          {/* My Memories: Theme Clusters or Recent View */}
+          {view === 'all' && !isLoading && memories.length > 0 && (
+            <>
+              {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
+              <div className="mb-6">
+                <PremiumTabs
+                  tabs={[
+                    { id: 'recent', label: 'Recent' },
+                    { id: 'themes', label: 'By Theme' }
+                  ]}
+                  activeTab={memoryView}
+                  onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
+                />
+              </div>
+
+              {/* Theme cluster detail view */}
+              {selectedCluster && memoryView === 'themes' && (
+                <div className="mb-8">
+                  <button
+                    onClick={() => setSelectedCluster(null)}
+                    className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border"
+                    style={{
+                      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                      color: 'var(--premium-text-tertiary)',
+                      borderColor: 'transparent',
+                      backdropFilter: 'blur(12px)'
+                    }}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Themes
+                  </button>
+                  <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 premium-text-platinum">
+                    <div
+                      className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                      }}
+                    >
+                      {React.createElement(getIconComponent(selectedCluster.name), {
+                        className: 'h-6 w-6',
+                        style: { color: 'var(--premium-blue)' }
+                      })}
+                    </div>
+                    {selectedCluster.name}
+                    <span className="text-sm font-normal" style={{ color: 'var(--premium-text-secondary)' }}>
+                      ({selectedCluster.memory_count} thoughts)
+                    </span>
+                  </h2>
+                  <Virtuoso
+                    style={{ height: 'calc(100vh - 400px)' }}
+                    data={selectedCluster.memories}
+                    overscan={200}
+                    itemContent={(index, memory) => (
+                      <div className="pb-6" style={{ contain: 'layout style paint' }}>
+                        <MemoryCard
+                          key={memory.id}
+                          memory={memory}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      </div>
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Theme clusters grid */}
+              {!selectedCluster && memoryView === 'themes' && (
+                <>
+                  {loadingClusters && clusters.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
+                      <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
+                    </div>
+                  ) : clusters.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-6">
+                      {clusters.map((cluster) => (
+                        <ThemeClusterCard
+                          key={cluster.id}
+                          cluster={cluster}
+                          onClick={() => setSelectedCluster(cluster)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="p-8 text-center" style={{
                       background: 'var(--premium-bg-2)',
                       backdropFilter: 'blur(12px)',
                       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
                     }}>
-                      <h4 className="font-bold mb-6 text-lg premium-text-platinum">How to Capture Thoughts</h4>
-                      <div className="space-y-4 text-left">
-                        <div className="flex gap-4">
-                          <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
-                            <span className="text-white font-bold text-sm">1</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold premium-text-platinum">Manually capture</p>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Click 'New thought' to manually add ideas, insights, or observations</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-4">
-                          <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
-                            <span className="text-white font-bold text-sm">2</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold premium-text-platinum">Connect Audiopen</p>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>Link your Audiopen account to automatically capture voice notes as thoughts</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-4">
-                          <div className="rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0 mt-1" style={{ background: 'linear-gradient(to right, var(--premium-blue), var(--premium-indigo))' }}>
-                            <span className="text-white font-bold text-sm">3</span>
-                          </div>
-                          <div>
-                            <p className="font-semibold premium-text-platinum">AI Extracts Insights</p>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}><BrandName size="sm" /> automatically identifies entities, topics, and connections</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-center px-4 sm:px-0">
-                      <div className="w-full sm:w-auto">
-                        <CreateMemoryDialog />
-                      </div>
-                    </div>
-
-                    <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      Tip: The more thoughts you capture, the better your AI-generated suggestions will be
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="inline-flex items-center justify-center mb-4">
-                      <Zap className="h-16 w-16" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <h3 className="text-2xl font-bold premium-text-platinum">Nothing to review right now</h3>
-                    <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Check back later for memories ready to resurface. Spaced repetition helps strengthen your knowledge over time.
-                    </p>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* My Memories: Theme Clusters or Recent View */}
-        {view === 'all' && !isLoading && memories.length > 0 && (
-          <>
-            {/* Sub-navigation for Themes vs Recent - Minimal pill tabs */}
-            <div className="mb-6">
-              <PremiumTabs
-                tabs={[
-                  { id: 'recent', label: 'Recent' },
-                  { id: 'themes', label: 'By Theme' }
-                ]}
-                activeTab={memoryView}
-                onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
-              />
-            </div>
-
-            {/* Theme cluster detail view */}
-            {selectedCluster && memoryView === 'themes' && (
-              <div className="mb-8">
-                <button
-                  onClick={() => setSelectedCluster(null)}
-                  className="mb-6 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border"
-                  style={{
-                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                    color: 'var(--premium-text-tertiary)',
-                    borderColor: 'transparent',
-                    backdropFilter: 'blur(12px)'
-                  }}
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Themes
-                </button>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 premium-text-platinum">
-                  <div
-                    className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
-                    style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}
-                  >
-                    {React.createElement(getIconComponent(selectedCluster.name), {
-                      className: 'h-6 w-6',
-                      style: { color: 'var(--premium-blue)' }
-                    })}
-                  </div>
-                  {selectedCluster.name}
-                  <span className="text-sm font-normal" style={{ color: 'var(--premium-text-secondary)' }}>
-                    ({selectedCluster.memory_count} thoughts)
-                  </span>
-                </h2>
-                <Virtuoso
-                  style={{ height: 'calc(100vh - 400px)' }}
-                  data={selectedCluster.memories}
-                  overscan={200}
-                  itemContent={(index, memory) => (
-                    <div className="pb-6" style={{ contain: 'layout style paint' }}>
-                      <MemoryCard
-                        key={memory.id}
-                        memory={memory}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    </div>
+                      <p style={{ color: 'var(--premium-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
+                    </Card>
                   )}
+                </>
+              )}
+
+              {/* Recent memories view - Virtualized for smooth scrolling with 100+ items */}
+              {memoryView === 'recent' && (
+                <Virtuoso
+                  style={{ height: 'calc(100vh - 280px)' }}
+                  data={memories}
+                  overscan={200}
+                  itemContent={(index, memory) => {
+                    const isNewlyCreated = memory.id === newlyCreatedMemoryId
+
+                    return (
+                      <div
+                        className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                        style={{
+                          contain: 'layout style paint',
+                          willChange: isNewlyCreated ? 'transform' : 'auto'
+                        }}
+                      >
+                        <MemoryCard
+                          memory={memory}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                        />
+                      </div>
+                    )
+                  }}
                 />
-              </div>
-            )}
+              )}
+            </>
+          )}
 
-            {/* Theme clusters grid */}
-            {!selectedCluster && memoryView === 'themes' && (
-              <>
-                {loadingClusters && clusters.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid mb-4" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
-                    <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
-                  </div>
-                ) : clusters.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-6">
-                    {clusters.map((cluster) => (
-                      <ThemeClusterCard
-                        key={cluster.id}
-                        cluster={cluster}
-                        onClick={() => setSelectedCluster(cluster)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="p-8 text-center" style={{
-                    background: 'var(--premium-bg-2)',
-                    backdropFilter: 'blur(12px)',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                  }}>
-                    <p style={{ color: 'var(--premium-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
-                  </Card>
-                )}
-              </>
-            )}
-
-            {/* Recent memories view - Virtualized for smooth scrolling with 100+ items */}
-            {memoryView === 'recent' && (
-              <Virtuoso
-                style={{ height: 'calc(100vh - 280px)' }}
-                data={memories}
-                overscan={200}
-                itemContent={(index, memory) => {
-                  const isNewlyCreated = memory.id === newlyCreatedMemoryId
-
-                  return (
-                    <div
-                      className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
-                      style={{
-                        contain: 'layout style paint',
-                        willChange: isNewlyCreated ? 'transform' : 'auto'
-                      }}
-                    >
-                      <MemoryCard
-                        memory={memory}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                      />
-                    </div>
-                  )
-                }}
-              />
-            )}
-          </>
-        )}
-
-        {/* Resurfacing Memories Grid - Virtualized */}
-        {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
-          <Virtuoso
-            style={{ height: 'calc(100vh - 280px)' }}
-            data={resurfacing}
-            overscan={200}
-            itemContent={(index, memory) => (
-              <div className="flex flex-col gap-3 pb-6" style={{ contain: 'layout style paint' }}>
-                <MemoryCard
-                  memory={memory}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-                <Button
-                  onClick={() => handleReview(memory.id)}
-                  variant="default"
-                  className="w-full btn-primary"
-                >
-                  Reviewed
-                </Button>
-              </div>
-            )}
-          />
-        )}
-      </div>
-
-      {/* Edit Dialog */}
-      <EditMemoryDialog
-        memory={selectedMemory}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-      />
-
-      {/* Confirmation Dialog */}
-      {confirmDialog}
+          {/* Resurfacing Memories Grid - Virtualized */}
+          {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
+            <Virtuoso
+              style={{ height: 'calc(100vh - 280px)' }}
+              data={resurfacing}
+              overscan={200}
+              itemContent={(index, memory) => (
+                <div className="flex flex-col gap-3 pb-6" style={{ contain: 'layout style paint' }}>
+                  <MemoryCard
+                    memory={memory}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                  <Button
+                    onClick={() => handleReview(memory.id)}
+                    variant="default"
+                    className="w-full btn-primary"
+                  >
+                    Reviewed
+                  </Button>
+                </div>
+              )}
+            />
+          )}
         </div>
+
+        {/* Edit Dialog */}
+        <EditMemoryDialog
+          memory={selectedMemory}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+
+        {/* Confirmation Dialog */}
+        {confirmDialog}
+      </div>
 
       {/* Connection Suggestions */}
       {suggestions.length > 0 && sourceType === 'memory' && (

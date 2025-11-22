@@ -32,6 +32,7 @@ export function CreateProjectDialog() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    motivation: '',
     next_step: '',
   })
 
@@ -39,6 +40,7 @@ export function CreateProjectDialog() {
     setFormData({
       title: '',
       description: '',
+      motivation: '',
       next_step: '',
     })
   }
@@ -65,6 +67,7 @@ export function CreateProjectDialog() {
         metadata: {
           tasks,
           progress: 0,
+          motivation: formData.motivation,
         },
       })
 
@@ -154,6 +157,29 @@ export function CreateProjectDialog() {
                 }}
                 autoComplete="off"
               />
+            </div>
+
+            {/* Motivation - The "So What" */}
+            <div className="space-y-2">
+              <Label htmlFor="motivation" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Motivation (Why?)
+              </Label>
+              <Input
+                id="motivation"
+                placeholder="Why is this project important right now?"
+                value={formData.motivation}
+                onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
+                className="text-base h-11 sm:h-12"
+                style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  borderColor: 'rgba(59, 130, 246, 0.2)',
+                  color: 'var(--premium-text-primary)'
+                }}
+                autoComplete="off"
+              />
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                Defining the "why" helps the AI align suggestions with your goals.
+              </p>
             </div>
 
             {/* Next Step */}
