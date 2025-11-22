@@ -27,7 +27,12 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
   const suggestions = pendingSuggestions[itemId] || []
   const count = suggestions.length
 
-  console.log(`[SuggestionBadge] ${itemType} ${itemId} has ${count} suggestions`, suggestions)
+  // Debug logging moved to useEffect to avoid setState during render
+  useEffect(() => {
+    if (count > 0) {
+      console.log(`[SuggestionBadge] ${itemType} ${itemId} has ${count} suggestions`, suggestions)
+    }
+  }, [itemType, itemId, count, suggestions])
 
   if (count === 0) return null
 
