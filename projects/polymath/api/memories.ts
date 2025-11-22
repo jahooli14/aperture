@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import formidable from 'formidable'
 import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
+import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -48,9 +49,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query
 
-    // POST: Transcribe audio (merged from transcribe.ts)
-    if (req.method === 'POST' && action === 'transcribe') {
-      return await handleTranscribe(req, res)
+    // POST: Media analysis (audio transcription or image description)
+    if (req.method === 'POST' && (action === 'transcribe' || action === 'analyze-media')) {
+      return await handleMediaAnalysis(req, res)
     }
 
     // POST: Background processing (merged from process.ts)
@@ -76,7 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET: Search (merged from search.ts)
     if (req.method === 'GET' && q) {
-      return await handleSearch(q as string, supabase, userId, res)
+      const context = req.query.context as string | undefined
+      return await handleSearch(q as string, supabase, userId, res, context)
     }
 
     // GET: Memory prompts
@@ -854,7 +856,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
  * Universal search handler (merged from search.ts)
  * Searches across memories, projects, and articles
  */
-async function handleSearch(query: string, supabase: any, userId: string, res: VercelResponse) {
+async function handleSearch(query: string, supabase: any, userId: string, res: VercelResponse, context?: string) {
   try {
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query parameter "q" is required' })
@@ -866,11 +868,21 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
       return res.status(400).json({ error: 'Query must be at least 2 characters' })
     }
 
+    // Generate embedding if context is provided
+    let embedding: number[] | undefined
+    if (context) {
+      try {
+        embedding = await generateEmbedding(context)
+      } catch (e) {
+        console.error('[handleSearch] Failed to generate embedding:', e)
+      }
+    }
+
     // Search across all content types in parallel
     const [memoriesResults, projectsResults, articlesResults] = await Promise.all([
-      searchMemories(searchTerm, supabase, userId),
-      searchProjects(searchTerm, supabase, userId),
-      searchArticles(searchTerm, supabase, userId)
+      searchMemories(searchTerm, supabase, userId, embedding),
+      searchProjects(searchTerm, supabase, userId, embedding),
+      searchArticles(searchTerm, supabase, userId, embedding)
     ])
 
     // Combine and sort results by score
@@ -882,6 +894,7 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
 
     return res.status(200).json({
       query: searchTerm,
+      context: !!context,
       total: allResults.length,
       results: allResults,
       breakdown: {
@@ -899,7 +912,7 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
 /**
  * Search memories using text search on title and body
  */
-async function searchMemories(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+async function searchMemories(query: string, supabase: any, userId: string, embedding?: number[]): Promise<SearchResult[]> {
   try {
     const { data, error } = await supabase
       .from('memories')
@@ -912,16 +925,26 @@ async function searchMemories(query: string, supabase: any, userId: string): Pro
       return []
     }
 
-    return (data || []).map(memory => ({
-      type: 'memory',
-      id: memory.id,
-      title: memory.title,
-      body: memory.body,
-      score: calculateTextScore(query, memory.title, memory.body),
-      created_at: memory.created_at,
-      entities: memory.entities,
-      tags: memory.tags
-    }))
+    return (data || []).map(memory => {
+      let score = calculateTextScore(query, memory.title, memory.body)
+      
+      // Boost score if vector similarity matches
+      if (embedding && memory.embedding) {
+        const similarity = cosineSimilarity(embedding, memory.embedding)
+        score += similarity * 100 // Add up to 100 points for perfect vector match
+      }
+      
+      return {
+        type: 'memory',
+        id: memory.id,
+        title: memory.title,
+        body: memory.body,
+        score,
+        created_at: memory.created_at,
+        entities: memory.entities,
+        tags: memory.tags
+      }
+    })
   } catch (error) {
     console.error('[searchMemories] Unexpected error:', error)
     return []
@@ -931,7 +954,7 @@ async function searchMemories(query: string, supabase: any, userId: string): Pro
 /**
  * Search projects using text search on title and description
  */
-async function searchProjects(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+async function searchProjects(query: string, supabase: any, userId: string, embedding?: number[]): Promise<SearchResult[]> {
   try {
     const { data, error } = await supabase
       .from('projects')
@@ -944,15 +967,24 @@ async function searchProjects(query: string, supabase: any, userId: string): Pro
       return []
     }
 
-    return (data || []).map(project => ({
-      type: 'project',
-      id: project.id,
-      title: project.title,
-      description: project.description,
-      score: calculateTextScore(query, project.title, project.description),
-      created_at: project.created_at,
-      tags: project.tags
-    }))
+    return (data || []).map(project => {
+      let score = calculateTextScore(query, project.title, project.description)
+      
+      if (embedding && project.embedding) {
+        const similarity = cosineSimilarity(embedding, project.embedding)
+        score += similarity * 100
+      }
+      
+      return {
+        type: 'project',
+        id: project.id,
+        title: project.title,
+        description: project.description,
+        score,
+        created_at: project.created_at,
+        tags: project.tags
+      }
+    })
   } catch (error) {
     console.error('[searchProjects] Unexpected error:', error)
     return []
@@ -962,7 +994,7 @@ async function searchProjects(query: string, supabase: any, userId: string): Pro
 /**
  * Search articles using text search on title, excerpt, and content
  */
-async function searchArticles(query: string, supabase: any, userId: string): Promise<SearchResult[]> {
+async function searchArticles(query: string, supabase: any, userId: string, embedding?: number[]): Promise<SearchResult[]> {
   try {
     const { data, error} = await supabase
       .from('reading_queue')
@@ -975,16 +1007,25 @@ async function searchArticles(query: string, supabase: any, userId: string): Pro
       return []
     }
 
-    return (data || []).map(article => ({
-      type: 'article',
-      id: article.id,
-      title: article.title || 'Untitled',
-      body: article.excerpt,
-      url: article.url,
-      score: calculateTextScore(query, article.title, article.excerpt),
-      created_at: article.created_at,
-      tags: article.tags
-    }))
+    return (data || []).map(article => {
+      let score = calculateTextScore(query, article.title, article.excerpt)
+      
+      if (embedding && article.embedding) {
+        const similarity = cosineSimilarity(embedding, article.embedding)
+        score += similarity * 100
+      }
+      
+      return {
+        type: 'article',
+        id: article.id,
+        title: article.title || 'Untitled',
+        body: article.excerpt,
+        url: article.url,
+        score,
+        created_at: article.created_at,
+        tags: article.tags
+      }
+    })
   } catch (error) {
     console.error('[searchArticles] Unexpected error:', error)
     return []
@@ -1062,10 +1103,10 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Handle audio transcription (merged from transcribe.ts)
- * Uses Google Gemini API to transcribe audio from native recordings
+ * Handle media analysis (audio transcription or image description)
+ * Uses Google Gemini 2.5 Flash for multi-modal understanding
  */
-async function handleTranscribe(req: VercelRequest, res: VercelResponse) {
+async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
   try {
     // Parse multipart form data
     const form = formidable({
@@ -1079,73 +1120,75 @@ async function handleTranscribe(req: VercelRequest, res: VercelResponse) {
       })
     })
 
-    // Get audio file
-    const audioFile = Array.isArray(files.audio) ? files.audio[0] : files.audio
+    // Check for various file keys (audio, image, file)
+    const uploadedFile = files.audio || files.image || files.file
+    const rawFile = Array.isArray(uploadedFile) ? uploadedFile[0] : uploadedFile
 
-    if (!audioFile) {
-      return res.status(400).json({ error: 'No audio file provided' })
+    if (!rawFile) {
+      return res.status(400).json({ error: 'No file provided (expected audio, image, or file)' })
     }
 
-    const file = audioFile as FormidableFile
+    const file = rawFile as FormidableFile
+    const mimeType = file.mimetype || 'application/octet-stream'
+    const isImage = mimeType.startsWith('image/')
+    // Assume audio for raw blobs if uncertain, unless it's clearly an image
+    const isAudio = !isImage
 
-    console.log('[transcribe] File received:', {
+    console.log('[media-analysis] File received:', {
       originalFilename: file.originalFilename,
-      mimetype: file.mimetype,
-      size: file.size
+      mimetype: mimeType,
+      size: file.size,
+      type: isImage ? 'IMAGE' : 'AUDIO'
     })
 
-    // Read audio file as base64
-    const audioData = fs.readFileSync(file.filepath)
-    const base64Audio = audioData.toString('base64')
+    // Read file as base64
+    const fileData = fs.readFileSync(file.filepath)
+    const base64Data = fileData.toString('base64')
 
-    console.log('[transcribe] Audio data:', {
-      size: audioData.length,
-      base64Length: base64Audio.length
-    })
-
-    // Use Gemini 2.5 Flash for audio transcription
+    // Use Gemini 2.5 Flash
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    console.log('[transcribe] Sending to Gemini with mimetype:', file.mimetype || 'audio/aac')
+    let prompt = ''
+    if (isImage) {
+      prompt = 'Describe this image in detail for a personal knowledge base. Capture text, key objects, diagram structures, and the overall context. If it is a whiteboard sketch, explain the concepts drawn. Return plain text.'
+    } else {
+      prompt = 'Listen to this audio recording and transcribe exactly what is said. Return only the transcribed text, with no additional commentary or formatting.'
+    }
+
+    console.log('[media-analysis] Sending to Gemini...')
 
     const result = await model.generateContent([
       {
         inlineData: {
-          mimeType: file.mimetype || 'audio/webm',
-          data: base64Audio
+          mimeType: mimeType,
+          data: base64Data
         }
       },
-      'Listen to this audio recording and transcribe exactly what is said. Return only the transcribed text, with no additional commentary or formatting.'
+      prompt
     ])
 
     const response = await result.response
     const text = response.text().trim()
 
-    console.log('[transcribe] Gemini response:', {
-      textLength: text.length,
-      text: text.slice(0, 200) // First 200 chars for logging
-    })
+    console.log('[media-analysis] Gemini response length:', text.length)
 
     // Clean up temp file
     fs.unlinkSync(file.filepath)
 
-    if (!text || text.length === 0) {
-      console.error('[transcribe] Empty transcription returned')
-      return res.status(500).json({
-        error: 'No transcription returned',
-        details: 'Gemini returned an empty response'
-      })
+    if (!text) {
+      throw new Error('Empty response from Gemini')
     }
 
     return res.status(200).json({
       success: true,
       text: text,
+      type: isImage ? 'image_description' : 'transcription'
     })
 
   } catch (error) {
-    console.error('[handleTranscribe] Error:', error)
+    console.error('[handleMediaAnalysis] Error:', error)
     return res.status(500).json({
-      error: 'Transcription failed',
+      error: 'Media analysis failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     })
   }

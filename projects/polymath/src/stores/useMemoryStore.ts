@@ -60,7 +60,17 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       if (error) throw error
 
-      set({ memories: data || [], loading: false, lastFetched: now })
+      // Preserve optimistic memories
+      const currentMemories = get().memories
+      const optimisticMemories = currentMemories.filter(m =>
+        m.id.startsWith('temp_') || m.id.startsWith('offline_')
+      )
+
+      const newMemories = [...optimisticMemories, ...(data || [])].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      set({ memories: newMemories, loading: false, lastFetched: now })
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Failed to fetch memories',
@@ -72,18 +82,31 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
   setMemories: (memories: Memory[]) => {
     const currentMemories = get().memories
 
+    // Preserve optimistic memories from current state
+    const optimisticMemories = currentMemories.filter(m =>
+      m.id.startsWith('temp_') || m.id.startsWith('offline_')
+    )
+
+    // Filter out any optimistic memories from the incoming list to avoid duplicates if they were somehow passed in
+    const incomingRealMemories = memories.filter(m =>
+      !m.id.startsWith('temp_') && !m.id.startsWith('offline_')
+    )
+
+    const mergedMemories = [...optimisticMemories, ...incomingRealMemories].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+
     // Skip update if data hasn't changed (prevent unnecessary re-renders)
-    if (currentMemories.length === memories.length && memories.length > 0) {
+    if (currentMemories.length === mergedMemories.length && mergedMemories.length > 0) {
       // Create ID maps for efficient lookup
       const currentById = new Map(currentMemories.map(m => [m.id, m]))
-      const newById = new Map(memories.map(m => [m.id, m]))
 
       // Check if same IDs exist
-      const sameIds = memories.every(m => currentById.has(m.id))
+      const sameIds = mergedMemories.every(m => currentById.has(m.id))
 
       if (sameIds) {
         // Check if processed status changed for any memory
-        const hasProcessedChange = memories.some(m => {
+        const hasProcessedChange = mergedMemories.some(m => {
           const current = currentById.get(m.id)
           return current && current.processed !== m.processed
         })
@@ -95,7 +118,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       }
     }
 
-    set({ memories, loading: false, error: null, lastFetched: Date.now() })
+    set({ memories: mergedMemories, loading: false, error: null, lastFetched: Date.now() })
   },
 
   clearError: () => {
@@ -218,17 +241,17 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       set((state) => ({
         memories: Array.isArray(state.memories)
           ? state.memories.map((m) =>
-              m.id === id
-                ? {
-                    ...m,
-                    title: input.title,
-                    body: input.body,
-                    tags: input.tags || [],
-                    memory_type: input.memory_type || null,
-                    processed: false,
-                  }
-                : m
-            )
+            m.id === id
+              ? {
+                ...m,
+                title: input.title,
+                body: input.body,
+                tags: input.tags || [],
+                memory_type: input.memory_type || null,
+                processed: false,
+              }
+              : m
+          )
           : [],
       }))
     }

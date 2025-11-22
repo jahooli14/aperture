@@ -22,6 +22,13 @@ const supabase = createClient(url, serviceRoleKey)
 const { apiKey } = getGeminiConfig()
 const genAI = new GoogleGenerativeAI(apiKey)
 
+export interface MorningBriefing {
+  greeting: string
+  focus_project: { id: string, title: string, next_step: string, unblocker?: string } | null
+  quick_win: { id: string, title: string } | null
+  forgotten_gem: { type: 'article'|'thought', title: string, snippet: string, relevance: string } | null
+}
+
 interface BedtimePrompt {
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
@@ -304,29 +311,41 @@ async function generateCatalystPromptsWithAI(
     .map(input => `${input.type.toUpperCase()}: "${input.title}"`)
     .join('\n')
 
-  const prompt = `You are seeding dreams. Not generating prompts—inviting the sleeping mind into the strange places where these things are already meeting.
+  const prompt = `You are an insight engineer. Generate 2-4 prompts that trigger genuine realizations from these specific inputs.
 
-**WHAT'S ALIVE RIGHT NOW:**
+**INPUTS:**
 ${inputsList}
 
-Your job: Find the dream that's already happening in the space between these. Don't announce what you're doing. Don't apply rules. Just walk into the forest and notice what's there.
+**YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items. Not "combine them" - find the specific tension, pattern, or assumption that creates an unlock.
 
-Generate 2-4 prompts. Each one is a doorway. Not a question with an expected answer. Not a scenario you've constructed. A moment where something shifts.
+**INSIGHT MECHANISMS:**
+1. **TENSION** - Do these items contradict each other? Which one is right?
+2. **ANALOGY** - Does one item's solution apply to another's problem?
+3. **PATTERN** - What do these items have in common that isn't obvious?
+4. **ASSUMPTION** - What unstated belief connects them? Is it true?
+5. **AVOIDANCE** - What question do these items together make unavoidable?
 
-Some might be concrete (you can touch it, see it, hear it). Some might be the feeling of understanding something you didn't know you knew. Some might be about time folding. Some might be spatial—the way objects relate. Some might be almost-memories.
+**RULES:**
+- BE SPECIFIC - Reference actual content from the titles, not generic placeholders
+- ONE INSIGHT PER PROMPT - Each prompt delivers one clear realization
+- DIRECT LANGUAGE - No "imagine", "picture", "feel". State the insight or ask the sharp question.
+- CREATE TENSION - The best prompts are slightly uncomfortable because they're true
 
-The only rule: it has to pull from the actual titles and things here. Not generic. Specific to what's actually in the system.
+**GOOD:**
+✅ "Both of these are about [specific theme]. But one assumes [X] and the other assumes [Y]. You can't have both."
+✅ "The approach in [Item A] would completely solve [Item B]'s core problem. Why haven't you applied it?"
+✅ "You keep returning to [specific detail]. What is it really about?"
 
-Don't end with a question mark if it doesn't belong. Don't narrate. Let the dream speak. If there's a sensory detail that matters, it'll be there naturally—not because you added it as a requirement.
-
-Tone: Like you're half-asleep yourself. Noticing. Not explaining.
+**BAD:**
+❌ "Explore the space between these ideas..." (vague)
+❌ "Let them weave together..." (no insight)
 
 Return ONLY valid JSON:
 [
   {
-    "prompt": "The full prompt—could be 1 sentence or 4. Could ask something or just state a moment. Whatever the dream needs.",
-    "type": "connection|divergent|revisit|transform",
-    "format": "visualization|scenario|incubation|question|statement"
+    "prompt": "The specific insight or sharp question",
+    "type": "tension|analogy|pattern|assumption|avoidance",
+    "format": "question|statement"
   }
 ]`
 
@@ -407,63 +426,73 @@ async function generatePromptsWithAI(
     }).join('\n')
     : 'No projects yet';
 
-  const prompt = `You are a hypnagogic thought catalyst. Generate 3-5 prompts for the pre-sleep state when the brain excels at pattern recognition and creative synthesis.
+  const prompt = `You are an insight engineer. Generate 3-5 prompts that trigger genuine "aha" moments by applying proven insight mechanisms to the user's actual knowledge.
 
-**HYPNAGOGIC STATE POWERS:**
-The twilight between waking and sleep enables: associative thinking, pattern recognition, creative problem-solving, and memory consolidation. Your prompts should SEED questions the sleeping mind will process overnight.
+**INSIGHT MECHANISMS (use these, not mysticism):**
 
-**USER'S KNOWLEDGE MAP:**
+1. **TENSIONS** - Find contradictions in their thinking that demand resolution
+   "You said X in one thought but Y in another. Which is true? Or is there a third option?"
 
-**Recent Reading (top 5 of last 2 weeks):**
+2. **UNSTATED ASSUMPTIONS** - Surface hidden beliefs blocking progress
+   "Your project assumes [X]. But what if that's wrong? What changes?"
+
+3. **ANALOGIES FROM DISTANT DOMAINS** - Transfer solutions across fields
+   "The article about [X] solved this with [approach]. Your project has the same structure."
+
+4. **PATTERN RECOGNITION** - Connect dots they haven't connected
+   "You've mentioned [theme] 4 times in different contexts. What's really going on there?"
+
+5. **INVERSION** - Flip the problem
+   "Instead of trying to [goal], what if you made [opposite] impossible?"
+
+6. **CONSTRAINT REMOVAL** - "What if [assumed limitation] wasn't a problem?"
+
+7. **THE QUESTION THEY'RE AVOIDING** - The obvious thing they haven't asked
+
+**USER'S KNOWLEDGE:**
+
+**Recent Reading:**
 ${topArticles.length > 0 ? topArticles.map(a => `- "${a.title}" [${a.tags.join(', ')}]\n  ${a.summary}`).join('\n\n') : 'No recent reading'}
 
-**Recent Thoughts (top 8 of last 7 days):**
+**Recent Thoughts:**
 ${topMemories.length > 0 ? topMemories.map(m => `- "${m.title}" [${m.themes.join(', ')}]\n  ${m.body}`).join('\n\n') : 'No recent thoughts'}
 
-**Projects (Outputs):**
+**Projects:**
 ${projectContext}
-
-**Detected Connections:**
-${connections.length > 0 ? connections.map(c => `- ${c}`).join('\n') : 'No obvious connections yet'}
 
 **Recurring Themes:** ${consequentialThemes.length > 0 ? consequentialThemes.join(', ') : 'None'}
 
 **Old Insights (14-90 days ago):**
 ${oldInsights.length > 0 ? oldInsights.map(i => `- "${i.title}"`).join('\n') : 'None'}
 
-**PROMPT TYPES:**
-1. **connection** - Bridge disparate knowledge pieces
-2. **divergent** - Unlock new angles via pattern disruption
-3. **revisit** - Resurface dormant insights for current relevance
-4. **transform** - Personal growth through pattern synthesis
-5. **strategic_insight** - Connect a project's deep MOTIVATION with a recent thought/article
+**RULES:**
 
-**PROMPT FORMATS:**
-1. **question** - Create productive cognitive tension (open loops for sleeping mind to resolve)
-2. **statement** - Declarative with embedded suggestions (use present progressive tense)
-3. **visualization** - Multi-sensory guided imagery (spatial, kinesthetic, transformative)
-4. **scenario** - Dreamlike what-if exploration (non-linear, symbolic, archetypal)
-5. **incubation** - Dream seeding structure: brief seed + sensory anchor + permission to release
+1. **BE SPECIFIC** - Use actual content from their thoughts/articles. Quote them. Reference specific details.
 
-**CRAFTING RULES (CRITICAL):**
-- **NO FORMULAIC COMBINATIONS**: Do NOT just say "Combine Project X and Article Y". That is boring.
-- **FOCUS ON THE "WHY"**: Use the project MOTIVATION. If they want to "build a legacy", connect *that* desire to a recent article about "long-term thinking", not just the project title.
-- **USE METAPHOR**: Instead of "combine", use words like "weaving", "echoing", "colliding", "fertilizing".
-- **BE SPECIFIC**: Reference actual details from the summaries/bodies, not just titles.
+2. **CREATE PRODUCTIVE TENSION** - The best prompts make them slightly uncomfortable because they reveal something true they hadn't articulated.
 
-**HYPNAGOGIC LANGUAGE PATTERNS:**
-1. **OPEN LOOPS**: "There's a hidden bridge between X and Y that only appears when you stop looking..."
-2. **TEMPORAL FLUIDITY**: "The answer tomorrow needs the question tonight..."
-3. **SENSORY ANCHORS**: "Picture [concept] as a shape... Feel its weight..."
-4. **PERMISSION**: "You don't need to solve this now... Your dreaming mind knows what to do."
+3. **NO VAGUE COMBINATIONS** - Never say "explore the connection between X and Y". Instead, NAME the specific insight: "X solved this by [method]. Your project is stuck on the same problem."
 
-**EXCELLENT EXAMPLES:**
-✅ "You wrote that you want to '${activeProjects[0]?.metadata?.motivation || 'change the world'}' with '${activeProjects[0]?.title || 'Project A'}'. That feeling is the same shape as the idea in '${topArticles[0]?.title || 'Article B'}'. Tonight, let them overlap."
-✅ "The reason '${activeProjects.find(p => p.status === 'dormant')?.title || 'Project X'}' is stuck isn't technical. It's waiting for the insight you had in '${topMemories[0]?.title || 'Memory Y'}'. As you sleep, watch the blockage dissolve."
+4. **ONE CLEAR INSIGHT PER PROMPT** - Each prompt should deliver ONE specific realization, not a vague direction.
 
-**CONTEXT SIGNALS:**
-${context.hasNoProjects && context.hasRichInput ? '→ Rich input, no projects: Suggest CONNECTION prompts showing project possibilities' : ''}
-${context.hasBlockedProjects ? '→ Blocked projects: Try REVISIT prompts using old insights to unlock' : ''}
+5. **DIRECT LANGUAGE** - No "imagine", "picture", "feel". Just state the insight or ask the sharp question.
+
+**GOOD EXAMPLES:**
+✅ "You want to ${activeProjects[0]?.metadata?.motivation || 'build something meaningful'}, but your tasks for '${activeProjects[0]?.title || 'your project'}' are all tactical. Where's the task that actually moves the needle on that deeper goal?"
+
+✅ "Three of your recent thoughts mention '${consequentialThemes[0] || 'a recurring theme'}' but your projects don't address it at all. Is this the thing you actually want to be working on?"
+
+✅ "The article '${topArticles[0]?.title || 'you read'}' argues [specific point]. That directly contradicts how you're approaching '${activeProjects[0]?.title || 'your project'}'. One of them is wrong."
+
+✅ "You've been circling '${consequentialThemes[0] || 'this idea'}' for weeks without acting. What are you afraid will happen if you actually start?"
+
+**BAD EXAMPLES:**
+❌ "Let the ideas weave together as you drift off..." (vague, no insight)
+❌ "Explore the connection between your reading and your project..." (no specific insight)
+❌ "Picture your project as a garden..." (metaphor without substance)
+
+${context.hasNoProjects && context.hasRichInput ? '→ They have inputs but no outputs. Ask: What are they avoiding building?' : ''}
+${context.hasBlockedProjects ? '→ Blocked projects. Find the unstated assumption or fear blocking them.' : ''}
 
 ${performance ? `**WHAT WORKS FOR THIS USER:**
 - Best type: "${performance.bestType}"
@@ -473,11 +502,10 @@ ${performance ? `**WHAT WORKS FOR THIS USER:**
 Return ONLY valid JSON:
 [
   {
-    "prompt": "Full prompt text...",
-    "type": "connection|divergent|revisit|transform|strategic_insight",
+    "prompt": "The specific insight or sharp question - direct, concrete, uncomfortable if necessary",
+    "type": "tension|assumption|analogy|pattern|inversion|constraint|avoidance",
     "relatedIds": ["IDs of items referenced"],
-    "metaphor": "Optional 1-sentence poetic framing",
-    "format": "question|statement|visualization|scenario|incubation"
+    "format": "question|statement"
   }
 ]`
 
@@ -585,5 +613,60 @@ async function getPromptPerformance(userId: string) {
     totalRated: data.length,
     overallAvgRating: data.reduce((sum, p) => sum + (p.rating || 0), 0) / data.length,
     breakthroughRate: data.filter(p => p.resulted_in_breakthrough).length / data.length
+  }
+}
+
+/**
+ * Generate Morning Momentum Briefing
+ * Executive state: Focused, actionable, unblocking.
+ */
+export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
+  logger.info({ userId }, 'Generating morning briefing')
+
+  const activeProjects = await getActiveProjects(userId)
+  const recentMemories = await getRecentMemories(userId, 5)
+  const recentArticles = await getRecentArticles(userId, 5)
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  const prompt = `You are an executive strategist. It is 6:00 AM.
+  
+  **OBJECTIVE:** Create a "Morning Momentum" briefing to get the user working immediately.
+  
+  **USER CONTEXT:**
+  **Active Projects:**
+  ${activeProjects.map(p => `- "${p.title}" (${p.status})`).join('\n')}
+  
+  **Recent Inputs (Fuel):**
+  ${recentMemories.map(m => `- Thought: "${m.title}"`).join('\n')}
+  ${recentArticles.map(a => `- Article: "${a.title}"`).join('\n')}
+  
+  **INSTRUCTIONS:**
+  1. **Focus Project:** Pick the most important active project. Define the immediate next step. If they have relevant recent inputs, suggest using them to "unblock".
+  2. **Quick Win:** Pick a small task or a different project that can be moved forward easily.
+  3. **Forgotten Gem:** Find one item (article/thought) that is highly relevant to their active projects but might be overlooked.
+  
+  Return JSON:
+  {
+    "greeting": "Motivational 1-sentence greeting",
+    "focus_project": { "id": "project_id", "title": "Title", "next_step": "Actionable task...", "unblocker": "Optional: Use [Article] to solve..." },
+    "quick_win": { "id": "project_id", "title": "Title" },
+    "forgotten_gem": { "type": "article", "title": "Title", "snippet": "Why it matters", "relevance": "Connection to project..." }
+  }`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) throw new Error('No JSON found')
+    return JSON.parse(jsonMatch[0])
+  } catch (e) {
+    logger.error({ error: e }, 'Failed to generate morning briefing')
+    return {
+      greeting: "Good morning. Ready to build?",
+      focus_project: activeProjects[0] ? { id: activeProjects[0].id, title: activeProjects[0].title, next_step: "Review status" } : null,
+      quick_win: null,
+      forgotten_gem: null
+    }
   }
 }
