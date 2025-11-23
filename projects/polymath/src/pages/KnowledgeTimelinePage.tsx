@@ -266,7 +266,7 @@ export function KnowledgeTimelinePage() {
       </div>
 
       {/* Main Content */}
-      <div className="pt-24 pb-24">
+      <div className="pt-44 pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Unified Timeline View (when 'all' is selected) */}
         {activeTrack === 'all' && filteredItems.length > 0 && (

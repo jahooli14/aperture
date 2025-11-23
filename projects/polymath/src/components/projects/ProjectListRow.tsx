@@ -7,6 +7,8 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Star } from 'lucide-react'
+import { useProjectStore } from '../../stores/useProjectStore'
 import type { Project } from '../../types'
 
 interface ProjectListRowProps {
@@ -20,6 +22,7 @@ export function ProjectListRow({
   isSpotlighted = false,
   spotlightColor = 'rgba(59, 130, 246, 0.1)' // default blue
 }: ProjectListRowProps) {
+  const { setPriority } = useProjectStore()
   const tasks = (project.metadata?.tasks || []) as any[]
   const nextTask = tasks
     .sort((a, b) => a.order - b.order)
@@ -55,12 +58,31 @@ export function ProjectListRow({
       >
         {/* Title row with status badge */}
         <div className="flex items-start justify-between gap-2 mb-1">
-          <h4
-            className="text-sm font-semibold flex-1 line-clamp-1"
-            style={{ color: 'rgba(255, 255, 255, 0.95)' }}
-          >
-            {project.title}
-          </h4>
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <button
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setPriority(project.id)
+              }}
+              className="flex-shrink-0 p-0.5 rounded hover:bg-white/10 transition-colors"
+              title={project.is_priority ? "Remove from priority" : "Set as priority"}
+            >
+              <Star
+                size={14}
+                style={{
+                  color: project.is_priority ? 'var(--premium-gold, #f59e0b)' : 'rgba(255, 255, 255, 0.3)',
+                  fill: project.is_priority ? 'var(--premium-gold, #f59e0b)' : 'none'
+                }}
+              />
+            </button>
+            <h4
+              className="text-sm font-semibold flex-1 line-clamp-1"
+              style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+            >
+              {project.title}
+            </h4>
+          </div>
           <span
             className="text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap flex-shrink-0"
             style={{

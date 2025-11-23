@@ -642,6 +642,22 @@ export function ProjectDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Ghostwriter Button - Prominent */}
+              <button
+                onClick={() => setShowSynthesisDialog(true)}
+                className="px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(139, 92, 246, 0.2))',
+                  backdropFilter: 'blur(12px)',
+                  color: '#d8b4fe',
+                  border: '1px solid rgba(168, 85, 247, 0.4)'
+                }}
+                title="Generate draft with Ghostwriter"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Ghostwriter</span>
+              </button>
+
               {/* Status Dropdown */}
               <div className="relative">
                 <button
