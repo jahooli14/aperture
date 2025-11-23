@@ -19,21 +19,19 @@ export const useGhostwriterStore = create<GhostwriterState>((set) => ({
     generateDraft: async (projectId, contextIds, format) => {
         set({ isSynthesizing: true, error: null })
         try {
-            // Mock API call for now if endpoint doesn't exist
-            // In real implementation: await api.post('ai/synthesize', { projectId, contextIds, format })
+            const response = await api.post('projects?resource=ghostwriter', { projectId, format })
 
-            // Simulating network delay
-            await new Promise(resolve => setTimeout(resolve, 2000))
-
-            const mockDrafts = {
-                brief: `# Project Brief\n\nBased on your thoughts and readings, here is a consolidated brief for this project.\n\n## Objectives\n- Objective 1\n- Objective 2\n\n## Key Insights\n- Insight from connected article\n- Insight from thought`,
-                blog: `# Blog Post Title\n\nHere is a draft blog post synthesizing your recent research.\n\n## Introduction\n...\n\n## Body\n...`,
-                outline: `# Project Outline\n\n1. Phase 1\n   - Task A\n   - Task B\n2. Phase 2`
+            if (response.draft) {
+                set({ draft: response.draft, isSynthesizing: false })
+            } else {
+                throw new Error('No draft returned from API')
             }
-
-            set({ draft: mockDrafts[format], isSynthesizing: false })
         } catch (error) {
-            set({ error: 'Failed to generate draft', isSynthesizing: false })
+            console.error('[Ghostwriter] Failed to generate draft:', error)
+            set({
+                error: error instanceof Error ? error.message : 'Failed to generate draft',
+                isSynthesizing: false
+            })
         }
     },
 

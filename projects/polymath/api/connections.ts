@@ -30,6 +30,99 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const { action, id, type } = req.query
 
+    // Get suggestions for an item via vector similarity
+    if (action === 'suggestions') {
+      try {
+        if (!id || !type) {
+          return res.status(400).json({ error: 'id and type are required' })
+        }
+
+        // Get the source item's embedding
+        let sourceEmbedding: number[] | null = null
+        let sourceTitle = ''
+
+        if (type === 'project') {
+          const { data } = await supabase.from('projects').select('title, embedding').eq('id', id).single()
+          sourceEmbedding = data?.embedding
+          sourceTitle = data?.title || ''
+        } else if (type === 'thought') {
+          const { data } = await supabase.from('memories').select('title, body, embedding').eq('id', id).single()
+          sourceEmbedding = data?.embedding
+          sourceTitle = data?.title || data?.body?.slice(0, 50) || ''
+        } else if (type === 'article') {
+          const { data } = await supabase.from('reading_queue').select('title, embedding').eq('id', id).single()
+          sourceEmbedding = data?.embedding
+          sourceTitle = data?.title || ''
+        }
+
+        if (!sourceEmbedding) {
+          return res.status(200).json({ suggestions: [], message: 'No embedding found for this item' })
+        }
+
+        const suggestions: Array<{
+          id: string
+          type: string
+          title: string
+          subtitle?: string
+          similarity: number
+          matchReason: string
+        }> = []
+
+        // Search all item types except the source type
+        const searchTypes = ['project', 'thought', 'article'].filter(t => t !== type)
+
+        for (const searchType of searchTypes) {
+          let items: any[] = []
+
+          if (searchType === 'project') {
+            const { data } = await supabase
+              .from('projects')
+              .select('id, title, description, embedding')
+              .not('embedding', 'is', null)
+              .limit(50)
+            items = data || []
+          } else if (searchType === 'thought') {
+            const { data } = await supabase
+              .from('memories')
+              .select('id, title, body, embedding')
+              .not('embedding', 'is', null)
+              .limit(50)
+            items = data || []
+          } else if (searchType === 'article') {
+            const { data } = await supabase
+              .from('reading_queue')
+              .select('id, title, excerpt, embedding')
+              .not('embedding', 'is', null)
+              .limit(50)
+            items = data || []
+          }
+
+          for (const item of items) {
+            if (!item.embedding) continue
+            const similarity = cosineSimilarity(sourceEmbedding, item.embedding)
+            if (similarity > 0.5) {
+              suggestions.push({
+                id: item.id,
+                type: searchType === 'thought' ? 'memory' : searchType,
+                title: item.title || item.body?.slice(0, 50) || 'Untitled',
+                subtitle: item.description?.slice(0, 100) || item.excerpt?.slice(0, 100) || item.body?.slice(0, 100),
+                similarity,
+                matchReason: `${Math.round(similarity * 100)}% semantic match`
+              })
+            }
+          }
+        }
+
+        // Sort by similarity and limit
+        suggestions.sort((a, b) => b.similarity - a.similarity)
+        return res.status(200).json({ suggestions: suggestions.slice(0, 10) })
+
+      } catch (error) {
+        console.error('[connections] Suggestions error:', error)
+        return res.status(500).json({ error: 'Failed to get suggestions' })
+      }
+    }
+
     if (action === 'list-sparks') {
       try {
         // Get connections where this item is either source or target

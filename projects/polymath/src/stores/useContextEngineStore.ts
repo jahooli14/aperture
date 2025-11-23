@@ -81,17 +81,8 @@ export const useContextEngineStore = create<ContextState>((set, get) => ({
         set({ loading: true })
 
         try {
-            // Use the auto-suggest API which is what ConnectionsList uses
-            const response = await fetch('/api/connections?action=auto-suggest', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    itemType: activeContext.type,
-                    itemId: activeContext.id,
-                    content: activeContext.data || activeContext.title,
-                    limit: 5
-                })
-            })
+            // Use the suggestions API for vector similarity search
+            const response = await fetch(`/api/connections?action=suggestions&id=${activeContext.id}&type=${activeContext.type}`)
 
             if (response.ok) {
                 const data = await response.json()
