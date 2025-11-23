@@ -21,7 +21,6 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
 import type { Project } from '../types'
 
-import { PremiumTabs } from '../components/ui/premium-tabs'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { SynthesisDialog } from '../components/ghostwriter/SynthesisDialog'
 import { DraftViewer } from '../components/ghostwriter/DraftViewer'
@@ -47,7 +46,6 @@ export function ProjectDetailPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState('overview')
 
   // Ghostwriter State
   const { generateDraft, draft, isSynthesizing, saveDraft, clearDraft } = useGhostwriterStore()
@@ -753,156 +751,133 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <PremiumTabs
-            tabs={[
-              { id: 'overview', label: 'Overview' },
-              { id: 'brain', label: 'Brain' },
-              { id: 'activity', label: 'Activity' }
-            ]}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-          />
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content - All sections on one page */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {activeTab === 'overview' && (
-          <>
-            {/* Description */}
-            <div className="premium-card p-4">
-              {editingDescription ? (
-                <div className="space-y-2">
-                  <textarea
-                    ref={descriptionInputRef}
-                    value={tempDescription}
-                    onChange={(e) => setTempDescription(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Escape') cancelEdit()
-                    }}
-                    rows={3}
-                    placeholder="Add a description..."
-                    className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
-                    style={{
-                      color: 'var(--premium-text-primary)'
-                    }}
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Cancel
-                    </button>
-                    <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
-                      Save
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
-                  onClick={startEditDescription}
-                  title="Click to edit"
-                >
-                  {project.description ? (
-                    <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
-                  ) : (
-                    <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Motivation - The "So What" */}
-            {project.metadata?.motivation && (
-              <div className="premium-card p-4 border-l-4 border-blue-500">
-                <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
-                  Motivation
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                  {project.metadata.motivation}
-                </p>
-              </div>
-            )}
-
-            {/* Task Checklist */}
-            <div data-task-list>
-              <TaskList
-                tasks={project.metadata?.tasks || []}
-                onUpdate={async (tasks) => {
-                  console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
-
-                  // Ensure metadata is properly structured
-                  const newMetadata = {
-                    ...project.metadata,
-                    tasks: tasks,
-                    progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
-                  }
-
-                  const updated = {
-                    ...project,
-                    metadata: newMetadata,
-                    last_active: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  }
-
-                  console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
-
-                  // Update local state
-                  setProject(updated)
-
-                  console.log('[ProjectDetail] Calling updateProject API...')
-                  try {
-                    await updateProject(project.id, {
-                      metadata: newMetadata,
-                      last_active: updated.last_active,
-                      updated_at: updated.updated_at
-                    })
-                    console.log('[ProjectDetail] Update successful!')
-                    // Don't reload - local state is already correct and reloading causes stale data
-                  } catch (error) {
-                    console.error('[ProjectDetail] Update failed:', error)
-                    // Revert local state on error
-                    setProject(project)
-                  }
+        {/* Description */}
+        <div className="premium-card p-4">
+          {editingDescription ? (
+            <div className="space-y-2">
+              <textarea
+                ref={descriptionInputRef}
+                value={tempDescription}
+                onChange={(e) => setTempDescription(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') cancelEdit()
+                }}
+                rows={3}
+                placeholder="Add a description..."
+                className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
+                style={{
+                  color: 'var(--premium-text-primary)'
                 }}
               />
+              <div className="flex gap-2 justify-end">
+                <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Cancel
+                </button>
+                <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
+                  Save
+                </button>
+              </div>
             </div>
-          </>
-        )}
+          ) : (
+            <div
+              className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
+              onClick={startEditDescription}
+              title="Click to edit"
+            >
+              {project.description ? (
+                <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+              ) : (
+                <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+              )}
+            </div>
+          )}
+        </div>
 
-        {activeTab === 'brain' && (
-          <div className="premium-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
-                Knowledge Graph
-              </h3>
-              <button
-                onClick={() => setShowSynthesisDialog(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(139, 92, 246, 0.1))',
-                  border: '1px solid rgba(168, 85, 247, 0.2)',
-                  color: '#d8b4fe'
-                }}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Synthesize
-              </button>
-            </div>
-            <ConnectionsList
-              itemType="project"
-              itemId={project.id}
-              content={`${project.title}\n${project.description || ''}`}
-            />
+        {/* Motivation - The "So What" */}
+        {project.metadata?.motivation && (
+          <div className="premium-card p-4 border-l-4 border-blue-500">
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
+              Motivation
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+              {project.metadata.motivation}
+            </p>
           </div>
         )}
 
-        {activeTab === 'activity' && (
+        {/* Task Checklist */}
+        <div data-task-list>
+          <TaskList
+            tasks={project.metadata?.tasks || []}
+            onUpdate={async (tasks) => {
+              console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
+
+              // Ensure metadata is properly structured
+              const newMetadata = {
+                ...project.metadata,
+                tasks: tasks,
+                progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
+              }
+
+              const updated = {
+                ...project,
+                metadata: newMetadata,
+                last_active: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+
+              console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
+
+              // Update local state
+              setProject(updated)
+
+              console.log('[ProjectDetail] Calling updateProject API...')
+              try {
+                await updateProject(project.id, {
+                  metadata: newMetadata,
+                  last_active: updated.last_active,
+                  updated_at: updated.updated_at
+                })
+                console.log('[ProjectDetail] Update successful!')
+                // Don't reload - local state is already correct and reloading causes stale data
+              } catch (error) {
+                console.error('[ProjectDetail] Update failed:', error)
+                // Revert local state on error
+                setProject(project)
+              }
+            }}
+          />
+        </div>
+
+        {/* Connections */}
+        <div className="premium-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+              Connections
+            </h3>
+          </div>
+          <ConnectionsList
+            itemType="project"
+            itemId={project.id}
+            content={`${project.title}\n${project.description || ''}`}
+          />
+        </div>
+
+        {/* Activity */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+            Activity
+          </h3>
           <ProjectActivityStream
             notes={notes}
             onRefresh={loadProjectDetails}
           />
-        )}
+        </div>
       </div>
 
       {/* Add Note Dialog */}
