@@ -390,11 +390,12 @@ function SpotlightSection({ projects }: { projects: Project[] }) {
   return (
     <>
       {spotlighted.map(({ project, type }) => (
-        <SpotlightCard
-          key={project.id}
-          project={project}
-          type={type}
-        />
+        <FocusableItem key={project.id} id={project.id} type="project">
+          <SpotlightCard
+            project={project}
+            type={type}
+          />
+        </FocusableItem>
       ))}
     </>
   )
