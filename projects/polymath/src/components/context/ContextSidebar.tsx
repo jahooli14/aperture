@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -9,10 +9,27 @@ import {
     Brain,
     ArrowRight,
     Link as LinkIcon,
-    Loader2
+    Loader2,
+    Lightbulb,
+    TrendingUp,
+    RefreshCw
 } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
+
+interface AIAnalysis {
+    summary: string
+    patterns: string[]
+    insight: string
+    suggestion: string
+}
+
+interface AnalysisData {
+    analysis: AIAnalysis
+    connectionCount: number
+    itemType: string
+    itemTitle: string
+}
 
 export function ContextSidebar() {
     const {
@@ -27,10 +44,36 @@ export function ContextSidebar() {
     const navigate = useNavigate()
     const { addToast } = useToast()
 
+    const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
+    const [analysisLoading, setAnalysisLoading] = useState(false)
+
+    const fetchAnalysis = async () => {
+        if (!activeContext.id || activeContext.type === 'page' || activeContext.type === 'home') {
+            setAnalysisData(null)
+            return
+        }
+
+        setAnalysisLoading(true)
+        try {
+            const response = await fetch(
+                `/api/connections?action=analyze&id=${activeContext.id}&type=${activeContext.type}`
+            )
+            if (response.ok) {
+                const data = await response.json()
+                setAnalysisData(data)
+            }
+        } catch (error) {
+            console.error('Failed to fetch analysis:', error)
+        } finally {
+            setAnalysisLoading(false)
+        }
+    }
+
     // Auto-refresh when sidebar is open and context changes
     useEffect(() => {
         if (sidebarOpen) {
             fetchRelatedContext()
+            fetchAnalysis()
         }
     }, [activeContext.id, sidebarOpen])
 
@@ -147,6 +190,81 @@ export function ContextSidebar() {
 
                         {/* Content */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {/* AI Analysis Section */}
+                            {activeContext.type !== 'page' && activeContext.type !== 'home' && (
+                                <div className="rounded-xl p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="h-4 w-4 text-purple-400" />
+                                            <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">
+                                                AI Analysis
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={fetchAnalysis}
+                                            disabled={analysisLoading}
+                                            className="p-1 hover:bg-white/10 rounded transition-colors"
+                                            title="Refresh analysis"
+                                        >
+                                            <RefreshCw className={`h-3 w-3 text-gray-400 ${analysisLoading ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    </div>
+
+                                    {analysisLoading ? (
+                                        <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Analyzing...</span>
+                                        </div>
+                                    ) : analysisData ? (
+                                        <div className="space-y-3">
+                                            {/* Summary */}
+                                            <p className="text-sm text-gray-300 leading-relaxed">
+                                                {analysisData.analysis.summary}
+                                            </p>
+
+                                            {/* Patterns */}
+                                            {analysisData.analysis.patterns.length > 0 && (
+                                                <div className="space-y-1">
+                                                    {analysisData.analysis.patterns.map((pattern, i) => (
+                                                        <div key={i} className="flex items-start gap-2">
+                                                            <TrendingUp className="h-3 w-3 text-blue-400 mt-1 flex-shrink-0" />
+                                                            <span className="text-xs text-gray-400">{pattern}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Insight */}
+                                            {analysisData.analysis.insight && (
+                                                <div className="flex items-start gap-2 pt-2 border-t border-white/5">
+                                                    <Lightbulb className="h-3 w-3 text-amber-400 mt-1 flex-shrink-0" />
+                                                    <span className="text-xs text-amber-200/80">{analysisData.analysis.insight}</span>
+                                                </div>
+                                            )}
+
+                                            {/* Suggestion */}
+                                            {analysisData.analysis.suggestion && (
+                                                <div className="pt-2">
+                                                    <p className="text-xs text-purple-300">
+                                                        → {analysisData.analysis.suggestion}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Connection count */}
+                                            <p className="text-xs text-gray-500 pt-1">
+                                                {analysisData.connectionCount} connection{analysisData.connectionCount !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-gray-500">
+                                            No analysis available yet
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Related Items Section */}
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                                     <Loader2 className="h-8 w-8 animate-spin mb-3 text-purple-500" />

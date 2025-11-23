@@ -123,6 +123,114 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // AI Analysis of item using its connections
+    if (action === 'analyze') {
+      try {
+        if (!id || !type) {
+          return res.status(400).json({ error: 'id and type are required' })
+        }
+
+        // Get the source item
+        let sourceItem: any = null
+        let sourceContent = ''
+
+        if (type === 'project') {
+          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+          sourceItem = data
+          sourceContent = `Project: ${data?.title}\n${data?.description || ''}`
+        } else if (type === 'thought' || type === 'memory') {
+          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
+          sourceItem = data
+          sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}`
+        } else if (type === 'article') {
+          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
+          sourceItem = data
+          sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+        }
+
+        if (!sourceItem) {
+          return res.status(404).json({ error: 'Item not found' })
+        }
+
+        // Get connections for this item
+        const { data: connections } = await supabase
+          .from('connections')
+          .select('*')
+          .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
+          .limit(10)
+
+        // Fetch details for connected items
+        const connectedItems: string[] = []
+        for (const conn of connections || []) {
+          const isSource = (conn.source_type === type || conn.source_type === 'thought' && type === 'memory') && conn.source_id === id
+          const relatedType = isSource ? conn.target_type : conn.source_type
+          const relatedId = isSource ? conn.target_id : conn.source_id
+
+          let itemText = ''
+          if (relatedType === 'thought') {
+            const { data } = await supabase.from('memories').select('title, body').eq('id', relatedId).single()
+            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'}`
+          } else if (relatedType === 'project') {
+            const { data } = await supabase.from('projects').select('title, description').eq('id', relatedId).single()
+            itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
+          } else if (relatedType === 'article') {
+            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('id', relatedId).single()
+            itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
+          }
+          if (itemText) connectedItems.push(itemText)
+        }
+
+        // Generate AI analysis
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+        const analysisPrompt = `Analyze this item and its connections to provide brief, actionable insights.
+
+CURRENT ITEM:
+${sourceContent}
+
+CONNECTED ITEMS (${connectedItems.length}):
+${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections yet'}
+
+Provide a JSON response with:
+1. "summary": One sentence describing what this item is about and its significance
+2. "patterns": Array of 1-2 patterns you notice (e.g., "This connects to 3 articles about productivity")
+3. "insight": One key insight or observation about how this relates to the user's other content
+4. "suggestion": One actionable suggestion (what to explore, read, or think about next)
+
+Keep each field concise (under 100 characters for patterns/insight/suggestion).
+Return valid JSON only.`
+
+        const result = await model.generateContent(analysisPrompt)
+        const responseText = result.response.text()
+
+        // Parse JSON from response
+        let analysis
+        try {
+          const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/)
+          analysis = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
+        } catch {
+          // Fallback if JSON parsing fails
+          analysis = {
+            summary: 'Unable to generate analysis',
+            patterns: [],
+            insight: '',
+            suggestion: 'Try adding more connections to this item'
+          }
+        }
+
+        return res.status(200).json({
+          analysis,
+          connectionCount: connections?.length || 0,
+          itemType: type,
+          itemTitle: sourceItem.title || sourceItem.body?.slice(0, 50) || 'Untitled'
+        })
+
+      } catch (error) {
+        console.error('[connections] Analysis error:', error)
+        return res.status(500).json({ error: 'Failed to analyze item' })
+      }
+    }
+
     if (action === 'list-sparks') {
       try {
         // Get connections where this item is either source or target
