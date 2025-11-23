@@ -76,7 +76,9 @@ interface FocusableItemProps {
 
 export function FocusableItem({ children, id, type, className = '' }: FocusableItemProps) {
   const { focusedId, registerItem } = useContext(FocusableListContext)
+  const { setContext, toggleSidebar } = useContextEngineStore()
   const ref = useRef<HTMLDivElement>(null)
+  const lastTapRef = useRef<number>(0)
   const isFocused = focusedId === id
 
   useEffect(() => {
@@ -85,6 +87,23 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
       return cleanup
     }
   }, [registerItem])
+
+  const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
+    const now = Date.now()
+    const DOUBLE_TAP_DELAY = 300
+
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected - open context sidebar
+      e.preventDefault()
+      e.stopPropagation()
+      const contextType = type === 'thought' ? 'memory' : type
+      setContext(contextType as any, id)
+      toggleSidebar(true)
+      lastTapRef.current = 0
+    } else {
+      lastTapRef.current = now
+    }
+  }
 
   return (
     <div
@@ -97,6 +116,8 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
         boxShadow: isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
         borderRadius: '0.75rem'
       }}
+      onClick={handleTap}
+      onTouchEnd={handleTap}
     >
       {children}
     </div>
