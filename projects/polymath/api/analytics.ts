@@ -186,10 +186,29 @@ async function getSynthesisEvolution() {
     .select('*')
     .eq('user_id', userId)
 
-  if (!memories || memories.length < 10) {
+  if (!memories || memories.length < 5) {
     return {
       insights: [],
-      message: 'Need more data to detect evolution patterns'
+      message: 'Need at least 5 thoughts to detect evolution patterns',
+      requirements: {
+        current: memories?.length || 0,
+        needed: 5,
+        tip: 'Add more thoughts to see how your thinking evolves over time'
+      }
+    }
+  }
+
+  // Check for themes - needed for grouping
+  const memoriesWithThemes = memories.filter(m => m.themes && m.themes.length > 0)
+  if (memoriesWithThemes.length < 3) {
+    return {
+      insights: [],
+      message: 'Your thoughts need themes to detect patterns',
+      requirements: {
+        current: memoriesWithThemes.length,
+        needed: 3,
+        tip: 'Themes are automatically extracted when you add thoughts. Try adding thoughts with clear topics.'
+      }
     }
   }
 

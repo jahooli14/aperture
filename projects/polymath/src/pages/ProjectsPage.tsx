@@ -19,6 +19,7 @@ import { Layers, Sparkles, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { VirtuosoGrid } from 'react-virtuoso'
+import { FocusableList, FocusableItem } from '../components/FocusableList'
 import type { Project } from '../types'
 
 export function ProjectsPage() {
@@ -264,29 +265,33 @@ export function ProjectsPage() {
 
               {/* Right Column: Scrollable List (2 columns on mobile, 1 on desktop for density) */}
               <div className="lg:col-span-2">
-                <VirtuosoGrid
-                  useWindowScroll
-                  data={projects}
-                  listClassName="grid grid-cols-2 gap-2"
-                  itemContent={(index, project) => {
-                    const isSpotlighted = isProjectSpotlighted(project, projects)
-                    const spotlightColor = getSpotlightColor(project, projects)
-                    return (
-                      <motion.div
-                        key={project.id}
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.05 }} // Reduced delay for virtualized items
-                      >
-                        <ProjectListRow
-                          project={project}
-                          isSpotlighted={isSpotlighted}
-                          spotlightColor={spotlightColor}
-                        />
-                      </motion.div>
-                    )
-                  }}
-                />
+                <FocusableList>
+                  <VirtuosoGrid
+                    useWindowScroll
+                    data={projects}
+                    listClassName="grid grid-cols-2 gap-2"
+                    itemContent={(index, project) => {
+                      const isSpotlighted = isProjectSpotlighted(project, projects)
+                      const spotlightColor = getSpotlightColor(project, projects)
+                      return (
+                        <FocusableItem id={project.id} type="project">
+                          <motion.div
+                            key={project.id}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.05 }} // Reduced delay for virtualized items
+                          >
+                            <ProjectListRow
+                              project={project}
+                              isSpotlighted={isSpotlighted}
+                              spotlightColor={spotlightColor}
+                            />
+                          </motion.div>
+                        </FocusableItem>
+                      )
+                    }}
+                  />
+                </FocusableList>
               </div>
             </div>
           )}

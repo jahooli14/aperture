@@ -5,7 +5,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Target, Check, X, GripVertical, ChevronDown, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Sparkles } from 'lucide-react'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
@@ -823,31 +823,6 @@ export function ProjectDetailPage() {
                 </p>
               </div>
             )}
-
-            {/* AI Strategy - The "So What" */}
-            <div className="premium-card p-6 relative overflow-hidden">
-              <div className="flex items-start gap-4 relative z-10">
-                <div className="p-3 rounded-lg bg-purple-500/20">
-                  <Target className="h-6 w-6 text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">AI Strategic Analysis</h3>
-                  <p className="text-purple-200/80 text-sm leading-relaxed mb-3">
-                    Based on your recent thoughts about <span className="text-white font-medium">{project.title}</span>, this project is high impact.
-                  </p>
-                  <div className="flex gap-2">
-                    <div className="px-2 py-1 rounded bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200">
-                      High Momentum
-                    </div>
-                    <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
-                      Strong Alignment
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-            </div>
 
             {/* Task Checklist */}
             <div data-task-list>

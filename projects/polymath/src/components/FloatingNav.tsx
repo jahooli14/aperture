@@ -21,8 +21,6 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
 
-import { useContextEngineStore } from '../stores/useContextEngineStore'
-
 // Schema colors for each section - unified blue theme
 const SCHEMA_COLORS = {
   home: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
@@ -43,11 +41,10 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Core navigation: Home + 3 tenets (Thoughts in middle)
+// Core navigation: Home + 3 tenets + Settings
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
-  { id: 'context', label: 'Context', icon: Sparkles, action: 'toggle-sidebar', color: 'context' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', action: 'navigate', color: 'home' },
@@ -58,7 +55,6 @@ export function FloatingNav() {
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
-  const { toggleSidebar, sidebarOpen } = useContextEngineStore()
   const { addToast } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -78,13 +74,10 @@ export function FloatingNav() {
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
       navigate(option.path)
-    } else if (option.action === 'toggle-sidebar') {
-      toggleSidebar()
     }
   }
 
   const isActive = (option: NavOption): boolean => {
-    if (option.action === 'toggle-sidebar') return sidebarOpen
     return location.pathname === option.path
   }
 

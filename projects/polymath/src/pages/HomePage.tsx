@@ -37,11 +37,13 @@ import {
   Brain,
   X,
   AlertCircle,
-  Check
+  Check,
+  Lightbulb,
+  RefreshCw
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
-import type { Memory, Project } from '../types'
+import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
   type: 'article' | 'thought' | 'project' | 'empty'
@@ -200,6 +202,134 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
 }
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+
+function InsightsSection() {
+  const [insights, setInsights] = useState<SynthesisInsight[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [requirements, setRequirements] = useState<{ current: number; needed: number; tip: string } | null>(null)
+  const navigate = useNavigate()
+
+  const fetchInsights = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true)
+    else setLoading(true)
+
+    try {
+      const response = await fetch('/api/analytics?resource=evolution')
+      if (response.ok) {
+        const data = await response.json()
+        setInsights(data.insights || [])
+        setRequirements(data.requirements || null)
+      }
+    } catch (error) {
+      console.error('Failed to fetch insights:', error)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchInsights()
+  }, [])
+
+  const getInsightIcon = (type: string) => {
+    switch (type) {
+      case 'evolution': return <TrendingUp className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+      case 'pattern': return <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-indigo)' }} />
+      case 'collision': return <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
+      case 'opportunity': return <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
+      default: return <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+    }
+  }
+
+  return (
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+      <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+        background: 'var(--premium-bg-2)',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+      }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+            Your <span style={{ color: 'var(--premium-blue)' }}>insights</span>
+          </h2>
+          <button
+            onClick={() => fetchInsights(true)}
+            disabled={refreshing}
+            className="h-8 w-8 rounded-lg flex items-center justify-center transition-all hover:bg-white/5"
+            style={{ color: 'var(--premium-text-tertiary)' }}
+            title="Refresh insights"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {loading ? (
+          <SkeletonCard variant="list" count={2} />
+        ) : insights.length > 0 ? (
+          <div className="space-y-3">
+            {/* Show first 2 insights */}
+            {insights.slice(0, 2).map((insight, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-xl transition-all"
+                style={{
+                  background: 'var(--premium-bg-3)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    {getInsightIcon(insight.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-sm mb-1 premium-text-platinum">
+                      {insight.title}
+                    </h3>
+                    <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {insight.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {insights.length > 2 && (
+              <button
+                onClick={() => navigate('/insights')}
+                className="block w-full text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+                style={{ color: 'var(--premium-blue)' }}
+              >
+                View All Insights ({insights.length}) <ArrowRight className="inline h-4 w-4 ml-1" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.5 }} />
+            <p className="text-sm mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
+              Building your insights...
+            </p>
+            {requirements ? (
+              <>
+                <p className="text-xs mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
+                </p>
+                <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  {requirements.tip}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                Add more thoughts with themes to see patterns emerge
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -783,7 +913,10 @@ export function HomePage() {
           projectsLoading={projectsLoading}
         />
 
-        {/* 4. EXPLORE */}
+        {/* 4. YOUR INSIGHTS */}
+        <InsightsSection />
+
+        {/* 5. EXPLORE */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
             background: 'var(--premium-bg-2)',

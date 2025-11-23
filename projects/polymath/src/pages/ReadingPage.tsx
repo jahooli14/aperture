@@ -22,6 +22,7 @@ import { PremiumTabs } from '../components/ui/premium-tabs'
 import { EmptyState } from '../components/ui/empty-state'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { articleProcessor } from '../lib/articleProcessor'
+import { FocusableList, FocusableItem } from '../components/FocusableList'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
@@ -755,51 +756,55 @@ export function ReadingPage() {
                 }
               />
             ) : (
-              <Virtuoso
-                style={{ height: 'calc(100vh - 240px)' }}
-                data={filteredArticles}
-                overscan={200}
-                itemContent={(index, article) => {
-                  const isSelected = bulkSelection.isSelected(article.id)
+              <FocusableList>
+                <Virtuoso
+                  style={{ height: 'calc(100vh - 240px)' }}
+                  data={filteredArticles}
+                  overscan={200}
+                  itemContent={(index, article) => {
+                    const isSelected = bulkSelection.isSelected(article.id)
 
-                  return (
-                    <div className="pb-4" style={{ contain: 'layout style paint' }}>
-                      <div
-                        className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
-                        onClick={(e) => {
-                          if (bulkSelection.isSelectionMode) {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            bulkSelection.toggleSelection(article.id)
-                          }
-                        }}
-                        style={{
-                          // Allow drag events to pass through when not in selection mode
-                          pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
-                        }}
-                      >
-                        {bulkSelection.isSelectionMode && (
+                    return (
+                      <FocusableItem id={article.id} type="article">
+                        <div className="pb-4" style={{ contain: 'layout style paint' }}>
                           <div
-                            className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                            className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
+                            onClick={(e) => {
+                              if (bulkSelection.isSelectionMode) {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                bulkSelection.toggleSelection(article.id)
+                              }
+                            }}
                             style={{
-                              backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-                              pointerEvents: 'auto'
+                              // Allow drag events to pass through when not in selection mode
+                              pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
                             }}
                           >
-                            {isSelected && <Check className="h-4 w-4 text-white" />}
+                            {bulkSelection.isSelectionMode && (
+                              <div
+                                className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                                style={{
+                                  backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+                                  pointerEvents: 'auto'
+                                }}
+                              >
+                                {isSelected && <Check className="h-4 w-4 text-white" />}
+                              </div>
+                            )}
+                            <div style={{ pointerEvents: 'auto' }}>
+                              <ArticleCard
+                                article={article}
+                                onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
+                              />
+                            </div>
                           </div>
-                        )}
-                        <div style={{ pointerEvents: 'auto' }}>
-                          <ArticleCard
-                            article={article}
-                            onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
-                          />
                         </div>
-                      </div>
-                    </div>
-                  )
-                }}
-              />
+                      </FocusableItem>
+                    )
+                  }}
+                />
+              </FocusableList>
             )}
           </>
         )}
