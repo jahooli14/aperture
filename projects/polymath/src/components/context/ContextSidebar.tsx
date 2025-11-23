@@ -367,9 +367,39 @@ export function ContextSidebar() {
                                                     <X className="h-3 w-3 text-gray-500" />
                                                 </button>
                                             </div>
-                                            <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
-                                                {actionResult.result}
-                                            </p>
+                                            <div className="text-sm text-gray-300 leading-relaxed space-y-2">
+                                                {actionResult.result.split('\n').map((line, i) => {
+                                                    const trimmed = line.trim()
+                                                    if (!trimmed) return null
+
+                                                    // Bullet points
+                                                    if (trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.match(/^\d+\./)) {
+                                                        const text = trimmed.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '')
+                                                        return (
+                                                            <div key={i} className="flex items-start gap-2">
+                                                                <span className="text-purple-400 mt-0.5">•</span>
+                                                                <span>{text}</span>
+                                                            </div>
+                                                        )
+                                                    }
+
+                                                    // Bold text (**text**)
+                                                    if (trimmed.includes('**')) {
+                                                        const parts = trimmed.split(/\*\*(.*?)\*\*/g)
+                                                        return (
+                                                            <p key={i}>
+                                                                {parts.map((part, j) =>
+                                                                    j % 2 === 1
+                                                                        ? <strong key={j} className="text-white font-medium">{part}</strong>
+                                                                        : part
+                                                                )}
+                                                            </p>
+                                                        )
+                                                    }
+
+                                                    return <p key={i}>{trimmed}</p>
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
