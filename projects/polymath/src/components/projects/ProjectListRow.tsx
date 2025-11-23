@@ -65,14 +65,14 @@ export function ProjectListRow({
                 e.stopPropagation()
                 setPriority(project.id)
               }}
-              className="flex-shrink-0 p-0.5 rounded hover:bg-white/10 transition-colors"
+              className="flex-shrink-0 p-1 rounded hover:bg-white/20 transition-colors"
               title={project.is_priority ? "Remove from priority" : "Set as priority"}
             >
               <Star
-                size={14}
+                size={18}
                 style={{
-                  color: project.is_priority ? 'var(--premium-gold, #f59e0b)' : 'rgba(255, 255, 255, 0.3)',
-                  fill: project.is_priority ? 'var(--premium-gold, #f59e0b)' : 'none'
+                  color: project.is_priority ? '#f59e0b' : 'rgba(255, 255, 255, 0.6)',
+                  fill: project.is_priority ? '#f59e0b' : 'none'
                 }}
               />
             </button>
