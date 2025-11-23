@@ -58,13 +58,45 @@ async function handleResponse(response: Response) {
   return data
 }
 
+const pendingRequests = new Map<string, Promise<any>>()
+const cache = new Map<string, { data: any, timestamp: number }>()
+const CACHE_TTL = 60 * 1000 // 1 minute
+
 export const api = {
   get: async (endpoint: string) => {
-    const response = await fetch(`/api/${endpoint}`)
-    return handleResponse(response)
+    // 1. Check Cache
+    const cached = cache.get(endpoint)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data
+    }
+
+    // 2. Check Pending Requests (Deduplication)
+    if (pendingRequests.has(endpoint)) {
+      return pendingRequests.get(endpoint)
+    }
+
+    // 3. Make Request
+    const promise = (async () => {
+      try {
+        const response = await fetch(`/api/${endpoint}`)
+        const data = await handleResponse(response)
+
+        // Update Cache
+        cache.set(endpoint, { data, timestamp: Date.now() })
+        return data
+      } finally {
+        pendingRequests.delete(endpoint)
+      }
+    })()
+
+    pendingRequests.set(endpoint, promise)
+    return promise
   },
 
   post: async (endpoint: string, data: any) => {
+    // Invalidate Cache on Mutation
+    cache.clear()
+
     const response = await fetch(`/api/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -74,6 +106,9 @@ export const api = {
   },
 
   patch: async (endpoint: string, data?: any) => {
+    // Invalidate Cache on Mutation
+    cache.clear()
+
     // For Vercel serverless routing, convert path-based IDs to query params
     // Special handling for priority endpoint: "projects/{id}/priority" → "projects?resource=priority&id={id}"
     let finalEndpoint = endpoint
@@ -103,6 +138,9 @@ export const api = {
   },
 
   delete: async (endpoint: string) => {
+    // Invalidate Cache on Mutation
+    cache.clear()
+
     // For Vercel serverless routing, convert path-based IDs to query params
     // e.g., "projects/abc-123" → "projects?id=abc-123"
     let finalEndpoint = endpoint

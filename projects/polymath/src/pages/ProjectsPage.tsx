@@ -18,6 +18,7 @@ import { EmptyState } from '../components/ui/empty-state'
 import { Layers, Sparkles, Search } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
+import { VirtuosoGrid } from 'react-virtuoso'
 import type { Project } from '../types'
 
 export function ProjectsPage() {
@@ -162,134 +163,137 @@ export function ProjectsPage() {
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.2 }}
       >
-      {/* Controls */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Tag Filters */}
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-sm font-medium self-center" style={{ color: 'var(--premium-text-secondary)' }}>
-              Tags:
-            </span>
-            {allTags.map(tag => (
-              <Button
-                key={tag}
-                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
-                onClick={() => toggleTag(tag)}
-                size="sm"
-                className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs"
-                style={{
-                  backgroundColor: selectedTags.includes(tag) ? 'var(--premium-bg-3)' : 'transparent',
-                  color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
-                }}
-              >
-                #{tag}
-              </Button>
-            ))}
-            {selectedTags.length > 0 && (
-              <Button
-                variant="ghost"
-                onClick={() => setSelectedTags([])}
-                size="sm"
-                className="text-xs underline"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-              >
-                Clear tags
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Demo Projects Context Banner - Only show when projects include demo data */}
-        {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
-          <Card className="mb-8" style={{
-            background: 'var(--premium-bg-2)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-          }}>
-            <CardContent className="pt-6">
-              <h3 className="font-semibold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
-                <Layers className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                Demo Projects - Progress Tracking in Action
-              </h3>
-              <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                These 4 demo projects show different stages: <strong>Completed</strong> (Standing Desk 100%), <strong>Active</strong> (Portfolio 65%, Image Classifier 80%, Meditation 40%).
-                Each has <strong>next steps</strong> and tracks capability growth as you work.
-              </p>
-              <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Error Banner */}
-        {error && (
-          <Card className="mb-6 bg-red-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-red-600 font-semibold">{error}</p>
+        {/* Controls */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Tag Filters */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="text-sm font-medium self-center" style={{ color: 'var(--premium-text-secondary)' }}>
+                Tags:
+              </span>
+              {allTags.map(tag => (
                 <Button
-                  onClick={() => fetchProjects()}
+                  key={tag}
+                  variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                  onClick={() => toggleTag(tag)}
                   size="sm"
-                  variant="outline"
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap px-3 py-1 rounded-full font-medium transition-all text-xs"
+                  style={{
+                    backgroundColor: selectedTags.includes(tag) ? 'var(--premium-bg-3)' : 'transparent',
+                    color: selectedTags.includes(tag) ? 'var(--premium-blue)' : 'var(--premium-text-secondary)'
+                  }}
                 >
-                  Retry
+                  #{tag}
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Two-Column Layout: Spotlight (left) + Scrollable List (right) */}
-        {loading && projects.length === 0 ? (
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <div key={i} className="h-32 bg-white/5 rounded-xl" />
-            ))}
-          </div>
-        ) : projects.length === 0 ? (
-          <EmptyState
-            icon={Layers}
-            title={filter === 'all' ? "No projects yet" : `No ${filter} projects`}
-            description="Build a project from a suggestion or create one manually to get started on your creative journey"
-          />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column: Spotlight (sticky on desktop, scrollable on mobile) */}
-            <div className="lg:sticky lg:top-24 lg:h-fit space-y-3">
-              <SpotlightSection projects={projects} />
+              ))}
+              {selectedTags.length > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setSelectedTags([])}
+                  size="sm"
+                  className="text-xs underline"
+                  style={{ color: 'var(--premium-text-tertiary)' }}
+                >
+                  Clear tags
+                </Button>
+              )}
             </div>
+          )}
 
-            {/* Right Column: Scrollable List (2 columns on mobile, 1 on desktop for density) */}
-            <div className="lg:col-span-2">
-              <div className="grid grid-cols-2 gap-2">
-                {projects.map((project, idx) => {
-                  const isSpotlighted = isProjectSpotlighted(project, projects)
-                  const spotlightColor = getSpotlightColor(project, projects)
-                  return (
-                    <motion.div
-                      key={project.id}
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.02 }}
-                    >
-                      <ProjectListRow
-                        project={project}
-                        isSpotlighted={isSpotlighted}
-                        spotlightColor={spotlightColor}
-                      />
-                    </motion.div>
-                  )
-                })}
+          {/* Demo Projects Context Banner - Only show when projects include demo data */}
+          {projects.length > 0 && projects.some(p => p.title === 'Standing Desk' || p.title === 'Portfolio Website') && (
+            <Card className="mb-8" style={{
+              background: 'var(--premium-bg-2)',
+              backdropFilter: 'blur(12px)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+            }}>
+              <CardContent className="pt-6">
+                <h3 className="font-semibold text-lg mb-2 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
+                  <Layers className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                  Demo Projects - Progress Tracking in Action
+                </h3>
+                <p className="leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+                  These 4 demo projects show different stages: <strong>Completed</strong> (Standing Desk 100%), <strong>Active</strong> (Portfolio 65%, Image Classifier 80%, Meditation 40%).
+                  Each has <strong>next steps</strong> and tracks capability growth as you work.
+                </p>
+                <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <strong>Tip:</strong> Build projects from suggestions, update progress, and watch your capabilities strengthen over time.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error Banner */}
+          {error && (
+            <Card className="mb-6 bg-red-50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm text-red-600 font-semibold">{error}</p>
+                  <Button
+                    onClick={() => fetchProjects()}
+                    size="sm"
+                    variant="outline"
+                    className="whitespace-nowrap"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Two-Column Layout: Spotlight (left) + Scrollable List (right) */}
+          {loading && projects.length === 0 ? (
+            <div className="animate-pulse space-y-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="h-32 bg-white/5 rounded-xl" />
+              ))}
+            </div>
+          ) : projects.length === 0 ? (
+            <EmptyState
+              icon={Layers}
+              title={filter === 'all' ? "No projects yet" : `No ${filter} projects`}
+              description="Build a project from a suggestion or create one manually to get started on your creative journey"
+            />
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Spotlight (sticky on desktop, scrollable on mobile) */}
+              <div className="lg:sticky lg:top-24 lg:h-fit space-y-3">
+                <SpotlightSection projects={projects} />
+              </div>
+
+              {/* Right Column: Scrollable List (2 columns on mobile, 1 on desktop for density) */}
+              <div className="lg:col-span-2">
+                <VirtuosoGrid
+                  useWindowScroll
+                  data={projects}
+                  listClassName="grid grid-cols-2 gap-2"
+                  itemContent={(index, project) => {
+                    const isSpotlighted = isProjectSpotlighted(project, projects)
+                    const spotlightColor = getSpotlightColor(project, projects)
+                    return (
+                      <motion.div
+                        key={project.id}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.05 }} // Reduced delay for virtualized items
+                      >
+                        <ProjectListRow
+                          project={project}
+                          isSpotlighted={isSpotlighted}
+                          spotlightColor={spotlightColor}
+                        />
+                      </motion.div>
+                    )
+                  }}
+                />
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      {/* Confirmation Dialog */}
-      {confirmDialog}
+        {/* Confirmation Dialog */}
+        {confirmDialog}
       </motion.div>
     </div>
   )
