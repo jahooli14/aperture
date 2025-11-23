@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Check, Copy, Share2, Edit } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
@@ -31,7 +31,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [isOffline, setIsOffline] = useState(false)
   const [progress, setProgress] = useState(0)
   const [connectionCount, setConnectionCount] = useState(0)
-  const [exitX, setExitX] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
@@ -61,15 +60,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     return cleaned || undefined
   }
 
-  // Motion values for swipe gesture - stable references, no memoization needed
-  const x = useMotionValue(0)
-  const archiveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
-  const deleteIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
-  const backgroundColor = useTransform(
-    x,
-    [-150, 0, 150],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(16, 185, 129, 0.3)']
-  )
 
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {
@@ -184,62 +174,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     window.open(article.url, '_blank', 'noopener,noreferrer')
   }
 
-  const handleDragEnd = React.useCallback((_: any, info: any) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-
-    // Swipe right = Mark as read/Archive
-    if (offset > 100 || velocity > 500) {
-      haptic.success()
-      setExitX(1000)
-      setTimeout(async () => {
-        try {
-          await updateArticleStatus(article.id, 'archived')
-          addToast({
-            title: 'Archived!',
-            description: 'Article marked as read',
-            variant: 'success',
-          })
-          // Show connections dialog after archiving
-          setExitX(0)
-          x.set(0)
-          setShowConnectionsDialog(true)
-        } catch (error) {
-          addToast({
-            title: 'Error',
-            description: 'Failed to archive article',
-            variant: 'destructive',
-          })
-          setExitX(0)
-          x.set(0)
-        }
-      }, 200)
-    }
-    // Swipe left = Delete
-    else if (offset < -100 || velocity < -500) {
-      haptic.warning()
-      setExitX(-1000)
-      setTimeout(async () => {
-        try {
-          await deleteArticle(article.id)
-          addToast({
-            title: 'Deleted',
-            description: 'Article removed from queue',
-            variant: 'success',
-          })
-        } catch (error) {
-          addToast({
-            title: 'Error',
-            description: 'Failed to delete article',
-            variant: 'destructive',
-          })
-          setExitX(0)
-          x.set(0)
-        }
-      }, 200)
-    }
-  }, [article.id, updateArticleStatus, deleteArticle, addToast, x])
-
   const handleCopyLink = React.useCallback(() => {
     navigator.clipboard.writeText(article.url).then(() => {
       haptic.success()
@@ -352,41 +286,11 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         title={article.title || 'Article'}
       />
 
-      <motion.div
-        style={{ x }}
-        drag="x"
-        dragConstraints={{ left: -200, right: 200 }}
-        dragElastic={0.1}
-        onDragEnd={handleDragEnd}
-        animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      <div
         className="relative"
         {...longPressHandlers}
       >
-        {/* Archive Indicator (Swipe Right) */}
         <motion.div
-          style={{ opacity: archiveIndicatorOpacity }}
-          className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
-        >
-          <div className="flex items-center gap-2">
-            <Check className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-            <span className="text-xl font-bold" style={{ color: 'var(--premium-emerald)' }}>ARCHIVE</span>
-          </div>
-        </motion.div>
-
-        {/* Delete Indicator (Swipe Left) */}
-        <motion.div
-          style={{ opacity: deleteIndicatorOpacity }}
-          className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10 rounded-xl"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-red-500">DELETE</span>
-            <Trash2 className="h-6 w-6 text-red-500" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          style={{ backgroundColor }}
           className="rounded-xl"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -660,7 +564,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             </div>
           </div>
         </motion.div>
-      </motion.div>
+      </div>
 
       {/* Edit Dialog */}
       <EditArticleDialog
