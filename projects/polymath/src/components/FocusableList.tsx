@@ -78,7 +78,7 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
   const { focusedId, registerItem } = useContext(FocusableListContext)
   const { setContext, toggleSidebar } = useContextEngineStore()
   const ref = useRef<HTMLDivElement>(null)
-  const lastTapRef = useRef<number>(0)
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null)
   const isFocused = focusedId === id
 
   useEffect(() => {
@@ -88,21 +88,36 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
     }
   }, [registerItem])
 
-  const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
-    const now = Date.now()
-    const DOUBLE_TAP_DELAY = 300
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    // Only track if not starting from screen edge (first 30px)
+    if (touch.clientX > 30) {
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      }
+    }
+  }
 
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Double tap detected - open context sidebar
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+
+    const touch = e.changedTouches[0]
+    const deltaX = touchStartRef.current.x - touch.clientX
+    const deltaY = Math.abs(touchStartRef.current.y - touch.clientY)
+    const deltaTime = Date.now() - touchStartRef.current.time
+
+    // Swipe left: moved >80px horizontally, <50px vertically, within 500ms
+    if (deltaX > 80 && deltaY < 50 && deltaTime < 500) {
       e.preventDefault()
       e.stopPropagation()
       const contextType = type === 'thought' ? 'memory' : type
       setContext(contextType as any, id)
       toggleSidebar(true)
-      lastTapRef.current = 0
-    } else {
-      lastTapRef.current = now
     }
+
+    touchStartRef.current = null
   }
 
   return (
@@ -116,8 +131,8 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
         boxShadow: isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
         borderRadius: '0.75rem'
       }}
-      onClick={handleTap}
-      onTouchEnd={handleTap}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       {children}
     </div>
