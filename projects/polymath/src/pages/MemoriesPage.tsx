@@ -28,6 +28,7 @@ import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
+import { FocusableList, FocusableItem } from '../components/FocusableList'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
 const getIconComponent = (name: string) => {
@@ -735,30 +736,34 @@ export function MemoriesPage() {
 
               {/* Recent memories view - Virtualized for smooth scrolling with 100+ items */}
               {memoryView === 'recent' && (
-                <Virtuoso
-                  style={{ height: 'calc(100vh - 280px)' }}
-                  data={memories}
-                  overscan={200}
-                  itemContent={(index, memory) => {
-                    const isNewlyCreated = memory.id === newlyCreatedMemoryId
+                <FocusableList>
+                  <Virtuoso
+                    style={{ height: 'calc(100vh - 280px)' }}
+                    data={memories}
+                    overscan={200}
+                    itemContent={(index, memory) => {
+                      const isNewlyCreated = memory.id === newlyCreatedMemoryId
 
-                    return (
-                      <div
-                        className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
-                        style={{
-                          contain: 'layout style paint',
-                          willChange: isNewlyCreated ? 'transform' : 'auto'
-                        }}
-                      >
-                        <MemoryCard
-                          memory={memory}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                        />
-                      </div>
-                    )
-                  }}
-                />
+                      return (
+                        <FocusableItem id={memory.id} type="thought">
+                          <div
+                            className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
+                            style={{
+                              contain: 'layout style paint',
+                              willChange: isNewlyCreated ? 'transform' : 'auto'
+                            }}
+                          >
+                            <MemoryCard
+                              memory={memory}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                            />
+                          </div>
+                        </FocusableItem>
+                      )
+                    }}
+                  />
+                </FocusableList>
               )}
             </>
           )}
