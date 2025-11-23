@@ -12,7 +12,11 @@ import {
     Loader2,
     Lightbulb,
     TrendingUp,
-    RefreshCw
+    RefreshCw,
+    FileText,
+    HelpCircle,
+    Compass,
+    GitBranch
 } from 'lucide-react'
 import { useContextEngineStore, ContextItem } from '../../stores/useContextEngineStore'
 import { useToast } from '../ui/toast'
@@ -46,6 +50,34 @@ export function ContextSidebar() {
 
     const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
     const [analysisLoading, setAnalysisLoading] = useState(false)
+    const [actionResult, setActionResult] = useState<{ type: string; result: string } | null>(null)
+    const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+    const executeAction = async (actionType: string) => {
+        if (!activeContext.id || activeContext.type === 'page' || activeContext.type === 'home') {
+            return
+        }
+
+        setActionLoading(actionType)
+        setActionResult(null)
+        try {
+            const response = await fetch(
+                `/api/connections?action=ai-action&id=${activeContext.id}&type=${activeContext.type}&actionType=${actionType}`
+            )
+            if (response.ok) {
+                const data = await response.json()
+                setActionResult({ type: actionType, result: data.result })
+            }
+        } catch (error) {
+            console.error('Failed to execute action:', error)
+            addToast({
+                title: 'Action failed',
+                variant: 'destructive'
+            })
+        } finally {
+            setActionLoading(null)
+        }
+    }
 
     const fetchAnalysis = async () => {
         if (!activeContext.id || activeContext.type === 'page' || activeContext.type === 'home') {
@@ -260,6 +292,85 @@ export function ContextSidebar() {
                                         <p className="text-xs text-gray-500">
                                             No analysis available yet
                                         </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Quick Actions */}
+                            {activeContext.type !== 'page' && activeContext.type !== 'home' && (
+                                <div className="space-y-3">
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        Quick Actions
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => executeAction('summarize')}
+                                            disabled={!!actionLoading}
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                        >
+                                            {actionLoading === 'summarize' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                                            ) : (
+                                                <FileText className="h-4 w-4 text-blue-400" />
+                                            )}
+                                            <span className="text-xs text-gray-300">Summarize</span>
+                                        </button>
+                                        <button
+                                            onClick={() => executeAction('find-gaps')}
+                                            disabled={!!actionLoading}
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                        >
+                                            {actionLoading === 'find-gaps' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                                            ) : (
+                                                <HelpCircle className="h-4 w-4 text-amber-400" />
+                                            )}
+                                            <span className="text-xs text-gray-300">Find Gaps</span>
+                                        </button>
+                                        <button
+                                            onClick={() => executeAction('suggest-next')}
+                                            disabled={!!actionLoading}
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                        >
+                                            {actionLoading === 'suggest-next' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                                            ) : (
+                                                <Compass className="h-4 w-4 text-emerald-400" />
+                                            )}
+                                            <span className="text-xs text-gray-300">Suggest Next</span>
+                                        </button>
+                                        <button
+                                            onClick={() => executeAction('connect-dots')}
+                                            disabled={!!actionLoading}
+                                            className="flex items-center gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                        >
+                                            {actionLoading === 'connect-dots' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+                                            ) : (
+                                                <GitBranch className="h-4 w-4 text-purple-400" />
+                                            )}
+                                            <span className="text-xs text-gray-300">Connect Dots</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Action Result */}
+                                    {actionResult && (
+                                        <div className="rounded-lg p-3 bg-white/5 border border-white/10">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-medium text-gray-400 capitalize">
+                                                    {actionResult.type.replace('-', ' ')}
+                                                </span>
+                                                <button
+                                                    onClick={() => setActionResult(null)}
+                                                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                                                >
+                                                    <X className="h-3 w-3 text-gray-500" />
+                                                </button>
+                                            </div>
+                                            <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
+                                                {actionResult.result}
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             )}

@@ -231,6 +231,133 @@ Return valid JSON only.`
       }
     }
 
+    // On-demand AI actions
+    if (action === 'ai-action') {
+      try {
+        const { actionType } = req.query
+        if (!id || !type || !actionType) {
+          return res.status(400).json({ error: 'id, type, and actionType are required' })
+        }
+
+        // Get the source item
+        let sourceContent = ''
+        let sourceTitle = ''
+
+        if (type === 'project') {
+          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+          sourceTitle = data?.title || 'Untitled'
+          sourceContent = `Project: ${data?.title}\nDescription: ${data?.description || ''}\nStatus: ${data?.status || 'unknown'}`
+        } else if (type === 'thought' || type === 'memory') {
+          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
+          sourceTitle = data?.title || data?.body?.slice(0, 50) || 'Untitled'
+          sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}\nThemes: ${(data?.themes || []).join(', ')}`
+        } else if (type === 'article') {
+          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
+          sourceTitle = data?.title || 'Untitled'
+          sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+        }
+
+        // Get connections
+        const { data: connections } = await supabase
+          .from('connections')
+          .select('*')
+          .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
+          .limit(10)
+
+        const connectedItems: string[] = []
+        for (const conn of connections || []) {
+          const isSource = (conn.source_type === type || conn.source_type === 'thought' && type === 'memory') && conn.source_id === id
+          const relatedType = isSource ? conn.target_type : conn.source_type
+          const relatedId = isSource ? conn.target_id : conn.source_id
+
+          let itemText = ''
+          if (relatedType === 'thought') {
+            const { data } = await supabase.from('memories').select('title, body, themes').eq('id', relatedId).single()
+            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'} (themes: ${(data?.themes || []).join(', ')})`
+          } else if (relatedType === 'project') {
+            const { data } = await supabase.from('projects').select('title, description').eq('id', relatedId).single()
+            itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
+          } else if (relatedType === 'article') {
+            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('id', relatedId).single()
+            itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
+          }
+          if (itemText) connectedItems.push(itemText)
+        }
+
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+        let prompt = ''
+        switch (actionType) {
+          case 'summarize':
+            prompt = `Summarize this item and its connections in 2-3 sentences. Focus on the key points and how it relates to connected items.
+
+ITEM:
+${sourceContent}
+
+CONNECTED ITEMS:
+${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+
+Provide a concise summary that captures the essence and context.`
+            break
+
+          case 'find-gaps':
+            prompt = `Analyze this item and its connections to identify knowledge gaps or missing pieces.
+
+ITEM:
+${sourceContent}
+
+CONNECTED ITEMS:
+${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+
+What's missing? What questions remain unanswered? What would make this more complete?
+Provide 2-3 specific gaps or missing pieces in bullet points.`
+            break
+
+          case 'suggest-next':
+            prompt = `Based on this item and its connections, suggest what the user should explore, read, or think about next.
+
+ITEM:
+${sourceContent}
+
+CONNECTED ITEMS:
+${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+
+Provide 2-3 specific, actionable suggestions for what to do next. Be concrete.`
+            break
+
+          case 'connect-dots':
+            prompt = `Find non-obvious connections and patterns between this item and its related content.
+
+ITEM:
+${sourceContent}
+
+CONNECTED ITEMS:
+${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+
+How do these seemingly different items connect? What patterns emerge? What unexpected relationships exist?
+Provide 2-3 insights about hidden connections.`
+            break
+
+          default:
+            return res.status(400).json({ error: 'Invalid actionType' })
+        }
+
+        const result = await model.generateContent(prompt)
+        const responseText = result.response.text()
+
+        return res.status(200).json({
+          result: responseText,
+          actionType,
+          itemTitle: sourceTitle,
+          connectionCount: connections?.length || 0
+        })
+
+      } catch (error) {
+        console.error('[connections] AI action error:', error)
+        return res.status(500).json({ error: 'Failed to perform AI action' })
+      }
+    }
+
     if (action === 'list-sparks') {
       try {
         // Get connections where this item is either source or target
