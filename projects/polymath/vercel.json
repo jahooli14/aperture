@@ -1,6 +1,5 @@
 {
   "buildCommand": "npm run build",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- projects/polymath",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
