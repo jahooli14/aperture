@@ -44,7 +44,7 @@ interface SearchResult {
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = await getUserId(req)
 
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query

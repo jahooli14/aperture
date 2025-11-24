@@ -17,13 +17,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
  * TIMELINE PATTERNS
  * Analyzes WHEN and HOW users capture thoughts
  */
-async function getTimelinePatterns() {
+async function getTimelinePatterns(userId: string) {
   const supabase = getSupabaseClient()
 
   // Get all user's memories with timestamps
   const { data: memories } = await supabase
     .from('memories')
     .select('created_at, audiopen_created_at, emotional_tone')
+    .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
   if (!memories || memories.length < 5) {
@@ -171,9 +172,8 @@ async function getTimelinePatterns() {
  * SYNTHESIS EVOLUTION
  * Multi-memory synthesis showing evolution of thinking
  */
-async function getSynthesisEvolution() {
+async function getSynthesisEvolution(userId: string) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
 
   // 1. Check Cache
   try {
@@ -195,6 +195,7 @@ async function getSynthesisEvolution() {
   const { data: memories } = await supabase
     .from('memories')
     .select('id, title, body, created_at, themes, emotional_tone')
+    .eq('user_id', userId)
     .order('created_at', { ascending: true })
 
   const { data: projects } = await supabase
@@ -458,14 +459,14 @@ Return JSON:
  * CREATIVE OPPORTUNITIES
  * Scans knowledge graph for project opportunities
  */
-async function getCreativeOpportunities() {
+async function getCreativeOpportunities(userId: string) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
 
   // Get user's memories
   const { data: memories } = await supabase
     .from('memories')
     .select('id, title, body, themes, created_at')
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(100)
 
@@ -621,9 +622,8 @@ Return JSON array (2-3 opportunities max):
  * SHADOW PROJECT DETECTOR
  * Finds clusters of activity that aren't yet projects
  */
-async function getShadowProjects() {
+async function getShadowProjects(userId: string) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
 
   // Get recent memories and articles (last 30 days)
   const cutoff = new Date()
@@ -682,7 +682,7 @@ async function getShadowProjects() {
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
     if (!jsonMatch) return { shadow_projects: [] }
     
     const shadows = JSON.parse(jsonMatch[0])
@@ -708,7 +708,7 @@ function getNextStep(project: any): string | null {
  * SMART SUGGESTION
  * Context-aware AI system that suggests the best next action
  */
-async function getSmartSuggestion() {
+async function getSmartSuggestion(userId: string) {
   // Get current context
   const now = new Date()
   const hour = now.getHours()
@@ -718,9 +718,9 @@ async function getSmartSuggestion() {
 
   // Fetch all relevant data in parallel
   const [projects, articles, memories] = await Promise.all([
-    fetchProjects(),
-    fetchArticles(),
-    fetchMemories()
+    fetchProjects(userId),
+    fetchArticles(userId),
+    fetchMemories(userId)
   ])
 
   // Generate suggestions based on context
@@ -736,631 +736,4 @@ async function getSmartSuggestion() {
     const nextStep = getNextStep(project)
     suggestions.push({
       type: 'project',
-      title: `Continue "${project.title}"`,
-      description: nextStep || 'Make progress on your priority project',
-      reasoning: '🔥 Hot streak! Keep the momentum going on your priority project',
-      item: project,
-      estimatedTime: project.estimated_next_step_time || 30,
-      energyLevel: project.energy_level || 'moderate',
-      priority: 10,
-      action_url: `/projects/${project.id}`
-    })
-  }
-
-  // 2. Morning = fresh energy projects
-  if (timeOfDay === 'morning' && !isWeekend) {
-    const freshProjects = projects.filter(p =>
-      p.status === 'active' &&
-      (!p.energy_level || p.energy_level === 'high' || p.energy_level === 'moderate')
-    )
-    if (freshProjects.length > 0) {
-      const project = freshProjects[0]
-      const nextStep = getNextStep(project)
-      suggestions.push({
-        type: 'project',
-        title: `Start fresh: "${project.title}"`,
-        description: nextStep || 'Make progress while energy is high',
-        reasoning: '☀️ Morning is perfect for focused work on important projects',
-        item: project,
-        estimatedTime: project.estimated_next_step_time || 45,
-        energyLevel: project.energy_level || 'high',
-        priority: 9,
-        action_url: `/projects/${project.id}`
-      })
-    }
-  }
-
-  // 3. Afternoon = reading & learning
-  if (timeOfDay === 'afternoon') {
-    const unreadArticles = articles.filter(a => a.status === 'unread')
-    if (unreadArticles.length > 0) {
-      const article = unreadArticles[0]
-      suggestions.push({
-        type: 'reading',
-        title: `Read: "${article.title || 'Saved article'}"`,
-        description: article.excerpt || 'Catch up on your reading queue',
-        reasoning: '📚 Afternoon is great for learning and absorbing new ideas',
-        item: article,
-        estimatedTime: article.read_time_minutes || 10,
-        energyLevel: 'low',
-        priority: 7,
-        action_url: `/reading/${article.id}`
-      })
-    }
-  }
-
-  // 4. Evening = low-energy tasks
-  if (timeOfDay === 'evening') {
-    const quickProjects = projects.filter(p =>
-      p.status === 'active' &&
-      p.estimated_next_step_time &&
-      p.estimated_next_step_time <= 15 &&
-      p.energy_level === 'low'
-    )
-    if (quickProjects.length > 0) {
-      const project = quickProjects[0]
-      const nextStep = getNextStep(project)
-      suggestions.push({
-        type: 'project',
-        title: `Quick win: "${project.title}"`,
-        description: nextStep || 'Complete a small task',
-        reasoning: '🌙 Evening is perfect for quick, low-energy wins',
-        item: project,
-        estimatedTime: project.estimated_next_step_time,
-        energyLevel: 'low',
-        priority: 8,
-        action_url: `/projects/${project.id}`
-      })
-    }
-  }
-
-  // 5. Weekend = creative exploration
-  if (isWeekend) {
-    const creativeProjects = projects.filter(p =>
-      p.status === 'active' &&
-      p.tags?.some(tag => ['creative', 'learning', 'hobby'].includes(tag.toLowerCase()))
-    )
-    if (creativeProjects.length > 0) {
-      const project = creativeProjects[0]
-      const nextStep = getNextStep(project)
-      suggestions.push({
-        type: 'project',
-        title: `Explore: "${project.title}"`,
-        description: nextStep || 'Work on your creative project',
-        reasoning: '🎨 Weekend time for creative exploration',
-        item: project,
-        estimatedTime: project.estimated_next_step_time || 60,
-        energyLevel: project.energy_level || 'moderate',
-        priority: 8,
-        action_url: `/projects/${project.id}`
-      })
-    }
-  }
-
-  // 6. No memories recently = suggest capture
-  if (memories.length === 0 || shouldSuggestCapture(memories)) {
-    suggestions.push({
-      type: 'capture',
-      title: 'Capture your thoughts',
-      description: 'Voice or text - what\'s on your mind?',
-      reasoning: '💭 Regular thought capture strengthens your knowledge base',
-      estimatedTime: 2,
-      energyLevel: 'low',
-      priority: 5,
-      action_url: '/memories?action=create'
-    })
-  }
-
-  // 7. Late night = rest suggestion
-  if (hour >= 22 || hour < 6) {
-    suggestions.push({
-      type: 'rest',
-      title: 'Time to rest',
-      description: 'Your brain needs sleep to consolidate learning',
-      reasoning: '😴 Late hours are for rest, not work',
-      priority: 10,
-      energyLevel: 'none'
-    })
-  }
-
-  // 8. Fallback: Check any active project
-  if (suggestions.length === 0 && projects.length > 0) {
-    const activeProjects = projects.filter(p => p.status === 'active')
-    if (activeProjects.length > 0) {
-      const project = activeProjects[0]
-      const nextStep = getNextStep(project)
-      suggestions.push({
-        type: 'project',
-        title: `Continue "${project.title}"`,
-        description: nextStep || 'Make progress on this project',
-        reasoning: '⚡ Keep momentum on your active projects',
-        item: project,
-        estimatedTime: project.estimated_next_step_time || 30,
-        energyLevel: project.energy_level || 'moderate',
-        priority: 6,
-        action_url: `/projects/${project.id}`
-      })
-    }
-  }
-
-  // Sort by priority and return top suggestion
-  suggestions.sort((a, b) => b.priority - a.priority)
-  const topSuggestion = suggestions[0]
-
-  if (!topSuggestion) {
-    return {
-      suggestion: {
-        type: 'capture',
-        title: 'Start your journey',
-        description: 'Capture your first thought or create a project',
-        reasoning: '✨ Begin building your knowledge graph',
-        priority: 5,
-        action_url: '/memories'
-      },
-      alternatives: [],
-      context: {
-        timeOfDay,
-        isWeekend,
-        hour,
-        dayOfWeek
-      }
-    }
-  }
-
-  return {
-    suggestion: topSuggestion,
-    alternatives: suggestions.slice(1, 4), // Return top 3 alternatives
-    context: {
-      timeOfDay,
-      isWeekend,
-      hour,
-      dayOfWeek
-    }
-  }
-}
-
-function getTimeOfDay(hour: number): string {
-  if (hour >= 5 && hour < 12) return 'morning'
-  if (hour >= 12 && hour < 17) return 'afternoon'
-  if (hour >= 17 && hour < 22) return 'evening'
-  return 'night'
-}
-
-function shouldSuggestCapture(memories: any[]): boolean {
-  if (memories.length === 0) return true
-
-  const lastMemory = memories[0]
-  const lastMemoryTime = new Date(lastMemory.created_at).getTime()
-  const now = Date.now()
-  const hoursSinceLastMemory = (now - lastMemoryTime) / (1000 * 60 * 60)
-
-  return hoursSinceLastMemory > 24
-}
-
-async function fetchProjects() {
-  const supabase = getSupabaseClient()
-  const userId = getUserId()
-
-  try {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', userId)
-      .in('status', ['active', 'upcoming'])
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (error) throw error
-    return data || []
-  } catch {
-    return []
-  }
-}
-
-async function fetchArticles() {
-  const supabase = getSupabaseClient()
-  const userId = getUserId()
-
-  try {
-    const { data, error } = await supabase
-      .from('reading_queue')
-      .select('*')
-      .eq('user_id', userId)
-      .in('status', ['unread', 'reading'])
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (error) throw error
-    return data || []
-  } catch {
-    return []
-  }
-}
-
-async function fetchMemories() {
-  const supabase = getSupabaseClient()
-  const userId = getUserId()
-
-  try {
-    const { data, error } = await supabase
-      .from('memories')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    if (error) throw error
-    return data || []
-  } catch {
-    return []
-  }
-}
-
-/**
- * GET INSPIRATION
- * Shows a random project that's DIFFERENT from Keep Momentum projects
- */
-async function getInspiration(excludeProjectIds: string[]) {
-  // Fetch ALL projects (not just active/upcoming) for inspiration
-  const supabase = getSupabaseClient()
-  const userId = getUserId()
-
-  const { data: allProjects, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', userId)
-    .in('status', ['active', 'upcoming', 'next', 'dormant']) // Exclude only 'done' and 'abandoned'
-    .order('created_at', { ascending: false })
-
-  const projects = allProjects || []
-
-  console.log('[Inspiration] Data fetched:', {
-    projectsCount: projects.length,
-    excludedProjectIds: excludeProjectIds
-  })
-
-  // Filter out the projects already shown in "Keep Momentum"
-  const otherProjects = projects.filter(p => !excludeProjectIds.includes(p.id))
-
-  console.log('[Inspiration] Other projects after exclusion:', otherProjects.length)
-
-  // Pick a random project from the remaining ones
-  if (otherProjects.length === 0) {
-    return {
-      type: 'empty',
-      title: 'Create something new',
-      description: 'No content to inspire from yet',
-      reasoning: 'Time to add thoughts, articles, or projects'
-    }
-  }
-
-  const project = otherProjects[Math.floor(Math.random() * otherProjects.length)]
-  const nextStep = getNextStep(project)
-
-  const selected = {
-    type: 'project',
-    title: project.title,
-    description: nextStep || project.description || 'Explore this idea',
-    url: `/projects/${project.id}`,
-    reasoning: 'A project waiting for your attention'
-  }
-
-  console.log('[Inspiration] Selected project:', selected.title)
-  return selected
-}
-
-/**
- * MONITORING/HEALTH
- * System stats and health check (merged from monitoring.ts)
- */
-async function getMonitoringStats() {
-  const supabase = getSupabaseClient()
-  const userId = getUserId()
-
-  // Get embedding stats
-  const { count: projectsWithEmbeddings } = await supabase
-    .from('projects')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-
-  const { count: totalProjects } = await supabase
-    .from('projects')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-
-  const { count: thoughtsWithEmbeddings } = await supabase
-    .from('memories')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-
-  const { count: totalThoughts } = await supabase
-    .from('memories')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-
-  const { count: articlesWithEmbeddings } = await supabase
-    .from('reading_queue')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-
-  const { count: totalArticles } = await supabase
-    .from('reading_queue')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-
-  // Get connection stats
-  const { count: aiConnections } = await supabase
-    .from('connections')
-    .select('*', { count: 'exact', head: true })
-    .eq('created_by', 'ai')
-
-  const { count: manualConnections } = await supabase
-    .from('connections')
-    .select('*', { count: 'exact', head: true })
-    .eq('created_by', 'user')
-
-  const { count: totalConnections } = await supabase
-    .from('connections')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: pendingSuggestions } = await supabase
-    .from('connection_suggestions')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('status', 'pending')
-
-  // Calculate coverage percentages
-  const projectCoverage = totalProjects ? Math.round((projectsWithEmbeddings! / totalProjects) * 100) : 0
-  const thoughtCoverage = totalThoughts ? Math.round((thoughtsWithEmbeddings! / totalThoughts) * 100) : 0
-  const articleCoverage = totalArticles ? Math.round((articlesWithEmbeddings! / totalArticles) * 100) : 0
-
-  // Get recent activity (last 24h)
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-
-  const { count: recentConnections } = await supabase
-    .from('connections')
-    .select('*', { count: 'exact', head: true })
-    .eq('created_by', 'ai')
-    .gte('created_at', yesterday)
-
-  const { count: recentSuggestions } = await supabase
-    .from('connection_suggestions')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', yesterday)
-
-  // Get Gemini API usage stats
-  const geminiUsage = getUsageStats()
-
-  const stats = {
-    gemini_api: {
-      single_embeddings: geminiUsage.single_embeddings,
-      batch_embeddings: geminiUsage.batch_embeddings,
-      total_items_embedded: geminiUsage.total_items_embedded,
-      errors: geminiUsage.errors,
-      retries: geminiUsage.retries,
-      success_rate: geminiUsage.total_items_embedded > 0
-        ? Math.round((1 - (geminiUsage.errors / (geminiUsage.single_embeddings + geminiUsage.batch_embeddings + geminiUsage.errors))) * 100)
-        : 100,
-      last_reset: geminiUsage.last_reset
-    },
-    embeddings: {
-      projects: {
-        total: totalProjects || 0,
-        with_embeddings: projectsWithEmbeddings || 0,
-        coverage: projectCoverage,
-        missing: (totalProjects || 0) - (projectsWithEmbeddings || 0)
-      },
-      thoughts: {
-        total: totalThoughts || 0,
-        with_embeddings: thoughtsWithEmbeddings || 0,
-        coverage: thoughtCoverage,
-        missing: (totalThoughts || 0) - (thoughtsWithEmbeddings || 0)
-      },
-      articles: {
-        total: totalArticles || 0,
-        with_embeddings: articlesWithEmbeddings || 0,
-        coverage: articleCoverage,
-        missing: (totalArticles || 0) - (articlesWithEmbeddings || 0)
-      },
-      overall: {
-        total_items: (totalProjects || 0) + (totalThoughts || 0) + (totalArticles || 0),
-        with_embeddings: (projectsWithEmbeddings || 0) + (thoughtsWithEmbeddings || 0) + (articlesWithEmbeddings || 0),
-        coverage: Math.round(
-          ((projectsWithEmbeddings || 0) + (thoughtsWithEmbeddings || 0) + (articlesWithEmbeddings || 0)) /
-          Math.max((totalProjects || 0) + (totalThoughts || 0) + (totalArticles || 0), 1) * 100
-        )
-      }
-    },
-    connections: {
-      total: totalConnections || 0,
-      ai_created: aiConnections || 0,
-      manual_created: manualConnections || 0,
-      pending_suggestions: pendingSuggestions || 0,
-      ai_percentage: totalConnections ? Math.round((aiConnections! / totalConnections) * 100) : 0
-    },
-    recent_activity_24h: {
-      connections_created: recentConnections || 0,
-      suggestions_generated: recentSuggestions || 0
-    },
-    health: {
-      status: projectCoverage >= 80 && thoughtCoverage >= 80 ? 'healthy' : 'needs_backfill',
-      gemini_configured: !!process.env.GEMINI_API_KEY,
-      recommendations: [] as string[]
-    }
-  }
-
-  // Add recommendations
-  if (stats.embeddings.projects.missing > 0) {
-    stats.health.recommendations.push(`Run backfill for ${stats.embeddings.projects.missing} projects`)
-  }
-  if (stats.embeddings.thoughts.missing > 0) {
-    stats.health.recommendations.push(`Run backfill for ${stats.embeddings.thoughts.missing} thoughts`)
-  }
-  if (stats.embeddings.articles.missing > 0) {
-    stats.health.recommendations.push(`Run backfill for ${stats.embeddings.articles.missing} articles`)
-  }
-  if (!stats.health.gemini_configured) {
-    stats.health.recommendations.push('Configure GEMINI_API_KEY environment variable')
-  }
-
-  return stats
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { resource } = req.query
-
-  // MONITORING/HEALTH (merged from /api/monitoring)
-  if (resource === 'monitoring' || resource === 'health') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const stats = await getMonitoringStats()
-      return res.status(200).json(stats)
-    } catch (error) {
-      console.error('[monitoring] Error:', error)
-      return res.status(500).json({
-        error: 'Failed to fetch monitoring stats',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-
-  // GET INSPIRATION
-  if (resource === 'inspiration') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const { exclude } = req.query
-      const excludeIds = exclude ? String(exclude).split(',') : []
-      const result = await getInspiration(excludeIds)
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Inspiration failed' })
-    }
-  }
-
-  // SMART SUGGESTION
-  if (resource === 'smart-suggestion') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const result = await getSmartSuggestion()
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Suggestion failed' })
-    }
-  }
-
-  // TIMELINE PATTERNS
-  if (resource === 'patterns') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const result = await getTimelinePatterns()
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Analysis failed' })
-    }
-  }
-
-  // SYNTHESIS EVOLUTION
-  if (resource === 'evolution') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const result = await getSynthesisEvolution()
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Analysis failed' })
-    }
-  }
-
-  // CREATIVE OPPORTUNITIES
-  if (resource === 'opportunities') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const result = await getCreativeOpportunities()
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Analysis failed' })
-    }
-  }
-
-  // MORNING MOMENTUM
-  if (resource === 'morning') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      const result = await generateMorningBriefing(getUserId())
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Briefing generation failed' })
-    }
-  }
-
-  // SHADOW PROJECTS
-  if (resource === 'shadow-projects') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      const result = await getShadowProjects()
-      return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Shadow project detection failed' })
-    }
-  }
-
-  // GRAPH HYGIENE
-  if (resource === 'hygiene') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-    try {
-      const result = await identifyTagMerges()
-      return res.status(200).json({ merges: result })
-    } catch {
-      return res.status(500).json({ error: 'Hygiene check failed' })
-    }
-  }
-
-  // INIT TAGS (Admin utility - one-time setup)
-  if (resource === 'init-tags') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      await generateSeedEmbeddings()
-      return res.status(200).json({
-        success: true,
-        message: 'Seed tag embeddings generated successfully'
-      })
-    } catch (error) {
-      return res.status(500).json({
-        error: 'Failed to initialize tags',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-
-  return res.status(400).json({ error: 'Invalid resource. Use ?resource=monitoring, ?resource=inspiration, ?resource=smart-suggestion, ?resource=patterns, ?resource=evolution, ?resource=opportunities, ?resource=morning, ?resource=shadow-projects, ?resource=hygiene, or ?resource=init-tags' })
-}
+      title: `Continue "${project.title}"

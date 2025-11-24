@@ -1241,7 +1241,7 @@ function countWords(content: string): number {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = await getUserId(req)
   const { resource, id } = req.query
 
   // HIGHLIGHTS RESOURCE
