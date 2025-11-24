@@ -7,8 +7,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
-import { ProjectListRow } from '../components/projects/ProjectListRow'
-import { SpotlightCard } from '../components/projects/SpotlightCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
@@ -257,42 +255,36 @@ export function ProjectsPage() {
               description="Build a project from a suggestion or create one manually to get started on your creative journey"
             />
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Spotlight (sticky on desktop, scrollable on mobile) */}
-              <div className="lg:sticky lg:top-24 lg:h-fit space-y-3">
-                <SpotlightSection projects={projects} />
-              </div>
+            <div className="space-y-4">
+              {/* Resurfaced Project Reminder - cycling through forgotten projects */}
+              <ResurfacedReminder projects={projects} />
 
-              {/* Right Column: Scrollable List (2 columns on mobile, 1 on desktop for density) */}
-              <div className="lg:col-span-2">
-                <FocusableList>
-                  <VirtuosoGrid
-                    useWindowScroll
-                    data={projects}
-                    listClassName="grid grid-cols-2 gap-2"
-                    itemContent={(index, project) => {
-                      const isSpotlighted = isProjectSpotlighted(project, projects)
-                      const spotlightColor = getSpotlightColor(project, projects)
-                      return (
-                        <FocusableItem id={project.id} type="project">
-                          <motion.div
-                            key={project.id}
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.05 }} // Reduced delay for virtualized items
-                          >
-                            <ProjectListRow
-                              project={project}
-                              isSpotlighted={isSpotlighted}
-                              spotlightColor={spotlightColor}
-                            />
-                          </motion.div>
-                        </FocusableItem>
-                      )
-                    }}
-                  />
-                </FocusableList>
-              </div>
+              {/* Project List */}
+              <FocusableList>
+                <VirtuosoGrid
+                  useWindowScroll
+                  data={projects}
+                  listClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  itemContent={(index, project) => {
+                    return (
+                      <FocusableItem id={project.id} type="project">
+                        <motion.div
+                          key={project.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 }}
+                        >
+                          <ProjectCard
+                            project={project}
+                            onClick={(id) => navigate(`/projects/${id}`)}
+                            onDelete={() => handleDelete(project)}
+                          />
+                        </motion.div>
+                      </FocusableItem>
+                    )
+                  }}
+                />
+              </FocusableList>
             </div>
           )}
         </div>
@@ -304,105 +296,74 @@ export function ProjectsPage() {
   )
 }
 
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  const diffDays = Math.floor(diffMs / 86400000)
+function ResurfacedReminder({ projects }: { projects: Project[] }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
 
-  if (diffMins < 60) return `${diffMins}m`
-  if (diffHours < 24) return `${diffHours}h`
-  if (diffDays < 7) return `${diffDays}d`
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo`
-  return `${Math.floor(diffDays / 365)}y`
-}
+  // Get dormant/forgotten projects (not touched in a while)
+  const forgottenProjects = React.useMemo(() => {
+    const now = Date.now()
+    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000
 
-function isProjectSpotlighted(project: Project, allProjects: Project[]): boolean {
-  const spotlighted = getSpotlightProjects(allProjects)
-  return spotlighted.some(p => p.project.id === project.id)
-}
+    return projects
+      .filter(p => {
+        if (p.status === 'completed') return false
+        const lastActive = p.updated_at || p.last_active || p.created_at
+        if (!lastActive) return true
+        return new Date(lastActive).getTime() < oneWeekAgo
+      })
+      .sort((a, b) => {
+        const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+        const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+        return aTime - bTime // Oldest first
+      })
+  }, [projects])
 
-function getSpotlightColor(project: Project, allProjects: Project[]): string {
-  const spotlighted = getSpotlightProjects(allProjects)
-  const spot = spotlighted.find(p => p.project.id === project.id)
-  if (!spot) return 'rgba(255, 255, 255, 0.02)'
+  // Cycle through forgotten projects every 10 seconds
+  useEffect(() => {
+    if (forgottenProjects.length <= 1) return
 
-  switch (spot.type) {
-    case 'pinned':
-      return 'rgba(59, 130, 246, 0.15)'
-    case 'recent':
-      return 'rgba(168, 85, 247, 0.15)'
-    case 'resurfaced':
-      return 'rgba(16, 185, 129, 0.15)'
-    default:
-      return 'rgba(255, 255, 255, 0.02)'
-  }
-}
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % forgottenProjects.length)
+    }, 10000)
 
-interface SpotlightProject {
-  project: Project
-  type: 'pinned' | 'recent' | 'resurfaced'
-}
+    return () => clearInterval(interval)
+  }, [forgottenProjects.length])
 
-function getSpotlightProjects(projects: Project[]): SpotlightProject[] {
-  const result: SpotlightProject[] = []
+  if (forgottenProjects.length === 0) return null
 
-  const getTime = (dateStr?: string) => {
-    if (!dateStr) return 0
-    const ms = new Date(dateStr).getTime()
-    return isNaN(ms) ? 0 : ms
-  }
-
-  // 1. Pinned project
-  const pinned = projects.find(p => p.is_priority && p.status === 'active')
-  if (pinned) {
-    result.push({ project: pinned, type: 'pinned' })
-  }
-
-  // 2. Recent projects (1-2)
-  const recent = projects
-    .filter(p => p.status === 'active' && !p.is_priority)
-    .sort((a, b) => {
-      const aTime = getTime(a.updated_at || a.last_active)
-      const bTime = getTime(b.updated_at || b.last_active)
-      return bTime - aTime
-    })
-    .slice(0, 2)
-  recent.forEach(p => result.push({ project: p, type: 'recent' }))
-
-  // 3. Resurfaced (dormant) projects (1-2)
-  const resurfaced = projects
-    .filter(p => p.status === 'dormant')
-    .sort((a, b) => {
-      // Prioritize ones that haven't been suggested recently
-      const aTime = getTime((a as any).last_suggested_at || a.created_at)
-      const bTime = getTime((b as any).last_suggested_at || b.created_at)
-      return aTime - bTime
-    })
-    .slice(0, 2)
-  resurfaced.forEach(p => result.push({ project: p, type: 'resurfaced' }))
-
-  return result
-}
-
-function SpotlightSection({ projects }: { projects: Project[] }) {
-  const spotlighted = getSpotlightProjects(projects)
-
-  if (spotlighted.length === 0) return null
+  const project = forgottenProjects[currentIndex]
+  const daysSince = Math.floor(
+    (Date.now() - new Date(project.updated_at || project.created_at || 0).getTime()) / (1000 * 60 * 60 * 24)
+  )
 
   return (
-    <>
-      {spotlighted.map(({ project, type }) => (
-        <FocusableItem key={project.id} id={project.id} type="project">
-          <SpotlightCard
-            project={project}
-            type={type}
-          />
-        </FocusableItem>
-      ))}
-    </>
+    <Link to={`/projects/${project.id}`}>
+      <motion.div
+        key={project.id}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="p-3 rounded-xl mb-2"
+        style={{
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))',
+          border: '1px solid rgba(16, 185, 129, 0.3)'
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'rgba(16, 185, 129, 0.8)' }}>
+              Remember this? • {daysSince}d ago
+            </p>
+            <h4 className="text-sm font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
+              {project.title}
+            </h4>
+          </div>
+          {forgottenProjects.length > 1 && (
+            <span className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+              {currentIndex + 1}/{forgottenProjects.length}
+            </span>
+          )}
+        </div>
+      </motion.div>
+    </Link>
   )
 }

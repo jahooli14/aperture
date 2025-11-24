@@ -370,17 +370,9 @@ export const ProjectCard = React.memo(function ProjectCard({
           </div>
         </motion.div>
 
-        <motion.div
-          style={{ backgroundColor }}
-          whileHover={{ y: -6, scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 25,
-            mass: 0.5
-          }}
+        <div
           className="rounded-xl"
+          style={{ backgroundColor: 'var(--premium-bg-2)' }}
         >
           <Card
             className="group h-full flex flex-col cursor-pointer relative overflow-hidden"
@@ -769,7 +761,7 @@ export const ProjectCard = React.memo(function ProjectCard({
               </>
             )}
           </Card>
-        </motion.div>
+        </div>
       </motion.div>
     </>
   )

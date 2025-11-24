@@ -137,15 +137,14 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       // Get existing connection IDs to avoid re-suggesting
       const existingIds = connections.map(c => c.related_id)
 
-      const response = await fetch('/api/connections?action=auto-suggest', {
+      const response = await fetch('/api/connections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          itemType,
-          itemId,
+          sourceType: itemType,
+          sourceId: itemId,
           content,
-          existingConnectionIds: existingIds
-          // Note: userId is handled server-side by getUserId()
+          userId: 'default' // Single-user app
         })
       })
 
@@ -155,7 +154,16 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       }
 
       const data = await response.json()
-      setSuggestions(data.suggestions || [])
+      // API returns candidates with { type, id, title, similarity }
+      const mappedSuggestions = (data.candidates || []).map((c: any) => ({
+        type: c.type,
+        id: c.id,
+        title: c.title,
+        content: '',
+        similarity: c.similarity,
+        reasoning: `${Math.round(c.similarity * 100)}% semantic similarity`
+      }))
+      setSuggestions(mappedSuggestions)
       setLastRefresh(new Date())
     } catch (err) {
       console.error('Error fetching AI suggestions:', err)

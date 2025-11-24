@@ -12,7 +12,7 @@ import {
   Layers,
   FileText,
   Mic,
-  Settings,
+  MoreHorizontal,
   Sparkles
 } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
@@ -47,7 +47,7 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'settings', label: 'Settings', icon: Settings, path: '/settings', action: 'navigate', color: 'home' },
+  { id: 'settings', label: 'More', icon: MoreHorizontal, path: '/settings', action: 'navigate', color: 'home' },
 ]
 
 export function FloatingNav() {

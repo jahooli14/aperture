@@ -1237,8 +1237,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const result = await getSynthesisEvolution()
       return res.status(200).json(result)
-    } catch {
-      return res.status(500).json({ error: 'Analysis failed' })
+    } catch (error) {
+      console.error('[analytics:evolution] Error:', error)
+      return res.status(500).json({
+        error: 'Analysis failed',
+        insights: [],
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
   }
 

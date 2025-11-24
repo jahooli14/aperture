@@ -182,10 +182,16 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
             {hasPendingSuggestions && (
               <Link
                 to="/suggestions"
-                className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                style={{ color: 'var(--premium-blue)' }}
+                className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
+                  color: 'var(--premium-blue)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}
               >
-                View Project Suggestions ({pendingSuggestionsCount}) <ArrowRight className="inline h-4 w-4 ml-1" />
+                <Sparkles className="inline h-4 w-4 mr-2" />
+                {pendingSuggestionsCount} Project {pendingSuggestionsCount === 1 ? 'Suggestion' : 'Suggestions'} Waiting
+                <ArrowRight className="inline h-4 w-4 ml-2" />
               </Link>
             )}
           </div>
@@ -347,7 +353,28 @@ function InsightsSection() {
         </div>
 
         {loading ? (
-          <SkeletonCard variant="list" count={2} />
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Sparkles className="h-6 w-6 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
+                <div className="absolute inset-0 animate-ping">
+                  <Sparkles className="h-6 w-6 opacity-30" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+                  Analyzing your thoughts...
+                </p>
+                <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  Finding patterns and connections
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)' }} />
+              <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)', animationDelay: '150ms' }} />
+            </div>
+          </div>
         ) : insights.length > 0 ? (
           <div className="space-y-3">
             {/* Show first 2 insights */}
