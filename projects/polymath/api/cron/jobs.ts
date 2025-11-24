@@ -25,7 +25,7 @@ import { processMemory } from '../../lib/process-memory.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = await getUserId(req)
   // Verify authorization
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET

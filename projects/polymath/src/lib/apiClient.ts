@@ -1,7 +1,4 @@
-/**
- * Centralized API Client
- * Single source of truth for all frontend API calls
- */
+import { supabase } from './supabase'
 
 class ApiError extends Error {
   constructor(public status: number, message: string, public details?: any) {
@@ -62,6 +59,13 @@ const pendingRequests = new Map<string, Promise<any>>()
 const cache = new Map<string, { data: any, timestamp: number }>()
 const CACHE_TTL = 60 * 1000 // 1 minute
 
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.access_token 
+    ? { 'Authorization': `Bearer ${session.access_token}` } 
+    : {}
+}
+
 export const api = {
   get: async (endpoint: string) => {
     // 1. Check Cache
@@ -78,7 +82,8 @@ export const api = {
     // 3. Make Request
     const promise = (async () => {
       try {
-        const response = await fetch(`/api/${endpoint}`)
+        const headers = await getAuthHeaders()
+        const response = await fetch(`/api/${endpoint}`, { headers })
         const data = await handleResponse(response)
 
         // Update Cache
@@ -97,9 +102,13 @@ export const api = {
     // Invalidate Cache on Mutation
     cache.clear()
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetch(`/api/${endpoint}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
       body: JSON.stringify(data)
     })
     return handleResponse(response)
@@ -129,9 +138,13 @@ export const api = {
       }
     }
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetch(`/api/${finalEndpoint}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...authHeaders
+      },
       body: data ? JSON.stringify(data) : undefined
     })
     return handleResponse(response)
@@ -150,8 +163,10 @@ export const api = {
       finalEndpoint = `${base}?id=${id}${rest}`
     }
 
+    const authHeaders = await getAuthHeaders()
     const response = await fetch(`/api/${finalEndpoint}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: authHeaders
     })
     return handleResponse(response)
   }
