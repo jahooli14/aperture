@@ -23,7 +23,7 @@ async function getTimelinePatterns() {
   // Get all user's memories with timestamps
   const { data: memories } = await supabase
     .from('memories')
-    .select('*')
+    .select('created_at, audiopen_created_at, emotional_tone')
     .order('created_at', { ascending: true })
 
   if (!memories || memories.length < 5) {
@@ -178,7 +178,7 @@ async function getSynthesisEvolution() {
   // Get memories and projects
   const { data: memories } = await supabase
     .from('memories')
-    .select('*')
+    .select('id, title, body, created_at, themes, emotional_tone')
     .order('created_at', { ascending: true })
 
   const { data: projects } = await supabase
@@ -225,17 +225,22 @@ async function getSynthesisEvolution() {
     }
   })
 
-  // Find topics with multiple memories over time
-  for (const [topic, mems] of topicGroups.entries()) {
-    if (mems.length >= 3) {
-      // Ask AI to analyze evolution
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  // Sort topics by frequency (descending) and take top 3
+  const sortedTopics = Array.from(topicGroups.entries())
+    .filter(([_, mems]) => mems.length >= 3)
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 3)
 
-      const memoryTexts = mems
-        .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
-        .join('\n\n')
+  // Process top topics in parallel
+  const evolutionPromises = sortedTopics.map(async ([topic, mems]) => {
+    // Ask AI to analyze evolution
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-      const evolutionPrompt = `Analyze the evolution of the user's BELIEFS and OPINIONS on the topic "${topic}":
+    const memoryTexts = mems
+      .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
+      .join('\n\n')
+
+    const evolutionPrompt = `Analyze the evolution of the user's BELIEFS and OPINIONS on the topic "${topic}":
 
 ${memoryTexts}
 
@@ -253,28 +258,30 @@ Return JSON:
   ]
 }`
 
-      try {
-        const result = await model.generateContent(evolutionPrompt)
-        const responseText = result.response.text()
-        const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/)
-        const evolution = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
+    try {
+      const result = await model.generateContent(evolutionPrompt)
+      const responseText = result.response.text()
+      const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/)
+      const evolution = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
 
-        insights.push({
-          type: 'evolution',
-          title: `How Your Thinking Evolved: ${topic}`,
-          description: evolution.summary,
-          data: {
-            topic,
-            ...evolution,
-            memory_ids: mems.map(m => m.id)
-          },
-          actionable: false
-        })
-      } catch {
-        // Skip if parsing fails
+      return {
+        type: 'evolution',
+        title: `How Your Thinking Evolved: ${topic}`,
+        description: evolution.summary,
+        data: {
+          topic,
+          ...evolution,
+          memory_ids: mems.map(m => m.id)
+        },
+        actionable: false
       }
+    } catch {
+      return null
     }
-  }
+  })
+
+  const evolutionResults = await Promise.all(evolutionPromises)
+  insights.push(...evolutionResults.filter(Boolean))
 
   // 2. Project Abandonment Pattern Detection
   const abandonedProjects = projects?.filter(p => p.status === 'abandoned' || p.abandoned_reason) || []
@@ -411,7 +418,7 @@ async function getCreativeOpportunities() {
   // Get user's memories
   const { data: memories } = await supabase
     .from('memories')
-    .select('*')
+    .select('id, title, body, themes, created_at')
     .order('created_at', { ascending: false })
     .limit(100)
 
