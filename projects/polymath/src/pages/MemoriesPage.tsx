@@ -97,12 +97,18 @@ export function MemoriesPage() {
     setLoadingClusters(true)
     try {
       const response = await fetch('/api/memories?themes=true')
-      if (!response.ok) throw new Error('Failed to fetch themes')
+      if (!response.ok) {
+        console.error('Failed to fetch themes:', response.status, response.statusText)
+        // Don't throw, just return empty clusters to prevent crash
+        setClusters([])
+        return
+      }
       const data: ThemeClustersResponse = await response.json()
       setClusters(data.clusters)
       setClustersLastFetched(now)
     } catch (err) {
       console.error('Failed to fetch theme clusters:', err)
+      setClusters([]) // Fallback to empty
     } finally {
       setLoadingClusters(false)
     }
