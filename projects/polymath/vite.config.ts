@@ -26,15 +26,15 @@ export default defineConfig({
     include: ['react', 'react-dom', 'react/jsx-runtime'],
     exclude: []
   },
-  // server: {
-  //   proxy: {
-  //     '/api': {
-  //       target: 'http://localhost:3000', // Use local API if running separately, otherwise rely on Vercel dev
-  //       changeOrigin: true,
-  //       secure: false,
-  //     }
-  //   }
-  // },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  },
   resolve: {
     dedupe: ['react', 'react-dom'],
     alias: {
