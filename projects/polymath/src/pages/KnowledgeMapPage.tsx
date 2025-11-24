@@ -5,7 +5,7 @@
 
 import { useEffect } from 'react'
 import { useMapStore } from '../stores/useMapStore'
-import { MapCanvas } from '../components/map/MapCanvas'
+import { Map3D } from '../components/map/Map3D'
 import { CityDetailsPanel } from '../components/map/CityDetailsPanel'
 import { MapToolbar } from '../components/map/MapToolbar'
 import { Map, Loader2 } from 'lucide-react'
@@ -99,7 +99,7 @@ export function KnowledgeMapPage() {
       <MapToolbar />
 
       {/* Map Canvas */}
-      <MapCanvas mapData={mapData} onCityClick={handleCityClick} />
+      <Map3D mapData={mapData} onCityClick={handleCityClick} />
 
       {/* City Details Panel */}
       {useMapStore.getState().selectedCity && (

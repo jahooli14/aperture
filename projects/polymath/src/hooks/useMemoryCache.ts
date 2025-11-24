@@ -127,7 +127,7 @@ export function useMemoryCache() {
    */
   async function cleanCache() {
     try {
-      await db.clearOldCache()
+      await db.clearOldMemoryCache()
       await loadCachedMemories()
       console.log('✓ Cache cleaned')
     } catch (error) {
