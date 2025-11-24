@@ -125,9 +125,8 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
       ref={ref}
       data-focus-id={id}
       data-focus-type={type}
-      className={`transition-all duration-200 ${className}`}
+      className={className}
       style={{
-        transform: isFocused ? 'scale(1.02)' : 'scale(1)',
         boxShadow: isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
         borderRadius: '0.75rem'
       }}

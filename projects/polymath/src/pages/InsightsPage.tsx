@@ -17,16 +17,35 @@ export function InsightsPage() {
   const navigate = useNavigate()
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchInsights = useCallback(async () => {
     setLoading(true)
+    setError(null)
+
+    // Add timeout to prevent infinite loading
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
     try {
-      const response = await fetch('/api/analytics?resource=evolution')
-      if (!response.ok) throw new Error('Failed to fetch insights')
+      const response = await fetch('/api/analytics?resource=evolution', {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch insights')
+      }
       const data = await response.json()
       setInsights(data.insights || [])
     } catch (error) {
       console.error('Error fetching insights:', error)
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError('Request timed out. The analysis is taking too long.')
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to load insights')
+      }
     } finally {
       setLoading(false)
     }
@@ -107,8 +126,34 @@ export function InsightsPage() {
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="text-center py-12">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-r-transparent mb-4" style={{ borderColor: 'var(--premium-blue)' }}></div>
-                <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Synthesizing insights...</p>
+                <div className="relative inline-block mb-4">
+                  <Sparkles className="h-12 w-12 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
+                  <div className="absolute inset-0 animate-ping">
+                    <Sparkles className="h-12 w-12 opacity-30" style={{ color: 'var(--premium-blue)' }} />
+                  </div>
+                </div>
+                <p className="text-lg font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>Analyzing your thoughts...</p>
+                <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>Finding patterns and connections</p>
+              </div>
+            </div>
+          </section>
+        ) : error ? (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+              <div className="py-12 text-center">
+                <AlertCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--premium-amber)' }} />
+                <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                  Something went wrong
+                </h2>
+                <p className="mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+                  {error}
+                </p>
+                <Button onClick={fetchInsights} className="btn-primary">
+                  Try Again
+                </Button>
               </div>
             </div>
           </section>
