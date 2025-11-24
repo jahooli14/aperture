@@ -510,8 +510,13 @@ export function HomePage() {
   const recentProject = activeProjects
     .filter(p => p.id !== priorityProject?.id)
     .sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.last_active).getTime()
-      const bTime = new Date(b.updated_at || b.last_active).getTime()
+      const getTime = (dateStr?: string) => {
+        if (!dateStr) return 0
+        const ms = new Date(dateStr).getTime()
+        return isNaN(ms) ? 0 : ms
+      }
+      const aTime = getTime(a.updated_at || a.last_active)
+      const bTime = getTime(b.updated_at || b.last_active)
       return bTime - aTime
     })[0] || null
 
