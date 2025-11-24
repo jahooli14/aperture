@@ -32,7 +32,7 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
@@ -479,8 +479,14 @@ export function ReadingPage() {
 
   // Memoize safe articles to prevent useMemo dependency issues
   const safeArticles = React.useMemo(() => {
-    return Array.isArray(articles) ? articles : []
-  }, [articles])
+    // Combine real articles with pending articles
+    // Filter out duplicates (if any pending article is now in real articles)
+    const realIds = new Set(articles.map(a => a.id))
+    const uniquePending = pendingArticles.filter(a => !realIds.has(a.id))
+
+    const allArticles = [...uniquePending, ...articles]
+    return Array.isArray(allArticles) ? allArticles : []
+  }, [articles, pendingArticles])
 
   const filteredArticles = React.useMemo(() => {
     if (!Array.isArray(safeArticles) || safeArticles.length === 0) return []
@@ -763,6 +769,7 @@ export function ReadingPage() {
                   overscan={200}
                   itemContent={(index, article) => {
                     const isSelected = bulkSelection.isSelected(article.id)
+                    const isPending = article.id.startsWith('temp-')
 
                     return (
                       <FocusableItem id={article.id} type="article">
@@ -778,7 +785,8 @@ export function ReadingPage() {
                             }}
                             style={{
                               // Allow drag events to pass through when not in selection mode
-                              pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none'
+                              pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none',
+                              opacity: isPending ? 0.7 : 1
                             }}
                           >
                             {bulkSelection.isSelectionMode && (

@@ -283,6 +283,89 @@ async function fetchArticleWithScraperAPI(url: string): Promise<any> {
 }
 
 /**
+ * Extract tweet content using fxtwitter.com (Fixup Twitter)
+ * This is a proxy that renders server-side HTML with rich OpenGraph tags
+ * Perfect for scraping without API keys or heavy browsers
+ */
+async function fetchTweet(url: string): Promise<any> {
+  console.log('[fetchTweet] Fetching tweet via fxtwitter:', url)
+
+  try {
+    // Convert to fxtwitter URL
+    const urlObj = new URL(url)
+    // Handle both twitter.com and x.com
+    if (urlObj.hostname.includes('twitter.com') || urlObj.hostname.includes('x.com')) {
+      urlObj.hostname = 'fxtwitter.com'
+    } else {
+      throw new Error('Not a Twitter/X URL')
+    }
+
+    const fxtwitterUrl = urlObj.toString()
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
+    // User-Agent is important - fxtwitter might behave differently for bots
+    // We spoof Discordbot to ensure we get the rich embed HTML
+    const response = await fetch(fxtwitterUrl, {
+      headers: {
+        'User-Agent': 'Discordbot/2.0; +https://discordapp.com',
+      },
+      signal: controller.signal
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      throw new Error(`fxtwitter returned ${response.status}`)
+    }
+
+    const html = await response.text()
+
+    // Parse HTML
+    const { document } = parseHTML(html)
+
+    // Extract metadata from OpenGraph tags
+    const getMeta = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') ||
+      document.querySelector(`meta[name="${prop}"]`)?.getAttribute('content')
+
+    const title = getMeta('og:title') || 'Tweet'
+    const description = getMeta('og:description') || ''
+    const image = getMeta('og:image') || getMeta('twitter:image')
+    const author = title.split(' on X')[0].split(' on Twitter')[0] // "Name (@handle)" usually
+
+    if (!description && !image) {
+      throw new Error('Failed to extract tweet content')
+    }
+
+    // Format content as simple HTML
+    let content = `<p>${description}</p>`
+    if (image) {
+      content += `<img src="${image}" alt="Tweet image" />`
+    }
+
+    // Add link to original
+    content += `<p><a href="${url}">View original tweet</a></p>`
+
+    return {
+      title: `Tweet by ${author}`,
+      content,
+      excerpt: description,
+      author,
+      source: 'Twitter',
+      publishedDate: new Date().toISOString(), // fxtwitter doesn't always give date in meta
+      thumbnailUrl: image,
+      faviconUrl: 'https://abs.twimg.com/favicons/twitter.2.ico',
+      length: description.length
+    }
+
+  } catch (error: any) {
+    console.error('[fetchTweet] Error:', error.message)
+    throw error
+  }
+}
+
+/**
  * Extract article content with 4-tier Free API Alliance (Strategy B: Orchestrator Pattern)
  * Shifts from CPU-bound (Puppeteer) to I/O-bound (API calls)
  * Stays within Vercel Hobby plan limits: 4 CPU-hours, 250MB bundle, 300s timeout
@@ -296,6 +379,21 @@ async function fetchArticle(url: string) {
   console.log('[fetchArticle] Starting 4-tier orchestrator extraction:', url)
 
   const errors: string[] = []
+
+  // Tier 0: Special handling for Twitter/X (uses fxtwitter proxy)
+  if (url.includes('twitter.com') || url.includes('x.com')) {
+    try {
+      console.log('[fetchArticle] Tier 0: Twitter/X specialized handler...')
+      const result = await fetchTweet(url)
+      console.log('[fetchArticle] ✅ Tier 0 succeeded (Twitter)')
+      return result
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Unknown error'
+      errors.push(`Tier 0: ${msg}`)
+      console.error('[fetchArticle] Tier 0 failed:', msg)
+      // Fall through to other tiers (though they likely won't work well for Twitter)
+    }
+  }
 
   // Tier 1: Try Mozilla Readability (fastest, works for 80% of sites)
   try {

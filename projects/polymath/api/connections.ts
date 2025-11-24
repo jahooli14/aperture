@@ -379,25 +379,26 @@ Provide 2-3 insights about hidden connections.`
           const relatedId = isSource ? conn.target_id : conn.source_id
 
           // Fetch related item details
-          let relatedTitle = 'Unknown'
+          let relatedItem: any = null
           if (relatedType === 'thought') {
-            const { data } = await supabase.from('memories').select('title, body').eq('id', relatedId).single()
-            relatedTitle = data?.title || data?.body?.slice(0, 50) + '...' || 'Untitled'
+            const { data } = await supabase.from('memories').select('id, title, body').eq('id', relatedId).single()
+            relatedItem = data
           } else if (relatedType === 'project') {
-            const { data } = await supabase.from('projects').select('title').eq('id', relatedId).single()
-            relatedTitle = data?.title || 'Untitled'
+            const { data } = await supabase.from('projects').select('id, title, description').eq('id', relatedId).single()
+            relatedItem = data
           } else if (relatedType === 'article') {
-            const { data } = await supabase.from('reading_queue').select('title').eq('id', relatedId).single()
-            relatedTitle = data?.title || 'Untitled'
+            const { data } = await supabase.from('reading_queue').select('id, title, excerpt').eq('id', relatedId).single()
+            relatedItem = data
           }
 
           return {
-            id: conn.id,
+            connection_id: conn.id,
             related_type: relatedType,
             related_id: relatedId,
-            related_title: relatedTitle,
-            connection_type: conn.connection_type,
-            created_by: conn.created_by,
+            related_item: relatedItem,
+            connection_type: conn.connection_type || 'relates_to',
+            direction: isSource ? 'outbound' : 'inbound',
+            created_by: conn.created_by || 'user',
             ai_reasoning: conn.ai_reasoning,
             created_at: conn.created_at
           }

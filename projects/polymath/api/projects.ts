@@ -3,7 +3,7 @@
  * Handles projects CRUD, daily queue, context, and suggestions
  */
 
-import type { VercelRequest, VercelResponse} from '@vercel/node'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
 import { z } from 'zod'
@@ -415,28 +415,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // GET: Load map state or generate initial map
       if (req.method === 'GET') {
         if (action === 'suggestions') {
-          // Generate door suggestions
+          // ... (existing suggestions logic)
           const { data: mapState, error: fetchError } = await supabase
             .from('knowledge_map_state')
             .select('map_data')
             .eq('user_id', userId)
             .single()
 
-          if (fetchError) {
-            if (fetchError.code === '42P01') {
-              return res.status(503).json({
-                error: 'Database table knowledge_map_state does not exist',
-                hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql'
-              })
-            }
-            throw fetchError
-          }
+          if (fetchError) throw fetchError
+          if (!mapState) return res.status(404).json({ error: 'Map not found' })
 
-          if (!mapState) {
-            return res.status(404).json({ error: 'Map not found' })
-          }
-
-          // Import and use the suggestions logic
           const { generateDoorSuggestions } = await import('./lib/map-suggestions.js')
           const doors = await generateDoorSuggestions(userId, mapState.map_data)
           return res.status(200).json({ doors })
@@ -448,15 +436,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .select('*')
           .eq('user_id', userId)
           .single()
-
-        // Check for table not found error
-        if (loadError && loadError.code === '42P01') {
-          return res.status(503).json({
-            error: 'Database table knowledge_map_state does not exist',
-            hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql',
-            migrationFile: 'supabase/migrations/create_knowledge_map.sql'
-          })
-        }
 
         if (existingMap) {
           return res.status(200).json({
@@ -478,15 +457,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             version: 1
           })
 
-        if (insertError) {
-          if (insertError.code === '42P01') {
-            return res.status(503).json({
-              error: 'Database table knowledge_map_state does not exist',
-              hint: 'Please run the migration: supabase/migrations/create_knowledge_map.sql'
-            })
-          }
-          throw insertError
-        }
+        if (insertError) throw insertError
 
         return res.status(200).json({
           mapData: initialMap,
@@ -494,1305 +465,1328 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           generated: true
         })
       }
-    } catch (error) {
-      console.error('[knowledge_map] Error:', error)
-      return res.status(500).json({
-        error: 'Knowledge map operation failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
+
+      // POST: Save map state OR Regenerate
+      if (req.method === 'POST') {
+        // REGENERATE ACTION
+        if (action === 'regenerate') {
+          console.log('[knowledge_map] Regenerating map for user:', userId)
+
+          // Import generation logic
+          const { generateInitialMap } = await import('./lib/map-generation.js')
+
+          // Generate fresh map from current data
+          const newMapData = await generateInitialMap(userId)
+
+          // Overwrite existing state
+          const { error: upsertError } = await supabase
+            .from('knowledge_map_state')
+            .upsert({
+              user_id: userId,
+              map_data: newMapData,
+              version: 1, // Reset version
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            })
+
+          if (upsertError) throw upsertError
+
+          return res.status(200).json({
+            success: true,
+            mapData: newMapData
+          })
+        }
+
+        // SAVE STATE
+        const { mapData } = req.body
+        const { error } = await supabase
+          .from('knowledge_map_state')
+          .upsert({
+            user_id: userId,
+            map_data: mapData,
+            version: mapData.version,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          })
+
+        if (error) throw error
+
+        return res.status(200).json({ success: true })
+      }
+
+      return res.status(405).json({ error: 'Method not allowed' })
     }
-
-    // POST: Save map state
-    if (req.method === 'POST') {
-      const { mapData } = req.body
-
-      const { error } = await supabase
-        .from('knowledge_map_state')
-        .upsert({
-          user_id: userId,
-          map_data: mapData,
-          version: mapData.version,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
-        })
-
-      if (error) throw error
-
-      return res.status(200).json({ success: true })
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
 
   // CONTEXT RESOURCE
   if (resource === 'context') {
-    if (req.method === 'GET') {
+      if (req.method === 'GET') {
+        try {
+          const { data, error } = await supabase
+            .from('user_daily_context')
+            .select('*')
+            .eq('user_id', userId)
+            .single()
+
+          if (error && error.code !== 'PGRST116') {
+            console.error('[context] Query error:', error)
+            return res.status(500).json({ error: error.message })
+          }
+
+          const context: UserContext = data || {
+            available_time: 'moderate',
+            current_energy: 'moderate',
+            available_context: ['desk', 'computer']
+          }
+
+          return res.status(200).json({ context })
+        } catch (error) {
+          console.error('[context] Error:', error)
+          return res.status(500).json({ error: 'Internal server error' })
+        }
+      }
+
+      if (req.method === 'POST' || req.method === 'PUT') {
+        try {
+          const { available_time, current_energy, available_context } = req.body
+
+          if (available_time && !['quick', 'moderate', 'deep'].includes(available_time)) {
+            return res.status(400).json({
+              error: 'Invalid available_time. Must be: quick, moderate, or deep'
+            })
+          }
+
+          if (current_energy && !['low', 'moderate', 'high'].includes(current_energy)) {
+            return res.status(400).json({
+              error: 'Invalid current_energy. Must be: low, moderate, or high'
+            })
+          }
+
+          if (available_context && !Array.isArray(available_context)) {
+            return res.status(400).json({
+              error: 'Invalid available_context. Must be an array'
+            })
+          }
+
+          const { data, error } = await supabase
+            .from('user_daily_context')
+            .upsert({
+              user_id: userId,
+              available_time: available_time || 'moderate',
+              current_energy: current_energy || 'moderate',
+              available_context: available_context || ['desk', 'computer'],
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+
+          if (error) {
+            console.error('[context] Upsert error:', error)
+            return res.status(500).json({ error: error.message })
+          }
+
+          return res.status(200).json({ context: data })
+        } catch (error) {
+          console.error('[context] Error:', error)
+          return res.status(500).json({ error: 'Internal server error' })
+        }
+      }
+
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    // DAILY QUEUE RESOURCE
+    if (resource === 'daily-queue') {
+      if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' })
+      }
+
       try {
-        const { data, error } = await supabase
+        const { data: contextData } = await supabase
           .from('user_daily_context')
           .select('*')
           .eq('user_id', userId)
           .single()
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('[context] Query error:', error)
-          return res.status(500).json({ error: error.message })
-        }
-
-        const context: UserContext = data || {
+        const context: UserContext = contextData || {
           available_time: 'moderate',
           current_energy: 'moderate',
           available_context: ['desk', 'computer']
         }
 
-        return res.status(200).json({ context })
+        const { data: projects, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('last_active', { ascending: false })
+
+        if (error) {
+          console.error('[daily-queue] Query error:', error)
+          return res.status(500).json({ error: error.message })
+        }
+
+        if (!projects || projects.length === 0) {
+          return res.status(200).json({
+            queue: [],
+            context,
+            total_projects: 0
+          })
+        }
+
+        const scores = projects.map(project => scoreProject(project, context))
+        const queue = selectDailyQueue(scores)
+
+        return res.status(200).json({
+          queue,
+          context,
+          total_projects: projects.length
+        })
       } catch (error) {
-        console.error('[context] Error:', error)
+        console.error('[daily-queue] Error:', error)
         return res.status(500).json({ error: 'Internal server error' })
       }
     }
 
-    if (req.method === 'POST' || req.method === 'PUT') {
+    // NOTES RESOURCE
+    if (resource === 'notes') {
+      if (req.method === 'POST') {
+        try {
+          const { project_id, bullets, note_type } = req.body
+
+          if (!project_id || !bullets || !Array.isArray(bullets)) {
+            return res.status(400).json({
+              error: 'project_id and bullets array required'
+            })
+          }
+
+          const { data, error } = await supabase
+            .from('project_notes')
+            .insert([{
+              project_id,
+              user_id: userId,
+              bullets,
+              created_at: new Date().toISOString()
+            }])
+            .select()
+            .single()
+
+          if (error) throw error
+
+          // Update project last_active
+          await supabase
+            .from('projects')
+            .update({ last_active: new Date().toISOString() })
+            .eq('id', project_id)
+
+          return res.status(201).json({
+            success: true,
+            note: { ...data, note_type }
+          })
+        } catch (error) {
+          console.error('[notes] Failed to create note:', error)
+          return res.status(500).json({ error: 'Failed to create note' })
+        }
+      }
+
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    // GHOSTWRITER RESOURCE - AI content synthesis
+    if (resource === 'ghostwriter') {
+      if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' })
+      }
+
       try {
-        const { available_time, current_energy, available_context } = req.body
+        const { projectId, format } = req.body
 
-        if (available_time && !['quick', 'moderate', 'deep'].includes(available_time)) {
-          return res.status(400).json({
-            error: 'Invalid available_time. Must be: quick, moderate, or deep'
+        if (!projectId) {
+          return res.status(400).json({ error: 'projectId is required' })
+        }
+
+        if (!format || !['brief', 'blog', 'outline'].includes(format)) {
+          return res.status(400).json({ error: 'format must be brief, blog, or outline' })
+        }
+
+        // Fetch project
+        const { data: project, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', projectId)
+          .eq('user_id', userId)
+          .single()
+
+        if (projectError || !project) {
+          return res.status(404).json({ error: 'Project not found' })
+        }
+
+        // Fetch connections
+        const { data: connections } = await supabase
+          .from('connections')
+          .select('*')
+          .or(`source_id.eq.${projectId},target_id.eq.${projectId}`)
+
+        // Gather connected item IDs
+        const connectedIds = { thoughts: [] as string[], articles: [] as string[], projects: [] as string[] }
+
+        for (const conn of connections || []) {
+          const isSource = conn.source_id === projectId
+          const otherId = isSource ? conn.target_id : conn.source_id
+          const otherType = isSource ? conn.target_type : conn.source_type
+
+          if (otherType === 'thought') connectedIds.thoughts.push(otherId)
+          else if (otherType === 'article') connectedIds.articles.push(otherId)
+          else if (otherType === 'project') connectedIds.projects.push(otherId)
+        }
+
+        // Fetch connected items
+        const [thoughts, articles, otherProjects] = await Promise.all([
+          connectedIds.thoughts.length > 0
+            ? supabase.from('memories').select('id, title, body').in('id', connectedIds.thoughts)
+            : { data: [] },
+          connectedIds.articles.length > 0
+            ? supabase.from('reading_queue').select('id, title, excerpt, highlights').in('id', connectedIds.articles)
+            : { data: [] },
+          connectedIds.projects.length > 0
+            ? supabase.from('projects').select('id, title, description').in('id', connectedIds.projects)
+            : { data: [] }
+        ])
+
+        // Fetch project notes
+        const { data: notes } = await supabase
+          .from('project_notes')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        // Build context
+        const contextParts: string[] = []
+        contextParts.push(`## Project: ${project.title}`)
+        if (project.description) contextParts.push(`Description: ${project.description}`)
+        if (project.metadata?.vision) contextParts.push(`Vision: ${project.metadata.vision}`)
+
+        const tasks = project.metadata?.tasks || []
+        if (tasks.length > 0) {
+          const completedTasks = tasks.filter((t: any) => t.done)
+          const pendingTasks = tasks.filter((t: any) => !t.done)
+          contextParts.push(`\n### Progress: ${completedTasks.length}/${tasks.length} tasks complete`)
+          if (pendingTasks.length > 0) {
+            contextParts.push('Next steps: ' + pendingTasks.slice(0, 3).map((t: any) => t.text).join(', '))
+          }
+        }
+
+        if (thoughts.data && thoughts.data.length > 0) {
+          contextParts.push('\n### Related Thoughts')
+          for (const t of thoughts.data) {
+            contextParts.push(`- ${t.title || 'Untitled'}: ${(t.body || '').slice(0, 200)}`)
+          }
+        }
+
+        if (articles.data && articles.data.length > 0) {
+          contextParts.push('\n### Related Articles')
+          for (const a of articles.data) {
+            contextParts.push(`- "${a.title}": ${(a.excerpt || '').slice(0, 150)}`)
+            if (a.highlights && a.highlights.length > 0) {
+              contextParts.push(`  Highlights: ${a.highlights.slice(0, 2).join('; ')}`)
+            }
+          }
+        }
+
+        if (otherProjects.data && otherProjects.data.length > 0) {
+          contextParts.push('\n### Related Projects')
+          for (const p of otherProjects.data) {
+            contextParts.push(`- ${p.title}: ${(p.description || '').slice(0, 100)}`)
+          }
+        }
+
+        if (notes && notes.length > 0) {
+          contextParts.push('\n### Recent Notes')
+          for (const note of notes.slice(0, 5)) {
+            const bullets = note.bullets || []
+            if (bullets.length > 0) contextParts.push(`- ${bullets.join('; ')}`)
+          }
+        }
+
+        const context = contextParts.join('\n')
+
+        // Format-specific prompts
+        const formatPrompts: Record<string, string> = {
+          brief: `Create a project brief with: summary (2-3 sentences), key objectives (3-5 bullets), insights from connected items, and next actions. Use markdown.`,
+          blog: `Draft a blog post with: title, hook intro, 2-3 sections on learnings, examples from materials, and takeaways. Conversational tone, markdown format.`,
+          outline: `Create an action plan with: phases/milestones, tasks under each, dependencies, effort levels. Actionable, markdown format.`
+        }
+
+        const prompt = `${formatPrompts[format]}\n\n## Project Context\n\n${context}\n\n---\n\nGenerate now:`
+
+        const draft = await generateText(prompt, { maxTokens: 1500, temperature: 0.7 })
+
+        return res.status(200).json({
+          draft,
+          contextItemCount: (thoughts.data?.length || 0) + (articles.data?.length || 0) + (otherProjects.data?.length || 0) + (notes?.length || 0),
+          format
+        })
+
+      } catch (error) {
+        console.error('[ghostwriter] Error:', error)
+        return res.status(500).json({
+          error: 'Failed to generate draft',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    // PROJECTS CRUD (default)
+    if (req.method === 'GET') {
+      try {
+        const { id, include_notes, filter } = req.query
+
+        // Single project with notes
+        if (id && typeof id === 'string') {
+          const { data: project, error: projectError } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .single()
+
+          if (projectError) throw projectError
+
+          if (!project) {
+            return res.status(404).json({ error: 'Project not found' })
+          }
+
+          // Fetch notes if requested
+          let notes = []
+          if (include_notes === 'true') {
+            const { data: notesData, error: notesError } = await supabase
+              .from('project_notes')
+              .select('*')
+              .eq('project_id', id)
+              .order('created_at', { ascending: false })
+
+            if (notesError) throw notesError
+            notes = notesData || []
+          }
+
+          return res.status(200).json({
+            success: true,
+            project,
+            notes
           })
         }
 
-        if (current_energy && !['low', 'moderate', 'high'].includes(current_energy)) {
-          return res.status(400).json({
-            error: 'Invalid current_energy. Must be: low, moderate, or high'
-          })
+        // List all projects with optional status filtering
+        let query = supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+
+        // Apply status filter if provided
+        if (filter && filter !== 'all') {
+          if (filter === 'upcoming') {
+            query = query.eq('status', 'upcoming')
+          } else if (filter === 'active') {
+            query = query.eq('status', 'active')
+          } else if (filter === 'dormant') {
+            query = query.in('status', ['dormant', 'on-hold', 'maintaining'])
+          } else if (filter === 'completed') {
+            query = query.eq('status', 'completed')
+          }
         }
 
-        if (available_context && !Array.isArray(available_context)) {
-          return res.status(400).json({
-            error: 'Invalid available_context. Must be an array'
-          })
+        const { data, error } = await query
+
+        if (error) throw error
+
+        return res.status(200).json({ projects: data || [] })
+      } catch (error) {
+        console.error('Failed to fetch projects:', error)
+        return res.status(500).json({ error: 'Failed to fetch projects' })
+      }
+    }
+
+    if (req.method === 'POST') {
+      try {
+        const projectData = {
+          ...req.body,
+          type: req.body.type || 'hobby', // Default to hobby if not provided
+          user_id: userId,
+          created_at: new Date().toISOString(),
+          last_active: new Date().toISOString(),
         }
 
-        const { data, error } = await supabase
-          .from('user_daily_context')
-          .upsert({
-            user_id: userId,
-            available_time: available_time || 'moderate',
-            current_energy: current_energy || 'moderate',
-            available_context: available_context || ['desk', 'computer'],
-            updated_at: new Date().toISOString()
-          })
+        const { data: project, error } = await supabase
+          .from('projects')
+          .insert([projectData])
           .select()
           .single()
 
         if (error) {
-          console.error('[context] Upsert error:', error)
-          return res.status(500).json({ error: error.message })
+          console.error('[projects] Insert error:', error)
+
+          // Check for constraint violation on type
+          if (error.message?.includes('projects_type_check') || error.code === '23514') {
+            return res.status(400).json({
+              error: 'Invalid project type',
+              details: `Type must be one of: 'creative', 'technical', or 'learning'. Received: '${projectData.type}'`,
+              suggestion: 'Valid types: creative (artistic/hobby), technical (coding/building), learning (educational)'
+            })
+          }
+
+          throw error
         }
 
-        return res.status(200).json({ context: data })
+        // Generate embedding and auto-suggest connections asynchronously (don't block response)
+        // Return project immediately, then process connections in background
+        const embeddingPromise = generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
+          .catch(err => console.error('[projects] Async embedding/connection error:', err))
+
+        return res.status(201).json({
+          ...project,
+          _meta: {
+            processing_connections: true,
+            message: 'AI is finding related items in the background'
+          }
+        })
       } catch (error) {
-        console.error('[context] Error:', error)
-        return res.status(500).json({ error: 'Internal server error' })
-      }
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
-  // DAILY QUEUE RESOURCE
-  if (resource === 'daily-queue') {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-    try {
-      const { data: contextData } = await supabase
-        .from('user_daily_context')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      const context: UserContext = contextData || {
-        available_time: 'moderate',
-        current_energy: 'moderate',
-        available_context: ['desk', 'computer']
-      }
-
-      const { data: projects, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .order('last_active', { ascending: false })
-
-      if (error) {
-        console.error('[daily-queue] Query error:', error)
-        return res.status(500).json({ error: error.message })
-      }
-
-      if (!projects || projects.length === 0) {
-        return res.status(200).json({
-          queue: [],
-          context,
-          total_projects: 0
+        console.error('[projects] Failed to create project:', error)
+        return res.status(500).json({
+          error: 'Failed to create project',
+          details: error instanceof Error ? error.message : 'Unknown error'
         })
       }
-
-      const scores = projects.map(project => scoreProject(project, context))
-      const queue = selectDailyQueue(scores)
-
-      return res.status(200).json({
-        queue,
-        context,
-        total_projects: projects.length
-      })
-    } catch (error) {
-      console.error('[daily-queue] Error:', error)
-      return res.status(500).json({ error: 'Internal server error' })
     }
-  }
 
-  // NOTES RESOURCE
-  if (resource === 'notes') {
-    if (req.method === 'POST') {
+    if (req.method === 'PUT' || req.method === 'PATCH') {
       try {
-        const { project_id, bullets, note_type } = req.body
+        const projectId = req.query.id as string
 
-        if (!project_id || !bullets || !Array.isArray(bullets)) {
-          return res.status(400).json({
-            error: 'project_id and bullets array required'
-          })
+        if (!projectId) {
+          return res.status(400).json({ error: 'Project ID required in query parameter' })
         }
 
+        // Remove id from updates if present in body
+        const { id: _bodyId, ...updates } = req.body
+
+        console.log('[PATCH] Updating project:', projectId, 'with data:', updates)
+
         const { data, error } = await supabase
-          .from('project_notes')
-          .insert([{
-            project_id,
-            user_id: userId,
-            bullets,
-            created_at: new Date().toISOString()
-          }])
+          .from('projects')
+          .update(updates)
+          .eq('id', projectId)
+          .eq('user_id', userId)
           .select()
           .single()
 
+        if (error) {
+          console.error('[PATCH] Supabase error:', error)
+          return res.status(500).json({
+            error: 'Failed to update project',
+            details: error.message,
+            code: error.code
+          })
+        }
+
+        if (!data) {
+          return res.status(404).json({ error: 'Project not found' })
+        }
+
+        console.log('[PATCH] Successfully updated project')
+        return res.status(200).json(data)
+      } catch (error) {
+        console.error('[PATCH] Unexpected error:', error)
+        return res.status(500).json({
+          error: 'Failed to update project',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      try {
+        const { id } = req.query
+
+        const { error } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', id)
+
         if (error) throw error
 
-        // Update project last_active
-        await supabase
-          .from('projects')
-          .update({ last_active: new Date().toISOString() })
-          .eq('id', project_id)
-
-        return res.status(201).json({
-          success: true,
-          note: { ...data, note_type }
-        })
+        return res.status(204).end()
       } catch (error) {
-        console.error('[notes] Failed to create note:', error)
-        return res.status(500).json({ error: 'Failed to create note' })
+        console.error('Failed to delete project:', error)
+        return res.status(500).json({ error: 'Failed to delete project' })
       }
     }
 
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // GHOSTWRITER RESOURCE - AI content synthesis
-  if (resource === 'ghostwriter') {
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' })
-    }
-
+  /**
+   * List suggestions (merged from suggestions.ts)
+   */
+  async function handleListSuggestions(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
     try {
-      const { projectId, format } = req.body
+      // Query parameters
+      const {
+        status = 'pending',
+        limit = '20',
+        offset = '0',
+        include_rated = 'false'
+      } = req.query
 
-      if (!projectId) {
-        return res.status(400).json({ error: 'projectId is required' })
-      }
-
-      if (!format || !['brief', 'blog', 'outline'].includes(format)) {
-        return res.status(400).json({ error: 'format must be brief, blog, or outline' })
-      }
-
-      // Fetch project
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', projectId)
-        .eq('user_id', userId)
-        .single()
-
-      if (projectError || !project) {
-        return res.status(404).json({ error: 'Project not found' })
-      }
-
-      // Fetch connections
-      const { data: connections } = await supabase
-        .from('connections')
-        .select('*')
-        .or(`source_id.eq.${projectId},target_id.eq.${projectId}`)
-
-      // Gather connected item IDs
-      const connectedIds = { thoughts: [] as string[], articles: [] as string[], projects: [] as string[] }
-
-      for (const conn of connections || []) {
-        const isSource = conn.source_id === projectId
-        const otherId = isSource ? conn.target_id : conn.source_id
-        const otherType = isSource ? conn.target_type : conn.source_type
-
-        if (otherType === 'thought') connectedIds.thoughts.push(otherId)
-        else if (otherType === 'article') connectedIds.articles.push(otherId)
-        else if (otherType === 'project') connectedIds.projects.push(otherId)
-      }
-
-      // Fetch connected items
-      const [thoughts, articles, otherProjects] = await Promise.all([
-        connectedIds.thoughts.length > 0
-          ? supabase.from('memories').select('id, title, body').in('id', connectedIds.thoughts)
-          : { data: [] },
-        connectedIds.articles.length > 0
-          ? supabase.from('reading_queue').select('id, title, excerpt, highlights').in('id', connectedIds.articles)
-          : { data: [] },
-        connectedIds.projects.length > 0
-          ? supabase.from('projects').select('id, title, description').in('id', connectedIds.projects)
-          : { data: [] }
-      ])
-
-      // Fetch project notes
-      const { data: notes } = await supabase
-        .from('project_notes')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      // Build context
-      const contextParts: string[] = []
-      contextParts.push(`## Project: ${project.title}`)
-      if (project.description) contextParts.push(`Description: ${project.description}`)
-      if (project.metadata?.vision) contextParts.push(`Vision: ${project.metadata.vision}`)
-
-      const tasks = project.metadata?.tasks || []
-      if (tasks.length > 0) {
-        const completedTasks = tasks.filter((t: any) => t.done)
-        const pendingTasks = tasks.filter((t: any) => !t.done)
-        contextParts.push(`\n### Progress: ${completedTasks.length}/${tasks.length} tasks complete`)
-        if (pendingTasks.length > 0) {
-          contextParts.push('Next steps: ' + pendingTasks.slice(0, 3).map((t: any) => t.text).join(', '))
-        }
-      }
-
-      if (thoughts.data && thoughts.data.length > 0) {
-        contextParts.push('\n### Related Thoughts')
-        for (const t of thoughts.data) {
-          contextParts.push(`- ${t.title || 'Untitled'}: ${(t.body || '').slice(0, 200)}`)
-        }
-      }
-
-      if (articles.data && articles.data.length > 0) {
-        contextParts.push('\n### Related Articles')
-        for (const a of articles.data) {
-          contextParts.push(`- "${a.title}": ${(a.excerpt || '').slice(0, 150)}`)
-          if (a.highlights && a.highlights.length > 0) {
-            contextParts.push(`  Highlights: ${a.highlights.slice(0, 2).join('; ')}`)
-          }
-        }
-      }
-
-      if (otherProjects.data && otherProjects.data.length > 0) {
-        contextParts.push('\n### Related Projects')
-        for (const p of otherProjects.data) {
-          contextParts.push(`- ${p.title}: ${(p.description || '').slice(0, 100)}`)
-        }
-      }
-
-      if (notes && notes.length > 0) {
-        contextParts.push('\n### Recent Notes')
-        for (const note of notes.slice(0, 5)) {
-          const bullets = note.bullets || []
-          if (bullets.length > 0) contextParts.push(`- ${bullets.join('; ')}`)
-        }
-      }
-
-      const context = contextParts.join('\n')
-
-      // Format-specific prompts
-      const formatPrompts: Record<string, string> = {
-        brief: `Create a project brief with: summary (2-3 sentences), key objectives (3-5 bullets), insights from connected items, and next actions. Use markdown.`,
-        blog: `Draft a blog post with: title, hook intro, 2-3 sections on learnings, examples from materials, and takeaways. Conversational tone, markdown format.`,
-        outline: `Create an action plan with: phases/milestones, tasks under each, dependencies, effort levels. Actionable, markdown format.`
-      }
-
-      const prompt = `${formatPrompts[format]}\n\n## Project Context\n\n${context}\n\n---\n\nGenerate now:`
-
-      const draft = await generateText(prompt, { maxTokens: 1500, temperature: 0.7 })
-
-      return res.status(200).json({
-        draft,
-        contextItemCount: (thoughts.data?.length || 0) + (articles.data?.length || 0) + (otherProjects.data?.length || 0) + (notes?.length || 0),
-        format
-      })
-
-    } catch (error) {
-      console.error('[ghostwriter] Error:', error)
-      return res.status(500).json({
-        error: 'Failed to generate draft',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-
-  // PROJECTS CRUD (default)
-  if (req.method === 'GET') {
-    try {
-      const { id, include_notes, filter } = req.query
-
-      // Single project with notes
-      if (id && typeof id === 'string') {
-        const { data: project, error: projectError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .single()
-
-        if (projectError) throw projectError
-
-        if (!project) {
-          return res.status(404).json({ error: 'Project not found' })
-        }
-
-        // Fetch notes if requested
-        let notes = []
-        if (include_notes === 'true') {
-          const { data: notesData, error: notesError } = await supabase
-            .from('project_notes')
-            .select('*')
-            .eq('project_id', id)
-            .order('created_at', { ascending: false })
-
-          if (notesError) throw notesError
-          notes = notesData || []
-        }
-
-        return res.status(200).json({
-          success: true,
-          project,
-          notes
-        })
-      }
-
-      // List all projects with optional status filtering
       let query = supabase
-        .from('projects')
-        .select('*')
+        .from('project_suggestions')
+        .select('*', { count: 'exact' })
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+        .order('total_points', { ascending: false })
 
-      // Apply status filter if provided
-      if (filter && filter !== 'all') {
-        if (filter === 'upcoming') {
-          query = query.eq('status', 'upcoming')
-        } else if (filter === 'active') {
-          query = query.eq('status', 'active')
-        } else if (filter === 'dormant') {
-          query = query.in('status', ['dormant', 'on-hold', 'maintaining'])
-        } else if (filter === 'completed') {
-          query = query.eq('status', 'completed')
+      // Filter by status
+      if (status !== 'all') {
+        if (include_rated === 'true') {
+          // Show pending + rated suggestions
+          query = query.in('status', ['pending', 'spark', 'meh', 'saved'])
+        } else {
+          // Only show pending
+          query = query.eq('status', status)
         }
       }
 
-      const { data, error } = await query
+      // Pagination
+      query = query.range(
+        Number(offset),
+        Number(offset) + Number(limit) - 1
+      )
 
-      if (error) throw error
-
-      return res.status(200).json({ projects: data || [] })
-    } catch (error) {
-      console.error('Failed to fetch projects:', error)
-      return res.status(500).json({ error: 'Failed to fetch projects' })
-    }
-  }
-
-  if (req.method === 'POST') {
-    try {
-      const projectData = {
-        ...req.body,
-        type: req.body.type || 'hobby', // Default to hobby if not provided
-        user_id: userId,
-        created_at: new Date().toISOString(),
-        last_active: new Date().toISOString(),
-      }
-
-      const { data: project, error } = await supabase
-        .from('projects')
-        .insert([projectData])
-        .select()
-        .single()
+      const { data, error, count } = await query
 
       if (error) {
-        console.error('[projects] Insert error:', error)
-
-        // Check for constraint violation on type
-        if (error.message?.includes('projects_type_check') || error.code === '23514') {
-          return res.status(400).json({
-            error: 'Invalid project type',
-            details: `Type must be one of: 'creative', 'technical', or 'learning'. Received: '${projectData.type}'`,
-            suggestion: 'Valid types: creative (artistic/hobby), technical (coding/building), learning (educational)'
-          })
-        }
-
-        throw error
+        return res.status(500).json({ error: error.message })
       }
 
-      // Generate embedding and auto-suggest connections asynchronously (don't block response)
-      // Return project immediately, then process connections in background
-      const embeddingPromise = generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
-        .catch(err => console.error('[projects] Async embedding/connection error:', err))
+      // Enrich suggestions with capability names
+      const enrichedSuggestions = await Promise.all(
+        (data || []).map(async (suggestion) => {
+          if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
+            const { data: capabilities } = await supabase
+              .from('capabilities')
+              .select('id, name')
+              .in('id', suggestion.capability_ids)
 
-      return res.status(201).json({
-        ...project,
-        _meta: {
-          processing_connections: true,
-          message: 'AI is finding related items in the background'
-        }
-      })
-    } catch (error) {
-      console.error('[projects] Failed to create project:', error)
-      return res.status(500).json({
-        error: 'Failed to create project',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-
-  if (req.method === 'PUT' || req.method === 'PATCH') {
-    try {
-      const projectId = req.query.id as string
-
-      if (!projectId) {
-        return res.status(400).json({ error: 'Project ID required in query parameter' })
-      }
-
-      // Remove id from updates if present in body
-      const { id: _bodyId, ...updates } = req.body
-
-      console.log('[PATCH] Updating project:', projectId, 'with data:', updates)
-
-      const { data, error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', projectId)
-        .eq('user_id', userId)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('[PATCH] Supabase error:', error)
-        return res.status(500).json({
-          error: 'Failed to update project',
-          details: error.message,
-          code: error.code
-        })
-      }
-
-      if (!data) {
-        return res.status(404).json({ error: 'Project not found' })
-      }
-
-      console.log('[PATCH] Successfully updated project')
-      return res.status(200).json(data)
-    } catch (error) {
-      console.error('[PATCH] Unexpected error:', error)
-      return res.status(500).json({
-        error: 'Failed to update project',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
-  }
-
-  if (req.method === 'DELETE') {
-    try {
-      const { id } = req.query
-
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-
-      return res.status(204).end()
-    } catch (error) {
-      console.error('Failed to delete project:', error)
-      return res.status(500).json({ error: 'Failed to delete project' })
-    }
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' })
-}
-
-/**
- * List suggestions (merged from suggestions.ts)
- */
-async function handleListSuggestions(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
-  try {
-    // Query parameters
-    const {
-      status = 'pending',
-      limit = '20',
-      offset = '0',
-      include_rated = 'false'
-    } = req.query
-
-    let query = supabase
-      .from('project_suggestions')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .order('total_points', { ascending: false })
-
-    // Filter by status
-    if (status !== 'all') {
-      if (include_rated === 'true') {
-        // Show pending + rated suggestions
-        query = query.in('status', ['pending', 'spark', 'meh', 'saved'])
-      } else {
-        // Only show pending
-        query = query.eq('status', status)
-      }
-    }
-
-    // Pagination
-    query = query.range(
-      Number(offset),
-      Number(offset) + Number(limit) - 1
-    )
-
-    const { data, error, count } = await query
-
-    if (error) {
-      return res.status(500).json({ error: error.message })
-    }
-
-    // Enrich suggestions with capability names
-    const enrichedSuggestions = await Promise.all(
-      (data || []).map(async (suggestion) => {
-        if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
-          const { data: capabilities } = await supabase
-            .from('capabilities')
-            .select('id, name')
-            .in('id', suggestion.capability_ids)
-
+            return {
+              ...suggestion,
+              capabilities: capabilities || []
+            }
+          }
           return {
             ...suggestion,
-            capabilities: capabilities || []
+            capabilities: []
+          }
+        })
+      )
+
+      return res.status(200).json({
+        suggestions: enrichedSuggestions,
+        total: count || 0,
+        limit: Number(limit),
+        offset: Number(offset)
+      })
+
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  /**
+   * Rate a suggestion (merged from suggestions.ts)
+   */
+  async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id: string, supabase: any, userId: string) {
+    if (!id) {
+      return res.status(400).json({ error: 'Suggestion ID required' })
+    }
+
+    try {
+      console.log('[rate] Rating suggestion:', id, 'Body:', req.body)
+
+      const parseResult = RateRequestSchema.safeParse(req.body)
+      if (!parseResult.success) {
+        console.error('[rate] Validation failed:', parseResult.error)
+        return res.status(400).json({
+          error: 'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)',
+          details: parseResult.error
+        })
+      }
+
+      const { rating, feedback } = parseResult.data
+      console.log('[rate] Parsed rating:', rating, 'feedback:', feedback)
+
+      // Store rating
+      const { data: ratingData, error: ratingError } = await supabase
+        .from('suggestion_ratings')
+        .insert({
+          suggestion_id: id,
+          user_id: userId,
+          rating,
+          feedback: feedback || null
+        })
+        .select()
+        .single()
+
+      if (ratingError) {
+        console.error('[rate] Rating insert error:', ratingError)
+        return res.status(500).json({ error: ratingError.message, details: ratingError })
+      }
+
+      console.log('[rate] Rating stored:', ratingData)
+
+      // Update suggestion status
+      // Map ratings to database-allowed statuses: pending, rated, built, dismissed, saved
+      let newStatus: string
+      if (rating === 2) {
+        newStatus = 'built'  // User wants to build this
+      } else if (rating === 1) {
+        newStatus = 'rated'  // User likes it (spark)
+      } else {
+        newStatus = 'dismissed'  // User doesn't want it (meh)
+      }
+      console.log('[rate] Setting status to:', newStatus)
+
+      const { data: suggestion, error: updateError } = await supabase
+        .from('project_suggestions')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('[rate] Suggestion update error:', updateError)
+        return res.status(500).json({ error: updateError.message, details: updateError })
+      }
+
+      console.log('[rate] Suggestion updated:', suggestion)
+
+      // Learn from rating
+      try {
+        if (rating > 0) {
+          console.log('[rate] Incrementing capability strengths for positive rating')
+          for (const capabilityId of suggestion.capability_ids || []) {
+            await incrementCapabilityStrength(capabilityId, 0.05, supabase)
+          }
+        } else if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
+          console.log('[rate] Penalizing combination for negative rating')
+          await penalizeCombination(suggestion.capability_ids, 0.1, supabase)
+        }
+      } catch (learningError) {
+        console.error('[rate] Learning error (non-fatal):', learningError)
+        // Don't fail the request if learning fails
+      }
+
+      console.log('[rate] Successfully rated suggestion')
+      return res.status(200).json({
+        success: true,
+        rating: ratingData,
+        updated_suggestion: {
+          id: suggestion.id,
+          status: suggestion.status
+        }
+      })
+
+    } catch (error) {
+      console.error('[rate] Unexpected error:', error)
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      })
+    }
+  }
+
+  /**
+   * Build a project from suggestion (merged from suggestions.ts)
+   */
+  async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse, id: string, supabase: any, userId: string) {
+    if (!id) {
+      return res.status(400).json({ error: 'Suggestion ID required' })
+    }
+
+    const { project_title, project_description, metadata = {} } = req.body
+
+    try {
+      // Get suggestion
+      const { data: suggestion, error: fetchError } = await supabase
+        .from('project_suggestions')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          return res.status(404).json({ error: 'Suggestion not found' })
+        }
+        return res.status(500).json({ error: fetchError.message })
+      }
+
+      const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
+      const projectType = metadata.type || (hasCapabilities ? 'side-project' : 'hobby')
+
+      // Create project
+      const { data: project, error: createError } = await supabase
+        .from('projects')
+        .insert({
+          user_id: userId,
+          title: project_title || suggestion.title,
+          description: project_description || suggestion.description,
+          type: projectType,
+          status: 'active',
+          last_active: new Date().toISOString(),
+          metadata: {
+            ...metadata,
+            from_suggestion: id,
+            capabilities: suggestion.capability_ids,
+            original_points: suggestion.total_points
+          }
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        return res.status(500).json({ error: createError.message })
+      }
+
+      // Update suggestion
+      await supabase
+        .from('project_suggestions')
+        .update({
+          status: 'built',
+          built_project_id: project.id
+        })
+        .eq('id', id)
+
+      // Add automatic +2 rating
+      await supabase
+        .from('suggestion_ratings')
+        .insert({
+          suggestion_id: id,
+          user_id: userId,
+          rating: 2,
+          feedback: 'Built this project!'
+        })
+
+      // Boost capability strengths significantly
+      for (const capabilityId of suggestion.capability_ids || []) {
+        await incrementCapabilityStrength(capabilityId, 0.3, supabase)
+      }
+
+      // Create project node strength entry
+      await supabase
+        .from('node_strengths')
+        .insert({
+          node_type: 'project',
+          node_id: project.id,
+          strength: 1.5,
+          activity_count: 1,
+          last_activity: new Date().toISOString()
+        })
+
+      return res.status(201).json({
+        success: true,
+        project,
+        suggestion: {
+          id: suggestion.id,
+          status: 'built',
+          built_project_id: project.id
+        }
+      })
+
+    } catch (error) {
+      return res.status(500).json({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  /**
+   * Generate embedding for a project and auto-suggest/create connections
+   * Runs asynchronously after project creation
+   */
+  async function generateProjectEmbeddingAndConnect(
+    projectId: string,
+    title: string,
+    description: string | null,
+    userId: string
+  ) {
+    const supabase = getSupabaseClient()
+
+    try {
+      console.log(`[projects] Generating embedding for project ${projectId}`)
+
+      // Generate embedding from title + description
+      const content = `${title}\n\n${description || ''}`
+      const embedding = await generateEmbedding(content)
+
+      // Store embedding in database
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({ embedding })
+        .eq('id', projectId)
+
+      if (updateError) {
+        console.error('[projects] Failed to store embedding:', updateError)
+        return
+      }
+
+      console.log(`[projects] Embedding stored, finding connections...`)
+
+      // Find related items across all types
+      const candidates = await findRelatedItemsForProject(projectId, userId, embedding, content)
+
+      console.log(`[projects] Found ${candidates.length} potential connections`)
+
+      // Auto-link >85%, suggest 55-85% (consistent with memories and articles)
+      const autoLinked = []
+      const suggestions = []
+
+      for (const candidate of candidates) {
+        if (candidate.similarity > 0.85) {
+          // Auto-create connection (with deduplication)
+          const created = await createConnection(
+            'project',
+            projectId,
+            candidate.type,
+            candidate.id,
+            'relates_to',
+            'ai',
+            `${Math.round(candidate.similarity * 100)}% semantic match`
+          )
+          if (created) {
+            autoLinked.push(candidate)
+          }
+        } else if (candidate.similarity > 0.55) {
+          // Store as suggestion
+          suggestions.push(candidate)
+        }
+      }
+
+      console.log(`[projects] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
+
+      // Store suggestions in database
+      if (suggestions.length > 0) {
+        const suggestionInserts = suggestions.map(s => ({
+          from_item_type: 'project',
+          from_item_id: projectId,
+          to_item_type: s.type,
+          to_item_id: s.id,
+          reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
+          confidence: s.similarity,
+          user_id: userId,
+          status: 'pending'
+        }))
+
+        await supabase
+          .from('connection_suggestions')
+          .insert(suggestionInserts)
+      }
+
+    } catch (error) {
+      console.error('[projects] Embedding/connection generation failed:', error)
+    }
+  }
+
+  /**
+   * Find related items for a project using vector similarity
+   */
+  async function findRelatedItemsForProject(
+    projectId: string,
+    userId: string,
+    projectEmbedding: number[],
+    projectContent: string
+  ): Promise<Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }>> {
+    const supabase = getSupabaseClient()
+    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
+
+    // Search other projects
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, description, embedding')
+      .eq('user_id', userId)
+      .neq('id', projectId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (projects) {
+      for (const p of projects) {
+        if (p.embedding) {
+          const similarity = cosineSimilarity(projectEmbedding, p.embedding)
+          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+          if (similarity > 0.55) {
+            candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
           }
         }
-        return {
-          ...suggestion,
-          capabilities: []
-        }
-      })
-    )
-
-    return res.status(200).json({
-      suggestions: enrichedSuggestions,
-      total: count || 0,
-      limit: Number(limit),
-      offset: Number(offset)
-    })
-
-  } catch (error) {
-    return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-/**
- * Rate a suggestion (merged from suggestions.ts)
- */
-async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id: string, supabase: any, userId: string) {
-  if (!id) {
-    return res.status(400).json({ error: 'Suggestion ID required' })
-  }
-
-  try {
-    console.log('[rate] Rating suggestion:', id, 'Body:', req.body)
-
-    const parseResult = RateRequestSchema.safeParse(req.body)
-    if (!parseResult.success) {
-      console.error('[rate] Validation failed:', parseResult.error)
-      return res.status(400).json({
-        error: 'Invalid rating. Must be: -1 (meh), 1 (spark), or 2 (built)',
-        details: parseResult.error
-      })
-    }
-
-    const { rating, feedback } = parseResult.data
-    console.log('[rate] Parsed rating:', rating, 'feedback:', feedback)
-
-    // Store rating
-    const { data: ratingData, error: ratingError } = await supabase
-      .from('suggestion_ratings')
-      .insert({
-        suggestion_id: id,
-        user_id: userId,
-        rating,
-        feedback: feedback || null
-      })
-      .select()
-      .single()
-
-    if (ratingError) {
-      console.error('[rate] Rating insert error:', ratingError)
-      return res.status(500).json({ error: ratingError.message, details: ratingError })
-    }
-
-    console.log('[rate] Rating stored:', ratingData)
-
-    // Update suggestion status
-    // Map ratings to database-allowed statuses: pending, rated, built, dismissed, saved
-    let newStatus: string
-    if (rating === 2) {
-      newStatus = 'built'  // User wants to build this
-    } else if (rating === 1) {
-      newStatus = 'rated'  // User likes it (spark)
-    } else {
-      newStatus = 'dismissed'  // User doesn't want it (meh)
-    }
-    console.log('[rate] Setting status to:', newStatus)
-
-    const { data: suggestion, error: updateError } = await supabase
-      .from('project_suggestions')
-      .update({ status: newStatus })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (updateError) {
-      console.error('[rate] Suggestion update error:', updateError)
-      return res.status(500).json({ error: updateError.message, details: updateError })
-    }
-
-    console.log('[rate] Suggestion updated:', suggestion)
-
-    // Learn from rating
-    try {
-      if (rating > 0) {
-        console.log('[rate] Incrementing capability strengths for positive rating')
-        for (const capabilityId of suggestion.capability_ids || []) {
-          await incrementCapabilityStrength(capabilityId, 0.05, supabase)
-        }
-      } else if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
-        console.log('[rate] Penalizing combination for negative rating')
-        await penalizeCombination(suggestion.capability_ids, 0.1, supabase)
-      }
-    } catch (learningError) {
-      console.error('[rate] Learning error (non-fatal):', learningError)
-      // Don't fail the request if learning fails
-    }
-
-    console.log('[rate] Successfully rated suggestion')
-    return res.status(200).json({
-      success: true,
-      rating: ratingData,
-      updated_suggestion: {
-        id: suggestion.id,
-        status: suggestion.status
-      }
-    })
-
-  } catch (error) {
-    console.error('[rate] Unexpected error:', error)
-    return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
-  }
-}
-
-/**
- * Build a project from suggestion (merged from suggestions.ts)
- */
-async function handleBuildFromSuggestion(req: VercelRequest, res: VercelResponse, id: string, supabase: any, userId: string) {
-  if (!id) {
-    return res.status(400).json({ error: 'Suggestion ID required' })
-  }
-
-  const { project_title, project_description, metadata = {} } = req.body
-
-  try {
-    // Get suggestion
-    const { data: suggestion, error: fetchError } = await supabase
-      .from('project_suggestions')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
-        return res.status(404).json({ error: 'Suggestion not found' })
-      }
-      return res.status(500).json({ error: fetchError.message })
-    }
-
-    const hasCapabilities = suggestion.capability_ids && suggestion.capability_ids.length > 0
-    const projectType = metadata.type || (hasCapabilities ? 'side-project' : 'hobby')
-
-    // Create project
-    const { data: project, error: createError } = await supabase
-      .from('projects')
-      .insert({
-        user_id: userId,
-        title: project_title || suggestion.title,
-        description: project_description || suggestion.description,
-        type: projectType,
-        status: 'active',
-        last_active: new Date().toISOString(),
-        metadata: {
-          ...metadata,
-          from_suggestion: id,
-          capabilities: suggestion.capability_ids,
-          original_points: suggestion.total_points
-        }
-      })
-      .select()
-      .single()
-
-    if (createError) {
-      return res.status(500).json({ error: createError.message })
-    }
-
-    // Update suggestion
-    await supabase
-      .from('project_suggestions')
-      .update({
-        status: 'built',
-        built_project_id: project.id
-      })
-      .eq('id', id)
-
-    // Add automatic +2 rating
-    await supabase
-      .from('suggestion_ratings')
-      .insert({
-        suggestion_id: id,
-        user_id: userId,
-        rating: 2,
-        feedback: 'Built this project!'
-      })
-
-    // Boost capability strengths significantly
-    for (const capabilityId of suggestion.capability_ids || []) {
-      await incrementCapabilityStrength(capabilityId, 0.3, supabase)
-    }
-
-    // Create project node strength entry
-    await supabase
-      .from('node_strengths')
-      .insert({
-        node_type: 'project',
-        node_id: project.id,
-        strength: 1.5,
-        activity_count: 1,
-        last_activity: new Date().toISOString()
-      })
-
-    return res.status(201).json({
-      success: true,
-      project,
-      suggestion: {
-        id: suggestion.id,
-        status: 'built',
-        built_project_id: project.id
-      }
-    })
-
-  } catch (error) {
-    return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-/**
- * Generate embedding for a project and auto-suggest/create connections
- * Runs asynchronously after project creation
- */
-async function generateProjectEmbeddingAndConnect(
-  projectId: string,
-  title: string,
-  description: string | null,
-  userId: string
-) {
-  const supabase = getSupabaseClient()
-
-  try {
-    console.log(`[projects] Generating embedding for project ${projectId}`)
-
-    // Generate embedding from title + description
-    const content = `${title}\n\n${description || ''}`
-    const embedding = await generateEmbedding(content)
-
-    // Store embedding in database
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({ embedding })
-      .eq('id', projectId)
-
-    if (updateError) {
-      console.error('[projects] Failed to store embedding:', updateError)
-      return
-    }
-
-    console.log(`[projects] Embedding stored, finding connections...`)
-
-    // Find related items across all types
-    const candidates = await findRelatedItemsForProject(projectId, userId, embedding, content)
-
-    console.log(`[projects] Found ${candidates.length} potential connections`)
-
-    // Auto-link >85%, suggest 55-85% (consistent with memories and articles)
-    const autoLinked = []
-    const suggestions = []
-
-    for (const candidate of candidates) {
-      if (candidate.similarity > 0.85) {
-        // Auto-create connection (with deduplication)
-        const created = await createConnection(
-          'project',
-          projectId,
-          candidate.type,
-          candidate.id,
-          'relates_to',
-          'ai',
-          `${Math.round(candidate.similarity * 100)}% semantic match`
-        )
-        if (created) {
-          autoLinked.push(candidate)
-        }
-      } else if (candidate.similarity > 0.55) {
-        // Store as suggestion
-        suggestions.push(candidate)
       }
     }
 
-    console.log(`[projects] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
-
-    // Store suggestions in database
-    if (suggestions.length > 0) {
-      const suggestionInserts = suggestions.map(s => ({
-        from_item_type: 'project',
-        from_item_id: projectId,
-        to_item_type: s.type,
-        to_item_id: s.id,
-        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
-        confidence: s.similarity,
-        user_id: userId,
-        status: 'pending'
-      }))
-
-      await supabase
-        .from('connection_suggestions')
-        .insert(suggestionInserts)
-    }
-
-  } catch (error) {
-    console.error('[projects] Embedding/connection generation failed:', error)
-  }
-}
-
-/**
- * Find related items for a project using vector similarity
- */
-async function findRelatedItemsForProject(
-  projectId: string,
-  userId: string,
-  projectEmbedding: number[],
-  projectContent: string
-): Promise<Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }>> {
-  const supabase = getSupabaseClient()
-  const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
-
-  // Search other projects
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, title, description, embedding')
-    .eq('user_id', userId)
-    .neq('id', projectId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (projects) {
-    for (const p of projects) {
-      if (p.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, p.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
-        }
-      }
-    }
-  }
-
-  // Search thoughts/memories
-  const { data: thoughts } = await supabase
-    .from('memories')
-    .select('id, title, body, embedding')
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (thoughts) {
-    for (const t of thoughts) {
-      if (t.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, t.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'thought', id: t.id, title: t.title || t.body?.slice(0, 50) + '...', similarity })
-        }
-      }
-    }
-  }
-
-  // Search articles (stored in reading_queue table)
-  const { data: articles } = await supabase
-    .from('reading_queue')
-    .select('id, title, excerpt, embedding')
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (articles) {
-    for (const a of articles) {
-      if (a.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, a.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
-        }
-      }
-    }
-  }
-
-  // Sort by similarity descending
-  return candidates.sort((a, b) => b.similarity - a.similarity).slice(0, 10)
-}
-
-/**
- * Create a connection between two items (with deduplication)
- */
-async function createConnection(
-  sourceType: string,
-  sourceId: string,
-  targetType: string,
-  targetId: string,
-  connectionType: string,
-  createdBy: string,
-  reasoning?: string
-): Promise<boolean> {
-  const supabase = getSupabaseClient()
-
-  // Check if connection already exists (either direction)
-  const { data: existing } = await supabase
-    .from('connections')
-    .select('id')
-    .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${targetType},target_id.eq.${targetId}),and(source_type.eq.${targetType},source_id.eq.${targetId},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
-    .maybeSingle()
-
-  if (existing) {
-    console.log('[projects] Connection already exists, skipping duplicate')
-    return false
-  }
-
-  const { error } = await supabase
-    .from('connections')
-    .insert({
-      source_type: sourceType,
-      source_id: sourceId,
-      target_type: targetType,
-      target_id: targetId,
-      connection_type: connectionType,
-      created_by: createdBy,
-      ai_reasoning: reasoning
-    })
-
-  if (error) {
-    console.error('[projects] Failed to create connection:', error)
-    return false
-  }
-
-  return true
-}
-
-/**
- * Bedtime Prompts Handlers (merged from bedtime.ts)
- */
-async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
-  try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const { data, error } = await supabase
-      .from('bedtime_prompts')
-      .select('*')
+    // Search thoughts/memories
+    const { data: thoughts } = await supabase
+      .from('memories')
+      .select('id, title, body, embedding')
       .eq('user_id', userId)
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false })
+      .not('embedding', 'is', null)
+      .limit(50)
 
-    if (error) throw error
-
-    // If no prompts today, check if it's past 9:30pm
-    if (!data || data.length === 0) {
-      const now = new Date()
-      const hour = now.getHours()
-      const minute = now.getMinutes()
-
-      // If it's past 9:30pm, generate new prompts
-      if (hour >= 21 && minute >= 30) {
-        const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
-        const prompts = await generateBedtimePrompts(userId)
-        return res.status(200).json({
-          prompts,
-          generated: true,
-          message: "Tonight's prompts are ready"
-        })
+    if (thoughts) {
+      for (const t of thoughts) {
+        if (t.embedding) {
+          const similarity = cosineSimilarity(projectEmbedding, t.embedding)
+          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+          if (similarity > 0.55) {
+            candidates.push({ type: 'thought', id: t.id, title: t.title || t.body?.slice(0, 50) + '...', similarity })
+          }
+        }
       }
-
-      // Otherwise return empty (too early)
-      return res.status(200).json({
-        prompts: [],
-        generated: false,
-        message: `Prompts available at 9:30pm (in ${21 - hour} hours)`
-      })
     }
 
-    return res.status(200).json({
-      prompts: data,
-      generated: false
-    })
-  } catch (error) {
-    console.error('[bedtime] Error:', error)
-    return res.status(500).json({
-      error: 'Failed to fetch bedtime prompts',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    })
+    // Search articles (stored in reading_queue table)
+    const { data: articles } = await supabase
+      .from('reading_queue')
+      .select('id, title, excerpt, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(50)
+
+    if (articles) {
+      for (const a of articles) {
+        if (a.embedding) {
+          const similarity = cosineSimilarity(projectEmbedding, a.embedding)
+          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
+          if (similarity > 0.55) {
+            candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
+          }
+        }
+      }
+    }
+
+    // Sort by similarity descending
+    return candidates.sort((a, b) => b.similarity - a.similarity).slice(0, 10)
   }
-}
 
-async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
-  try {
-    const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
-    const prompts = await generateBedtimePrompts(userId)
-    return res.status(201).json({
-      prompts,
-      generated: true,
-      message: `Generated ${prompts.length} bedtime prompts`
-    })
-  } catch (error) {
-    console.error('[bedtime] Error:', error)
-    return res.status(500).json({
-      error: 'Failed to generate bedtime prompts',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
+  /**
+   * Create a connection between two items (with deduplication)
+   */
+  async function createConnection(
+    sourceType: string,
+    sourceId: string,
+    targetType: string,
+    targetId: string,
+    connectionType: string,
+    createdBy: string,
+    reasoning?: string
+  ): Promise<boolean> {
+    const supabase = getSupabaseClient()
 
-async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
-  try {
-    const { inputs } = req.body
+    // Check if connection already exists (either direction)
+    const { data: existing } = await supabase
+      .from('connections')
+      .select('id')
+      .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${targetType},target_id.eq.${targetId}),and(source_type.eq.${targetType},source_id.eq.${targetId},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
+      .maybeSingle()
 
-    // Validate inputs
-    if (!inputs || !Array.isArray(inputs)) {
-      return res.status(400).json({
-        error: 'Invalid request',
-        details: 'Request body must include "inputs" array'
-      })
-    }
-
-    if (inputs.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid inputs',
-        details: 'At least one input required'
-      })
-    }
-
-    // Validate each input
-    for (const input of inputs) {
-      if (!input.title || !input.type || !input.id) {
-        return res.status(400).json({
-          error: 'Invalid input format',
-          details: 'Each input must have: title (string), type (project|article|thought), id (string)'
-        })
-      }
-      if (!['project', 'article', 'thought'].includes(input.type)) {
-        return res.status(400).json({
-          error: 'Invalid input type',
-          details: 'Input type must be one of: project, article, thought'
-        })
-      }
-    }
-
-    const { generateCatalystPrompts } = await import('../lib/bedtime-ideas.js')
-    const prompts = await generateCatalystPrompts(inputs, userId)
-
-    return res.status(201).json({
-      prompts,
-      generated: true,
-      message: `Generated ${prompts.length} catalyst prompts`,
-      inputs
-    })
-  } catch (error) {
-    console.error('[catalyst] Error:', error)
-    return res.status(500).json({
-      error: 'Failed to generate catalyst prompts',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-async function handleMarkBedtimeViewed(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
-  try {
-    const { ids, id, rating, resulted_in_breakthrough } = req.body
-
-    // Handle bulk "mark as viewed" (legacy support)
-    if (ids && Array.isArray(ids)) {
-      const { error } = await supabase
-        .from('bedtime_prompts')
-        .update({
-          viewed: true,
-          viewed_at: new Date().toISOString()
-        })
-        .in('id', ids)
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      return res.status(200).json({ success: true, updated: ids.length })
-    }
-
-    // Handle single prompt update (rating or breakthrough)
-    if (!id) {
-      return res.status(400).json({ error: 'id or ids required' })
-    }
-
-    const updates: any = {}
-
-    if (rating !== undefined) {
-      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-        return res.status(400).json({ error: 'rating must be a number between 1 and 5' })
-      }
-      updates.rating = rating
-    }
-
-    if (resulted_in_breakthrough !== undefined) {
-      if (typeof resulted_in_breakthrough !== 'boolean') {
-        return res.status(400).json({ error: 'resulted_in_breakthrough must be a boolean' })
-      }
-      updates.resulted_in_breakthrough = resulted_in_breakthrough
-    }
-
-    if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: 'No updates provided' })
+    if (existing) {
+      console.log('[projects] Connection already exists, skipping duplicate')
+      return false
     }
 
     const { error } = await supabase
-      .from('bedtime_prompts')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
-
-    if (error) throw error
-
-    return res.status(200).json({ success: true, updated: updates })
-  } catch (error) {
-    console.error('[bedtime] Error:', error)
-    return res.status(500).json({
-      error: 'Failed to update bedtime prompt',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    })
-  }
-}
-
-/**
- * Helper: Increment capability strength (merged from suggestions.ts)
- */
-async function incrementCapabilityStrength(capabilityId: string, increment: number, supabase: any) {
-  const { data: capability } = await supabase
-    .from('capabilities')
-    .select('strength')
-    .eq('id', capabilityId)
-    .single()
-
-  if (!capability) return
-
-  const newStrength = capability.strength + increment
-
-  await supabase
-    .from('capabilities')
-    .update({
-      strength: newStrength,
-      last_used: new Date().toISOString()
-    })
-    .eq('id', capabilityId)
-
-  await supabase
-    .from('node_strengths')
-    .upsert({
-      node_type: 'capability',
-      node_id: capabilityId,
-      strength: newStrength,
-      activity_count: 1,
-      last_activity: new Date().toISOString()
-    }, {
-      onConflict: 'node_type,node_id',
-      ignoreDuplicates: false
-    })
-}
-
-/**
- * Helper: Penalize capability combination (merged from suggestions.ts)
- */
-async function penalizeCombination(capabilityIds: string[], penalty: number, supabase: any) {
-  try {
-    console.log('[penalize] Penalizing combination:', capabilityIds)
-    const sortedIds = [...capabilityIds].sort()
-
-    const { data: combo, error: fetchError } = await supabase
-      .from('capability_combinations')
-      .select('*')
-      .eq('capability_ids', sortedIds)
-      .maybeSingle()
-
-    if (fetchError) {
-      console.error('[penalize] Error fetching combo:', fetchError)
-      throw fetchError
-    }
-
-    if (!combo) {
-      console.log('[penalize] No combo found for:', sortedIds)
-      return
-    }
-
-    console.log('[penalize] Found combo:', combo)
-    const { error: updateError } = await supabase
-      .from('capability_combinations')
-      .update({
-        times_rated_negative: combo.times_rated_negative + 1,
-        penalty_score: combo.penalty_score + penalty
+      .from('connections')
+      .insert({
+        source_type: sourceType,
+        source_id: sourceId,
+        target_type: targetType,
+        target_id: targetId,
+        connection_type: connectionType,
+        created_by: createdBy,
+        ai_reasoning: reasoning
       })
-      .eq('capability_ids', sortedIds)
 
-    if (updateError) {
-      console.error('[penalize] Error updating combo:', updateError)
-      throw updateError
+    if (error) {
+      console.error('[projects] Failed to create connection:', error)
+      return false
     }
 
-    console.log('[penalize] Successfully penalized combination')
-  } catch (error) {
-    console.error('[penalize] Unexpected error:', error)
-    throw error
+    return true
   }
-}
+
+  /**
+   * Bedtime Prompts Handlers (merged from bedtime.ts)
+   */
+  async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const { data, error } = await supabase
+        .from('bedtime_prompts')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // If no prompts today, check if it's past 9:30pm
+      if (!data || data.length === 0) {
+        const now = new Date()
+        const hour = now.getHours()
+        const minute = now.getMinutes()
+
+        // If it's past 9:30pm, generate new prompts
+        if (hour >= 21 && minute >= 30) {
+          const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
+          const prompts = await generateBedtimePrompts(userId)
+          return res.status(200).json({
+            prompts,
+            generated: true,
+            message: "Tonight's prompts are ready"
+          })
+        }
+
+        // Otherwise return empty (too early)
+        return res.status(200).json({
+          prompts: [],
+          generated: false,
+          message: `Prompts available at 9:30pm (in ${21 - hour} hours)`
+        })
+      }
+
+      return res.status(200).json({
+        prompts: data,
+        generated: false
+      })
+    } catch (error) {
+      console.error('[bedtime] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to fetch bedtime prompts',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+    try {
+      const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
+      const prompts = await generateBedtimePrompts(userId)
+      return res.status(201).json({
+        prompts,
+        generated: true,
+        message: `Generated ${prompts.length} bedtime prompts`
+      })
+    } catch (error) {
+      console.error('[bedtime] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to generate bedtime prompts',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+    try {
+      const { inputs } = req.body
+
+      // Validate inputs
+      if (!inputs || !Array.isArray(inputs)) {
+        return res.status(400).json({
+          error: 'Invalid request',
+          details: 'Request body must include "inputs" array'
+        })
+      }
+
+      if (inputs.length === 0) {
+        return res.status(400).json({
+          error: 'Invalid inputs',
+          details: 'At least one input required'
+        })
+      }
+
+      // Validate each input
+      for (const input of inputs) {
+        if (!input.title || !input.type || !input.id) {
+          return res.status(400).json({
+            error: 'Invalid input format',
+            details: 'Each input must have: title (string), type (project|article|thought), id (string)'
+          })
+        }
+        if (!['project', 'article', 'thought'].includes(input.type)) {
+          return res.status(400).json({
+            error: 'Invalid input type',
+            details: 'Input type must be one of: project, article, thought'
+          })
+        }
+      }
+
+      const { generateCatalystPrompts } = await import('../lib/bedtime-ideas.js')
+      const prompts = await generateCatalystPrompts(inputs, userId)
+
+      return res.status(201).json({
+        prompts,
+        generated: true,
+        message: `Generated ${prompts.length} catalyst prompts`,
+        inputs
+      })
+    } catch (error) {
+      console.error('[catalyst] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to generate catalyst prompts',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  async function handleMarkBedtimeViewed(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
+    try {
+      const { ids, id, rating, resulted_in_breakthrough } = req.body
+
+      // Handle bulk "mark as viewed" (legacy support)
+      if (ids && Array.isArray(ids)) {
+        const { error } = await supabase
+          .from('bedtime_prompts')
+          .update({
+            viewed: true,
+            viewed_at: new Date().toISOString()
+          })
+          .in('id', ids)
+          .eq('user_id', userId)
+
+        if (error) throw error
+
+        return res.status(200).json({ success: true, updated: ids.length })
+      }
+
+      // Handle single prompt update (rating or breakthrough)
+      if (!id) {
+        return res.status(400).json({ error: 'id or ids required' })
+      }
+
+      const updates: any = {}
+
+      if (rating !== undefined) {
+        if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+          return res.status(400).json({ error: 'rating must be a number between 1 and 5' })
+        }
+        updates.rating = rating
+      }
+
+      if (resulted_in_breakthrough !== undefined) {
+        if (typeof resulted_in_breakthrough !== 'boolean') {
+          return res.status(400).json({ error: 'resulted_in_breakthrough must be a boolean' })
+        }
+        updates.resulted_in_breakthrough = resulted_in_breakthrough
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No updates provided' })
+      }
+
+      const { error } = await supabase
+        .from('bedtime_prompts')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+
+      return res.status(200).json({ success: true, updated: updates })
+    } catch (error) {
+      console.error('[bedtime] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to update bedtime prompt',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  /**
+   * Helper: Increment capability strength (merged from suggestions.ts)
+   */
+  async function incrementCapabilityStrength(capabilityId: string, increment: number, supabase: any) {
+    const { data: capability } = await supabase
+      .from('capabilities')
+      .select('strength')
+      .eq('id', capabilityId)
+      .single()
+
+    if (!capability) return
+
+    const newStrength = capability.strength + increment
+
+    await supabase
+      .from('capabilities')
+      .update({
+        strength: newStrength,
+        last_used: new Date().toISOString()
+      })
+      .eq('id', capabilityId)
+
+    await supabase
+      .from('node_strengths')
+      .upsert({
+        node_type: 'capability',
+        node_id: capabilityId,
+        strength: newStrength,
+        activity_count: 1,
+        last_activity: new Date().toISOString()
+      }, {
+        onConflict: 'node_type,node_id',
+        ignoreDuplicates: false
+      })
+  }
+
+  /**
+   * Helper: Penalize capability combination (merged from suggestions.ts)
+   */
+  async function penalizeCombination(capabilityIds: string[], penalty: number, supabase: any) {
+    try {
+      console.log('[penalize] Penalizing combination:', capabilityIds)
+      const sortedIds = [...capabilityIds].sort()
+
+      const { data: combo, error: fetchError } = await supabase
+        .from('capability_combinations')
+        .select('*')
+        .eq('capability_ids', sortedIds)
+        .maybeSingle()
+
+      if (fetchError) {
+        console.error('[penalize] Error fetching combo:', fetchError)
+        throw fetchError
+      }
+
+      if (!combo) {
+        console.log('[penalize] No combo found for:', sortedIds)
+        return
+      }
+
+      console.log('[penalize] Found combo:', combo)
+      const { error: updateError } = await supabase
+        .from('capability_combinations')
+        .update({
+          times_rated_negative: combo.times_rated_negative + 1,
+          penalty_score: combo.penalty_score + penalty
+        })
+        .eq('capability_ids', sortedIds)
+
+      if (updateError) {
+        console.error('[penalize] Error updating combo:', updateError)
+        throw updateError
+      }
+
+      console.log('[penalize] Successfully penalized combination')
+    } catch (error) {
+      console.error('[penalize] Unexpected error:', error)
+      throw error
+    }
+  }
