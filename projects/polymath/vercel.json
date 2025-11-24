@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "ignoreCommand": "exit 1",
+  "ignoreCommand": "if [[ $VERCEL_GIT_COMMIT_AUTHOR_LOGIN == dependabot* ]]; then exit 0; fi; git diff --quiet HEAD^ HEAD -- projects/polymath || exit 1",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {

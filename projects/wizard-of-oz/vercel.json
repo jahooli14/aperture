@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "ignoreCommand": "bash -c 'git diff --quiet HEAD^ HEAD projects/wizard-of-oz/ && exit 0 || exit 1'",
+  "ignoreCommand": "if [[ $VERCEL_GIT_COMMIT_AUTHOR_LOGIN == dependabot* ]]; then exit 0; fi; git diff --quiet HEAD^ HEAD -- projects/wizard-of-oz || exit 1",
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
