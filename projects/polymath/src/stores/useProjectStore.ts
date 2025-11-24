@@ -255,29 +255,59 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   setPriority: async (id) => {
     const previousAllProjects = get().allProjects
+    const targetProject = previousAllProjects.find(p => p.id === id)
 
-    // Optimistic Update
-    const updatedAllProjects = previousAllProjects.map(p =>
-      p.id === id ? { ...p, is_priority: !p.is_priority } : p
-    )
-    const sorted = smartSortProjects(updatedAllProjects)
+    if (!targetProject) return
 
-    set(state => ({
-      allProjects: sorted,
-      projects: filterProjects(sorted, state.filter)
-    }))
+    // 1. If already priority -> Toggle OFF
+    if (targetProject.is_priority) {
+      const updatedAllProjects = previousAllProjects.map(p =>
+        p.id === id ? { ...p, is_priority: false } : p
+      )
+      const sorted = smartSortProjects(updatedAllProjects)
 
-    try {
-      await api.patch(`projects/${id}/priority`)
-    } catch (error) {
-      logger.error('Failed to set priority:', error)
-      // Rollback
       set(state => ({
-        allProjects: previousAllProjects,
-        projects: filterProjects(previousAllProjects, state.filter),
-        error: error instanceof Error ? error.message : 'Failed to set priority'
+        allProjects: sorted,
+        projects: filterProjects(sorted, state.filter)
       }))
-      throw error
+
+      try {
+        await api.patch(`projects/${id}`, { is_priority: false })
+      } catch (error) {
+        logger.error('Failed to unset priority:', error)
+        // Rollback
+        set(state => ({
+          allProjects: previousAllProjects,
+          projects: filterProjects(previousAllProjects, state.filter),
+          error: error instanceof Error ? error.message : 'Failed to unset priority'
+        }))
+        throw error
+      }
+    } else {
+      // 2. If NOT priority -> Set as ONLY priority
+      const updatedAllProjects = previousAllProjects.map(p =>
+        p.id === id ? { ...p, is_priority: true } : { ...p, is_priority: false }
+      )
+      const sorted = smartSortProjects(updatedAllProjects)
+
+      set(state => ({
+        allProjects: sorted,
+        projects: filterProjects(sorted, state.filter)
+      }))
+
+      try {
+        // Use atomic set-priority endpoint
+        await api.post('projects?resource=set-priority', { project_id: id })
+      } catch (error) {
+        logger.error('Failed to set priority:', error)
+        // Rollback
+        set(state => ({
+          allProjects: previousAllProjects,
+          projects: filterProjects(previousAllProjects, state.filter),
+          error: error instanceof Error ? error.message : 'Failed to set priority'
+        }))
+        throw error
+      }
     }
   },
 
