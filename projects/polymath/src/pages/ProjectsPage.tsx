@@ -350,6 +350,12 @@ interface SpotlightProject {
 function getSpotlightProjects(projects: Project[]): SpotlightProject[] {
   const result: SpotlightProject[] = []
 
+  const getTime = (dateStr?: string) => {
+    if (!dateStr) return 0
+    const ms = new Date(dateStr).getTime()
+    return isNaN(ms) ? 0 : ms
+  }
+
   // 1. Pinned project
   const pinned = projects.find(p => p.is_priority && p.status === 'active')
   if (pinned) {
@@ -360,8 +366,8 @@ function getSpotlightProjects(projects: Project[]): SpotlightProject[] {
   const recent = projects
     .filter(p => p.status === 'active' && !p.is_priority)
     .sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.last_active).getTime()
-      const bTime = new Date(b.updated_at || b.last_active).getTime()
+      const aTime = getTime(a.updated_at || a.last_active)
+      const bTime = getTime(b.updated_at || b.last_active)
       return bTime - aTime
     })
     .slice(0, 2)
@@ -372,8 +378,8 @@ function getSpotlightProjects(projects: Project[]): SpotlightProject[] {
     .filter(p => p.status === 'dormant')
     .sort((a, b) => {
       // Prioritize ones that haven't been suggested recently
-      const aTime = new Date((a as any).last_suggested_at || a.created_at).getTime()
-      const bTime = new Date((b as any).last_suggested_at || b.created_at).getTime()
+      const aTime = getTime((a as any).last_suggested_at || a.created_at)
+      const bTime = getTime((b as any).last_suggested_at || b.created_at)
       return aTime - bTime
     })
     .slice(0, 2)
