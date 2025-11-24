@@ -201,6 +201,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   )
 }
 
+import { useContextEngineStore } from '../stores/useContextEngineStore'
 
 // Simple Dialog Component for displaying full insights
 function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight | null; open: boolean; onClose: () => void }) {
