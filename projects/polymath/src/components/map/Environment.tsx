@@ -25,9 +25,9 @@ export function Environment() {
 
             {/* Floating Clouds for atmosphere */}
             <group ref={cloudsRef} position={[0, 100, 0]}>
-                <Cloud opacity={0.3} speed={0.2} width={100} depth={10} segments={10} position={[0, 50, -100]} />
-                <Cloud opacity={0.3} speed={0.2} width={100} depth={10} segments={10} position={[100, 50, 100]} />
-                <Cloud opacity={0.3} speed={0.2} width={100} depth={10} segments={10} position={[-100, 50, 100]} />
+                <Cloud opacity={0.3} speed={0.2} segments={10} position={[0, 50, -100]} />
+                <Cloud opacity={0.3} speed={0.2} segments={10} position={[100, 50, 100]} />
+                <Cloud opacity={0.3} speed={0.2} segments={10} position={[-100, 50, 100]} />
             </group>
 
             {/* Subtle grid for ground reference - lighter */}
