@@ -26,8 +26,12 @@ interface MapState {
   addDoor: (door: Door) => void
   dismissDoor: (doorId: string) => void
   acceptDoor: (door: Door) => void
+  recalculateLayout: () => Promise<void>
+  regenerateMap: () => Promise<void>
   updateViewport: (x: number, y: number, scale: number) => void
 }
+
+import { forceLayout } from '../utils/mapLayout'
 
 export const useMapStore = create<MapState>((set, get) => ({
   mapData: null,
@@ -46,14 +50,31 @@ export const useMapStore = create<MapState>((set, get) => ({
         throw new Error('Invalid response from server - mapData is missing')
       }
 
+      let mapData = data.mapData
+
+      // Check if layout needs calculation (e.g. all cities at 0,0 or very few cities positioned)
+      const needsLayout = mapData.cities.length > 0 && mapData.cities.every((c: City) => c.position.x === 0 && c.position.y === 0)
+
+      if (needsLayout) {
+        logger.info('[map] Initial layout calculation required')
+        const updatedCities = forceLayout.calculateLayout(mapData.cities, mapData.roads)
+        mapData = {
+          ...mapData,
+          cities: updatedCities,
+          version: mapData.version + 1
+        }
+        // Save the calculated layout
+        await get().saveMap(mapData)
+      }
+
       set({
-        mapData: data.mapData,
+        mapData: mapData,
         loading: false
       })
 
       logger.info('[map] Loaded map:', {
-        cities: data.mapData.cities?.length || 0,
-        roads: data.mapData.roads?.length || 0,
+        cities: mapData.cities?.length || 0,
+        roads: mapData.roads?.length || 0,
         generated: data.generated
       })
 
@@ -75,6 +96,51 @@ export const useMapStore = create<MapState>((set, get) => ({
       set({
         error: errorMessage,
         loading: false
+      })
+    }
+  },
+
+  recalculateLayout: async () => {
+    const { mapData } = get()
+    if (!mapData) return
+
+    set({ loading: true })
+
+    // Run layout calculation in a timeout to allow UI to show loading state
+    setTimeout(async () => {
+      try {
+        const updatedCities = forceLayout.calculateLayout(mapData.cities, mapData.roads)
+        const newMapData = {
+          ...mapData,
+          cities: updatedCities,
+          version: mapData.version + 1
+        }
+
+        set({ mapData: newMapData, loading: false })
+        await get().saveMap(newMapData)
+        logger.info('[map] Recalculated layout')
+      } catch (error) {
+        logger.error('Failed to recalculate layout:', error)
+        set({ loading: false })
+      }
+    }, 100)
+  },
+
+  regenerateMap: async () => {
+    set({ loading: true, error: null })
+    try {
+      logger.info('[map] Triggering full map regeneration...')
+      // Call API to regenerate map from source data
+      await api.post('projects?resource=knowledge_map&action=regenerate', {})
+
+      // Fetch the newly generated map
+      await get().fetchMap()
+      logger.info('[map] Map regeneration complete')
+    } catch (error) {
+      logger.error('Failed to regenerate map:', error)
+      set({
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to regenerate map'
       })
     }
   },

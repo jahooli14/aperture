@@ -44,6 +44,7 @@ export interface ArticleHighlight {
 
 export interface SaveArticleRequest {
   url: string
+  title?: string
   tags?: string[]
 }
 

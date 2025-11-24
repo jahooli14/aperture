@@ -46,14 +46,16 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
 
     try {
       console.log('[SaveArticleDialog] Saving article:', url.trim())
+
+      // Optimistic save - returns immediately with temp article
       const article = await saveArticle({ url: url.trim() })
 
-      console.log('[SaveArticleDialog] Article saved, starting robust processing')
+      console.log('[SaveArticleDialog] Article saved (optimistic), starting robust processing')
 
       // Show success immediately and close dialog
       addToast({
         title: 'Article saved!',
-        description: 'Extracting content in background...',
+        description: 'Added to your queue',
         variant: 'success',
       })
 
@@ -61,46 +63,42 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       onClose()
 
       // Use ArticleProcessor for robust background polling with retry
-      articleProcessor.startProcessing(article.id, url.trim(), async (status, updatedArticle) => {
-        const { fetchArticles } = useReadingStore.getState()
+      // Note: If offline, this will just queue up or fail gracefully
+      if (!article.id.startsWith('temp-')) {
+        articleProcessor.startProcessing(article.id, url.trim(), async (status, updatedArticle) => {
+          const { fetchArticles } = useReadingStore.getState()
 
-        if (status === 'complete') {
-          console.log('[SaveArticleDialog] Extraction complete')
+          if (status === 'complete') {
+            console.log('[SaveArticleDialog] Extraction complete')
 
-          addToast({
-            title: 'Article ready!',
-            description: updatedArticle?.title || 'Content extracted successfully',
-            variant: 'success',
-          })
+            addToast({
+              title: 'Article ready!',
+              description: updatedArticle?.title || 'Content extracted successfully',
+              variant: 'success',
+            })
 
-          // Refresh articles list
-          await fetchArticles(undefined, true)
+            // Refresh articles list
+            await fetchArticles(undefined, true)
 
-          // Trigger connection detection
-          if (updatedArticle && (updatedArticle.content || updatedArticle.excerpt)) {
-            fetchSuggestions(
-              'article',
-              updatedArticle.id,
-              updatedArticle.content || updatedArticle.excerpt || '',
-              updatedArticle.title || undefined
-            )
+            // Trigger connection detection
+            if (updatedArticle && (updatedArticle.content || updatedArticle.excerpt)) {
+              fetchSuggestions(
+                'article',
+                updatedArticle.id,
+                updatedArticle.content || updatedArticle.excerpt || '',
+                updatedArticle.title || undefined
+              )
+            }
+          } else if (status === 'retrying') {
+            // Quietly retry in background
+            console.log('[SaveArticleDialog] Retrying extraction...')
+          } else if (status === 'failed') {
+            // Don't show error toast for background processing failures unless critical
+            console.log('[SaveArticleDialog] Extraction failed')
+            await fetchArticles(undefined, true)
           }
-        } else if (status === 'retrying') {
-          addToast({
-            title: 'Retrying extraction...',
-            description: 'First attempt timed out, trying again',
-            variant: 'default',
-          })
-          await fetchArticles(undefined, true)
-        } else if (status === 'failed') {
-          addToast({
-            title: 'Extraction took too long',
-            description: 'Article saved but content extraction failed. You can still access the original URL.',
-            variant: 'destructive',
-          })
-          await fetchArticles(undefined, true)
-        }
-      })
+        })
+      }
 
     } catch (error) {
       console.error('[SaveArticleDialog] Failed to save article:', error)

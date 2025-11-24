@@ -1,11 +1,11 @@
 /**
- * CityNode Component - OPTIMIZED
- * Renders cities with map-style visuals and minimal animations for performance
+ * CityNode Component - PREMIUM
+ * Renders a city as a 3D-style building block with dynamic lighting and shadows
  */
 
 import { memo } from 'react'
 import type { City } from '../../utils/mapTypes'
-import { getCityRadius, getCityColor } from '../../utils/mapCalculations'
+import { CityBuilding } from './CityBuilding'
 
 interface CityNodeProps {
   city: City
@@ -13,33 +13,57 @@ interface CityNodeProps {
 }
 
 export const CityNode = memo(function CityNode({ city, onClick }: CityNodeProps) {
-  const radius = getCityRadius(city.size)
+  // Determine size and color based on population/importance
+  const isMetropolis = city.size === 'metropolis'
+  const isCity = city.size === 'city'
 
-  // Blue shades only - darker = more important
-  const fillColor = city.size === 'metropolis' ? '#1e40af' :  // Dark blue
-                    city.size === 'city' ? '#3b82f6' :        // Medium blue
-                    city.size === 'town' ? '#60a5fa' :        // Light blue
-                    '#93c5fd'                                 // Very light blue
+  // Base size calculation
+  const baseSize = isMetropolis ? 120 : isCity ? 80 : 50
+  const buildingSize = baseSize + (city.population * 0.5) // Grow slightly with population
+  const buildingHeight = isMetropolis ? 60 : isCity ? 40 : 20
+
+  // Color palette - Premium/Dark theme
+  const color = isMetropolis
+    ? '#3b82f6' // Blue for metropolis
+    : isCity
+      ? '#60a5fa' // Light blue for city
+      : '#94a3b8' // Slate for town/village
 
   return (
-    <g onClick={onClick} className="cursor-pointer group" data-city-id={city.id}>
-      {/* Simple circle - no icons */}
+    <g
+      onClick={(e) => {
+        e.stopPropagation()
+        onClick()
+      }}
+      className="cursor-pointer group"
+      data-city-id={city.id}
+      style={{ transition: 'opacity 0.2s' }}
+    >
+      {/* Selection Halo */}
       <circle
         cx={city.position.x}
         cy={city.position.y}
-        r={radius}
-        fill={fillColor}
-        stroke="#ffffff"
-        strokeWidth={3}
-        style={{
-          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
-        }}
+        r={buildingSize * 0.8}
+        fill={color}
+        opacity={0}
+        className="group-hover:opacity-20 transition-opacity duration-300"
+        style={{ filter: 'blur(20px)' }}
+      />
+
+      {/* 3D Building Block */}
+      <CityBuilding
+        x={city.position.x}
+        y={city.position.y}
+        width={buildingSize}
+        height={buildingSize}
+        depth={buildingHeight}
+        color={color}
       />
 
       {/* Label */}
       <text
         x={city.position.x}
-        y={city.position.y - radius - 10}
+        y={city.position.y - buildingHeight - 15}
         textAnchor="middle"
         fill="#1f2937"
         fontSize={city.size === 'metropolis' ? 14 : city.size === 'city' ? 12 : 11}
@@ -47,49 +71,40 @@ export const CityNode = memo(function CityNode({ city, onClick }: CityNodeProps)
         className="pointer-events-none select-none"
         style={{
           fontFamily: 'Inter, Roboto, system-ui, sans-serif',
-          letterSpacing: '0.3px'
+          letterSpacing: '0.3px',
+          textShadow: '0 1px 2px rgba(255,255,255,0.8)'
         }}
       >
         {city.name}
       </text>
 
       {/* Population badge */}
-      <g>
-        <rect
-          x={city.position.x - 18}
-          y={city.position.y + radius + 8}
-          width={36}
-          height={16}
-          rx={8}
-          fill="#ffffff"
-          stroke={fillColor}
-          strokeWidth={1.5}
-          opacity={0.95}
-        />
-        <text
-          x={city.position.x}
-          y={city.position.y + radius + 19}
-          textAnchor="middle"
-          fill={fillColor}
-          fontSize={10}
-          fontWeight={600}
-          className="pointer-events-none select-none"
-        >
-          {city.population}
-        </text>
-      </g>
-
-      {/* Hover ring */}
-      <circle
-        cx={city.position.x}
-        cy={city.position.y}
-        r={radius + 6}
-        fill="none"
-        stroke={fillColor}
-        strokeWidth={2}
-        opacity={0}
-        className="group-hover:opacity-50 transition-opacity duration-200"
-      />
+      {city.population > 0 && (
+        <g transform={`translate(0, ${buildingSize / 2})`}>
+          <rect
+            x={city.position.x - 14}
+            y={city.position.y + 10}
+            width={28}
+            height={14}
+            rx={7}
+            fill="#ffffff"
+            stroke={color}
+            strokeWidth={1.5}
+            opacity={0.9}
+          />
+          <text
+            x={city.position.x}
+            y={city.position.y + 20}
+            textAnchor="middle"
+            fill={color}
+            fontSize={9}
+            fontWeight={700}
+            className="pointer-events-none select-none"
+          >
+            {city.population}
+          </text>
+        </g>
+      )}
     </g>
   )
 })
