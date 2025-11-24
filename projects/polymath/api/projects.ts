@@ -517,7 +517,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       return res.status(405).json({ error: 'Method not allowed' })
+    } catch (error) {
+      console.error('[knowledge_map] Error:', error)
+      return res.status(500).json({
+        error: 'Knowledge map operation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
     }
+  }
 
   // CONTEXT RESOURCE
   if (resource === 'context') {
