@@ -47,9 +47,16 @@ function smartSortProjects(projects: Project[]): Project[] {
     const statusDiff = (statusPriority[a.status] || 99) - (statusPriority[b.status] || 99)
     if (statusDiff !== 0) return statusDiff
 
-    // 2. Most recently touched first (using updated_at if available, else last_active)
-    const aTime = new Date(a.updated_at || a.last_active).getTime()
-    const bTime = new Date(b.updated_at || b.last_active).getTime()
+    // 2. Most recently touched first (safe date parsing)
+    const getTime = (dateStr?: string) => {
+      if (!dateStr) return 0
+      const ms = new Date(dateStr).getTime()
+      return isNaN(ms) ? 0 : ms
+    }
+
+    const aTime = getTime(a.updated_at || a.last_active)
+    const bTime = getTime(b.updated_at || b.last_active)
+    
     return bTime - aTime
   })
 }
@@ -89,7 +96,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const MAX_RETRIES = 3
     const RETRY_DELAYS = [1000, 2000, 4000]
 
-    // Only set loading on first fetch to avoid UI flicker
+    // Always set loading true if not initialized
     if (!get().initialized) {
       set({ loading: true, error: null })
     }
@@ -97,7 +104,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       // Always fetch ALL projects
       const data = await api.get('projects')
-      let fetchedProjects = Array.isArray(data) ? data : data.projects || []
+      let fetchedProjects = Array.isArray(data) ? data : data?.projects || []
 
       // Sort once
       fetchedProjects = smartSortProjects(fetchedProjects)
@@ -296,8 +303,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       }))
 
       try {
-        // Use atomic set-priority endpoint
-        await api.post('projects?resource=set-priority', { project_id: id })
+        // Use atomic set-priority endpoint and use returned projects for source of truth
+        const response = await api.post('projects?resource=set-priority', { project_id: id })
+        
+        if (response && response.projects) {
+           const sortedResponse = smartSortProjects(response.projects)
+           set(state => ({
+             allProjects: sortedResponse,
+             projects: filterProjects(sortedResponse, state.filter)
+           }))
+        }
       } catch (error) {
         logger.error('Failed to set priority:', error)
         // Rollback
