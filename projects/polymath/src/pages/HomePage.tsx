@@ -201,13 +201,94 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
   )
 }
 
-import { useContextEngineStore } from '../stores/useContextEngineStore'
+
+// Simple Dialog Component for displaying full insights
+function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight | null; open: boolean; onClose: () => void }) {
+  if (!insight) return null
+
+  return (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${open ? '' : 'hidden'}`}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-lg rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
+        style={{ background: 'var(--premium-bg-2)' }}
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+          style={{ color: 'var(--premium-text-tertiary)' }}
+        >
+          <X className="h-5 w-5" />
+        </button>
+        
+        <div className="mb-6 pr-8">
+          <h2 className="text-xl font-bold premium-text-platinum mb-2">
+            {insight.title}
+          </h2>
+          <div className="flex items-center gap-2">
+             <span className="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider" 
+                   style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--premium-text-secondary)' }}>
+               {insight.type}
+             </span>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="prose prose-invert prose-sm max-w-none">
+            <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              {insight.description}
+            </p>
+          </div>
+
+          {/* Render timeline if available */}
+          {insight.data && insight.data.timeline && Array.isArray(insight.data.timeline) && (
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--premium-text-secondary)' }}>Evolution Timeline</h3>
+              <div className="space-y-4 relative pl-4 border-l-2 border-white/10">
+                {insight.data.timeline.map((item: any, idx: number) => (
+                  <div key={idx} className="relative pl-4">
+                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--premium-bg-2)]" 
+                         style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)' }} />
+                    <div className="text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {item.date || 'Previously'}
+                    </div>
+                    <div className="text-sm font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+                      {item.stance}
+                    </div>
+                    {item.quote && (
+                      <div className="text-xs italic pl-2 border-l-2 border-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                        "{item.quote}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {insight.actionable && insight.action && (
+             <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+               <h4 className="text-sm font-bold text-blue-400 mb-1">Recommendation</h4>
+               <p className="text-sm text-blue-200">{insight.action}</p>
+             </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 function InsightsSection() {
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [requirements, setRequirements] = useState<{ current: number; needed: number; tip: string } | null>(null)
+  
+  // Dialog State
+  const [selectedInsight, setSelectedInsight] = useState<SynthesisInsight | null>(null)
+  
   const navigate = useNavigate()
 
   const fetchInsights = async (isRefresh = false) => {
@@ -270,9 +351,10 @@ function InsightsSection() {
           <div className="space-y-3">
             {/* Show first 2 insights */}
             {insights.slice(0, 2).map((insight, index) => (
-              <div
+              <button
                 key={index}
-                className="p-4 rounded-xl transition-all"
+                onClick={() => setSelectedInsight(insight)}
+                className="w-full text-left p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: 'var(--premium-bg-3)',
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
@@ -290,8 +372,9 @@ function InsightsSection() {
                       {insight.description}
                     </p>
                   </div>
+                  <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--premium-text-tertiary)' }} />
                 </div>
-              </div>
+              </button>
             ))}
 
             {insights.length > 2 && (
@@ -327,6 +410,13 @@ function InsightsSection() {
           </div>
         )}
       </div>
+      
+      {/* Full Insight Modal */}
+      <InsightDialog 
+        insight={selectedInsight} 
+        open={!!selectedInsight} 
+        onClose={() => setSelectedInsight(null)} 
+      />
     </section>
   )
 }

@@ -175,6 +175,22 @@ async function getSynthesisEvolution() {
   const supabase = getSupabaseClient()
   const userId = getUserId()
 
+  // 1. Check Cache
+  try {
+    const { data: cached } = await supabase
+      .from('insights_cache')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('resource_type', 'evolution')
+      .single()
+
+    if (cached && new Date(cached.expires_at) > new Date()) {
+      return cached.data
+    }
+  } catch (e) {
+    // Cache table might not exist yet, ignore
+  }
+
   // Get memories and projects
   const { data: memories } = await supabase
     .from('memories')
@@ -240,21 +256,26 @@ async function getSynthesisEvolution() {
       .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
       .join('\n\n')
 
-    const evolutionPrompt = `Analyze the evolution of the user's BELIEFS and OPINIONS on the topic "${topic}":
+    const evolutionPrompt = `Analyze the evolution of the user's BELIEFS and OPINIONS on the topic "${topic}" based on their notes.
 
 ${memoryTexts}
 
+**INSTRUCTIONS:**
+1.  **Address the user directly as "You".** Do not say "The user".
+2.  **Be concise.** 2-3 sentences max for the summary.
+3.  **Focus on the shift.** What changed in *your* thinking?
+
 Detect shifts in stance, opinion, or mental models.
 1. **Evolution type**: growth (learning), contradiction (changed mind), refinement (nuance), or reinforcement (conviction).
-2. **Stance Tracking**: What did they believe before? What do they believe now?
+2. **Stance Tracking**: What did you believe before? What do you believe now?
 
 Return JSON:
 {
   "evolution_type": "growth|contradiction|refinement|reinforcement",
-  "summary": "Stance shifted from X to Y...",
+  "summary": "Your stance shifted from X to Y...",
   "timeline": [
-    {"date": "2024-01-15", "stance": "Believed X", "quote": "..."},
-    {"date": "2024-03-20", "stance": "Now believes Y", "quote": "..."}
+    {"date": "2024-01-15", "stance": "You believed X", "quote": "..."},
+    {"date": "2024-03-20", "stance": "Now you believe Y", "quote": "..."}
   ]
 }`
 
@@ -293,12 +314,16 @@ Return JSON:
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    const patternPrompt = `Analyze project abandonment patterns:
+    const patternPrompt = `Analyze your project abandonment patterns:
 
 ${abandonmentReasons}
 
+**INSTRUCTIONS:**
+1.  **Address the user directly as "You".**
+2.  **Be concise.**
+
 Detect:
-1. **Common pattern**: What's the recurring theme? (e.g., "quits at deployment", "loses interest after MVP", "abandons when it gets hard")
+1. **Common pattern**: What's the recurring theme? (e.g., "You quit at deployment", "You lose interest after MVP")
 2. **Recommendation**: Specific, actionable advice to break this pattern
 
 Return JSON:
@@ -404,7 +429,29 @@ Return JSON:
     })
   }
 
-  return { insights }
+  const result = { insights }
+
+  // Cache the result
+  try {
+    const expiresAt = new Date()
+    expiresAt.setHours(expiresAt.getHours() + 24) // 24 hour cache
+
+    await supabase
+      .from('insights_cache')
+      .upsert({
+        user_id: userId,
+        resource_type: 'evolution',
+        data: result,
+        updated_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString()
+      }, {
+        onConflict: 'user_id,resource_type'
+      })
+  } catch (e) {
+    // Ignore cache errors
+  }
+
+  return result
 }
 
 /**
