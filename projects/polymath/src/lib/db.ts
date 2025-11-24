@@ -1,10 +1,42 @@
 /**
- * IndexedDB wrapper for offline storage
- * Stores pending captures and cached memories
+ * Unified Dexie.js Database for Offline Storage
+ * Combines reading list, pending captures, and memory cache
  */
 
-const DB_NAME = 'clandestined'
-const DB_VERSION = 1
+import Dexie, { Table } from 'dexie'
+import type { Article, ArticleHighlight } from '../types/reading'
+
+// --- Interfaces from ReadingDatabase ---
+
+// Extended Article interface for offline storage
+export interface CachedArticle extends Article {
+  // Track offline sync status
+  offline_available: boolean
+  images_cached: boolean
+  last_synced: string
+}
+
+// Cached image blob
+export interface CachedImage {
+  id?: number
+  article_id: string
+  url: string
+  blob: Blob
+  content_type: string
+  cached_at: string
+}
+
+// Reading progress tracking
+export interface ReadingProgress {
+  id?: number
+  article_id: string
+  scroll_position: number
+  scroll_percentage: number
+  last_position_text?: string // Text snippet at last position
+  updated_at: string
+}
+
+// --- Interfaces from ClandestinedDB ---
 
 export interface PendingCapture {
   id?: number
@@ -24,176 +56,168 @@ export interface CachedMemory {
   cached_at: number
 }
 
-class ClandestinedDB {
-  private db: IDBDatabase | null = null
+export class PolymathDatabase extends Dexie {
+  // Reading Tables
+  articles!: Table<CachedArticle, string>
+  images!: Table<CachedImage, number>
+  highlights!: Table<ArticleHighlight, string>
+  progress!: Table<ReadingProgress, number>
 
-  async init(): Promise<void> {
-    if (this.db) return
+  // Capture & Memory Tables
+  pendingCaptures!: Table<PendingCapture, number>
+  memories!: Table<CachedMemory, string>
 
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION)
+  constructor() {
+    super('PolymathDB') // New DB name to ensure clean migration
 
-      request.onerror = () => {
-        console.error('IndexedDB error:', request.error)
-        reject(request.error)
-      }
-
-      request.onsuccess = () => {
-        this.db = request.result
-        console.log('IndexedDB initialized')
-        resolve()
-      }
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result
-
-        // Pending captures store
-        if (!db.objectStoreNames.contains('pending-captures')) {
-          const capturesStore = db.createObjectStore('pending-captures', {
-            keyPath: 'id',
-            autoIncrement: true
-          })
-          capturesStore.createIndex('timestamp', 'timestamp', { unique: false })
-          capturesStore.createIndex('synced', 'synced', { unique: false })
-        }
-
-        // Cached memories store
-        if (!db.objectStoreNames.contains('memories')) {
-          const memoriesStore = db.createObjectStore('memories', {
-            keyPath: 'id'
-          })
-          memoriesStore.createIndex('cached_at', 'cached_at', { unique: false })
-        }
-
-        console.log('IndexedDB schema created')
-      }
+    // Define database schema
+    this.version(1).stores({
+      // Reading
+      articles: 'id, user_id, status, created_at, last_synced, offline_available',
+      images: '++id, article_id, url, cached_at',
+      highlights: 'id, article_id, created_at',
+      progress: '++id, article_id, updated_at',
+      
+      // Captures
+      pendingCaptures: '++id, timestamp, synced',
+      
+      // Memories Cache
+      memories: 'id, cached_at'
     })
   }
 
-  // Pending Captures
+  // --- Reading Methods ---
+
+  async cacheArticle(article: Article): Promise<void> {
+    const cachedArticle: CachedArticle = {
+      ...article,
+      offline_available: true,
+      images_cached: false,
+      last_synced: new Date().toISOString()
+    }
+    await this.articles.put(cachedArticle)
+  }
+
+  async cacheImage(articleId: string, url: string, blob: Blob): Promise<void> {
+    await this.images.add({
+      article_id: articleId,
+      url,
+      blob,
+      content_type: blob.type,
+      cached_at: new Date().toISOString()
+    })
+  }
+
+  async getCachedImage(url: string): Promise<CachedImage | undefined> {
+    return await this.images.where('url').equals(url).first()
+  }
+
+  async getArticleImages(articleId: string): Promise<CachedImage[]> {
+    return await this.images.where('article_id').equals(articleId).toArray()
+  }
+
+  async markImagesCached(articleId: string): Promise<void> {
+    await this.articles.update(articleId, { images_cached: true })
+  }
+
+  async saveProgress(articleId: string, position: number, percentage: number, text?: string): Promise<void> {
+    const existing = await this.progress.where('article_id').equals(articleId).first()
+    const progressData: ReadingProgress = {
+      article_id: articleId,
+      scroll_position: position,
+      scroll_percentage: percentage,
+      last_position_text: text,
+      updated_at: new Date().toISOString()
+    }
+
+    if (existing) {
+      await this.progress.update(existing.id!, progressData)
+    } else {
+      await this.progress.add(progressData)
+    }
+  }
+
+  async getProgress(articleId: string): Promise<ReadingProgress | undefined> {
+    return await this.progress.where('article_id').equals(articleId).first()
+  }
+
+  async clearArticleCache(articleId: string): Promise<void> {
+    await this.articles.delete(articleId)
+    await this.images.where('article_id').equals(articleId).delete()
+    await this.highlights.where('article_id').equals(articleId).delete()
+    const progress = await this.progress.where('article_id').equals(articleId).first()
+    if (progress?.id) {
+      await this.progress.delete(progress.id)
+    }
+  }
+
+  async getCacheSize(): Promise<number> {
+    const images = await this.images.toArray()
+    return images.reduce((total, img) => total + img.blob.size, 0)
+  }
+
+  async cleanupOldCache(daysToKeep: number = 30): Promise<number> {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
+    const cutoffISO = cutoffDate.toISOString()
+    
+    const deletedImages = await this.images.where('cached_at').below(cutoffISO).delete()
+    const deletedArticles = await this.articles
+      .where('last_synced').below(cutoffISO)
+      .and(article => article.status === 'archived')
+      .delete()
+      
+    return deletedImages + deletedArticles
+  }
+
+  // --- Pending Capture Methods ---
+
   async addPendingCapture(transcript: string): Promise<number> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['pending-captures'], 'readwrite')
-      const store = tx.objectStore('pending-captures')
-
-      const capture: PendingCapture = {
-        transcript,
-        timestamp: Date.now(),
-        synced: false,
-        retries: 0
-      }
-
-      const request = store.add(capture)
-      request.onsuccess = () => resolve(request.result as number)
-      request.onerror = () => reject(request.error)
+    return await this.pendingCaptures.add({
+      transcript,
+      timestamp: Date.now(),
+      synced: false,
+      retries: 0
     })
   }
 
   async getPendingCaptures(): Promise<PendingCapture[]> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['pending-captures'], 'readonly')
-      const store = tx.objectStore('pending-captures')
-      const request = store.getAll()
-
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+    return await this.pendingCaptures.toArray()
   }
 
   async deletePendingCapture(id: number): Promise<void> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['pending-captures'], 'readwrite')
-      const store = tx.objectStore('pending-captures')
-      const request = store.delete(id)
-
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-    })
+    await this.pendingCaptures.delete(id)
   }
 
   async getPendingCaptureCount(): Promise<number> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['pending-captures'], 'readonly')
-      const store = tx.objectStore('pending-captures')
-      const request = store.count()
-
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+    return await this.pendingCaptures.count()
   }
 
   async clearAllPendingCaptures(): Promise<void> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['pending-captures'], 'readwrite')
-      const store = tx.objectStore('pending-captures')
-      const request = store.clear()
-
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
-    })
+    await this.pendingCaptures.clear()
   }
 
-  // Cached Memories
+  // --- Memory Cache Methods ---
+
   async cacheMemory(memory: Omit<CachedMemory, 'cached_at'>): Promise<void> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['memories'], 'readwrite')
-      const store = tx.objectStore('memories')
-
-      const cachedMemory: CachedMemory = {
-        ...memory,
-        cached_at: Date.now()
-      }
-
-      const request = store.put(cachedMemory)
-      request.onsuccess = () => resolve()
-      request.onerror = () => reject(request.error)
+    await this.memories.put({
+      ...memory,
+      cached_at: Date.now()
     })
   }
 
   async getCachedMemories(): Promise<CachedMemory[]> {
-    await this.init()
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['memories'], 'readonly')
-      const store = tx.objectStore('memories')
-      const request = store.getAll()
-
-      request.onsuccess = () => resolve(request.result)
-      request.onerror = () => reject(request.error)
-    })
+    return await this.memories.toArray()
   }
 
-  async clearOldCache(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
-    await this.init()
+  async clearOldMemoryCache(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const cutoff = Date.now() - maxAge
-
-    return new Promise((resolve, reject) => {
-      const tx = this.db!.transaction(['memories'], 'readwrite')
-      const store = tx.objectStore('memories')
-      const index = store.index('cached_at')
-      const request = index.openCursor()
-
-      request.onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest).result
-        if (cursor) {
-          if (cursor.value.cached_at < cutoff) {
-            cursor.delete()
-          }
-          cursor.continue()
-        } else {
-          resolve()
-        }
-      }
-
-      request.onerror = () => reject(request.error)
-    })
+    await this.memories.where('cached_at').below(cutoff).delete()
   }
 }
 
-// Singleton instance
-export const db = new ClandestinedDB()
+// Export singleton instance
+export const db = new PolymathDatabase()
+
+// Export alias for backward compatibility during migration (optional, but helpful)
+export const readingDb = db

@@ -126,10 +126,6 @@ export function FocusableItem({ children, id, type, className = '' }: FocusableI
       data-focus-id={id}
       data-focus-type={type}
       className={className}
-      style={{
-        boxShadow: isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.3)' : 'none',
-        borderRadius: '0.75rem'
-      }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >

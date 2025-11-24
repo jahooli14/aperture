@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react'
-import { readingDb } from '../lib/readingDb'
+import { readingDb } from '../lib/db'
 import type { Article } from '../types/reading'
 
 interface UseOfflineArticleResult {

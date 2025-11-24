@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { readingDb } from '../lib/readingDb'
+import { readingDb } from '../lib/db'
 
 interface UseReadingProgressResult {
   progress: number // Percentage 0-100

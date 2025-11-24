@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './lib/supabase.js'
 import { getUserId } from './lib/auth.js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import formidable from 'formidable'
 import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
@@ -186,133 +186,54 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
   console.log('[handleCapture] Starting capture processing')
 
-  // Use raw transcript - full AI processing will add all enrichment
-  // Initial Gemini call for title/bullets is unreliable (returns empty), so skip it
-  const parsedTitle = text.substring(0, 100) + (text.length > 100 ? '...' : '')
-  const parsedBullets = [text]
-  console.log('[handleCapture] Using raw transcript - full processing will handle AI enrichment')
+  let parsedTitle = text.substring(0, 100) + (text.length > 100 ? '...' : '')
+  let parsedBullets = [text]
 
-  /* DISABLED: Initial Gemini call returns empty responses
   try {
-    // Parse transcript with Gemini FIRST (should be < 5 seconds)
+    // Configure Gemini with Structured Outputs (JSON Schema)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 300,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            title: { type: SchemaType.STRING, description: "A concise, first-person title (5-10 words)" },
+            bullets: {
+              type: SchemaType.ARRAY,
+              items: { type: SchemaType.STRING },
+              description: "2-4 bullet points capturing key ideas in first person"
+            }
+          },
+          required: ["title", "bullets"]
+        }
       }
     })
 
     const prompt = `Transform this text into a clear, first-person thought.
+Text: ${text}`
 
-Extract:
-1. Title (5-10 words, first person)
-2. 2-4 bullet points (first person, capturing key ideas)
+    console.log('[handleCapture] Calling Gemini with Structured Outputs...')
 
-Text: ${text}
-
-Return ONLY JSON:
-{"title": "...", "bullets": ["...", "..."]}`
-
-    console.log('[handleCapture] Calling Gemini...')
-
-    // Add timeout wrapper
-    const geminiPromise = model.generateContent(prompt)
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini timeout')), 10000)
-    )
-
-    const result = await Promise.race([geminiPromise, timeoutPromise]) as any
-    console.log(`[handleCapture] Gemini responded in ${Date.now() - startTime}ms`)
-
-    // Check for safety filters or blocked content
+    const result = await model.generateContent(prompt)
     const response = result.response
-    if (response.promptFeedback?.blockReason) {
-      console.warn('[handleCapture] Content blocked:', response.promptFeedback.blockReason)
-      throw new Error(`Content blocked: ${response.promptFeedback.blockReason}`)
-    }
-
-    const geminiResponse = response.text()
-    console.log('[handleCapture] Raw response length:', geminiResponse?.length || 0)
-    if (geminiResponse) {
-      console.log('[handleCapture] Raw response:', geminiResponse.substring(0, 200))
-    }
-
-    // Check if response is empty
-    if (!geminiResponse || geminiResponse.trim().length === 0) {
-      console.warn('[handleCapture] Empty Gemini response, using fallback')
-      throw new Error('Empty Gemini response')
-    }
-
-    // Parse Gemini response - try multiple strategies
-    let parsed: any = null
-
-    // Strategy 1: Extract from markdown code block (```json ... ```)
-    const codeBlockMatch = geminiResponse.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
-    if (codeBlockMatch) {
-      try {
-        parsed = JSON.parse(codeBlockMatch[1].trim())
-        console.log('[handleCapture] Parsed from markdown code block')
-      } catch (e) {
-        console.log('[handleCapture] Code block parse failed, trying repair:', e)
-        // Try to repair incomplete JSON in code block
-        try {
-          const repaired = repairIncompleteJSON(codeBlockMatch[1].trim())
-          parsed = JSON.parse(repaired)
-          console.log('[handleCapture] Repaired and parsed code block JSON')
-        } catch (e2) {
-          console.log('[handleCapture] JSON repair failed:', e2)
-        }
-      }
-    }
-
-    // Strategy 2: Extract raw JSON object
-    if (!parsed) {
-      const jsonMatch = geminiResponse.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        try {
-          parsed = JSON.parse(jsonMatch[0])
-          console.log('[handleCapture] Parsed from raw JSON')
-        } catch (e) {
-          console.log('[handleCapture] Raw JSON parse failed, trying repair:', e)
-          // Try to repair incomplete JSON
-          try {
-            const repaired = repairIncompleteJSON(jsonMatch[0])
-            parsed = JSON.parse(repaired)
-            console.log('[handleCapture] Repaired and parsed raw JSON')
-          } catch (e2) {
-            console.log('[handleCapture] JSON repair failed:', e2)
-          }
-        }
-      }
-    }
-
-    // Strategy 3: Try parsing the entire response as JSON
-    if (!parsed) {
-      try {
-        parsed = JSON.parse(geminiResponse.trim())
-        console.log('[handleCapture] Parsed entire response as JSON')
-      } catch (e) {
-        console.log('[handleCapture] Full text parse failed:', e)
-      }
-    }
-
-    // If we successfully parsed, use those values
-    if (parsed && parsed.title && parsed.bullets) {
+    const jsonText = response.text()
+    
+    console.log('[handleCapture] Gemini response:', jsonText)
+    
+    const parsed = JSON.parse(jsonText)
+    
+    if (parsed.title && parsed.bullets) {
       parsedTitle = parsed.title
       parsedBullets = parsed.bullets
-      console.log('[handleCapture] Successfully parsed Gemini response')
-    } else {
-      console.warn('[handleCapture] Could not parse Gemini response, using fallback')
-      if (parsed) {
-        console.warn('[handleCapture] Parsed but invalid format:', JSON.stringify(parsed))
-      }
+      console.log('[handleCapture] Successfully parsed structured response')
     }
+
   } catch (geminiError) {
-    // Gemini failed - log but continue with fallback
     console.error('[handleCapture] Gemini error, using fallback:', geminiError)
   }
-  */
 
   // Always create memory with raw transcript
   try {

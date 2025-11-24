@@ -532,55 +532,89 @@ export const ProjectCard = React.memo(function ProjectCard({
                 </div>
               </div>
 
-              {/* Next Task - Simplified */}
+              {/* Task Progress Section */}
               {(() => {
                 const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; order: number }>
                 const nextTask = tasks.sort((a, b) => a.order - b.order).find(t => !t.done)
                 const completedCount = tasks.filter(t => t.done).length
                 const totalCount = tasks.length
+                const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
-                return nextTask ? (
-                  <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{
-                    background: 'var(--premium-bg-3)'
-                  }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-start gap-2.5 flex-1">
-                      <button
-                        onClick={async (e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          const updatedTasks = tasks.map(t =>
-                            t.id === nextTask.id ? { ...t, done: true } : t
-                          ) as any
-                          try {
-                            await updateProject(project.id, {
-                              metadata: { ...project.metadata, tasks: updatedTasks } as any
-                            })
-                            addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
-                            haptic.success()
-                          } catch (error) {
-                            console.error('Failed to complete task:', error)
-                            addToast({ title: 'Failed to complete task', variant: 'destructive' })
-                          }
-                        }}
-                        className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
-                        style={{
-                          color: 'rgba(59, 130, 246, 0.9)',
-                          border: '1.5px solid rgba(255, 255, 255, 0.3)'
-                        }}
-                        title="Complete this task"
-                      />
+                return (
+                  <div className="space-y-2">
+                    {/* Next Task */}
+                    {nextTask && (
+                      <div className="rounded-lg p-2.5 flex items-center justify-between gap-2" style={{
+                        background: 'var(--premium-bg-3)'
+                      }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-start gap-2.5 flex-1">
+                          <button
+                            onClick={async (e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              const updatedTasks = tasks.map(t =>
+                                t.id === nextTask.id ? { ...t, done: true } : t
+                              ) as any
+                              try {
+                                await updateProject(project.id, {
+                                  metadata: { ...project.metadata, tasks: updatedTasks } as any
+                                })
+                                addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
+                                haptic.success()
+                              } catch (error) {
+                                console.error('Failed to complete task:', error)
+                                addToast({ title: 'Failed to complete task', variant: 'destructive' })
+                              }
+                            }}
+                            className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                            style={{
+                              color: 'rgba(59, 130, 246, 0.9)',
+                              border: '1.5px solid rgba(255, 255, 255, 0.3)'
+                            }}
+                            title="Complete this task"
+                          />
 
-                      <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
-                        {nextTask.text}
-                      </p>
-                    </div>
-                    <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--premium-blue)' }}>
-                      {completedCount}/{totalCount}
-                    </span>
+                          <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                            {nextTask.text}
+                          </p>
+                        </div>
+                        <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'var(--premium-blue)' }}>
+                          {completedCount}/{totalCount}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Progress Bar & Meta */}
+                    {totalCount > 0 && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${progress}%`,
+                              background: progress === 100
+                                ? 'var(--premium-emerald)'
+                                : 'var(--premium-blue)'
+                            }}
+                          />
+                        </div>
+                        <span className="text-[10px]" style={{ color: 'var(--premium-text-tertiary)' }}>
+                          {relativeTime}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Empty state - no tasks */}
+                    {totalCount === 0 && (
+                      <div className="flex items-center justify-between text-[10px]" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <span>No tasks yet</span>
+                        <span>{relativeTime}</span>
+                      </div>
+                    )}
                   </div>
-                ) : null
+                )
               })()}
             </CardContent>
             {/* Removed expanded view - navigate to detail page instead */}

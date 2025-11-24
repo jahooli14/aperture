@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
 import { ProjectCard } from '../components/projects/ProjectCard'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
@@ -298,33 +298,27 @@ export function ProjectsPage() {
 
 function ResurfacedReminder({ projects }: { projects: Project[] }) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const touchStartX = React.useRef(0)
+  const navigate = useNavigate()
 
-  // Get dormant/forgotten projects (not touched in a while)
+  // Get all non-completed projects, sorted by least recently touched
   const forgottenProjects = React.useMemo(() => {
-    const now = Date.now()
-    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000
-
     return projects
-      .filter(p => {
-        if (p.status === 'completed') return false
-        const lastActive = p.updated_at || p.last_active || p.created_at
-        if (!lastActive) return true
-        return new Date(lastActive).getTime() < oneWeekAgo
-      })
+      .filter(p => p.status !== 'completed')
       .sort((a, b) => {
-        const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
-        const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+        const aTime = new Date(a.updated_at || a.last_active || a.created_at || 0).getTime()
+        const bTime = new Date(b.updated_at || b.last_active || b.created_at || 0).getTime()
         return aTime - bTime // Oldest first
       })
   }, [projects])
 
-  // Cycle through forgotten projects every 10 seconds
+  // Auto-cycle through forgotten projects every 5 seconds
   useEffect(() => {
     if (forgottenProjects.length <= 1) return
 
     const interval = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % forgottenProjects.length)
-    }, 10000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [forgottenProjects.length])
@@ -336,34 +330,74 @@ function ResurfacedReminder({ projects }: { projects: Project[] }) {
     (Date.now() - new Date(project.updated_at || project.created_at || 0).getTime()) / (1000 * 60 * 60 * 24)
   )
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const deltaX = touchStartX.current - e.changedTouches[0].clientX
+    const threshold = 50
+
+    if (Math.abs(deltaX) > threshold) {
+      if (deltaX > 0) {
+        // Swipe left - next
+        setCurrentIndex(prev => (prev + 1) % forgottenProjects.length)
+      } else {
+        // Swipe right - previous
+        setCurrentIndex(prev => (prev - 1 + forgottenProjects.length) % forgottenProjects.length)
+      }
+    }
+  }
+
+  const handleClick = () => {
+    navigate(`/projects/${project.id}`)
+  }
+
   return (
-    <Link to={`/projects/${project.id}`}>
-      <motion.div
-        key={project.id}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="p-3 rounded-xl mb-2"
-        style={{
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))',
-          border: '1px solid rgba(16, 185, 129, 0.3)'
-        }}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'rgba(16, 185, 129, 0.8)' }}>
-              Remember this? • {daysSince}d ago
-            </p>
-            <h4 className="text-sm font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.title}
-            </h4>
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onClick={handleClick}
+      className="cursor-pointer overflow-hidden"
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={project.id}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className="p-3 rounded-xl mb-2"
+          style={{
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05))',
+            border: '1px solid rgba(16, 185, 129, 0.3)'
+          }}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] uppercase tracking-wide mb-1" style={{ color: 'rgba(16, 185, 129, 0.8)' }}>
+                Remember this? • {daysSince}d ago
+              </p>
+              <h4 className="text-sm font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
+                {project.title}
+              </h4>
+            </div>
+            {forgottenProjects.length > 1 && (
+              <div className="flex items-center gap-1">
+                {forgottenProjects.map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full transition-all"
+                    style={{
+                      backgroundColor: i === currentIndex ? 'rgba(16, 185, 129, 0.8)' : 'rgba(255, 255, 255, 0.2)'
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-          {forgottenProjects.length > 1 && (
-            <span className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-              {currentIndex + 1}/{forgottenProjects.length}
-            </span>
-          )}
-        </div>
-      </motion.div>
-    </Link>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   )
 }
