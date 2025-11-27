@@ -345,6 +345,17 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     // Online flow
     try {
+      // Manually cascade delete to bridges to avoid FK constraint violations
+      const { error: bridgeError } = await supabase
+        .from('bridges')
+        .delete()
+        .or(`memory_a.eq.${id},memory_b.eq.${id}`)
+
+      if (bridgeError) {
+        console.warn('[MemoryStore] Failed to delete associated bridges:', bridgeError)
+        // Continue anyway, maybe they don't exist or it's not critical
+      }
+
       const { error } = await supabase.from('memories').delete().eq('id', id)
 
       if (error) throw error
