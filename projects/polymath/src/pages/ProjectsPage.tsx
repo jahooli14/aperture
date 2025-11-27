@@ -18,6 +18,7 @@ import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
+import { SubtleBackground } from '../components/SubtleBackground'
 import type { Project } from '../types'
 
 export function ProjectsPage() {
@@ -111,21 +112,23 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)'
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="flex items-center" style={{
-            color: 'var(--premium-blue)',
-            opacity: 0.7
-          }}>
-            <Layers className="h-7 w-7" />
-          </div>
+    <>
+      <SubtleBackground />
+      <div className="min-h-screen">
+        {/* Header */}
+        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+        }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+            <div className="flex items-center" style={{
+              color: 'var(--premium-blue)',
+              opacity: 0.7
+            }}>
+              <Layers className="h-7 w-7" />
+            </div>
 
-          {/* Filter Tabs */}
-          <PremiumTabs
+            {/* Filter Tabs */}
+            <PremiumTabs
             tabs={[
               { id: 'all', label: 'All' },
               { id: 'upcoming', label: 'Next' },
@@ -138,21 +141,21 @@ export function ProjectsPage() {
             className="flex-nowrap"
           />
 
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            <CreateProjectDialog />
-            <button
-              onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+              <CreateProjectDialog />
+              <button
+                onClick={() => navigate('/search')}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+                style={{
+                  color: 'var(--premium-blue)'
+                }}
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
       <motion.div
         className="pb-24 relative z-10"
@@ -163,7 +166,21 @@ export function ProjectsPage() {
         transition={{ duration: 0.2 }}
       >
         {/* Controls */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+          {/* Outer Card Structure */}
+          <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Title Section */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Your <span style={{ color: 'var(--premium-blue)' }}>projects</span>
+              </h2>
+            </div>
+
+            {/* Inner Content */}
+            <div>
           {/* Tag Filters */}
           {allTags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
@@ -287,12 +304,15 @@ export function ProjectsPage() {
               </FocusableList>
             </div>
           )}
+            </div>
+          </div>
         </div>
 
         {/* Confirmation Dialog */}
         {confirmDialog}
       </motion.div>
-    </div>
+      </div>
+    </>
   )
 }
 

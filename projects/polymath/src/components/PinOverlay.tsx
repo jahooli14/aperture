@@ -70,9 +70,6 @@ export function PinOverlay() {
             <h3 className="font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
-            <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-              (swipe ↕)
-            </span>
           </div>
           <button
             onClick={(e) => {
@@ -98,16 +95,14 @@ export function PinOverlay() {
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="fixed inset-x-0 z-30 premium-glass-strong border-t"
+        className="fixed inset-x-0 z-30 premium-glass-strong border-t flex flex-col"
         style={{
-          top: viewState === 'maximized' ? 0 : '50%',
+          top: viewState === 'maximized' ? '5%' : '50%',
           bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5rem)',
           borderColor: 'rgba(255, 255, 255, 0.1)',
           backgroundColor: 'var(--premium-surface-base)',
           overscrollBehavior: 'contain'
         }}
-        onTouchMove={(e) => e.stopPropagation()}
-        onWheel={(e) => e.stopPropagation()}
       >
         {/* Header - Draggable for swipe gestures */}
         <motion.div
@@ -128,9 +123,6 @@ export function PinOverlay() {
             <h3 className="font-semibold truncate" style={{ color: 'var(--premium-text-primary)' }}>
               {pinnedItem?.title}
             </h3>
-            <span className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-              (swipe ↕)
-            </span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -147,9 +139,8 @@ export function PinOverlay() {
 
         {/* Content */}
         <div
-          className="overflow-y-auto"
+          className="flex flex-col flex-1 min-h-0 overflow-y-auto"
           style={{
-            height: 'calc(100% - 60px)',
             overscrollBehavior: 'contain'
           }}
         >

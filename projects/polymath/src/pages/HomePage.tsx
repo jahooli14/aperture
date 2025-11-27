@@ -778,17 +778,11 @@ export function HomePage() {
 
                 <div className="flex items-start gap-4 pr-10">
                   <div className="flex-1">
-                    <h3 className="font-bold mb-1 flex items-center gap-2" style={{ color: 'var(--premium-text-primary)' }}>
+                    <h3 className="font-bold mb-1" style={{ color: 'var(--premium-text-primary)' }}>
                       Complete Your Profile
-                      <span className="text-sm px-2 py-0.5 rounded-full" style={{
-                        backgroundColor: 'var(--premium-bg-4)',
-                        color: 'rgba(60, 140, 180, 0.9)'
-                      }}>
-                        {progress.completed_required}/{progress.total_required}
-                      </span>
                     </h3>
                     <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Answer 10 foundational questions to unlock personalized suggestions
+                      Answer a few questions to get personalized suggestions tailored to your interests
                     </p>
                     <Link
                       to="/onboarding"

@@ -28,6 +28,7 @@ import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
+import { SubtleBackground } from '../components/SubtleBackground'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 
@@ -370,6 +371,7 @@ export function MemoriesPage() {
 
   return (
     <>
+      <SubtleBackground />
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
         backgroundColor: 'rgba(15, 24, 41, 0.7)'
@@ -414,42 +416,21 @@ export function MemoriesPage() {
       </div>
 
       <div className="pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
+          {/* Outer Card Structure */}
+          <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Title Section */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                Your <span style={{ color: 'var(--premium-blue)' }}>thoughts</span>
+              </h2>
+            </div>
 
-          {/* Knowledge Pulse - "So What" Context */}
-          {view === 'all' && memories.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 p-6 rounded-xl relative overflow-hidden"
-              style={{
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1))',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              <div className="flex items-start gap-4 relative z-10">
-                <div className="p-3 rounded-lg bg-blue-500/20">
-                  <Zap className="h-6 w-6 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-1">Knowledge Pulse</h3>
-                  <p className="text-blue-200/80 leading-relaxed">
-                    Your <span className="text-white font-semibold">{memories.length} thoughts</span> are fueling your personal knowledge engine.
-                    {clusters.length > 0 && (
-                      <>
-                        {' '}They have strengthened <span className="text-white font-semibold">{clusters.length} key themes</span> including
-                        {' '}<span className="text-blue-300 italic">{clusters.slice(0, 2).map(c => c.name).join(', ')}</span>.
-                      </>
-                    )}
-                    {' '}Keep capturing to reveal hidden connections.
-                  </p>
-                </div>
-              </div>
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-            </motion.div>
-          )}
-
+            {/* Inner Content */}
+            <div>
           {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
           {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
             <Card className="mb-8" style={{
@@ -798,6 +779,8 @@ export function MemoriesPage() {
               )}
             />
           )}
+            </div>
+          </div>
         </div>
 
         {/* Edit Dialog */}
