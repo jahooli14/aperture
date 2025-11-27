@@ -215,13 +215,26 @@ export const ProjectCard = React.memo(function ProjectCard({
       await updateProject(project.id, {
         metadata: { ...project.metadata, tasks: updatedTasks }
       })
+      addToast({
+        title: 'Task added',
+        description: `"${text}" has been added.`,
+        variant: 'success',
+      })
     } catch (error) {
       console.error('Failed to add task:', error)
+      addToast({
+        title: 'Failed to add task',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      })
     }
-  }, [project, updateProject])
+  }, [project, updateProject, addToast])
 
   const handlePinnedToggleTask = React.useCallback(async (taskId: string) => {
     const tasks = (project.metadata?.tasks || []) as any[]
+    const taskToToggle = tasks.find(t => t.id === taskId)
+    if (!taskToToggle) return
+
     const updatedTasks = tasks.map(t => 
       t.id === taskId ? { ...t, done: !t.done } : t
     )
@@ -231,10 +244,20 @@ export const ProjectCard = React.memo(function ProjectCard({
       await updateProject(project.id, {
         metadata: { ...project.metadata, tasks: updatedTasks, progress }
       })
+      addToast({
+        title: 'Task updated',
+        description: `"${taskToToggle.text}" marked as ${taskToToggle.done ? 'incomplete' : 'complete'}.`,
+        variant: 'success',
+      })
     } catch (error) {
       console.error('Failed to toggle task:', error)
+      addToast({
+        title: 'Failed to update task',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive',
+      })
     }
-  }, [project, updateProject])
+  }, [project, updateProject, addToast])
 
   const handlePinnedReorderTask = React.useCallback((draggedId: string, targetId: string) => {
     const allTasks = (project.metadata?.tasks || []) as any[]
