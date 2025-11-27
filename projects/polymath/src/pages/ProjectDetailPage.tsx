@@ -282,11 +282,16 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       console.log('[addPinnedTask] Task saved to backend')
       await loadProjectDetails()
+      addToast({
+        title: 'Task added',
+        description: `"${text}" has been added.`,
+        variant: 'success',
+      })
     } catch (error) {
       console.error('[addPinnedTask] Failed to add task:', error)
       addToast({
         title: 'Failed to add task',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive',
       })
     }
@@ -296,8 +301,11 @@ export function ProjectDetailPage() {
     if (!project) return
 
     const tasks = (project.metadata?.tasks || []) as Task[]
+    const taskToToggle = tasks.find(t => t.id === taskId)
+    if (!taskToToggle) return
+
     const updatedTasks = tasks.map(t =>
-      t.id === taskId ? { ...t, done: true } : t
+      t.id === taskId ? { ...t, done: !t.done } : t
     )
     const newMetadata = {
       ...project.metadata,
@@ -308,11 +316,16 @@ export function ProjectDetailPage() {
     try {
       await updateProject(project.id, { metadata: newMetadata })
       await loadProjectDetails()
+      addToast({
+        title: 'Task updated',
+        description: `"${taskToToggle.text}" marked as ${taskToToggle.done ? 'incomplete' : 'complete'}.`,
+        variant: 'success',
+      })
     } catch (error) {
       console.error('Failed to update task:', error)
       addToast({
         title: 'Failed to update task',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
         variant: 'destructive',
       })
     }
