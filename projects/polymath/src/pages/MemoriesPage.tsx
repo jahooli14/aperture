@@ -220,12 +220,17 @@ export function MemoriesPage() {
           description: `"${memory.title}" has been removed.`,
           variant: 'success',
         })
+        
+        // Force refresh to ensure server state matches
+        await loadMemories(true)
       } catch (error) {
         addToast({
           title: 'Failed to delete thought',
           description: error instanceof Error ? error.message : 'An error occurred',
           variant: 'destructive',
         })
+        // Refresh to restore state if delete failed
+        await loadMemories(true)
       }
     }
   }

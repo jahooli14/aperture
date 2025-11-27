@@ -1,78 +1,69 @@
 /**
- * OnboardingPage - 5-question flow to build initial knowledge graph
- * Questions 1-2: Structured (skill learned, abandoned project)
- * Questions 3-5: Freeform voice/text
+ * OnboardingPage - Initial knowledge graph build
+ * Uses Foundational Prompts to guide the user
  */
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ArrowRight, Sparkles } from 'lucide-react'
 import { VoiceInput } from '../components/VoiceInput'
+import { useOnboardingStore } from '../stores/useOnboardingStore'
 import type { OnboardingResponse, OnboardingAnalysis } from '../types'
 
 const STORAGE_KEY = 'onboarding_progress'
 
-const QUESTIONS = [
-  {
-    id: 1,
-    text: "What's a skill you learned in the past year?",
-    type: 'structured' as const,
-    placeholder: "e.g., React, design, photography..."
-  },
-  {
-    id: 2,
-    text: "Tell me about something you started but didn't finish",
-    type: 'structured' as const,
-    placeholder: "What happened? Why did you stop?"
-  },
-  {
-    id: 3,
-    text: "What's on your mind lately? Projects, ideas, frustrations - anything",
-    type: 'freeform' as const,
-    placeholder: "Just talk for 30 seconds..."
-  },
-  {
-    id: 4,
-    text: "Anything else you've been mulling over?",
-    type: 'freeform' as const,
-    placeholder: "Another 30 seconds..."
-  },
-  {
-    id: 5,
-    text: "One more thought - whatever comes to mind",
-    type: 'freeform' as const,
-    placeholder: "Last one..."
-  }
-]
-
 export function OnboardingPage() {
   const navigate = useNavigate()
+  const { requiredPrompts, fetchPrompts, submitResponse } = useOnboardingStore()
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<OnboardingResponse[]>([])
   const [currentResponse, setCurrentResponse] = useState('')
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(true)
 
-  // Load saved progress on mount
+  // Fetch prompts and load saved progress on mount
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const { currentQuestion: savedQuestion, responses: savedResponses } = JSON.parse(saved)
-        setCurrentQuestion(savedQuestion)
-        setResponses(savedResponses)
-      } catch (e) {
-        console.error('Failed to load saved progress:', e)
+    const init = async () => {
+      await fetchPrompts()
+      setIsLoadingPrompts(false)
+      
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        try {
+          const { currentQuestion: savedQuestion, responses: savedResponses } = JSON.parse(saved)
+          setCurrentQuestion(savedQuestion)
+          setResponses(savedResponses)
+        } catch (e) {
+          console.error('Failed to load saved progress:', e)
+        }
       }
     }
-  }, [])
+    init()
+  }, [fetchPrompts])
 
-  const question = QUESTIONS[currentQuestion]
-  const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100
+  // Use required prompts, or fallback to empty array if loading
+  const questions = requiredPrompts || []
+  const question = questions[currentQuestion]
+  const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0
 
   const handleNext = async () => {
     if (!currentResponse.trim()) return
 
+    // 1. Submit to persistent store (so it shows as completed in Core list)
+    if (question) {
+      try {
+        await submitResponse({
+          prompt_id: question.id,
+          bullets: [currentResponse] // Treat as single bullet/paragraph
+        })
+      } catch (e) {
+        console.warn('Failed to submit persistent response:', e)
+        // Continue anyway - don't block onboarding flow
+      }
+    }
+
+    // 2. Add to local state for analysis
     const newResponse: OnboardingResponse = {
       transcript: currentResponse,
       question_number: currentQuestion + 1
@@ -82,8 +73,8 @@ export function OnboardingPage() {
     setResponses(updatedResponses)
     setCurrentResponse('')
 
-    // Save progress to localStorage
-    if (currentQuestion < QUESTIONS.length - 1) {
+    // 3. Save progress or finish
+    if (currentQuestion < questions.length - 1) {
       const nextQuestion = currentQuestion + 1
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         currentQuestion: nextQuestion,
@@ -153,6 +144,17 @@ export function OnboardingPage() {
     }
   }
 
+  if (isLoadingPrompts) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: 'var(--premium-blue)' }}></div>
+          <p style={{ color: 'var(--premium-text-secondary)' }}>Loading your personal roadmap...</p>
+        </div>
+      </div>
+    )
+  }
+
   if (isAnalyzing) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -181,7 +183,7 @@ export function OnboardingPage() {
               Your First Patterns
             </h1>
             <p className="text-xl" style={{ color: 'var(--premium-text-secondary)' }}>
-              Here's what we found from just 5 thoughts
+              Here's what we found from just {questions.length} thoughts
             </p>
           </div>
 
@@ -285,6 +287,19 @@ export function OnboardingPage() {
     )
   }
 
+  if (!question) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+            No prompts found
+          </h2>
+          <button onClick={() => navigate('/')} className="text-blue-400">Go Home</button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen">
       {/* Progress Bar */}
@@ -303,7 +318,7 @@ export function OnboardingPage() {
               Let's map your creative brain
             </h1>
             <p className="text-xl" style={{ color: 'var(--premium-text-secondary)' }}>
-              Question {currentQuestion + 1} of {QUESTIONS.length}
+              Question {currentQuestion + 1} of {questions.length}
             </p>
             <button
               onClick={handleSkipOnboarding}
@@ -317,14 +332,14 @@ export function OnboardingPage() {
           {/* Question Card */}
           <div className="p-8 mb-6" style={{ background: 'var(--premium-bg-2)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
             <h2 className="text-2xl font-semibold mb-6" style={{ color: 'var(--premium-text-primary)' }}>
-              {question.text}
+              {question.prompt_text}
             </h2>
 
             <div className="space-y-4">
               <textarea
                 value={currentResponse}
                 onChange={(e) => setCurrentResponse(e.target.value)}
-                placeholder={question.placeholder}
+                placeholder={question.prompt_description || "Type your answer here..."}
                 className="w-full px-4 py-3 rounded-lg focus:ring-2 resize-none"
                 style={{
                   backgroundColor: 'var(--premium-surface-elevated)',
@@ -332,17 +347,15 @@ export function OnboardingPage() {
                   borderWidth: '0',
                   outlineColor: 'var(--premium-blue)'
                 }}
-                rows={question.type === 'freeform' ? 6 : 3}
+                rows={5}
                 autoFocus
               />
 
-              {question.type === 'freeform' && (
-                <VoiceInput
-                  onTranscript={handleVoiceTranscript}
-                  maxDuration={30}
-                  autoSubmit={false}
-                />
-              )}
+              <VoiceInput
+                onTranscript={handleVoiceTranscript}
+                maxDuration={60}
+                autoSubmit={false}
+              />
             </div>
           </div>
 
@@ -365,7 +378,7 @@ export function OnboardingPage() {
               disabled={!currentResponse.trim()}
               className="btn-primary px-6 py-3 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {currentQuestion === QUESTIONS.length - 1 ? 'Analyze' : 'Next'}
+              {currentQuestion === questions.length - 1 ? 'Analyze' : 'Next'}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -381,7 +394,7 @@ export function OnboardingPage() {
                   <div key={i} className="flex items-start gap-2 text-sm">
                     <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--premium-blue)' }} />
                     <span className="line-clamp-1" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {QUESTIONS[i]?.text || 'Question'}: {response?.transcript?.substring(0, 60) || ''}...
+                      {questions[i]?.prompt_text || 'Question'}: {response?.transcript?.substring(0, 60) || ''}...
                     </span>
                   </div>
                 ))}
