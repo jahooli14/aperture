@@ -42,8 +42,8 @@ export function ContextMenu({ items, isOpen, onClose, title }: ContextMenuProps)
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-0 left-0 right-0 z-50 premium-card rounded-t-2xl p-6 space-y-4"
+            transition={{ type: 'spring', stiffness: 400, damping: 40, mass: 0.8 }}
+            className="fixed bottom-0 left-0 right-0 z-[60] premium-card rounded-t-2xl p-6 space-y-4"
             style={{
               maxHeight: '80vh',
               overflowY: 'auto',
