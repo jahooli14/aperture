@@ -322,15 +322,15 @@ function ResurfacedReminder({ projects }: { projects: Project[] }) {
   const touchStartX = React.useRef(0)
   const navigate = useNavigate()
 
-  // Get all non-completed projects, sorted by least recently touched
+  // Get all non-completed projects, randomized to keep it fresh
   const forgottenProjects = React.useMemo(() => {
-    return projects
-      .filter(p => p.status !== 'completed')
-      .sort((a, b) => {
-        const aTime = new Date(a.updated_at || a.last_active || a.created_at || 0).getTime()
-        const bTime = new Date(b.updated_at || b.last_active || b.created_at || 0).getTime()
-        return aTime - bTime // Oldest first
-      })
+    const list = projects.filter(p => p.status !== 'completed')
+    // Fisher-Yates shuffle
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list
   }, [projects])
 
   // Auto-cycle through forgotten projects every 5 seconds
