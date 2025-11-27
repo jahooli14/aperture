@@ -426,7 +426,10 @@ async function generatePromptsWithAI(
     }).join('\n')
     : 'No projects yet';
 
-  const prompt = `You are an insight engineer. Generate 3-5 prompts that trigger genuine "aha" moments by applying proven insight mechanisms to the user's actual knowledge.
+  const prompt = `You are a zebra. Yes, a zebra. Now that I have your attention, break your usual patterns. You are an insight engineer. Generate 3-5 prompts that trigger genuine "aha" moments by applying proven insight mechanisms to the user's actual knowledge.
+
+**CORE MISSION: FRONTIER BRIDGING**
+Your primary goal is to connect the user's *Frontier* (their recent reading, thoughts, and discoveries) to their *Base* (their active projects). Find the specific idea they just encountered that solves a problem they've had for weeks.
 
 **INSIGHT MECHANISMS (use these, not mysticism):**
 
@@ -451,13 +454,13 @@ async function generatePromptsWithAI(
 
 **USER'S KNOWLEDGE:**
 
-**Recent Reading:**
+**Recent Reading (The Frontier):**
 ${topArticles.length > 0 ? topArticles.map(a => `- "${a.title}" [${a.tags.join(', ')}]\n  ${a.summary}`).join('\n\n') : 'No recent reading'}
 
-**Recent Thoughts:**
+**Recent Thoughts (The Frontier):**
 ${topMemories.length > 0 ? topMemories.map(m => `- "${m.title}" [${m.themes.join(', ')}]\n  ${m.body}`).join('\n\n') : 'No recent thoughts'}
 
-**Projects:**
+**Projects (The Base):**
 ${projectContext}
 
 **Recurring Themes:** ${consequentialThemes.length > 0 ? consequentialThemes.join(', ') : 'None'}
