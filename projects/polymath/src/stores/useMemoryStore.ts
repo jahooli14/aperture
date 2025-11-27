@@ -345,21 +345,41 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     // Online flow
     try {
-      // Manually cascade delete to bridges to avoid FK constraint violations
+      console.log('[MemoryStore] Deleting memory:', id)
+
+      // 1. Manually cascade delete to bridges
       const { error: bridgeError } = await supabase
         .from('bridges')
         .delete()
         .or(`memory_a.eq.${id},memory_b.eq.${id}`)
 
-      if (bridgeError) {
-        console.warn('[MemoryStore] Failed to delete associated bridges:', bridgeError)
-        // Continue anyway, maybe they don't exist or it's not critical
-      }
+      if (bridgeError) console.warn('[MemoryStore] Bridge delete warning:', bridgeError)
 
-      const { error } = await supabase.from('memories').delete().eq('id', id)
+      // 2. Clear references in user_prompt_status (if this memory was a prompt response)
+      // We don't know the user_id here easily, but RLS should handle it or we just update by response_id
+      const { error: promptError } = await supabase
+        .from('user_prompt_status')
+        .update({ response_id: null, status: 'pending' }) // Reset prompt to pending? Or just clear link?
+        .eq('response_id', id)
+      
+      if (promptError) console.warn('[MemoryStore] Prompt status update warning:', promptError)
+
+      // 3. Delete the memory
+      const { error, count } = await supabase
+        .from('memories')
+        .delete({ count: 'exact' })
+        .eq('id', id)
 
       if (error) throw error
+      
+      if (count === 0) {
+        throw new Error('Memory not found or permission denied (count: 0)')
+      }
+
+      console.log('[MemoryStore] Memory deleted successfully')
+
     } catch (error) {
+      console.error('[MemoryStore] Delete failed, rolling back:', error)
       // Rollback on error
       set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to delete memory')
