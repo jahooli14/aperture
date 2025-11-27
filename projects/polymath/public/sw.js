@@ -4,7 +4,7 @@
  */
 
 // Update this version when you want to trigger a new service worker
-const VERSION = '1.0.5-bulletproof-share'
+const VERSION = '1.0.6-share-fix'
 const CACHE_NAME = `polymath-v${VERSION}`
 const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
 
