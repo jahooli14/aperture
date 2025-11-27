@@ -11,6 +11,7 @@ import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
 import { AddNoteDialog } from '../components/projects/AddNoteDialog'
 import { TaskList, type Task } from '../components/projects/TaskList'
+import { PinnedTaskList } from '../components/projects/PinnedTaskList'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { CreateConnectionDialog } from '../components/connections/CreateConnectionDialog'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -58,12 +59,10 @@ export function ProjectDetailPage() {
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
-  const [newPinnedTaskText, setNewPinnedTaskText] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
-  const pinnedTaskInputRef = useRef<HTMLInputElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -255,23 +254,18 @@ export function ProjectDetailPage() {
     setEditingDescription(false)
   }
 
-  const addPinnedTask = useCallback(async () => {
-    console.log('[addPinnedTask] Called with text:', newPinnedTaskText)
+  const addPinnedTask = useCallback(async (text: string) => {
+    console.log('[addPinnedTask] Called with text:', text)
 
     if (!project) {
       console.log('[addPinnedTask] No project')
       return
     }
 
-    if (!newPinnedTaskText.trim()) {
-      console.log('[addPinnedTask] Empty text')
-      return
-    }
-
     const tasks = (project.metadata?.tasks || []) as Task[]
     const newTask = {
       id: crypto.randomUUID(),
-      text: newPinnedTaskText.trim(),
+      text: text.trim(),
       done: false,
       created_at: new Date().toISOString(),
       order: tasks.length
@@ -288,13 +282,6 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       console.log('[addPinnedTask] Task saved to backend')
       await loadProjectDetails()
-      console.log('[addPinnedTask] Project details reloaded')
-      setNewPinnedTaskText('')
-      console.log('[addPinnedTask] Input cleared')
-      // Force a small delay to ensure state updates propagate
-      setTimeout(() => {
-        console.log('[addPinnedTask] Task added successfully - input should be clear now')
-      }, 50)
     } catch (error) {
       console.error('[addPinnedTask] Failed to add task:', error)
       addToast({
@@ -303,7 +290,7 @@ export function ProjectDetailPage() {
         variant: 'destructive',
       })
     }
-  }, [project, newPinnedTaskText, updateProject, loadProjectDetails, addToast])
+  }, [project, updateProject, loadProjectDetails, addToast])
 
   const togglePinnedTask = useCallback(async (taskId: string) => {
     if (!project) return
@@ -335,15 +322,14 @@ export function ProjectDetailPage() {
     setDraggedPinnedTaskId(taskId)
   }, [])
 
-  const handlePinnedDragOver = useCallback((e: React.DragEvent, targetTaskId: string) => {
-    e.preventDefault()
-    if (!draggedPinnedTaskId || !project || draggedPinnedTaskId === targetTaskId) return
+  const handleReorder = useCallback((draggedId: string, targetId: string) => {
+    if (!project) return
 
     const allTasks = (project.metadata?.tasks || []) as Task[]
     const sortedTasks = [...allTasks].sort((a, b) => a.order - b.order)
 
-    const draggedIndex = sortedTasks.findIndex(t => t.id === draggedPinnedTaskId)
-    const targetIndex = sortedTasks.findIndex(t => t.id === targetTaskId)
+    const draggedIndex = sortedTasks.findIndex(t => t.id === draggedId)
+    const targetIndex = sortedTasks.findIndex(t => t.id === targetId)
 
     if (draggedIndex === -1 || targetIndex === -1) return
 
@@ -363,9 +349,11 @@ export function ProjectDetailPage() {
       tasks: reorderedTasks
     }
 
+    // Optimistic update handled by child component visual state usually, 
+    // but here we update parent to trigger persist
     updateProject(project.id, { metadata: newMetadata })
     setProject({ ...project, metadata: newMetadata })
-  }, [draggedPinnedTaskId, project, updateProject])
+  }, [project, updateProject])
 
   const handlePinnedDragEnd = useCallback(() => {
     setDraggedPinnedTaskId(null)
@@ -412,97 +400,17 @@ export function ProjectDetailPage() {
     if (!project) return null
 
     return (
-      <div key={`pinned-${tasks.length}`} className="p-6 pb-32 flex flex-col">
-        {/* Header */}
-        <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
-        </h4>
-
-        {/* Task list */}
-        <div className="space-y-1.5">
-          {/* Incomplete tasks only */}
-          {tasks.filter(t => !t.done).map((task, index) => {
-            const isNextTask = index === 0
-            return (
-              <div
-                key={task.id}
-                draggable
-                onDragStart={() => handlePinnedDragStart(task.id)}
-                onDragOver={(e) => handlePinnedDragOver(e, task.id)}
-                onDragEnd={handlePinnedDragEnd}
-                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
-                style={{
-                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
-                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  <GripVertical className="h-3 w-3" />
-                </div>
-                <button
-                  onClick={() => togglePinnedTask(task.id)}
-                  className="flex items-center gap-2 flex-1"
-                >
-                  <div
-                    className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
-                    style={{
-                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                      color: 'rgba(59, 130, 246, 0.9)'
-                    }}
-                  >
-                  </div>
-                  <span style={{
-                    color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
-                    fontWeight: isNextTask ? 600 : 400
-                  }}>
-                    {task.text}
-                  </span>
-                </button>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Add task input - fixed at bottom */}
-        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
-          <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
-            <Plus className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
-            <input
-              ref={pinnedTaskInputRef}
-              type="text"
-              placeholder="Add task..."
-              value={newPinnedTaskText}
-              onChange={(e) => {
-                console.log('[Pinned Input] onChange:', e.target.value)
-                setNewPinnedTaskText(e.target.value)
-              }}
-              onClick={(e) => {
-                e.stopPropagation()
-                pinnedTaskInputRef.current?.focus()
-              }}
-              onFocus={handleInputFocus}
-              onKeyDown={(e) => {
-                console.log('[Pinned Input] onKeyDown:', e.key)
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addPinnedTask()
-                }
-              }}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              className="flex-1 px-3 py-2 text-sm rounded-md focus:outline-none bg-transparent"
-              style={{
-                color: 'var(--premium-text-primary)',
-                border: '1px solid rgba(59, 130, 246, 0.4)'
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      <PinnedTaskList
+        tasks={project.metadata?.tasks || []}
+        onToggle={togglePinnedTask}
+        onAdd={addPinnedTask}
+        onReorder={handleReorder}
+        draggedTaskId={draggedPinnedTaskId}
+        onDragStart={handlePinnedDragStart}
+        onDragEnd={handlePinnedDragEnd}
+      />
     )
-  }, [tasks, project?.status, progress, togglePinnedTask, addPinnedTask, project, handlePinnedDragStart, handlePinnedDragOver, handlePinnedDragEnd, draggedPinnedTaskId, newPinnedTaskText])
+  }, [project?.metadata?.tasks, togglePinnedTask, addPinnedTask, handleReorder, draggedPinnedTaskId, handlePinnedDragStart, handlePinnedDragEnd])
 
   if (loading) {
     return (
