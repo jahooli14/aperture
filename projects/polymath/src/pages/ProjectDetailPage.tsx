@@ -283,8 +283,8 @@ export function ProjectDetailPage() {
       console.log('[addPinnedTask] Task saved to backend')
       await loadProjectDetails()
       addToast({
-        title: 'Task added',
-        description: `"${text}" has been added.`,
+        title: 'Updated!',
+        description: 'Task added to project',
         variant: 'success',
       })
     } catch (error) {
@@ -317,8 +317,8 @@ export function ProjectDetailPage() {
       await updateProject(project.id, { metadata: newMetadata })
       await loadProjectDetails()
       addToast({
-        title: 'Task updated',
-        description: `"${taskToToggle.text}" marked as ${taskToToggle.done ? 'incomplete' : 'complete'}.`,
+        title: 'Updated!',
+        description: 'Task status updated',
         variant: 'success',
       })
     } catch (error) {
