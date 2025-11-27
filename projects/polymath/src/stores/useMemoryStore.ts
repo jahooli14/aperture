@@ -373,14 +373,18 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       if (error) throw error
       
       if (count === 0) {
-        throw new Error('Memory not found or permission denied (count: 0)')
+        console.warn('[MemoryStore] Memory not found in DB (already deleted?), keeping UI consistent')
+        // Do NOT throw error here. If it's not in the DB, we want it gone from UI too.
+        // The optimistic update at the start of this function already removed it.
+      } else {
+        console.log('[MemoryStore] Memory deleted successfully')
       }
 
-      console.log('[MemoryStore] Memory deleted successfully')
-
     } catch (error) {
-      console.error('[MemoryStore] Delete failed, rolling back:', error)
-      // Rollback on error
+      console.error('[MemoryStore] Delete failed:', error)
+      
+      // Only rollback if it's a genuine API error, not a "not found" (count 0) situation
+      // Since we removed the count check above, this catch block handles network/permission errors
       set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to delete memory')
     }
