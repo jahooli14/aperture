@@ -1664,7 +1664,8 @@ Extract:
   "entities": {
     "people": ["names"],
     "topics": ["specific technologies, concepts, or subjects discussed"],
-    "organizations": ["companies, institutions mentioned"]
+    "organizations": ["companies, institutions mentioned"],
+    "skills": ["user skills or capabilities mentioned in the article if it's about learning/doing something - e.g. 'Python', 'woodworking', 'data analysis']
   },
   "themes": ["high-level themes - max 3"],
   "key_insights": ["2-3 key takeaways"]
@@ -1695,6 +1696,15 @@ Return ONLY the JSON, no other text.`
           .eq('id', articleId)
 
         if (updateError) throw updateError
+
+        // Store skills as capabilities
+        if (analysis.entities?.skills && analysis.entities.skills.length > 0) {
+          await storeCapabilitiesFromArticle(
+            articleId,
+            analysis.entities.skills,
+            article.title
+          ).catch(err => console.error('Background capability storage failed:', err))
+        }
 
         // Also trigger embedding generation if not already done
         if (!article.embedding) {
@@ -2159,5 +2169,66 @@ async function generateArticleEmbeddingAndConnect(
 
   } catch (error) {
     console.error('[reading] Embedding/connection generation failed:', error)
+  }
+}
+
+/**
+ * Store capabilities from article skills
+ * Similar to memory processing but for articles
+ */
+async function storeCapabilitiesFromArticle(
+  articleId: string,
+  skills: string[],
+  articleTitle: string
+): Promise<void> {
+  if (!skills || skills.length === 0) {
+    return
+  }
+
+  const supabase = getSupabaseClient()
+  console.log(`[reading] Storing ${skills.length} capabilities from article ${articleId}`)
+
+  for (const skillName of skills) {
+    try {
+      // Check if capability already exists
+      const { data: existing } = await supabase
+        .from('capabilities')
+        .select('id, strength, last_used')
+        .eq('name', skillName)
+        .maybeSingle()
+
+      if (existing) {
+        // Update existing capability: increment strength
+        const newStrength = existing.strength + 0.1
+        await supabase
+          .from('capabilities')
+          .update({
+            strength: newStrength,
+            last_used: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+
+        console.log(`[reading] Updated capability '${skillName}' strength: ${existing.strength} → ${newStrength}`)
+      } else {
+        // Create new capability
+        const embedding = await generateEmbedding(skillName)
+
+        await supabase
+          .from('capabilities')
+          .insert({
+            name: skillName,
+            description: `User capability: ${skillName}`,
+            source_project: 'user',
+            code_references: [{ article_id: articleId, article_title: articleTitle }],
+            strength: 1.0,
+            last_used: new Date().toISOString(),
+            embedding,
+          })
+
+        console.log(`[reading] Created new capability: ${skillName}`)
+      }
+    } catch (error) {
+      console.error(`[reading] Error storing capability '${skillName}':`, error)
+    }
   }
 }

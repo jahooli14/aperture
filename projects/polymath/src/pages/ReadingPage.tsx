@@ -23,6 +23,7 @@ import { EmptyState } from '../components/ui/empty-state'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { articleProcessor } from '../lib/articleProcessor'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
+import { SubtleBackground } from '../components/SubtleBackground'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
@@ -579,8 +580,10 @@ export function ReadingPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
-      {/* Header */}
+    <>
+      <SubtleBackground />
+      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
+        {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
         backgroundColor: 'rgba(15, 24, 41, 0.7)'
       }}>
@@ -674,10 +677,29 @@ export function ReadingPage() {
         </div>
       )}
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
-        {/* Updates Tab - RSS Feed Items */}
-        {activeTab === 'updates' && (
+      {/* Content - Outer Card Structure */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
+        <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+          background: 'var(--premium-bg-2)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+        }}>
+          {/* Title Section */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+              {activeTab === 'updates' ? (
+                <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
+              ) : activeTab === 'archived' ? (
+                <>Your reading <span style={{ color: 'var(--premium-blue)' }}>archive</span></>
+              ) : (
+                <>Your <span style={{ color: 'var(--premium-blue)' }}>reading material</span></>
+              )}
+            </h2>
+          </div>
+
+          {/* Inner Content */}
+          <div>
+            {/* Updates Tab - RSS Feed Items */}
+            {activeTab === 'updates' && (
           <>
             {loadingRSS && rssItems.length === 0 ? (
               <SkeletonCard variant="list" count={5} />
@@ -815,7 +837,9 @@ export function ReadingPage() {
               </FocusableList>
             )}
           </>
-        )}
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Save Article Dialog */}
@@ -930,6 +954,7 @@ export function ReadingPage() {
           }
         }}
       />
-    </div>
+      </div>
+    </>
   )
 }

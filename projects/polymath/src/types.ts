@@ -17,6 +17,7 @@ export interface Entities {
   people: string[]
   places: string[]
   topics: string[]
+  skills: string[]
 }
 
 export interface SourceReference {

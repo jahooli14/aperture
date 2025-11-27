@@ -72,6 +72,11 @@ export async function processMemory(memoryId: string): Promise<void> {
     await storeEntities(memoryId, metadata.entities)
     logger.info({ memory_id: memoryId }, '✅ Entities stored')
 
+    // 5b. Store skills as capabilities in the capabilities table
+    logger.info({ memory_id: memoryId }, '🔄 Storing capabilities from skills...')
+    await storeCapabilities(memoryId, metadata.entities?.skills || [], metadata.summary_title)
+    logger.info({ memory_id: memoryId }, '✅ Capabilities stored')
+
     // 6. Auto-suggest and create connections
     logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
     // Use hardcoded user_id (single-user app, memories table doesn't have user_id)
@@ -124,7 +129,8 @@ Extract the following in JSON format:
   "entities": {
     "people": ["names of specific people mentioned"],
     "places": ["names of specific locations"],
-    "topics": ["specific technologies, activities, or concepts - e.g. 'React', 'meditation', 'cooking']
+    "topics": ["specific technologies, activities, or concepts - e.g. 'React', 'meditation', 'cooking'],
+    "skills": ["user's abilities, skills, or capabilities mentioned - e.g. 'woodworking', 'Python programming', 'video editing', 'cooking', 'teaching']
   },
   "themes": ["high-level life themes - max 3"],
   "tags": ["searchable tags - 3-5 tags"],
@@ -138,6 +144,7 @@ Rules:
 - entities.people: Only actual names (e.g., "Sarah", "Alex"), not generic terms
 - entities.places: Only specific locations (e.g., "London", "Central Park")
 - entities.topics: Specific nouns - technologies, tools, activities, subjects (e.g., "TypeScript", "yoga", "parenting")
+- entities.skills: User's abilities, expertise, or things they can do. Extract if user says "I can", "I know how to", "I'm good at", or describes doing something skillfully (e.g., "woodworking", "Python", "cooking", "teaching", "video editing")
 - themes: Broad life categories ONLY (max 3) - e.g., "career", "health", "creativity", "relationships", "learning", "family"
 - tags: Short searchable keywords (3-5) - overlap with topics is OK but keep minimal. Use for: mood, context, or specifics not captured elsewhere
 - emotional_tone: One short phrase (e.g., "excited", "reflective and calm", "frustrated")
@@ -202,6 +209,9 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
   for (const topic of entities.topics || []) {
     allEntities.push({ name: topic, type: 'topic', memory_id: memoryId })
   }
+  for (const skill of entities.skills || []) {
+    allEntities.push({ name: skill, type: 'skill', memory_id: memoryId })
+  }
 
   if (allEntities.length === 0) {
     logger.debug('No entities to store')
@@ -221,6 +231,77 @@ async function storeEntities(memoryId: string, entities: Entities): Promise<void
     // Don't throw - entity storage is non-critical
   } else {
     logger.debug({ count: allEntities.length }, 'Stored entities')
+  }
+}
+
+/**
+ * Store or update capabilities from extracted skills
+ * Upserts to capabilities table with strength tracking
+ */
+async function storeCapabilities(memoryId: string, skills: string[], memoryTitle: string): Promise<void> {
+  if (!skills || skills.length === 0) {
+    logger.debug('No skills to store as capabilities')
+    return
+  }
+
+  logger.info({ memory_id: memoryId, skills_count: skills.length, skills }, 'Storing capabilities from skills')
+
+  for (const skillName of skills) {
+    try {
+      // Check if capability already exists
+      const { data: existing, error: fetchError } = await supabase
+        .from('capabilities')
+        .select('id, strength, last_used')
+        .eq('name', skillName)
+        .maybeSingle()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        logger.warn({ skill: skillName, error: fetchError }, 'Error fetching capability')
+        continue
+      }
+
+      if (existing) {
+        // Update existing capability: increment strength and update last_used
+        const newStrength = existing.strength + 0.1 // Increment by 0.1 each time mentioned
+        const { error: updateError } = await supabase
+          .from('capabilities')
+          .update({
+            strength: newStrength,
+            last_used: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+
+        if (updateError) {
+          logger.warn({ skill: skillName, error: updateError }, 'Error updating capability')
+        } else {
+          logger.debug({ skill: skillName, old_strength: existing.strength, new_strength: newStrength }, 'Updated capability strength')
+        }
+      } else {
+        // Create new capability
+        // Generate embedding for the skill
+        const embedding = await generateEmbedding(skillName)
+
+        const { error: insertError } = await supabase
+          .from('capabilities')
+          .insert({
+            name: skillName,
+            description: `User capability: ${skillName}`, // Simple description
+            source_project: 'user',
+            code_references: [{ memory_id: memoryId, memory_title: memoryTitle }],
+            strength: 1.0, // Initial strength
+            last_used: new Date().toISOString(),
+            embedding,
+          })
+
+        if (insertError) {
+          logger.warn({ skill: skillName, error: insertError }, 'Error inserting capability')
+        } else {
+          logger.info({ skill: skillName }, 'Created new capability')
+        }
+      }
+    } catch (error) {
+      logger.warn({ skill: skillName, error }, 'Error processing capability')
+    }
   }
 }
 

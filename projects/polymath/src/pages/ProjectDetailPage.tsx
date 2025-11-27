@@ -412,108 +412,97 @@ export function ProjectDetailPage() {
     if (!project) return null
 
     return (
-      <div key={`pinned-${tasks.length}`} className="p-6 pb-32 space-y-6">
-        {/* Active Tasks Only - Mobile Optimized */}
-        <div>
-          <h4 className="text-sm font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-            Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
-          </h4>
-          <div className="space-y-1.5 overflow-y-auto">
-            {/* Incomplete tasks only */}
-            {tasks.filter(t => !t.done).map((task, index) => {
-              const isNextTask = index === 0
-              return (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={() => handlePinnedDragStart(task.id)}
-                  onDragOver={(e) => handlePinnedDragOver(e, task.id)}
-                  onDragEnd={handlePinnedDragEnd}
-                  className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
-                  style={{
-                    opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
-                    background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
-                  }}
-                >
-                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    <GripVertical className="h-3 w-3" />
-                  </div>
-                  <button
-                    onClick={() => togglePinnedTask(task.id)}
-                    className="flex items-center gap-2 flex-1"
-                  >
-                    <div
-                      className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
-                      style={{
-                        border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                        color: 'rgba(59, 130, 246, 0.9)'
-                      }}
-                    >
-                    </div>
-                    <span style={{
-                      color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
-                      fontWeight: isNextTask ? 600 : 400
-                    }}>
-                      {task.text}
-                    </span>
-                  </button>
-                </div>
-              )
-            })}
+      <div key={`pinned-${tasks.length}`} className="p-6 pb-32 flex flex-col">
+        {/* Header */}
+        <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
+        </h4>
 
-            {/* Add task row with + button */}
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                ref={pinnedTaskInputRef}
-                type="text"
-                placeholder="Add a task..."
-                value={newPinnedTaskText}
-                onChange={(e) => {
-                  console.log('[Pinned Input] onChange:', e.target.value)
-                  setNewPinnedTaskText(e.target.value)
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  pinnedTaskInputRef.current?.focus()
-                }}
-                onFocus={handleInputFocus}
-                onKeyDown={(e) => {
-                  console.log('[Pinned Input] onKeyDown:', e.key)
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addPinnedTask()
-                  }
-                }}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
+        {/* Task list */}
+        <div className="space-y-1.5">
+          {/* Incomplete tasks only */}
+          {tasks.filter(t => !t.done).map((task, index) => {
+            const isNextTask = index === 0
+            return (
+              <div
+                key={task.id}
+                draggable
+                onDragStart={() => handlePinnedDragStart(task.id)}
+                onDragOver={(e) => handlePinnedDragOver(e, task.id)}
+                onDragEnd={handlePinnedDragEnd}
+                className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
                 style={{
-                  color: 'var(--premium-text-primary)'
-                }}
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  console.log('[Add Button] Clicked')
-                  addPinnedTask()
-                }}
-                disabled={!newPinnedTaskText.trim()}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
-                style={{
-                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                  color: 'white'
+                  opacity: draggedPinnedTaskId === task.id ? 0.5 : 1,
+                  background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
                 }}
               >
-                Add
-              </button>
-            </div>
+                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
+                  <GripVertical className="h-3 w-3" />
+                </div>
+                <button
+                  onClick={() => togglePinnedTask(task.id)}
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <div
+                    className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
+                    style={{
+                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                      color: 'rgba(59, 130, 246, 0.9)'
+                    }}
+                  >
+                  </div>
+                  <span style={{
+                    color: isNextTask ? 'var(--premium-text-primary)' : 'var(--premium-text-secondary)',
+                    fontWeight: isNextTask ? 600 : 400
+                  }}>
+                    {task.text}
+                  </span>
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Add task input - fixed at bottom */}
+        <div className="mt-4 pt-4 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}>
+          <div className="flex items-center gap-2 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)' }}>
+            <Plus className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
+            <input
+              ref={pinnedTaskInputRef}
+              type="text"
+              placeholder="Add task..."
+              value={newPinnedTaskText}
+              onChange={(e) => {
+                console.log('[Pinned Input] onChange:', e.target.value)
+                setNewPinnedTaskText(e.target.value)
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                pinnedTaskInputRef.current?.focus()
+              }}
+              onFocus={handleInputFocus}
+              onKeyDown={(e) => {
+                console.log('[Pinned Input] onKeyDown:', e.key)
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  addPinnedTask()
+                }
+              }}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              className="flex-1 px-3 py-2 text-sm rounded-md focus:outline-none bg-transparent"
+              style={{
+                color: 'var(--premium-text-primary)',
+                border: '1px solid rgba(59, 130, 246, 0.4)'
+              }}
+            />
           </div>
         </div>
       </div>
     )
-  }, [tasks.length, project?.status, progress, togglePinnedTask, addPinnedTask, project, handlePinnedDragStart, handlePinnedDragOver, handlePinnedDragEnd, draggedPinnedTaskId])
+  }, [tasks, project?.status, progress, togglePinnedTask, addPinnedTask, project, handlePinnedDragStart, handlePinnedDragOver, handlePinnedDragEnd, draggedPinnedTaskId, newPinnedTaskText])
 
   if (loading) {
     return (

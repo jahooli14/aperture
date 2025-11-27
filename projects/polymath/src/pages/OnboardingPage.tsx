@@ -4,11 +4,13 @@
  * Questions 3-5: Freeform voice/text
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ArrowRight, Sparkles } from 'lucide-react'
 import { VoiceInput } from '../components/VoiceInput'
 import type { OnboardingResponse, OnboardingAnalysis } from '../types'
+
+const STORAGE_KEY = 'onboarding_progress'
 
 const QUESTIONS = [
   {
@@ -51,6 +53,20 @@ export function OnboardingPage() {
   const [analysis, setAnalysis] = useState<OnboardingAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
+  // Load saved progress on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      try {
+        const { currentQuestion: savedQuestion, responses: savedResponses } = JSON.parse(saved)
+        setCurrentQuestion(savedQuestion)
+        setResponses(savedResponses)
+      } catch (e) {
+        console.error('Failed to load saved progress:', e)
+      }
+    }
+  }, [])
+
   const question = QUESTIONS[currentQuestion]
   const progress = ((currentQuestion + 1) / QUESTIONS.length) * 100
 
@@ -66,10 +82,17 @@ export function OnboardingPage() {
     setResponses(updatedResponses)
     setCurrentResponse('')
 
+    // Save progress to localStorage
     if (currentQuestion < QUESTIONS.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
+      const nextQuestion = currentQuestion + 1
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        currentQuestion: nextQuestion,
+        responses: updatedResponses
+      }))
+      setCurrentQuestion(nextQuestion)
     } else {
-      // All questions answered - analyze
+      // All questions answered - clear storage and analyze
+      localStorage.removeItem(STORAGE_KEY)
       await analyzeResponses(updatedResponses)
     }
   }
@@ -94,7 +117,7 @@ export function OnboardingPage() {
         capabilities: ['React', 'Design'],
         themes: ['Web Development', 'Creative Tools'],
         patterns: ['Abandons at deployment phase'],
-        entities: { people: [], places: [], topics: ['coding', 'design'] },
+        entities: { people: [], places: [], topics: ['coding', 'design'], skills: [] },
         first_insight: 'You mentioned deployment twice as a challenge. This is a common pattern we can address.',
         graph_preview: {
           nodes: [
@@ -118,7 +141,16 @@ export function OnboardingPage() {
   }
 
   const handleSkipOnboarding = () => {
+    localStorage.removeItem(STORAGE_KEY)
     navigate('/')
+  }
+
+  const handleBack = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1)
+      // Clear current response when going back
+      setCurrentResponse('')
+    }
   }
 
   if (isAnalyzing) {
@@ -319,7 +351,7 @@ export function OnboardingPage() {
             <div className="text-sm">
               {currentQuestion > 0 && (
                 <button
-                  onClick={() => setCurrentQuestion(currentQuestion - 1)}
+                  onClick={handleBack}
                   className="hover:opacity-80 transition-opacity"
                   style={{ color: 'var(--premium-text-secondary)' }}
                 >
