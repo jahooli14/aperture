@@ -281,6 +281,7 @@ export function ProjectsPage() {
                 <VirtuosoGrid
                   useWindowScroll
                   data={projects}
+                  overscan={1000}
                   listClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
                   itemContent={(index, project) => {
                     return (

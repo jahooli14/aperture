@@ -732,7 +732,7 @@ export function MemoriesPage() {
                   <Virtuoso
                     style={{ height: 'calc(100vh - 280px)' }}
                     data={memories}
-                    overscan={200}
+                    overscan={1000}
                     itemContent={(index, memory) => {
                       const isNewlyCreated = memory.id === newlyCreatedMemoryId
 
