@@ -24,11 +24,28 @@ const MAX_SHARE_AGE = 24 * 60 * 60 * 1000 // 24 hours
 /**
  * Utility to validate if a string is a valid HTTP/HTTPS URL
  */
+/**
+ * Advanced URL validation with comprehensive checks
+ */
 function isValidUrl(str: string | null): boolean {
   if (!str) return false
+
   try {
     const url = new URL(str)
-    return ['http:', 'https:'].includes(url.protocol)
+
+    // Strict protocol check
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return false
+    }
+
+    // Optional: Additional domain validation
+    const validDomainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    if (!validDomainRegex.test(url.hostname)) {
+      return false
+    }
+
+    // Optional length checks
+    return url.toString().length <= 2048
   } catch {
     return false
   }
@@ -77,33 +94,6 @@ function sanitizeUrl(url: string): string {
   } catch (error) {
     console.warn('[ShareHandler] URL sanitization error:', error)
     return '' // Return empty string for invalid URLs
-  }
-}
-
-/**
- * Advanced URL validation with additional checks
- */
-function isValidUrl(str: string | null): boolean {
-  if (!str) return false
-
-  try {
-    const url = new URL(str)
-
-    // Strict protocol check
-    if (!['http:', 'https:'].includes(url.protocol)) {
-      return false
-    }
-
-    // Optional: Additional domain validation
-    const validDomainRegex = /^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-    if (!validDomainRegex.test(url.hostname)) {
-      return false
-    }
-
-    // Optional length checks
-    return url.toString().length <= 2048
-  } catch {
-    return false
   }
 }
 
