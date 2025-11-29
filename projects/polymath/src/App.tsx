@@ -67,6 +67,55 @@ function PageLoader() {
   )
 }
 
+// Share Target Fallback - Handles cases where SW doesn't catch the share request
+function ShareTargetFallback() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    console.log('[ShareTargetFallback] Activated with search:', location.search)
+    
+    // Extract params
+    const params = new URLSearchParams(location.search)
+    const text = params.get('text')
+    const url = params.get('url')
+    const title = params.get('title')
+
+    // Determine URL (Android puts it in text sometimes)
+    let sharedUrl = url
+    
+    // If text looks like a URL and url param is missing/empty, use text
+    if (!sharedUrl && text && (text.startsWith('http://') || text.startsWith('https://'))) {
+      sharedUrl = text
+    }
+
+    if (sharedUrl) {
+      console.log('[ShareTargetFallback] Redirecting to reading with URL:', sharedUrl)
+      // Redirect to reading page with params
+      const redirectParams = new URLSearchParams()
+      redirectParams.set('url', sharedUrl)
+      // Also set 'text' because ReadingPage might look for it
+      redirectParams.set('text', sharedUrl)
+      if (title) redirectParams.set('title', title)
+      
+      navigate(`/reading?${redirectParams.toString()}`, { replace: true })
+    } else {
+      console.warn('[ShareTargetFallback] No URL found, redirecting to root')
+      // No URL found, go to reading page anyway
+      navigate('/reading', { replace: true })
+    }
+  }, [navigate, location])
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-[#0f1729]">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+        <p className="text-gray-400 font-medium">Saving article...</p>
+      </div>
+    </div>
+  )
+}
+
 // Share target handling is now done via shareHandler.ts (runs before React)
 // which captures params in sessionStorage for ReadingPage to consume
 
@@ -198,6 +247,7 @@ export default function App() {
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/bedtime" element={<BedtimePage />} />
                       <Route path="/map" element={<KnowledgeMapPage />} />
+                      <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>
                   </Suspense>
                 </ErrorBoundary>
