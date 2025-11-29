@@ -22,6 +22,10 @@ import { PremiumTabs } from '../components/ui/premium-tabs'
 import { EmptyState } from '../components/ui/empty-state'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { articleProcessor } from '../lib/articleProcessor'
+import {
+  consumeShareData,
+  clearShareData
+} from '../lib/shareHandler'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { ArticleStatus } from '../types/reading'
