@@ -289,9 +289,17 @@ export function ReadingPage() {
     console.log('[ReadingPage] Current URL:', location.pathname + location.search)
 
     const params = new URLSearchParams(location.search)
-    const sharedParam = params.get('shared')
+    
+    // Check for 'shared', 'url', or 'text' parameters (robust fallback)
+    let sharedParam = params.get('shared') || params.get('url')
+    const textParam = params.get('text')
 
-    console.log('[ReadingPage] Shared parameter:', sharedParam)
+    // If no URL found yet, check if 'text' param contains a URL (common on Android)
+    if (!sharedParam && textParam && (textParam.startsWith('http://') || textParam.startsWith('https://'))) {
+      sharedParam = textParam
+    }
+
+    console.log('[ReadingPage] Extracted share URL:', sharedParam)
 
     const shareUrl: string | undefined = sharedParam || undefined
 
