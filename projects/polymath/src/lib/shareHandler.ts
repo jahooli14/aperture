@@ -114,19 +114,44 @@ export function initShareHandler() {
     const params = new URLSearchParams(window.location.search)
     const textParam = params.get('text')
     const urlParam = params.get('url')
+    const sharedParam = params.get('shared') // Add shared parameter check
     const titleParam = params.get('title')
 
-    // Detailed logging of input parameters
-    console.group('[ShareHandler] Input Parameters')
-    console.log('Text Param:', textParam)
-    console.log('URL Param:', urlParam)
-    console.log('Title Param:', titleParam)
+    // Log EVERYTHING for debugging
+    const fullShareLog = {
+      textParam,
+      urlParam,
+      sharedParam,
+      titleParam,
+      fullSearch: window.location.search,
+      fullUrl: window.location.href
+    }
+
+    // Write extensive log file for debugging
+    const logFileName = `/Users/danielcroome-horgan/Aperture/projects/polymath/logs/share_log_${Date.now()}.json`
+    try {
+      if (typeof window !== 'undefined') {
+        const fs = require('fs')
+        fs.writeFileSync(logFileName, JSON.stringify(fullShareLog, null, 2))
+        console.log(`[ShareHandler] Extensive log written to ${logFileName}`)
+      }
+    } catch (logError) {
+      console.error('[ShareHandler] Failed to write log file:', logError)
+    }
+
+    // Detailed console logging
+    console.group('[ShareHandler] Comprehensive Share Detection')
+    console.log('Full Share Log:', fullShareLog)
     console.groupEnd()
 
-    // Prioritize URL detection: text param (Android) → url param
+    // Prioritize URL detection
     let sharedUrl: string | null = null
 
-    if (isValidUrl(textParam)) {
+    // Check in order: shared param, text param, url param
+    if (isValidUrl(sharedParam)) {
+      sharedUrl = sanitizeUrl(sharedParam)
+      console.log('[ShareHandler] URL sourced from shared parameter')
+    } else if (isValidUrl(textParam)) {
       sharedUrl = sanitizeUrl(textParam)
       console.log('[ShareHandler] URL sourced from text parameter')
     } else if (isValidUrl(urlParam)) {
@@ -138,9 +163,9 @@ export function initShareHandler() {
       const shareData: ShareData = {
         url: sharedUrl,
         title: titleParam || undefined,
-        text: textParam || undefined,
+        text: textParam || sharedParam || undefined,
         timestamp: Date.now(),
-        source: 'web',
+        source: sharedParam ? 'native' : 'web',
         processed: false
       }
 
@@ -151,34 +176,57 @@ export function initShareHandler() {
         // Enhanced logging with performance metrics
         const endTime = performance.now()
         console.group('[ShareHandler] Share Link Stored')
-        console.log('URL:', shareData.url)
+        console.log('Full Share Data:', shareData)
         console.log('Processing Time:', (endTime - startTime).toFixed(2), 'ms')
         console.log('Storage Mechanism: localStorage')
         console.groupEnd()
-      } catch (error) {
-        // Comprehensive error logging
-        console.group('[ShareHandler] Storage Error')
-        console.error('Failed to store share data:', error)
-        console.log('Available localStorage space:',
-          typeof navigator !== 'undefined' ?
-          navigator.storage?.estimate() :
-          'Unable to estimate'
-        )
-        console.groupEnd()
 
-        // Optional: Fallback mechanism or error reporting
-        if (typeof window !== 'undefined' && window.navigator && window.navigator.sendBeacon) {
-          const errorData = new FormData()
-          errorData.append('error', 'Share Link Storage Failed')
-          errorData.append('url', sharedUrl)
-          window.navigator.sendBeacon('/api/log-error', errorData)
+        // Attempt to trigger custom event for immediate processing
+        if (typeof window !== 'undefined') {
+          const shareEvent = new CustomEvent('pwa-share', {
+            detail: {
+              shared: sharedUrl,
+              source: shareData.source
+            }
+          })
+          window.dispatchEvent(shareEvent)
+          console.log('[ShareHandler] Dispatched custom share event')
+        }
+      } catch (error) {
+        console.error('[ShareHandler] Comprehensive storage error:', error)
+
+        // More aggressive error reporting
+        if (typeof window !== 'undefined') {
+          const errorReport = {
+            error: 'Share Link Storage Failed',
+            details: error instanceof Error ? error.message : String(error),
+            url: sharedUrl,
+            timestamp: new Date().toISOString()
+          }
+
+          try {
+            // Log to localStorage for later retrieval
+            localStorage.setItem('share-error-log', JSON.stringify(errorReport))
+
+            // Send beacon if possible
+            if (window.navigator.sendBeacon) {
+              const errorBlob = new Blob([JSON.stringify(errorReport)], {type: 'application/json'})
+              window.navigator.sendBeacon('/api/share-error', errorBlob)
+            }
+          } catch (reportError) {
+            console.error('[ShareHandler] Failed to log error:', reportError)
+          }
         }
       }
     } else {
-      console.warn('[ShareHandler] No valid URL found in share parameters')
+      console.warn('[ShareHandler] No valid URL found in share parameters', {
+        textParam,
+        urlParam,
+        sharedParam
+      })
     }
   } catch (unexpectedError) {
-    console.error('[ShareHandler] Unexpected error during initialization:', unexpectedError)
+    console.error('[ShareHandler] Catastrophic error during initialization:', unexpectedError)
   }
 }
 
