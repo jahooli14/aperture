@@ -184,7 +184,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                   >
                     <Link
                       to={`/projects/${project.id}`}
-                      className="group block p-4 rounded-xl backdrop-blur-xl transition-all duration-300 h-full flex flex-col"
+                      className="group block p-4 rounded-xl backdrop-blur-xl transition-all duration-300 min-h-56 flex flex-col"
                       style={{
                         background: 'var(--premium-bg-2)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
@@ -199,7 +199,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                       }}
                     >
                       {/* Header with title and pin indicator */}
-                      <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-start justify-between gap-2 mb-3 flex-shrink-0">
                         <h4 className="premium-text-platinum font-semibold text-sm flex-1 line-clamp-2">
                           {project.title}
                         </h4>
@@ -211,17 +211,20 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                       {/* Description */}
                       {project.description && (
                         <p
-                          className="text-xs line-clamp-2 mb-3 flex-1"
+                          className="text-xs line-clamp-2 mb-3"
                           style={{ color: 'var(--premium-text-secondary)' }}
                         >
                           {project.description}
                         </p>
                       )}
 
+                      {/* Spacer - grows to fill available space */}
+                      <div className="flex-1"></div>
+
                       {/* Next Task - Interactive with Checkbox */}
                       {nextTask ? (
                         <div
-                          className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3"
+                          className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0"
                           style={{ background: 'var(--premium-bg-3)' }}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -270,14 +273,14 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs mb-3" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <p className="text-xs mb-3 flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
                           No tasks yet
                         </p>
                       )}
 
                       {/* Progress bar if tasks exist */}
                       {totalTasks > 0 && (
-                        <div className="mt-auto">
+                        <div className="flex-shrink-0">
                           <div
                             className="h-1.5 rounded-full overflow-hidden"
                             style={{ background: 'rgba(255, 255, 255, 0.1)' }}

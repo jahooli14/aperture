@@ -34,6 +34,7 @@ export function CreateProjectDialog() {
     description: '',
     motivation: '',
     next_step: '',
+    type: 'Creative',
   })
 
   const resetForm = () => {
@@ -42,6 +43,7 @@ export function CreateProjectDialog() {
       description: '',
       motivation: '',
       next_step: '',
+      type: 'Creative',
     })
   }
 
@@ -64,6 +66,7 @@ export function CreateProjectDialog() {
         description: formData.description || '',
         // type is optional - database will default to 'creative'
         status: 'active', // Always start as active
+        type: formData.type,
         metadata: {
           tasks,
           progress: 0,
@@ -157,6 +160,28 @@ export function CreateProjectDialog() {
                 }}
                 autoComplete="off"
               />
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="category" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Category
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {['Creative', 'Tech', 'Writing', 'Business', 'Life', 'Learning'].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: cat })}
+                    className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${formData.type === cat
+                        ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Motivation - The "So What" */}

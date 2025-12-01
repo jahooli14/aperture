@@ -216,29 +216,29 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${open ? '' : 'hidden'}`}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="relative w-full max-w-lg rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]"
         style={{ background: 'var(--premium-bg-2)' }}
       >
-        <button 
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
           style={{ color: 'var(--premium-text-tertiary)' }}
         >
           <X className="h-5 w-5" />
         </button>
-        
+
         <div className="mb-6 pr-8">
           <h2 className="text-xl font-bold premium-text-platinum mb-2">
             {insight.title}
           </h2>
           <div className="flex items-center gap-2">
-             <span className="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider" 
-                   style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--premium-text-secondary)' }}>
-               {insight.type}
-             </span>
+            <span className="px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--premium-text-secondary)' }}>
+              {insight.type}
+            </span>
           </div>
         </div>
 
@@ -256,8 +256,8 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
               <div className="space-y-4 relative pl-4 border-l-2 border-white/10">
                 {insight.data.timeline.map((item: any, idx: number) => (
                   <div key={idx} className="relative pl-4">
-                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--premium-bg-2)]" 
-                         style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)' }} />
+                    <div className="absolute -left-[21px] top-1.5 h-3 w-3 rounded-full border-2 border-[var(--premium-bg-2)]"
+                      style={{ backgroundColor: idx === insight.data.timeline.length - 1 ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)' }} />
                     <div className="text-xs mb-1" style={{ color: 'var(--premium-text-tertiary)' }}>
                       {item.date || 'Previously'}
                     </div>
@@ -274,12 +274,12 @@ function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight |
               </div>
             </div>
           )}
-          
+
           {insight.actionable && insight.action && (
-             <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-               <h4 className="text-sm font-bold text-blue-400 mb-1">Recommendation</h4>
-               <p className="text-sm text-blue-200">{insight.action}</p>
-             </div>
+            <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <h4 className="text-sm font-bold text-blue-400 mb-1">Recommendation</h4>
+              <p className="text-sm text-blue-200">{insight.action}</p>
+            </div>
           )}
         </div>
       </motion.div>
@@ -292,10 +292,10 @@ function InsightsSection() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [requirements, setRequirements] = useState<{ current: number; needed: number; tip: string } | null>(null)
-  
+
   // Dialog State
   const [selectedInsight, setSelectedInsight] = useState<SynthesisInsight | null>(null)
-  
+
   const navigate = useNavigate()
 
   const fetchInsights = async (isRefresh = false) => {
@@ -438,16 +438,18 @@ function InsightsSection() {
           </div>
         )}
       </div>
-      
+
       {/* Full Insight Modal */}
-      <InsightDialog 
-        insight={selectedInsight} 
-        open={!!selectedInsight} 
-        onClose={() => setSelectedInsight(null)} 
+      <InsightDialog
+        insight={selectedInsight}
+        open={!!selectedInsight}
+        onClose={() => setSelectedInsight(null)}
       />
     </section>
   )
 }
+
+import { FocusStream } from '../components/home/FocusStream'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -801,6 +803,9 @@ export function HomePage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Focus Stream - New Section */}
+        <FocusStream />
 
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">

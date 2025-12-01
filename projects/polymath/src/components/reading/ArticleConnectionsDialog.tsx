@@ -18,21 +18,23 @@ interface ArticleConnectionsDialogProps {
   isOpen: boolean
   onClose: () => void
   onConnectionsCreated?: () => void
+  initialStage?: 'prompt' | 'discovering'
 }
 
 export function ArticleConnectionsDialog({
   article,
   isOpen,
   onClose,
-  onConnectionsCreated
+  onConnectionsCreated,
+  initialStage = 'prompt'
 }: ArticleConnectionsDialogProps) {
-  const [stage, setStage] = useState<'prompt' | 'discovering'>('prompt')
+  const [stage, setStage] = useState<'prompt' | 'discovering'>(initialStage)
 
   useEffect(() => {
     if (isOpen) {
-      setStage('prompt')
+      setStage(initialStage)
     }
-  }, [isOpen])
+  }, [isOpen, initialStage])
 
   const handleDiscover = () => {
     setStage('discovering')
@@ -137,7 +139,7 @@ export function ArticleConnectionsDialog({
                       onConnectionCreated={() => {
                         onConnectionsCreated?.()
                       }}
-                      onConnectionDeleted={() => {}}
+                      onConnectionDeleted={() => { }}
                     />
                   </div>
 
