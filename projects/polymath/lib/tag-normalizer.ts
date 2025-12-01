@@ -5,8 +5,8 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@supabase/supabase-js'
-import { getSupabaseConfig, getGeminiConfig } from './env.js'
-import { logger } from './logger.js'
+import { getSupabaseConfig, getGeminiConfig } from './env'
+import { logger } from './logger'
 
 const { apiKey } = getGeminiConfig()
 const genAI = new GoogleGenerativeAI(apiKey)

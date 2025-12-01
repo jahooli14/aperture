@@ -5,11 +5,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from './lib/supabase.js'
-import { getUserId } from './lib/auth.js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { marked } from 'marked'
 import Parser from 'rss-parser'
-import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
+import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings'
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
 

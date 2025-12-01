@@ -4,11 +4,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from './lib/supabase.js'
-import { getUserId } from './lib/auth.js'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
 import { z } from 'zod'
-import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js'
-import { generateText } from './lib/gemini-chat.js'
+import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings'
+import { generateText } from './lib/gemini-chat'
 
 // Daily Queue Scoring Logic
 interface UserContext {

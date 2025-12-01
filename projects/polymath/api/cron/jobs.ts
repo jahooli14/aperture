@@ -17,15 +17,15 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from '../lib/supabase.js'
-import { getUserId } from '../lib/auth.js'
-import { runSynthesis } from '../../lib/synthesis.js'
-import { strengthenNodes } from '../../lib/strengthen-nodes.js'
-import { processMemory } from '../../lib/process-memory.js'
+import { getSupabaseClient } from '../lib/supabase'
+import { getUserId } from '../lib/auth'
+import { runSynthesis } from '../../lib/synthesis'
+import { strengthenNodes } from '../../lib/strengthen-nodes'
+import { processMemory } from '../../lib/process-memory'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = await getUserId(req)
+  const userId = getUserId()
   // Verify authorization
   const authHeader = req.headers['authorization']
   const cronSecret = process.env.CRON_SECRET
