@@ -1,0 +1,6 @@
+dist/
+node_modules/
+.DS_Store
+# Exclude TypeScript files - only deploy compiled JavaScript
+*.ts
+!*.d.ts
