@@ -1,5 +1,34 @@
 {
-  "buildCommand": "npm run build && node scripts/compile-api.js && find api lib scripts -name '*.ts' ! -name '*.d.ts' -delete",
+  "buildCommand": "npm run build && node scripts/compile-api.js",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "functions": {
+    "api/*.ts": {
+      "maxDuration": 60,
+      "runtime": "nodejs20.x"
+    },
+    "api/cron/*.ts": {
+      "maxDuration": 60,
+      "runtime": "nodejs20.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/jobs?job=daily",
+      "schedule": "30 21 * * *"
+    }
+  ]
 }
