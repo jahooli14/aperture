@@ -1,2 +1,4 @@
-*.ts
-!*.d.ts
+api/**/*.ts
+lib/**/*.ts
+scripts/**/*.ts
+!**/*.d.ts
