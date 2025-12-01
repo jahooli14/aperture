@@ -31,6 +31,9 @@ function compileFile(filePath) {
 
     fs.writeFileSync(jsPath, jsCode, 'utf8');
     compiled.push(relativePath + ' → ' + path.relative(process.cwd(), jsPath));
+
+    // Remove the original .ts file to avoid conflicts with Vercel
+    fs.unlinkSync(filePath);
   } catch (error) {
     console.error(`Failed to compile ${relativePath}:`, error.message);
     process.exit(1);
