@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2 } from 'lucide-react'
+import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2, Sparkles } from 'lucide-react'
 import { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -14,11 +14,46 @@ interface ReviewDeckProps {
 export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const [direction, setDirection] = useState<'left' | 'right' | 'up' | null>(null)
+    const [showTaskInput, setShowTaskInput] = useState(false)
+    const [taskInput, setTaskInput] = useState('')
+    const [suggestions, setSuggestions] = useState<string[]>([])
+    const [suggestionIndex, setSuggestionIndex] = useState(0)
+    const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
     const { updateProject } = useProjectStore()
     const { addToast } = useToast()
 
+    // Safe access for hooks
+    const currentProject = projects[currentIndex]
+
+    // Fetch AI suggestions when project changes
+    React.useEffect(() => {
+        if (!currentProject) return
+
+        const fetchSuggestions = async () => {
+            setIsLoadingSuggestions(true)
+            try {
+                const res = await fetch(`/api/projects?resource=next-steps&id=${currentProject.id}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        setSuggestions(data.suggestions.map((s: any) => s.suggested_task))
+                        setSuggestionIndex(0)
+                    } else {
+                        setSuggestions([])
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch suggestions:', error)
+            } finally {
+                setIsLoadingSuggestions(false)
+            }
+        }
+
+        fetchSuggestions()
+    }, [currentProject?.id])
+
     // If we've gone through all projects
-    if (currentIndex >= projects.length) {
+    if (!currentProject) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                 <div className="premium-card p-8 max-w-md w-full text-center">
@@ -38,9 +73,36 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
         )
     }
 
-    const currentProject = projects[currentIndex]
+
 
     const handleSwipe = async (dir: 'left' | 'right' | 'up') => {
+        if (dir === 'up') {
+            // Intercept 'up' swipe to show input
+            setShowTaskInput(true)
+            // Generate suggestion based on project state
+            const tasks = currentProject.metadata?.tasks || []
+            const lastTask = tasks.length > 0 ? tasks[tasks.length - 1] : null
+
+            let suggestion = "Brainstorm next steps"
+
+            // Prioritize AI suggestions if available
+            if (suggestions.length > 0) {
+                suggestion = suggestions[0]
+            } else {
+                // Fallback logic
+                if (!currentProject.description) suggestion = "Draft project description"
+                else if (tasks.length === 0) suggestion = "Create initial task list"
+                else if (lastTask && lastTask.done) suggestion = `Follow up on: ${lastTask.text}`
+                else if (currentProject.type === 'Writing') suggestion = "Outline next chapter"
+                else if (currentProject.type === 'Tech') suggestion = "Review codebase status"
+                else if (currentProject.type === 'Creative') suggestion = "Gather inspiration"
+                else if (lastTask) suggestion = `Review output of: ${lastTask.text}`
+            }
+
+            setTaskInput(suggestion)
+            return
+        }
+
         setDirection(dir)
         haptic.medium()
 
@@ -51,27 +113,41 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                 await updateProject(currentProject.id, { status: 'active', last_active: new Date().toISOString() })
                 addToast({ title: 'Marked Active', description: `${currentProject.title} is back in rotation.` })
             } else if (dir === 'left') {
-                // Snooze (Update last_active to now so it disappears from dormant list for 14 days)
-                // Or we could have a specific 'snoozed_until' field, but updating last_active is a simple hack for "I looked at it"
+                // Snooze
                 await updateProject(currentProject.id, { last_active: new Date().toISOString() })
                 addToast({ title: 'Snoozed', description: `We'll remind you about ${currentProject.title} later.` })
-            } else if (dir === 'up') {
-                // Micro-Action: Add a generic "Review" task
-                const tasks = currentProject.metadata?.tasks || []
-                const newTask = {
-                    id: crypto.randomUUID(),
-                    text: "Review project status and next steps",
-                    done: false,
-                    created_at: new Date().toISOString(),
-                    order: tasks.length
-                }
-                await updateProject(currentProject.id, {
-                    last_active: new Date().toISOString(),
-                    metadata: { ...currentProject.metadata, tasks: [...tasks, newTask] }
-                })
-                addToast({ title: 'Task Added', description: 'Added "Review project" to task list.' })
             }
 
+            setDirection(null)
+            setCurrentIndex(prev => prev + 1)
+        }, 200)
+    }
+
+    const handleTaskSubmit = async (e?: React.FormEvent) => {
+        e?.preventDefault()
+        if (!taskInput.trim()) return
+
+        const tasks = currentProject.metadata?.tasks || []
+        const newTask = {
+            id: crypto.randomUUID(),
+            text: taskInput.trim(),
+            done: false,
+            created_at: new Date().toISOString(),
+            order: tasks.length
+        }
+
+        await updateProject(currentProject.id, {
+            last_active: new Date().toISOString(),
+            metadata: { ...currentProject.metadata, tasks: [...tasks, newTask] }
+        })
+
+        addToast({ title: 'Task Added', description: 'Action item created.' })
+        setShowTaskInput(false)
+        setTaskInput('')
+
+        // Animate away
+        setDirection('up')
+        setTimeout(() => {
             setDirection(null)
             setCurrentIndex(prev => prev + 1)
         }, 200)
@@ -98,6 +174,92 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                         onSwipe={handleSwipe}
                     />
                 </AnimatePresence>
+
+                {/* Task Input Overlay */}
+                {showTaskInput && (
+                    <div className="absolute inset-0 z-20 bg-slate-900 rounded-3xl border border-slate-700 shadow-2xl p-6 flex flex-col">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-white">Add Action</h3>
+                            <button onClick={() => setShowTaskInput(false)} className="p-2 hover:bg-white/10 rounded-full">
+                                <X className="h-5 w-5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 flex flex-col justify-center gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-blue-400 uppercase tracking-wider">
+                                    Next Step
+                                </label>
+                                <textarea
+                                    autoFocus
+                                    value={taskInput}
+                                    onChange={(e) => setTaskInput(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none h-32"
+                                    placeholder="What needs to be done?"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault()
+                                            handleTaskSubmit()
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setTaskInput("Review project status")}
+                                    className="px-3 py-2 rounded-lg bg-slate-800 text-xs text-slate-400 hover:bg-slate-700 transition-colors"
+                                >
+                                    Review Status
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        // Cycle through AI suggestions if available
+                                        if (suggestions.length > 0) {
+                                            const nextIndex = (suggestionIndex + 1) % suggestions.length
+                                            setSuggestionIndex(nextIndex)
+                                            setTaskInput(suggestions[nextIndex])
+                                            return
+                                        }
+
+                                        // Fallback context-aware logic
+                                        let suggestion = "Brainstorm next steps"
+                                        const tasks = currentProject.metadata?.tasks || []
+                                        const lastTask = tasks.length > 0 ? tasks[tasks.length - 1] : null
+
+                                        if (!currentProject.description) suggestion = "Draft project description"
+                                        else if (tasks.length === 0) suggestion = "Create initial task list"
+                                        else if (lastTask && lastTask.done) suggestion = `Follow up on: ${lastTask.text}`
+                                        else if (currentProject.type === 'Writing') suggestion = "Outline next chapter"
+                                        else if (currentProject.type === 'Tech') suggestion = "Review codebase status"
+                                        else if (currentProject.type === 'Creative') suggestion = "Gather inspiration"
+                                        else if (lastTask) suggestion = `Review output of: ${lastTask.text}`
+
+                                        setTaskInput(suggestion)
+                                    }}
+                                    className="px-3 py-2 rounded-lg bg-indigo-500/20 text-xs text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 transition-colors flex items-center gap-1"
+                                    disabled={isLoadingSuggestions}
+                                >
+                                    {isLoadingSuggestions ? (
+                                        <Sparkles className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        <Sparkles className="h-3 w-3" />
+                                    )}
+                                    {suggestions.length > 1 ? `Suggest (${suggestionIndex + 1}/${suggestions.length})` : 'Suggest'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => handleTaskSubmit()}
+                            disabled={!taskInput.trim()}
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold flex items-center justify-center gap-2 transition-all mt-auto"
+                        >
+                            <Plus className="h-5 w-5" />
+                            Add & Continue
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="mt-8 flex items-center gap-6">
