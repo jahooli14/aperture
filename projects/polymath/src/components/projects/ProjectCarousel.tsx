@@ -224,7 +224,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                       {/* Next Task - Interactive with Checkbox */}
                       {nextTask ? (
                         <div
-                          className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0"
+                          className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0 h-10"
                           style={{ background: 'var(--premium-bg-3)' }}
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -273,7 +273,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                           )}
                         </div>
                       ) : (
-                        <p className="text-xs mb-3 flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        <p className="text-xs mb-3 flex-shrink-0 h-10 flex items-center" style={{ color: 'var(--premium-text-tertiary)' }}>
                           No tasks yet
                         </p>
                       )}
