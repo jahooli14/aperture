@@ -5,7 +5,7 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 60,
-      "runtime": "nodejs20.x"
+      "runtime": "nodejs20"
     }
   },
   "routes": [
