@@ -1,11 +1,5 @@
 {
   "buildCommand": "npm run build && node scripts/compile-api.js",
   "outputDirectory": "dist",
-  "installCommand": "npm install --include=dev",
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 60,
-      "runtime": "nodejs@20"
-    }
-  }
+  "installCommand": "npm install --include=dev"
 }
