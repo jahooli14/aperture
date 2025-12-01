@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && node scripts/compile-api.js",
+  "buildCommand": "npm run build && node scripts/compile-api.js && find api lib scripts -name '*.ts' -not -name '*.d.ts' -delete",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "routes": [
