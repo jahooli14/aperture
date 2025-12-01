@@ -6,6 +6,7 @@ import { getSupabaseClient } from './lib/supabase.js';
 import { getUserId } from './lib/auth.js';
 import { z } from 'zod';
 import { generateEmbedding, cosineSimilarity } from './lib/gemini-embeddings.js';
+import { generateText } from './lib/gemini-chat.js';
 // Validation schema for rating suggestions
 const RateRequestSchema = z.object({
     rating: z.number().int().min(-1).max(2),
@@ -326,6 +327,27 @@ export default async function handler(req, res) {
         // PATCH - Mark prompts as viewed
         if (req.method === 'PATCH') {
             return handleMarkBedtimeViewed(req, res, supabase, userId);
+        }
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+    // NEXT STEPS RESOURCE (AI Suggestions)
+    if (resource === 'next-steps') {
+        const id = req.query.id;
+        const action = req.query.action;
+        if (!id && req.method !== 'PATCH') {
+            return res.status(400).json({ error: 'Project ID required' });
+        }
+        // GET: Fetch suggestions (auto-generate if stale/missing)
+        if (req.method === 'GET') {
+            return handleGetNextSteps(req, res, supabase, userId, id);
+        }
+        // POST: Force regenerate
+        if (req.method === 'POST' && action === 'regenerate') {
+            return handleGenerateNextSteps(req, res, supabase, userId, id);
+        }
+        // PATCH: Update status
+        if (req.method === 'PATCH') {
+            return handleUpdateNextStepStatus(req, res, supabase, userId);
         }
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -1397,4 +1419,113 @@ async function penalizeCombination(capabilityIds, penalty, supabase) {
         console.error('[penalize] Unexpected error:', error);
         throw error;
     }
+}
+/**
+ * Next Steps Handlers
+ */
+async function handleGetNextSteps(req, res, supabase, userId, projectId) {
+    try {
+        // 1. Check for existing pending suggestions
+        const { data: existing, error } = await supabase
+            .from('project_next_steps')
+            .select('*')
+            .eq('project_id', projectId)
+            .eq('user_id', userId)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(3);
+        if (error)
+            throw error;
+        // 2. Check freshness (e.g., 24 hours)
+        const isFresh = existing && existing.length > 0 &&
+            (new Date().getTime() - new Date(existing[0].created_at).getTime()) < (24 * 60 * 60 * 1000);
+        if (isFresh) {
+            return res.status(200).json({ suggestions: existing, generated: false });
+        }
+        // 3. Generate if stale or missing
+        console.log('[next-steps] Suggestions stale or missing, generating new ones...');
+        const suggestions = await generateNextSteps(projectId, userId, supabase);
+        return res.status(200).json({ suggestions, generated: true });
+    }
+    catch (error) {
+        console.error('[next-steps] Error:', error);
+        return res.status(500).json({ error: 'Failed to fetch next steps' });
+    }
+}
+async function handleGenerateNextSteps(req, res, supabase, userId, projectId) {
+    try {
+        const suggestions = await generateNextSteps(projectId, userId, supabase);
+        return res.status(200).json({ suggestions, generated: true });
+    }
+    catch (error) {
+        console.error('[next-steps] Generation error:', error);
+        return res.status(500).json({ error: 'Failed to generate next steps' });
+    }
+}
+async function handleUpdateNextStepStatus(req, res, supabase, userId) {
+    try {
+        const { id, status } = req.body;
+        if (!id || !status)
+            return res.status(400).json({ error: 'id and status required' });
+        const { data, error } = await supabase
+            .from('project_next_steps')
+            .update({ status })
+            .eq('id', id)
+            .eq('user_id', userId)
+            .select()
+            .single();
+        if (error)
+            throw error;
+        return res.status(200).json({ success: true, suggestion: data });
+    }
+    catch (error) {
+        return res.status(500).json({ error: 'Failed to update status' });
+    }
+}
+async function generateNextSteps(projectId, userId, supabase) {
+    // 1. Fetch project context
+    const { data: project } = await supabase
+        .from('projects')
+        .select('title, description, metadata')
+        .eq('id', projectId)
+        .single();
+    if (!project)
+        throw new Error('Project not found');
+    const tasks = (project.metadata?.tasks || []);
+    const lastTasks = tasks.slice(-3).map(t => `- ${t.text} (${t.done ? 'Done' : 'Pending'})`).join('\n');
+    // 2. Prompt Gemini
+    const prompt = `You are a pragmatic project manager. Suggest 3 concrete, actionable next steps for this project.
+    
+Project: ${project.title}
+Description: ${project.description || 'No description'}
+
+Recent Activity:
+${lastTasks || 'No tasks yet'}
+
+Output strictly as a JSON array of strings. Keep each task under 10 words. Start with a verb.
+Example: ["Draft initial outline", "Research competitor pricing", "Email stakeholders"]`;
+    const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.4 });
+    const suggestedTasks = JSON.parse(response);
+    if (!Array.isArray(suggestedTasks))
+        throw new Error('Invalid AI response format');
+    // 3. Store in DB
+    const inserts = suggestedTasks.map(task => ({
+        project_id: projectId,
+        user_id: userId,
+        suggested_task: task,
+        status: 'pending'
+    }));
+    // Clear old pending ones first (optional, but keeps it clean)
+    await supabase
+        .from('project_next_steps')
+        .update({ status: 'dismissed' })
+        .eq('project_id', projectId)
+        .eq('status', 'pending');
+    const { data, error } = await supabase
+        .from('project_next_steps')
+        .insert(inserts)
+        .select();
+    if (error)
+        throw error;
+    return data;
 }
