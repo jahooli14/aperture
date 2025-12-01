@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && node scripts/compile-api.js",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "routes": [
