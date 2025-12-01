@@ -19,6 +19,7 @@ export function FocusStream() {
     // 1. Identify Dormant Projects (> 14 days inactive)
     const dormantProjects = useMemo(() => {
         const fourteenDaysAgo = new Date()
+        // fourteenDaysAgo.setMinutes(fourteenDaysAgo.getMinutes() - 1)
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
 
         return allProjects
@@ -53,6 +54,20 @@ export function FocusStream() {
 
         setTimeContext(prev => ({ ...prev, hour, energy }))
     }, [])
+
+    // Pre-fetch AI suggestions for top dormant projects
+    useEffect(() => {
+        if (dormantProjects.length === 0) return
+
+        // Only pre-fetch for the first 3 to save resources
+        const projectsToPreload = dormantProjects.slice(0, 3)
+
+        projectsToPreload.forEach(project => {
+            // Fire and forget - this will trigger generation if needed
+            fetch(`/api/projects?resource=next-steps&id=${project.id}`)
+                .catch(err => console.error(`Failed to pre-fetch suggestions for ${project.id}`, err))
+        })
+    }, [dormantProjects])
 
     if (allProjects.length === 0) return null
 
@@ -141,7 +156,12 @@ export function FocusStream() {
                                 Fits your current {timeContext.energy} energy level.
                                 {sparkCandidate.metadata?.tasks?.find((t: any) => !t.done)?.text
                                     ? ` Next step: "${sparkCandidate.metadata.tasks.find((t: any) => !t.done).text}"`
-                                    : " Why not add a quick thought or link an article?"}
+                                    : ` 💡 AI Suggestion: ${[
+                                        "Spend 5 minutes brainstorming next steps",
+                                        "Find one article that inspires you for this",
+                                        "Write down your main goal for this project",
+                                        "Review your motivation notes"
+                                    ][Math.floor(Math.random() * 4)]}`}
                             </p>
 
                             <button className="text-sm font-medium text-emerald-400 flex items-center gap-1 group-hover:gap-2 transition-all">

@@ -573,8 +573,8 @@ export function ProjectDetailPage() {
               <button
                 onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
                 className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80 ${project.status === 'completed'
-                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                    : 'bg-slate-800/50 text-slate-400 border-slate-700/50'
+                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                  : 'bg-slate-800/50 text-slate-400 border-slate-700/50'
                   }`}
                 style={{ border: '1px solid' }}
                 title={project.status === 'completed' ? 'Mark as Active' : 'Mark as Completed'}

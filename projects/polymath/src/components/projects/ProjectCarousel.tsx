@@ -181,6 +181,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: projectIndex * 0.05 }}
+                    className="h-full"
                   >
                     <Link
                       to={`/projects/${project.id}`}
@@ -208,96 +209,98 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                         )}
                       </div>
 
-                      {/* Description */}
-                      {project.description && (
-                        <p
-                          className="text-xs line-clamp-2 mb-3"
-                          style={{ color: 'var(--premium-text-secondary)' }}
-                        >
-                          {project.description}
-                        </p>
-                      )}
+                      {/* Description - always takes space for consistent height */}
+                      <div className="mb-3 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
+                        {project.description && (
+                          <p
+                            className="text-xs line-clamp-2"
+                            style={{ color: 'var(--premium-text-secondary)' }}
+                          >
+                            {project.description}
+                          </p>
+                        )}
+                      </div>
 
                       {/* Spacer - grows to fill available space */}
                       <div className="flex-1"></div>
 
-                      {/* Next Task - Interactive with Checkbox */}
-                      {nextTask ? (
-                        <div
-                          className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0 h-10"
-                          style={{ background: 'var(--premium-bg-3)' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            onClick={async (e) => {
-                              e.preventDefault()
-                              e.stopPropagation()
-                              if (!onUpdateProject) return
-                              const updatedTasks = tasks.map(t =>
-                                t.id === nextTask.id ? { ...t, done: true } : t
-                              )
-                              try {
-                                await onUpdateProject(project.id, {
-                                  metadata: { ...project.metadata, tasks: updatedTasks }
-                                })
-                                addToast({
-                                  title: 'Task complete!',
-                                  description: nextTask.text,
-                                  variant: 'success'
-                                })
-                                haptic.success()
-                              } catch (error) {
-                                console.error('Failed to complete task:', error)
-                                addToast({
-                                  title: 'Failed to complete task',
-                                  variant: 'destructive'
-                                })
-                              }
-                            }}
-                            className="flex-shrink-0 h-4 w-4 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
-                            style={{
-                              color: 'rgba(59, 130, 246, 0.9)',
-                              border: '1px solid rgba(255, 255, 255, 0.2)'
-                            }}
-                            title="Mark as complete"
-                          >
-                            <Check className="h-2.5 w-2.5 opacity-0 hover:opacity-100" />
-                          </button>
-                          <p className="text-xs premium-text-platinum line-clamp-1 flex-1">
-                            {nextTask.text}
-                          </p>
-                          {totalTasks > 0 && (
-                            <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
-                              {completedTasks}/{totalTasks}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-xs mb-3 flex-shrink-0 h-10 flex items-center" style={{ color: 'var(--premium-text-tertiary)' }}>
-                          No tasks yet
-                        </p>
-                      )}
-
-                      {/* Progress bar if tasks exist */}
-                      {totalTasks > 0 && (
-                        <div className="flex-shrink-0">
-                          <div
-                            className="h-1.5 rounded-full overflow-hidden"
-                            style={{ background: 'rgba(255, 255, 255, 0.1)' }}
-                          >
-                            <motion.div
-                              className="h-full"
-                              style={{
-                                background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))',
-                                width: `${(completedTasks / totalTasks) * 100}%`
+                      {/* Task or placeholder - fixed height to maintain consistent card sizes */}
+                      <div
+                        className="rounded-lg p-2 flex items-center justify-between gap-2 bg-opacity-50 mb-3 flex-shrink-0 h-10 overflow-hidden"
+                        style={{ background: nextTask ? 'var(--premium-bg-3)' : 'transparent' }}
+                        onClick={(e) => nextTask && e.stopPropagation()}
+                      >
+                        {nextTask ? (
+                          <>
+                            <button
+                              onClick={async (e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                if (!onUpdateProject) return
+                                const updatedTasks = tasks.map(t =>
+                                  t.id === nextTask.id ? { ...t, done: true } : t
+                                )
+                                try {
+                                  await onUpdateProject(project.id, {
+                                    metadata: { ...project.metadata, tasks: updatedTasks }
+                                  })
+                                  addToast({
+                                    title: 'Task complete!',
+                                    description: nextTask.text,
+                                    variant: 'success'
+                                  })
+                                  haptic.success()
+                                } catch (error) {
+                                  console.error('Failed to complete task:', error)
+                                  addToast({
+                                    title: 'Failed to complete task',
+                                    variant: 'destructive'
+                                  })
+                                }
                               }}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${(completedTasks / totalTasks) * 100}%` }}
-                              transition={{ duration: 0.6 }}
-                            />
-                          </div>
+                              className="flex-shrink-0 h-4 w-4 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
+                              style={{
+                                color: 'rgba(59, 130, 246, 0.9)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)'
+                              }}
+                              title="Mark as complete"
+                            >
+                              <Check className="h-2.5 w-2.5 opacity-0 hover:opacity-100" />
+                            </button>
+                            <p className="text-xs premium-text-platinum line-clamp-1 flex-1">
+                              {nextTask.text}
+                            </p>
+                            {totalTasks > 0 && (
+                              <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
+                                {completedTasks}/{totalTasks}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <p className="text-xs flex-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+                            No tasks yet
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Progress bar - always shown to maintain consistent height */}
+                      <div className="flex-shrink-0 w-full">
+                        <div
+                          className="h-1.5 rounded-full overflow-hidden w-full"
+                          style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+                        >
+                          <motion.div
+                            className="h-full"
+                            style={{
+                              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))' : 'transparent',
+                              width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%'
+                            }}
+                            initial={{ width: 0 }}
+                            animate={{ width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%' }}
+                            transition={{ duration: 0.6 }}
+                          />
                         </div>
-                      )}
+                      </div>
                     </Link>
                   </motion.div>
                 )

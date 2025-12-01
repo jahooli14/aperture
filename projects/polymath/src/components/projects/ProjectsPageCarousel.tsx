@@ -73,58 +73,63 @@ function ProjectCard({ project }: {
         )}
       </div>
 
-      {/* Description */}
-      {project.description && (
-        <p
-          className="text-xs line-clamp-2 mb-3 flex-1"
-          style={{ color: 'var(--premium-text-secondary)' }}
-        >
-          {project.description}
-        </p>
-      )}
-
-      {/* Next Task */}
-      {nextTask ? (
-        <div
-          className="rounded-lg p-2 flex items-center justify-between gap-2 mb-3"
-          style={{ background: 'var(--premium-bg-3)' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p className="text-xs premium-text-platinum line-clamp-1 flex-1">
-            {nextTask.text}
-          </p>
-          {totalTasks > 0 && (
-            <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
-              {completedTasks}/{totalTasks}
-            </span>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs mb-3" style={{ color: 'var(--premium-text-tertiary)' }}>
-          No tasks yet
-        </p>
-      )}
-
-      {/* Progress bar */}
-      {totalTasks > 0 && (
-        <div className="mt-auto">
-          <div
-            className="h-1.5 rounded-full overflow-hidden"
-            style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+      {/* Description - always takes space for consistent height */}
+      <div className="mb-3 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
+        {project.description && (
+          <p
+            className="text-xs line-clamp-2"
+            style={{ color: 'var(--premium-text-secondary)' }}
           >
-            <motion.div
-              className="h-full"
-              style={{
-                background: 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))',
-                width: `${(completedTasks / totalTasks) * 100}%`
-              }}
-              initial={{ width: 0 }}
-              animate={{ width: `${(completedTasks / totalTasks) * 100}%` }}
-              transition={{ duration: 0.6 }}
-            />
-          </div>
+            {project.description}
+          </p>
+        )}
+      </div>
+
+      {/* Spacer - grows to fill available space */}
+      <div className="flex-1"></div>
+
+      {/* Task or placeholder - fixed height to maintain consistent card sizes */}
+      <div
+        className="rounded-lg p-2 flex items-center justify-between gap-2 mb-3 h-10 flex-shrink-0 overflow-hidden"
+        style={{ background: nextTask ? 'var(--premium-bg-3)' : 'transparent' }}
+        onClick={(e) => nextTask && e.stopPropagation()}
+      >
+        {nextTask ? (
+          <>
+            <p className="text-xs premium-text-platinum line-clamp-1 flex-1">
+              {nextTask.text}
+            </p>
+            {totalTasks > 0 && (
+              <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
+                {completedTasks}/{totalTasks}
+              </span>
+            )}
+          </>
+        ) : (
+          <p className="text-xs flex-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+            No tasks yet
+          </p>
+        )}
+      </div>
+
+      {/* Progress bar - always shown to maintain consistent height */}
+      <div className="flex-shrink-0 w-full">
+        <div
+          className="h-1.5 rounded-full overflow-hidden w-full"
+          style={{ background: 'rgba(255, 255, 255, 0.1)' }}
+        >
+          <motion.div
+            className="h-full"
+            style={{
+              background: totalTasks > 0 ? 'linear-gradient(90deg, var(--premium-blue), var(--premium-emerald))' : 'transparent',
+              width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%'
+            }}
+            initial={{ width: 0 }}
+            animate={{ width: totalTasks > 0 ? `${(completedTasks / totalTasks) * 100}%` : '0%' }}
+            transition={{ duration: 0.6 }}
+          />
         </div>
-      )}
+      </div>
     </Link>
   )
 }
@@ -162,13 +167,14 @@ function ProjectSection({ title, description, icon: Icon, color, projects, loadi
       </div>
 
       {/* Grid of projects */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
         {projects.map((project, idx) => (
           <motion.div
             key={project.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
+            className="h-full"
           >
             <ProjectCard project={project} />
           </motion.div>

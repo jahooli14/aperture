@@ -487,7 +487,7 @@ export const ProjectCard = React.memo(function ProjectCard({
             <CardContent className="relative z-10 p-4">
               {/* Title Row with Actions */}
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h3 className="font-bold text-lg flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                <h3 className="font-bold text-lg flex-1 min-w-0 line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                   {project.title}
                 </h3>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -594,7 +594,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                 const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
                 return (
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-h-[5.25rem]">
                     {/* Next Task */}
                     {nextTask && (
                       <div className="rounded-lg p-2.5 flex items-center justify-between gap-2"
@@ -630,7 +630,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                             title="Complete this task"
                           />
 
-                          <p className="text-sm flex-1 min-w-0" style={{ color: 'var(--premium-text-primary)' }}>
+                          <p className="text-sm flex-1 min-w-0 line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                             {nextTask.text}
                           </p>
                         </div>
