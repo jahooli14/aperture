@@ -1,5 +1,5 @@
 {
   "buildCommand": "npm run build && node scripts/compile-api.js",
   "outputDirectory": "dist",
-  "installCommand": "npm install --include=dev"
+  "installCommand": "npm install"
 }
