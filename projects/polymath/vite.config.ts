@@ -44,7 +44,28 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Manual chunks removed to prevent context singleton issues
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
+          'supabase': ['@supabase/supabase-js'],
+          // Note: @google/generative-ai is only used server-side in API routes, not in frontend
+          'capacitor': [
+            '@capacitor/app',
+            '@capacitor/core',
+            '@capacitor/filesystem',
+            '@capacitor/haptics',
+            '@capacitor/keyboard',
+            '@capacitor/network',
+            '@capacitor/preferences',
+            '@capacitor/splash-screen',
+            '@capacitor/status-bar'
+          ],
+          // Heavy 3D visualization libraries - separate chunk
+          '3d-vendor': ['three', 'd3-force-3d', 'react-force-graph-3d'],
+          // Animation library
+          'animation-vendor': ['framer-motion'],
+        },
       },
     },
     // Increase chunk size warning limit since we're using code splitting

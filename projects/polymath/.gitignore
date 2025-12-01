@@ -7,4 +7,3 @@ dist
 *.tsbuildinfo
 *.tsbuildinfo
 .env.temp
-.env*.local
