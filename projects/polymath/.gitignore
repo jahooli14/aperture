@@ -5,5 +5,10 @@ dist
 .vercel
 .env.production
 *.tsbuildinfo
-*.tsbuildinfo
 .env.temp
+
+# Compiled TypeScript files - these are generated during build
+api/**/*.ts
+lib/**/*.ts
+scripts/**/*.ts
+!**/*.d.ts
