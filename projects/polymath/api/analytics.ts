@@ -5,11 +5,11 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { generateSeedEmbeddings, identifyTagMerges } from '../lib/tag-normalizer.js'
-import { generateMorningBriefing } from '../lib/bedtime-ideas.js'
-import { getSupabaseClient } from './lib/supabase.js'
-import { getUserId } from './lib/auth.js'
-import { getUsageStats } from './lib/gemini-embeddings.js'
+import { generateSeedEmbeddings, identifyTagMerges } from '../lib/tag-normalizer'
+import { generateMorningBriefing } from '../lib/bedtime-ideas'
+import { getSupabaseClient } from './lib/supabase'
+import { getUserId } from './lib/auth'
+import { getUsageStats } from './lib/gemini-embeddings'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 

@@ -13,8 +13,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getSupabaseConfig, getGeminiConfig } from './env.js'
-import { logger } from './logger.js'
+import { getSupabaseConfig, getGeminiConfig } from './env'
+import { logger } from './logger'
 
 const { url, serviceRoleKey } = getSupabaseConfig()
 const supabase = createClient(url, serviceRoleKey)

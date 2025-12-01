@@ -3,7 +3,7 @@
  * Generates glowing door suggestions based on map state
  */
 
-import { getSupabaseClient } from './supabase.js'
+import { getSupabaseClient } from './supabase'
 
 type DoorType = 'new_connection' | 'new_topic' | 'project_idea' | 'bridge'
 

@@ -1,13 +1,15 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build && node scripts/compile-api.js",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
     "api/*.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs20.x"
     },
     "api/cron/*.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "runtime": "nodejs20.x"
     }
   },
   "routes": [

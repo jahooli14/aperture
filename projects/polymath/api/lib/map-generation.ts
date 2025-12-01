@@ -3,8 +3,8 @@
  * Uses semantic embeddings and clustering to create meaningful geographic layout
  */
 
-import { getSupabaseClient } from './supabase.js'
-import { cosineSimilarity } from './gemini-embeddings.js'
+import { getSupabaseClient } from './supabase'
+import { cosineSimilarity } from './gemini-embeddings'
 import type { MapData, City, Road, Region } from '../../src/utils/mapTypes'
 
 // Re-define types here for API usage

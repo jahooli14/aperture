@@ -2,30 +2,15 @@
  * Project Scaffold Generator
  * Generates repo structure and README for project suggestions
  */
-
-import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getGeminiConfig } from './env'
-
-const { apiKey } = getGeminiConfig()
-const genAI = new GoogleGenerativeAI(apiKey)
-
-interface ProjectScaffold {
-  readme: string
-  techStack: string[]
-  fileStructure: Record<string, string> // file path → description
-  mvpFeatures: string[]
-  setupInstructions: string[]
-}
-
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getGeminiConfig } from './env.js';
+const { apiKey } = getGeminiConfig();
+const genAI = new GoogleGenerativeAI(apiKey);
 /**
  * Generate complete project scaffold for a suggestion
  */
-export async function generateProjectScaffold(
-  title: string,
-  description: string,
-  capabilities: string[]
-): Promise<ProjectScaffold> {
-  const prompt = `You are a project scaffolding expert. Generate a complete, production-ready project structure and README.
+export async function generateProjectScaffold(title, description, capabilities) {
+    const prompt = `You are a project scaffolding expert. Generate a complete, production-ready project structure and README.
 
 Project Title: ${title}
 Description: ${description}
@@ -69,34 +54,27 @@ Return ONLY valid JSON (no markdown, no code blocks):
   },
   "mvpFeatures": ["Feature 1", "Feature 2", ...],
   "setupInstructions": ["npm install", "npm run dev", ...]
-}`
-
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp',
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 2048,
-    }
-  })
-
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
-
-  // Extract JSON from response
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON found in AI response')
-
-  return JSON.parse(jsonMatch[0])
+}`;
+    const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+        }
+    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch)
+        throw new Error('No JSON found in AI response');
+    return JSON.parse(jsonMatch[0]);
 }
-
 /**
  * Generate simplified scaffold for creative (non-tech) projects
  */
-export async function generateCreativeScaffold(
-  title: string,
-  description: string
-): Promise<ProjectScaffold> {
-  const prompt = `You are a creative project planner. Generate a project plan for a creative (non-technical) project.
+export async function generateCreativeScaffold(title, description) {
+    const prompt = `You are a creative project planner. Generate a project plan for a creative (non-technical) project.
 
 Project Title: ${title}
 Description: ${description}
@@ -134,21 +112,18 @@ Return ONLY valid JSON (no markdown, no code blocks):
   },
   "mvpFeatures": ["First milestone", "Second milestone", ...],
   "setupInstructions": ["Gather materials", "Set up workspace", ...]
-}`
-
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp',
-    generationConfig: {
-      temperature: 0.8,
-      maxOutputTokens: 2048,
-    }
-  })
-
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON found in AI response')
-
-  return JSON.parse(jsonMatch[0])
+}`;
+    const model = genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 2048,
+        }
+    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch)
+        throw new Error('No JSON found in AI response');
+    return JSON.parse(jsonMatch[0]);
 }
