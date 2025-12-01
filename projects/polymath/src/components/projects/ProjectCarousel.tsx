@@ -166,7 +166,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
             </div>
 
             {/* Projects Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-3 auto-rows-fr">
               {section.projects.map((project, projectIndex) => {
                 const tasks = (project.metadata?.tasks || []) as any[]
                 const nextTask = tasks
@@ -184,7 +184,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
                   >
                     <Link
                       to={`/projects/${project.id}`}
-                      className="group block p-4 rounded-xl backdrop-blur-xl transition-all duration-300 min-h-56 flex flex-col"
+                      className="group block p-4 rounded-xl backdrop-blur-xl transition-all duration-300 flex flex-col h-full"
                       style={{
                         background: 'var(--premium-bg-2)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
