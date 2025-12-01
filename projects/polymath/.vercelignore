@@ -1,6 +1,11 @@
 dist/
 node_modules/
 .DS_Store
-# Exclude TypeScript files - only deploy compiled JavaScript
-*.ts
+# Exclude TypeScript source files only from api/ and lib/
+# Keep src/ files for frontend compilation
+api/*.ts
+api/**/*.ts
+lib/*.ts
+lib/**/*.ts
+scripts/**/*.ts
 !*.d.ts
