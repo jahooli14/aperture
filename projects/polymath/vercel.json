@@ -3,11 +3,7 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
-    "api/*.ts": {
-      "maxDuration": 60,
-      "runtime": "nodejs20.x"
-    },
-    "api/cron/*.ts": {
+    "api/**/*.js": {
       "maxDuration": 60,
       "runtime": "nodejs20.x"
     }
