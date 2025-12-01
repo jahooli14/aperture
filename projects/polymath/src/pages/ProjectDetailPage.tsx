@@ -5,7 +5,9 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Sparkles } from 'lucide-react'
+import { StudioTab } from '../components/projects/StudioTab'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
 import { ProjectActivityStream } from '../components/projects/ProjectActivityStream'
@@ -44,6 +46,7 @@ export function ProjectDetailPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
+  const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
 
 
   // Listen for custom event from FloatingNav to open AddNote dialog
@@ -61,6 +64,7 @@ export function ProjectDetailPage() {
   const [tempDescription, setTempDescription] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
@@ -396,6 +400,21 @@ export function ProjectDetailPage() {
     }
   }
 
+  const handleCategoryChange = async (newCategory: string) => {
+    if (!project) return
+    const oldType = project.type
+    setProject({ ...project, type: newCategory })
+
+    try {
+      await updateProject(project.id, { type: newCategory })
+      addToast({ title: 'Category updated', variant: 'success' })
+    } catch (error) {
+      setProject({ ...project, type: oldType })
+      addToast({ title: 'Failed to update category', variant: 'destructive' })
+    }
+    setShowCategoryMenu(false)
+  }
+
   const handleNoteAdded = (note: ProjectNote) => {
     setNotes([note, ...notes])
     setShowAddNote(false)
@@ -503,30 +522,27 @@ export function ProjectDetailPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Status Dropdown */}
+              {/* Category Picker */}
               <div className="relative">
                 <button
-                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  onClick={() => setShowCategoryMenu(!showCategoryMenu)}
                   className="px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80"
                   style={{
-                    background: 'var(--premium-bg-3)',
-                    backdropFilter: 'blur(12px)',
-                    color: 'var(--premium-blue)',
-                    border: '1px solid var(--premium-blue)'
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: 'var(--premium-text-secondary)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
                   }}
-                  title="Change project status"
+                  title="Change project category"
                 >
-                  <span>
-                    {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[project.status]}
-                  </span>
+                  <span>{project.type || 'Uncategorized'}</span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
 
-                {showStatusMenu && (
+                {showCategoryMenu && (
                   <>
                     <div
                       className="fixed inset-0 z-10"
-                      onClick={() => setShowStatusMenu(false)}
+                      onClick={() => setShowCategoryMenu(false)}
                     />
                     <div className="absolute right-0 mt-2 w-40 rounded-lg py-1 z-20 shadow-lg"
                       style={{
@@ -535,26 +551,43 @@ export function ProjectDetailPage() {
                         border: '1px solid rgba(59, 130, 246, 0.3)'
                       }}
                     >
-                      {['upcoming', 'active', 'dormant', 'completed'].map((status) => (
+                      {['Creative', 'Tech', 'Writing', 'Business', 'Life', 'Learning'].map((cat) => (
                         <button
-                          key={status}
-                          onClick={() => {
-                            handleStatusChange(status as Project['status'])
-                            setShowStatusMenu(false)
-                          }}
+                          key={cat}
+                          onClick={() => handleCategoryChange(cat)}
                           className="w-full px-4 py-2 text-left text-xs font-medium transition-colors hover:opacity-80"
                           style={{
-                            color: project.status === status ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
-                            backgroundColor: project.status === status ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
+                            color: project.type === cat ? 'var(--premium-blue)' : 'var(--premium-text-secondary)',
+                            backgroundColor: project.type === cat ? 'rgba(59, 130, 246, 0.1)' : 'transparent'
                           }}
                         >
-                          {{ active: 'Active', upcoming: 'Next', dormant: 'Dormant', completed: 'Done', 'on-hold': 'On Hold', maintaining: 'Maintaining', archived: 'Archived', abandoned: 'Abandoned' }[status]}
+                          {cat}
                         </button>
                       ))}
                     </div>
                   </>
                 )}
               </div>
+
+              {/* Status Toggle (Complete/Active only) */}
+              <button
+                onClick={() => handleStatusChange(project.status === 'completed' ? 'active' : 'completed')}
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-2 text-xs font-medium transition-all hover:opacity-80 ${project.status === 'completed'
+                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                    : 'bg-slate-800/50 text-slate-400 border-slate-700/50'
+                  }`}
+                style={{ border: '1px solid' }}
+                title={project.status === 'completed' ? 'Mark as Active' : 'Mark as Completed'}
+              >
+                {project.status === 'completed' ? (
+                  <>
+                    <Check className="h-3 w-3" />
+                    <span>Done</span>
+                  </>
+                ) : (
+                  <span>Mark Done</span>
+                )}
+              </button>
 
               {/* Pin Button */}
               <PinButton
@@ -602,129 +635,171 @@ export function ProjectDetailPage() {
       </div>
 
       {/* Content - All sections on one page */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Description */}
-        <div className="premium-card p-4">
-          {editingDescription ? (
-            <div className="space-y-2">
-              <textarea
-                ref={descriptionInputRef}
-                value={tempDescription}
-                onChange={(e) => setTempDescription(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') cancelEdit()
-                }}
-                rows={3}
-                placeholder="Add a description..."
-                className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
-                style={{
-                  color: 'var(--premium-text-primary)'
-                }}
+      {/* Tabs */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 mt-6">
+        <div className="flex items-center gap-4 border-b border-white/10">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'overview' ? 'text-blue-400' : 'text-slate-400 hover:text-slate-200'
+              }`}
+          >
+            Overview
+            {activeTab === 'overview' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
               />
-              <div className="flex gap-2 justify-end">
-                <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
-                  Cancel
-                </button>
-                <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
-                  Save
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
-              onClick={startEditDescription}
-              title="Click to edit"
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('studio')}
+            className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'studio' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
+              }`}
+          >
+            The Studio
+            {activeTab === 'studio' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-400"
+              />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        <AnimatePresence mode="wait">
+          {activeTab === 'overview' ? (
+            <motion.div
+              key="overview"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
             >
-              {project.description ? (
-                <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
-              ) : (
-                <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+              {/* Description */}
+              <div className="premium-card p-4">
+                {editingDescription ? (
+                  <div className="space-y-2">
+                    <textarea
+                      ref={descriptionInputRef}
+                      value={tempDescription}
+                      onChange={(e) => setTempDescription(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') cancelEdit()
+                      }}
+                      rows={3}
+                      placeholder="Add a description..."
+                      className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
+                      style={{
+                        color: 'var(--premium-text-primary)'
+                      }}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
+                        Cancel
+                      </button>
+                      <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
+                    onClick={startEditDescription}
+                    title="Click to edit"
+                  >
+                    {project.description ? (
+                      <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+                    ) : (
+                      <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Motivation - The "So What" */}
+              {project.metadata?.motivation && (
+                <div className="premium-card p-4 border-l-4 border-blue-500">
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
+                    Motivation
+                  </h3>
+                  <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                    {project.metadata.motivation}
+                  </p>
+                </div>
               )}
-            </div>
+
+              {/* Task Checklist */}
+              <div data-task-list>
+                <TaskList
+                  tasks={project.metadata?.tasks || []}
+                  onUpdate={async (tasks) => {
+                    console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
+
+                    // Ensure metadata is properly structured
+                    const newMetadata = {
+                      ...project.metadata,
+                      tasks: tasks,
+                      progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
+                    }
+
+                    const updated = {
+                      ...project,
+                      metadata: newMetadata,
+                      last_active: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    }
+
+                    console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
+
+                    // Update local state
+                    setProject(updated)
+
+                    console.log('[ProjectDetail] Calling updateProject API...')
+                    try {
+                      await updateProject(project.id, {
+                        metadata: newMetadata,
+                        last_active: updated.last_active,
+                        updated_at: updated.updated_at
+                      })
+                      console.log('[ProjectDetail] Update successful!')
+                      // Don't reload - local state is already correct and reloading causes stale data
+                    } catch (error) {
+                      console.error('[ProjectDetail] Update failed:', error)
+                      // Revert local state on error
+                      setProject(project)
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Activity */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+                  Activity
+                </h3>
+                <ProjectActivityStream
+                  notes={notes}
+                  onRefresh={loadProjectDetails}
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="studio"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <StudioTab project={project} />
+            </motion.div>
           )}
-        </div>
-
-        {/* Motivation - The "So What" */}
-        {project.metadata?.motivation && (
-          <div className="premium-card p-4 border-l-4 border-blue-500">
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
-              Motivation
-            </h3>
-            <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-              {project.metadata.motivation}
-            </p>
-          </div>
-        )}
-
-        {/* Task Checklist */}
-        <div data-task-list>
-          <TaskList
-            tasks={project.metadata?.tasks || []}
-            onUpdate={async (tasks) => {
-              console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
-
-              // Ensure metadata is properly structured
-              const newMetadata = {
-                ...project.metadata,
-                tasks: tasks,
-                progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
-              }
-
-              const updated = {
-                ...project,
-                metadata: newMetadata,
-                last_active: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-
-              console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
-
-              // Update local state
-              setProject(updated)
-
-              console.log('[ProjectDetail] Calling updateProject API...')
-              try {
-                await updateProject(project.id, {
-                  metadata: newMetadata,
-                  last_active: updated.last_active,
-                  updated_at: updated.updated_at
-                })
-                console.log('[ProjectDetail] Update successful!')
-                // Don't reload - local state is already correct and reloading causes stale data
-              } catch (error) {
-                console.error('[ProjectDetail] Update failed:', error)
-                // Revert local state on error
-                setProject(project)
-              }
-            }}
-          />
-        </div>
-
-        {/* Connections */}
-        <div className="premium-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
-              Connections
-            </h3>
-          </div>
-          <ConnectionsList
-            itemType="project"
-            itemId={project.id}
-            content={`${project.title}\n${project.description || ''}`}
-          />
-        </div>
-
-        {/* Activity */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-            Activity
-          </h3>
-          <ProjectActivityStream
-            notes={notes}
-            onRefresh={loadProjectDetails}
-          />
-        </div>
+        </AnimatePresence>
       </div>
 
       {/* Add Note Dialog */}

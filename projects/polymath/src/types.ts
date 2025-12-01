@@ -459,6 +459,7 @@ export interface CreateProjectInput {
   title: string
   description?: string
   status?: ProjectStatus
+  type?: string
   metadata?: ProjectMetadata
 }
 
@@ -466,6 +467,7 @@ export interface UpdateProjectInput {
   title?: string
   description?: string
   status?: ProjectStatus
+  type?: string
   metadata?: ProjectMetadata
 }
 

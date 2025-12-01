@@ -538,6 +538,17 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                   <Edit className="h-4 w-4" />
                 </button>
                 <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowConnectionsDialog(true)
+                  }}
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: 'var(--premium-blue)' }}
+                  title="Contextual Lens (Find Connections)"
+                >
+                  <Link2 className="h-4 w-4" />
+                </button>
+                <button
                   onClick={openOriginal}
                   className="p-1.5 rounded-lg transition-colors"
                   style={{ color: 'var(--premium-text-secondary)' }}
@@ -587,6 +598,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           // Refresh connection count if needed
           console.log('Connections created for article:', article.id)
         }}
+        initialStage="discovering"
       />
     </>
   )
