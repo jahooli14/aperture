@@ -40,9 +40,25 @@ export function FocusStream() {
     const sparkCandidate = useMemo(() => {
         const activeProjects = allProjects.filter(p => p.status === 'active')
         if (activeProjects.length === 0) return null
-        // Random for now, but could be smarter
-        return activeProjects[Math.floor(Math.random() * activeProjects.length)]
-    }, [allProjects])
+
+        // Filter by energy level
+        const matchingProjects = activeProjects.filter(p => {
+            // Check next task's energy first
+            const nextTask = p.metadata?.tasks?.sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
+            
+            if (nextTask?.energy_level) {
+                return nextTask.energy_level === timeContext.energy
+            }
+            
+            // Fallback to project energy
+            const projectEnergy = p.energy_level || 'moderate'
+            return projectEnergy === timeContext.energy
+        })
+
+        // Use matching projects if found, otherwise fallback to any active project
+        const pool = matchingProjects.length > 0 ? matchingProjects : activeProjects
+        return pool[Math.floor(Math.random() * pool.length)]
+    }, [allProjects, timeContext.energy])
 
     // Determine Energy Level based on time (Mock logic)
     useEffect(() => {

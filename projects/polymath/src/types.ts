@@ -438,6 +438,7 @@ export interface Task {
   done: boolean
   created_at: string
   order: number
+  energy_level?: 'low' | 'moderate' | 'high'
 }
 
 export interface ProjectMetadata {
