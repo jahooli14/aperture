@@ -1,11 +1,8 @@
 {
-  "buildCommand": "npm run build && node scripts/compile-api.js && find api lib scripts -name '*.ts' ! -name '*.d.ts' -delete",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 60,
-      "runtime": "vercel/node@20.x"
+      "runtime": "nodejs20.x"
     }
   },
   "routes": [
