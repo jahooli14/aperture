@@ -1239,7 +1239,7 @@ function countWords(content: string): number {
   return textOnly.split(/\s+/).length
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
   const userId = getUserId()
   const { resource, id } = req.query
@@ -2230,5 +2230,20 @@ async function storeCapabilitiesFromArticle(
     } catch (error) {
       console.error(`[reading] Error storing capability '${skillName}':`, error)
     }
+  }
+}
+
+
+// Error handling wrapper
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    return await internalHandler(req, res)
+  } catch (error: any) {
+    console.error('[API Error] Unhandled exception:', error)
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      details: error.message,
+      stack: error.stack
+    })
   }
 }

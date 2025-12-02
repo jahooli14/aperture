@@ -198,7 +198,7 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
   return queue
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
   const userId = getUserId()
   const { resource } = req.query
@@ -1799,4 +1799,19 @@ Example: ["Draft initial outline", "Research competitor pricing", "Email stakeho
 
   if (error) throw error
   return data
+}
+
+
+// Error handling wrapper
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    return await internalHandler(req, res)
+  } catch (error: any) {
+    console.error('[API Error] Unhandled exception:', error)
+    return res.status(500).json({
+      error: 'Internal Server Error',
+      details: error.message,
+      stack: error.stack
+    })
+  }
 }
