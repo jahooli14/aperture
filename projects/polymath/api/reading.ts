@@ -27,7 +27,7 @@ function decodeHTMLEntities(text: string): string {
   if (!text) return text
 
   // Use linkedom's HTML parsing to decode entities
-  const { document } = parseHTML(`<div>${text}</div>`)
+  const { document } = parseHTML(`<div>${text}</div>`) as any
   return document.querySelector('div')?.textContent || text
 }
 
@@ -75,7 +75,7 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
     console.log('[Readability] HTML fetched, length:', html.length)
 
     // Parse HTML with linkedom (DOM implementation for Node.js)
-    const { document } = parseHTML(html)
+    const { document } = parseHTML(html) as any
 
     // Set base URL for relative links
     const baseURL = new URL(url)
@@ -172,7 +172,7 @@ async function fetchArticleWithDiffbot(url: string): Promise<any> {
       throw new Error(`Diffbot API returned ${response.status}`)
     }
 
-    const data = await response.json()
+    const data = await response.json() as any
 
     if (!data.objects || data.objects.length === 0) {
       throw new Error('Diffbot returned no article data')
@@ -229,7 +229,7 @@ async function fetchArticleWithScraperAPI(url: string): Promise<any> {
     console.log('[ScraperAPI] HTML fetched, length:', html.length)
 
     // Parse with linkedom + Readability
-    const { document } = parseHTML(html)
+    const { document } = parseHTML(html) as any
 
     const baseURL = new URL(url)
     const base = document.createElement('base')
@@ -323,7 +323,7 @@ async function fetchTweet(url: string): Promise<any> {
     const html = await response.text()
 
     // Parse HTML
-    const { document } = parseHTML(html)
+    const { document } = parseHTML(html) as any
 
     // Extract metadata from OpenGraph tags
     const getMeta = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') ||
