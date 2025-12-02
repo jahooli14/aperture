@@ -4,17 +4,21 @@
  * Implements point allocation, diversity injection, and suggestion storage
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './supabase'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getSupabaseConfig, getGeminiConfig } from './env'
-import { logger } from './logger'
 import { generateProjectScaffold, generateCreativeScaffold } from './generate-project-scaffold'
 
-const { url, serviceRoleKey } = getSupabaseConfig()
-const supabase = createClient(url, serviceRoleKey)
+const logger = {
+  info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  warn: (objOrMsg: any, msg?: string) => console.warn(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  error: (objOrMsg: any, msg?: string) => console.error(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  debug: (objOrMsg: any, msg?: string) => console.debug(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  fatal: (objOrMsg: any, msg?: string) => console.error(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  level: 'info'
+}
 
-const { apiKey } = getGeminiConfig()
-const genAI = new GoogleGenerativeAI(apiKey)
+const supabase = getSupabaseClient()
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 // Synthesis configuration
 const CONFIG = {
@@ -214,8 +218,7 @@ async function getCapabilities(): Promise<Capability[]> {
  * Lower score = less novel (suggested many times, especially if dismissed)
  */
 async function calculateNovelty(capabilityIds: string[]): Promise<number> {
-  const { url, serviceRoleKey } = getSupabaseConfig()
-  const supabase = createClient(url, serviceRoleKey)
+  const supabase = getSupabaseClient()
 
   // Sort capability IDs for consistent lookup
   const sortedIds = [...capabilityIds].sort()
@@ -277,8 +280,7 @@ async function calculateInterestScore(
 ): Promise<number> {
   if (interests.length === 0) return 0.5 // Neutral if no interests
 
-  const { url, serviceRoleKey } = getSupabaseConfig()
-  const supabase = createClient(url, serviceRoleKey)
+  const supabase = getSupabaseClient()
 
   // Generate embedding for project description
   const projectEmbedding = await generateEmbedding(projectDescription)
@@ -346,8 +348,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
  * Find memories that inspired a project idea using vector similarity
  */
 async function findInspiringMemories(projectDescription: string): Promise<string[]> {
-  const { url, serviceRoleKey } = getSupabaseConfig()
-  const supabase = createClient(url, serviceRoleKey)
+  const supabase = getSupabaseClient()
 
   // Generate embedding for project description
   const projectEmbedding = await generateEmbedding(projectDescription)

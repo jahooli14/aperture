@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
-import { GapAnalysisResult } from '../src/types'
+import { getSupabaseClient } from './supabase'
+import { GapAnalysisResult } from '../../src/types'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getSupabaseClient()
 
 /**
  * Analyzes user's memories and detects gaps for follow-up prompts
