@@ -4,7 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 
 // Use process.env directly, similar to other API lib modules
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
