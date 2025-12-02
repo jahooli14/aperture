@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 
 const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -29,7 +29,7 @@ interface BedtimePrompt {
  * Generate Catalyst prompts from 2-3 specific inputs
  */
 export async function generateCatalystPrompts(
-  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
+  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>, 
   userId: string
 ): Promise<BedtimePrompt[]> {
   console.log(`[Bedtime] Generating catalyst prompts for user ${userId} with ${inputs.length} inputs`)
@@ -250,3 +250,74 @@ async function generateCatalystPromptsWithAI(
 ${inputsList}
 
 **YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items. Not
+`
+
+  const result = await model.generateContent(prompt)
+  const text = result.response.text()
+
+  const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
+  if (!jsonMatch) {
+    console.error('[Bedtime] Failed to parse catalyst prompts JSON:', text)
+    throw new Error('Failed to parse catalyst prompts')
+  }
+
+  const parsed = JSON.parse(jsonMatch[0])
+  return parsed.map((p: any) => ({
+    prompt: p.prompt,
+    type: p.type || 'connection',
+    format: p.format || 'visualization',
+    relatedIds: inputs.map(i => i.id),
+    metaphor: undefined
+  }))
+}
+
+async function generatePromptsWithAI(
+  recentArticles: any[],
+  recentMemories: any[],
+  activeProjects: any[],
+  currentInterests: any[],
+  oldInsights: any[],
+  context: {
+    hasRichInput: boolean
+    hasBlockedProjects: boolean
+    hasNoProjects: boolean
+  },
+  performance?: any
+): Promise<BedtimePrompt[]> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+
+  const allThemes = recentMemories
+    .flatMap(m => m.themes || [])
+    .filter(Boolean)
+
+  const themeCounts = allThemes.reduce((acc: Record<string, number>, theme: string) => {
+    acc[theme] = (acc[theme] || 0) + 1
+    return acc
+  }, {})
+
+  const consequentialThemes = Object.entries(themeCounts)
+    .filter(([_, count]) => (count as number) >= 2)
+    .sort(([, a], [, b]) => (b as number) - (a as number))
+    .slice(0, 5)
+    .map(([theme, count]) => `${theme} (appears ${count}x)`)
+
+  const topArticles = recentArticles.slice(0, 5).map(a => ({
+    title: a.title,
+    summary: a.summary?.substring(0, 200) || 'No summary',
+    tags: a.tags?.slice(0, 3) || []
+  }))
+
+  const topMemories = recentMemories.slice(0, 8).map(m => ({
+    title: m.title,
+    body: m.body?.substring(0, 200),
+    themes: m.themes?.slice(0, 3) || []
+  }))
+
+  const projectContext = activeProjects.length > 0
+    ? activeProjects.map(p => {
+      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : '';
+      return `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}${motivation}`;
+    }).join('\n')
+    : 'No projects yet';
+
+  const prompt = `You are a zebra. Yes, a zebra. Now that I have your attention, break your usual patterns. You are an insight engineer. Generate 3-5 prompts that trigger genuine 
