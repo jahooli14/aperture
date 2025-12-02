@@ -648,13 +648,17 @@ async function getShadowProjects() {
 /**
  * Helper function to get first incomplete task from project
  */
-function getNextStep(project: any): string | null {
+function getNextTask(project: any): { text: string, energy_level?: string } | null {
   const tasks = project.metadata?.tasks || []
   const nextTask = tasks
     .sort((a: any, b: any) => a.order - b.order)
     .find((task: any) => !task.done)
 
-  return nextTask?.text || null
+  if (!nextTask) return null
+  return {
+    text: nextTask.text,
+    energy_level: nextTask.energy_level
+  }
 }
 
 /**
@@ -686,37 +690,45 @@ async function getSmartSuggestion() {
   )
   if (hotStreakProjects.length > 0) {
     const project = hotStreakProjects[0]
-    const nextStep = getNextStep(project)
+    const nextTask = getNextTask(project)
     suggestions.push({
       type: 'project',
       title: `Continue "${project.title}"`,
-      description: nextStep || 'Make progress on your priority project',
+      description: nextTask?.text || 'Make progress on your priority project',
       reasoning: '🔥 Hot streak! Keep the momentum going on your priority project',
       item: project,
       estimatedTime: project.estimated_next_step_time || 30,
-      energyLevel: project.energy_level || 'moderate',
+      energyLevel: nextTask?.energy_level || project.energy_level || 'moderate',
       priority: 10,
       action_url: `/projects/${project.id}`
     })
   }
 
-  // 2. Morning = fresh energy projects
+  // 2. Morning = fresh energy projects (High/Moderate)
   if (timeOfDay === 'morning' && !isWeekend) {
-    const freshProjects = projects.filter(p =>
-      p.status === 'active' &&
-      (!p.energy_level || p.energy_level === 'high' || p.energy_level === 'moderate')
-    )
+    const freshProjects = projects.filter(p => {
+      const nextTask = getNextTask(p)
+      
+      // If task has energy level, prioritize that
+      if (nextTask?.energy_level) {
+        return nextTask.energy_level === 'high' || nextTask.energy_level === 'moderate'
+      }
+
+      // Fallback to project level
+      return !p.energy_level || p.energy_level === 'high' || p.energy_level === 'moderate'
+    })
+
     if (freshProjects.length > 0) {
       const project = freshProjects[0]
-      const nextStep = getNextStep(project)
+      const nextTask = getNextTask(project)
       suggestions.push({
         type: 'project',
         title: `Start fresh: "${project.title}"`,
-        description: nextStep || 'Make progress while energy is high',
+        description: nextTask?.text || 'Make progress while energy is high',
         reasoning: '☀️ Morning is perfect for focused work on important projects',
         item: project,
         estimatedTime: project.estimated_next_step_time || 45,
-        energyLevel: project.energy_level || 'high',
+        energyLevel: nextTask?.energy_level || project.energy_level || 'high',
         priority: 9,
         action_url: `/projects/${project.id}`
       })
@@ -744,23 +756,33 @@ async function getSmartSuggestion() {
 
   // 4. Evening = low-energy tasks
   if (timeOfDay === 'evening') {
-    const quickProjects = projects.filter(p =>
-      p.status === 'active' &&
-      p.estimated_next_step_time &&
-      p.estimated_next_step_time <= 15 &&
-      p.energy_level === 'low'
-    )
+    const quickProjects = projects.filter(p => {
+      const nextTask = getNextTask(p)
+      
+      // If task has energy level, prioritize that
+      if (nextTask?.energy_level) {
+        return nextTask.energy_level === 'low'
+      }
+      
+      // Fallback to project level
+      return (
+        p.estimated_next_step_time &&
+        p.estimated_next_step_time <= 15 &&
+        p.energy_level === 'low'
+      )
+    })
+
     if (quickProjects.length > 0) {
       const project = quickProjects[0]
-      const nextStep = getNextStep(project)
+      const nextTask = getNextTask(project)
       suggestions.push({
         type: 'project',
         title: `Quick win: "${project.title}"`,
-        description: nextStep || 'Complete a small task',
+        description: nextTask?.text || 'Complete a small task',
         reasoning: '🌙 Evening is perfect for quick, low-energy wins',
         item: project,
         estimatedTime: project.estimated_next_step_time,
-        energyLevel: 'low',
+        energyLevel: nextTask?.energy_level || 'low',
         priority: 8,
         action_url: `/projects/${project.id}`
       })
@@ -775,15 +797,15 @@ async function getSmartSuggestion() {
     )
     if (creativeProjects.length > 0) {
       const project = creativeProjects[0]
-      const nextStep = getNextStep(project)
+      const nextTask = getNextTask(project)
       suggestions.push({
         type: 'project',
         title: `Explore: "${project.title}"`,
-        description: nextStep || 'Work on your creative project',
+        description: nextTask?.text || 'Work on your creative project',
         reasoning: '🎨 Weekend time for creative exploration',
         item: project,
         estimatedTime: project.estimated_next_step_time || 60,
-        energyLevel: project.energy_level || 'moderate',
+        energyLevel: nextTask?.energy_level || project.energy_level || 'moderate',
         priority: 8,
         action_url: `/projects/${project.id}`
       })
@@ -821,15 +843,15 @@ async function getSmartSuggestion() {
     const activeProjects = projects.filter(p => p.status === 'active')
     if (activeProjects.length > 0) {
       const project = activeProjects[0]
-      const nextStep = getNextStep(project)
+      const nextTask = getNextTask(project)
       suggestions.push({
         type: 'project',
         title: `Continue "${project.title}"`,
-        description: nextStep || 'Make progress on this project',
+        description: nextTask?.text || 'Make progress on this project',
         reasoning: '⚡ Keep momentum on your active projects',
         item: project,
         estimatedTime: project.estimated_next_step_time || 30,
-        energyLevel: project.energy_level || 'moderate',
+        energyLevel: nextTask?.energy_level || project.energy_level || 'moderate',
         priority: 6,
         action_url: `/projects/${project.id}`
       })
@@ -988,12 +1010,12 @@ async function getInspiration(excludeProjectIds: string[]) {
   }
 
   const project = otherProjects[Math.floor(Math.random() * otherProjects.length)]
-  const nextStep = getNextStep(project)
+  const nextTask = getNextTask(project)
 
   const selected = {
     type: 'project',
     title: project.title,
-    description: nextStep || project.description || 'Explore this idea',
+    description: nextTask?.text || project.description || 'Explore this idea',
     url: `/projects/${project.id}`,
     reasoning: 'A project waiting for your attention'
   }
