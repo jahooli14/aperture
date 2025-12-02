@@ -787,8 +787,9 @@ export async function runSynthesis(userId: string) {
 
   // Merge and deduplicate interests
   const interestMap = new Map<string, Interest>()
+  const allInterests = [...memoryInterests, ...articleInterests]
 
-  [...memoryInterests, ...articleInterests].forEach(interest => {
+  allInterests.forEach(interest => {
     const key = interest.name.toLowerCase()
     if (interestMap.has(key)) {
       // If duplicate, take the stronger one and add mentions

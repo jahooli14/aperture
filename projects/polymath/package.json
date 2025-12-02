@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc -p tsconfig.api.json; vite build",
     "build:analyze": "npm run build && node scripts/analyze-bundle.js",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
