@@ -1633,8 +1633,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ANALYZE RESOURCE - Extract entities/themes from article
   if (resource === 'analyze' && req.method === 'POST') {
     try {
-      const articleId = id
-      if (!articleId) {
+      const articleId = Array.isArray(id) ? id[0] : id
+      if (!articleId || typeof articleId !== 'string') {
         return res.status(400).json({ error: 'Article ID required' })
       }
 

@@ -217,7 +217,10 @@ export default function App() {
     <PinProvider>
       <AutoSuggestionProvider>
         <ToastProvider>
-          <Router>
+          <Router future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}>
             <ScrollToTop />
             <div className="min-h-screen flex flex-col">
               <OfflineIndicator />
