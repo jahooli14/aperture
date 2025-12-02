@@ -99,7 +99,7 @@ If no interesting gaps, return empty array.`
       return { followUpPrompts: [] }
     }
 
-    const result = await response.json()
+    const result = await response.json() as any // Explicitly cast to avoid 'unknown' error
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!text) {
