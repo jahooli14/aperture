@@ -1,23 +1,5 @@
 {
   "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
   "crons": [
     {
       "path": "/api/cron/jobs?job=daily",
