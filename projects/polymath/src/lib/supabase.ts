@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Prioritize Vite env vars, fallback to process.env for broader compatibility
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || process.env.SUPABASE_URL
-const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+// Prioritize Vite env vars, fallback to build-time defined constants (Vercel/Process env)
+const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || __SUPABASE_URL__
+const supabaseAnonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || __SUPABASE_ANON_KEY__
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('[Supabase] Missing environment variables:', {
