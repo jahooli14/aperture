@@ -200,7 +200,7 @@ function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = await getUserId(req)
+  const userId = getUserId()
   const { resource } = req.query
 
   // PRIORITY RESOURCE - Set project as priority (PATCH /api/projects?resource=priority&id={id})
