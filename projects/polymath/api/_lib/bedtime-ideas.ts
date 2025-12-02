@@ -76,7 +76,7 @@ async function getRecentArticles(userId: string, days: number) {
   cutoff.setDate(cutoff.getDate() - days)
 
   const { data } = await supabase
-    .from('reading_items')
+    .from('reading_queue')
     .select('id, title, summary, url, tags, completed_at, created_at')
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
@@ -189,47 +189,6 @@ async function getOldInsights(userId: string, daysAgo: number) {
   return data || []
 }
 
-function detectConnections(
-  articles: any[],
-  memories: any[],
-  projects: any[]
-): string[] {
-  const connections: string[] = []
-
-  const articleTags = new Set(articles.flatMap(a => a.tags || []))
-  const memoryThemes = new Set(memories.flatMap(m => m.themes || []))
-  const memoryEntities = new Set(
-    memories.flatMap(m => (m.entities || []).map((e: any) => e.name))
-  )
-
-  const themeOverlaps = [...articleTags].filter(tag =>
-    memoryThemes.has(tag as string) || memoryEntities.has(tag as string)
-  )
-
-  if (themeOverlaps.length > 0) {
-    connections.push(
-      `Cross-pollination: "${themeOverlaps.slice(0, 3).join('", "')}" appears in both your reading and your thoughts`
-    )
-  }
-
-  const dormantProjects = projects.filter(p => p.status === 'dormant')
-  for (const project of dormantProjects) {
-    const projectKeywords = (project.title + ' ' + (project.description || ''))
-      .toLowerCase()
-      .split(/\s+/) // Corrected escape for regex
-    const hasThemeMatch = [...memoryThemes].some(theme =>
-      projectKeywords.some(word => word.includes((theme as string).toLowerCase()))
-    )
-    if (hasThemeMatch) {
-      connections.push(
-        `Dormant project "${project.title}" relates to your recent thinking`
-      )
-    }
-  }
-
-  return connections.slice(0, 3)
-}
-
 async function generateCatalystPromptsWithAI(
   inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string } >,
   userId: string
@@ -249,13 +208,21 @@ async function generateCatalystPromptsWithAI(
 **INPUTS:**
 ${inputsList}
 
-**YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items. Not
-`
+**YOUR JOB:** Find the non-obvious insight hiding in the intersection of these items.
+
+Return JSON array:
+[
+  {
+    "prompt": "...",
+    "type": "connection",
+    "format": "visualization"
+  }
+]`
 
   const result = await model.generateContent(prompt)
   const text = result.response.text()
 
-  const jsonMatch = text.match(/[[\]][\s\S]*[[\]]/)
+  const jsonMatch = text.match(/[\[][\s\S]*[\]]/) // Corrected escape for regex
   if (!jsonMatch) {
     console.error('[Bedtime] Failed to parse catalyst prompts JSON:', text)
     throw new Error('Failed to parse catalyst prompts')
@@ -314,7 +281,97 @@ async function generatePromptsWithAI(
   }))
 
   const projectContext = activeProjects.length > 0
-    ? activeProjects.map(p => {
-      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The \"Why\"): ${p.metadata.motivation}` : '';
-      return `- [${p.status.toUpperCase()}] \"${p.title}\": ${p.description || 'No description'}${motivation}`;
-    }).join('\n')
+    ? activeProjects.map((p: any) => {
+      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : ''; // Corrected escape for quote
+      return `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}${motivation}`;
+    }).join('\n') // Corrected escape for newline
+    : 'No active projects.'
+
+  const prompt = `You are a Hypnagogic Assistant. The user is about to sleep.
+Your goal is to generate "Incubation Prompts" that their brain can work on subconsciously.
+
+**USER CONTEXT:**
+- Recent Reading: ${topArticles.map(a => `"${a.title}"`).join(', ') || 'None'}
+- Recent Thoughts: ${topMemories.map(m => `"${m.title}"`).join(', ') || 'None'}
+- Recurring Themes: ${consequentialThemes.join(', ') || 'None'}
+- Active Projects:
+${projectContext}
+
+- Top Interests: ${currentInterests.map((i: any) => `${i.name}`).join(', ') || 'None'}
+- Old Insights: ${oldInsights.map((i: any) => `"${i.title}"`).join(', ') || 'None'}
+
+**INSTRUCTIONS:**
+Generate 3-4 specific prompts.
+1. **Connection**: Connect a recent article to a project.
+2. **Divergent**: Ask a "What if" question about a recurring theme.
+3. **Unblock**: If they have a project, suggest a tiny perspective shift to unblock it.
+4. **Synthesis**: Combine an old insight with a new interest.
+
+Return JSON array:
+[
+  {
+    "prompt": "How could the concept of [X] from your reading apply to [Project Y]?",
+    "type": "connection",
+    "relatedIds": ["id1", "id2"]
+  }
+]`
+
+  try {
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/[\[][\s\S]*[\]]/) // Corrected escape for regex
+    return jsonMatch ? JSON.parse(jsonMatch[0]) : []
+  } catch (e) {
+    console.error('Failed to generate bedtime prompts', e)
+    return []
+  }
+}
+
+async function storePrompts(userId: string, prompts: BedtimePrompt[]) {
+  // Placeholder
+  return
+}
+
+async function getPromptPerformance(userId: string) {
+  return {}
+}
+
+export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  
+  const projects = await getActiveProjects(userId)
+  const projectContext = projects.map((p: any) => `${p.title} (${p.status})`).join(', ')
+
+  const prompt = `Generate a morning briefing for a creator.
+  Projects: ${projectContext}
+  
+  Return JSON matching this structure:
+  {
+    "greeting": "Good morning...",
+    "focus_project": { "id": "...", "title": "...", "next_step": "...", "unblocker": "..." },
+    "quick_win": { "id": "...", "title": "..." },
+    "forgotten_gem": null
+  }`
+  
+  try {
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/\{[\s\S]*\}/) // Corrected escape for regex
+    if (!jsonMatch) throw new Error('Invalid JSON')
+    
+    const data = JSON.parse(jsonMatch[0])
+    return data
+  } catch (e) {
+    return {
+      greeting: "Good morning!",
+      focus_project: projects[0] ? { 
+        id: projects[0].id, 
+        title: projects[0].title, 
+        next_step: "Review current status", 
+        unblocker: "Break it down" 
+      } : null,
+      quick_win: null,
+      forgotten_gem: null
+    }
+  }
+}
