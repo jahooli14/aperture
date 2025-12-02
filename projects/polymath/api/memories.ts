@@ -280,7 +280,7 @@ Text: ${text}`
     try {
       // Import processMemory function
       console.log(`[handleCapture] 🔄 Attempting to import process-memory module...`)
-      const { processMemory } = await import('../lib/process-memory.js')
+      const { processMemory } = await import('./_lib/process-memory.js')
       console.log(`[handleCapture] ✅ Successfully imported process-memory module`)
 
       // Process the memory (extract entities, generate embeddings, etc.)
@@ -1007,7 +1007,7 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { processMemory } = await import('../lib/process-memory.js')
+    const { processMemory } = await import('./_lib/process-memory.js')
     await processMemory(memory_id)
 
     return res.status(200).json({
