@@ -1,16 +1,18 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { createClient } from '@supabase/supabase-js'
-import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../src/types'
-import { getSupabaseConfig, getGeminiConfig } from './env'
-import { logger } from './logger'
+import { getSupabaseClient } from './supabase'
+import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
 import { normalizeTags } from './tag-normalizer'
-import { cosineSimilarity } from '../api/lib/gemini-embeddings'
+import { cosineSimilarity } from './gemini-embeddings'
 
-const { apiKey } = getGeminiConfig()
-const genAI = new GoogleGenerativeAI(apiKey)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const supabase = getSupabaseClient()
 
-const { url, serviceRoleKey } = getSupabaseConfig()
-const supabase = createClient(url, serviceRoleKey)
+const logger = {
+  info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  warn: (objOrMsg: any, msg?: string) => console.warn(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  error: (objOrMsg: any, msg?: string) => console.error(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+  debug: (objOrMsg: any, msg?: string) => console.debug(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),
+}
 
 /**
  * Process a memory: extract entities, generate embeddings, store results

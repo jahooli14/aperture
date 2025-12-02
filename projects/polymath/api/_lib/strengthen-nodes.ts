@@ -4,7 +4,7 @@
  * Runs daily to update node strengths based on actual usage
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from './supabase'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { readFile } from 'fs/promises'
@@ -12,10 +12,7 @@ import { join } from 'path'
 
 const execAsync = promisify(exec)
 
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const supabase = getSupabaseClient()
 
 const CONFIG = {
   CAPABILITY_INCREMENT: 0.1, // Strength boost per use

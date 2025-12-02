@@ -4,10 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getGeminiConfig } from './env'
-
-const { apiKey } = getGeminiConfig()
-const genAI = new GoogleGenerativeAI(apiKey)
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 interface ProjectScaffold {
   readme: string

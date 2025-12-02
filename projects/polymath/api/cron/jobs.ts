@@ -17,11 +17,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from '../lib/supabase'
-import { getUserId } from '../lib/auth'
-import { runSynthesis } from '../../lib/synthesis'
-import { strengthenNodes } from '../../lib/strengthen-nodes'
-import { processMemory } from '../../lib/process-memory'
+import { getSupabaseClient } from '../_lib/supabase'
+import { getUserId } from '../_lib/auth'
+import { runSynthesis } from '../_lib/synthesis'
+import { strengthenNodes } from '../_lib/strengthen-nodes'
+import { processMemory } from '../_lib/process-memory'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
@@ -138,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 4. Generate bedtime prompts (runs once daily)
       try {
-        const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
+        const { generateBedtimePrompts } = await import('../_lib/bedtime-ideas.js')
         const prompts = await generateBedtimePrompts(userId)
         results.tasks.bedtime = {
           success: true,
