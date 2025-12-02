@@ -138,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // 4. Generate bedtime prompts (runs once daily)
       try {
-        const { generateBedtimePrompts } = await import('../../lib/bedtime-ideas.js')
+        const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
         const prompts = await generateBedtimePrompts(userId)
         results.tasks.bedtime = {
           success: true,

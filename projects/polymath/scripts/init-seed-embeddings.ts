@@ -14,7 +14,7 @@ config({ path: resolve(process.cwd(), '.env.local') })
 // Load .env.production.local as fallback
 config({ path: resolve(process.cwd(), '.env.production.local') })
 
-import { generateSeedEmbeddings } from '../lib/tag-normalizer.js'
+import { generateSeedEmbeddings } from '../api/lib/tag-normalizer.js'
 
 async function main() {
   console.log('🚀 Starting seed tag embedding generation...')

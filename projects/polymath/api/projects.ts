@@ -1435,7 +1435,7 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
 
       // If it's past 9:30pm, generate new prompts
       if (hour >= 21 && minute >= 30) {
-        const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
+        const { generateBedtimePrompts } = await import('./lib/bedtime-ideas.js')
         const prompts = await generateBedtimePrompts(userId)
         return res.status(200).json({
           prompts,
@@ -1467,7 +1467,7 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
 
 async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   try {
-    const { generateBedtimePrompts } = await import('../lib/bedtime-ideas.js')
+    const { generateBedtimePrompts } = await import('./lib/bedtime-ideas.js')
     const prompts = await generateBedtimePrompts(userId)
     return res.status(201).json({
       prompts,
@@ -1518,7 +1518,7 @@ async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResp
       }
     }
 
-    const { generateCatalystPrompts } = await import('../lib/bedtime-ideas.js')
+    const { generateCatalystPrompts } = await import('./lib/bedtime-ideas.js')
     const prompts = await generateCatalystPrompts(inputs, userId)
 
     return res.status(201).json({
