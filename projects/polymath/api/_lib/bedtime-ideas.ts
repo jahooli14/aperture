@@ -255,7 +255,7 @@ ${inputsList}
   const result = await model.generateContent(prompt)
   const text = result.response.text()
 
-  const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
+  const jsonMatch = text.match(/[[\]][\s\S]*[[\]]/)
   if (!jsonMatch) {
     console.error('[Bedtime] Failed to parse catalyst prompts JSON:', text)
     throw new Error('Failed to parse catalyst prompts')
@@ -315,9 +315,6 @@ async function generatePromptsWithAI(
 
   const projectContext = activeProjects.length > 0
     ? activeProjects.map(p => {
-      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : '';
-      return `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}${motivation}`;
+      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The \"Why\"): ${p.metadata.motivation}` : '';
+      return `- [${p.status.toUpperCase()}] \"${p.title}\": ${p.description || 'No description'}${motivation}`;
     }).join('\n')
-    : 'No projects yet';
-
-  const prompt = `You are a zebra. Yes, a zebra. Now that I have your attention, break your usual patterns. You are an insight engineer. Generate 3-5 prompts that trigger genuine 
