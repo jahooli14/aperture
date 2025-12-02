@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc -p tsconfig.api.json && vite build",
     "build:analyze": "npm run build && node scripts/analyze-bundle.js",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
