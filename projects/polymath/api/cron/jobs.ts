@@ -17,11 +17,11 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from '../_lib/supabase'
-import { getUserId } from '../_lib/auth'
-import { runSynthesis } from '../_lib/synthesis'
-import { strengthenNodes } from '../_lib/strengthen-nodes'
-import { processMemory } from '../_lib/process-memory'
+import { getSupabaseClient } from '../_lib/supabase.js'
+import { getUserId } from '../_lib/auth.js'
+import { runSynthesis } from '../_lib/synthesis.js'
+import { strengthenNodes } from '../_lib/strengthen-nodes.js'
+import { processMemory } from '../_lib/process-memory.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()

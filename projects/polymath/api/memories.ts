@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { getSupabaseClient } from './_lib/supabase'
-import { getUserId } from './_lib/auth'
+import { getSupabaseClient } from './_lib/supabase.js'
+import { getUserId } from './_lib/auth.js'
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import formidable from 'formidable'
 import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
-import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings'
+import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
