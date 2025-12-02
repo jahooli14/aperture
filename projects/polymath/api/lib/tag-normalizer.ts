@@ -4,15 +4,11 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { createClient } from '@supabase/supabase-js'
-import { getSupabaseConfig, getGeminiConfig } from './env'
-import { logger } from './logger'
+import { getSupabaseClient } from './supabase'
 
-const { apiKey } = getGeminiConfig()
-const genAI = new GoogleGenerativeAI(apiKey)
-
-const { url, serviceRoleKey } = getSupabaseConfig()
-const supabase = createClient(url, serviceRoleKey)
+// Use process.env directly, similar to other API lib modules
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const supabase = getSupabaseClient()
 
 interface CanonicalTag {
   id: string
@@ -92,7 +88,7 @@ export async function normalizeTags(rawTags: string[]): Promise<string[]> {
           })
           .select()
 
-        logger.info({ raw: cleaned, canonical: tag, similarity }, 'Mapped tag to canonical form')
+        console.log(`[Tag Normalizer] Mapped tag '${cleaned}' to '${tag}' (similarity: ${similarity})`)
         continue
       }
 
@@ -112,15 +108,15 @@ export async function normalizeTags(rawTags: string[]): Promise<string[]> {
         .single()
 
       if (error) {
-        logger.warn({ tag: cleaned, error }, 'Failed to create canonical tag, skipping')
+        console.warn(`[Tag Normalizer] Failed to create canonical tag '${cleaned}':`, error)
         continue
       }
 
       normalizedTags.push(cleaned)
-      logger.info({ tag: cleaned, category }, 'Created new canonical tag')
+      console.log(`[Tag Normalizer] Created new canonical tag '${cleaned}' in category '${category}'`)
 
     } catch (error) {
-      logger.warn({ tag: cleaned, error }, 'Error normalizing tag, skipping')
+      console.warn(`[Tag Normalizer] Error normalizing tag '${cleaned}':`, error)
       continue
     }
   }
@@ -175,7 +171,7 @@ Respond with ONLY the category name, nothing else.`
     // Fallback
     return 'Personal'
   } catch (error) {
-    logger.warn({ tag, error }, 'Failed to infer category, using default')
+    console.warn(`[Tag Normalizer] Failed to infer category for '${tag}', using default. Error:`, error)
     return 'Personal'
   }
 }
@@ -185,7 +181,7 @@ Respond with ONLY the category name, nothing else.`
  * Call this from a one-time initialization endpoint
  */
 export async function generateSeedEmbeddings(): Promise<void> {
-  logger.info('Generating embeddings for seed tags...')
+  console.log('[Tag Normalizer] Generating embeddings for seed tags...')
 
   const { data: seedTags, error: fetchError } = await supabase
     .from('canonical_tags')
@@ -198,11 +194,11 @@ export async function generateSeedEmbeddings(): Promise<void> {
   }
 
   if (!seedTags || seedTags.length === 0) {
-    logger.info('All seed tags already have embeddings')
+    console.log('[Tag Normalizer] All seed tags already have embeddings')
     return
   }
 
-  logger.info({ count: seedTags.length }, 'Processing seed tags')
+  console.log(`[Tag Normalizer] Processing ${seedTags.length} seed tags`)
 
   let processed = 0
   for (const tag of seedTags) {
@@ -215,17 +211,15 @@ export async function generateSeedEmbeddings(): Promise<void> {
         .eq('id', tag.id)
 
       processed++
-      logger.debug({ tag: tag.tag, progress: `${processed}/${seedTags.length}` }, 'Generated embedding')
-
       // Rate limiting: wait 100ms between API calls
       await new Promise(resolve => setTimeout(resolve, 100))
 
     } catch (error) {
-      logger.error({ tag: tag.tag, error }, 'Failed to generate embedding')
+      console.error(`[Tag Normalizer] Failed to generate embedding for '${tag.tag}':`, error)
     }
   }
 
-  logger.info({ processed, total: seedTags.length }, 'Completed seed embedding generation')
+  console.log(`[Tag Normalizer] Completed seed embedding generation (${processed}/${seedTags.length})`)
 }
 
 /**
@@ -243,7 +237,7 @@ export async function identifyTagMerges(): Promise<any[]> {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const tagList = tags.map(t => t.tag).join('\n')
 
-  const prompt = `Identify clusters of tags that mean the exact same thing and should be merged.
+  const prompt = `Identify clusters of tags that mean the exact same thing and should be merged. 
   
   TAGS:
   ${tagList}
@@ -251,7 +245,7 @@ export async function identifyTagMerges(): Promise<any[]> {
   Rules:
   - Only group tags that are semantically IDENTICAL (e.g. "ai" and "artificial intelligence", "ux" and "user experience").
   - Ignore related but distinct concepts.
-  - Select the best "canonical" name for the group (usually the most common or shortest).
+  - Select the best "canonical" name for the group (usually the most common or shortest). 
   
   Return JSON:
   [
@@ -262,7 +256,7 @@ export async function identifyTagMerges(): Promise<any[]> {
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    const jsonMatch = text.match(/[\[][\s\S]*[/\]]/)
     if (!jsonMatch) return []
 
     const clusters = JSON.parse(jsonMatch[0])
@@ -272,7 +266,7 @@ export async function identifyTagMerges(): Promise<any[]> {
       ids: tags.filter(t => c.merge_candidates.includes(t.tag) || t.tag === c.canonical).map(t => t.id)
     })).filter((c: any) => c.ids.length > 1)
   } catch (e) {
-    logger.error({ error: e }, 'Failed to identify tag merges')
+    console.error('[Tag Normalizer] Failed to identify tag merges:', e)
     return []
   }
 }
