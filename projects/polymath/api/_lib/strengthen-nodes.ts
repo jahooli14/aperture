@@ -4,7 +4,7 @@
  * Runs daily to update node strengths based on actual usage
  */
 
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { readFile } from 'fs/promises'

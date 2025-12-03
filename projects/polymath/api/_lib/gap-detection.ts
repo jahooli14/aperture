@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 import { GapAnalysisResult } from '../../src/types'
 
 const supabase = getSupabaseClient()
