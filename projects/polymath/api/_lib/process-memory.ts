@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
-import { normalizeTags } from './tag-normalizer'
-import { cosineSimilarity } from './gemini-embeddings'
+import { normalizeTags } from './tag-normalizer.js'
+import { cosineSimilarity } from './gemini-embeddings.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
