@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getUserId } from '../_lib/auth.js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -26,6 +27,13 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!process.env.GEMINI_API_KEY) {
+    console.error('[connections] GEMINI_API_KEY is not set. Cannot perform AI operations.')
+    return res.status(500).json({ error: 'Server configuration error: GEMINI_API_KEY is not set.' })
+  }
+
+  const userId = getUserId() // Get the user ID
+
   // Handle GET requests for listing connections
   if (req.method === 'GET') {
     const { action, id, type } = req.query
@@ -42,15 +50,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let sourceTitle = ''
 
         if (type === 'project') {
-          const { data } = await supabase.from('projects').select('title, embedding').eq('id', id).single()
+          const { data } = await supabase.from('projects').select('title, embedding').eq('user_id', userId).eq('id', id).single()
           sourceEmbedding = data?.embedding
           sourceTitle = data?.title || ''
         } else if (type === 'thought') {
-          const { data } = await supabase.from('memories').select('title, body, embedding').eq('id', id).single()
+          const { data } = await supabase.from('memories').select('title, body, embedding').eq('user_id', userId).eq('id', id).single()
           sourceEmbedding = data?.embedding
           sourceTitle = data?.title || data?.body?.slice(0, 50) || ''
         } else if (type === 'article') {
-          const { data } = await supabase.from('reading_queue').select('title, embedding').eq('id', id).single()
+          const { data } = await supabase.from('reading_queue').select('title, embedding').eq('user_id', userId).eq('id', id).single()
           sourceEmbedding = data?.embedding
           sourceTitle = data?.title || ''
         }
@@ -78,6 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data } = await supabase
               .from('projects')
               .select('id, title, description, embedding')
+              .eq('user_id', userId) // Added user_id filter
               .not('embedding', 'is', null)
               .limit(50)
             items = data || []
@@ -85,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data } = await supabase
               .from('memories')
               .select('id, title, body, embedding')
+              .eq('user_id', userId) // Added user_id filter
               .not('embedding', 'is', null)
               .limit(50)
             items = data || []
@@ -92,6 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data } = await supabase
               .from('reading_queue')
               .select('id, title, excerpt, embedding')
+              .eq('user_id', userId) // Added user_id filter
               .not('embedding', 'is', null)
               .limit(50)
             items = data || []
@@ -135,15 +146,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let sourceContent = ''
 
         if (type === 'project') {
-          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+          const { data } = await supabase.from('projects').select('*').eq('user_id', userId).eq('id', id).single()
           sourceItem = data
           sourceContent = `Project: ${data?.title}\n${data?.description || ''}`
         } else if (type === 'thought' || type === 'memory') {
-          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
+          const { data } = await supabase.from('memories').select('*').eq('user_id', userId).eq('id', id).single()
           sourceItem = data
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}`
         } else if (type === 'article') {
-          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
+          const { data } = await supabase.from('reading_queue').select('*').eq('user_id', userId).eq('id', id).single()
           sourceItem = data
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
         }
@@ -156,6 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { data: connections } = await supabase
           .from('connections')
           .select('*')
+          .eq('user_id', userId) // Added user_id filter
           .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
           .limit(10)
 
@@ -168,13 +180,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           let itemText = ''
           if (relatedType === 'thought') {
-            const { data } = await supabase.from('memories').select('title, body').eq('id', relatedId).single()
+            const { data } = await supabase.from('memories').select('title, body').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'}`
           } else if (relatedType === 'project') {
-            const { data } = await supabase.from('projects').select('title, description').eq('id', relatedId).single()
+            const { data } = await supabase.from('projects').select('title, description').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
           } else if (relatedType === 'article') {
-            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('id', relatedId).single()
+            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
           }
           if (itemText) connectedItems.push(itemText)
@@ -244,15 +256,15 @@ Return valid JSON only.`
         let sourceTitle = ''
 
         if (type === 'project') {
-          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
+          const { data } = await supabase.from('projects').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `Project: ${data?.title}\nDescription: ${data?.description || ''}\nStatus: ${data?.status || 'unknown'}`
         } else if (type === 'thought' || type === 'memory') {
-          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
+          const { data } = await supabase.from('memories').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || data?.body?.slice(0, 50) || 'Untitled'
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}\nThemes: ${(data?.themes || []).join(', ')}`
         } else if (type === 'article') {
-          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
+          const { data } = await supabase.from('reading_queue').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
         }
@@ -261,6 +273,7 @@ Return valid JSON only.`
         const { data: connections } = await supabase
           .from('connections')
           .select('*')
+          .eq('user_id', userId) // Added user_id filter
           .or(`and(source_type.eq.${type === 'memory' ? 'thought' : type},source_id.eq.${id}),and(target_type.eq.${type === 'memory' ? 'thought' : type},target_id.eq.${id})`)
           .limit(10)
 
@@ -272,13 +285,13 @@ Return valid JSON only.`
 
           let itemText = ''
           if (relatedType === 'thought') {
-            const { data } = await supabase.from('memories').select('title, body, themes').eq('id', relatedId).single()
+            const { data } = await supabase.from('memories').select('title, body, themes').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'} (themes: ${(data?.themes || []).join(', ')})`
           } else if (relatedType === 'project') {
-            const { data } = await supabase.from('projects').select('title, description').eq('id', relatedId).single()
+            const { data } = await supabase.from('projects').select('title, description').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
           } else if (relatedType === 'article') {
-            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('id', relatedId).single()
+            const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
           }
           if (itemText) connectedItems.push(itemText)
@@ -364,6 +377,7 @@ Provide 2-3 insights about hidden connections.`
         const { data: connections, error } = await supabase
           .from('connections')
           .select('*')
+          .eq('user_id', userId) // Added user_id filter
           .or(`and(source_type.eq.${type},source_id.eq.${id}),and(target_type.eq.${type},target_id.eq.${id})`)
 
         if (error) {
@@ -381,13 +395,13 @@ Provide 2-3 insights about hidden connections.`
           // Fetch related item details
           let relatedItem: any = null
           if (relatedType === 'thought') {
-            const { data } = await supabase.from('memories').select('id, title, body').eq('id', relatedId).single()
+            const { data } = await supabase.from('memories').select('id, title, body').eq('user_id', userId).eq('id', relatedId).single()
             relatedItem = data
           } else if (relatedType === 'project') {
-            const { data } = await supabase.from('projects').select('id, title, description').eq('id', relatedId).single()
+            const { data } = await supabase.from('projects').select('id, title, description').eq('user_id', userId).eq('id', relatedId).single()
             relatedItem = data
           } else if (relatedType === 'article') {
-            const { data } = await supabase.from('reading_queue').select('id, title, excerpt').eq('id', relatedId).single()
+            const { data } = await supabase.from('reading_queue').select('id, title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             relatedItem = data
           }
 
@@ -420,13 +434,13 @@ Provide 2-3 insights about hidden connections.`
   }
 
   try {
-    const { sourceId, sourceType, content, embedding, userId } = req.body
+    const { sourceId, sourceType, content, embedding } = req.body // userId is now from getUserId()
 
-    if (!sourceId || !sourceType || !userId) {
+    if (!sourceId || !sourceType) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    console.log(`[connections] Finding connections for ${sourceType}:${sourceId}`)
+    console.log(`[connections] Finding connections for ${sourceType}:${sourceId} for user: ${userId}`)
 
     // 1. Get embedding if not provided
     let vector = embedding
@@ -519,6 +533,7 @@ Provide 2-3 insights about hidden connections.`
       const { data: existing } = await supabase
         .from('connections')
         .select('id')
+        .eq('user_id', userId) // Added user_id filter
         .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
         .maybeSingle()
 
@@ -529,6 +544,7 @@ Provide 2-3 insights about hidden connections.`
         await supabase
           .from('connections')
           .insert({
+            user_id: userId, // Ensure user_id is set
             source_type: sourceType,
             source_id: sourceId,
             target_type: candidate.type,
