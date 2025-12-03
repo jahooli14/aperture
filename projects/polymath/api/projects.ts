@@ -9,6 +9,9 @@ import { getUserId } from './_lib/auth.js'
 import { z } from 'zod'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
+import { generateDoorSuggestions } from './_lib/map-suggestions.js'
+import { generateInitialMap } from './_lib/map-generation.js'
+import { generateBedtimePrompts, generateCatalystPrompts } from './_lib/bedtime-ideas.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -452,7 +455,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           if (fetchError) throw fetchError
           if (!mapState) return res.status(404).json({ error: 'Map not found' })
 
-          const { generateDoorSuggestions } = await import('./_lib/map-suggestions.js')
           const doors = await generateDoorSuggestions(userId, mapState.map_data)
           return res.status(200).json({ doors })
         }
@@ -472,7 +474,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         }
 
         // No map exists - generate initial
-        const { generateInitialMap } = await import('./_lib/map-generation.js')
         const initialMap = await generateInitialMap(userId)
 
         // Save it
@@ -498,8 +499,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         // REGENERATE ACTION
         if (action === 'regenerate') {
           console.log('[knowledge_map] Regenerating map for user:', userId)
-
-const { generateInitialMap } = await import('./_lib/map-generation.js')
 
           // Generate fresh map from current data
           const newMapData = await generateInitialMap(userId)
@@ -1434,7 +1433,6 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
 
       // If it's past 9:30pm, generate new prompts
       if (hour >= 21 && minute >= 30) {
-        const { generateBedtimePrompts } = await import('./_lib/bedtime-ideas.js')
         const prompts = await generateBedtimePrompts(userId)
         return res.status(200).json({
           prompts,
@@ -1466,7 +1464,6 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
 
 async function handleGenerateBedtimePrompts(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   try {
-    const { generateBedtimePrompts } = await import('./_lib/bedtime-ideas.js')
     const prompts = await generateBedtimePrompts(userId)
     return res.status(201).json({
       prompts,
@@ -1517,7 +1514,6 @@ async function handleGenerateCatalystPrompts(req: VercelRequest, res: VercelResp
       }
     }
 
-    const { generateCatalystPrompts } = await import('./_lib/bedtime-ideas.js')
     const prompts = await generateCatalystPrompts(inputs, userId)
 
     return res.status(201).json({

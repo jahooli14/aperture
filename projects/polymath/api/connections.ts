@@ -195,22 +195,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Generate AI analysis
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-        const analysisPrompt = `Analyze this item and its connections to provide brief, actionable insights.
+        // Truncate content to prevent token overflow/timeouts
+        const truncatedSource = sourceContent.slice(0, 1000)
+        const truncatedConnections = connectedItems.map(i => i.slice(0, 500)).join('\n')
+
+        const analysisPrompt = `You are an insight engine. Analyze this item and its connections to find the "So What?".
 
 CURRENT ITEM:
-${sourceContent}
+${truncatedSource}...
 
 CONNECTED ITEMS (${connectedItems.length}):
-${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections yet'}
+${connectedItems.length > 0 ? truncatedConnections : 'No connections yet'}
 
-Provide a JSON response with:
-1. "summary": One sentence describing what this item is about and its significance
-2. "patterns": Array of 1-2 patterns you notice (e.g., "This connects to 3 articles about productivity")
-3. "insight": One key insight or observation about how this relates to the user's other content
-4. "suggestion": One actionable suggestion (what to explore, read, or think about next)
+Output valid JSON with:
+1. "summary": One punchy sentence on the core idea.
+2. "patterns": Array of 1-2 unexpected patterns across items.
+3. "insight": One "Aha!" moment. How do these connect to reveal a bigger truth?
+4. "suggestion": One concrete next step to advance this thinking.
 
-Keep each field concise (under 100 characters for patterns/insight/suggestion).
-Return valid JSON only.`
+Keep it brief and high-impact. No fluff.`
 
         const result = await model.generateContent(analysisPrompt)
         const responseText = result.response.text()
@@ -299,56 +302,56 @@ Return valid JSON only.`
 
         const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
+        // Truncate content
+        const truncatedSource = sourceContent.slice(0, 1000)
+        const truncatedConnections = connectedItems.map(i => i.slice(0, 500)).join('\n')
+
         let prompt = ''
         switch (actionType) {
           case 'summarize':
-            prompt = `Summarize this item and its connections in 2-3 sentences. Focus on the key points and how it relates to connected items.
+            prompt = `Synthesize this item and its connections into 2 sentences. What is the core message when viewed together?
 
 ITEM:
-${sourceContent}
+${truncatedSource}
 
 CONNECTED ITEMS:
-${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
-
-Provide a concise summary that captures the essence and context.`
+${connectedItems.length > 0 ? truncatedConnections : 'No connections'}`
             break
 
           case 'find-gaps':
-            prompt = `Analyze this item and its connections to identify knowledge gaps or missing pieces.
+            prompt = `Identify knowledge gaps in this cluster of ideas.
 
 ITEM:
-${sourceContent}
+${truncatedSource}
 
 CONNECTED ITEMS:
-${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
 
-What's missing? What questions remain unanswered? What would make this more complete?
-Provide 2-3 specific gaps or missing pieces in bullet points.`
+What key question remains unanswered? Provide 2-3 specific gaps.`
             break
 
           case 'suggest-next':
-            prompt = `Based on this item and its connections, suggest what the user should explore, read, or think about next.
+            prompt = `Suggest the single most high-impact next step for this topic.
 
 ITEM:
-${sourceContent}
+${truncatedSource}
 
 CONNECTED ITEMS:
-${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
 
-Provide 2-3 specific, actionable suggestions for what to do next. Be concrete.`
+Be concrete and actionable.`
             break
 
           case 'connect-dots':
-            prompt = `Find non-obvious connections and patterns between this item and its related content.
+            prompt = `Find the hidden pattern connecting these items.
 
 ITEM:
-${sourceContent}
+${truncatedSource}
 
 CONNECTED ITEMS:
-${connectedItems.length > 0 ? connectedItems.join('\n') : 'No connections'}
+${connectedItems.length > 0 ? truncatedConnections : 'No connections'}
 
-How do these seemingly different items connect? What patterns emerge? What unexpected relationships exist?
-Provide 2-3 insights about hidden connections.`
+What is the non-obvious link?`
             break
 
           default:

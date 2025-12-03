@@ -22,7 +22,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 // Synthesis configuration
 const CONFIG = {
-  SUGGESTIONS_PER_RUN: 5,
+  SUGGESTIONS_PER_RUN: 1, // Drastically reduced to prevent timeouts (was 5)
   WILDCARD_FREQUENCY: 3, // Every 3rd suggestion is a wildcard
   NOVELTY_WEIGHT: 0.3,
   FEASIBILITY_WEIGHT: 0.4,
@@ -458,38 +458,27 @@ async function generateProjectIdea(
   const capabilityList = capabilities.map(c => `- ${c.name}: ${c.description}`).join('\n')
   const interestList = interests.slice(0, 5).map(i => `- ${i.name} (${i.type}, ${i.mentions} mentions)`).join('\n')
 
-  const prompt = `You are a creative synthesis engine that generates DIVERSE, UNIQUE project ideas.
+  const prompt = `You are a strategic synthesis engine. Generate ONE high-impact project idea that bridges these capabilities and interests.
 
-Given these technical capabilities:
+CONTEXT:
+Capabilities:
 ${capabilityList}
 
-And these user interests (from MemoryOS):
+Interests:
 ${interestList}
 
-Generate ONE novel project idea that combines these capabilities in a NOTABLY DIFFERENT way.
-
-CRITICAL - Diversity Requirements:
-- Each project must have distinct use cases, domains, or applications
-- Avoid generic terms like "platform", "app", "tool", "system"
-- Be specific about WHAT the project does and WHO it serves
-- Think about unique angles: education vs entertainment vs productivity vs social impact
-- Examples of GOOD diversity:
-  * "AI-powered recipe generator for dietary restrictions" ✓
-  * "Interactive music visualizer for meditation" ✓
-  * "Collaborative story builder for kids" ✓
-- Examples of BAD (too similar):
-  * "Social platform for X" ✗
-  * "Dashboard to track Y" ✗
-  * "App for managing Z" ✗
+TASK:
+Create a project concept that answers "So What?" - why does combining these specific things matter?
+Focus on:
+1. Novelty: Don't just build a "tracker" or "platform". Build a tool that solves a unique problem.
+2. Synergy: How does the tech capability unlock a new way to explore the interest?
 
 Requirements:
-- Must use ALL listed capabilities in a creative, specific way
-- Should feel energizing and novel, not generic
-- Title should be concrete and descriptive (not vague)
-- Description should be 2-3 sentences explaining the SPECIFIC use case and unique value
-- Reasoning should explain why THIS particular combination creates something special
+- Title: Punchy, 3-6 words.
+- Description: Max 2 sentences. Focus on the value prop.
+- Reasoning: The "So What?". Why is this combination powerful?
 
-Return ONLY valid JSON (no markdown, no code blocks):
+Return ONLY valid JSON:
 {
   "title": "...",
   "description": "...",

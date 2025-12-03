@@ -281,7 +281,7 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
   console.log('[map-generation] 🗺️ Generating semantic knowledge map for user:', userId)
 
   // 1. Fetch all user's data with embeddings, limited to recent/most relevant for performance
-  const MAX_ITEMS_PER_TYPE = 200; // Limit to 200 per type to prevent timeouts
+  const MAX_ITEMS_PER_TYPE = 50; // Limit to 50 per type to prevent timeouts on Vercel Hobby
 
   const [
     { data: memories },
