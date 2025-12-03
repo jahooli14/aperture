@@ -18,7 +18,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from '../_lib/supabase.js'
-import { getUserId } from '../_lib/auth.js'
+import { getUserId } from '../_lib/auth'
 import { runSynthesis } from '../_lib/synthesis.js'
 import { strengthenNodes } from '../_lib/strengthen-nodes.js'
 import { processMemory } from '../_lib/process-memory.js'
