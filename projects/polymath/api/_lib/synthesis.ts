@@ -435,11 +435,17 @@ Return ONLY valid JSON (no markdown, no code blocks):
   const result = await model.generateContent(prompt)
   const text = result.response.text()
 
-  // Extract JSON from response
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON found in response')
-
-  return JSON.parse(jsonMatch[0])
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      logger.error({ raw_response: text }, 'No JSON found in Gemini response for creative project')
+      throw new Error('No JSON found in Gemini response for creative project')
+    }
+    return JSON.parse(jsonMatch[0])
+  } catch (parseError) {
+    logger.error({ raw_response: text, parse_error: parseError }, 'Failed to parse JSON from Gemini response for creative project')
+    throw new Error(`Failed to parse JSON from Gemini response for creative project: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+  }
 }
 
 /**
@@ -502,10 +508,17 @@ Return ONLY valid JSON (no markdown, no code blocks):
   const text = result.response.text()
 
   // Extract JSON from response (handles markdown code blocks)
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON found in response')
-
-  return JSON.parse(jsonMatch[0])
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      logger.error({ raw_response: text }, 'No JSON found in Gemini response for project idea')
+      throw new Error('No JSON found in Gemini response for project idea')
+    }
+    return JSON.parse(jsonMatch[0])
+  } catch (parseError) {
+    logger.error({ raw_response: text, parse_error: parseError }, 'Failed to parse JSON from Gemini response for project idea')
+    throw new Error(`Failed to parse JSON from Gemini response for project idea: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
+  }
 }
 
 /**
@@ -781,6 +794,11 @@ async function isSimilarToExisting(
  */
 export async function runSynthesis(userId: string) {
   logger.info({ user_id: userId }, 'Starting weekly synthesis')
+
+  if (!process.env.GEMINI_API_KEY) {
+    logger.fatal('GEMINI_API_KEY is not set. Cannot run synthesis.')
+    return []
+  }
 
   // 1. Extract interests from memories and articles
   const memoryInterests = await extractInterests()

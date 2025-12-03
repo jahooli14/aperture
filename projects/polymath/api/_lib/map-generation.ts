@@ -280,16 +280,20 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
 
   console.log('[map-generation] 🗺️ Generating semantic knowledge map for user:', userId)
 
-  // 1. Fetch all user's data with embeddings
-  // NOTE: memories table doesn't have user_id column - it's a single-user app
+  // 1. Fetch all user's data with embeddings, limited to recent/most relevant for performance
+  const MAX_ITEMS_PER_TYPE = 200; // Limit to 200 per type to prevent timeouts
+
   const [
     { data: memories },
     { data: projects },
     { data: articles }
   ] = await Promise.all([
-    supabase.from('memories').select('*').not('embedding', 'is', null).limit(1000),
-    supabase.from('projects').select('*').eq('user_id', userId),
-    supabase.from('reading_queue').select('*').eq('user_id', userId).not('embedding', 'is', null)
+    // Memories (now includes user_id filter)
+    supabase.from('memories').select('*').eq('user_id', userId).not('embedding', 'is', null).order('created_at', { ascending: false }).limit(MAX_ITEMS_PER_TYPE),
+    // Projects
+    supabase.from('projects').select('*').eq('user_id', userId).not('embedding', 'is', null).order('created_at', { ascending: false }).limit(MAX_ITEMS_PER_TYPE),
+    // Articles
+    supabase.from('reading_queue').select('*').eq('user_id', userId).not('embedding', 'is', null).order('created_at', { ascending: false }).limit(MAX_ITEMS_PER_TYPE)
   ])
 
   console.log('[map-generation] Fetched data:', {
@@ -372,11 +376,11 @@ export async function generateInitialMap(userId: string): Promise<MapData> {
   console.log('[map-generation] Items for clustering:', itemsForClustering.length)
 
   // Determine optimal number of clusters (cities) based on item count
-  // Avoid too many clusters for small datasets
+  // Avoid too many clusters for small datasets. Max 10 clusters for up to 600 items (3 * 200).
   const itemCount = allItems.length
   const numClusters = itemCount < 10 ? 3 :
-                      itemCount < 30 ? Math.floor(Math.sqrt(itemCount)) :
-                      Math.min(20, Math.floor(Math.sqrt(itemCount) * 1.5))
+                      itemCount < 50 ? Math.floor(Math.sqrt(itemCount)) :
+                      Math.min(20, Math.floor(itemCount / 20)); // Max 20 clusters, or 1 cluster per 20 items
 
   console.log('[map-generation] Creating', numClusters, 'semantic clusters for', itemCount, 'items')
 

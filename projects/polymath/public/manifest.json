@@ -1,12 +1,12 @@
 {
-  "name": "Clandestined - Personal Knowledge Graph",
-  "short_name": "Clandestined",
+  "name": "Fragments - Personal Knowledge Graph",
+  "short_name": "Fragments",
   "description": "Voice-to-memory personal knowledge graph & creative project tracker. Capture thoughts, track projects, and build your second brain.",
   "start_url": "/?v=7",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#141b26",
-  "theme_color": "#3b82f6",
+  "background_color": "#0f1729",
+  "theme_color": "#0f1729",
   "orientation": "any",
   "icons": [
     {

@@ -18,10 +18,10 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
 
   return (
     <span className={`${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.02em' }}>
-      Clan<span style={{
+      Frag<span style={{
         color: 'rgba(100, 180, 255, 1)',
         letterSpacing: '0.01em'
-      }}>destined</span>
+      }}>ments</span>
     </span>
   )
 }

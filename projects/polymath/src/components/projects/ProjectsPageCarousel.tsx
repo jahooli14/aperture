@@ -167,14 +167,14 @@ function ProjectSection({ title, description, icon: Icon, color, projects, loadi
       </div>
 
       {/* Grid of projects */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
+      <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 snap-x snap-mandatory scrollbar-hide">
         {projects.map((project, idx) => (
           <motion.div
             key={project.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
-            className="h-full"
+            className="h-full flex-shrink-0 w-[300px] snap-center"
           >
             <ProjectCard project={project} />
           </motion.div>

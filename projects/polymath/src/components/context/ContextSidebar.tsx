@@ -93,9 +93,23 @@ export function ContextSidebar() {
             if (response.ok) {
                 const data = await response.json()
                 setAnalysisData(data)
+            } else {
+                console.error('Failed to fetch analysis: Response not OK', response.status)
+                addToast({
+                    title: 'Analysis failed',
+                    description: `API responded with status: ${response.status}`,
+                    variant: 'destructive'
+                })
+                setAnalysisData(null) // Clear analysis data on non-OK response
             }
         } catch (error) {
             console.error('Failed to fetch analysis:', error)
+            addToast({
+                title: 'Analysis failed',
+                description: 'Could not connect to analysis service.',
+                variant: 'destructive'
+            })
+            setAnalysisData(null) // Clear analysis data on fetch error
         } finally {
             setAnalysisLoading(false)
         }
