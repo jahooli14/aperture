@@ -6,6 +6,7 @@ import formidable from 'formidable'
 import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
+import { processMemory } from './_lib/process-memory.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -278,10 +279,8 @@ Text: ${text}`
     console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
 
     try {
-      // Import processMemory function
-      console.log(`[handleCapture] 🔄 Attempting to import process-memory module...`)
-      const { processMemory } = await import('./_lib/process-memory.js')
-      console.log(`[handleCapture] ✅ Successfully imported process-memory module`)
+      // Process memory inline with Gemini (tags, summary, linking, etc.)
+      console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
 
       // Process the memory (extract entities, generate embeddings, etc.)
       console.log(`[handleCapture] 🔄 Calling processMemory(${memory.id})...`)
@@ -1007,7 +1006,6 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { processMemory } = await import('./_lib/process-memory.js')
     await processMemory(memory_id)
 
     return res.status(200).json({
