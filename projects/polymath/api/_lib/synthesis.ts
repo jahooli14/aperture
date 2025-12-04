@@ -156,43 +156,49 @@ async function extractInterests(): Promise<Interest[]> {
 async function extractInterestsFromArticles(): Promise<Interest[]> {
   logger.info('Extracting interests from articles')
 
-  const { data: articles, error } = await supabase
-    .from('reading_queue')
-    .select('entities, themes')
-    .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
-    .not('entities', 'is', null)
+  try {
+    const { data: articles, error } = await supabase
+      .from('reading_queue')
+      .select('entities, themes')
+      .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
+      // .not('entities', 'is', null) // Removing this constraint as it might fail if column doesn't exist
 
-  if (error) throw error
+    if (error) throw error
 
-  const topicCounts: Record<string, number> = {}
+    const topicCounts: Record<string, number> = {}
 
-  articles.forEach(article => {
-    // Count topics
-    const topics = article.entities?.topics || []
-    topics.forEach((topic: string) => {
-      const key = topic.toLowerCase()
-      topicCounts[key] = (topicCounts[key] || 0) + 1
+    articles.forEach(article => {
+      // Count topics
+      const topics = article.entities?.topics || []
+      topics.forEach((topic: string) => {
+        const key = topic.toLowerCase()
+        topicCounts[key] = (topicCounts[key] || 0) + 1
+      })
+
+      // Count themes
+      const themes = article.themes || []
+      themes.forEach((theme: string) => {
+        const key = theme.toLowerCase()
+        topicCounts[key] = (topicCounts[key] || 0) + 1
+      })
     })
 
-    // Count themes
-    const themes = article.themes || []
-    themes.forEach((theme: string) => {
-      const key = theme.toLowerCase()
-      topicCounts[key] = (topicCounts[key] || 0) + 1
-    })
-  })
+    // Convert to Interest objects
+    return Object.entries(topicCounts)
+      .filter(([_, count]) => count >= 2) // Lower threshold for articles
+      .map(([name, count]) => ({
+        id: `article_${name.replace(/\s+/g, '_')}`,
+        name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize
+        type: 'topic',
+        strength: Math.min(count / 5, 1.0),
+        mentions: count
+      }))
+      .sort((a, b) => b.strength - a.strength)
 
-  // Convert to Interest objects
-  return Object.entries(topicCounts)
-    .filter(([_, count]) => count >= 2) // Lower threshold for articles
-    .map(([name, count]) => ({
-      id: `article_${name.replace(/\s+/g, '_')}`,
-      name: name.charAt(0).toUpperCase() + name.slice(1), // Capitalize
-      type: 'topic',
-      strength: Math.min(count / 5, 1.0),
-      mentions: count
-    }))
-    .sort((a, b) => b.strength - a.strength)
+  } catch (error) {
+    logger.warn({ error }, 'Failed to extract interests from articles (skipping)')
+    return []
+  }
 }
 
 /**

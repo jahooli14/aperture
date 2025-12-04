@@ -1409,14 +1409,28 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const { data, error } = await supabase
-      .from('bedtime_prompts')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('created_at', today.toISOString())
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
+    let data = []
+    try {
+      const result = await supabase
+        .from('bedtime_prompts')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('created_at', today.toISOString())
+        .order('created_at', { ascending: false })
+      
+      if (result.error) throw result.error
+      data = result.data
+    } catch (dbError: any) {
+      console.warn('[bedtime] Failed to fetch prompts (table might be missing):', dbError.message)
+      // Fallback to generation if table is missing (generation handles storage, might also fail but we'll see)
+      // Actually, if table missing, generation storage will also fail.
+      // Return empty for now to prevent crash
+      return res.status(200).json({
+        prompts: [],
+        generated: false,
+        message: 'Feature unavailable (migration pending)'
+      })
+    }
 
     // If no prompts today, check if it's past 9:30pm
     if (!data || data.length === 0) {
