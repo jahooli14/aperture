@@ -57,10 +57,16 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       to={`/projects/${project.id}`}
       className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${theme.border} bg-gradient-to-br ${theme.bg} ${prominent ? 'p-5' : 'p-4'}`}
       style={{
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        boxShadow: `0 4px 16px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.2)')}` // Dynamic boxShadow
       }}
-      onMouseEnter={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)}
-      onMouseLeave={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.leave)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'var(--premium-bg-3)'
+        e.currentTarget.style.boxShadow = `0 12px 32px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.4)')}`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = `linear-gradient(to bottom right, ${theme.bg.replace('from-', '').split('to-')[0]} ${theme.bg.split('to-')[1]})`
+        e.currentTarget.style.boxShadow = `0 4px 16px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.2)')}`
+      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -110,7 +116,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
+                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
                   style={{ width: `${progress}%` }}
                 />
               </div>

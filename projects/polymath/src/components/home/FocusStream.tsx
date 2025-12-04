@@ -135,17 +135,17 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${priorityProject.id}`)}
                         style={{
-                            background: `var(--premium-bg-2)`,
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: `1px solid ${getTheme(priorityProject.type || 'other').border.replace('border-', '').replace('/30', '/70')}` // More prominent border
+                            background: `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
+                            boxShadow: `0 4px 16px ${getTheme(priorityProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`,
+                            border: `1px solid ${getTheme(priorityProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-3)`
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
+                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(priorityProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-2)`
-                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
+                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(priorityProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`
                         }}
                     >
                         <div className="relative z-10">
@@ -178,17 +178,17 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${recentProject.id}`)}
                         style={{
-                            background: `var(--premium-bg-2)`,
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: `1px solid ${getTheme(recentProject.type || 'other').border.replace('border-', '').replace('/30', '/70')}`
+                            background: `linear-gradient(135deg, ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
+                            boxShadow: `0 4px 16px ${getTheme(recentProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`,
+                            border: `1px solid ${getTheme(recentProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-3)`
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
+                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(recentProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-2)`
-                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(recentProject.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
+                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(recentProject.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`
                         }}
                     >
                         <div className="relative z-10">
@@ -220,17 +220,17 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => setShowReviewDeck(true)}
                         style={{
-                            background: `var(--premium-bg-2)`,
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: `1px solid ${getTheme('technical').border.replace('border-', '').replace('/30', '/70')}` // Use a general blue tint for review mode
+                            background: `linear-gradient(135deg, ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
+                            boxShadow: `0 4px 16px ${getTheme('business').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`,
+                            border: `1px solid ${getTheme('business').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-3)`
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
+                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme('business').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-2)`
-                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme('business').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
+                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme('business').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`
                         }}
                     >
                         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -239,7 +239,7 @@ export function FocusStream() {
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme('technical').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme('technical').text} border ${getTheme('technical').border}`}>
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme('business').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme('business').text} border ${getTheme('business').border}`}>
                                     Review Mode
                                 </span>
                                 <span className="text-xs text-slate-500">
@@ -255,7 +255,7 @@ export function FocusStream() {
                                 Take a moment to decide their future.
                             </p>
 
-                            <button className={`text-sm font-medium ${getTheme('technical').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
+                            <button className={`text-sm font-medium ${getTheme('business').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
                                 Start Review <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -271,17 +271,17 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
-                            background: `var(--premium-bg-2)`,
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: `1px solid ${getTheme(sparkCandidate.type || 'other').border.replace('border-', '').replace('/30', '/70')}`
+                            background: `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
+                            boxShadow: `0 4px 16px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`,
+                            border: `1px solid ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-3)`
-                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
+                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `var(--premium-bg-2)`
-                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
+                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`
                         }}
                     >
                         <div className="relative z-10">
