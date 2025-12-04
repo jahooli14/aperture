@@ -43,12 +43,24 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
+  // Color Coding
+  const getTheme = (type: string) => {
+    switch (type) {
+      case 'technical': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
+      case 'creative': return { border: 'border-pink-500/30', bg: 'from-pink-500/10 to-pink-500/5', text: 'text-pink-400' }
+      case 'learning': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
+      case 'content': return { border: 'border-purple-500/30', bg: 'from-purple-500/10 to-purple-500/5', text: 'text-purple-400' }
+      default: return { border: 'border-white/10', bg: 'from-white/5 to-white/5', text: 'text-slate-400' }
+    }
+  }
+
+  const theme = getTheme(project.type || 'other')
+
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid ${prominent ? 'p-5 border border-white/10' : 'p-4'}`}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${theme.border} bg-gradient-to-br ${theme.bg} ${prominent ? 'p-5' : 'p-4'}`}
       style={{
-        background: 'var(--premium-bg-2)',
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
       }}
       onMouseEnter={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)}
@@ -60,7 +72,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           {project.title}
         </h4>
         {project.is_priority && (
-          <Pin className="h-4 w-4 text-blue-400 flex-shrink-0" />
+          <Pin className={`h-4 w-4 flex-shrink-0 ${theme.text}`} />
         )}
       </div>
 
@@ -73,13 +85,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
       {/* Next Action (The "Unblocker") */}
       {nextTask && (
-        <div className={`rounded-lg p-3 mb-3 flex items-start gap-3 ${prominent ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-white/5'}`}>
-          <div className={`mt-0.5 ${prominent ? 'text-blue-400' : 'text-gray-500'}`}>
+        <div className={`rounded-lg p-3 mb-3 flex items-start gap-3 bg-black/20 border border-white/5`}>
+          <div className={`mt-0.5 ${theme.text}`}>
             <CheckCircle2 className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-300 uppercase tracking-wider mb-0.5">Next Step</p>
-            <p className={`text-sm font-medium ${prominent ? 'text-blue-100' : 'text-gray-200'} line-clamp-2`}>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Next Step</p>
+            <p className={`text-sm font-medium text-gray-200 line-clamp-2`}>
               {nextTask.text}
             </p>
           </div>
@@ -147,7 +159,7 @@ export function ProjectsPageCarousel({
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Active Focus</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeProjects.map(project => (
               <motion.div 
                 key={project.id}
@@ -179,7 +191,7 @@ export function ProjectsPageCarousel({
             )}
           </div>
 
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+          <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
             {drawerProjects.map((project, i) => (
               <motion.div
                 key={project.id}
