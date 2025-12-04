@@ -31,19 +31,36 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
   // Color Coding
-  const getTheme = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'tech': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
-      case 'creative': return { border: 'border-pink-500/30', bg: 'from-pink-500/10 to-pink-500/5', text: 'text-pink-400' }
-      case 'writing': return { border: 'border-indigo-500/30', bg: 'from-indigo-500/10 to-indigo-500/5', text: 'text-indigo-400' }
-      case 'business': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
-      case 'learning': return { border: 'border-amber-500/30', bg: 'from-amber-500/10 to-amber-500/5', text: 'text-amber-400' }
-      case 'life': return { border: 'border-cyan-500/30', bg: 'from-cyan-500/10 to-cyan-500/5', text: 'text-cyan-400' }
-      default: return { border: 'border-white/10', bg: 'from-white/5 to-white/5', text: 'text-slate-400' }
+  const getTheme = (type: string, title: string) => {
+    const t = type.toLowerCase()
+    
+    // Explicit mappings with boosted visibility
+    if (t === 'tech' || t === 'technical') return { border: 'border-rose-500/40', bg: 'from-rose-500/20 to-rose-500/5', text: 'text-rose-400' }
+    if (t === 'creative') return { border: 'border-pink-500/40', bg: 'from-pink-500/20 to-pink-500/5', text: 'text-pink-400' }
+    if (t === 'writing') return { border: 'border-indigo-500/40', bg: 'from-indigo-500/20 to-indigo-500/5', text: 'text-indigo-400' }
+    if (t === 'business') return { border: 'border-emerald-500/40', bg: 'from-emerald-500/20 to-emerald-500/5', text: 'text-emerald-400' }
+    if (t === 'learning') return { border: 'border-amber-500/40', bg: 'from-amber-500/20 to-amber-500/5', text: 'text-amber-400' }
+    if (t === 'life') return { border: 'border-cyan-500/40', bg: 'from-cyan-500/20 to-cyan-500/5', text: 'text-cyan-400' }
+    if (t === 'hobby') return { border: 'border-orange-500/40', bg: 'from-orange-500/20 to-orange-500/5', text: 'text-orange-400' }
+    if (t === 'side-project') return { border: 'border-violet-500/40', bg: 'from-violet-500/20 to-violet-500/5', text: 'text-violet-400' }
+
+    // Deterministic fallback based on title hash
+    const colors = [
+      { border: 'border-blue-500/40', bg: 'from-blue-500/20 to-blue-500/5', text: 'text-blue-400' },
+      { border: 'border-purple-500/40', bg: 'from-purple-500/20 to-purple-500/5', text: 'text-purple-400' },
+      { border: 'border-teal-500/40', bg: 'from-teal-500/20 to-teal-500/5', text: 'text-teal-400' },
+      { border: 'border-fuchsia-500/40', bg: 'from-fuchsia-500/20 to-fuchsia-500/5', text: 'text-fuchsia-400' },
+    ]
+    
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) {
+      hash = title.charCodeAt(i) + ((hash << 5) - hash);
     }
+    
+    return colors[Math.abs(hash) % colors.length];
   }
 
-  const theme = getTheme(project.type || 'other')
+  const theme = getTheme(project.type || 'other', project.title)
 
   const handleAnalyze = (e: React.MouseEvent) => {
     e.preventDefault()
