@@ -227,19 +227,9 @@ export function ProjectsPageCarousel({
       {/* SECTION 2: THE DRAWER (Masonry) */}
       {drawerList.length > 0 && (
         <section>
-          <div className="flex items-center justify-between gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-400" />
-              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
-            </div>
-            {suggestedProjects.length > 0 && clearSuggestions && (
-              <button 
-                onClick={clearSuggestions}
-                className="text-xs text-red-400 hover:text-red-300 transition-colors"
-              >
-                Clear Suggestions
-              </button>
-            )}
+          <div className="flex items-center gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
+            <AlertCircle className="h-4 w-4 text-blue-400" />
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
           </div>
 
           <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
