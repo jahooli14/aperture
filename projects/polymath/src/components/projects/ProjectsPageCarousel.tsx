@@ -25,7 +25,16 @@ interface ProjectsPageCarouselProps {
   onClearSuggestions?: () => void
 }
 
-// ... (ProjectCard component remains unchanged)
+interface Task {
+  text: string
+  done: boolean
+  order: number
+}
+
+const CARD_HOVER_STYLES = {
+  enter: { background: 'var(--premium-bg-3)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
+  leave: { background: 'var(--premium-bg-2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
+}
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const tasks = (project.metadata?.tasks || []) as Task[]
@@ -120,15 +129,17 @@ export function ProjectsPageCarousel({
   const drawerProjects = [...resurfaceProjects, ...suggestedProjects]
   
   // Active Focus: Pinned + Top 2 Recent (excluding pinned if it's in recent)
-  // ... (activeProjects logic remains unchanged)
+  const activeProjects = [
+    pinnedProject,
+    ...recentProjects.filter(p => p.id !== pinnedProject?.id).slice(0, 2)
+  ].filter(Boolean) as Project[]
 
-  // ... (loading check remains unchanged)
+  if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
 
   return (
     <div className="space-y-8 pb-20">
       
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
-      {/* ... (Active Focus section remains unchanged) */}
       {activeProjects.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4 px-1">
