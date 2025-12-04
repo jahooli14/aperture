@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, Clock, Battery, ArrowRight, Sparkles, RefreshCw, CheckCircle2, Zap } from 'lucide-react'
+import { Layers, Clock, Battery, ArrowRight, Sparkles } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
-import { formatDistanceToNow } from 'date-fns'
 
 export function FocusStream() {
     const navigate = useNavigate()
-    const { allProjects, updateProject } = useProjectStore()
+    const { allProjects } = useProjectStore()
     const [showReviewDeck, setShowReviewDeck] = useState(false)
     const [timeContext, setTimeContext] = useState({
         isWeekend: new Date().getDay() === 0 || new Date().getDay() === 6,
@@ -19,7 +18,6 @@ export function FocusStream() {
     // 1. Identify Dormant Projects (> 14 days inactive)
     const dormantProjects = useMemo(() => {
         const fourteenDaysAgo = new Date()
-        // fourteenDaysAgo.setMinutes(fourteenDaysAgo.getMinutes() - 1)
         fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
 
         return allProjects
@@ -90,7 +88,7 @@ export function FocusStream() {
     return (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
             <div className="flex items-center gap-2 mb-4">
-                <Zap className="h-5 w-5 text-amber-400" />
+                <Sparkles className="h-5 w-5 text-blue-400" />
                 <h2 className="text-xl font-bold premium-text-platinum">
                     Focus Stream
                 </h2>
@@ -102,31 +100,40 @@ export function FocusStream() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="premium-card p-5 relative overflow-hidden group cursor-pointer"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => setShowReviewDeck(true)}
                         style={{
-                            background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(30, 41, 59, 0.6))',
-                            border: '1px solid rgba(59, 130, 246, 0.2)'
+                            background: 'var(--premium-bg-2)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
-                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                             <Layers className="h-24 w-24" />
                         </div>
 
                         <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-300">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
                                     Review Mode
                                 </span>
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-slate-500">
                                     {dormantProjects.length} projects waiting
                                 </span>
                             </div>
 
-                            <h3 className="text-lg font-bold text-white mb-1">
+                            <h3 className="text-lg font-bold text-white mb-2">
                                 Dust off your archives
                             </h3>
-                            <p className="text-sm text-slate-300 mb-4 line-clamp-2">
+                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
                                 You have {dormantProjects.length} projects that haven't been touched in over 2 weeks.
                                 Take a moment to decide their future.
                             </p>
@@ -144,31 +151,40 @@ export function FocusStream() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="premium-card p-5 relative overflow-hidden group cursor-pointer"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
-                            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(30, 41, 59, 0.6))',
-                            border: '1px solid rgba(16, 185, 129, 0.2)'
+                            background: 'var(--premium-bg-2)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
-                        <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
                             <Sparkles className="h-24 w-24" />
                         </div>
 
                         <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/20 text-emerald-300 flex items-center gap-1">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
                                     <Battery className="h-3 w-3" /> {timeContext.energy} Energy
                                 </span>
-                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <span className="text-xs text-slate-500 flex items-center gap-1">
                                     <Clock className="h-3 w-3" /> ~20 min
                                 </span>
                             </div>
 
-                            <h3 className="text-lg font-bold text-white mb-1">
+                            <h3 className="text-lg font-bold text-white mb-2">
                                 Spark: {sparkCandidate.title}
                             </h3>
-                            <p className="text-sm text-slate-300 mb-4 line-clamp-2">
+                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
                                 Fits your current {timeContext.energy} energy level.
                                 {sparkCandidate.metadata?.tasks?.find((t: any) => !t.done)?.text
                                     ? ` Next step: "${sparkCandidate.metadata.tasks.find((t: any) => !t.done).text}"`

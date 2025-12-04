@@ -355,6 +355,24 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       return handleBuildFromSuggestion(req, res, id, supabase, userId)
     }
 
+    // DELETE: Clear all pending suggestions
+    if (req.method === 'DELETE' && action === 'clear') {
+      try {
+        console.log('[suggestions] Clearing pending suggestions for user:', userId)
+        const { count, error } = await supabase
+          .from('project_suggestions')
+          .delete({ count: 'exact' })
+          .eq('user_id', userId)
+          .eq('status', 'pending')
+
+        if (error) throw error
+
+        return res.status(200).json({ success: true, count })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to clear suggestions' })
+      }
+    }
+
     return res.status(405).json({ error: 'Method not allowed' })
   }
 

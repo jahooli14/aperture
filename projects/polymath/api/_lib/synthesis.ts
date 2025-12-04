@@ -4,9 +4,9 @@
  * Implements point allocation, diversity injection, and suggestion storage
  */
 
-import { getSupabaseClient } from './supabase'
+import { getSupabaseClient } from './supabase.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { generateProjectScaffold, generateCreativeScaffold } from './generate-project-scaffold'
+import { generateProjectScaffold, generateCreativeScaffold } from './generate-project-scaffold.js'
 
 const logger = {
   info: (objOrMsg: any, msg?: string) => console.log(msg || objOrMsg, typeof objOrMsg === 'object' && msg ? objOrMsg : ''),

@@ -47,7 +47,6 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'constellation', label: 'Galaxy', icon: Sparkles, path: '/constellation', action: 'navigate', color: 'constellation' },
   { id: 'settings', label: 'More', icon: MoreHorizontal, path: '/settings', action: 'navigate', color: 'home' },
 ]
 
