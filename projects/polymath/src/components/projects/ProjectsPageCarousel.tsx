@@ -40,11 +40,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   // Color Coding
   const getTheme = (type: string) => {
     switch (type) {
-      case 'technical': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
-      case 'creative': return { border: 'border-pink-500/30', bg: 'from-pink-500/10 to-pink-500/5', text: 'text-pink-400' }
-      case 'learning': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
-      case 'content': return { border: 'border-purple-500/30', bg: 'from-purple-500/10 to-purple-500/5', text: 'text-purple-400' }
-      default: return { border: 'border-white/10', bg: 'from-white/5 to-white/5', text: 'text-slate-400' }
+      case 'technical': return { borderColor: 'rgba(59, 130, 246, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))', textColor: '#60a5fa' }
+      case 'creative': return { borderColor: 'rgba(236, 72, 153, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(236, 72, 153, 0.05))', textColor: '#f472b6' }
+      case 'learning': return { borderColor: 'rgba(16, 185, 129, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))', textColor: '#6ee7b7' }
+      case 'content': return { borderColor: 'rgba(168, 85, 247, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05))', textColor: '#d8b4fe' }
+      default: return { borderColor: 'rgba(255, 255, 255, 0.1)', bgGradient: 'linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))', textColor: '#94a3b8' }
     }
   }
 
@@ -60,9 +60,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${theme.border} bg-gradient-to-br ${theme.bg} ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
       style={{
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+        borderColor: theme.borderColor,
+        background: theme.bgGradient
       }}
       onMouseEnter={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)}
       onMouseLeave={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.leave)}
@@ -81,7 +83,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             <Sparkles className="h-4 w-4" />
           </button>
           {project.is_priority && (
-            <Pin className={`h-4 w-4 ${theme.text}`} />
+            <Pin className="h-4 w-4" style={{ color: theme.textColor }} />
           )}
         </div>
       </div>
@@ -96,7 +98,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       {/* Next Action (The "Unblocker") */}
       {nextTask && (
         <div className={`rounded-lg p-3 mb-3 flex items-start gap-3 bg-black/20 border border-white/5`}>
-          <div className={`mt-0.5 ${theme.text}`}>
+          <div className="mt-0.5" style={{ color: theme.textColor }}>
             <CheckCircle2 className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
