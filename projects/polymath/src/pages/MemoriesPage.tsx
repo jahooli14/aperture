@@ -635,7 +635,8 @@ export function MemoriesPage() {
               <div className="mb-6">
                 <PremiumTabs
                   tabs={[
-                    { id: 'recent', label: 'Recent' }
+                    { id: 'recent', label: 'Recent' },
+                    { id: 'themes', label: 'By Theme' }
                   ]}
                   activeTab={memoryView}
                   onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}
@@ -704,10 +705,10 @@ export function MemoriesPage() {
                       <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
                     </div>
                   ) : clusters.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-6">
-                      {clusters.map((cluster) => (
+                    <div className="grid grid-cols-2 gap-4">
+                      {clusters.map((cluster, index) => (
                         <ThemeClusterCard
-                          key={cluster.id}
+                          key={`${cluster.id}-${index}`}
                           cluster={cluster}
                           onClick={() => setSelectedCluster(cluster)}
                         />
