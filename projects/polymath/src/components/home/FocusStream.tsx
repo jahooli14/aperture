@@ -99,34 +99,41 @@ export function FocusStream() {
         })
     }, [dormantProjects])
 
-    // Color Coding
-    const getTheme = (type: string, title: string) => {
-      const t = type.toLowerCase()
-      
-      // Explicit mappings with boosted visibility
-      if (t === 'tech' || t === 'technical') return { border: 'border-rose-500/40', bg: 'from-rose-500/20 to-rose-500/5', text: 'text-rose-400' }
-      if (t === 'creative') return { border: 'border-pink-500/40', bg: 'from-pink-500/20 to-pink-500/5', text: 'text-pink-400' }
-      if (t === 'writing') return { border: 'border-indigo-500/40', bg: 'from-indigo-500/20 to-indigo-500/5', text: 'text-indigo-400' }
-      if (t === 'business') return { border: 'border-emerald-500/40', bg: 'from-emerald-500/20 to-emerald-500/5', text: 'text-emerald-400' }
-      if (t === 'learning') return { border: 'border-amber-500/40', bg: 'from-amber-500/20 to-amber-500/5', text: 'text-amber-400' }
-      if (t === 'life') return { border: 'border-cyan-500/40', bg: 'from-cyan-500/20 to-cyan-500/5', text: 'text-cyan-400' }
-      if (t === 'hobby') return { border: 'border-orange-500/40', bg: 'from-orange-500/20 to-orange-500/5', text: 'text-orange-400' }
-      if (t === 'side-project') return { border: 'border-violet-500/40', bg: 'from-violet-500/20 to-violet-500/5', text: 'text-violet-400' }
+    // Color Coding - matching ProjectCard.tsx
+    const PROJECT_COLORS: Record<string, string> = {
+      tech: '59, 130, 246',      // Blue-500
+      technical: '59, 130, 246', // Blue-500
+      creative: '236, 72, 153',  // Pink-500
+      writing: '99, 102, 241',   // Indigo-500
+      business: '16, 185, 129',  // Emerald-500
+      learning: '245, 158, 11',  // Amber-500
+      life: '6, 182, 212',       // Cyan-500
+      hobby: '249, 115, 22',     // Orange-500
+      content: '168, 85, 247',   // Purple-500
+      'side-project': '139, 92, 246', // Violet-500
+      default: '148, 163, 184'   // Slate-400
+    }
 
-      // Deterministic fallback based on title hash
-      const colors = [
-        { border: 'border-blue-500/40', bg: 'from-blue-500/20 to-blue-500/5', text: 'text-blue-400' },
-        { border: 'border-purple-500/40', bg: 'from-purple-500/20 to-purple-500/5', text: 'text-purple-400' },
-        { border: 'border-teal-500/40', bg: 'from-teal-500/20 to-teal-500/5', text: 'text-teal-400' },
-        { border: 'border-fuchsia-500/40', bg: 'from-fuchsia-500/20 to-fuchsia-500/5', text: 'text-fuchsia-400' },
-      ]
-      
-      let hash = 0;
-      for (let i = 0; i < title.length; i++) {
-        hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    const getTheme = (type: string, title: string) => {
+      const t = type?.toLowerCase().trim() || ''
+
+      let rgb = PROJECT_COLORS[t]
+
+      // Deterministic fallback if type is unknown or missing
+      if (!rgb) {
+        const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+        let hash = 0
+        for (let i = 0; i < title.length; i++) {
+          hash = title.charCodeAt(i) + ((hash << 5) - hash)
+        }
+        rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
       }
-      
-      return colors[Math.abs(hash) % colors.length];
+
+      return {
+        borderColor: `rgba(${rgb}, 0.3)`,
+        textColor: `rgb(${rgb})`,
+        rgb: rgb
+      }
     }
 
     if (allProjects.length === 0) return null
@@ -145,29 +152,35 @@ export function FocusStream() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Card 0: Priority Project */}
-                {priorityProject && (
+                {priorityProject && (() => {
+                    const theme = getTheme(priorityProject.type || 'other', priorityProject.title)
+                    return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
                         onClick={() => navigate(`/projects/${priorityProject.id}`)}
                         style={{
-                            background: `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
-                            boxShadow: `0 4px 16px ${getTheme(priorityProject.type || 'other', priorityProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`,
-                            border: `1px solid ${getTheme(priorityProject.type || 'other', priorityProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                            boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
+                            borderColor: theme.borderColor
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
-                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(priorityProject.type || 'other', priorityProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                            e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
-                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(priorityProject.type || 'other', priorityProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                            e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(priorityProject.type || 'other', priorityProject.title).bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/20', '/20')} ${getTheme(priorityProject.type || 'other', priorityProject.title).text} border ${getTheme(priorityProject.type || 'other', priorityProject.title).border}`}>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    color: theme.textColor,
+                                    borderColor: `rgba(${theme.rgb}, 0.3)`
+                                }}>
                                     Priority
                                 </span>
                             </div>
@@ -179,38 +192,45 @@ export function FocusStream() {
                                 {priorityProject.description || 'Keep moving forward on your top priority.'}
                             </p>
 
-                            <button className={`text-sm font-medium ${getTheme(priorityProject.type || 'other', priorityProject.title).text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
+                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
                     </motion.div>
-                )}
+                    )
+                })()}
 
                 {/* Card 0.5: Recent Project */}
-                {recentProject && (
+                {recentProject && (() => {
+                    const theme = getTheme(recentProject.type || 'other', recentProject.title)
+                    return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.05 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
                         onClick={() => navigate(`/projects/${recentProject.id}`)}
                         style={{
-                            background: `linear-gradient(135deg, ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
-                            boxShadow: `0 4px 16px ${getTheme(recentProject.type || 'other', recentProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`,
-                            border: `1px solid ${getTheme(recentProject.type || 'other', recentProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                            boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
+                            borderColor: theme.borderColor
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
-                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(recentProject.type || 'other', recentProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                            e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
-                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(recentProject.type || 'other', recentProject.title).border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                            e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(recentProject.type || 'other', recentProject.title).bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/20', '/20')} ${getTheme(recentProject.type || 'other', recentProject.title).text} border ${getTheme(recentProject.type || 'other', recentProject.title).border}`}>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 border" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    color: theme.textColor,
+                                    borderColor: `rgba(${theme.rgb}, 0.3)`
+                                }}>
                                     <Clock className="h-3 w-3" /> Recent
                                 </span>
                             </div>
@@ -222,32 +242,35 @@ export function FocusStream() {
                                 {recentProject.description || 'Pick up where you left off.'}
                             </p>
 
-                            <button className={`text-sm font-medium ${getTheme(recentProject.type || 'other', recentProject.title).text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
+                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
                                 Continue <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
                     </motion.div>
-                )}
+                    )
+                })()}
 
                 {/* Card 1: Review Dormant Projects */}
-                {dormantProjects.length > 0 && (
+                {dormantProjects.length > 0 && (() => {
+                    const theme = getTheme('business', 'Review')
+                    return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
                         onClick={() => setShowReviewDeck(true)}
                         style={{
-                            background: `linear-gradient(135deg, ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
-                            boxShadow: `0 4px 16px ${getTheme('business', 'Review').border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`,
-                            border: `1px solid ${getTheme('business', 'Review').border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                            boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
+                            borderColor: theme.borderColor
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
-                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme('business', 'Review').border.replace('border-', 'rgba(').replace('/40', ', 0.5)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                            e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme('business', 'Review').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
-                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme('business', 'Review').border.replace('border-', 'rgba(').replace('/40', ', 0.3)')}`
+                            e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                            e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                         }}
                     >
                         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -256,7 +279,11 @@ export function FocusStream() {
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme('business', 'Review').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/20', '/20')} ${getTheme('business', 'Review').text} border ${getTheme('business', 'Review').border}`}>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    color: theme.textColor,
+                                    borderColor: `rgba(${theme.rgb}, 0.3)`
+                                }}>
                                     Review Mode
                                 </span>
                                 <span className="text-xs text-slate-500">
@@ -272,38 +299,45 @@ export function FocusStream() {
                                 Take a moment to decide their future.
                             </p>
 
-                            <button className={`text-sm font-medium ${getTheme('business', 'Review').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
+                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
                                 Start Review <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
                     </motion.div>
-                )}
+                    )
+                })()}
 
                 {/* Card 2: Time-Aware Spark */}
-                {sparkCandidate && (
+                {sparkCandidate && (() => {
+                    const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
+                    return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
-                            background: `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`,
-                            boxShadow: `0 4px 16px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`,
-                            border: `1px solid ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
+                            background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.6))',
+                            border: '1px solid rgba(6, 182, 212, 0.4)',
+                            boxShadow: '0 4px 16px rgba(6, 182, 212, 0.15)'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.3), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.2))`;
-                            e.currentTarget.style.boxShadow = `0 8px 24px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.5)')}`
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(30, 41, 59, 0.7))'
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(6, 182, 212, 0.2)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = `linear-gradient(135deg, ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[0]}0.2), ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'rgba(').split('to-')[1].split(')')[0]},0.1))`;
-                            e.currentTarget.style.boxShadow = `0 4px 16px ${getTheme(sparkCandidate.type || 'other').border.replace('border-', 'rgba(').replace('/30', ', 0.3)')}`
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.6))'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(6, 182, 212, 0.15)'
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme(sparkCandidate.type || 'other').text} border ${getTheme(sparkCandidate.type || 'other').border} flex items-center gap-1`}>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
+                                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                                    color: 'rgb(6, 182, 212)',
+                                    borderColor: 'rgba(6, 182, 212, 0.3)'
+                                }}>
                                     <Battery className="h-3 w-3" /> {timeContext.energy} Energy
                                 </span>
                                 <span className="text-xs text-slate-500 flex items-center gap-1">
@@ -326,12 +360,13 @@ export function FocusStream() {
                                     ][Math.floor(Math.random() * 4)]}`}
                             </p>
 
-                            <button className={`text-sm font-medium ${getTheme(sparkCandidate.type || 'other').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
+                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: 'rgb(6, 182, 212)' }}>
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
                     </motion.div>
-                )}
+                    )
+                })()}
                 </div>
             </div>
 
