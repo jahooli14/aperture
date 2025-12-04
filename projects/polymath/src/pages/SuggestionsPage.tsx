@@ -33,6 +33,7 @@ export function SuggestionsPage() {
     rateSuggestion,
     buildSuggestion,
     triggerSynthesis,
+    clearSuggestions, // Add clearSuggestions
     setFilter,
     setSortBy
   } = useSuggestionStore()
@@ -170,7 +171,18 @@ export function SuggestionsPage() {
         {/* Header with Action */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           {/* Button row - pushes content down */}
-          <div className="flex items-center justify-end mb-6">
+          <div className="flex items-center justify-end gap-3 mb-6">
+            {suggestions.length > 0 && (
+              <Button
+                onClick={() => clearSuggestions()}
+                variant="ghost"
+                size="sm"
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                disabled={synthesizing}
+              >
+                Clear All ({suggestions.length})
+              </Button>
+            )}
             <button
               onClick={handleSynthesize}
               disabled={synthesizing}

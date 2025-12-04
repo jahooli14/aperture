@@ -23,6 +23,19 @@ import { runSynthesis } from '../_lib/synthesis.js'
 import { strengthenNodes } from '../_lib/strengthen-nodes.js'
 import { processMemory } from '../_lib/process-memory.js'
 import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
+import webpush from 'web-push'
+
+// Configure web-push (globally or within the handler if needed per-request)
+// VAPID details from environment variables
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:your@email.com', // Replace with your contact email
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  )
+} else {
+  console.warn('[cron/jobs] Web Push VAPID keys not set. Push notifications will not work.')
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
@@ -151,6 +164,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: error instanceof Error ? error.message : 'Unknown error'
         }
         console.error('[cron/jobs/daily] Bedtime prompts failed:', error)
+      }
+
+      // 5. Send Bedtime Push Notifications (if enabled)
+      if (webpush.VapidDetails && now.getHours() === 21 && now.getMinutes() >= 30) { // Check if it's 9:30 PM UTC
+        try {
+          const { data: subscriptions, error: subError } = await supabase
+            .from('push_subscriptions')
+            .select('*')
+            .eq('user_id', userId) // Assuming subscriptions are tied to user_id
+
+          if (subError) throw subError
+
+          console.log(`[cron/jobs/daily] Sending bedtime pushes to ${subscriptions.length} subscriptions...`)
+
+          for (const sub of subscriptions) {
+            await webpush.sendNotification({
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.p256dh,
+                auth: sub.auth,
+              },
+            }, JSON.stringify({
+              title: "🌙 Bedtime Ideas Ready",
+              body: "Your subconscious is ready to work. Tap to see tonight's prompts.",
+              url: "/bedtime"
+            }))
+            console.log(`[cron/jobs/daily] Sent push to ${sub.endpoint.slice(0, 30)}...`)
+          }
+          results.tasks.push_notifications = { success: true, sent_count: subscriptions.length }
+        } catch (error) {
+          console.error('[cron/jobs/daily] Failed to send push notifications:', error)
+          results.tasks.push_notifications = {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
+        }
       }
 
       return res.status(200).json(results)
