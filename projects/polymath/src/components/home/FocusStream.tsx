@@ -86,15 +86,19 @@ export function FocusStream() {
     if (allProjects.length === 0) return null
 
     return (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-            <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-blue-400" />
-                <h2 className="text-xl font-bold premium-text-platinum">
-                    Focus Stream
-                </h2>
-            </div>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+                background: 'var(--premium-bg-2)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            }}>
+                <div className="flex items-center gap-2 mb-5">
+                    <Sparkles className="h-5 w-5 text-blue-400" />
+                    <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                        Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
+                    </h2>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Card 1: Review Dormant Projects */}
                 {dormantProjects.length > 0 && (
                     <motion.div
@@ -154,26 +158,22 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
-                            background: 'var(--premium-bg-2)',
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(30, 41, 59, 0.6))',
+                            border: '1px solid rgba(6, 182, 212, 0.2)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.7))'
                             e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(30, 41, 59, 0.6))'
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
-                        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Sparkles className="h-24 w-24" />
-                        </div>
-
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 flex items-center gap-1">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
                                     <Battery className="h-3 w-3" /> {timeContext.energy} Energy
                                 </span>
                                 <span className="text-xs text-slate-500 flex items-center gap-1">
@@ -196,12 +196,13 @@ export function FocusStream() {
                                     ][Math.floor(Math.random() * 4)]}`}
                             </p>
 
-                            <button className="text-sm font-medium text-emerald-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <button className="text-sm font-medium text-cyan-400 flex items-center gap-1 group-hover:gap-2 transition-all">
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
                     </motion.div>
                 )}
+                </div>
             </div>
 
             {/* Review Deck Modal */}
