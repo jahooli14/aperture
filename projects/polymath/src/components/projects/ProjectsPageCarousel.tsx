@@ -1,9 +1,4 @@
-/**
- * Projects Dashboard Component
- * Google Keep-style masonry layout for projects
- */
-
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -15,12 +10,11 @@ import {
   Sparkles
 } from 'lucide-react'
 import type { Project } from '../../types'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { useSuggestionStore } from '../../stores/useSuggestionStore'
 
 interface ProjectsPageCarouselProps {
-  activeProjects: Project[]
-  drawerProjects: Project[]
   loading?: boolean
-  onClearSuggestions?: () => void
 }
 
 interface Task {
@@ -128,26 +122,78 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 }
 
 export function ProjectsPageCarousel({
-  activeProjects,
-  drawerProjects,
   loading = false,
-  onClearSuggestions
 }: ProjectsPageCarouselProps) {
+  const { projects } = useProjectStore()
+  const { clearSuggestions } = useSuggestionStore()
+
+  // Categorize projects for the dashboard
+  const { activeList, drawerList, suggestedProjects } = useMemo(() => {
+    // 1. Get all priority projects
+    const priorityProjects = projects.filter(p => p.is_priority)
+    const priorityIds = new Set(priorityProjects.map(p => p.id))
+    
+    // 2. Get recent active projects, excluding those already prioritized
+    const sortedByRecency = [...projects].sort((a, b) => 
+      new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
+    )
+
+    // Fill remaining slots up to 3 (Pinned + Top Recent) for active focus
+    const maxActiveCount = 3
+    const recentActiveNonPriority = sortedByRecency
+      .filter(p => p.status === 'active' && !priorityIds.has(p.id))
+      .slice(0, maxActiveCount - priorityProjects.length) 
+
+    const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
+    const activeIds = new Set(activeList.map(p => p.id))
+
+    // Everything else goes in the drawer
+    let drawerList = projects.filter(p => !activeIds.has(p.id))
+
+    // Shuffle drawer daily (deterministic for the day)
+    const seed = new Date().toDateString()
+    const seededRandom = (str: string) => {
+      let h = 0xdeadbeef;
+      for(let i = 0; i < str.length; i++)
+        h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
+      return ((h ^ h >>> 16) >>> 0) / 4294967296;
+    }
+    
+    drawerList.sort((a, b) => {
+      const scoreA = seededRandom(seed + a.id)
+      const scoreB = seededRandom(seed + b.id)
+      return scoreB - scoreA
+    })
+
+    // Separate suggested projects for the clear button logic
+    const suggestedProjects = drawerList.filter(p => {
+      const created = new Date(p.created_at).getTime()
+      const isNew = (Date.now() - created) < (7 * 24 * 60 * 60 * 1000)
+      return isNew && !p.is_priority // Assuming suggestions are new and not priority
+    })
+
+    return {
+      activeList,
+      drawerList,
+      suggestedProjects
+    }
+  }, [projects])
+
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
 
   return (
     <div className="space-y-8 pb-20">
       
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
-      {activeProjects.length > 0 && (
+      {activeList.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4 px-1">
-            <Sparkles className="h-4 w-4 text-amber-400" />
+            <Pin className="h-4 w-4 text-blue-400" />
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Active Focus</h3>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeProjects.map(project => (
+            {activeList.map(project => (
               <motion.div 
                 key={project.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -161,16 +207,16 @@ export function ProjectsPageCarousel({
       )}
 
       {/* SECTION 2: THE DRAWER (Masonry) */}
-      {drawerProjects.length > 0 && (
+      {drawerList.length > 0 && (
         <section>
           <div className="flex items-center justify-between gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 text-blue-400" />
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
             </div>
-            {onClearSuggestions && (
+            {suggestedProjects.length > 0 && clearSuggestions && (
               <button 
-                onClick={onClearSuggestions}
+                onClick={clearSuggestions}
                 className="text-xs text-red-400 hover:text-red-300 transition-colors"
               >
                 Clear Suggestions
@@ -179,7 +225,7 @@ export function ProjectsPageCarousel({
           </div>
 
           <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
-            {drawerProjects.map((project, i) => (
+            {drawerList.map((project, i) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0 }}
@@ -194,7 +240,7 @@ export function ProjectsPageCarousel({
         </section>
       )}
 
-      {activeProjects.length === 0 && drawerProjects.length === 0 && (
+      {activeList.length === 0 && drawerList.length === 0 && (
         <div className="text-center py-20 text-gray-500">
           <p>No projects yet. Capture a thought to start.</p>
         </div>

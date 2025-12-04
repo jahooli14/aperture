@@ -79,24 +79,28 @@ export function ProjectsPage() {
 
   // Categorize projects for the dashboard
   const { activeList, drawerList } = React.useMemo(() => {
-    const pinned = projects.find(p => p.is_priority) || null
+    // 1. Get all priority projects
+    const priorityProjects = projects.filter(p => p.is_priority)
+    const priorityIds = new Set(priorityProjects.map(p => p.id))
     
+    // 2. Get recent active projects, excluding those already prioritized
     const sortedByRecency = [...projects].sort((a, b) => 
       new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
     )
 
-    // Top 2 active projects (excluding pinned) for "Active Focus"
-    const recentActive = sortedByRecency
-      .filter(p => p.status === 'active' && p.id !== pinned?.id)
-      .slice(0, 2)
+    // Fill remaining slots up to 3 (Pinned + Top Recent) for active focus
+    const maxActiveCount = 3
+    const recentActiveNonPriority = sortedByRecency
+      .filter(p => p.status === 'active' && !priorityIds.has(p.id))
+      .slice(0, maxActiveCount - priorityProjects.length) 
 
-    const activeList = [pinned, ...recentActive].filter(Boolean) as Project[]
+    const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
     const activeIds = new Set(activeList.map(p => p.id))
 
     // Everything else goes in the drawer
     let drawerList = projects.filter(p => !activeIds.has(p.id))
 
-    // Shuffle drawer daily
+    // Shuffle drawer daily (deterministic for the day)
     const seed = new Date().toDateString()
     const seededRandom = (str: string) => {
       let h = 0xdeadbeef;
@@ -105,12 +109,6 @@ export function ProjectsPage() {
       return ((h ^ h >>> 16) >>> 0) / 4294967296;
     }
     
-    // Deterministic shuffle based on date
-    const rng = seededRandom(seed)
-    drawerList = drawerList.sort(() => 0.5 - seededRandom(seed + Math.random())) // Simple shuffle, refined below if needed
-
-    // Better shuffle: map to random value then sort
-    // Actually, to keep it stable for the day, we need a stable sort based on hash of ID + Date
     drawerList.sort((a, b) => {
       const scoreA = seededRandom(seed + a.id)
       const scoreB = seededRandom(seed + b.id)
