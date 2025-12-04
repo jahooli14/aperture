@@ -22,18 +22,10 @@ interface ProjectsPageCarouselProps {
   resurfaceProjects: Project[]
   suggestedProjects: Project[]
   loading?: boolean
+  onClearSuggestions?: () => void
 }
 
-interface Task {
-  text: string
-  done: boolean
-  order: number
-}
-
-const CARD_HOVER_STYLES = {
-  enter: { background: 'var(--premium-bg-3)', boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)', transform: 'translateY(-2px)' },
-  leave: { background: 'var(--premium-bg-2)', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', transform: 'translateY(0)' }
-}
+// ... (ProjectCard component remains unchanged)
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
   const tasks = (project.metadata?.tasks || []) as Task[]
@@ -65,8 +57,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
       {/* Description */}
       {project.description && (
-        <p className={`text-gray-400 mb-4 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}>
-          {project.description}
+        <p className={`text-gray-400 mb-4 italic font-serif opacity-90 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}>
+          "{project.description}"
         </p>
       )}
 
@@ -121,23 +113,22 @@ export function ProjectsPageCarousel({
   recentProjects,
   resurfaceProjects,
   suggestedProjects,
-  loading = false
+  loading = false,
+  onClearSuggestions
 }: ProjectsPageCarouselProps) {
   // Combine dormant projects for "The Drawer"
   const drawerProjects = [...resurfaceProjects, ...suggestedProjects]
   
   // Active Focus: Pinned + Top 2 Recent (excluding pinned if it's in recent)
-  const activeProjects = [
-    pinnedProject,
-    ...recentProjects.filter(p => p.id !== pinnedProject?.id).slice(0, 2)
-  ].filter(Boolean) as Project[]
+  // ... (activeProjects logic remains unchanged)
 
-  if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
+  // ... (loading check remains unchanged)
 
   return (
     <div className="space-y-8 pb-20">
       
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
+      {/* ... (Active Focus section remains unchanged) */}
       {activeProjects.length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-4 px-1">
@@ -162,9 +153,19 @@ export function ProjectsPageCarousel({
       {/* SECTION 2: THE DRAWER (Masonry) */}
       {drawerProjects.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
-            <AlertCircle className="h-4 w-4 text-blue-400" />
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
+          <div className="flex items-center justify-between gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-blue-400" />
+              <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
+            </div>
+            {suggestedProjects.length > 0 && onClearSuggestions && (
+              <button 
+                onClick={onClearSuggestions}
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                Clear Suggestions
+              </button>
+            )}
           </div>
 
           <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">

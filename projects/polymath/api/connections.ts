@@ -146,15 +146,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let sourceContent = ''
 
         if (type === 'project') {
-          const { data } = await supabase.from('projects').select('*').eq('user_id', userId).eq('id', id).single()
+          const { data } = await supabase.from('projects').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Project: ${data?.title}\n${data?.description || ''}`
         } else if (type === 'thought' || type === 'memory') {
-          const { data } = await supabase.from('memories').select('*').eq('user_id', userId).eq('id', id).single()
+          const { data } = await supabase.from('memories').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Thought: ${data?.title || ''}\n${data?.body || ''}`
         } else if (type === 'article') {
-          const { data } = await supabase.from('reading_queue').select('*').eq('user_id', userId).eq('id', id).single()
+          const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
         }

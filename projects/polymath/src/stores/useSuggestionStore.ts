@@ -39,6 +39,7 @@ interface SuggestionState {
     description?: string
     type?: 'hobby' | 'side-project' | 'learning'
   }) => Promise<any>
+  clearSuggestions: () => Promise<void>
   triggerSynthesis: () => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
   setSortBy: (sortBy: SuggestionState['sortBy']) => void
@@ -139,6 +140,25 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
       await get().fetchSuggestions()
 
       return await response.json()
+    } catch (error) {
+      set({
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+      throw error
+    }
+  },
+
+  clearSuggestions: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/projects?resource=suggestions&action=clear`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to clear suggestions')
+      }
+
+      await get().fetchSuggestions()
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error'
