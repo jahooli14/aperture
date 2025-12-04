@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
+import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
 import { Button } from '../components/ui/button'
@@ -22,6 +23,8 @@ export function ProjectsPage() {
     deleteProject,
     setFilter
   } = useProjectStore()
+
+  const { clearSuggestions } = useSuggestionStore()
 
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [debouncedSelectedTags, setDebouncedSelectedTags] = useState<string[]>([])
@@ -219,6 +222,7 @@ export function ProjectsPage() {
                   resurfaceProjects={resurfaceProjects}
                   suggestedProjects={suggestedProjects}
                   loading={loading}
+                  onClearSuggestions={clearSuggestions}
                 />
               </div>
             </div>
