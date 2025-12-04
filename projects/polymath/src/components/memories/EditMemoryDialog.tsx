@@ -12,12 +12,12 @@ import {
   BottomSheetHeader,
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
-import { Input } from '../ui/input'
+import { Textarea } from '../ui/textarea'
 import { Label } from '../ui/label'
 import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Sparkles, Plus, X } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import type { Memory } from '../../types'
 
 interface EditMemoryDialogProps {
@@ -31,7 +31,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
   const { updateMemory } = useMemoryStore()
   const { addToast } = useToast()
 
-  const [bullets, setBullets] = useState<string[]>([''])
+  const [body, setBody] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
@@ -45,32 +45,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
         tags: memory.tags?.join(', ') || '',
         memory_type: memory.memory_type || '',
       })
-
-      // Convert body text to bullets (split by newlines or sentences)
-      const bodyBullets = memory.body
-        .split(/\n+/)
-        .map(b => b.trim())
-        .filter(b => b.length > 0)
-
-      setBullets(bodyBullets.length > 0 ? bodyBullets : [''])
+      setBody(memory.body)
     }
   }, [memory, open])
-
-  const addBullet = () => {
-    setBullets([...bullets, ''])
-  }
-
-  const removeBullet = (index: number) => {
-    if (bullets.length > 1) {
-      setBullets(bullets.filter((_, i) => i !== index))
-    }
-  }
-
-  const updateBullet = (index: number, value: string) => {
-    const newBullets = [...bullets]
-    newBullets[index] = value
-    setBullets(newBullets)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,14 +61,9 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
         .map((t) => t.trim())
         .filter((t) => t.length > 0)
 
-      const body = bullets
-        .map(b => b.trim())
-        .filter(b => b.length > 0)
-        .join('\n\n')
-
       await updateMemory(memory.id, {
         title: formData.title,
-        body,
+        body: body.trim(),
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
       })
@@ -151,61 +123,26 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
               />
             </div>
 
-            {/* Bullet Points */}
+            {/* Body Content */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                  Content <span style={{ color: '#ef4444' }}>*</span>
-                </Label>
-                <Button
-                  type="button"
-                  onClick={addBullet}
-                  variant="ghost"
-                  size="sm"
-                  className="hover:bg-white/10"
-                  style={{ color: 'var(--premium-blue)' }}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add point
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {bullets.map((bullet, index) => (
-                  <div key={index} className="flex gap-2">
-                    <div className="flex-shrink-0 w-6 h-11 sm:h-12 flex items-center justify-center font-medium" style={{ color: 'var(--premium-text-tertiary)' }}>
-                      •
-                    </div>
-                    <Input
-                      placeholder={`Point ${index + 1}`}
-                      value={bullet}
-                      onChange={(e) => updateBullet(index, e.target.value)}
-                      className="text-base h-11 sm:h-12"
-                      style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        color: 'var(--premium-text-primary)'
-                      }}
-                      autoComplete="off"
-                    />
-                    {bullets.length > 1 && (
-                      <Button
-                        type="button"
-                        onClick={() => removeBullet(index)}
-                        variant="ghost"
-                        size="sm"
-                        className="flex-shrink-0 hover:bg-red-500/10"
-                        style={{ color: 'var(--premium-text-tertiary)' }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
+              <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                Content <span style={{ color: '#ef4444' }}>*</span>
+              </Label>
+              <Textarea
+                id="body"
+                placeholder="Write your thoughts..."
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                required
+                className="text-base min-h-[200px] resize-y leading-relaxed p-4"
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'var(--premium-text-primary)'
+                }}
+              />
               <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                AI will re-analyze this to extract entities and themes
+                AI will analyze this to extract entities and themes.
               </p>
             </div>
 
@@ -264,7 +201,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
             <BottomSheetFooter>
               <Button
                 type="submit"
-                disabled={loading || !formData.title || bullets.every(b => !b.trim())}
+                disabled={loading || !formData.title || !body.trim()}
                 className="btn-primary w-full h-12 touch-manipulation"
               >
                 {loading ? (
