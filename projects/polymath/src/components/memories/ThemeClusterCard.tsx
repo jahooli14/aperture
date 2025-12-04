@@ -26,7 +26,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
   return (
     <button
       onClick={onClick}
-      className="group relative premium-card p-6 text-left w-full hover-lift flex items-start gap-4"
+      className="group relative premium-card p-5 text-left w-full hover-lift flex flex-col items-start gap-4"
     >
       {/* Icon */}
       <div
@@ -41,14 +41,14 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 w-full min-w-0">
         {/* Theme Name */}
-        <h3 className="text-xl font-bold mb-1 premium-text-platinum">
+        <h3 className="text-lg font-bold mb-1 premium-text-platinum line-clamp-2">
           {cluster.name}
         </h3>
 
         {/* Thought Count */}
-        <p className="text-sm mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
+        <p className="text-sm mb-4" style={{ color: 'var(--premium-text-secondary)' }}>
           {cluster.memory_count} {cluster.memory_count === 1 ? 'thought' : 'thoughts'}
         </p>
 
@@ -79,7 +79,7 @@ export const ThemeClusterCard = React.memo(function ThemeClusterCard({ cluster, 
       </div>
 
       {/* Hover indicator */}
-      <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity">
         <ChevronRight className="w-5 h-5" style={{ color: 'var(--premium-blue)' }} />
       </div>
     </button>

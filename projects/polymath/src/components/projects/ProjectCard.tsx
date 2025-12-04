@@ -31,65 +31,106 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
   // Color Coding
-  const getTheme = (type: string, title: string) => {
-    const t = type.toLowerCase()
-    
-    // Explicit mappings with boosted visibility
-    if (t === 'tech' || t === 'technical') return { border: 'border-rose-500/40', bg: 'from-rose-500/20 to-rose-500/5', text: 'text-rose-400' }
-    if (t === 'creative') return { border: 'border-pink-500/40', bg: 'from-pink-500/20 to-pink-500/5', text: 'text-pink-400' }
-    if (t === 'writing') return { border: 'border-indigo-500/40', bg: 'from-indigo-500/20 to-indigo-500/5', text: 'text-indigo-400' }
-    if (t === 'business') return { border: 'border-emerald-500/40', bg: 'from-emerald-500/20 to-emerald-500/5', text: 'text-emerald-400' }
-    if (t === 'learning') return { border: 'border-amber-500/40', bg: 'from-amber-500/20 to-amber-500/5', text: 'text-amber-400' }
-    if (t === 'life') return { border: 'border-cyan-500/40', bg: 'from-cyan-500/20 to-cyan-500/5', text: 'text-cyan-400' }
-    if (t === 'hobby') return { border: 'border-orange-500/40', bg: 'from-orange-500/20 to-orange-500/5', text: 'text-orange-400' }
-    if (t === 'side-project') return { border: 'border-violet-500/40', bg: 'from-violet-500/20 to-violet-500/5', text: 'text-violet-400' }
+  const getTheme = (type: string = '') => {
+    const t = type.toLowerCase().trim()
+    // console.log('ProjectCard type:', t) // Debugging
 
-    // Deterministic fallback based on title hash
-    const colors = [
-      { border: 'border-blue-500/40', bg: 'from-blue-500/20 to-blue-500/5', text: 'text-blue-400' },
-      { border: 'border-purple-500/40', bg: 'from-purple-500/20 to-purple-500/5', text: 'text-purple-400' },
-      { border: 'border-teal-500/40', bg: 'from-teal-500/20 to-teal-500/5', text: 'text-teal-400' },
-      { border: 'border-fuchsia-500/40', bg: 'from-fuchsia-500/20 to-fuchsia-500/5', text: 'text-fuchsia-400' },
-    ]
-    
-    let hash = 0;
-    for (let i = 0; i < title.length; i++) {
-      hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    switch (t) {
+      case 'technical':
+      case 'tech': 
+        return { 
+          border: 'border-rose-500', 
+          bg: 'from-rose-950/40 to-rose-900/20', 
+          text: 'text-rose-400', 
+          shadow: 'shadow-rose-900/20'
+        }
+      case 'creative': 
+        return { 
+          border: 'border-pink-500', 
+          bg: 'from-pink-950/40 to-pink-900/20', 
+          text: 'text-pink-400',
+          shadow: 'shadow-pink-900/20'
+        }
+      case 'writing': 
+        return { 
+          border: 'border-indigo-500', 
+          bg: 'from-indigo-950/40 to-indigo-900/20', 
+          text: 'text-indigo-400',
+          shadow: 'shadow-indigo-900/20'
+        }
+      case 'business': 
+        return { 
+          border: 'border-emerald-500', 
+          bg: 'from-emerald-950/40 to-emerald-900/20', 
+          text: 'text-emerald-400',
+          shadow: 'shadow-emerald-900/20'
+        }
+      case 'learning': 
+        return { 
+          border: 'border-amber-500', 
+          bg: 'from-amber-950/40 to-amber-900/20', 
+          text: 'text-amber-400',
+          shadow: 'shadow-amber-900/20'
+        }
+      case 'life': 
+        return { 
+          border: 'border-cyan-500', 
+          bg: 'from-cyan-950/40 to-cyan-900/20', 
+          text: 'text-cyan-400',
+          shadow: 'shadow-cyan-900/20'
+        }
+      case 'hobby': 
+        return { 
+          border: 'border-orange-500', 
+          bg: 'from-orange-950/40 to-orange-900/20', 
+          text: 'text-orange-400',
+          shadow: 'shadow-orange-900/20'
+        }
+      case 'side-project': 
+        return { 
+          border: 'border-violet-500', 
+          bg: 'from-violet-950/40 to-violet-900/20', 
+          text: 'text-violet-400',
+          shadow: 'shadow-violet-900/20'
+        }
+      default: 
+        return { 
+          border: 'border-slate-700', 
+          bg: 'from-slate-800/40 to-slate-900/20', 
+          text: 'text-slate-400',
+          shadow: 'shadow-slate-900/20'
+        }
     }
-    
-    return colors[Math.abs(hash) % colors.length];
   }
 
-  const theme = getTheme(project.type || 'other', project.title)
-
-  const handleAnalyze = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
-    toggleSidebar(true)
-  }
+  const theme = getTheme(project.type)
 
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${theme.border} bg-gradient-to-br ${theme.bg} ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border bg-gradient-to-br ${theme.border} ${theme.bg} ${prominent ? 'p-5' : 'p-4'}`}
       style={{
-        boxShadow: `0 4px 16px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.2)')}` // Dynamic boxShadow
+        boxShadow: `0 4px 12px rgba(0,0,0,0.2)` // Base shadow
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'var(--premium-bg-3)'
-        e.currentTarget.style.boxShadow = `0 12px 32px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.4)')}`
+        // We handle hover style via CSS classes mostly now to allow Tailwind to work better, 
+        // but for dynamic colors we might need inline styles if classes fail.
+        // Let's rely on the classes first.
+        e.currentTarget.style.transform = 'translateY(-2px)'
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = `linear-gradient(to bottom right, ${theme.bg.replace('from-', '').split('to-')[0]} ${theme.bg.split('to-')[1]})`
-        e.currentTarget.style.boxShadow = `0 4px 16px ${theme.border.replace('border-', 'rgba(').replace('/30', ', 0.2)')}`
+        e.currentTarget.style.transform = 'translateY(0)'
       }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className={`premium-text-platinum font-bold leading-tight ${prominent ? 'text-lg' : 'text-sm'}`}>
-          {project.title}
-        </h4>
+        <div className="flex items-center gap-2">
+           {/* Visual Debug Dot / Type Indicator */}
+           <div className={`w-2 h-2 rounded-full ${theme.text.replace('text-', 'bg-')}`} />
+           <h4 className={`premium-text-platinum font-bold leading-tight ${prominent ? 'text-lg' : 'text-sm'}`}>
+            {project.title}
+          </h4>
+        </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button 
             onClick={handleAnalyze}
