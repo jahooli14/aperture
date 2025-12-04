@@ -32,13 +32,13 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
 
   // Color Coding
   const getTheme = (type: string) => {
-    switch (type) {
-      case 'technical': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
+    switch (type.toLowerCase()) {
+      case 'tech': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
       case 'creative': return { border: 'border-pink-500/30', bg: 'from-pink-500/10 to-pink-500/5', text: 'text-pink-400' }
-      case 'learning': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
-      case 'content': return { border: 'border-purple-500/30', bg: 'from-purple-500/10 to-purple-500/5', text: 'text-purple-400' }
-      case 'hobby': return { border: 'border-amber-500/30', bg: 'from-amber-500/10 to-amber-500/5', text: 'text-amber-400' }
-      case 'side-project': return { border: 'border-indigo-500/30', bg: 'from-indigo-500/10 to-indigo-500/5', text: 'text-indigo-400' }
+      case 'writing': return { border: 'border-indigo-500/30', bg: 'from-indigo-500/10 to-indigo-500/5', text: 'text-indigo-400' }
+      case 'business': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
+      case 'learning': return { border: 'border-amber-500/30', bg: 'from-amber-500/10 to-amber-500/5', text: 'text-amber-400' }
+      case 'life': return { border: 'border-cyan-500/30', bg: 'from-cyan-500/10 to-cyan-500/5', text: 'text-cyan-400' }
       default: return { border: 'border-white/10', bg: 'from-white/5 to-white/5', text: 'text-slate-400' }
     }
   }
