@@ -179,7 +179,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
               </div>
             </Link>
 
-            {hasPendingSuggestions && (
+            {hasPendingSuggestions ? (
               <Link
                 to="/suggestions"
                 className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -191,6 +191,20 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
               >
                 <Sparkles className="inline h-4 w-4 mr-2" />
                 {pendingSuggestionsCount} Project {pendingSuggestionsCount === 1 ? 'Suggestion' : 'Suggestions'} Waiting
+                <ArrowRight className="inline h-4 w-4 ml-2" />
+              </Link>
+            ) : (
+              <Link
+                to="/suggestions"
+                className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  background: 'var(--premium-bg-3)',
+                  color: 'var(--premium-text-secondary)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <Sparkles className="inline h-4 w-4 mr-2" />
+                Suggest project ideas
                 <ArrowRight className="inline h-4 w-4 ml-2" />
               </Link>
             )}
@@ -804,9 +818,6 @@ export function HomePage() {
           )}
         </AnimatePresence>
 
-        {/* Focus Stream - New Section */}
-        <FocusStream />
-
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
@@ -874,158 +885,8 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* 2. KEEP THE MOMENTUM (Compact) */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="mb-5">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
-              </h2>
-            </div>
-
-            {projectsLoading ? (
-              <SkeletonCard variant="list" count={2} />
-            ) : projectsToShow.length > 0 ? (
-              <div className="space-y-3">
-                {projectsToShow.map((project) => {
-                  // Get first incomplete task from the tasks array
-                  const tasks = (project.metadata?.tasks || []) as Array<{ id: string; text: string; done: boolean; created_at: string; order: number }>
-                  const nextTask = tasks
-                    .sort((a, b) => a.order - b.order)
-                    .find(task => !task.done)
-                  const nextStep = nextTask?.text
-
-                  // Calculate progress
-                  const totalTasks = tasks.length
-                  const completedTasks = tasks.filter(t => t.done).length
-                  const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-
-                  return (
-                    <Link
-                      key={project.id}
-                      to={`/projects/${project.id}`}
-                      className="group block p-4 rounded-xl transition-all duration-300"
-                      style={{
-                        background: 'var(--premium-bg-2)',
-                        backdropFilter: 'blur(12px)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-3)'
-                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-2)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
-                    >
-                      {/* Project Title & Priority Badge */}
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="premium-text-platinum font-bold text-base flex-1">
-                          {project.title}
-                        </h3>
-
-                        {project.is_priority && (
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <div className="h-2 w-2 rounded-full" style={{
-                              backgroundColor: 'var(--premium-blue)',
-                              boxShadow: '0 0 8px rgba(59, 130, 246, 0.5)'
-                            }} />
-                            <span className="text-xs font-medium" style={{ color: 'var(--premium-blue)' }}>
-                              Priority
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Next Step - Interactive with Checkbox */}
-                      <div
-                        className="rounded-lg p-2.5 flex items-center justify-between gap-2"
-                        style={{
-                          background: 'var(--premium-bg-3)'
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {nextTask ? (
-                          <div className="flex items-start gap-2.5 flex-1">
-                            <button
-                              onClick={async (e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                const updatedTasks = tasks.map(t =>
-                                  t.id === nextTask.id ? { ...t, done: true } : t
-                                )
-                                try {
-                                  await updateProject(project.id, {
-                                    metadata: { ...project.metadata, tasks: updatedTasks }
-                                  })
-                                  addToast({ title: 'Task complete!', description: nextTask.text, variant: 'success' })
-                                  haptic.success()
-                                } catch (error) {
-                                  console.error('Failed to complete task:', error)
-                                  addToast({ title: 'Failed to complete task', variant: 'destructive' })
-                                }
-                              }}
-                              className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-blue-500/20"
-                              style={{
-                                color: 'rgba(59, 130, 246, 0.9)',
-                                border: '2px solid rgba(255, 255, 255, 0.3)'
-                              }}
-                              title="Mark as complete"
-                            >
-                              <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
-                            </button>
-                            <div className="premium-text-platinum font-medium text-sm flex-1">
-                              {nextStep}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="premium-text-platinum font-medium text-sm flex-1">
-                            No tasks yet - click to add one
-                          </div>
-                        )}
-                        {totalTasks > 0 && (
-                          <span className="text-xs font-medium flex-shrink-0" style={{ color: 'var(--premium-text-tertiary)' }}>
-                            {completedTasks}/{totalTasks}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  )
-                })}
-
-                <Link
-                  to="/projects"
-                  className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                  style={{ color: 'var(--premium-blue)' }}
-                >
-                  View All Projects <ArrowRight className="inline h-4 w-4 ml-1" />
-                </Link>
-              </div>
-            ) : (
-              <EmptyState
-                icon={Layers}
-                title="Ready to build something?"
-                description="Projects are where ideas become reality."
-                action={
-                  <Link
-                    to="/projects"
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                    style={{
-                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                      color: 'var(--premium-blue)'
-                    }}
-                  >
-                    Create Project <ArrowRight className="h-4 w-4" />
-                  </Link>
-                }
-              />
-            )}
-          </div>
-        </section>
+        {/* 2. KEEP THE MOMENTUM (Focus Stream) */}
+        <FocusStream />
 
         {/* 3. GET INSPIRATION */}
         <GetInspirationSection

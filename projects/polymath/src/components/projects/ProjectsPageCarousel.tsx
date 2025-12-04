@@ -12,6 +12,7 @@ import {
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
+import { useContextEngineStore } from '../../stores/useContextEngineStore'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
@@ -29,6 +30,7 @@ const CARD_HOVER_STYLES = {
 }
 
 function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
+  const { setContext, toggleSidebar } = useContextEngineStore()
   const tasks = (project.metadata?.tasks || []) as Task[]
   const nextTask = tasks.sort((a, b) => a.order - b.order).find(task => !task.done)
   const totalTasks = tasks.length
@@ -48,6 +50,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
   const theme = getTheme(project.type || 'other')
 
+  const handleAnalyze = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContext('project', project.id, project.title, `${project.title}\n\n${project.description || ''}`)
+    toggleSidebar(true)
+  }
+
   return (
     <Link
       to={`/projects/${project.id}`}
@@ -63,9 +72,18 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         <h4 className={`premium-text-platinum font-bold leading-tight ${prominent ? 'text-lg' : 'text-sm'}`}>
           {project.title}
         </h4>
-        {project.is_priority && (
-          <Pin className={`h-4 w-4 flex-shrink-0 ${theme.text}`} />
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button 
+            onClick={handleAnalyze}
+            className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-blue-400"
+            title="AI Analysis"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+          {project.is_priority && (
+            <Pin className={`h-4 w-4 ${theme.text}`} />
+          )}
+        </div>
       </div>
 
       {/* Description */}
