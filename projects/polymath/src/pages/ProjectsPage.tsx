@@ -78,35 +78,48 @@ export function ProjectsPage() {
   }, [filter]) // Only re-fetch when filter changes, not when fetchProjects changes
 
   // Categorize projects for the dashboard
-  const { pinnedProject, recentProjects, resurfaceProjects, suggestedProjects } = React.useMemo(() => {
+  const { activeList, drawerList } = React.useMemo(() => {
     const pinned = projects.find(p => p.is_priority) || null
     
     const sortedByRecency = [...projects].sort((a, b) => 
       new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
     )
 
-    const recent = sortedByRecency.slice(0, 5)
+    // Top 2 active projects (excluding pinned) for "Active Focus"
+    const recentActive = sortedByRecency
+      .filter(p => p.status === 'active' && p.id !== pinned?.id)
+      .slice(0, 2)
 
-    const now = Date.now()
-    const DAY = 24 * 60 * 60 * 1000
+    const activeList = [pinned, ...recentActive].filter(Boolean) as Project[]
+    const activeIds = new Set(activeList.map(p => p.id))
 
-    const resurface = projects.filter(p => {
-      const lastActive = new Date(p.last_active || p.created_at).getTime()
-      const isDormant = (now - lastActive) > (14 * DAY)
-      return isDormant && !p.is_priority
-    })
+    // Everything else goes in the drawer
+    let drawerList = projects.filter(p => !activeIds.has(p.id))
 
-    const suggested = projects.filter(p => {
-      const created = new Date(p.created_at).getTime()
-      const isNew = (now - created) < (7 * DAY)
-      return isNew && !p.is_priority
+    // Shuffle drawer daily
+    const seed = new Date().toDateString()
+    const seededRandom = (str: string) => {
+      let h = 0xdeadbeef;
+      for(let i = 0; i < str.length; i++)
+        h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
+      return ((h ^ h >>> 16) >>> 0) / 4294967296;
+    }
+    
+    // Deterministic shuffle based on date
+    const rng = seededRandom(seed)
+    drawerList = drawerList.sort(() => 0.5 - seededRandom(seed + Math.random())) // Simple shuffle, refined below if needed
+
+    // Better shuffle: map to random value then sort
+    // Actually, to keep it stable for the day, we need a stable sort based on hash of ID + Date
+    drawerList.sort((a, b) => {
+      const scoreA = seededRandom(seed + a.id)
+      const scoreB = seededRandom(seed + b.id)
+      return scoreB - scoreA
     })
 
     return {
-      pinnedProject: pinned,
-      recentProjects: recent,
-      resurfaceProjects: resurface,
-      suggestedProjects: suggested
+      activeList,
+      drawerList
     }
   }, [projects])
 
@@ -217,10 +230,8 @@ export function ProjectsPage() {
 
                 {/* Masonry Dashboard */}
                 <ProjectsPageCarousel 
-                  pinnedProject={pinnedProject}
-                  recentProjects={recentProjects}
-                  resurfaceProjects={resurfaceProjects}
-                  suggestedProjects={suggestedProjects}
+                  activeProjects={activeList}
+                  drawerProjects={drawerList}
                   loading={loading}
                   onClearSuggestions={clearSuggestions}
                 />

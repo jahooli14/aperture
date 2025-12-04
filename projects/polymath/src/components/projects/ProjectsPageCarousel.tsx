@@ -17,10 +17,8 @@ import {
 import type { Project } from '../../types'
 
 interface ProjectsPageCarouselProps {
-  pinnedProject: Project | null
-  recentProjects: Project[]
-  resurfaceProjects: Project[]
-  suggestedProjects: Project[]
+  activeProjects: Project[]
+  drawerProjects: Project[]
   loading?: boolean
   onClearSuggestions?: () => void
 }
@@ -130,22 +128,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 }
 
 export function ProjectsPageCarousel({
-  pinnedProject,
-  recentProjects,
-  resurfaceProjects,
-  suggestedProjects,
+  activeProjects,
+  drawerProjects,
   loading = false,
   onClearSuggestions
 }: ProjectsPageCarouselProps) {
-  // Combine dormant projects for "The Drawer"
-  const drawerProjects = [...resurfaceProjects, ...suggestedProjects]
-  
-  // Active Focus: Pinned + Top 2 Recent (excluding pinned if it's in recent)
-  const activeProjects = [
-    pinnedProject,
-    ...recentProjects.filter(p => p.id !== pinnedProject?.id).slice(0, 2)
-  ].filter(Boolean) as Project[]
-
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
 
   return (
@@ -181,7 +168,7 @@ export function ProjectsPageCarousel({
               <AlertCircle className="h-4 w-4 text-blue-400" />
               <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
             </div>
-            {suggestedProjects.length > 0 && onClearSuggestions && (
+            {onClearSuggestions && (
               <button 
                 onClick={onClearSuggestions}
                 className="text-xs text-red-400 hover:text-red-300 transition-colors"
