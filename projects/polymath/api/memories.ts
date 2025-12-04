@@ -76,6 +76,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleReview(memoryId as string, res, supabase)
     }
 
+    // PATCH: Update memory (content/metadata)
+    if (req.method === 'PATCH') {
+      const memoryId = req.body.id || id
+      return await handleUpdate(memoryId as string, req, res, supabase)
+    }
+
     // GET: Search (merged from search.ts)
     if (req.method === 'GET' && q) {
       const context = req.query.context as string | undefined
@@ -1022,9 +1028,59 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Handle media analysis (audio transcription or image description)
- * Uses Google Gemini 2.5 Flash for multi-modal understanding
+ * Update memory content and metadata
  */
+async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelResponse, supabase: any) {
+  if (!memoryId) {
+    return res.status(400).json({ error: 'Memory ID required' })
+  }
+
+  const { title, body, tags, memory_type } = req.body
+
+  try {
+    const updateData: any = {
+      processed: false, // Trigger reprocessing
+      processed_at: null
+    }
+
+    if (title !== undefined) updateData.title = title
+    if (body !== undefined) updateData.body = body
+    if (tags !== undefined) updateData.tags = tags
+    if (memory_type !== undefined) updateData.memory_type = memory_type
+
+    const { data: memory, error } = await supabase
+      .from('memories')
+      .update(updateData)
+      .eq('id', memoryId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[handleUpdate] Database error:', error)
+      return res.status(500).json({ error: 'Failed to update memory', details: error.message })
+    }
+
+    // Trigger background processing to regenerate embeddings/entities
+    // We import dynamically to avoid circular dependencies if any, but static import is available at top
+    try {
+      // Fire and forget processing
+      processMemory(memoryId).catch(err => 
+        console.error('[handleUpdate] Background processing failed:', err)
+      )
+    } catch (e) {
+      console.error('[handleUpdate] Failed to trigger processing:', e)
+    }
+
+    return res.status(200).json({
+      success: true,
+      memory
+    })
+  } catch (error) {
+    console.error('[handleUpdate] Error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
 async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
   try {
     // Parse multipart form data

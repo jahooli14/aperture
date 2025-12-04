@@ -278,22 +278,23 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     // Online flow
     try {
-      const updateData = {
-        title: input.title,
-        body: input.body,
-        tags: input.tags || [],
-        memory_type: input.memory_type || null,
-        processed: false, // Trigger reprocessing
+      const response = await fetch(`/api/memories?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: input.title,
+          body: input.body,
+          tags: input.tags || [],
+          memory_type: input.memory_type || null,
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to update memory (${response.status})`)
       }
 
-      const { data, error } = await supabase
-        .from('memories')
-        .update(updateData)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
+      const { memory: data } = await response.json()
 
       // Replace with server data
       set((state) => ({
@@ -301,18 +302,6 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           ? state.memories.map((m) => (m.id === id ? data : m))
           : [data],
       }))
-
-      // Trigger background processing
-      try {
-        await fetch('/api/memories?action=process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memory_id: data.id })
-        })
-      } catch (processError) {
-        console.error('Failed to trigger processing:', processError)
-        // Don't throw - memory was updated successfully
-      }
 
       return data
     } catch (error) {
