@@ -713,7 +713,9 @@ export function ProjectDetailPage() {
                     title="Click to edit"
                   >
                     {project.description ? (
-                      <p style={{ color: 'var(--premium-text-secondary)' }}>{project.description}</p>
+                      <p className="text-lg italic font-serif text-center leading-relaxed opacity-90" style={{ color: 'var(--premium-text-secondary)' }}>
+                        "{project.description}"
+                      </p>
                     ) : (
                       <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
                     )}
