@@ -58,6 +58,22 @@ export function FocusStream() {
         return pool[Math.floor(Math.random() * pool.length)]
     }, [allProjects, timeContext.energy])
 
+    // 3. Priority Project
+    const priorityProject = useMemo(() => {
+        return allProjects.find(p => p.is_priority && p.status === 'active')
+    }, [allProjects])
+
+    // 4. Recent Project (Most active non-priority)
+    const recentProject = useMemo(() => {
+        return allProjects
+            .filter(p => p.status === 'active' && p.id !== priorityProject?.id)
+            .sort((a, b) => {
+                const dateA = a.last_active ? new Date(a.last_active) : new Date(a.created_at)
+                const dateB = b.last_active ? new Date(b.last_active) : new Date(b.created_at)
+                return dateB.getTime() - dateA.getTime()
+            })[0]
+    }, [allProjects, priorityProject])
+
     // Determine Energy Level based on time (Mock logic)
     useEffect(() => {
         const hour = new Date().getHours()
@@ -99,6 +115,91 @@ export function FocusStream() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card 0: Priority Project */}
+                {priorityProject && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        onClick={() => navigate(`/projects/${priorityProject.id}`)}
+                        style={{
+                            background: 'var(--premium-bg-2)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(59, 130, 246, 0.3)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                        }}
+                    >
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                                    Priority
+                                </span>
+                            </div>
+
+                            <h3 className="text-lg font-bold text-white mb-2">
+                                {priorityProject.title}
+                            </h3>
+                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                                {priorityProject.description || 'Keep moving forward on your top priority.'}
+                            </p>
+
+                            <button className="text-sm font-medium text-blue-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Open Project <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Card 0.5: Recent Project */}
+                {recentProject && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 }}
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
+                        onClick={() => navigate(`/projects/${recentProject.id}`)}
+                        style={{
+                            background: 'var(--premium-bg-2)',
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+                        }}
+                    >
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
+                                    <Clock className="h-3 w-3" /> Recent
+                                </span>
+                            </div>
+
+                            <h3 className="text-lg font-bold text-white mb-2">
+                                {recentProject.title}
+                            </h3>
+                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                                {recentProject.description || 'Pick up where you left off.'}
+                            </p>
+
+                            <button className="text-sm font-medium text-purple-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                                Continue <ArrowRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+
                 {/* Card 1: Review Dormant Projects */}
                 {dormantProjects.length > 0 && (
                     <motion.div
