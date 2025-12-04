@@ -167,13 +167,14 @@ export function ProjectsPageCarousel({
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
           </div>
 
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
             {drawerProjects.map((project, i) => (
               <motion.div
                 key={project.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: i * 0.05 }}
+                className="break-inside-avoid mb-4"
               >
                 <ProjectCard project={project} />
               </motion.div>
