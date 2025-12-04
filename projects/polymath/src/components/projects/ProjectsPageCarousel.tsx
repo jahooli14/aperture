@@ -37,18 +37,45 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
-  // Color Coding
-  const getTheme = (type: string) => {
-    switch (type) {
-      case 'technical': return { borderColor: 'rgba(59, 130, 246, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))', textColor: '#60a5fa' }
-      case 'creative': return { borderColor: 'rgba(236, 72, 153, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(236, 72, 153, 0.1), rgba(236, 72, 153, 0.05))', textColor: '#f472b6' }
-      case 'learning': return { borderColor: 'rgba(16, 185, 129, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05))', textColor: '#6ee7b7' }
-      case 'content': return { borderColor: 'rgba(168, 85, 247, 0.3)', bgGradient: 'linear-gradient(to bottom right, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.05))', textColor: '#d8b4fe' }
-      default: return { borderColor: 'rgba(255, 255, 255, 0.1)', bgGradient: 'linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))', textColor: '#94a3b8' }
+  // Color Coding - matching ProjectCard.tsx
+  const PROJECT_COLORS: Record<string, string> = {
+    tech: '59, 130, 246',      // Blue-500
+    technical: '59, 130, 246', // Blue-500
+    creative: '236, 72, 153',  // Pink-500
+    writing: '99, 102, 241',   // Indigo-500
+    business: '16, 185, 129',  // Emerald-500
+    learning: '245, 158, 11',  // Amber-500
+    life: '6, 182, 212',       // Cyan-500
+    hobby: '249, 115, 22',     // Orange-500
+    content: '168, 85, 247',   // Purple-500
+    'side-project': '139, 92, 246', // Violet-500
+    default: '148, 163, 184'   // Slate-400
+  }
+
+  const getTheme = (type: string, title: string) => {
+    const t = type?.toLowerCase().trim() || ''
+
+    let rgb = PROJECT_COLORS[t]
+
+    // Deterministic fallback if type is unknown or missing
+    if (!rgb) {
+      const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+      let hash = 0
+      for (let i = 0; i < title.length; i++) {
+        hash = title.charCodeAt(i) + ((hash << 5) - hash)
+      }
+      rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+    }
+
+    return {
+      borderColor: `rgba(${rgb}, 0.3)`,
+      bgGradient: `linear-gradient(135deg, rgba(${rgb}, 0.15) 0%, rgba(${rgb}, 0.05) 100%)`,
+      textColor: `rgb(${rgb})`,
+      rgb: rgb
     }
   }
 
-  const theme = getTheme(project.type || 'other')
+  const theme = getTheme(project.type || 'other', project.title)
 
   const handleAnalyze = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -60,14 +87,24 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
       style={{
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
         borderColor: theme.borderColor,
         background: theme.bgGradient
       }}
-      onMouseEnter={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.enter)}
-      onMouseLeave={(e) => Object.assign(e.currentTarget.style, CARD_HOVER_STYLES.leave)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25) 0%, rgba(${theme.rgb}, 0.1) 100%)`
+        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.5)`
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = `0 12px 32px rgba(${theme.rgb}, 0.15)`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = theme.bgGradient
+        e.currentTarget.style.borderColor = theme.borderColor
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)'
+      }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">

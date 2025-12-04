@@ -80,7 +80,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 mb-4 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
       style={{
         borderColor: theme.border,
         background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15) 0%, rgba(${theme.rgb}, 0.05) 100%)`,
