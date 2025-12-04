@@ -311,7 +311,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             style={{
               background: 'var(--premium-bg-2)',
               backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              border: 'none'
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.background = 'var(--premium-bg-3)'

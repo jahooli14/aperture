@@ -199,8 +199,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
                 className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{
                   background: 'var(--premium-bg-3)',
-                  color: 'var(--premium-text-secondary)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                  color: 'var(--premium-text-secondary)'
                 }}
               >
                 <Sparkles className="inline h-4 w-4 mr-2" />

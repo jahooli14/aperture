@@ -635,8 +635,7 @@ export function MemoriesPage() {
               <div className="mb-6">
                 <PremiumTabs
                   tabs={[
-                    { id: 'recent', label: 'Recent' },
-                    { id: 'themes', label: 'By Theme' }
+                    { id: 'recent', label: 'Recent' }
                   ]}
                   activeTab={memoryView}
                   onChange={(tabId) => setMemoryView(tabId as typeof memoryView)}

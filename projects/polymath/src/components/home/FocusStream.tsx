@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, Clock, Battery, ArrowRight, Sparkles } from 'lucide-react'
+import { Layers, Clock, Battery, ArrowRight } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
@@ -99,6 +99,17 @@ export function FocusStream() {
         })
     }, [dormantProjects])
 
+    // Color Coding
+    const getTheme = (type: string) => {
+      switch (type) {
+        case 'technical': return { border: 'border-blue-500/30', bg: 'from-blue-500/10 to-blue-500/5', text: 'text-blue-400' }
+        case 'creative': return { border: 'border-pink-500/30', bg: 'from-pink-500/10 to-pink-500/5', text: 'text-pink-400' }
+        case 'learning': return { border: 'border-emerald-500/30', bg: 'from-emerald-500/10 to-emerald-500/5', text: 'text-emerald-400' }
+        case 'content': return { border: 'border-purple-500/30', bg: 'from-purple-500/10 to-purple-500/5', text: 'text-purple-400' }
+        default: return { border: 'border-white/10', bg: 'from-white/5 to-white/5', text: 'text-slate-400' }
+      }
+    }
+
     if (allProjects.length === 0) return null
 
     return (
@@ -107,8 +118,7 @@ export function FocusStream() {
                 background: 'var(--premium-bg-2)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
-                <div className="flex items-center gap-2 mb-5">
-                    <Sparkles className="h-5 w-5 text-blue-400" />
+                <div className="mb-5">
                     <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
                         Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
                     </h2>
@@ -123,22 +133,22 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${priorityProject.id}`)}
                         style={{
-                            background: 'var(--premium-bg-2)',
+                            background: `var(--premium-bg-2)`,
                             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: '1px solid rgba(59, 130, 246, 0.3)'
+                            border: `1px solid ${getTheme(priorityProject.type || 'other').border.replace('border-', '').replace('/30', '/70')}` // More prominent border
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.background = `var(--premium-bg-3)`
                             e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.background = `var(--premium-bg-2)`
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(priorityProject.type || 'other').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme(priorityProject.type || 'other').text} border ${getTheme(priorityProject.type || 'other').border}`}>
                                     Priority
                                 </span>
                             </div>
@@ -150,7 +160,7 @@ export function FocusStream() {
                                 {priorityProject.description || 'Keep moving forward on your top priority.'}
                             </p>
 
-                            <button className="text-sm font-medium text-blue-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <button className={`text-sm font-medium ${getTheme(priorityProject.type || 'other').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -166,22 +176,22 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${recentProject.id}`)}
                         style={{
-                            background: 'var(--premium-bg-2)',
+                            background: `var(--premium-bg-2)`,
                             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            border: `1px solid ${getTheme(recentProject.type || 'other').border.replace('border-', '').replace('/30', '/70')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.background = `var(--premium-bg-3)`
                             e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.background = `var(--premium-bg-2)`
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(recentProject.type || 'other').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme(recentProject.type || 'other').text} border ${getTheme(recentProject.type || 'other').border}`}>
                                     <Clock className="h-3 w-3" /> Recent
                                 </span>
                             </div>
@@ -193,7 +203,7 @@ export function FocusStream() {
                                 {recentProject.description || 'Pick up where you left off.'}
                             </p>
 
-                            <button className="text-sm font-medium text-purple-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <button className={`text-sm font-medium ${getTheme(recentProject.type || 'other').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
                                 Continue <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -208,16 +218,16 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => setShowReviewDeck(true)}
                         style={{
-                            background: 'var(--premium-bg-2)',
+                            background: `var(--premium-bg-2)`,
                             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            border: `1px solid ${getTheme('technical').border.replace('border-', '').replace('/30', '/70')}` // Use a general blue tint for review mode
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-3)'
+                            e.currentTarget.style.background = `var(--premium-bg-3)`
                             e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'var(--premium-bg-2)'
+                            e.currentTarget.style.background = `var(--premium-bg-2)`
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
@@ -227,7 +237,7 @@ export function FocusStream() {
 
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme('technical').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme('technical').text} border ${getTheme('technical').border}`}>
                                     Review Mode
                                 </span>
                                 <span className="text-xs text-slate-500">
@@ -243,7 +253,7 @@ export function FocusStream() {
                                 Take a moment to decide their future.
                             </p>
 
-                            <button className="text-sm font-medium text-blue-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <button className={`text-sm font-medium ${getTheme('technical').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
                                 Start Review <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -259,22 +269,22 @@ export function FocusStream() {
                         className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
-                            background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(30, 41, 59, 0.6))',
-                            border: '1px solid rgba(6, 182, 212, 0.2)',
-                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+                            background: `var(--premium-bg-2)`,
+                            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+                            border: `1px solid ${getTheme(sparkCandidate.type || 'other').border.replace('border-', '').replace('/30', '/70')}`
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.7))'
+                            e.currentTarget.style.background = `var(--premium-bg-3)`
                             e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.3)'
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(30, 41, 59, 0.6))'
+                            e.currentTarget.style.background = `var(--premium-bg-2)`
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
                         }}
                     >
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-3">
-                                <span className="px-2 py-0.5 rounded text-xs font-medium bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 flex items-center gap-1">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${getTheme(sparkCandidate.type || 'other').bg.replace('from-', 'bg-').replace('to-', 'bg-').replace('/10', '/20')} ${getTheme(sparkCandidate.type || 'other').text} border ${getTheme(sparkCandidate.type || 'other').border} flex items-center gap-1`}>
                                     <Battery className="h-3 w-3" /> {timeContext.energy} Energy
                                 </span>
                                 <span className="text-xs text-slate-500 flex items-center gap-1">
@@ -297,7 +307,7 @@ export function FocusStream() {
                                     ][Math.floor(Math.random() * 4)]}`}
                             </p>
 
-                            <button className="text-sm font-medium text-cyan-400 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            <button className={`text-sm font-medium ${getTheme(sparkCandidate.type || 'other').text} flex items-center gap-1 group-hover:gap-2 transition-all`}>
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
                         </div>
