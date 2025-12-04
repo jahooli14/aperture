@@ -428,6 +428,26 @@ What is the non-obvious link?`
       }
     }
 
+    if (action === 'list-all') {
+      try {
+        const { data: connections, error } = await supabase
+          .from('connections')
+          .select('*')
+          .eq('user_id', userId)
+          .limit(1000) // Reasonable limit for graph view
+
+        if (error) {
+          console.error('[connections] Error fetching all:', error)
+          return res.status(500).json({ error: 'Failed to fetch connections' })
+        }
+
+        return res.status(200).json({ connections })
+      } catch (error) {
+        console.error('[connections] Error:', error)
+        return res.status(500).json({ error: 'Failed to list all connections' })
+      }
+    }
+
     return res.status(400).json({ error: 'Invalid action' })
   }
 

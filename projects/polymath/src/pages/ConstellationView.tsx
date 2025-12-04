@@ -132,9 +132,9 @@ export default function ConstellationView() {
       const memories = await memoriesRes.json()
       const articles = await articlesRes.json()
 
-      // TODO: Implement /api/connections endpoint for fetching all connections
-      // For now, use empty connections to avoid breaking the visualization
-      const connectionsData = { connections: [] }
+      // Fetch all connections
+      const connectionsRes = await fetch('/api/connections?action=list-all')
+      const connectionsData = await connectionsRes.json()
 
       // Build nodes
       const nodes: GraphNode[] = []
@@ -296,7 +296,7 @@ export default function ConstellationView() {
       if (starfieldRef.current) {
         scene.remove(starfieldRef.current)
         starfieldRef.current.geometry.dispose()
-        ;(starfieldRef.current.material as THREE.Material).dispose()
+          ; (starfieldRef.current.material as THREE.Material).dispose()
       }
       scene.remove(ambientLight)
       scene.remove(directionalLight)
@@ -489,8 +489,8 @@ export default function ConstellationView() {
       const pulseGlow = new THREE.Mesh(pulseGlowGeometry, pulseGlowMaterial)
       mesh.add(pulseGlow)
 
-      ;(mesh as any).userData.pulseGlow = pulseGlow
-      ;(mesh as any).userData.pulsePhase = Math.random() * Math.PI * 2
+        ; (mesh as any).userData.pulseGlow = pulseGlow
+        ; (mesh as any).userData.pulsePhase = Math.random() * Math.PI * 2
     }
 
     // Lens flare for brightest nodes (recent or high connections)
@@ -508,7 +508,7 @@ export default function ConstellationView() {
       flare.position.z = 0
       mesh.add(flare)
 
-      ;(mesh as any).userData.lensFlare = flare
+        ; (mesh as any).userData.lensFlare = flare
     }
 
     // For projects (planets), add enhanced orbital ring with particles
@@ -525,8 +525,8 @@ export default function ConstellationView() {
       ring.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.3 // Slight random tilt
       mesh.add(ring)
 
-      // Store for animation
-      ;(mesh as any).userData.orbitRing = ring
+        // Store for animation
+        ; (mesh as any).userData.orbitRing = ring
 
       // Add smaller inner ring for depth
       const innerRingGeometry = new THREE.TorusGeometry(node.val / 2 * 1.3, 0.3, 6, 32)
@@ -1054,11 +1054,10 @@ export default function ConstellationView() {
             {/* Voice Control */}
             <button
               onClick={startVoiceControl}
-              className={`p-3 rounded-xl transition-all ${
-                isListening
+              className={`p-3 rounded-xl transition-all ${isListening
                   ? 'scale-110'
                   : 'premium-glass'
-              }`}
+                }`}
               style={{
                 backgroundColor: isListening ? '#ef4444' : undefined,
                 color: '#ffffff'
@@ -1316,11 +1315,10 @@ export default function ConstellationView() {
           <div className="flex gap-2 justify-center flex-wrap">
             <button
               onClick={() => setFilter(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                filter === null
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filter === null
                   ? 'premium-btn-primary'
                   : 'premium-glass'
-              }`}
+                }`}
               style={{
                 color: '#ffffff',
                 background: filter === null ? 'linear-gradient(135deg, #3b82f6, #2563eb)' : undefined
@@ -1332,9 +1330,8 @@ export default function ConstellationView() {
               <button
                 key={type}
                 onClick={() => setFilter(filter === type ? null : type)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                  filter === type ? '' : 'premium-glass'
-                }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${filter === type ? '' : 'premium-glass'
+                  }`}
                 style={{
                   backgroundColor: filter === type ? theme.color : undefined,
                   color: '#ffffff',

@@ -123,14 +123,41 @@ function scoreProject(project: any, context: UserContext): ProjectScore {
   const alignment = calculateAlignment(project, context)
   const unlock_bonus = calculateUnlockBonus(project)
 
-  const total_score = momentum + staleness + freshness + alignment + unlock_bonus
+  let total_score = momentum + staleness + freshness + alignment + unlock_bonus
+  let match_reason = 'Good fit for today'
+  let category: ProjectScore['category'] = 'available'
+
+  // Anti-Rot Logic
+  const lastActive = new Date(project.last_active)
+  const daysIdle = daysBetween(lastActive, new Date())
+  const hasTasks = project.metadata?.tasks && project.metadata.tasks.length > 0
+
+  if (daysIdle > 14) {
+    category = 'needs_attention'
+    total_score += 50 // Force to top
+    if (hasTasks) {
+      match_reason = "Dormant. Commit to just ONE task today."
+    } else {
+      match_reason = "Stuck? Let's break this down into steps."
+    }
+  } else if (daysIdle > 7) {
+    category = 'needs_attention'
+    total_score += 20
+    match_reason = "Losing momentum. Do a quick 5 min task."
+  } else if (momentum > 20) {
+    category = 'hot_streak'
+    match_reason = "You're on a roll! Keep it going."
+  } else if (freshness > 15) {
+    category = 'fresh_energy'
+    match_reason = "New project energy. Capitalize on it."
+  }
 
   return {
     project_id: project.id,
     project,
     total_score,
-    category: 'available',
-    match_reason: 'Good fit for today',
+    category,
+    match_reason,
     breakdown: {
       momentum,
       staleness,
@@ -142,63 +169,11 @@ function scoreProject(project: any, context: UserContext): ProjectScore {
 }
 
 function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
-  const queue: ProjectScore[] = []
-
-  const hotStreak = scores
-    .filter(s => s.breakdown.momentum >= 25)
-    .sort((a, b) => b.breakdown.momentum - a.breakdown.momentum)[0]
-
-  if (hotStreak) {
-    const lastActive = new Date(hotStreak.project.last_active)
-    const daysAgo = daysBetween(lastActive, new Date())
-    hotStreak.category = 'hot_streak'
-    hotStreak.match_reason = daysAgo === 0
-      ? 'Worked on today - keep it going!'
-      : `Worked on ${daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`} - keep momentum!`
-    queue.push(hotStreak)
-  }
-
-  const needsAttention = scores
-    .filter(s =>
-      s.breakdown.staleness >= 15 &&
-      !queue.find(q => q.project_id === s.project_id)
-    )
-    .sort((a, b) => b.breakdown.staleness - a.breakdown.staleness)[0]
-
-  if (needsAttention && queue.length < 3) {
-    const lastActive = new Date(needsAttention.project.last_active)
-    const daysIdle = daysBetween(lastActive, new Date())
-    needsAttention.category = 'needs_attention'
-    needsAttention.match_reason = `${daysIdle} days idle - needs attention`
-    queue.push(needsAttention)
-  }
-
-  const freshEnergy = scores
-    .filter(s =>
-      s.breakdown.freshness >= 10 &&
-      !queue.find(q => q.project_id === s.project_id)
-    )
-    .sort((a, b) => b.breakdown.freshness - a.breakdown.freshness)[0]
-
-  if (freshEnergy && queue.length < 3) {
-    freshEnergy.category = 'fresh_energy'
-    freshEnergy.match_reason = 'New project - explore the energy!'
-    queue.push(freshEnergy)
-  }
-
-  while (queue.length < 3) {
-    const next = scores
-      .filter(s => !queue.find(q => q.project_id === s.project_id))
-      .sort((a, b) => b.total_score - a.total_score)[0]
-
-    if (!next) break
-
-    next.category = 'available'
-    next.match_reason = 'Good match for your context'
-    queue.push(next)
-  }
-
-  return queue
+  // Sort by score (Anti-Rot logic boosts dormant projects to top)
+  const sorted = [...scores].sort((a, b) => b.total_score - a.total_score)
+  
+  // Take top 3 unique projects
+  return sorted.slice(0, 3)
 }
 
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
