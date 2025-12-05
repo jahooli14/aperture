@@ -5,8 +5,7 @@ import {
   Pin,
   ArrowRight,
   CheckCircle2,
-  Clock,
-  Sparkles
+  Clock
 } from 'lucide-react'
 import type { Project } from '../../types'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
@@ -105,40 +104,51 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button 
+          <button
             onClick={handleAnalyze}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors"
-            style={{ color: `rgba(${theme.rgb}, 0.7)` }}
+            className="w-1.5 h-1.5 rounded-full transition-colors hover:scale-125"
+            style={{
+              backgroundColor: `rgba(${theme.rgb}, 0.7)`
+            }}
             title="AI Analysis"
           >
-            <Sparkles className="h-4 w-4" />
           </button>
           {project.is_priority && (
-            <Pin className="h-4 w-4" style={{ color: theme.text }} />
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.text }}></div>
           )}
         </div>
       </div>
 
-      {/* Description */}
-      {project.description && (
-        <p className={`mb-4 italic font-serif opacity-90 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
-          "{project.description}"
-        </p>
-      )}
-
-      {/* Next Action (The "Unblocker") */}
-      {nextTask && (
-        <div className="rounded-lg p-3 mb-3 flex items-start gap-3" style={{ background: 'rgba(0, 0, 0, 0.3)', border: `1px solid rgba(${theme.rgb}, 0.2)` }}>
-          <div className="mt-0.5" style={{ color: theme.text }}>
-            <CheckCircle2 className="h-4 w-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wider mb-0.5" style={{ color: `rgba(${theme.rgb}, 0.7)` }}>Next Step</p>
-            <p className="text-sm font-medium text-gray-200 line-clamp-2">
-              {nextTask.text}
-            </p>
+      {/* Focus Stream Mode: Prominently show Next Action if available */}
+      {nextTask ? (
+        <div className="mb-4">
+          <div 
+            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5" 
+            style={{ 
+              background: `rgba(${theme.rgb}, 0.1)`, 
+              border: `1px solid rgba(${theme.rgb}, 0.3)` 
+            }}
+          >
+            <div className="mt-0.5 flex-shrink-0" style={{ color: theme.text }}>
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70" style={{ color: theme.text }}>
+                Immediate Next Step
+              </p>
+              <p className="text-sm font-medium leading-snug text-gray-100 line-clamp-3">
+                {nextTask.text}
+              </p>
+            </div>
           </div>
         </div>
+      ) : (
+        /* Fallback: Description if no next task */
+        project.description && (
+          <p className={`mb-4 italic font-serif opacity-90 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
+            "{project.description}"
+          </p>
+        )
       )}
 
       {/* Footer / Meta */}
