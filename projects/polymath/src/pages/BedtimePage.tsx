@@ -46,7 +46,16 @@ export function BedtimePage() {
       const response = await fetch('/api/projects?resource=bedtime')
       const data = await response.json()
 
-      setPrompts(data.prompts || [])
+      // Ensure unique IDs to prevent feedback applying to all items
+      const rawPrompts = data.prompts || []
+      const uniquePrompts = rawPrompts.map((p: any, index: number) => ({
+        ...p,
+        // Fallback to index-based ID if ID is missing or potential duplicate
+        id: p.id || `generated-${Date.now()}-${index}`,
+        _uniqueId: `${p.id || 'no-id'}-${index}` // Internal unique key
+      }))
+
+      setPrompts(uniquePrompts)
       setMessage(data.message || '')
     } catch (error) {
       addToast({
@@ -65,10 +74,18 @@ export function BedtimePage() {
       const response = await fetch('/api/projects?resource=bedtime', { method: 'POST' })
       const data = await response.json()
 
-      setPrompts(data.prompts || [])
+      // Ensure unique IDs
+      const rawPrompts = data.prompts || []
+      const uniquePrompts = rawPrompts.map((p: any, index: number) => ({
+        ...p,
+        id: p.id || `generated-${Date.now()}-${index}`,
+        _uniqueId: `${p.id || 'no-id'}-${index}`
+      }))
+
+      setPrompts(uniquePrompts)
       addToast({
         title: '✨ New prompts generated',
-        description: `${data.prompts?.length || 0} ideas for tonight`,
+        description: `${uniquePrompts.length} ideas for tonight`,
         variant: 'success'
       })
     } catch (error) {
@@ -240,7 +257,7 @@ export function BedtimePage() {
               }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
-              <Sparkles className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
+              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: 'var(--premium-gold)' }}></div>
             </motion.div>
             <div>
               <h2 className="premium-text-platinum text-2xl font-bold">
@@ -255,7 +272,7 @@ export function BedtimePage() {
           {/* Time indicator */}
           <div className="premium-glass-subtle rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-gold)' }} />
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--premium-gold)' }}></div>
               <div>
                 <p className="text-sm font-medium premium-text-platinum">
                   {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}

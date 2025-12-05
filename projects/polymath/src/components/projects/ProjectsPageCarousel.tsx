@@ -2,12 +2,12 @@ import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Pin,
+  Star,
   ArrowRight,
   CheckCircle2,
   Clock,
   AlertCircle,
-  Sparkles
+  Pin
 } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -112,15 +112,18 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button 
+          <button
             onClick={handleAnalyze}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-blue-400"
+            className="w-1.5 h-1.5 rounded-full transition-colors hover:scale-125"
+            style={{
+              backgroundColor: theme.textColor,
+              opacity: 0.6
+            }}
             title="AI Analysis"
           >
-            <Sparkles className="h-4 w-4" />
           </button>
           {project.is_priority && (
-            <Pin className="h-4 w-4" style={{ color: theme.textColor }} />
+            <Star className="h-4 w-4 fill-current" style={{ color: theme.textColor }} />
           )}
         </div>
       </div>

@@ -368,11 +368,8 @@ function InsightsSection() {
         {loading ? (
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <Sparkles className="h-6 w-6 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
-                <div className="absolute inset-0 animate-ping">
-                  <Sparkles className="h-6 w-6 opacity-30" style={{ color: 'var(--premium-blue)' }} />
-                </div>
+              <div>
+                <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
               </div>
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>

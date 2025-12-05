@@ -41,14 +41,14 @@ export function PinnedTaskList({
   }, [draggedTaskId, onReorder])
 
   return (
-    <div className="p-6 pb-32 flex flex-col">
+    <div className="p-6 pb-32 flex flex-col items-start w-full">
       {/* Header */}
-      <h4 className="text-sm font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
+      <h4 className="text-sm font-semibold mb-4 w-full" style={{ color: 'var(--premium-text-primary)' }}>
         Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
       </h4>
 
       {/* Task list */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 w-full">
         {/* Incomplete tasks only */}
         {tasks.filter(t => !t.done).map((task, index) => {
           const isNextTask = index === 0
@@ -59,7 +59,7 @@ export function PinnedTaskList({
               onDragStart={() => onDragStart(task.id)}
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={onDragEnd}
-              className="group w-full flex items-center gap-2 text-sm p-2 rounded-lg transition-colors text-left cursor-move"
+              className="group w-full flex items-center gap-2 text-sm p-3 rounded-lg transition-colors text-left cursor-move"
               style={{
                 opacity: draggedTaskId === task.id ? 0.5 : 1,
                 background: isNextTask ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)'
@@ -70,7 +70,7 @@ export function PinnedTaskList({
               </div>
               <button
                 onClick={() => onToggle(task.id)}
-                className="flex items-center gap-2 flex-1"
+                className="flex items-center gap-2 flex-1 text-left"
               >
                 <div
                   className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-all hover:bg-blue-500/20"
