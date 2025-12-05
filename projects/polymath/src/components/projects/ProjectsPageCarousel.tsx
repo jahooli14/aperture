@@ -5,9 +5,7 @@ import {
   Star,
   ArrowRight,
   CheckCircle2,
-  Clock,
-  AlertCircle,
-  Pin
+  Clock
 } from 'lucide-react'
 import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
@@ -247,8 +245,7 @@ export function ProjectsPageCarousel({
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
       {activeList.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-4 px-1">
-            <Pin className="h-4 w-4 text-blue-400" />
+          <div className="mb-4 px-1">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Active Focus</h3>
           </div>
           
@@ -269,8 +266,7 @@ export function ProjectsPageCarousel({
       {/* SECTION 2: THE DRAWER (Masonry) */}
       {drawerList.length > 0 && (
         <section>
-          <div className="flex items-center gap-2 mb-4 px-1 mt-8 border-t border-white/5 pt-8">
-            <AlertCircle className="h-4 w-4 text-blue-400" />
+          <div className="mb-4 px-1 mt-8 border-t border-white/5 pt-8">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
           </div>
 
