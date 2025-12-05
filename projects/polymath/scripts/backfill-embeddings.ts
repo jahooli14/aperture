@@ -5,11 +5,12 @@
  * Generates embeddings and creates auto-connections for existing items that don't have embeddings yet.
  *
  * Usage:
- *   npm run backfill:embeddings [--type=projects|thoughts|articles|all] [--limit=50] [--dry-run]
+ *   npm run backfill:embeddings [--type=projects|thoughts|articles|all] [--limit=50] [--dry-run] [--re-embed]
  *
  * Examples:
  *   npm run backfill:embeddings --type=projects --limit=10
  *   npm run backfill:embeddings --type=all --dry-run
+ *   npm run backfill:embeddings --type=all --re-embed --limit=100
  */
 
 // Load environment variables BEFORE any imports that validate env
@@ -18,7 +19,7 @@ import { resolve } from 'path'
 config({ path: resolve(process.cwd(), '.env.local') })
 
 import { createClient } from '@supabase/supabase-js'
-import { generateEmbedding, cosineSimilarity } from '../api/lib/gemini-embeddings.js'
+import { generateEmbedding, cosineSimilarity } from '../api/_lib/gemini-embeddings.js'
 
 // Access env vars directly to avoid validation issues
 const url = process.env.VITE_SUPABASE_URL!
@@ -29,6 +30,7 @@ interface BackfillOptions {
   type: 'projects' | 'thoughts' | 'articles' | 'all'
   limit: number
   dryRun: boolean
+  reEmbed: boolean
 }
 
 interface BackfillStats {
@@ -46,7 +48,8 @@ function parseArgs(): BackfillOptions {
   const options: BackfillOptions = {
     type: 'all',
     limit: 50,
-    dryRun: false
+    dryRun: false,
+    reEmbed: false
   }
 
   for (const arg of args) {
@@ -59,6 +62,8 @@ function parseArgs(): BackfillOptions {
       options.limit = parseInt(arg.split('=')[1])
     } else if (arg === '--dry-run') {
       options.dryRun = true
+    } else if (arg === '--re-embed') {
+      options.reEmbed = true
     }
   }
 
@@ -68,14 +73,18 @@ function parseArgs(): BackfillOptions {
 /**
  * Backfill projects
  */
-async function backfillProjects(limit: number, dryRun: boolean): Promise<BackfillStats> {
-  console.log(`\n[Projects] Finding items without embeddings (limit: ${limit})...`)
+async function backfillProjects(limit: number, dryRun: boolean, reEmbed: boolean): Promise<BackfillStats> {
+  console.log(`\n[Projects] Finding items ${reEmbed ? 'to update' : 'without embeddings'} (limit: ${limit})...`)
 
-  const { data: projects, error } = await supabase
+  let query = supabase
     .from('projects')
     .select('id, title, description, user_id')
-    .is('embedding', null)
-    .limit(limit)
+    
+  if (!reEmbed) {
+    query = query.is('embedding', null)
+  }
+    
+  const { data: projects, error } = await query.limit(limit)
 
   if (error) {
     console.error('[Projects] Error fetching:', error)
@@ -83,11 +92,11 @@ async function backfillProjects(limit: number, dryRun: boolean): Promise<Backfil
   }
 
   if (!projects || projects.length === 0) {
-    console.log('[Projects] No items found without embeddings')
+    console.log('[Projects] No items found')
     return { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
   }
 
-  console.log(`[Projects] Found ${projects.length} items without embeddings`)
+  console.log(`[Projects] Found ${projects.length} items`)
 
   const stats: BackfillStats = { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
 
@@ -141,14 +150,18 @@ async function backfillProjects(limit: number, dryRun: boolean): Promise<Backfil
 /**
  * Backfill thoughts/memories
  */
-async function backfillThoughts(limit: number, dryRun: boolean): Promise<BackfillStats> {
-  console.log(`\n[Thoughts] Finding items without embeddings (limit: ${limit})...`)
+async function backfillThoughts(limit: number, dryRun: boolean, reEmbed: boolean): Promise<BackfillStats> {
+  console.log(`\n[Thoughts] Finding items ${reEmbed ? 'to update' : 'without embeddings'} (limit: ${limit})...`)
 
-  const { data: memories, error } = await supabase
+  let query = supabase
     .from('memories')
     .select('id, title, body, user_id')
-    .is('embedding', null)
-    .limit(limit)
+
+  if (!reEmbed) {
+    query = query.is('embedding', null)
+  }
+
+  const { data: memories, error } = await query.limit(limit)
 
   if (error) {
     console.error('[Thoughts] Error fetching:', error)
@@ -156,11 +169,11 @@ async function backfillThoughts(limit: number, dryRun: boolean): Promise<Backfil
   }
 
   if (!memories || memories.length === 0) {
-    console.log('[Thoughts] No items found without embeddings')
+    console.log('[Thoughts] No items found')
     return { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
   }
 
-  console.log(`[Thoughts] Found ${memories.length} items without embeddings`)
+  console.log(`[Thoughts] Found ${memories.length} items`)
 
   const stats: BackfillStats = { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
 
@@ -215,15 +228,19 @@ async function backfillThoughts(limit: number, dryRun: boolean): Promise<Backfil
 /**
  * Backfill articles
  */
-async function backfillArticles(limit: number, dryRun: boolean): Promise<BackfillStats> {
-  console.log(`\n[Articles] Finding items without embeddings (limit: ${limit})...`)
+async function backfillArticles(limit: number, dryRun: boolean, reEmbed: boolean): Promise<BackfillStats> {
+  console.log(`\n[Articles] Finding items ${reEmbed ? 'to update' : 'without embeddings'} (limit: ${limit})...`)
 
-  const { data: articles, error } = await supabase
+  let query = supabase
     .from('reading_queue')
     .select('id, title, excerpt, user_id')
-    .is('embedding', null)
-    .eq('processed', true) // Only process extracted articles
-    .limit(limit)
+    .eq('processed', true)
+
+  if (!reEmbed) {
+    query = query.is('embedding', null)
+  }
+
+  const { data: articles, error } = await query.limit(limit)
 
   if (error) {
     console.error('[Articles] Error fetching:', error)
@@ -231,11 +248,11 @@ async function backfillArticles(limit: number, dryRun: boolean): Promise<Backfil
   }
 
   if (!articles || articles.length === 0) {
-    console.log('[Articles] No items found without embeddings')
+    console.log('[Articles] No items found')
     return { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
   }
 
-  console.log(`[Articles] Found ${articles.length} items without embeddings`)
+  console.log(`[Articles] Found ${articles.length} items`)
 
   const stats: BackfillStats = { processed: 0, embeddings_created: 0, connections_created: 0, errors: 0 }
 
@@ -406,6 +423,7 @@ async function main() {
   console.log(`Type: ${options.type}`)
   console.log(`Limit: ${options.limit} per type`)
   console.log(`Dry Run: ${options.dryRun}`)
+  console.log(`Re-Embed: ${options.reEmbed}`)
   console.log('='.repeat(60))
 
   const totalStats: BackfillStats = {
@@ -417,7 +435,7 @@ async function main() {
 
   try {
     if (options.type === 'projects' || options.type === 'all') {
-      const stats = await backfillProjects(options.limit, options.dryRun)
+      const stats = await backfillProjects(options.limit, options.dryRun, options.reEmbed)
       totalStats.processed += stats.processed
       totalStats.embeddings_created += stats.embeddings_created
       totalStats.connections_created += stats.connections_created
@@ -425,7 +443,7 @@ async function main() {
     }
 
     if (options.type === 'thoughts' || options.type === 'all') {
-      const stats = await backfillThoughts(options.limit, options.dryRun)
+      const stats = await backfillThoughts(options.limit, options.dryRun, options.reEmbed)
       totalStats.processed += stats.processed
       totalStats.embeddings_created += stats.embeddings_created
       totalStats.connections_created += stats.connections_created
@@ -433,7 +451,7 @@ async function main() {
     }
 
     if (options.type === 'articles' || options.type === 'all') {
-      const stats = await backfillArticles(options.limit, options.dryRun)
+      const stats = await backfillArticles(options.limit, options.dryRun, options.reEmbed)
       totalStats.processed += stats.processed
       totalStats.embeddings_created += stats.embeddings_created
       totalStats.connections_created += stats.connections_created
