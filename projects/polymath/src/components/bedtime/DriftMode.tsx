@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, X, Wind, Zap } from 'lucide-react'
+import { Mic, X, Wind, Zap, Square, Loader2 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
+import { useMediaRecorderVoice } from '../../hooks/useMediaRecorderVoice'
+import { useMemoryStore } from '../../stores/useMemoryStore'
+import { useToast } from '../ui/toast'
 
 interface DriftModeProps {
   prompts: any[]
@@ -14,11 +17,129 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0)
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
   
-  // ...
+  const { addMemory } = useMemoryStore()
+  const { addToast } = useToast()
+
+  // Motion tracking refs
+  const lastAccel = useRef<{ x: number, y: number, z: number } | null>(null)
+  const stillnessStart = useRef<number>(Date.now())
+  const hasDrifted = useRef(false)
+
+  // ... (keep existing useEffects and motion logic from original component)
+  useEffect(() => {
+    requestMotionPermission()
+    return () => {
+      window.removeEventListener('devicemotion', handleMotion)
+    }
+  }, [])
+
+  const requestMotionPermission = async () => {
+    if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
+      try {
+        const response = await (DeviceMotionEvent as any).requestPermission()
+        if (response === 'granted') {
+          setMotionPermission('granted')
+          window.addEventListener('devicemotion', handleMotion)
+        } else {
+          setMotionPermission('denied')
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    } else {
+      setMotionPermission('granted')
+      window.addEventListener('devicemotion', handleMotion)
+    }
+  }
+
+  const handleMotion = (event: DeviceMotionEvent) => {
+    const accel = event.accelerationIncludingGravity
+    if (!accel) return
+
+    const x = accel.x || 0
+    const y = accel.y || 0
+    const z = accel.z || 0
+
+    if (!lastAccel.current) {
+      lastAccel.current = { x, y, z }
+      return
+    }
+
+    const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
+    
+    const STILL_THRESHOLD = 0.5
+    const WAKE_THRESHOLD = 2.0 
+
+    if (delta < STILL_THRESHOLD) {
+      if (!hasDrifted.current && Date.now() - stillnessStart.current > 5000) {
+        setStage('drifting')
+        hasDrifted.current = true
+        haptic.light()
+      }
+    } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stage === 'drifting') {
+      triggerInsight()
+    }
+
+    lastAccel.current = { x, y, z }
+    
+    if (delta > STILL_THRESHOLD && !hasDrifted.current) {
+      stillnessStart.current = Date.now()
+    }
+  }
+
+  const triggerInsight = () => {
+    haptic.medium()
+    setStage('awakened')
+    setCurrentPromptIndex(prev => (prev + 1) % prompts.length)
+  }
+
+  const resetDrift = () => {
+    setStage('settling')
+    hasDrifted.current = false
+    stillnessStart.current = Date.now()
+  }
+
+  const handleTranscript = async (text: string) => {
+    if (!text.trim()) return
+
+    try {
+      await addMemory({
+        body: text,
+        type: 'thought',
+        source: 'drift_mode'
+      })
+      
+      addToast({
+        title: 'Insight Captured',
+        description: 'Saved to your thoughts',
+        variant: 'success'
+      })
+      
+      haptic.success()
+      resetDrift()
+    } catch (error) {
+      console.error('Failed to save drift insight:', error)
+      addToast({
+        title: 'Failed to save',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const {
+    isRecording,
+    isProcessing,
+    toggleRecording
+  } = useMediaRecorderVoice({
+    onTranscript: handleTranscript,
+    maxDuration: 60, // Allow 1 minute for insights
+    autoSubmit: true
+  })
+
+  const currentPrompt = prompts[currentPromptIndex]
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-amber-900 flex flex-col items-center justify-center overflow-hidden">
-      {/* Exit Button */}
       <button 
         onClick={onClose}
         className="absolute top-6 right-6 p-4 rounded-full bg-white/5 text-amber-900/50 hover:bg-white/10"
@@ -27,7 +148,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       </button>
 
       <AnimatePresence mode="wait">
-        {/* Stage 1: Settling / Instructions */}
         {stage === 'settling' && (
           <motion.div 
             key="settling"
@@ -42,7 +162,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </h2>
             <p className="text-lg text-amber-900/60 leading-relaxed">
               {mode === 'sleep' 
-                ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight."
+                ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight." 
                 : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
             </p>
             {motionPermission === 'denied' && (
@@ -51,7 +171,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           </motion.div>
         )}
 
-        {/* Stage 2: Drifting (Darkness) */}
         {stage === 'drifting' && (
           <motion.div 
             key="drifting"
@@ -65,7 +184,6 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           </motion.div>
         )}
 
-        {/* Stage 3: Awakened (The Prompt) */}
         {stage === 'awakened' && currentPrompt && (
           <motion.div 
             key="awakened"
@@ -95,9 +213,24 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <Wind className="h-5 w-5" />
                 {mode === 'sleep' ? 'Drift Again' : 'Reset Again'}
               </button>
-              {/* Future: Voice Capture */}
-              <button className="p-4 rounded-full bg-amber-900/10 text-amber-800 opacity-50 cursor-not-allowed">
-                <Mic className="h-5 w-5" />
+              
+              {/* Voice Capture */}
+              <button 
+                onClick={toggleRecording}
+                disabled={isProcessing}
+                className={`p-4 rounded-full transition-all ${ 
+                  isRecording 
+                    ? 'bg-red-500/20 text-red-600 animate-pulse' 
+                    : 'bg-amber-900/10 text-amber-800 hover:bg-amber-900/20'
+                }`}
+              >
+                {isProcessing ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : isRecording ? (
+                  <Square className="h-5 w-5 fill-current" />
+                ) : (
+                  <Mic className="h-5 w-5" />
+                )}
               </button>
             </div>
           </motion.div>
