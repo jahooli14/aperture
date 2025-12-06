@@ -394,7 +394,7 @@ export interface SynthesisInsight {
 }
 
 /**
- * Polymath TypeScript Type Definitions
+ * Rosette TypeScript Type Definitions
  * Copy to: projects/memory-os/src/types.ts (append to existing types)
  */
 

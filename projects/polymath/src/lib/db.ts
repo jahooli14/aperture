@@ -71,7 +71,7 @@ export interface CachedProject {
   cached_at: string
 }
 
-export class PolymathDatabase extends Dexie {
+export class RosetteDatabase extends Dexie {
   // Reading Tables
   articles!: Table<CachedArticle, string>
   images!: Table<CachedImage, number>
@@ -86,7 +86,7 @@ export class PolymathDatabase extends Dexie {
   memories!: Table<CachedMemory, string>
 
   constructor() {
-    super('PolymathDB') // New DB name to ensure clean migration
+    super('RosetteDB') // New DB name to ensure clean migration
 
     // Define database schema
     this.version(1).stores({
@@ -252,7 +252,7 @@ export class PolymathDatabase extends Dexie {
 }
 
 // Export singleton instance
-export const db = new PolymathDatabase()
+export const db = new RosetteDatabase()
 
 // Export alias for backward compatibility during migration (optional, but helpful)
 export const readingDb = db

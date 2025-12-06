@@ -1,5 +1,5 @@
 /**
- * Clandestined Brand Name Component
+ * Rosette Brand Name Component
  * Displays the app name with styling
  */
 
@@ -18,10 +18,10 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
 
   return (
     <span className={`${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.02em' }}>
-      Frag<span style={{
+      Ro<span style={{
         color: 'rgba(100, 180, 255, 1)',
         letterSpacing: '0.01em'
-      }}>ments</span>
+      }}>sette</span>
     </span>
   )
 }

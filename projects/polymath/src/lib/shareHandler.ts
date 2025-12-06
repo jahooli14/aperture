@@ -1,6 +1,6 @@
 /**
  * Share Handler
- * Robust, cross-platform share link handling for Polymath PWA
+ * Robust, cross-platform share link handling for Rosette PWA
  *
  * Key Improvements:
  * - Uses localStorage for persistent storage
@@ -18,7 +18,7 @@ export interface ShareData {
   processed: boolean
 }
 
-const SHARE_DATA_KEY = 'polymath_share_data'
+const SHARE_DATA_KEY = 'rosette_share_data'
 const MAX_SHARE_AGE = 24 * 60 * 60 * 1000 // 24 hours
 
 /**
@@ -128,7 +128,7 @@ export function initShareHandler() {
     }
 
     // Write extensive log file for debugging
-    const logFileName = `/Users/danielcroome-horgan/Aperture/projects/polymath/logs/share_log_${Date.now()}.json`
+    const logFileName = `/Users/danielcroome-horgan/Aperture/projects/rosette/logs/share_log_${Date.now()}.json`
     try {
       if (typeof window !== 'undefined') {
         const fs = require('fs')
