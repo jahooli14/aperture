@@ -5,10 +5,11 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, Wifi } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
+import { useOfflineArticle } from '../../hooks/useOfflineArticle'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/db'
 import { haptic } from '../../utils/haptics'
@@ -27,6 +28,7 @@ interface ArticleCardProps {
 
 export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
+  const { downloadForOffline, caching } = useOfflineArticle()
   const { addToast } = useToast()
   const [isOffline, setIsOffline] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -129,6 +131,32 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     }
   }
 
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isOffline) return
+
+    try {
+      addToast({
+        title: 'Downloading...',
+        description: 'Saving article for offline reading',
+        variant: 'default',
+      })
+      await downloadForOffline(article)
+      setIsOffline(true)
+      addToast({
+        title: 'Downloaded',
+        description: 'Article available offline',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Download failed',
+        description: 'Could not save article offline',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleMarkAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation()
     try {
@@ -209,12 +237,19 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const shareIcon = React.useMemo(() => <Share2 className="h-5 w-5" />, [])
   const archiveIcon = React.useMemo(() => <Archive className="h-5 w-5" />, [])
   const deleteIcon = React.useMemo(() => <Trash2 className="h-5 w-5" />, [])
+  const downloadIcon = React.useMemo(() => <Download className="h-5 w-5" />, [])
 
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => [
     {
       label: 'Edit',
       icon: editIcon,
       onClick: () => setShowEditDialog(true),
+    },
+    {
+      label: isOffline ? 'Available Offline' : 'Save Offline',
+      icon: downloadIcon,
+      onClick: handleDownload,
+      disabled: isOffline
     },
     {
       label: 'Open Original',
@@ -275,7 +310,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       },
       variant: 'destructive' as const,
     },
-  ], [article.id, article.url, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast])
+  ], [article.id, article.url, isOffline, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, downloadIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast, handleDownload])
 
   return (
     <>
@@ -527,6 +562,21 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
               {/* Actions */}
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {!isOffline && (
+                  <button
+                    onClick={handleDownload}
+                    disabled={caching}
+                    className="p-1.5 rounded-lg transition-colors"
+                    style={{ color: caching ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)' }}
+                    title="Save Offline"
+                  >
+                    {caching ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
