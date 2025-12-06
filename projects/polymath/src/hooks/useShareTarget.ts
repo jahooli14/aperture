@@ -1,6 +1,6 @@
 /**
  * useShareTarget Hook
- * Robust Share Target handling for Polymath PWA
+ * Robust Share Target handling for Rosette PWA
  * Supports both URL params and localStorage-based share mechanism
  */
 
@@ -46,7 +46,7 @@ export function useShareTarget({
     }
 
     try {
-      const logFileName = `/Users/danielcroome-horgan/Aperture/projects/polymath/logs/share_target_log_${Date.now()}.json`
+      const logFileName = `/Users/danielcroome-horgan/Aperture/projects/rosette/logs/share_target_log_${Date.now()}.json`
       const fs = require('fs')
       fs.writeFileSync(logFileName, JSON.stringify(logEntry, null, 2))
       console.log(`[useShareTarget] Extensive log written to ${logFileName}`)

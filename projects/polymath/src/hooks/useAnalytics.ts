@@ -25,7 +25,7 @@ interface AnalyticsStore {
   [key: string]: SectionAnalytics
 }
 
-const STORAGE_KEY = 'polymath_section_analytics'
+const STORAGE_KEY = 'rosette_section_analytics'
 const VIEW_DURATION_THRESHOLD = 2000 // 2 seconds to count as a "view"
 
 /**

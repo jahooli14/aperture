@@ -37,7 +37,7 @@ export const useThemeStore = create<ThemeState>()(
       setShowBugTracker: (show) => set({ showBugTracker: show }),
     }),
     {
-      name: 'polymath-theme',
+      name: 'rosette-theme',
     }
   )
 )
