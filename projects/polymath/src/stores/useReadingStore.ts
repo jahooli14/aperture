@@ -24,6 +24,9 @@ interface ReadingState {
   deleteArticle: (id: string) => Promise<void>
   setFilter: (filter: ArticleStatus | 'all') => void
   syncPendingArticles: () => Promise<void>
+  // React Query Sync Actions
+  setArticles: (articles: Article[]) => void
+  setLoading: (loading: boolean) => void
 }
 
 export const useReadingStore = create<ReadingState>((set, get) => {
@@ -489,6 +492,8 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         get().fetchArticles(filter)
       }
     },
+    setArticles: (articles) => set({ articles }),
+    setLoading: (loading) => set({ loading })
   }
 })
 
