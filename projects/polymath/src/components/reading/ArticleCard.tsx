@@ -224,7 +224,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       },
       variant: 'destructive' as const,
     },
-  ], [article.id, article.url, isOffline, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, downloadIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast, handleDownload])
+  ], [article.id, article.url, isOffline, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, downloadIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast])
 
   return (
     <>
