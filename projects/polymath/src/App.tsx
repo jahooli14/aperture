@@ -36,6 +36,7 @@ const ScrollTimelinePage = lazy(() => import('./pages/ScrollTimelinePage').then(
 const InsightsPage = lazy(() => import('./pages/InsightsPage').then(m => ({ default: m.InsightsPage })))
 const ConstellationView = lazy(() => import('./pages/ConstellationView'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const CapabilitiesPage = lazy(() => import('./pages/CapabilitiesPage').then(m => ({ default: m.CapabilitiesPage })))
 const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
 const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage })))
@@ -246,6 +247,7 @@ export default function App() {
                       <Route path="/insights" element={<InsightsPage />} />
                       <Route path="/constellation" element={<ConstellationView />} />
                       <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/settings/capabilities" element={<CapabilitiesPage />} />
                       <Route path="/rss" element={<RSSFeedsPage />} />
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/bedtime" element={<BedtimePage />} />
