@@ -14,6 +14,7 @@ import { generateInitialMap } from './_lib/map-generation.js'
 import { generateBedtimePrompts, generateCatalystPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
+import { identifyRottingProjects, generateProjectEulogy, buryProject, resurrectProject } from './_lib/project-maintenance.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -595,6 +596,69 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ success: true })
       } catch (error) {
         return res.status(500).json({ error: 'Delete failed' })
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // REAPER RESOURCE (for managing rotting projects)
+  if (resource === 'reaper') {
+    const action = req.query.action as string
+    const id = req.query.id as string
+
+    // GET: Get rotting projects or generate eulogy
+    if (req.method === 'GET') {
+      if (action === 'rotting') {
+        try {
+          const rottingProjects = await identifyRottingProjects(userId)
+          return res.status(200).json(rottingProjects)
+        } catch (error) {
+          console.error('[reaper] Failed to get rotting projects:', error)
+          return res.status(500).json({ error: 'Failed to get rotting projects' })
+        }
+      } else if (action === 'eulogy') {
+        if (!id) return res.status(400).json({ error: 'Project ID required' })
+        try {
+          // Fetch project details for eulogy generation
+          const { data: project, error: fetchError } = await supabase
+            .from('projects')
+            .select('title, description')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .single()
+
+          if (fetchError) throw fetchError
+          if (!project) return res.status(404).json({ error: 'Project not found' })
+
+          const eulogy = await generateProjectEulogy(project)
+          return res.status(200).json({ eulogy })
+        } catch (error) {
+          console.error('[reaper] Failed to generate eulogy:', error)
+          return res.status(500).json({ error: 'Failed to generate eulogy' })
+        }
+      }
+    }
+
+    // POST: Bury or Resurrect a project
+    if (req.method === 'POST') {
+      if (!id) return res.status(400).json({ error: 'Project ID required' })
+      if (action === 'bury') {
+        try {
+          await buryProject(id, userId)
+          return res.status(200).json({ success: true, message: 'Project buried' })
+        } catch (error) {
+          console.error('[reaper] Failed to bury project:', error)
+          return res.status(500).json({ error: 'Failed to bury project' })
+        }
+      } else if (action === 'resurrect') {
+        try {
+          await resurrectProject(id, userId)
+          return res.status(200).json({ success: true, message: 'Project resurrected' })
+        } catch (error) {
+          console.error('[reaper] Failed to resurrect project:', error)
+          return res.status(500).json({ error: 'Failed to resurrect project' })
+        }
       }
     }
 

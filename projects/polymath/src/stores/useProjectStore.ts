@@ -64,6 +64,7 @@ function smartSortProjects(projects: Project[]): Project[] {
 // Helper to filter projects locally
 function filterProjects(projects: Project[], filter: ProjectState['filter']): Project[] {
   if (filter === 'all') return projects
+  if (filter === 'dormant') return projects.filter(p => ['dormant', 'on-hold', 'maintaining'].includes(p.status))
   return projects.filter(p => p.status === filter)
 }
 
@@ -72,7 +73,7 @@ interface ProjectState {
   projects: Project[] // Filtered view
   loading: boolean
   error: string | null
-  filter: 'all' | 'upcoming' | 'active' | 'dormant' | 'completed'
+  filter: 'all' | 'upcoming' | 'active' | 'dormant' | 'completed' | 'graveyard'
   initialized: boolean
   offlineMode: boolean
 
@@ -83,6 +84,10 @@ interface ProjectState {
   deleteProject: (id: string) => Promise<void>
   setPriority: (id: string) => Promise<void>
   setFilter: (filter: ProjectState['filter']) => void
+  // React Query Sync Actions
+  setProjects: (projects: Project[]) => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -436,5 +441,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       filter,
       projects: filterProjects(state.allProjects, filter)
     }))
-  }
+  },
+  setProjects: (projects) => set({ projects, allProjects: projects }), // Simplified for now
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error })
 }))
