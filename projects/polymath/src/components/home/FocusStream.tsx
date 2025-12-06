@@ -154,11 +154,12 @@ export function FocusStream() {
                 {/* Card 0: Priority Project */}
                 {priorityProject && (() => {
                     const theme = getTheme(priorityProject.type || 'other', priorityProject.title)
+                    const nextTask = (priorityProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
                     return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
                         onClick={() => navigate(`/projects/${priorityProject.id}`)}
                         style={{
                             background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
@@ -174,7 +175,7 @@ export function FocusStream() {
                             e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                         }}
                     >
-                        <div className="relative z-10">
+                        <div className="relative z-10 flex-1">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
@@ -192,6 +193,16 @@ export function FocusStream() {
                                 {priorityProject.description || 'Keep moving forward on your top priority.'}
                             </p>
 
+                            {nextTask && (
+                                <div className="mb-4 p-3 rounded-lg" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    border: `1px solid rgba(${theme.rgb}, 0.3)`
+                                }}>
+                                    <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                    <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
+                                </div>
+                            )}
+
                             <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
                                 Open Project <ArrowRight className="h-4 w-4" />
                             </button>
@@ -203,12 +214,13 @@ export function FocusStream() {
                 {/* Card 0.5: Recent Project */}
                 {recentProject && (() => {
                     const theme = getTheme(recentProject.type || 'other', recentProject.title)
+                    const nextTask = (recentProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
                     return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.05 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
                         onClick={() => navigate(`/projects/${recentProject.id}`)}
                         style={{
                             background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
@@ -224,7 +236,7 @@ export function FocusStream() {
                             e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                         }}
                     >
-                        <div className="relative z-10">
+                        <div className="relative z-10 flex-1">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 border" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
@@ -241,6 +253,16 @@ export function FocusStream() {
                             <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
                                 {recentProject.description || 'Pick up where you left off.'}
                             </p>
+
+                            {nextTask && (
+                                <div className="mb-4 p-3 rounded-lg" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    border: `1px solid rgba(${theme.rgb}, 0.3)`
+                                }}>
+                                    <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                    <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
+                                </div>
+                            )}
 
                             <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
                                 Continue <ArrowRight className="h-4 w-4" />
