@@ -222,7 +222,7 @@ export function ReadingPage() {
   // React Query handles fetching now
   useEffect(() => {
     const loadData = async () => {
-      // await fetchArticles()
+      await fetchArticles()
       await fetchFeeds()
 
       // Auto-sync RSS feeds in background (throttled to 2 hours)
