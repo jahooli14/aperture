@@ -41,7 +41,23 @@ export async function generateText(
       }
     })
 
-    return result.response.text()
+    if (!result.response) {
+      throw new Error('Gemini API returned no response object')
+    }
+
+    try {
+      return result.response.text()
+    } catch (e) {
+      // Check for safety blocks
+      if (result.response.promptFeedback?.blockReason) {
+        throw new Error(`Gemini blocked content: ${result.response.promptFeedback.blockReason}`)
+      }
+      // Check for empty candidates
+      if (!result.response.candidates || result.response.candidates.length === 0) {
+        throw new Error('Gemini returned no candidates')
+      }
+      throw e
+    }
   } catch (error: any) {
     console.error('[Gemini Chat] Generation error:', error)
     console.error('[Gemini Chat] Error details:', {

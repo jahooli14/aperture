@@ -45,6 +45,7 @@ import {
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
+import { SerendipityDialog } from '../components/SerendipityDialog'
 import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
@@ -489,6 +490,11 @@ export function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
+  
+  // Serendipity State
+  const [serendipityOpen, setSerendipityOpen] = useState(false)
+  const [serendipityData, setSerendipityData] = useState<any>(null)
+  const [serendipityLoading, setSerendipityLoading] = useState(false)
 
   // Refetch data whenever user navigates to this page
   useEffect(() => {
@@ -518,6 +524,20 @@ export function HomePage() {
       }
     } catch (e) {
       console.error('Failed to fetch break prompts', e)
+    }
+  }
+
+  const handleOpenSerendipity = async () => {
+    setSerendipityOpen(true)
+    setSerendipityLoading(true)
+    try {
+      const response = await fetch('/api/connections?action=serendipity')
+      const data = await response.json()
+      setSerendipityData(data)
+    } catch (e) {
+      console.error('Failed to fetch serendipity', e)
+    } finally {
+      setSerendipityLoading(false)
     }
   }
 
@@ -1021,6 +1041,37 @@ export function HomePage() {
                   <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
+
+              {/* Serendipity Engine */}
+              <button
+                onClick={handleOpenSerendipity}
+                className="group p-5 rounded-xl transition-all text-left col-span-1 md:col-span-2"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05))',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(139, 92, 246, 0.2)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(139, 92, 246, 0.2)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)'
+                    }}>
+                      <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Serendipity Engine</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Find hidden bridges between unconnected ideas
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-purple)' }} />
+                </div>
+              </button>
             </div>
 
             {/* Card of the Day - Resurfacing - Enhanced Design */}
@@ -1077,6 +1128,15 @@ export function HomePage() {
 
       {/* Dialogs */}
       <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
+
+      {/* Serendipity Dialog */}
+      <SerendipityDialog
+        isOpen={serendipityOpen}
+        onClose={() => setSerendipityOpen(false)}
+        data={serendipityData}
+        loading={serendipityLoading}
+        onRefresh={handleOpenSerendipity}
+      />
 
       {/* Hidden trigger buttons for dialogs */}
       <div style={{ display: 'none' }}>
