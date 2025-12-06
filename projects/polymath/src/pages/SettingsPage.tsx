@@ -1,9 +1,4 @@
-/**
- * Settings Page - Access to secondary features
- * Timeline, Galaxy, Analysis, and other tools
- */
-
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -34,6 +29,7 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/ui/toast'
 
+// ... existing interfaces
 interface SettingsOption {
   id: string
   label: string
@@ -49,8 +45,10 @@ interface Capability {
   name: string
   description: string
   strength: number
+  last_used?: string
 }
 
+// ... existing options
 const SETTINGS_OPTIONS: SettingsOption[] = [
   {
     id: 'map',
@@ -61,6 +59,7 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
     color: '#fbbf24',
     glow: 'rgba(251, 191, 36, 0.4)'
   },
+  // ... other options
   {
     id: 'suggestions',
     label: 'Discover projects',
@@ -114,15 +113,6 @@ const SETTINGS_OPTIONS: SettingsOption[] = [
     path: '/insights',
     color: '#10b981',
     glow: 'rgba(16, 185, 129, 0.4)'
-  },
-  {
-    id: 'capabilities',
-    label: 'Capabilities',
-    description: 'Skills and interests extracted from your projects',
-    icon: Zap,
-    path: '/settings/capabilities',
-    color: '#fbbf24',
-    glow: 'rgba(251, 191, 36, 0.4)'
   }
 ]
 
@@ -223,7 +213,6 @@ export function SettingsPage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.1 }}
     >
-      {/* Subtle Background Effect */}
       <SubtleBackground />
 
       {/* Fixed Header Bar */}
@@ -300,14 +289,12 @@ export function SettingsPage() {
                     e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                   }}
                 >
-                  {/* Glow effect on hover */}
                   <div
                     className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl pointer-events-none"
                     style={{ backgroundColor: option.glow }}
                   />
 
                   <div className="relative z-10 flex items-center gap-4">
-                    {/* Icon */}
                     <div
                       className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
@@ -320,7 +307,6 @@ export function SettingsPage() {
                       />
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1">
                       <h3 className="font-semibold mb-1 premium-text-platinum">
                         {option.label}
@@ -330,7 +316,6 @@ export function SettingsPage() {
                       </p>
                     </div>
 
-                    {/* Arrow */}
                     <ChevronRight
                       className="w-6 h-6 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
                       style={{ color: 'var(--premium-platinum)' }}
@@ -339,6 +324,115 @@ export function SettingsPage() {
                 </motion.button>
               )
             })}
+          </div>
+        </section>
+
+        {/* Capabilities Section (RPG Style) */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Zap className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+                    Your Capabilities
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    Skills and interests extracted from your projects (RPG Stats)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtractCapabilities}
+                disabled={extractingCaps}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                title="Re-analyze Data"
+              >
+                <RefreshCw className={`h-5 w-5 ${extractingCaps ? 'animate-spin' : ''}`} style={{ color: 'var(--premium-text-secondary)' }} />
+              </button>
+            </div>
+
+            {loadingCaps ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              </div>
+            ) : capabilities.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {capabilities.map(cap => {
+                  // Calculate RPG stats
+                  const level = Math.floor(cap.strength)
+                  const progress = (cap.strength - level) * 100
+                  const daysSinceUse = cap.last_used 
+                    ? Math.floor((Date.now() - new Date(cap.last_used).getTime()) / (1000 * 60 * 60 * 24))
+                    : 0
+                  const isDecaying = daysSinceUse > 30
+                  
+                  return (
+                    <div
+                      key={cap.id}
+                      className="group relative overflow-hidden rounded-xl p-4 transition-all border hover:scale-[1.02]"
+                      style={{
+                        background: isDecaying 
+                          ? 'linear-gradient(135deg, rgba(120, 50, 50, 0.1), rgba(80, 40, 40, 0.2))'
+                          : 'linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 255, 255, 0.02))',
+                        borderColor: isDecaying 
+                          ? 'rgba(150, 50, 50, 0.3)' 
+                          : level >= 5 ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                        boxShadow: level >= 5 ? '0 0 15px rgba(255, 215, 0, 0.1)' : 'none'
+                      }}
+                    >
+                      {/* Level Badge */}
+                      <div className="absolute top-3 right-3 flex items-center gap-2">
+                        <span className="text-xs font-mono opacity-50 uppercase tracking-wider">LVL {level}</span>
+                        {level >= 5 && <Sparkles className="h-3 w-3 text-yellow-400" />}
+                      </div>
+
+                      <h3 className="font-bold text-base mb-1" style={{ 
+                        color: isDecaying ? 'rgba(255, 200, 200, 0.8)' : 'var(--premium-text-primary)' 
+                      }}>
+                        {cap.name}
+                      </h3>
+                      
+                      <p className="text-xs line-clamp-2 mb-3 h-8" style={{ color: 'var(--premium-text-secondary)' }}>
+                        {cap.description}
+                      </p>
+
+                      {/* XP Bar */}
+                      <div className="relative h-1.5 w-full bg-black/30 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full transition-all duration-500"
+                          style={{ 
+                            width: `${progress}%`,
+                            background: isDecaying ? '#ef4444' : level >= 5 ? '#fbbf24' : '#3b82f6'
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Footer Status */}
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-[10px]" style={{ color: isDecaying ? '#fca5a5' : 'var(--premium-text-tertiary)' }}>
+                          {isDecaying ? `${daysSinceUse}d dormant (Rusting)` : 'Active'}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteCapability(cap.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-red-500/20"
+                          title="Remove Capability"
+                        >
+                          <Trash2 className="h-3 w-3 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No capabilities found. Try refreshing to analyze your data.
+              </div>
+            )}
           </div>
         </section>
 
