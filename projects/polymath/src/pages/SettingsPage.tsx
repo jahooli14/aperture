@@ -43,11 +43,23 @@ interface Capability {
   strength: number
 }
 
+const intensityOptions = [
+  { value: 'subtle' as const, label: 'Subtle', description: 'Minimal visual effects' },
+  { value: 'balanced' as const, label: 'Balanced', description: 'Default experience' },
+  { value: 'vibrant' as const, label: 'Vibrant', description: 'Enhanced visuals' }
+]
+
+const fontSizeOptions = [
+  { value: 'small' as const, label: 'Small' },
+  { value: 'medium' as const, label: 'Medium' },
+  { value: 'large' as const, label: 'Large' }
+]
+
 export function SettingsPage() {
   const navigate = useNavigate()
   const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
   const { addToast } = useToast()
-  
+
   const [capabilities, setCapabilities] = useState<Capability[]>([])
   const [loadingCaps, setLoadingCaps] = useState(false)
   const [extractingCaps, setExtractingCaps] = useState(false)
