@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
+import { useReadingQueue } from '../hooks/useReadingQueue'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
@@ -39,6 +40,9 @@ export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+
+  // Use React Query for data fetching
+  const { isLoading: isQueryLoading } = useReadingQueue()
   const { downloadForOffline } = useOfflineArticle()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
@@ -215,10 +219,10 @@ export function ReadingPage() {
     }
   }, [articles, fetchArticles, addToast])
 
-  // Fetch data on mount and when navigating back to this page (like HomePage)
+  // React Query handles fetching now
   useEffect(() => {
     const loadData = async () => {
-      await fetchArticles()
+      // await fetchArticles()
       await fetchFeeds()
 
       // Auto-sync RSS feeds in background (throttled to 2 hours)

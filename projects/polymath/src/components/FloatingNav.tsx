@@ -57,7 +57,18 @@ export function FloatingNav() {
   const { addOfflineCapture } = useOfflineSync()
   const { addToast } = useToast()
   const navigate = useNavigate()
+
   const location = useLocation()
+  const [isHidden, setIsHidden] = React.useState(false)
+
+  // Listen for toggle-nav events from ReaderPage
+  React.useEffect(() => {
+    const handleToggle = (e: CustomEvent) => {
+      setIsHidden(e.detail.hidden)
+    }
+    window.addEventListener('toggle-nav', handleToggle as EventListener)
+    return () => window.removeEventListener('toggle-nav', handleToggle as EventListener)
+  }, [])
 
   // Listen for voice capture requests from AddNoteDialog
   React.useEffect(() => {
@@ -261,7 +272,7 @@ export function FloatingNav() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={{ scale: isHidden ? 0 : 1, opacity: isHidden ? 0 : 1 }}
         transition={{
           type: 'spring',
           stiffness: 260,
@@ -293,7 +304,8 @@ export function FloatingNav() {
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
         initial={false}
-        animate={{ y: 0, opacity: 1 }}
+        animate={{ y: isHidden ? 100 : 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
         className="fixed bottom-0 left-0 right-0 z-40 pb-safe"
         style={{
           paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)',

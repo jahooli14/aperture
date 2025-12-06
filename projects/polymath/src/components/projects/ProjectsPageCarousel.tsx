@@ -14,6 +14,9 @@ import { useContextEngineStore } from '../../stores/useContextEngineStore'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
+  activeProjects: Project[]
+  drawerProjects: Project[]
+  onClearSuggestions?: () => void
 }
 
 interface Task {
@@ -154,8 +157,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -168,7 +171,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             </span>
           )}
         </div>
-        
+
         {prominent && (
           <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-blue-500 group-hover:text-white transition-colors text-gray-500">
             <ArrowRight className="h-4 w-4" />
@@ -181,77 +184,30 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
 export function ProjectsPageCarousel({
   loading = false,
+  activeProjects: activeList,
+  drawerProjects: drawerList,
+  onClearSuggestions
 }: ProjectsPageCarouselProps) {
-  const { projects } = useProjectStore()
-  const { clearSuggestions } = useSuggestionStore()
+  // const { projects } = useProjectStore() // Removed internal fetching
+  // const { clearSuggestions } = useSuggestionStore() // Passed as prop
 
-  // Categorize projects for the dashboard
-  const { activeList, drawerList, suggestedProjects } = useMemo(() => {
-    // 1. Get all priority projects
-    const priorityProjects = projects.filter(p => p.is_priority)
-    const priorityIds = new Set(priorityProjects.map(p => p.id))
-    
-    // 2. Get recent active projects, excluding those already prioritized
-    const sortedByRecency = [...projects].sort((a, b) => 
-      new Date(b.last_active || b.created_at).getTime() - new Date(a.last_active || a.created_at).getTime()
-    )
-
-    // Fill remaining slots up to 3 (Pinned + Top Recent) for active focus
-    const maxActiveCount = 3
-    const recentActiveNonPriority = sortedByRecency
-      .filter(p => p.status === 'active' && !priorityIds.has(p.id))
-      .slice(0, maxActiveCount - priorityProjects.length) 
-
-    const activeList = [...priorityProjects, ...recentActiveNonPriority].filter(Boolean) as Project[]
-    const activeIds = new Set(activeList.map(p => p.id))
-
-    // Everything else goes in the drawer
-    let drawerList = projects.filter(p => !activeIds.has(p.id))
-
-    // Shuffle drawer daily (deterministic for the day)
-    const seed = new Date().toDateString()
-    const seededRandom = (str: string) => {
-      let h = 0xdeadbeef;
-      for(let i = 0; i < str.length; i++)
-        h = Math.imul(h ^ str.charCodeAt(i), 2654435761);
-      return ((h ^ h >>> 16) >>> 0) / 4294967296;
-    }
-    
-    drawerList.sort((a, b) => {
-      const scoreA = seededRandom(seed + a.id)
-      const scoreB = seededRandom(seed + b.id)
-      return scoreB - scoreA
-    })
-
-    // Separate suggested projects for the clear button logic
-    const suggestedProjects = drawerList.filter(p => {
-      const created = new Date(p.created_at).getTime()
-      const isNew = (Date.now() - created) < (7 * 24 * 60 * 60 * 1000)
-      return isNew && !p.is_priority // Assuming suggestions are new and not priority
-    })
-
-    return {
-      activeList,
-      drawerList,
-      suggestedProjects
-    }
-  }, [projects])
+  // Categorization logic moved to parent (ProjectsPage)
 
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
 
   return (
     <div className="space-y-8 pb-20">
-      
+
       {/* SECTION 1: ACTIVE FOCUS (Grid) */}
       {activeList.length > 0 && (
         <section>
           <div className="mb-4 px-1">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Active Focus</h3>
           </div>
-          
+
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeList.map(project => (
-              <motion.div 
+              <motion.div
                 key={project.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
