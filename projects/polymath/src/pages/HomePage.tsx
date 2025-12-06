@@ -39,7 +39,8 @@ import {
   AlertCircle,
   Check,
   Lightbulb,
-  RefreshCw
+  RefreshCw,
+  Wind
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
