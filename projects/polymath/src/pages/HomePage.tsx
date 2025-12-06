@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { DriftMode } from '../components/bedtime/DriftMode'
 import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
@@ -485,6 +486,8 @@ export function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [driftModeOpen, setDriftModeOpen] = useState(false)
+  const [breakPrompts, setBreakPrompts] = useState<any[]>([])
 
   // Refetch data whenever user navigates to this page
   useEffect(() => {
@@ -503,6 +506,19 @@ export function HomePage() {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key])
+
+  const handleOpenDrift = async () => {
+    setDriftModeOpen(true)
+    try {
+      const response = await fetch('/api/projects?resource=break')
+      const data = await response.json()
+      if (data.prompts) {
+        setBreakPrompts(data.prompts)
+      }
+    } catch (e) {
+      console.error('Failed to fetch break prompts', e)
+    }
+  }
 
   // Show onboarding banner after delay if not completed
   useEffect(() => {
@@ -877,9 +893,34 @@ export function HomePage() {
               >
                 <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
+
+              {/* Drift / Reset */}
+              <button
+                onClick={handleOpenDrift}
+                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1))',
+                  border: '1px solid rgba(251, 191, 36, 0.2)'
+                }}
+                title="Drift / Reset"
+              >
+                <div className="relative">
+                  <Wind className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                </div>
+              </button>
             </div>
           </div>
         </section>
+
+        {/* Drift Mode Overlay */}
+        {driftModeOpen && (
+          <DriftMode 
+            mode="break"
+            prompts={breakPrompts} 
+            onClose={() => setDriftModeOpen(false)} 
+          />
+        )}
 
         {/* 2. KEEP THE MOMENTUM (Focus Stream) */}
         <FocusStream />
