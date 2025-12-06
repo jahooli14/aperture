@@ -11,7 +11,7 @@ import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js
 import { generateText } from './_lib/gemini-chat.js'
 import { generateDoorSuggestions } from './_lib/map-suggestions.js'
 import { generateInitialMap } from './_lib/map-generation.js'
-import { generateBedtimePrompts, generateCatalystPrompts } from './_lib/bedtime-ideas.js'
+import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { identifyRottingProjects, generateProjectEulogy, buryProject, resurrectProject } from './_lib/project-maintenance.js'
@@ -403,6 +403,20 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       return handleMarkBedtimeViewed(req, res, supabase, userId)
     }
 
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // BREAK PROMPTS RESOURCE (Daytime Drift)
+  if (resource === 'break') {
+    if (req.method === 'GET') {
+      try {
+        const prompts = await generateBreakPrompts(userId)
+        return res.status(200).json({ prompts, generated: true })
+      } catch (error) {
+        console.error('[break] Error:', error)
+        return res.status(500).json({ error: 'Failed to generate break prompts' })
+      }
+    }
     return res.status(405).json({ error: 'Method not allowed' })
   }
 

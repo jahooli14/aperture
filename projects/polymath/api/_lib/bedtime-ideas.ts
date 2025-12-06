@@ -17,12 +17,65 @@ export interface MorningBriefing {
   forgotten_gem: { type: 'article'|'thought', title: string, snippet: string, relevance: string } | null
 }
 
-interface BedtimePrompt {
+export interface BedtimePrompt {
   prompt: string
   type: 'connection' | 'divergent' | 'revisit' | 'transform'
   relatedIds: string[] // Memory/project/article IDs that inspired this
   metaphor?: string // Optional poetic framing for enhanced contemplation
   format?: 'question' | 'statement' | 'visualization' | 'scenario' | 'incubation' // Prompt variety
+}
+
+export async function generateBreakPrompts(userId: string): Promise<BedtimePrompt[]> {
+  console.log(`[Bedtime] Generating break prompts for user ${userId}`)
+  
+  const activeProjects = await getActiveProjects(userId)
+  const capabilities = await getCapabilities(userId)
+
+  const topCapabilities = capabilities.slice(0, 5).map((c: any) => `${c.name}`).join(', ')
+  const projectContext = activeProjects.slice(0, 3).map((p: any) => `"${p.title}"`).join(', ')
+
+  const prompt = `You are an Oblique Strategist. The user is taking a short break from work.
+  They need a "Logic Breaker" to reset their context.
+  
+  **USER CONTEXT:**
+  - Active Projects: ${projectContext || 'None'}
+  - Capabilities: ${topCapabilities || 'General Creator'}
+  
+  **STRATEGY:**
+  Generate 1-2 prompts using these techniques:
+  1. **Oblique Strategy**: Use randomness or paradox. "Honor thy error as a hidden intention."
+  2. **Inversion**: "What if you did the opposite?"
+  3. **Scale Shift**: "View this from 10,000 feet."
+  
+  Return JSON array:
+  [
+    {
+      "prompt": "...",
+      "type": "transform",
+      "metaphor": "..."
+    }
+  ]`
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const result = await model.generateContent(prompt)
+    const text = result.response.text()
+    const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
+    const prompts = jsonMatch ? JSON.parse(jsonMatch[0]) : []
+    
+    return prompts.map((p: any) => ({
+      ...p,
+      relatedIds: [],
+      format: 'statement'
+    }))
+  } catch (e) {
+    console.error('Failed to generate break prompts', e)
+    return [{
+      prompt: "Look closely at the most embarrassing detail and amplify it.",
+      type: "transform",
+      relatedIds: []
+    }]
+  }
 }
 
 /**
