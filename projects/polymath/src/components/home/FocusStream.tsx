@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, Clock, Battery, ArrowRight } from 'lucide-react'
+import { Layers, Clock, Battery } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
@@ -194,7 +194,7 @@ export function FocusStream() {
                             </p>
 
                             {nextTask && (
-                                <div className="mb-4 p-3 rounded-lg" style={{
+                                <div className="p-3 rounded-lg" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.3)`
                                 }}>
@@ -202,10 +202,6 @@ export function FocusStream() {
                                     <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
                                 </div>
                             )}
-
-                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
-                                Open Project <ArrowRight className="h-4 w-4" />
-                            </button>
                         </div>
                     </motion.div>
                     )
@@ -255,7 +251,7 @@ export function FocusStream() {
                             </p>
 
                             {nextTask && (
-                                <div className="mb-4 p-3 rounded-lg" style={{
+                                <div className="p-3 rounded-lg" style={{
                                     backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                     border: `1px solid rgba(${theme.rgb}, 0.3)`
                                 }}>
@@ -263,10 +259,6 @@ export function FocusStream() {
                                     <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
                                 </div>
                             )}
-
-                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
-                                Continue <ArrowRight className="h-4 w-4" />
-                            </button>
                         </div>
                     </motion.div>
                     )
@@ -316,14 +308,10 @@ export function FocusStream() {
                             <h3 className="text-lg font-bold text-white mb-2">
                                 Dust off your archives
                             </h3>
-                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">
                                 You have {dormantProjects.length} projects that haven't been touched in over 2 weeks.
                                 Take a moment to decide their future.
                             </p>
-
-                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: theme.textColor }}>
-                                Start Review <ArrowRight className="h-4 w-4" />
-                            </button>
                         </div>
                     </motion.div>
                     )
@@ -370,7 +358,7 @@ export function FocusStream() {
                             <h3 className="text-lg font-bold text-white mb-2">
                                 Spark: {sparkCandidate.title}
                             </h3>
-                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">
                                 Fits your current {timeContext.energy} energy level.
                                 {sparkCandidate.metadata?.tasks?.find((t: any) => !t.done)?.text
                                     ? ` Next step: "${sparkCandidate.metadata.tasks.find((t: any) => !t.done).text}"`
@@ -381,10 +369,6 @@ export function FocusStream() {
                                         "Review your motivation notes"
                                     ][Math.floor(Math.random() * 4)]}`}
                             </p>
-
-                            <button className="text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all" style={{ color: 'rgb(6, 182, 212)' }}>
-                                Open Project <ArrowRight className="h-4 w-4" />
-                            </button>
                         </div>
                     </motion.div>
                     )
