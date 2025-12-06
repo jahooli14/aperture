@@ -13,6 +13,7 @@ import { generateDoorSuggestions } from './_lib/map-suggestions.js'
 import { generateInitialMap } from './_lib/map-generation.js'
 import { generateBedtimePrompts, generateCatalystPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
+import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -909,6 +910,71 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       const { id: _bodyId, ...updates } = req.body
 
       console.log('[PATCH] Updating project:', projectId, 'with data:', updates)
+
+      // First, fetch the project to get its current state
+      const { data: existingProject, error: fetchError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .eq('user_id', userId)
+        .single()
+
+      if (fetchError) {
+        console.error('[PATCH] Failed to fetch project:', fetchError)
+        return res.status(500).json({
+          error: 'Failed to fetch project',
+          details: fetchError.message
+        })
+      }
+
+      if (!existingProject) {
+        return res.status(404).json({ error: 'Project not found' })
+      }
+
+      // If metadata with tasks is being updated, analyze new tasks
+      if (updates.metadata?.tasks) {
+        const newTasks = (updates.metadata.tasks || []) as any[]
+        const existingTasks = (existingProject.metadata?.tasks || []) as any[]
+
+        // Find newly added tasks (those not in the existing tasks)
+        const addedTasks = newTasks.filter(
+          newTask => !existingTasks.some(existingTask => existingTask.id === newTask.id)
+        )
+
+        if (addedTasks.length > 0) {
+          console.log('[PATCH] Analyzing', addedTasks.length, 'new tasks for energy levels')
+
+          // Analyze each new task in parallel
+          const analyzedTasks = await Promise.all(
+            addedTasks.map(async (task) => {
+              try {
+                const analysis = await analyzeTaskEnergy(
+                  task.text,
+                  existingProject.title,
+                  existingProject.description
+                )
+                return {
+                  ...task,
+                  energy_level: analysis.energy_level,
+                  energy_reasoning: analysis.reasoning
+                }
+              } catch (error) {
+                console.error('[PATCH] Failed to analyze task:', task.text, error)
+                return task // Return unmodified if analysis fails
+              }
+            })
+          )
+
+          // Replace the new tasks with analyzed versions
+          const updatedNewTasks = newTasks.map(task => {
+            const analyzed = analyzedTasks.find(t => t.id === task.id)
+            return analyzed || task
+          })
+
+          updates.metadata.tasks = updatedNewTasks
+          console.log('[PATCH] Task analysis complete, updated tasks with energy levels')
+        }
+      }
 
       const { data, error } = await supabase
         .from('projects')
