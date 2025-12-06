@@ -48,10 +48,24 @@ export async function extractCapabilities(userId: string) {
     Content:
     ${content}`
 
-    const response = await generateText(prompt, { responseFormat: 'json', temperature: 0.2 })
-    const capabilities = JSON.parse(response)
+    const response = await generateText(prompt, { 
+      responseFormat: 'json', 
+      temperature: 0.2,
+      maxTokens: 2000 // Increase token limit to prevent truncation
+    })
 
-    if (!Array.isArray(capabilities)) throw new Error('Invalid AI response')
+    let capabilities
+    try {
+      // Attempt to find JSON array in the response
+      const jsonMatch = response.match(/\[[\s\S]*\]/)
+      const jsonString = jsonMatch ? jsonMatch[0] : response
+      capabilities = JSON.parse(jsonString)
+    } catch (parseError) {
+      console.error('[capabilities] JSON Parse Error. Raw response:', response)
+      throw parseError
+    }
+
+    if (!Array.isArray(capabilities)) throw new Error('Invalid AI response format: Not an array')
 
     console.log(`[capabilities] Found ${capabilities.length} capabilities`)
 
