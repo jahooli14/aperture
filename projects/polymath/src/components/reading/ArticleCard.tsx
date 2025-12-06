@@ -9,7 +9,6 @@ import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edi
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
-import { useOfflineArticle } from '../../hooks/useOfflineArticle'
 import { useToast } from '../ui/toast'
 import { readingDb } from '../../lib/db'
 import { haptic } from '../../utils/haptics'
@@ -28,7 +27,6 @@ interface ArticleCardProps {
 
 export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
-  const { downloadForOffline, caching } = useOfflineArticle()
   const { addToast } = useToast()
   const [isOffline, setIsOffline] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -62,100 +60,12 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     return cleaned || undefined
   }
 
-
   // Long-press for context menu
   const longPressHandlers = useLongPress(() => {
     setShowContextMenu(true)
   }, {
     threshold: 500,
   })
-
-  useEffect(() => {
-    // Batch checks to reduce re-renders
-    const loadData = async () => {
-      await Promise.all([
-        checkOfflineStatus(),
-        checkProgress(),
-        fetchConnectionCount()
-      ])
-    }
-    loadData()
-  }, [article.id])
-
-  const fetchConnectionCount = async () => {
-    try {
-      const response = await fetch(`/api/connections?action=list-sparks&id=${article.id}&type=article`)
-      if (response.ok) {
-        const data = await response.json()
-        setConnectionCount(data.connections?.length || 0)
-      } else {
-        // Get error details from response
-        const text = await response.text()
-        const errorData = text.startsWith('{') ? JSON.parse(text) : {}
-        console.error('[ArticleCard] Failed to fetch connections:', {
-          status: response.status,
-          contentType: response.headers.get('content-type'),
-          responseBody: text.substring(0, 500),
-          error: errorData.error,
-          details: errorData.details
-        })
-      }
-    } catch (error) {
-      console.error('[ArticleCard] Failed to fetch connections:', error)
-    }
-  }
-
-  const checkOfflineStatus = async () => {
-    try {
-      const cached = await readingDb.articles.get(article.id)
-      setIsOffline(cached?.offline_available && cached?.images_cached || false)
-    } catch (error) {
-      console.warn('[ArticleCard] Failed to check offline status:', error)
-      setIsOffline(false)
-    }
-  }
-
-  const checkProgress = async () => {
-    try {
-      const savedProgress = await readingDb.getProgress(article.id)
-      if (savedProgress) {
-        console.log(`[ArticleCard] Progress for ${article.title}: ${savedProgress.scroll_percentage}%`)
-        setProgress(savedProgress.scroll_percentage)
-      } else {
-        console.log(`[ArticleCard] No progress found for ${article.title}`)
-        setProgress(0)
-      }
-    } catch (error) {
-      console.warn('[ArticleCard] Failed to check progress:', error)
-      setProgress(0)
-    }
-  }
-
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (isOffline) return
-
-    try {
-      addToast({
-        title: 'Downloading...',
-        description: 'Saving article for offline reading',
-        variant: 'default',
-      })
-      await downloadForOffline(article)
-      setIsOffline(true)
-      addToast({
-        title: 'Downloaded',
-        description: 'Article available offline',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Download failed',
-        description: 'Could not save article offline',
-        variant: 'destructive',
-      })
-    }
-  }
 
   const handleMarkAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -230,6 +140,16 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     }
   }, [article.title, article.excerpt, article.url, handleCopyLink])
 
+  const checkOfflineStatus = async () => {
+    try {
+      const cached = await readingDb.articles.get(article.id)
+      setIsOffline(!!cached?.offline_available)
+    } catch (error) {
+      console.warn('[ArticleCard] Failed to check offline status:', error)
+      setIsOffline(false)
+    }
+  }
+
   // Memoize icon elements to prevent recreation (prevents flickering)
   const editIcon = React.useMemo(() => <Edit className="h-5 w-5" />, [])
   const externalLinkIcon = React.useMemo(() => <ExternalLink className="h-5 w-5" />, [])
@@ -244,12 +164,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       label: 'Edit',
       icon: editIcon,
       onClick: () => setShowEditDialog(true),
-    },
-    {
-      label: isOffline ? 'Available Offline' : 'Save Offline',
-      icon: downloadIcon,
-      onClick: handleDownload,
-      disabled: isOffline
     },
     {
       label: 'Open Original',
@@ -562,21 +476,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
               {/* Actions */}
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                {!isOffline && (
-                  <button
-                    onClick={handleDownload}
-                    disabled={caching}
-                    className="p-1.5 rounded-lg transition-colors"
-                    style={{ color: caching ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)' }}
-                    title="Save Offline"
-                  >
-                    {caching ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
-                  </button>
-                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()

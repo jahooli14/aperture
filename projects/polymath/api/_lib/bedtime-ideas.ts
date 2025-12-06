@@ -45,6 +45,7 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   const activeProjects = await getActiveProjects(userId) // Current outputs
   const currentInterests = await getCurrentInterests(userId)
   const oldInsights = await getOldInsights(userId, 90) // 14-90 days old
+  const capabilities = await getCapabilities(userId) // Capabilities for synesthetic metaphors
 
   // 2. Get past prompt performance for personalization
   const performance = await getPromptPerformance(userId)
@@ -61,6 +62,7 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
     activeProjects,
     currentInterests,
     oldInsights,
+    capabilities,
     { hasRichInput, hasBlockedProjects, hasNoProjects },
     performance
   )
@@ -69,6 +71,16 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   await storePrompts(userId, prompts)
 
   return prompts
+}
+
+async function getCapabilities(userId: string) {
+  const { data } = await supabase
+    .from('capabilities')
+    .select('name, description, strength')
+    .eq('user_id', userId)
+    .order('strength', { ascending: false })
+    .limit(10)
+  return data || []
 }
 
 async function getRecentArticles(userId: string, days: number) {
@@ -244,6 +256,7 @@ async function generatePromptsWithAI(
   activeProjects: any[],
   currentInterests: any[],
   oldInsights: any[],
+  capabilities: any[],
   context: {
     hasRichInput: boolean
     hasBlockedProjects: boolean
@@ -280,46 +293,70 @@ async function generatePromptsWithAI(
     themes: m.themes?.slice(0, 3) || []
   }))
 
+  const topCapabilities = capabilities.map(c => `${c.name}: ${c.description}`)
+
   const projectContext = activeProjects.length > 0
     ? activeProjects.map((p: any) => {
-      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : ''; // Corrected escape for quote
+      const motivation = p.metadata?.motivation ? `\n  MOTIVATION (The "Why"): ${p.metadata.motivation}` : '';
       return `- [${p.status.toUpperCase()}] "${p.title}": ${p.description || 'No description'}${motivation}`;
-    }).join('\n') // Corrected escape for newline
+    }).join('\n')
     : 'No active projects.'
 
-  const prompt = `You are a Hypnagogic Assistant. The user is about to sleep.
-Your goal is to generate "Incubation Prompts" that their brain can work on subconsciously.
+  const prompt = `You are the "Entropic Engine," a digital pharmacopoeia designed to induce hypnagogic creativity.
+The user is about to sleep (N1 state). Your goal is to generate "Bedtime Prompts" that bypass rigid logic and trigger deep semantic restructuring.
 
 **USER CONTEXT:**
 - Recent Reading: ${topArticles.map(a => `"${a.title}"`).join(', ') || 'None'}
 - Recent Thoughts: ${topMemories.map(m => `"${m.title}"`).join(', ') || 'None'}
-- Recurring Themes: ${consequentialThemes.join(', ') || 'None'}
+- Capabilities (Verbs/Tools): ${topCapabilities.join(', ') || 'None'}
 - Active Projects:
 ${projectContext}
 
-- Top Interests: ${currentInterests.map((i: any) => `${i.name}`).join(', ') || 'None'}
-- Old Insights: ${oldInsights.map((i: any) => `"${i.title}"`).join(', ') || 'None'}
+**THE PHARMACOPOEIA (STRATEGIES):**
+Select strategies based on the inputs to generate 3-4 prompts.
 
-**INSTRUCTIONS:**
-Generate 3-4 specific prompts.
-1. **Connection**: Connect a recent article to a project.
-2. **Divergent**: Ask a "What if" question about a recurring theme.
-3. **Unblock**: If they have a project, suggest a tiny perspective shift to unblock it.
-4. **Synthesis**: Combine an old insight with a new interest.
+1. **Perspective Shift (The "Overview Effect" - LSD/DMT)**
+   - *Goal:* Break out of the "weeds".
+   - *Techniques:* Temporal Zoom (project 1000 years future/past), Scale Inversion (cellular/galactic), Alien Anthropologist.
+   - *Example:* "Imagine your [Project] is a ruin discovered 1000 years from now. What one function is still working?"
+
+2. **Synesthetic Cross-Pollination (The "Melting" - Psilocybin)**
+   - *Goal:* Transfer capability/insight across domains using sensory metaphors.
+   - *Techniques:* Modal Transposition (sound/texture), Texture Mapping, Biological Metaphor.
+   - *Example:* "If the friction in [Project] had a sound frequency, what would it be? Can you hum a counter-frequency?"
+   - *Instruction:* Use the user's 'Capabilities' as the source of the metaphor.
+
+3. **The Logic Breaker (The "Koan" - Zen/DMT)**
+   - *Goal:* Exhaust executive control (Beta waves) to allow associative flow (Theta).
+   - *Techniques:* Inversion, Paradox, Oblique Strategy.
+   - *Example:* "What would happen if you tried to make [Project] fail in the most beautiful way possible?"
+
+4. **Emotional Integration (The "Catharsis" - MDMA)**
+   - *Goal:* Connect intellectual work with emotional drives/shadow.
+   - *Techniques:* Shadow Work, Ancestral Resonance, Surrender.
+   - *Example:* "Which of your projects is currently asking for your love, and which is asking for your fear?"
+
+**OUTPUT INSTRUCTIONS:**
+- Generate 3-4 distinct prompts using different strategies.
+- Keep prompts short, poetic, and hypnotic.
+- **Metaphor**: Provide a short, abstract metaphor or visualization aid for each.
+- **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
 
 Return JSON array:
 [
   {
-    "prompt": "How could the concept of [X] from your reading apply to [Project Y]?",
-    "type": "connection",
-    "relatedIds": ["id1", "id2"]
+    "prompt": "...",
+    "type": "transform",
+    "metaphor": "A melting clock draping over a branch...",
+    "strategy": "Synesthesia",
+    "relatedIds": ["..."]
   }
 ]`
 
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
-    const jsonMatch = text.match(/[\[][\s\S]*[\]]/) // Corrected escape for regex
+    const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
     return jsonMatch ? JSON.parse(jsonMatch[0]) : []
   } catch (e) {
     console.error('Failed to generate bedtime prompts', e)

@@ -6,10 +6,11 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon } from 'lucide-react'
+import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
+import { DriftMode } from '../components/bedtime/DriftMode'
 
 interface BedtimePrompt {
   id: string
@@ -30,6 +31,7 @@ export function BedtimePage() {
   const [message, setMessage] = useState('')
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set())
   const [zenModeOpen, setZenModeOpen] = useState(false)
+  const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
   const { addToast } = useToast()
 
@@ -257,7 +259,7 @@ export function BedtimePage() {
               }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
-              <div className="w-4 h-4 rounded-full" style={{ backgroundColor: 'var(--premium-gold)' }}></div>
+              <Sparkles className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
             </motion.div>
             <div>
               <h2 className="premium-text-platinum text-2xl font-bold">
@@ -272,7 +274,7 @@ export function BedtimePage() {
           {/* Time indicator */}
           <div className="premium-glass-subtle rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--premium-gold)' }}></div>
+              <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-gold)' }} />
               <div>
                 <p className="text-sm font-medium premium-text-platinum">
                   {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}
@@ -287,15 +289,26 @@ export function BedtimePage() {
 
             <div className="flex items-center gap-2">
               {prompts.length > 0 && (
-                <button
-                  onClick={() => setZenModeOpen(true)}
-                  className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
-                  style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
-                  title="Zen Mode"
-                >
-                  <Maximize2 className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
-                  <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Zen</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setDriftModeOpen(true)}
+                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
+                    style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    title="Drift Mode (Motion Activated)"
+                  >
+                    <Wind className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Drift</span>
+                  </button>
+                  <button
+                    onClick={() => setZenModeOpen(true)}
+                    className="px-4 py-2 rounded-lg transition-all premium-glass-subtle hover:bg-white/10 flex items-center gap-2"
+                    style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    title="Zen Mode"
+                  >
+                    <Maximize2 className="h-4 w-4" style={{ color: 'var(--premium-gold)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--premium-gold)' }}>Zen</span>
+                  </button>
+                </>
               )}
               <button
                 onClick={generateNew}
@@ -557,6 +570,14 @@ export function BedtimePage() {
             prompts={prompts}
             onClose={() => setZenModeOpen(false)}
             onMarkViewed={markViewed}
+          />
+        )}
+
+        {/* Drift Mode */}
+        {driftModeOpen && prompts.length > 0 && (
+          <DriftMode
+            prompts={prompts}
+            onClose={() => setDriftModeOpen(false)}
           />
         )}
       </div>
