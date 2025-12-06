@@ -567,11 +567,17 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
       if (action === 'extract') {
         try {
+          console.log('[capabilities] Starting extraction for user:', userId)
           const caps = await extractCapabilities(userId)
+          console.log('[capabilities] Extraction complete, found:', caps.length, 'capabilities')
           return res.status(200).json({ success: true, extracted: caps })
         } catch (error) {
-          console.error('[capabilities] Extraction error:', error)
-          return res.status(500).json({ error: 'Extraction failed' })
+          console.error('[capabilities] Extraction error:', error instanceof Error ? error.message : String(error))
+          console.error('[capabilities] Error stack:', error instanceof Error ? error.stack : 'No stack')
+          return res.status(500).json({
+            error: 'Extraction failed',
+            details: error instanceof Error ? error.message : String(error)
+          })
         }
       }
     }

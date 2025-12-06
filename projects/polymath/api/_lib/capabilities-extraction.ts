@@ -63,17 +63,22 @@ export async function extractCapabilities(userId: string) {
       const { data, error } = await supabase
         .from('capabilities')
         .upsert({
+          user_id: userId,
           name: cap.name,
           description: cap.description,
           source_project: 'user-extracted',
           strength: 1.0,
           embedding,
           last_used: new Date().toISOString()
-        }, { onConflict: 'name' })
+        }, { onConflict: 'user_id,name' })
         .select()
         .single()
 
-      if (!error && data) saved.push(data)
+      if (error) {
+        console.error('[capabilities] Error saving capability:', cap.name, error)
+      } else if (data) {
+        saved.push(data)
+      }
     }
 
     return saved
