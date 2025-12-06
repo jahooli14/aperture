@@ -23,6 +23,8 @@ import { runSynthesis } from '../_lib/synthesis.js'
 import { strengthenNodes } from '../_lib/strengthen-nodes.js'
 import { processMemory } from '../_lib/process-memory.js'
 import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
+import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
+import { extractCapabilities } from '../_lib/capabilities-extraction.js'
 import webpush from 'web-push'
 
 // Configure web-push (globally or within the handler if needed per-request)
@@ -199,6 +201,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
           }
+        }
+      }
+
+      // 6. Maintenance (Embeddings & Capabilities)
+      try {
+        // Daily: Update embeddings for new/stale items (limit 20)
+        console.log('[cron/jobs/daily] Running embedding maintenance...')
+        const maintenanceStats = await maintainEmbeddings(userId, 20, false)
+        results.tasks.embeddings = { success: true, stats: maintenanceStats }
+
+        // Weekly (Sunday): Extract capabilities
+        if (now.getUTCDay() === 0) {
+          console.log('[cron/jobs/daily] Running weekly capability extraction...')
+          const newCaps = await extractCapabilities(userId)
+          results.tasks.capabilities = { success: true, extracted: newCaps.length }
+        }
+      } catch (error) {
+        console.error('[cron/jobs/daily] Maintenance failed:', error)
+        results.tasks.maintenance = { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
         }
       }
 

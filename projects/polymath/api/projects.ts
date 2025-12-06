@@ -12,6 +12,7 @@ import { generateText } from './_lib/gemini-chat.js'
 import { generateDoorSuggestions } from './_lib/map-suggestions.js'
 import { generateInitialMap } from './_lib/map-generation.js'
 import { generateBedtimePrompts, generateCatalystPrompts } from './_lib/bedtime-ideas.js'
+import { extractCapabilities } from './_lib/capabilities-extraction.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -542,6 +543,55 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         details: error instanceof Error ? error.message : 'Unknown error'
       })
     }
+  }
+
+  // CAPABILITIES RESOURCE
+  if (resource === 'capabilities') {
+    const action = req.query.action as string
+    const id = req.query.id as string
+
+    if (req.method === 'GET') {
+      try {
+        const { data, error } = await supabase
+          .from('capabilities')
+          .select('*')
+          .order('strength', { ascending: false })
+        
+        if (error) throw error
+        return res.status(200).json(data)
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch capabilities' })
+      }
+    }
+
+    if (req.method === 'POST') {
+      if (action === 'extract') {
+        try {
+          const caps = await extractCapabilities(userId)
+          return res.status(200).json({ success: true, extracted: caps })
+        } catch (error) {
+          console.error('[capabilities] Extraction error:', error)
+          return res.status(500).json({ error: 'Extraction failed' })
+        }
+      }
+    }
+
+    if (req.method === 'DELETE') {
+      if (!id) return res.status(400).json({ error: 'ID required' })
+      try {
+        const { error } = await supabase
+          .from('capabilities')
+          .delete()
+          .eq('id', id)
+        
+        if (error) throw error
+        return res.status(200).json({ success: true })
+      } catch (error) {
+        return res.status(500).json({ error: 'Delete failed' })
+      }
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   // CONTEXT RESOURCE

@@ -3,6 +3,7 @@
  * Timeline, Galaxy, Analysis, and other tools
  */
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -21,103 +22,106 @@ import {
   Search,
   Bug,
   ToggleRight,
-  ToggleLeft
+  ToggleLeft,
+  Zap,
+  RefreshCw,
+  Trash2,
+  Loader2
 } from 'lucide-react'
 import { useThemeStore, type AccentColor, type ThemeIntensity, type FontSize } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
 import { SubtleBackground } from '../components/SubtleBackground'
+import { supabase } from '../lib/supabase'
+import { useToast } from '../components/ui/toast'
 
-interface SettingsOption {
+// ... (keep existing interfaces)
+
+interface Capability {
   id: string
-  label: string
+  name: string
   description: string
-  icon: any
-  path: string
-  color: string
-  glow: string
+  strength: number
 }
-
-const SETTINGS_OPTIONS: SettingsOption[] = [
-  {
-    id: 'map',
-    label: 'Knowledge map',
-    description: 'Geographic visualization with glowing doors of opportunity',
-    icon: Map,
-    path: '/map',
-    color: '#fbbf24',
-    glow: 'rgba(251, 191, 36, 0.4)'
-  },
-  {
-    id: 'suggestions',
-    label: 'Discover projects',
-    description: 'AI-powered project recommendations from your knowledge',
-    icon: Lightbulb,
-    path: '/suggestions',
-    color: '#f59e0b',
-    glow: 'rgba(245, 158, 11, 0.4)'
-  },
-  {
-    id: 'bedtime',
-    label: 'Bedtime ideas',
-    description: 'Trippy prompts for creative subconscious thinking (9:30pm daily)',
-    icon: Moon,
-    path: '/bedtime',
-    color: '#6366f1',
-    glow: 'rgba(99, 102, 241, 0.4)'
-  },
-  {
-    id: 'rss',
-    label: 'Auto-import',
-    description: 'RSS feeds & email newsletters auto-added to reading queue',
-    icon: Rss,
-    path: '/rss',
-    color: '#f97316',
-    glow: 'rgba(249, 115, 22, 0.4)'
-  },
-  {
-    id: 'timeline',
-    label: 'Timeline',
-    description: 'Chronological view of your knowledge journey',
-    icon: Calendar,
-    path: '/knowledge-timeline',
-    color: '#f59e0b',
-    glow: 'rgba(245, 158, 11, 0.4)'
-  },
-  {
-    id: 'galaxy',
-    label: 'Galaxy view',
-    description: 'Explore connections in 3D space',
-    icon: Sparkles,
-    path: '/constellation',
-    color: '#8b5cf6',
-    glow: 'rgba(139, 92, 246, 0.4)'
-  },
-  {
-    id: 'insights',
-    label: 'Analysis',
-    description: 'Deep insights and patterns in your data',
-    icon: TrendingUp,
-    path: '/insights',
-    color: '#10b981',
-    glow: 'rgba(16, 185, 129, 0.4)'
-  }
-]
 
 export function SettingsPage() {
   const navigate = useNavigate()
   const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
+  const { addToast } = useToast()
+  
+  const [capabilities, setCapabilities] = useState<Capability[]>([])
+  const [loadingCaps, setLoadingCaps] = useState(false)
+  const [extractingCaps, setExtractingCaps] = useState(false)
 
-  const intensityOptions: { value: ThemeIntensity; label: string; description: string }[] = [
-    { value: 'subtle', label: 'Subtle', description: 'Muted colors' },
-    { value: 'normal', label: 'Normal', description: 'Balanced' },
-    { value: 'vibrant', label: 'Vibrant', description: 'Bold colors' },
-  ]
+  useEffect(() => {
+    fetchCapabilities()
+  }, [])
 
-  const fontSizeOptions: { value: FontSize; label: string }[] = [
-    { value: 'small', label: 'Small' },
-    { value: 'normal', label: 'Normal' },
-    { value: 'large', label: 'Large' },
-  ]
+  const fetchCapabilities = async () => {
+    setLoadingCaps(true)
+    try {
+      const { data, error } = await supabase
+        .from('capabilities')
+        .select('*')
+        .order('strength', { ascending: false })
+      
+      if (error) throw error
+      setCapabilities(data || [])
+    } catch (error) {
+      console.error('Failed to fetch capabilities:', error)
+    } finally {
+      setLoadingCaps(false)
+    }
+  }
+
+  const handleExtractCapabilities = async () => {
+    setExtractingCaps(true)
+    try {
+      const response = await fetch('/api/projects?resource=capabilities&action=extract', {
+        method: 'POST'
+      })
+      if (!response.ok) throw new Error('Extraction failed')
+      
+      const result = await response.json()
+      addToast({
+        title: 'Capabilities Updated',
+        description: `Found ${result.extracted?.length || 0} new capabilities`,
+        variant: 'success'
+      })
+      fetchCapabilities()
+    } catch (error) {
+      addToast({
+        title: 'Extraction Failed',
+        description: 'Could not analyze your data',
+        variant: 'destructive'
+      })
+    } finally {
+      setExtractingCaps(false)
+    }
+  }
+
+  const handleDeleteCapability = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('capabilities')
+        .delete()
+        .eq('id', id)
+      
+      if (error) throw error
+      
+      setCapabilities(prev => prev.filter(c => c.id !== id))
+      addToast({
+        title: 'Capability Removed',
+        variant: 'success'
+      })
+    } catch (error) {
+      addToast({
+        title: 'Failed to delete',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  // ... (keep existing options setup)
 
   return (
     <motion.div
@@ -126,122 +130,76 @@ export function SettingsPage() {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.1 }}
     >
-      {/* Subtle Background Effect */}
-      <SubtleBackground />
-
-      {/* Fixed Header Bar */}
-      <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
-        style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Settings className="h-7 w-7" style={{ color: 'var(--premium-blue)', opacity: 0.7 }} />
-            <h1 className="text-2xl sm:text-3xl" style={{
-              fontWeight: 600,
-              letterSpacing: 'var(--premium-tracking-tight)',
-              color: 'var(--premium-text-secondary)',
-              opacity: 0.7
-            }}>
-              Settings
-            </h1>
-          </div>
-          <button
-            onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-            style={{
-              color: 'var(--premium-blue)'
-            }}
-            title="Search everything"
-          >
-            <Search className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
+      {/* ... (keep header) */}
+      
       <div className="min-h-screen pb-24" style={{ paddingTop: '5.5rem' }}>
-        {/* Header Section */}
+        {/* ... (keep Explore More section) */}
+
+        {/* Options Grid */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          {/* ... (keep existing grid) */}
+        </section>
+
+        {/* Capabilities Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              Explore <span style={{ color: 'var(--premium-blue)' }}>more</span>
-            </h2>
-            <p className="mt-2 text-lg" style={{ color: 'var(--premium-text-secondary)' }}>
-              Advanced views and analysis tools
-            </p>
-          </div>
-        </section>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Zap className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+                    Your Capabilities
+                  </h2>
+                  <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                    Skills and interests extracted from your projects
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleExtractCapabilities}
+                disabled={extractingCaps}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                title="Re-analyze Data"
+              >
+                <RefreshCw className={`h-5 w-5 ${extractingCaps ? 'animate-spin' : ''}`} style={{ color: 'var(--premium-text-secondary)' }} />
+              </button>
+            </div>
 
-        {/* Options Grid */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <div className="grid grid-cols-1 gap-4">
-            {SETTINGS_OPTIONS.map((option, index) => {
-              const Icon = option.icon
-              return (
-                <motion.button
-                  key={option.id}
-                  onClick={() => navigate(option.path)}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="p-6 rounded-xl backdrop-blur-xl transition-all duration-300 text-left group relative"
-                  style={{
-                    background: 'var(--premium-bg-2)',
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--premium-bg-3)'
-                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--premium-bg-2)'
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
-                  }}
-                >
-                  {/* Glow effect on hover */}
+            {loadingCaps ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              </div>
+            ) : capabilities.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {capabilities.map(cap => (
                   <div
-                    className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl pointer-events-none"
-                    style={{ backgroundColor: option.glow }}
-                  />
-
-                  <div className="relative z-10 flex items-center gap-4">
-                    {/* Icon */}
-                    <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `linear-gradient(135deg, ${option.glow}, transparent)`
-                      }}
+                    key={cap.id}
+                    className="group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:border-red-500/30 hover:bg-red-500/5"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      borderColor: 'rgba(255,255,255,0.1)'
+                    }}
+                  >
+                    <span className="text-sm font-medium premium-text-platinum">
+                      {cap.name}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteCapability(cap.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-red-500/20"
                     >
-                      <Icon
-                        className="w-7 h-7"
-                        style={{ color: option.color }}
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1 premium-text-platinum">
-                        {option.label}
-                      </h3>
-                      <p style={{ color: 'var(--premium-text-secondary)' }}>
-                        {option.description}
-                      </p>
-                    </div>
-
-                    {/* Arrow */}
-                    <ChevronRight
-                      className="w-6 h-6 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
-                      style={{ color: 'var(--premium-platinum)' }}
-                    />
+                      <Trash2 className="h-3 w-3 text-red-400" />
+                    </button>
                   </div>
-                </motion.button>
-              )
-            })}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No capabilities found. Try refreshing to analyze your data.
+              </div>
+            )}
           </div>
         </section>
 

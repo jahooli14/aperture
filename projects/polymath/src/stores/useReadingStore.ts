@@ -12,6 +12,7 @@ interface ReadingState {
   error: string | null
   currentFilter: ArticleStatus | 'all'
   lastFetched: number | null
+  offlineMode: boolean
 
   pendingArticles: Article[]
 
@@ -44,6 +45,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
     error: null,
     currentFilter: 'all',
     lastFetched: null,
+    offlineMode: false,
 
     fetchArticles: async (status?: ArticleStatus, force = false) => {
       const state = get()
@@ -59,6 +61,32 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       // Only set loading if we're actually fetching
       set({ loading: true, error: null })
 
+      // Check online status
+      if (!navigator.onLine) {
+        console.log('[ReadingStore] Offline mode detected - fetching from local DB')
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cachedArticles = await readingDb.articles.toArray()
+
+          // Filter by status if needed
+          const filtered = status
+            ? cachedArticles.filter(a => a.status === status)
+            : cachedArticles
+
+          set({
+            articles: filtered,
+            loading: false,
+            offlineMode: true,
+            error: null
+          })
+          return
+        } catch (e) {
+          console.error('[ReadingStore] Failed to load offline articles:', e)
+          set({ error: 'Failed to load offline articles', loading: false, offlineMode: true })
+          return
+        }
+      }
+
       try {
         const params = new URLSearchParams()
         if (status) params.append('status', status)
@@ -70,6 +98,11 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         }
 
         const { articles } = await response.json()
+
+        // Cache fetched articles for offline use (only if we fetched all or specific status)
+        // We only cache what we see to avoid overwriting with partial data, but for simplicity
+        // we might want a dedicated sync strategy. For now, let's just update the store.
+        // Ideally, we should background sync these to Dexie.
 
         // Skip update if data hasn't changed (prevent unnecessary re-renders)
         const currentArticles = get().articles
@@ -89,16 +122,34 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
             if (!hasImportantChange) {
               console.log('[ReadingStore] Skipping state update - data unchanged')
-              set({ loading: false }) // Still need to clear loading state
+              set({ loading: false, offlineMode: false }) // Still need to clear loading state
               return
             }
           }
         }
 
-        set({ articles, loading: false, lastFetched: now })
+        set({ articles, loading: false, lastFetched: now, offlineMode: false })
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        set({ error: errorMessage, loading: false })
+
+        // Fallback to offline DB on error
+        console.log('[ReadingStore] Fetch failed, falling back to offline DB')
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cachedArticles = await readingDb.articles.toArray()
+          const filtered = status
+            ? cachedArticles.filter(a => a.status === status)
+            : cachedArticles
+
+          set({
+            articles: filtered,
+            loading: false,
+            offlineMode: true,
+            error: null // Clear error since we successfully loaded offline data
+          })
+        } catch (dbError) {
+          set({ error: errorMessage, loading: false })
+        }
       }
     },
 

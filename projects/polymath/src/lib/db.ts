@@ -56,12 +56,30 @@ export interface CachedMemory {
   cached_at: number
 }
 
+// Cached Project interface
+export interface CachedProject {
+  id: string
+  user_id: string
+  title: string
+  description: string | null
+  status: string
+  last_active: string
+  created_at: string
+  updated_at?: string
+  is_priority?: boolean
+  metadata?: any
+  cached_at: string
+}
+
 export class PolymathDatabase extends Dexie {
   // Reading Tables
   articles!: Table<CachedArticle, string>
   images!: Table<CachedImage, number>
   highlights!: Table<ArticleHighlight, string>
   progress!: Table<ReadingProgress, number>
+
+  // Project Tables
+  projects!: Table<CachedProject, string>
 
   // Capture & Memory Tables
   pendingCaptures!: Table<PendingCapture, number>
@@ -77,10 +95,13 @@ export class PolymathDatabase extends Dexie {
       images: '++id, article_id, url, cached_at',
       highlights: 'id, article_id, created_at',
       progress: '++id, article_id, updated_at',
-      
+
+      // Projects
+      projects: 'id, status, is_priority, updated_at, last_active',
+
       // Captures
       pendingCaptures: '++id, timestamp, synced',
-      
+
       // Memories Cache
       memories: 'id, cached_at'
     })
@@ -160,13 +181,13 @@ export class PolymathDatabase extends Dexie {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
     const cutoffISO = cutoffDate.toISOString()
-    
+
     const deletedImages = await this.images.where('cached_at').below(cutoffISO).delete()
     const deletedArticles = await this.articles
       .where('last_synced').below(cutoffISO)
       .and(article => article.status === 'archived')
       .delete()
-      
+
     return deletedImages + deletedArticles
   }
 
@@ -213,6 +234,20 @@ export class PolymathDatabase extends Dexie {
   async clearOldMemoryCache(maxAge: number = 7 * 24 * 60 * 60 * 1000): Promise<void> {
     const cutoff = Date.now() - maxAge
     await this.memories.where('cached_at').below(cutoff).delete()
+  }
+
+  // --- Project Cache Methods ---
+
+  async cacheProjects(projects: any[]): Promise<void> {
+    const cachedProjects: CachedProject[] = projects.map(p => ({
+      ...p,
+      cached_at: new Date().toISOString()
+    }))
+    await this.projects.bulkPut(cachedProjects)
+  }
+
+  async getCachedProjects(): Promise<CachedProject[]> {
+    return await this.projects.toArray()
   }
 }
 

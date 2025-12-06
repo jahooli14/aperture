@@ -289,7 +289,7 @@ export function ReadingPage() {
     console.log('[ReadingPage] Current URL:', location.pathname + location.search)
 
     const params = new URLSearchParams(location.search)
-    
+
     // Check for 'shared', 'url', or 'text' parameters (robust fallback)
     let sharedParam = params.get('shared') || params.get('url')
     const textParam = params.get('text')
@@ -596,376 +596,384 @@ export function ReadingPage() {
       <SubtleBackground />
       <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
         {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-        backgroundColor: 'rgba(15, 24, 41, 0.7)'
-      }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="flex items-center" style={{
-            color: 'var(--premium-blue)',
-            opacity: 0.7
-          }}>
-            <FileText className="h-7 w-7" />
-          </div>
-
-          {/* Filter Tabs */}
-          <PremiumTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onChange={handleTabChange}
-            className="flex-nowrap"
-          />
-
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            <button
-              onClick={() => setShowSaveDialog(true)}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="New Article"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
-
-            <button
-              onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Processing Indicator */}
-      {processingArticles.size > 0 && (
-        <div className="fixed top-24 left-0 right-0 z-30 px-4 sm:px-6">
-          <div className="max-w-4xl mx-auto">
-            {Array.from(processingArticles.entries()).map(([articleId, { status, url }]) => (
-              <div
-                key={articleId}
-                className="premium-glass rounded-xl p-4 mb-2 flex items-center gap-3"
-                style={{
-                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                  borderColor: status === 'retrying' ? 'var(--premium-amber)' : 'var(--premium-blue)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid'
-                }}
-              >
-                {status === 'retrying' ? (
-                  <RotateCw className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-amber)' }} />
-                ) : (
-                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-blue)' }} />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm" style={{ color: 'var(--premium-text-primary)' }}>
-                    {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    {new URL(url).hostname}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    articleProcessor.cancelProcessing(articleId)
-                    setProcessingArticles(prev => {
-                      const next = new Map(prev)
-                      next.delete(articleId)
-                      return next
-                    })
-                  }}
-                  className="text-xs px-3 py-1 rounded-lg hover:bg-white/5 transition-colors"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                >
-                  Cancel
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Content - Outer Card Structure */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
-        <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
-          background: 'var(--premium-bg-2)',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
         }}>
-          {/* Title Section */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-              {activeTab === 'updates' ? (
-                <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
-              ) : activeTab === 'archived' ? (
-                <>Your reading <span style={{ color: 'var(--premium-blue)' }}>archive</span></>
-              ) : (
-                <>Your <span style={{ color: 'var(--premium-blue)' }}>reading material</span></>
-              )}
-            </h2>
-          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+            <div className="flex items-center" style={{
+              color: 'var(--premium-blue)',
+              opacity: 0.7
+            }}>
+              <FileText className="h-7 w-7" />
+            </div>
 
-          {/* Inner Content */}
-          <div>
-            {/* Updates Tab - RSS Feed Items */}
-            {activeTab === 'updates' && (
-          <>
-            {loadingRSS && rssItems.length === 0 ? (
-              <SkeletonCard variant="list" count={5} />
-            ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
-              <EmptyState
-                icon={Rss}
-                title="No RSS feeds yet"
-                description="Subscribe to RSS feeds in Settings to see updates here"
-              />
-            ) : (!rssItems || !Array.isArray(rssItems) || rssItems.length === 0) ? (
-              <EmptyState
-                icon={BookOpen}
-                title="No updates yet"
-                description='Click "Sync Feeds" to fetch latest articles from your RSS feeds'
-                action={
-                  <button
-                    onClick={handleRSSSync}
-                    disabled={syncing}
-                    className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
-                    style={{
-                      color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
-                      opacity: syncing ? 0.5 : 1
-                    }}
-                  >
-                    <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
-                    {syncing ? 'Syncing...' : 'Sync feeds'}
-                  </button>
-                }
-              />
-            ) : (
-              <Virtuoso
-                style={{ height: 'calc(100vh - 280px)' }}
-                data={rssItems}
-                overscan={200}
-                itemContent={(index, item) => (
-                  <div className="pb-4" style={{ contain: 'layout style paint' }}>
-                    <RSSFeedItem
-                      key={item.guid}
-                      item={item}
-                      onSave={() => handleSaveRSSItem(item)}
-                      onDismiss={() => {
-                        // Add to permanent dismissal log
-                        addToDismissedLog(item.guid)
-                        // Remove from local state
-                        setRssItems(prev => prev.filter(i => i.guid !== item.guid))
-                      }}
-                    />
-                  </div>
-                )}
-              />
+            {/* Offline Indicator */}
+            {useReadingStore(state => state.offlineMode) && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-xs font-medium text-amber-500">Offline Mode</span>
+              </div>
             )}
-          </>
+
+            {/* Filter Tabs */}
+            <PremiumTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={handleTabChange}
+              className="flex-nowrap"
+            />
+
+            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+              <button
+                onClick={() => setShowSaveDialog(true)}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+                style={{
+                  color: 'var(--premium-blue)'
+                }}
+                title="New Article"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+
+              <button
+                onClick={() => navigate('/search')}
+                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+                style={{
+                  color: 'var(--premium-blue)'
+                }}
+                title="Search everything"
+              >
+                <Search className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Processing Indicator */}
+        {processingArticles.size > 0 && (
+          <div className="fixed top-24 left-0 right-0 z-30 px-4 sm:px-6">
+            <div className="max-w-4xl mx-auto">
+              {Array.from(processingArticles.entries()).map(([articleId, { status, url }]) => (
+                <div
+                  key={articleId}
+                  className="premium-glass rounded-xl p-4 mb-2 flex items-center gap-3"
+                  style={{
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    borderColor: status === 'retrying' ? 'var(--premium-amber)' : 'var(--premium-blue)',
+                    borderWidth: '1px',
+                    borderStyle: 'solid'
+                  }}
+                >
+                  {status === 'retrying' ? (
+                    <RotateCw className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-amber)' }} />
+                  ) : (
+                    <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-blue)' }} />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm" style={{ color: 'var(--premium-text-primary)' }}>
+                      {status === 'retrying' ? 'Retrying extraction...' : 'Extracting article...'}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+                      {new URL(url).hostname}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      articleProcessor.cancelProcessing(articleId)
+                      setProcessingArticles(prev => {
+                        const next = new Map(prev)
+                        next.delete(articleId)
+                        return next
+                      })
+                    }}
+                    className="text-xs px-3 py-1 rounded-lg hover:bg-white/5 transition-colors"
+                    style={{ color: 'var(--premium-text-tertiary)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* Regular Articles - Queue/Unread/Archived */}
-        {activeTab !== 'updates' && (
-          <>
-            {loading && articles.length === 0 ? (
-              <SkeletonCard variant="default" count={4} />
-            ) : filteredArticles.length === 0 ? (
-              <EmptyState
-                icon={BookOpen}
-                title={activeTab === 'queue' ? 'No articles yet' : `No ${activeTab} articles`}
-                description={
-                  activeTab === 'queue'
-                    ? 'Save your first article to start building your reading queue'
-                    : `You don't have any ${activeTab} articles yet`
-                }
-                action={
-                  activeTab === 'queue' ? (
-                    <button
-                      onClick={() => setShowSaveDialog(true)}
-                      className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
-                      style={{
-                        color: 'var(--premium-blue)'
-                      }}
-                    >
-                      <Plus className="h-5 w-5" />
-                      Save Your First Article
-                    </button>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <FocusableList>
-                <Virtuoso
-                  style={{ height: 'calc(100vh - 240px)' }}
-                  data={filteredArticles}
-                  overscan={200}
-                  itemContent={(index, article) => {
-                    const isSelected = bulkSelection.isSelected(article.id)
-                    const isPending = article.id.startsWith('temp-')
+        {/* Content - Outer Card Structure */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
+          <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Title Section */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
+                {activeTab === 'updates' ? (
+                  <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
+                ) : activeTab === 'archived' ? (
+                  <>Your reading <span style={{ color: 'var(--premium-blue)' }}>archive</span></>
+                ) : (
+                  <>Your <span style={{ color: 'var(--premium-blue)' }}>reading material</span></>
+                )}
+              </h2>
+            </div>
 
-                    return (
-                      <FocusableItem id={article.id} type="article">
+            {/* Inner Content */}
+            <div>
+              {/* Updates Tab - RSS Feed Items */}
+              {activeTab === 'updates' && (
+                <>
+                  {loadingRSS && rssItems.length === 0 ? (
+                    <SkeletonCard variant="list" count={5} />
+                  ) : (!feeds || !Array.isArray(feeds) || feeds.length === 0) ? (
+                    <EmptyState
+                      icon={Rss}
+                      title="No RSS feeds yet"
+                      description="Subscribe to RSS feeds in Settings to see updates here"
+                    />
+                  ) : (!rssItems || !Array.isArray(rssItems) || rssItems.length === 0) ? (
+                    <EmptyState
+                      icon={BookOpen}
+                      title="No updates yet"
+                      description='Click "Sync Feeds" to fetch latest articles from your RSS feeds'
+                      action={
+                        <button
+                          onClick={handleRSSSync}
+                          disabled={syncing}
+                          className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
+                          style={{
+                            color: syncing ? 'var(--premium-text-tertiary)' : 'var(--premium-blue)',
+                            opacity: syncing ? 0.5 : 1
+                          }}
+                        >
+                          <RefreshCw className={`h-5 w-5 ${syncing ? 'animate-spin' : ''}`} />
+                          {syncing ? 'Syncing...' : 'Sync feeds'}
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <Virtuoso
+                      style={{ height: 'calc(100vh - 280px)' }}
+                      data={rssItems}
+                      overscan={200}
+                      itemContent={(index, item) => (
                         <div className="pb-4" style={{ contain: 'layout style paint' }}>
-                          <div
-                            className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
-                            onClick={(e) => {
-                              if (bulkSelection.isSelectionMode) {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                bulkSelection.toggleSelection(article.id)
-                              }
+                          <RSSFeedItem
+                            key={item.guid}
+                            item={item}
+                            onSave={() => handleSaveRSSItem(item)}
+                            onDismiss={() => {
+                              // Add to permanent dismissal log
+                              addToDismissedLog(item.guid)
+                              // Remove from local state
+                              setRssItems(prev => prev.filter(i => i.guid !== item.guid))
                             }}
+                          />
+                        </div>
+                      )}
+                    />
+                  )}
+                </>
+              )}
+
+              {/* Regular Articles - Queue/Unread/Archived */}
+              {activeTab !== 'updates' && (
+                <>
+                  {loading && articles.length === 0 ? (
+                    <SkeletonCard variant="default" count={4} />
+                  ) : filteredArticles.length === 0 ? (
+                    <EmptyState
+                      icon={BookOpen}
+                      title={activeTab === 'queue' ? 'No articles yet' : `No ${activeTab} articles`}
+                      description={
+                        activeTab === 'queue'
+                          ? 'Save your first article to start building your reading queue'
+                          : `You don't have any ${activeTab} articles yet`
+                      }
+                      action={
+                        activeTab === 'queue' ? (
+                          <button
+                            onClick={() => setShowSaveDialog(true)}
+                            className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
                             style={{
-                              // Allow drag events to pass through when not in selection mode
-                              pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none',
-                              opacity: isPending ? 0.7 : 1
+                              color: 'var(--premium-blue)'
                             }}
                           >
-                            {bulkSelection.isSelectionMode && (
-                              <div
-                                className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
-                                style={{
-                                  backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
-                                  pointerEvents: 'auto'
-                                }}
-                              >
-                                {isSelected && <Check className="h-4 w-4 text-white" />}
+                            <Plus className="h-5 w-5" />
+                            Save Your First Article
+                          </button>
+                        ) : undefined
+                      }
+                    />
+                  ) : (
+                    <FocusableList>
+                      <Virtuoso
+                        style={{ height: 'calc(100vh - 240px)' }}
+                        data={filteredArticles}
+                        overscan={200}
+                        itemContent={(index, article) => {
+                          const isSelected = bulkSelection.isSelected(article.id)
+                          const isPending = article.id.startsWith('temp-')
+
+                          return (
+                            <FocusableItem id={article.id} type="article">
+                              <div className="pb-4" style={{ contain: 'layout style paint' }}>
+                                <div
+                                  className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
+                                  onClick={(e) => {
+                                    if (bulkSelection.isSelectionMode) {
+                                      e.preventDefault()
+                                      e.stopPropagation()
+                                      bulkSelection.toggleSelection(article.id)
+                                    }
+                                  }}
+                                  style={{
+                                    // Allow drag events to pass through when not in selection mode
+                                    pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none',
+                                    opacity: isPending ? 0.7 : 1
+                                  }}
+                                >
+                                  {bulkSelection.isSelectionMode && (
+                                    <div
+                                      className="absolute top-4 left-4 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all"
+                                      style={{
+                                        backgroundColor: isSelected ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.05)',
+                                        pointerEvents: 'auto'
+                                      }}
+                                    >
+                                      {isSelected && <Check className="h-4 w-4 text-white" />}
+                                    </div>
+                                  )}
+                                  <div style={{ pointerEvents: 'auto' }}>
+                                    <ArticleCard
+                                      article={article}
+                                      onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
+                                    />
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                            <div style={{ pointerEvents: 'auto' }}>
-                              <ArticleCard
-                                article={article}
-                                onClick={() => !bulkSelection.isSelectionMode && navigate(`/reading/${article.id}`)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </FocusableItem>
-                    )
-                  }}
-                />
-              </FocusableList>
-            )}
-          </>
-            )}
+                            </FocusableItem>
+                          )
+                        }}
+                      />
+                    </FocusableList>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Save Article Dialog */}
-      <SaveArticleDialog
-        open={showSaveDialog}
-        onClose={() => setShowSaveDialog(false)}
-      />
+        {/* Save Article Dialog */}
+        <SaveArticleDialog
+          open={showSaveDialog}
+          onClose={() => setShowSaveDialog(false)}
+        />
 
-      {/* Connection Suggestions */}
-      {suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
-        <ConnectionSuggestion
-          suggestions={suggestions}
-          sourceType={sourceType}
-          sourceId={sourceId!}
-          onLinkCreated={(targetId, targetType) => {
-            addToast({
-              title: 'Connection created!',
-              description: `Linked to ${targetType}`,
-              variant: 'success',
+        {/* Connection Suggestions */}
+        {suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
+          <ConnectionSuggestion
+            suggestions={suggestions}
+            sourceType={sourceType}
+            sourceId={sourceId!}
+            onLinkCreated={(targetId, targetType) => {
+              addToast({
+                title: 'Connection created!',
+                description: `Linked to ${targetType}`,
+                variant: 'success',
+              })
+            }}
+            onDismiss={clearSuggestions}
+          />
+        )}
+
+        {/* Bulk Actions Bar */}
+        <BulkActionsBar
+          selectedCount={bulkSelection.selectedCount}
+          onCancel={bulkSelection.exitSelectionMode}
+          actions={[
+            {
+              label: 'Archive',
+              icon: <Archive className="h-4 w-4" />,
+              onClick: handleBulkArchive,
+              loading: bulkActionLoading,
+            },
+            {
+              label: 'Delete',
+              icon: <Trash2 className="h-4 w-4" />,
+              onClick: handleBulkDelete,
+              variant: 'destructive' as const,
+              loading: bulkActionLoading,
+            },
+          ]}
+        />
+
+        {/* Processing Debug Panel */}
+        <ProcessingDebugPanel
+          articles={safeArticles}
+          onRetry={(articleId, url) => {
+            setProcessingArticles(prev => new Map(prev).set(articleId, { status: 'extracting', url }))
+
+            articleProcessor.startProcessing(articleId, url, (status, updatedArticle) => {
+              setProcessingArticles(prev => {
+                const next = new Map(prev)
+                if (status === 'complete') {
+                  next.delete(articleId)
+                  addToast({
+                    title: '✓ Article ready!',
+                    description: updatedArticle?.title || 'Content extracted successfully',
+                    variant: 'success',
+                  })
+                  fetchArticles()
+                } else if (status === 'retrying') {
+                  next.set(articleId, { status: 'retrying', url })
+                } else if (status === 'failed') {
+                  next.delete(articleId)
+                  addToast({
+                    title: 'Extraction failed',
+                    description: 'Could not extract content after retries',
+                    variant: 'destructive',
+                  })
+                  fetchArticles()
+                } else {
+                  next.set(articleId, { status, url })
+                }
+                return next
+              })
             })
           }}
-          onDismiss={clearSuggestions}
-        />
-      )}
-
-      {/* Bulk Actions Bar */}
-      <BulkActionsBar
-        selectedCount={bulkSelection.selectedCount}
-        onCancel={bulkSelection.exitSelectionMode}
-        actions={[
-          {
-            label: 'Archive',
-            icon: <Archive className="h-4 w-4" />,
-            onClick: handleBulkArchive,
-            loading: bulkActionLoading,
-          },
-          {
-            label: 'Delete',
-            icon: <Trash2 className="h-4 w-4" />,
-            onClick: handleBulkDelete,
-            variant: 'destructive' as const,
-            loading: bulkActionLoading,
-          },
-        ]}
-      />
-
-      {/* Processing Debug Panel */}
-      <ProcessingDebugPanel
-        articles={safeArticles}
-        onRetry={(articleId, url) => {
-          setProcessingArticles(prev => new Map(prev).set(articleId, { status: 'extracting', url }))
-
-          articleProcessor.startProcessing(articleId, url, (status, updatedArticle) => {
-            setProcessingArticles(prev => {
-              const next = new Map(prev)
-              if (status === 'complete') {
-                next.delete(articleId)
-                addToast({
-                  title: '✓ Article ready!',
-                  description: updatedArticle?.title || 'Content extracted successfully',
-                  variant: 'success',
-                })
-                fetchArticles()
-              } else if (status === 'retrying') {
-                next.set(articleId, { status: 'retrying', url })
-              } else if (status === 'failed') {
-                next.delete(articleId)
-                addToast({
-                  title: 'Extraction failed',
-                  description: 'Could not extract content after retries',
-                  variant: 'destructive',
-                })
-                fetchArticles()
-              } else {
-                next.set(articleId, { status, url })
-              }
-              return next
-            })
-          })
-        }}
-        onFlushAll={async () => {
-          const stuckArticles = safeArticles.filter(a =>
-            !a.processed &&
-            !a.tags?.includes('rss') &&
-            !a.tags?.includes('auto-imported')
-          )
-
-          addToast({
-            title: 'Flushing stuck articles...',
-            description: `Deleting ${stuckArticles.length} article(s)`,
-            variant: 'default',
-          })
-
-          try {
-            await Promise.all(
-              stuckArticles.map(article => deleteArticle(article.id))
+          onFlushAll={async () => {
+            const stuckArticles = safeArticles.filter(a =>
+              !a.processed &&
+              !a.tags?.includes('rss') &&
+              !a.tags?.includes('auto-imported')
             )
 
             addToast({
-              title: '✓ Queue flushed!',
-              description: `Deleted ${stuckArticles.length} stuck article(s)`,
-              variant: 'success',
+              title: 'Flushing stuck articles...',
+              description: `Deleting ${stuckArticles.length} article(s)`,
+              variant: 'default',
             })
 
-            await fetchArticles()
-          } catch (error) {
-            addToast({
-              title: 'Failed to flush',
-              description: error instanceof Error ? error.message : 'Unknown error',
-              variant: 'destructive',
-            })
-          }
-        }}
-      />
+            try {
+              await Promise.all(
+                stuckArticles.map(article => deleteArticle(article.id))
+              )
+
+              addToast({
+                title: '✓ Queue flushed!',
+                description: `Deleted ${stuckArticles.length} stuck article(s)`,
+                variant: 'success',
+              })
+
+              await fetchArticles()
+            } catch (error) {
+              addToast({
+                title: 'Failed to flush',
+                description: error instanceof Error ? error.message : 'Unknown error',
+                variant: 'destructive',
+              })
+            }
+          }}
+        />
       </div>
     </>
   )

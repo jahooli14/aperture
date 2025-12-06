@@ -56,7 +56,7 @@ function smartSortProjects(projects: Project[]): Project[] {
 
     const aTime = getTime(a.updated_at || a.last_active)
     const bTime = getTime(b.updated_at || b.last_active)
-    
+
     return bTime - aTime
   })
 }
@@ -74,6 +74,7 @@ interface ProjectState {
   error: string | null
   filter: 'all' | 'upcoming' | 'active' | 'dormant' | 'completed'
   initialized: boolean
+  offlineMode: boolean
 
   // Actions
   fetchProjects: (retryCount?: number) => Promise<void>
@@ -91,6 +92,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   error: null,
   filter: 'all',
   initialized: false,
+  offlineMode: false,
 
   fetchProjects: async (retryCount = 0) => {
     const MAX_RETRIES = 3
@@ -101,10 +103,45 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       set({ loading: true, error: null })
     }
 
+    // Check online status
+    if (!navigator.onLine) {
+      console.log('[ProjectStore] Offline mode detected - fetching from local DB')
+      try {
+        const { readingDb } = await import('../lib/db')
+        const cachedProjects = await readingDb.getCachedProjects()
+
+        // Map cached projects to Project type (they are compatible)
+        const projects = cachedProjects as unknown as Project[]
+        const sorted = smartSortProjects(projects)
+
+        set(state => ({
+          allProjects: sorted,
+          projects: filterProjects(sorted, state.filter),
+          loading: false,
+          initialized: true,
+          offlineMode: true,
+          error: null
+        }))
+        return
+      } catch (e) {
+        console.error('[ProjectStore] Failed to load offline projects:', e)
+        set({ error: 'Failed to load offline projects', loading: false, offlineMode: true })
+        return
+      }
+    }
+
     try {
       // Always fetch ALL projects
       const data = await api.get('projects')
       let fetchedProjects = Array.isArray(data) ? data : data?.projects || []
+
+      // Cache projects for offline use
+      try {
+        const { readingDb } = await import('../lib/db')
+        await readingDb.cacheProjects(fetchedProjects)
+      } catch (cacheError) {
+        console.warn('[ProjectStore] Failed to cache projects:', cacheError)
+      }
 
       // Sort once
       fetchedProjects = smartSortProjects(fetchedProjects)
@@ -114,10 +151,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: filterProjects(fetchedProjects, state.filter),
         loading: false,
         initialized: true,
+        offlineMode: false,
         error: null
       }))
     } catch (error) {
       logger.error('Failed to fetch projects:', error)
+
+      // Fallback to offline DB on error
+      console.log('[ProjectStore] Fetch failed, falling back to offline DB')
+      try {
+        const { readingDb } = await import('../lib/db')
+        const cachedProjects = await readingDb.getCachedProjects()
+        const projects = cachedProjects as unknown as Project[]
+        const sorted = smartSortProjects(projects)
+
+        set(state => ({
+          allProjects: sorted,
+          projects: filterProjects(sorted, state.filter),
+          loading: false,
+          initialized: true,
+          offlineMode: true,
+          error: null
+        }))
+        return
+      } catch (dbError) {
+        // If offline fallback fails, try retry logic
+      }
 
       if (retryCount < MAX_RETRIES) {
         const delay = RETRY_DELAYS[retryCount]
@@ -305,13 +364,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       try {
         // Use atomic set-priority endpoint and use returned projects for source of truth
         const response = await api.post('projects?resource=set-priority', { project_id: id })
-        
+
         if (response && response.projects) {
-           const sortedResponse = smartSortProjects(response.projects)
-           set(state => ({
-             allProjects: sortedResponse,
-             projects: filterProjects(sortedResponse, state.filter)
-           }))
+          const sortedResponse = smartSortProjects(response.projects)
+          set(state => ({
+            allProjects: sortedResponse,
+            projects: filterProjects(sortedResponse, state.filter)
+          }))
         }
       } catch (error) {
         logger.error('Failed to set priority:', error)
