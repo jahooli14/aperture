@@ -99,10 +99,23 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         const { articles } = await response.json()
 
-        // Cache fetched articles for offline use (only if we fetched all or specific status)
-        // We only cache what we see to avoid overwriting with partial data, but for simplicity
-        // we might want a dedicated sync strategy. For now, let's just update the store.
-        // Ideally, we should background sync these to Dexie.
+        // Automatically cache fetched articles for offline use
+        try {
+          const { readingDb } = await import('../lib/db')
+          // Map to CachedArticle type (adding offline_available flag)
+          const cachedArticles = articles.map((a: any) => ({
+            ...a,
+            offline_available: true, // Auto-cached articles are available offline
+            images_cached: false, // We don't auto-cache images yet to save bandwidth
+            last_synced: new Date().toISOString()
+          }))
+
+          // Bulk put to update existing or add new
+          await readingDb.articles.bulkPut(cachedArticles)
+          console.log(`[ReadingStore] Auto-cached ${articles.length} articles`)
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
+        }
 
         // Skip update if data hasn't changed (prevent unnecessary re-renders)
         const currentArticles = get().articles
@@ -209,6 +222,19 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         const { article } = await response.json()
 
+        // Cache the new article
+        try {
+          const { readingDb } = await import('../lib/db')
+          await readingDb.articles.put({
+            ...article,
+            offline_available: true,
+            images_cached: false,
+            last_synced: new Date().toISOString()
+          })
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to cache new article:', cacheError)
+        }
+
         // Success! Replace temp article with real one
         set((state) => {
           const filteredPending = state.pendingArticles.filter(a => a.id !== tempId)
@@ -254,6 +280,19 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           if (response.ok) {
             const { article: savedArticle } = await response.json()
 
+            // Cache synced article
+            try {
+              const { readingDb } = await import('../lib/db')
+              await readingDb.articles.put({
+                ...savedArticle,
+                offline_available: true,
+                images_cached: false,
+                last_synced: new Date().toISOString()
+              })
+            } catch (cacheError) {
+              console.warn('[ReadingStore] Failed to cache synced article:', cacheError)
+            }
+
             // Update the real article in the list
             set(s => ({
               articles: s.articles.map(a => a.id === article.id ? savedArticle : a)
@@ -282,12 +321,27 @@ export const useReadingStore = create<ReadingState>((set, get) => {
     updateArticle: async (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => {
       // Optimistic update
       const previousArticles = get().articles
+      const updatedArticle = previousArticles.find(a => a.id === id)
 
-      set((state) => ({
-        articles: state.articles.map((a) =>
-          a.id === id ? { ...a, ...updates } : a
-        ),
-      }))
+      if (updatedArticle) {
+        const newArticle = { ...updatedArticle, ...updates }
+        set((state) => ({
+          articles: state.articles.map((a) =>
+            a.id === id ? newArticle : a
+          ),
+        }))
+
+        // Update cache optimistically
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cached = await readingDb.articles.get(id)
+          if (cached) {
+            await readingDb.articles.put({ ...cached, ...updates })
+          }
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to update cached article:', cacheError)
+        }
+      }
 
       try {
         const response = await fetch('/api/reading', {
@@ -302,6 +356,17 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         const { article } = await response.json()
 
+        // Update cache with server response
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cached = await readingDb.articles.get(id)
+          if (cached) {
+            await readingDb.articles.put({ ...cached, ...article })
+          }
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to update cached article from server:', cacheError)
+        }
+
         // Replace with server data
         set((state) => ({
           articles: state.articles.map((a) =>
@@ -311,6 +376,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       } catch (error) {
         // Rollback on error
         set({ articles: previousArticles })
+        // Revert cache if possible (complex, maybe skip for now or re-fetch)
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
         set({ error: errorMessage })
         throw error
@@ -328,6 +394,17 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             a.id === id ? { ...a, status } : a
           ),
         }))
+
+        // Update cache optimistically
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cached = await readingDb.articles.get(id)
+          if (cached) {
+            await readingDb.articles.put({ ...cached, status })
+          }
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to update cached article status:', cacheError)
+        }
       }
 
       try {
@@ -342,6 +419,17 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         }
 
         const { article } = await response.json()
+
+        // Update cache with server response
+        try {
+          const { readingDb } = await import('../lib/db')
+          const cached = await readingDb.articles.get(id)
+          if (cached) {
+            await readingDb.articles.put({ ...cached, ...article })
+          }
+        } catch (cacheError) {
+          console.warn('[ReadingStore] Failed to update cached article status from server:', cacheError)
+        }
 
         // Replace with server data
         set((state) => ({
@@ -365,6 +453,14 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       set((state) => ({
         articles: state.articles.filter((a) => a.id !== id),
       }))
+
+      // Remove from cache optimistically
+      try {
+        const { readingDb } = await import('../lib/db')
+        await readingDb.articles.delete(id)
+      } catch (cacheError) {
+        console.warn('[ReadingStore] Failed to delete cached article:', cacheError)
+      }
 
       try {
         const response = await fetch(`/api/reading?id=${id}`, {

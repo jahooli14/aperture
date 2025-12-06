@@ -219,10 +219,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       // Replace temp ID with real ID
       set(state => {
         const updatedAll = state.allProjects.map(p =>
-          p.id === tempId ? { ...result, ...data } : p // Merge result to keep any local changes? Actually result should be authoritative
+          p.id === tempId ? { ...result, ...data } : p
         )
         // Re-sort in case server data changes order (unlikely for new)
         const sorted = smartSortProjects(updatedAll)
+
+        // Update cache
+        import('../lib/db').then(({ readingDb }) => {
+          readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after create:', e))
+        })
+
         return {
           allProjects: sorted,
           projects: filterProjects(sorted, state.filter)
@@ -257,6 +263,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       projects: filterProjects(sortedAllProjects, state.filter)
     }))
 
+    // Update cache optimistically
+    import('../lib/db').then(({ readingDb }) => {
+      readingDb.cacheProjects(sortedAllProjects).catch(e => console.warn('Failed to cache projects after update:', e))
+    })
+
     // If offline, queue operation
     if (!isOnline) {
       await queueOperation('update_project', { id, ...data })
@@ -282,6 +293,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: filterProjects(previousAllProjects, state.filter),
         error: error instanceof Error ? error.message : 'Failed to update project'
       }))
+      // Revert cache
+      import('../lib/db').then(({ readingDb }) => {
+        readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+      })
       throw error
     }
   },
@@ -296,6 +311,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       allProjects: newAllProjects,
       projects: filterProjects(newAllProjects, state.filter)
     }))
+
+    // Update cache optimistically
+    import('../lib/db').then(({ readingDb }) => {
+      readingDb.projects.delete(id).catch(e => console.warn('Failed to delete project from cache:', e))
+    })
 
     const { isOnline } = useOfflineStore.getState()
 
@@ -315,6 +335,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: filterProjects(previousAllProjects, state.filter),
         error: error instanceof Error ? error.message : 'Failed to delete project'
       }))
+      // Revert cache
+      import('../lib/db').then(({ readingDb }) => {
+        readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+      })
       throw error
     }
   },
@@ -337,6 +361,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: filterProjects(sorted, state.filter)
       }))
 
+      // Update cache
+      import('../lib/db').then(({ readingDb }) => {
+        readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after priority toggle:', e))
+      })
+
       try {
         await api.patch(`projects/${id}`, { is_priority: false })
       } catch (error) {
@@ -347,6 +376,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           projects: filterProjects(previousAllProjects, state.filter),
           error: error instanceof Error ? error.message : 'Failed to unset priority'
         }))
+        // Revert cache
+        import('../lib/db').then(({ readingDb }) => {
+          readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+        })
         throw error
       }
     } else {
@@ -361,6 +394,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         projects: filterProjects(sorted, state.filter)
       }))
 
+      // Update cache
+      import('../lib/db').then(({ readingDb }) => {
+        readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache projects after priority set:', e))
+      })
+
       try {
         // Use atomic set-priority endpoint and use returned projects for source of truth
         const response = await api.post('projects?resource=set-priority', { project_id: id })
@@ -371,6 +409,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             allProjects: sortedResponse,
             projects: filterProjects(sortedResponse, state.filter)
           }))
+          // Update cache with server response
+          import('../lib/db').then(({ readingDb }) => {
+            readingDb.cacheProjects(sortedResponse).catch(e => console.warn('Failed to cache projects after priority set (server):', e))
+          })
         }
       } catch (error) {
         logger.error('Failed to set priority:', error)
@@ -380,6 +422,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
           projects: filterProjects(previousAllProjects, state.filter),
           error: error instanceof Error ? error.message : 'Failed to set priority'
         }))
+        // Revert cache
+        import('../lib/db').then(({ readingDb }) => {
+          readingDb.cacheProjects(previousAllProjects).catch(e => console.warn('Failed to revert project cache:', e))
+        })
         throw error
       }
     }

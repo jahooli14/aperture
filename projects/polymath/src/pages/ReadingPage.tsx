@@ -8,7 +8,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
-import { useRSSStore } from '../stores/useRSSStore'
+import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
@@ -22,6 +22,7 @@ import { PremiumTabs } from '../components/ui/premium-tabs'
 import { EmptyState } from '../components/ui/empty-state'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { articleProcessor } from '../lib/articleProcessor'
+import { useRSSStore } from '../stores/useRSSStore'
 import {
   consumeShareData,
   clearShareData
@@ -38,6 +39,7 @@ export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const { downloadForOffline } = useOfflineArticle()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
@@ -341,6 +343,18 @@ export function ReadingPage() {
                   description: updatedArticle?.title || 'Content extracted successfully',
                   variant: 'success',
                 })
+
+                // Auto-download for offline reading
+                if (updatedArticle) {
+                  downloadForOffline(updatedArticle).then(() => {
+                    addToast({
+                      title: 'Saved Offline',
+                      description: 'Article and images available offline',
+                      variant: 'success',
+                    })
+                  }).catch(err => console.warn('Failed to auto-download:', err))
+                }
+
                 fetchArticles(undefined, true) // Force refresh to show completed article (bypass cache)
               } else if (status === 'retrying') {
                 next.set(article.id, { status: 'retrying', url: shareUrl })
@@ -429,6 +443,18 @@ export function ReadingPage() {
                     description: updatedArticle?.title || 'Content extracted successfully',
                     variant: 'success',
                   })
+
+                  // Auto-download for offline reading
+                  if (updatedArticle) {
+                    downloadForOffline(updatedArticle).then(() => {
+                      addToast({
+                        title: 'Saved Offline',
+                        description: 'Article and images available offline',
+                        variant: 'success',
+                      })
+                    }).catch(err => console.warn('Failed to auto-download:', err))
+                  }
+
                   fetchArticles(undefined, true) // Force refresh for postMessage share
                 } else if (status === 'retrying') {
                   next.set(article.id, { status: 'retrying', url: sharedUrl })
