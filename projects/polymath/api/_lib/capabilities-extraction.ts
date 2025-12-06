@@ -56,12 +56,27 @@ export async function extractCapabilities(userId: string) {
 
     let capabilities
     try {
+      console.log('[capabilities] Raw response length:', response.length)
+      console.log('[capabilities] Raw response (first 200 chars):', response.slice(0, 200))
+
+      if (!response || response.trim().length === 0) {
+        console.error('[capabilities] Gemini returned empty response')
+        throw new Error('Gemini API returned empty response')
+      }
+
       // Attempt to find JSON array in the response
       const jsonMatch = response.match(/\[[\s\S]*\]/)
       const jsonString = jsonMatch ? jsonMatch[0] : response
+
+      if (!jsonString || jsonString.trim().length === 0) {
+        console.error('[capabilities] No JSON found in response')
+        throw new Error('No JSON array found in response')
+      }
+
       capabilities = JSON.parse(jsonString)
     } catch (parseError) {
       console.error('[capabilities] JSON Parse Error. Raw response:', response)
+      console.error('[capabilities] Parse error details:', parseError instanceof Error ? parseError.message : String(parseError))
       throw parseError
     }
 
