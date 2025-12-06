@@ -25,6 +25,7 @@ import { processMemory } from '../_lib/process-memory.js'
 import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
 import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
+import { identifyRottingProjects, generateProjectEulogy } from '../_lib/project-maintenance.js'
 import webpush from 'web-push'
 
 // Configure web-push (globally or within the handler if needed per-request)
@@ -204,7 +205,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // 6. Maintenance (Embeddings & Capabilities)
+      // 6. Identify Rotting Projects
+      try {
+        console.log('[cron/jobs/daily] Identifying rotting projects...')
+        const rottingProjects = await identifyRottingProjects(userId)
+        if (rottingProjects.length > 0) {
+          results.tasks.rotting_projects = { success: true, count: rottingProjects.length, projects: rottingProjects.map((p: any) => p.title) }
+          console.log(`[cron/jobs/daily] Found ${rottingProjects.length} rotting projects:`, rottingProjects.map((p: any) => p.title))
+        } else {
+          results.tasks.rotting_projects = { success: true, count: 0 }
+        }
+      } catch (error) {
+        console.error('[cron/jobs/daily] Rotting projects identification failed:', error)
+        results.tasks.rotting_projects = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+      
+      // 7. Maintenance (Embeddings & Capabilities)
       try {
         // Daily: Update embeddings for new/stale items (limit 20)
         console.log('[cron/jobs/daily] Running embedding maintenance...')
