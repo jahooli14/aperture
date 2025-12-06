@@ -320,12 +320,13 @@ export function FocusStream() {
                 {/* Card 2: Time-Aware Spark */}
                 {sparkCandidate && (() => {
                     const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
+                    const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
                     return (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
+                        className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
                         onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                         style={{
                             background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(30, 41, 59, 0.6))',
@@ -341,7 +342,7 @@ export function FocusStream() {
                             e.currentTarget.style.boxShadow = '0 4px 16px rgba(6, 182, 212, 0.15)'
                         }}
                     >
-                        <div className="relative z-10">
+                        <div className="relative z-10 flex-1">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
                                     backgroundColor: 'rgba(6, 182, 212, 0.1)',
@@ -358,17 +359,19 @@ export function FocusStream() {
                             <h3 className="text-lg font-bold text-white mb-2">
                                 Spark: {sparkCandidate.title}
                             </h3>
-                            <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">
+                            <p className="text-sm text-slate-400 mb-4 leading-relaxed">
                                 Fits your current {timeContext.energy} energy level.
-                                {sparkCandidate.metadata?.tasks?.find((t: any) => !t.done)?.text
-                                    ? ` Next step: "${sparkCandidate.metadata.tasks.find((t: any) => !t.done).text}"`
-                                    : ` 💡 AI Suggestion: ${[
-                                        "Spend 5 minutes brainstorming next steps",
-                                        "Find one article that inspires you for this",
-                                        "Write down your main goal for this project",
-                                        "Review your motivation notes"
-                                    ][Math.floor(Math.random() * 4)]}`}
                             </p>
+
+                            {nextTask && (
+                                <div className="p-3 rounded-lg" style={{
+                                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                                    border: '1px solid rgba(6, 182, 212, 0.3)'
+                                }}>
+                                    <p className="text-xs font-medium mb-1" style={{ color: 'rgb(6, 182, 212)' }}>NEXT STEP</p>
+                                    <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                     )
