@@ -220,7 +220,9 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     })
 
     const prompt = `Transform this text into a clear, first-person thought.
-Text: ${text}`
+Text: ${text}
+
+Return valid JSON.`
 
     console.log('[handleCapture] Calling Gemini with Structured Outputs...')
 
@@ -230,7 +232,9 @@ Text: ${text}`
     
     console.log('[handleCapture] Gemini response:', jsonText)
     
-    const parsed = JSON.parse(jsonText)
+    // Robust JSON extraction
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
     
     if (parsed.title && parsed.bullets) {
       parsedTitle = parsed.title
