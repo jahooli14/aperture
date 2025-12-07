@@ -28,36 +28,52 @@ export async function extractCapabilities(userId: string) {
     }
 
     const content = [
-      ...(projects || []).map(p => `Project: ${p.title}\n${p.description || ''}`),
-      ...(memories || []).map(m => `Thought: ${m.title || ''}\n${m.body}`)
+      ...(projects || []).map(p => `Project: ${p.title}\n${p.description?.slice(0, 500) || ''}`),
+      ...(memories || []).map(m => `Thought: ${m.title || ''}\n${m.body?.slice(0, 500)}`)
     ].join('\n\n')
 
-    // 2. Analyze with Gemini
-    const prompt = `Analyze the following user projects and thoughts. 
-    Extract a list of "Capabilities" (skills, tools, concepts, mental models, or specific interests) that this user demonstrates.
-    
-    Return a JSON array of objects with this structure:
-    {
-      "name": "kebab-case-name",
-      "description": "Brief description of the capability and how the user uses it.",
-      "source": "project" or "thought"
-    }
-    
-    Focus on specific, actionable capabilities (e.g., "react-development", "system-design", "creative-writing").
-    
-    Content:
-    ${content}`
+    // 2. Analyze with Gemini (with retry)
+    const generateCapabilities = async () => {
+      const prompt = `Analyze the following user projects and thoughts. 
+      Extract a list of "Capabilities" (skills, tools, concepts, mental models, or specific interests) that this user demonstrates.
+      
+      Return a JSON array of objects with this structure:
+      {
+        "name": "kebab-case-name",
+        "description": "Brief description of the capability and how the user uses it.",
+        "source": "project" or "thought"
+      }
+      
+      Focus on specific, actionable capabilities (e.g., "react-development", "system-design", "creative-writing").
+      
+      Content:
+      ${content}`
 
-    const response = await generateText(prompt, { 
-      responseFormat: 'json', 
-      temperature: 0.2,
-      maxTokens: 2000 // Increase token limit to prevent truncation
-    })
+      return generateText(prompt, { 
+        responseFormat: 'json', 
+        temperature: 0.2,
+        maxTokens: 2000
+      })
+    }
+
+    let response = ''
+    try {
+      response = await generateCapabilities()
+    } catch (e) {
+      console.warn('[capabilities] First attempt failed, retrying...', e)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      try {
+        response = await generateCapabilities()
+      } catch (retryError) {
+        console.error('[capabilities] Retry failed:', retryError)
+        // Return empty to prevent UI crash
+        return []
+      }
+    }
 
     let capabilities
     try {
       console.log('[capabilities] Raw response length:', response.length)
-      console.log('[capabilities] Raw response (first 200 chars):', response.slice(0, 200))
 
       if (!response || response.trim().length === 0) {
         console.error('[capabilities] Gemini returned empty response')
