@@ -16,6 +16,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [stage, setStage] = useState<'settling' | 'drifting' | 'awakened'>('settling')
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0)
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
+  const [progress, setProgress] = useState(0) // Stability progress (0-100)
   
   const { addMemory } = useMemoryStore()
   const { addToast } = useToast()
@@ -82,7 +83,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
     if (delta < STILL_THRESHOLD) {
       // User is still
-      if (!hasDrifted.current && Date.now() - stillnessStart.current > 3000) { // Reduced to 3s for easier testing
+      const duration = Date.now() - stillnessStart.current
+      const newProgress = Math.min(100, (duration / 3000) * 100)
+      setProgress(newProgress)
+
+      if (!hasDrifted.current && duration > 3000) { // Reduced to 3s for easier testing
         setStage('drifting')
         hasDrifted.current = true
         haptic.light() // Gentle confirmation
@@ -99,6 +104,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     // Reset stillness timer if moving too much before drift
     if (delta > STILL_THRESHOLD && !hasDrifted.current) {
       stillnessStart.current = Date.now()
+      setProgress(0)
     }
   }
 
@@ -142,7 +148,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     }
   }
 
-  const {
+  const { 
     isRecording,
     isProcessing,
     toggleRecording
@@ -174,11 +180,31 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             exit={{ opacity: 0 }}
             className="text-center px-8 max-w-md"
           >
-            <Wind className="h-12 w-12 mx-auto mb-6 text-amber-900/40 animate-pulse" />
+            <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+              {/* Stability Ring */}
+              <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                <circle 
+                  cx="50" cy="50" r="45" 
+                  fill="none" 
+                  stroke="rgba(120, 53, 15, 0.1)" 
+                  strokeWidth="4" 
+                />
+                <motion.circle 
+                  cx="50" cy="50" r="45" 
+                  fill="none" 
+                  stroke="#d97706" // amber-600
+                  strokeWidth="4"
+                  strokeDasharray="283"
+                  strokeDashoffset={283 - (283 * progress) / 100}
+                  transition={{ duration: 0.1 }} // smooth update
+                />
+              </svg>
+              <Wind className="h-10 w-10 text-amber-900/40" />
+            </div>
+
             <h2 className="text-2xl font-serif font-medium mb-4 text-amber-700">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
-            </h2>
-            <p className="text-lg text-amber-900/60 leading-relaxed mb-8">
+            </h2>            <p className="text-lg text-amber-900/60 leading-relaxed mb-8">
               {mode === 'sleep' 
                 ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight." 
                 : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
