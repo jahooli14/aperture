@@ -232,18 +232,22 @@ Return valid JSON.`
     
     console.log('[handleCapture] Gemini response:', jsonText)
     
-    // Robust JSON extraction
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
-    
-    if (parsed.title && parsed.bullets) {
-      parsedTitle = parsed.title
-      parsedBullets = parsed.bullets
-      console.log('[handleCapture] Successfully parsed structured response')
+    try {
+      // Robust JSON extraction
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
+      
+      if (parsed.title && parsed.bullets) {
+        parsedTitle = parsed.title
+        parsedBullets = parsed.bullets
+        console.log('[handleCapture] Successfully parsed structured response')
+      }
+    } catch (parseError) {
+      console.warn('[handleCapture] Failed to parse Gemini JSON, using raw text fallback:', parseError)
     }
 
   } catch (geminiError) {
-    console.error('[handleCapture] Gemini error, using fallback:', geminiError)
+    console.error('[handleCapture] Gemini generation error, using fallback:', geminiError)
   }
 
   // Always create memory with raw transcript
