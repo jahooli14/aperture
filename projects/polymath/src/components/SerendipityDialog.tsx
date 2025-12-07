@@ -54,7 +54,7 @@ export function SerendipityDialog({ isOpen, onClose, data, loading, onRefresh }:
               <Loader2 className="h-12 w-12 animate-spin text-purple-500 mb-4" />
               <p className="text-purple-300/80 animate-pulse">Traversing the vector space...</p>
             </div>
-          ) : data ? (
+          ) : data && data.source && data.target ? (
             <div className="space-y-8">
               {/* The Bridge Visualization */}
               <div className="flex items-center justify-between relative">
