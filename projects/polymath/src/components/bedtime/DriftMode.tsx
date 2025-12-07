@@ -25,9 +25,10 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const stillnessStart = useRef<number>(Date.now())
   const hasDrifted = useRef(false)
 
-  // ... (keep existing useEffects and motion logic from original component)
+  // Permission Request Logic
+  // REMOVED: Auto-request on mount (fails on iOS)
+  // MOVED: To "Begin Session" button click
   useEffect(() => {
-    requestMotionPermission()
     return () => {
       window.removeEventListener('devicemotion', handleMotion)
     }
@@ -40,15 +41,18 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         if (response === 'granted') {
           setMotionPermission('granted')
           window.addEventListener('devicemotion', handleMotion)
+          haptic.success()
         } else {
           setMotionPermission('denied')
         }
       } catch (e) {
         console.error(e)
+        // If not https, it might fail
       }
     } else {
       setMotionPermission('granted')
       window.addEventListener('devicemotion', handleMotion)
+      haptic.success()
     }
   }
 
@@ -101,6 +105,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const triggerInsight = () => {
     haptic.medium()
     setStage('awakened')
+    // Pick a random prompt or next
     setCurrentPromptIndex(prev => (prev + 1) % prompts.length)
   }
 
@@ -151,6 +156,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-amber-900 flex flex-col items-center justify-center overflow-hidden">
+      {/* Exit Button */}
       <button 
         onClick={onClose}
         className="absolute top-6 right-6 p-4 rounded-full bg-white/5 text-amber-900/50 hover:bg-white/10"
@@ -159,6 +165,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       </button>
 
       <AnimatePresence mode="wait">
+        {/* Stage 1: Settling / Instructions */}
         {stage === 'settling' && (
           <motion.div 
             key="settling"
@@ -171,17 +178,26 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <h2 className="text-2xl font-serif font-medium mb-4 text-amber-700">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
             </h2>
-            <p className="text-lg text-amber-900/60 leading-relaxed">
+            <p className="text-lg text-amber-900/60 leading-relaxed mb-8">
               {mode === 'sleep' 
                 ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight." 
                 : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
             </p>
+            
+            <button
+              onClick={requestMotionPermission}
+              className="px-8 py-3 rounded-full bg-amber-900/20 text-amber-600 font-medium hover:bg-amber-900/30 transition-all"
+            >
+              Begin Session
+            </button>
+
             {motionPermission === 'denied' && (
               <p className="mt-4 text-red-900/50 text-sm">Motion permission required for this feature.</p>
             )}
           </motion.div>
         )}
 
+        {/* Stage 2: Drifting (Darkness) */}
         {stage === 'drifting' && (
           <motion.div 
             key="drifting"
@@ -195,6 +211,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           </motion.div>
         )}
 
+        {/* Stage 3: Awakened (The Prompt) */}
         {stage === 'awakened' && currentPrompt && (
           <motion.div 
             key="awakened"
