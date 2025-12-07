@@ -60,11 +60,10 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
     return null
   }
 
-  // 2. Find the pair with the LOWEST similarity (most distant)
-  // But not zero (unrelated noise). Ideally 0.1 - 0.6 range (relaxed).
-  let bestPair = null
-  let minSimilarity = 1.0
-  let targetSimilarity = 0.25 // High entropy target
+  // 2. Find pairs in the "Goldilocks Zone" (Distant but bridgeable)
+  // Ideally 0.1 - 0.6 range.
+  const candidates: Array<{ pair: any[], score: number, sim: number }> = []
+  const targetSimilarity = 0.25 // High entropy target
 
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
@@ -72,13 +71,27 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
       
       // Relaxed Goldilocks distance
       if (sim > 0.05 && sim < 0.6) {
-        // Prefer this pair if it's closer to our target "high entropy" score
-        if (Math.abs(sim - targetSimilarity) < Math.abs(minSimilarity - targetSimilarity)) {
-          minSimilarity = sim
-          bestPair = [items[i], items[j]]
-        }
+        // Score: Lower is better (closer to target entropy)
+        const score = Math.abs(sim - targetSimilarity)
+        candidates.push({ pair: [items[i], items[j]], score, sim })
       }
     }
+  }
+
+  let bestPair = null
+  let chosenSim = 0
+
+  if (candidates.length > 0) {
+    // Sort by score (closest to target entropy)
+    candidates.sort((a, b) => a.score - b.score)
+    
+    // Pick random from top 10 to ensure variety (Fixes "always same 2 items")
+    const topCandidates = candidates.slice(0, 10)
+    const selected = topCandidates[Math.floor(Math.random() * topCandidates.length)]
+    
+    bestPair = selected.pair
+    chosenSim = selected.sim
+    console.log(`[Serendipity] Picked random pair from ${candidates.length} candidates. Top 10 variety applied.`)
   }
 
   if (!bestPair) {
@@ -88,10 +101,11 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
     let idx2 = Math.floor(Math.random() * items.length)
     while (idx1 === idx2) idx2 = Math.floor(Math.random() * items.length)
     bestPair = [items[idx1], items[idx2]]
+    chosenSim = 0 // Unknown/Random
   }
 
   const [source, target] = bestPair
-  console.log(`[Serendipity] Bridging: "${source.title}" <-> "${target.title}" (Sim: ${minSimilarity.toFixed(2)})`)
+  console.log(`[Serendipity] Bridging: "${source.title}" <-> "${target.title}" (Sim: ${chosenSim.toFixed(2)})`)
 
   // 3. Generate the Bridge (Bisociation)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
