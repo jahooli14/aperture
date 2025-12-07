@@ -72,9 +72,10 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
     const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
     
-    // Tuned Thresholds for better sensitivity
-    const STILL_THRESHOLD = 0.3 // Stricter stillness
-    const WAKE_THRESHOLD = 1.2 // Easier wake (slip detection)
+    // Tuned Thresholds - Less sensitive (v2)
+    const STILL_THRESHOLD = 0.2 // Stricter stillness (was 0.3)
+    const WAKE_THRESHOLD = 2.5 // Harder wake/jerk (was 1.2)
+    const REQUIRED_DURATION = 4000 // Longer settling time (was 3000)
 
     // Debug log (throttled)
     if (Math.random() < 0.05) {
@@ -84,10 +85,10 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     if (delta < STILL_THRESHOLD) {
       // User is still
       const duration = Date.now() - stillnessStart.current
-      const newProgress = Math.min(100, (duration / 3000) * 100)
+      const newProgress = Math.min(100, (duration / REQUIRED_DURATION) * 100)
       setProgress(newProgress)
 
-      if (!hasDrifted.current && duration > 3000) { // Reduced to 3s for easier testing
+      if (!hasDrifted.current && duration > REQUIRED_DURATION) {
         setStage('drifting')
         hasDrifted.current = true
         haptic.light() // Gentle confirmation
