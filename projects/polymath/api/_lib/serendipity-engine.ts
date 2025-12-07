@@ -19,12 +19,41 @@ export interface SerendipityMatch {
 export async function findStructuralHole(userId: string): Promise<SerendipityMatch | null> {
   console.log(`[Serendipity] Hunting for structural holes for user ${userId}`)
 
-  // 1. Fetch a random sample of items with embeddings
-  const { data: items } = await supabase
-    .rpc('get_random_items_with_embeddings', { 
-      user_id_param: userId, 
-      limit_param: 50 
-    })
+  let items: any[] = []
+
+  try {
+    // 1. Try RPC first
+    const { data, error } = await supabase
+      .rpc('get_random_items_with_embeddings', { 
+        user_id_param: userId, 
+        limit_param: 50 
+      })
+    
+    if (error) throw error
+    items = data || []
+  } catch (rpcError) {
+    console.warn('[Serendipity] RPC failed (migration might be missing), falling back to manual fetch:', rpcError)
+    
+    // Fallback: Fetch recent items from projects and thoughts manually
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(25)
+      
+    const { data: thoughts } = await supabase
+      .from('memories')
+      .select('id, title, body, embedding')
+      .eq('user_id', userId)
+      .not('embedding', 'is', null)
+      .limit(25)
+
+    if (projects) items.push(...projects.map((p: any) => ({ ...p, type: 'project' })))
+    if (thoughts) items.push(...thoughts.map((t: any) => ({ ...t, title: t.title || t.body?.slice(0, 50), type: 'thought' })))
+  }
+
+  console.log(`[Serendipity] Found ${items.length} items with embeddings`)
 
   if (!items || items.length < 2) {
     console.log('[Serendipity] Not enough items to find holes.')
@@ -32,18 +61,17 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   }
 
   // 2. Find the pair with the LOWEST similarity (most distant)
-  // But not zero (unrelated noise). Ideally 0.2 - 0.4 range.
+  // But not zero (unrelated noise). Ideally 0.1 - 0.6 range (relaxed).
   let bestPair = null
   let minSimilarity = 1.0
-  let targetSimilarity = 0.3 // We want distant but not alien
+  let targetSimilarity = 0.25 // High entropy target
 
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const sim = cosineSimilarity(items[i].embedding, items[j].embedding)
       
-      // We look for "Goldilocks" distance: Distant enough to be surprising, 
-      // close enough to be bridgeable.
-      if (sim > 0.15 && sim < 0.45) {
+      // Relaxed Goldilocks distance
+      if (sim > 0.05 && sim < 0.6) {
         // Prefer this pair if it's closer to our target "high entropy" score
         if (Math.abs(sim - targetSimilarity) < Math.abs(minSimilarity - targetSimilarity)) {
           minSimilarity = sim
@@ -55,10 +83,15 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
 
   if (!bestPair) {
     // Fallback: Just pick two random ones if no goldilocks pair found
-    bestPair = [items[0], items[Math.floor(Math.random() * items.length)]]
+    console.log('[Serendipity] No perfect hole found, picking random pair')
+    const idx1 = Math.floor(Math.random() * items.length)
+    let idx2 = Math.floor(Math.random() * items.length)
+    while (idx1 === idx2) idx2 = Math.floor(Math.random() * items.length)
+    bestPair = [items[idx1], items[idx2]]
   }
 
   const [source, target] = bestPair
+  console.log(`[Serendipity] Bridging: "${source.title}" <-> "${target.title}" (Sim: ${minSimilarity.toFixed(2)})`)
 
   // 3. Generate the Bridge (Bisociation)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })

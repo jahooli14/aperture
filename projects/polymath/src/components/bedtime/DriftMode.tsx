@@ -67,21 +67,32 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
     const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
     
-    const STILL_THRESHOLD = 0.5
-    const WAKE_THRESHOLD = 2.0 
+    // Tuned Thresholds for better sensitivity
+    const STILL_THRESHOLD = 0.3 // Stricter stillness
+    const WAKE_THRESHOLD = 1.2 // Easier wake (slip detection)
+
+    // Debug log (throttled)
+    if (Math.random() < 0.05) {
+      console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stage}, Drifted: ${hasDrifted.current}`)
+    }
 
     if (delta < STILL_THRESHOLD) {
-      if (!hasDrifted.current && Date.now() - stillnessStart.current > 5000) {
+      // User is still
+      if (!hasDrifted.current && Date.now() - stillnessStart.current > 3000) { // Reduced to 3s for easier testing
         setStage('drifting')
         hasDrifted.current = true
-        haptic.light()
+        haptic.light() // Gentle confirmation
+        console.log('[Drift] Entering drift state (stillness detected)')
       }
     } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stage === 'drifting') {
+      // Sudden movement after drifting -> Trigger Insight
+      console.log('[Drift] WAKE EVENT DETECTED! Delta:', delta)
       triggerInsight()
     }
 
     lastAccel.current = { x, y, z }
     
+    // Reset stillness timer if moving too much before drift
     if (delta > STILL_THRESHOLD && !hasDrifted.current) {
       stillnessStart.current = Date.now()
     }
