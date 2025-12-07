@@ -1,3 +1,5 @@
+import { findStructuralHole } from './_lib/serendipity-engine.js'
+
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
@@ -37,6 +39,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle GET requests for listing connections
   if (req.method === 'GET') {
     const { action, id, type } = req.query
+
+    // SERENDIPITY ENGINE (Phase 4)
+    if (action === 'serendipity') {
+      try {
+        const result = await findStructuralHole(userId)
+        return res.status(200).json(result || { message: 'No serendipity found (yet)' })
+      } catch (error) {
+        console.error('[connections] Serendipity error:', error)
+        return res.status(500).json({ error: 'Failed to find structural hole' })
+      }
+    }
 
     // Get suggestions for an item via vector similarity
     if (action === 'suggestions') {
