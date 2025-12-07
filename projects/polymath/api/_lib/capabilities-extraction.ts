@@ -28,8 +28,8 @@ export async function extractCapabilities(userId: string) {
     }
 
     const content = [
-      ...(projects || []).map(p => `Project: ${p.title}\n${p.description?.slice(0, 500) || ''}`),
-      ...(memories || []).map(m => `Thought: ${m.title || ''}\n${m.body?.slice(0, 500)}`)
+      ...(projects || []).map(p => `Project: ${p.title}\n${p.description || ''}`),
+      ...(memories || []).map(m => `Thought: ${m.title || ''}\n${m.body}`)
     ].join('\n\n')
 
     // 2. Analyze with Gemini (with retry)
