@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
 import { normalizeTags } from './tag-normalizer.js'
-import { cosineSimilarity } from './gemini-embeddings.js'
+import { updateItemConnections } from './connection-logic.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -83,7 +83,8 @@ export async function processMemory(memoryId: string): Promise<void> {
     logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
     // Use hardcoded user_id (single-user app, memories table doesn't have user_id)
     const userId = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
-    await findAndCreateConnections(memoryId, userId, embedding, metadata.summary_title, metadata.insightful_body)
+    // Use shared logic for Top 5 Dynamic connections
+    await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
     logger.info({
@@ -115,7 +116,7 @@ export async function processMemory(memoryId: string): Promise<void> {
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
 async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const prompt = `Clean up this voice note into something natural and readable.
 
@@ -304,159 +305,5 @@ async function storeCapabilities(memoryId: string, skills: string[], memoryTitle
     } catch (error) {
       logger.warn({ skill: skillName, error }, 'Error processing capability')
     }
-  }
-}
-
-/**
- * Find and create connections for a new memory
- */
-async function findAndCreateConnections(
-  memoryId: string,
-  userId: string,
-  embedding: number[],
-  title: string,
-  body: string
-): Promise<void> {
-  try {
-    logger.info({ memory_id: memoryId }, 'Finding connections for memory')
-
-    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
-
-    // Search projects
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('id, title, description, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (projectsError) {
-      logger.warn({ memory_id: memoryId, error: projectsError }, 'Error querying projects for connections')
-    }
-
-    if (projects) {
-      for (const p of projects) {
-        if (p.embedding) {
-          const similarity = cosineSimilarity(embedding, p.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
-          if (similarity > 0.55) {
-            candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
-          }
-        }
-      }
-    }
-
-    // Search other memories (memories table has no user_id column - single user app)
-    const { data: memories, error: memoriesError } = await supabase
-      .from('memories')
-      .select('id, title, body, embedding')
-      .neq('id', memoryId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (memoriesError) {
-      logger.warn({ memory_id: memoryId, error: memoriesError }, 'Error querying memories for connections')
-    }
-
-    if (memories) {
-      for (const m of memories) {
-        if (m.embedding) {
-          const similarity = cosineSimilarity(embedding, m.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
-          if (similarity > 0.55) {
-            candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
-          }
-        }
-      }
-    }
-
-    // Search articles (stored in reading_queue table)
-    const { data: articles, error: articlesError } = await supabase
-      .from('reading_queue')
-      .select('id, title, excerpt, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (articlesError) {
-      logger.warn({ memory_id: memoryId, error: articlesError }, 'Error querying articles for connections')
-    }
-
-    if (articles) {
-      for (const a of articles) {
-        if (a.embedding) {
-          const similarity = cosineSimilarity(embedding, a.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency with connections API
-          if (similarity > 0.55) {
-            candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
-          }
-        }
-      }
-    }
-
-    // Sort by similarity
-    candidates.sort((a, b) => b.similarity - a.similarity)
-
-    logger.info({ memory_id: memoryId, candidates_found: candidates.length }, 'Found connection candidates')
-
-    // Auto-link >85%, suggest 55-85%
-    const autoLinked = []
-    const suggestions = []
-
-    for (const candidate of candidates.slice(0, 10)) {
-      if (candidate.similarity > 0.85) {
-        // Auto-create connection (with deduplication check)
-        const { data: existing } = await supabase
-          .from('connections')
-          .select('id')
-          .or(`and(source_type.eq.thought,source_id.eq.${memoryId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.thought,target_id.eq.${memoryId})`)
-          .maybeSingle()
-
-        if (!existing) {
-          await supabase
-            .from('connections')
-            .insert({
-              source_type: 'thought',
-              source_id: memoryId,
-              target_type: candidate.type,
-              target_id: candidate.id,
-              connection_type: 'relates_to',
-              created_by: 'ai',
-              ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
-            })
-          autoLinked.push(candidate)
-        }
-      } else if (candidate.similarity > 0.55) {
-        suggestions.push(candidate)
-      }
-    }
-
-    logger.info({ memory_id: memoryId, auto_linked: autoLinked.length, suggestions: suggestions.length }, 'Created connections')
-
-    // Store suggestions
-    if (suggestions.length > 0) {
-      const suggestionInserts = suggestions.map(s => ({
-        from_item_type: 'thought',
-        from_item_id: memoryId,
-        to_item_type: s.type,
-        to_item_id: s.id,
-        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
-        confidence: s.similarity,
-        user_id: userId,
-        status: 'pending'
-      }))
-
-      await supabase
-        .from('connection_suggestions')
-        .insert(suggestionInserts)
-    }
-
-  } catch (error) {
-    logger.warn({
-      memory_id: memoryId,
-      error_message: error instanceof Error ? error.message : String(error),
-      error_stack: error instanceof Error ? error.stack : undefined,
-      error_type: error instanceof Error ? error.constructor.name : typeof error
-    }, 'Failed to find connections (non-fatal)')
   }
 }
