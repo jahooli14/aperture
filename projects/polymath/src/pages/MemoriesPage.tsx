@@ -6,19 +6,19 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
+// import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { MemoryCard } from '../components/MemoryCard'
 import { CreateMemoryDialog } from '../components/memories/CreateMemoryDialog'
-import { EditMemoryDialog } from '../components/memories/EditMemoryDialog'
+// import { EditMemoryDialog } from '../components/memories/EditMemoryDialog' // Now handled by MemoryDetailModal
 import { FoundationalPrompts } from '../components/onboarding/FoundationalPrompts'
 import { SuggestedPrompts } from '../components/onboarding/SuggestedPrompts'
 import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
-import { Card, CardContent } from '../components/ui/card'
+// import { Card, CardContent } from '../components/ui/card' // Will use GlassCard
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { useConnectionStore } from '../stores/useConnectionStore'
@@ -29,8 +29,10 @@ import { SkeletonCard } from '../components/ui/skeleton-card'
 import { Brain, Zap, ArrowLeft, CloudOff, Search, Lightbulb, Leaf, Code, Palette, Heart, BookOpen, Users } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
-import { FocusableList, FocusableItem } from '../components/FocusableList'
+// import { FocusableList, FocusableItem } from '../components/FocusableList' // Removed for masonry
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
+import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
+import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
 
 const getIconComponent = (name: string) => {
   const lowerName = name.toLowerCase()
@@ -64,8 +66,8 @@ export function MemoriesPage() {
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
+  const [showDetailModal, setShowDetailModal] = useState(false) // State to open/close the detail modal
   const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
   const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
 
@@ -438,12 +440,8 @@ export function MemoriesPage() {
             <div>
           {/* Demo Data Context Banner - Only show on "My Thoughts" view with demo data */}
           {view === 'all' && memories.length > 0 && memories.some(m => m.audiopen_id?.startsWith('demo-')) && (
-            <Card className="mb-8" style={{
-              background: 'var(--premium-bg-2)',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-            }}>
-              <CardContent className="pt-6">
+            <GlassCard isInteractive={false} className="mb-8">
+              <div className="pt-6">
                 <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                   <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                   Demo Thoughts - Cross-Domain Examples
@@ -455,18 +453,14 @@ export function MemoriesPage() {
                 <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
                   💡 <strong>Tip:</strong> Real-world usage works best with 5-10 thoughts covering both your professional expertise and personal interests.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </GlassCard>
           )}
 
           {/* Resurfacing Info Banner */}
           {view === 'resurfacing' && resurfacing.length > 0 && (
-            <Card className="mb-8" style={{
-              background: 'var(--premium-bg-2)',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-            }}>
-              <CardContent className="pt-6">
+            <GlassCard isInteractive={false} className="mb-8">
+              <div className="pt-6">
                 <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                   Up for review
                 </h3>
@@ -474,17 +468,17 @@ export function MemoriesPage() {
                   These thoughts are ready for review based on spaced repetition.
                   Reviewing strengthens your memory and extends the next review interval.
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </GlassCard>
           )}
 
           {/* Error Banner */}
           {error && (
-            <Card className="mb-6 border-red-300 bg-red-50">
-              <CardContent className="pt-6">
+            <GlassCard isInteractive={false} className="mb-6 border-red-300 bg-red-50">
+              <div className="pt-6">
                 <p className="text-sm text-red-600">{error}</p>
-              </CardContent>
-            </Card>
+              </div>
+            </GlassCard>
           )}
 
           {/* Foundational Tab */}
@@ -497,12 +491,8 @@ export function MemoriesPage() {
 
               {/* Voice Note Processing Banner */}
               {processingVoiceNote && (
-                <Card className="mb-6 animate-pulse" style={{
-                  backgroundColor: 'var(--premium-bg-4)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}>
-                  <CardContent className="pt-6">
+                <GlassCard isInteractive={false} className="mb-6 animate-pulse">
+                  <div className="pt-6">
                     <div className="flex items-center gap-4">
                       <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid" style={{ borderColor: 'var(--premium-blue)', borderRightColor: 'transparent' }}></div>
                       <div className="flex-1">
@@ -524,8 +514,8 @@ export function MemoriesPage() {
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </GlassCard>
               )}
 
               {/* Loading State - Show skeleton loaders like HomePage */}
@@ -546,12 +536,8 @@ export function MemoriesPage() {
 
           {/* Empty State */}
           {!isLoading && displayMemories.length === 0 && (
-            <Card style={{
-              background: 'var(--premium-bg-2)',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-            }}>
-              <CardContent className="py-16">
+            <GlassCard isInteractive={false} className="mb-8">
+              <div className="py-16">
                 <div className="max-w-2xl mx-auto text-center space-y-8">
                   {view === 'all' ? (
                     <>
@@ -565,11 +551,7 @@ export function MemoriesPage() {
                         </p>
                       </div>
 
-                      <div className="rounded-xl p-8" style={{
-                        background: 'var(--premium-bg-2)',
-                        backdropFilter: 'blur(12px)',
-                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}>
+                      <GlassCard isInteractive={false} className="p-8">
                         <h4 className="font-bold mb-6 text-lg premium-text-platinum">How to Capture Thoughts</h4>
                         <div className="space-y-4 text-left">
                           <div className="flex gap-4">
@@ -600,7 +582,7 @@ export function MemoriesPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </GlassCard>
 
                       <div className="flex justify-center px-4 sm:px-0">
                         <div className="w-full sm:w-auto">
@@ -624,8 +606,8 @@ export function MemoriesPage() {
                     </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </GlassCard>
           )}
 
           {/* My Memories: Theme Clusters or Recent View */}
@@ -678,21 +660,17 @@ export function MemoriesPage() {
                       ({selectedCluster.memory_count} thoughts)
                     </span>
                   </h2>
-                  <Virtuoso
-                    style={{ height: 'calc(100vh - 400px)' }}
-                    data={selectedCluster.memories}
-                    overscan={200}
-                    itemContent={(index, memory) => (
-                      <div className="pb-6" style={{ contain: 'layout style paint' }}>
+                  <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+                    {selectedCluster.memories.map((memory) => (
+                      <div key={memory.id} className="mb-6 break-inside-avoid">
                         <MemoryCard
-                          key={memory.id}
                           memory={memory}
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                         />
                       </div>
-                    )}
-                  />
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -715,59 +693,35 @@ export function MemoriesPage() {
                       ))}
                     </div>
                   ) : (
-                    <Card className="p-8 text-center" style={{
-                      background: 'var(--premium-bg-2)',
-                      backdropFilter: 'blur(12px)',
-                      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                    }}>
+                    <GlassCard isInteractive={false} className="p-8 text-center">
                       <p style={{ color: 'var(--premium-text-secondary)' }}>No themes detected yet. Add more thoughts with diverse topics!</p>
-                    </Card>
+                    </GlassCard>
                   )}
                 </>
               )}
 
-              {/* Recent memories view - Virtualized for smooth scrolling with 100+ items */}
+              {/* Recent memories view - Masonry Grid */}
               {memoryView === 'recent' && (
-                <FocusableList>
-                  <Virtuoso
-                    style={{ height: 'calc(100vh - 280px)' }}
-                    data={memories}
-                    overscan={1000}
-                    itemContent={(index, memory) => {
-                      const isNewlyCreated = memory.id === newlyCreatedMemoryId
-
-                      return (
-                        <FocusableItem id={memory.id} type="thought">
-                          <div
-                            className={`pb-6 transition-all duration-500 ${isNewlyCreated ? 'ring-4 ring-blue-500 rounded-xl animate-pulse' : ''}`}
-                            style={{
-                              contain: 'layout style paint',
-                              willChange: isNewlyCreated ? 'transform' : 'auto'
-                            }}
-                          >
-                            <MemoryCard
-                              memory={memory}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                            />
-                          </div>
-                        </FocusableItem>
-                      )
-                    }}
-                  />
-                </FocusableList>
+                <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+                  {displayMemories.map((memory) => (
+                    <div key={memory.id} className="mb-6 break-inside-avoid">
+                      <MemoryCard
+                        memory={memory}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
             </>
           )}
 
-          {/* Resurfacing Memories Grid - Virtualized */}
+          {/* Resurfacing Memories Grid - Masonry */}
           {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
-            <Virtuoso
-              style={{ height: 'calc(100vh - 280px)' }}
-              data={resurfacing}
-              overscan={200}
-              itemContent={(index, memory) => (
-                <div className="flex flex-col gap-3 pb-6" style={{ contain: 'layout style paint' }}>
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+              {resurfacing.map((memory) => (
+                <div key={memory.id} className="flex flex-col gap-3 mb-6 break-inside-avoid">
                   <MemoryCard
                     memory={memory}
                     onEdit={handleEdit}
@@ -781,19 +735,14 @@ export function MemoriesPage() {
                     Reviewed
                   </Button>
                 </div>
-              )}
-            />
+              ))}
+            </div>
           )}
             </div>
           </div>
         </div>
 
-        {/* Edit Dialog */}
-        <EditMemoryDialog
-          memory={selectedMemory}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
+
 
         {/* Confirmation Dialog */}
         {confirmDialog}
