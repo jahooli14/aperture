@@ -136,6 +136,7 @@ export function SettingsPage() {
   const [capabilities, setCapabilities] = useState<Capability[]>([])
   const [loadingCaps, setLoadingCaps] = useState(false)
   const [extractingCaps, setExtractingCaps] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
 
   useEffect(() => {
     fetchCapabilities()
@@ -155,6 +156,32 @@ export function SettingsPage() {
       console.error('Failed to fetch capabilities:', error)
     } finally {
       setLoadingCaps(false)
+    }
+  }
+
+  const handleRegenerateConnections = async () => {
+    setRegenerating(true)
+    try {
+      const response = await fetch('/api/admin/regenerate-connections', {
+        method: 'POST'
+      })
+      
+      if (!response.ok) throw new Error('Regeneration failed')
+      
+      const result = await response.json()
+      addToast({
+        title: 'Connections Regenerated',
+        description: result.message,
+        variant: 'success'
+      })
+    } catch (error) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to regenerate connections',
+        variant: 'destructive'
+      })
+    } finally {
+      setRegenerating(false)
     }
   }
 
@@ -566,6 +593,50 @@ export function SettingsPage() {
               </div>
             </button>
           </div>
+          </div>
+        </section>
+
+        {/* Maintenance Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="flex items-center gap-3 mb-6">
+              <Zap className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
+              <h2
+                className="text-2xl font-bold"
+                style={{ color: 'var(--premium-text-primary)' }}
+              >
+                Maintenance
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={handleRegenerateConnections}
+                disabled={regenerating}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left group hover:scale-[1.01]"
+                style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.2)'
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                  background: 'rgba(245, 158, 11, 0.2)'
+                }}>
+                  <RefreshCw className={`w-6 h-6 ${regenerating ? 'animate-spin' : ''}`} style={{ color: '#fbbf24' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum">
+                    Regenerate Connections
+                  </h3>
+                  <p style={{ color: 'var(--premium-text-secondary)', fontSize: '0.875rem' }}>
+                    Re-scan entire library to find new semantic links (Top 5 Dynamic)
+                  </p>
+                </div>
+              </button>
+            </div>
           </div>
         </section>
       </div>
