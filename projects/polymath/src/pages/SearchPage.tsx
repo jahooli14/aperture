@@ -1,8 +1,3 @@
-/**
- * Search Page
- * Universal search across memories, projects, and articles
- */
-
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -12,6 +7,8 @@ import { haptic } from '../utils/haptics'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { EmptyState } from '../components/ui/empty-state'
 import { PremiumCard } from '../components/ui/premium-card'
+import { readingDb } from '../lib/db' // Import readingDb
+import { useOfflineStore } from '../stores/useOfflineStore' // Import useOfflineStore
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article' | 'suggestion'
@@ -36,6 +33,68 @@ interface SearchResponse {
     projects: number
     articles: number
     suggestions: number
+  }
+}
+
+// Helper function for offline search
+async function searchOffline(searchQuery: string): Promise<SearchResponse> {
+  const lowerCaseQuery = searchQuery.toLowerCase()
+  const now = new Date().toISOString()
+
+  let memories = await readingDb.memories.toArray()
+  let projects = await readingDb.projects.toArray()
+  let articles = await readingDb.articles.toArray()
+  // No offline suggestions for now
+
+  const filteredMemories = memories
+    .filter(m => m.title.toLowerCase().includes(lowerCaseQuery) || m.body.toLowerCase().includes(lowerCaseQuery))
+    .map(m => ({
+      type: 'memory' as const,
+      id: m.id,
+      title: m.title,
+      body: m.body,
+      score: 1, // Placeholder
+      created_at: m.created_at || now,
+    }))
+
+  const filteredProjects = projects
+    .filter(p => p.title.toLowerCase().includes(lowerCaseQuery) || (p.description && p.description.toLowerCase().includes(lowerCaseQuery)))
+    .map(p => ({
+      type: 'project' as const,
+      id: p.id,
+      title: p.title,
+      description: p.description || '',
+      score: 1, // Placeholder
+      created_at: p.created_at || now,
+    }))
+  
+  const filteredArticles = articles
+    .filter(a => a.title.toLowerCase().includes(lowerCaseQuery) || (a.content && a.content.toLowerCase().includes(lowerCaseQuery)) || (a.excerpt && a.excerpt.toLowerCase().includes(lowerCaseQuery)))
+    .map(a => ({
+      type: 'article' as const,
+      id: a.id,
+      title: a.title,
+      body: a.content || a.excerpt || '',
+      url: a.url,
+      score: 1, // Placeholder
+      created_at: a.created_at || now,
+    }))
+
+  const allResults = [...filteredMemories, ...filteredProjects, ...filteredArticles];
+
+  // Sort by created_at descending (most recent first)
+  allResults.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return {
+    query: searchQuery,
+    total: allResults.length,
+    results: allResults,
+    breakdown: {
+      memories: filteredMemories.length,
+      projects: filteredProjects.length,
+      articles: filteredArticles.length,
+      suggestions: 0,
+    },
   }
 }
 
@@ -68,14 +127,35 @@ export function SearchPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
-      if (!response.ok) {
-        throw new Error('Search failed')
-      }
+      const { isOnline } = useOfflineStore.getState()
 
-      const data: SearchResponse = await response.json()
-      setResults(data)
-      haptic.light()
+      if (!isOnline) {
+        console.log('[SearchPage] Offline mode - performing local search.')
+        const offlineResults = await searchOffline(searchQuery)
+        setResults(offlineResults)
+        haptic.light()
+      } else {
+        try {
+          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
+          if (!response.ok) {
+            throw new Error('Online search failed')
+          }
+
+          const data: SearchResponse = await response.json()
+          setResults(data)
+          haptic.light()
+        } catch (onlineError) {
+          console.error('[SearchPage] Online search failed, falling back to offline:', onlineError)
+          addToast({
+            title: 'Online search failed',
+            description: 'Falling back to offline results.',
+            variant: 'warning'
+          })
+          const offlineResults = await searchOffline(searchQuery)
+          setResults(offlineResults)
+          haptic.light()
+        }
+      }
     } catch (error) {
       console.error('Search error:', error)
       addToast({
