@@ -1,6 +1,6 @@
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
+import React, { useState, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2 } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -8,38 +8,60 @@ import { useMemoryStore } from '../stores/useMemoryStore'
 import { useToast } from './ui/toast'
 import { haptic } from '../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
-// import { MemoryLinks } from './MemoryLinks' // Moved to modal
-// import { PinButton } from './PinButton' // Moved to modal or removed
-// import { SuggestionBadge } from './SuggestionBadge' // Removed from card
-// import { ConnectionsList } from './connections/ConnectionsList' // Moved to modal
-
-import { GlassCard } from './ui/GlassCard'
-import { SmartActionDot } from './SmartActionDot'
-import { MemoryDetailModal } from './memories/MemoryDetailModal' // Import the new modal
+import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { MemoryDetailModal } from './memories/MemoryDetailModal'
+import { useConfirmDialog } from './ui/confirm-dialog'
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
 const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
-const BRIDGE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+// Reused color logic from ProjectCard for consistency
+const PROJECT_COLORS: Record<string, string> = {
+  tech: '59, 130, 246',      // Blue-500
+  technical: '59, 130, 246', // Blue-500
+  creative: '236, 72, 153',  // Pink-500
+  writing: '99, 102, 241',   // Indigo-500
+  business: '16, 185, 129',  // Emerald-500
+  learning: '245, 158, 11',  // Amber-500
+  life: '6, 182, 212',       // Cyan-500
+  hobby: '249, 115, 22',     // Orange-500
+  'side-project': '139, 92, 246', // Violet-500
+  default: '148, 163, 184'   // Slate-400
+}
+
+const getTheme = (title: string, type: string = 'default') => {
+  const t = type?.toLowerCase().trim() || ''
+
+  let rgb = PROJECT_COLORS[t]
+
+  // Deterministic fallback if type is unknown or missing
+  if (!rgb) {
+    const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+    let hash = 0
+    for (let i = 0; i < title.length; i++) {
+      hash = title.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+  }
+
+  return { rgb }
+}
 
 interface MemoryCardProps {
   memory: Memory
-  onEdit?: (memory: Memory) => void // Prop to trigger edit from outside
-  onDelete?: (memory: Memory) => void // Prop to trigger delete from outside
+  onEdit?: (memory: Memory) => void
+  onDelete?: (memory: Memory) => void
 }
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const navigate = useNavigate()
-  // const [bridges, setBridges] = useState<BridgeWithMemories[]>([]) // Moved to modal
-  // const [bridgesFetched, setBridgesFetched] = useState(false) // Moved to modal
   const [showContextMenu, setShowContextMenu] = useState(false)
-  const [showDetailModal, setShowDetailModal] = useState(false) // State for the detail modal
-  
-  const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory) // Still needed for context menu actions
+  const [showDetailModal, setShowDetailModal] = useState(false)
+
+  const { setContext, toggleSidebar } = useContextEngineStore()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
   const { addToast } = useToast()
-
-  // Removed long-press handlers as per new interaction model
-  // Removed bridge fetching useEffect as it's now in the modal
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
   const handleCopyText = useCallback(() => {
     const textToCopy = `${memory.title}\n\n${memory.body}`
@@ -69,19 +91,23 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     }
   }, [memory.title, memory.body, handleCopyText])
 
+  const handleAnalyze = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    e.preventDefault()
+    // Set context for the side panel AI
+    setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
+    toggleSidebar(true)
+  }
+
   const handleDelete = useCallback(async () => {
-    // This delete flow will bypass the modal's delete directly from the card's context menu
     if (!memory) return;
 
-    const confirmed = await addToast({
+    const confirmed = await confirm({
       title: `Delete "${memory.title}"?`,
       description: 'This action cannot be undone. The thought will be permanently removed.',
-      action: {
-        label: 'Delete',
-        onClick: () => true
-      },
+      confirmText: 'Delete',
       variant: 'destructive',
-    }).action.onClick(); // Fake promise resolve for confirm dialog
+    });
 
     if (confirmed) {
       try {
@@ -91,7 +117,6 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           description: `"${memory.title}" has been removed.`,
           variant: 'success',
         });
-        // If onDelete prop exists, call it for external state updates (e.g., from MemoriesPage)
         onDelete?.(memory);
       } catch (error) {
         addToast({
@@ -101,10 +126,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         });
       }
     }
-  }, [memory, deleteMemory, addToast, onDelete]);
+  }, [memory, deleteMemory, addToast, onDelete, confirm]);
 
-
-  // Memoize icon elements to prevent recreation (THIS is what causes stack overflow)
+  // Memoize icon elements
   const editIcon = useMemo(() => <Edit className="h-5 w-5" />, [])
   const copyIcon = useMemo(() => <Copy className="h-5 w-5" />, [])
   const shareIcon = useMemo(() => <Share2 className="h-5 w-5" />, [])
@@ -114,7 +138,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     {
       label: 'Edit',
       icon: editIcon,
-      onClick: () => setShowDetailModal(true), // Open modal in edit mode or trigger edit from modal
+      onClick: () => setShowDetailModal(true),
     },
     {
       label: 'Copy Text',
@@ -143,21 +167,48 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         title={memory.title}
       />
 
-      <GlassCard
-        variant="muted"
-        onClick={() => setShowDetailModal(true)} // Open detail modal on card click
+      <div
+        onClick={() => setShowDetailModal(true)}
+        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative"
+        style={{
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        }}
       >
-        <CardHeader className="relative z-10 flex flex-row items-start justify-between pb-2">
-          <CardTitle className="text-lg font-semibold leading-tight flex-1 line-clamp-2 pr-8" style={{ color: 'var(--premium-text-primary)' }}>
+        <CardHeader className="relative z-10 flex flex-row items-start justify-between p-0 pb-2">
+          <h3 className="font-bold text-base leading-snug mb-1" style={{
+            color: 'var(--premium-text-primary)'
+          }}>
             {memory.title}
-          </CardTitle>
+          </h3>
           <div className="flex items-center gap-1">
-            {/* AI Analysis Dot */}
-            <SmartActionDot color="var(--premium-indigo)" title="Analyze Thought" />
-            {/* 3-dot menu */}
+            {/* AI Analysis Dot (Interactive) */}
+            <button
+              onClick={handleAnalyze}
+              className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
+              style={{
+                backgroundColor: '#06b6d4', // Cyan-500
+                opacity: 1
+              }}
+              title="Analyze with AI"
+            />
+
             <Button
               onClick={(e) => {
-                e.stopPropagation(); // Prevent card click from opening modal
+                e.stopPropagation();
                 setShowContextMenu(true);
               }}
               variant="ghost"
@@ -170,27 +221,51 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           </div>
         </CardHeader>
 
-        <CardDescription className="relative z-10 text-sm leading-relaxed line-clamp-3 px-6 pb-4" style={{ color: 'var(--premium-text-secondary)' }}>
+        <p className="text-sm leading-relaxed line-clamp-6 mb-3" style={{
+          color: 'var(--premium-text-secondary)'
+        }}>
           {memory.body}
-        </CardDescription>
+        </p>
 
-        {/* Footer with simplified date */}
-        <div className="flex items-center gap-2 text-xs pt-3 mt-3 px-6 border-t" style={{
+        <div className="flex items-center justify-between gap-2 text-xs pt-3 mt-3 border-t" style={{
           color: 'var(--premium-text-tertiary)',
           borderColor: 'rgba(255, 255, 255, 0.1)'
         }}>
-          <Calendar className="h-3 w-3" />
-          <span>{new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-        </div>
-      </GlassCard>
+          <div className="flex items-center gap-2 shrink-0">
+            <Calendar className="h-3 w-3" />
+            <span>{new Date(memory.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+          </div>
 
-      {/* Memory Detail Modal */}
+          {memory.tags && memory.tags.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-hidden justify-end min-w-0">
+              {memory.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 text-[10px] font-medium rounded-full whitespace-nowrap"
+                  style={{
+                    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+                    color: '#94a3b8'
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+              {memory.tags.length > 2 && (
+                <span className="text-[10px] opacity-40 shrink-0" style={{ color: '#94a3b8' }}>
+                  +{memory.tags.length - 2}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <MemoryDetailModal
         memory={memory}
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
       />
+      {confirmDialog}
     </>
   )
 })
-

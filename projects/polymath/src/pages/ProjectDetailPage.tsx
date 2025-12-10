@@ -115,28 +115,28 @@ export function ProjectDetailPage() {
       // 2. Fetch fresh data from API
       // If offline, this will fail, but that's okay if we have cached data
       const response = await fetch(`/api/projects?id=${id}&include_notes=true`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch project details')
       }
 
       const data = await response.json()
-      
+
       if (data.project) {
         setProject(data.project)
         if (data.notes) setNotes(data.notes)
-        
+
         // Update store with fresh data
         // useProjectStore.getState().updateProject(id, data.project)
       }
     } catch (error) {
       console.warn('[ProjectDetail] Fetch failed:', error)
-      
+
       // Only show error if we don't have cached data
       const hasCachedData = useProjectStore.getState().allProjects.some(p => p.id === id)
-      
+
       if (!hasCachedData) {
-        toast({
+        addToast({
           title: 'Error',
           description: 'Failed to load project details',
           variant: 'destructive',

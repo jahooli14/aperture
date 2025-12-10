@@ -563,7 +563,7 @@ export function ReadingPage() {
   }
 
   const tabs = [
-    { id: 'queue', label: 'Queue', count: getTabCount('queue') },
+    { id: 'queue', label: 'Inbox', count: getTabCount('queue') },
     { id: 'updates', label: 'Updates', count: getTabCount('updates') },
     { id: 'archived', label: 'Archived', count: getTabCount('archived') },
   ]
@@ -624,60 +624,61 @@ export function ReadingPage() {
   return (
     <>
       <SubtleBackground />
-      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
-        {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
-        }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-            <div className="flex items-center" style={{
-              color: 'var(--premium-blue)',
-              opacity: 0.7
-            }}>
-              <FileText className="h-7 w-7" />
+      {/* Header */}
+      <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
+        backgroundColor: 'rgba(15, 24, 41, 0.7)'
+      }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          <div className="flex items-center" style={{
+            color: 'var(--premium-blue)',
+            opacity: 0.7
+          }}>
+            <FileText className="h-7 w-7" />
+          </div>
+
+          {/* Offline Indicator */}
+          {useReadingStore(state => state.offlineMode) && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              <span className="text-xs font-medium text-amber-500">Offline Mode</span>
             </div>
+          )}
 
-            {/* Offline Indicator */}
-            {useReadingStore(state => state.offlineMode) && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="text-xs font-medium text-amber-500">Offline Mode</span>
-              </div>
-            )}
+          {/* Filter Tabs */}
+          <PremiumTabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={handleTabChange}
+            className="flex-nowrap"
+          />
 
-            {/* Filter Tabs */}
-            <PremiumTabs
-              tabs={tabs}
-              activeTab={activeTab}
-              onChange={handleTabChange}
-              className="flex-nowrap"
-            />
+          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{
+                color: 'var(--premium-blue)'
+              }}
+              title="New Article"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
 
-            <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-              <button
-                onClick={() => setShowSaveDialog(true)}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{
-                  color: 'var(--premium-blue)'
-                }}
-                title="New Article"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
-
-              <button
-                onClick={() => navigate('/search')}
-                className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{
-                  color: 'var(--premium-blue)'
-                }}
-                title="Search everything"
-              >
-                <Search className="h-5 w-5" />
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{
+                color: 'var(--premium-blue)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
           </div>
         </div>
+      </div>
+
+      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
 
         {/* Processing Indicator */}
         {processingArticles.size > 0 && (
@@ -812,10 +813,10 @@ export function ReadingPage() {
                   ) : filteredArticles.length === 0 ? (
                     <EmptyState
                       icon={BookOpen}
-                      title={activeTab === 'queue' ? 'No articles yet' : `No ${activeTab} articles`}
+                      title={activeTab === 'queue' ? 'No articles in your inbox yet' : `No ${activeTab} articles`}
                       description={
                         activeTab === 'queue'
-                          ? 'Save your first article to start building your reading queue'
+                          ? 'Save your first article to start building your inbox'
                           : `You don't have any ${activeTab} articles yet`
                       }
                       action={
@@ -835,17 +836,14 @@ export function ReadingPage() {
                     />
                   ) : (
                     <FocusableList>
-                      <Virtuoso
-                        style={{ height: 'calc(100vh - 240px)' }}
-                        data={filteredArticles}
-                        overscan={200}
-                        itemContent={(index, article) => {
+                      <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                        {filteredArticles.map((article) => {
                           const isSelected = bulkSelection.isSelected(article.id)
                           const isPending = article.id.startsWith('temp-')
 
                           return (
-                            <FocusableItem id={article.id} type="article">
-                              <div className="pb-4" style={{ contain: 'layout style paint' }}>
+                            <div key={article.id} className="mb-4 break-inside-avoid">
+                              <FocusableItem id={article.id} type="article">
                                 <div
                                   className={`relative ${bulkSelection.isSelectionMode ? 'cursor-pointer' : ''}`}
                                   onClick={(e) => {
@@ -879,41 +877,44 @@ export function ReadingPage() {
                                     />
                                   </div>
                                 </div>
-                              </div>
-                            </FocusableItem>
+                              </FocusableItem>
+                            </div>
                           )
-                        }}
-                      />
+                        })}
+                      </div>
                     </FocusableList>
                   )}
                 </>
               )}
             </div>
           </div>
-        </div>
+        </div >
 
         {/* Save Article Dialog */}
-        <SaveArticleDialog
+        < SaveArticleDialog
           open={showSaveDialog}
-          onClose={() => setShowSaveDialog(false)}
+          onClose={() => setShowSaveDialog(false)
+          }
         />
 
         {/* Connection Suggestions */}
-        {suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
-          <ConnectionSuggestion
-            suggestions={suggestions}
-            sourceType={sourceType}
-            sourceId={sourceId!}
-            onLinkCreated={(targetId, targetType) => {
-              addToast({
-                title: 'Connection created!',
-                description: `Linked to ${targetType}`,
-                variant: 'success',
-              })
-            }}
-            onDismiss={clearSuggestions}
-          />
-        )}
+        {
+          suggestions && Array.isArray(suggestions) && suggestions.length > 0 && sourceType === 'article' && (
+            <ConnectionSuggestion
+              suggestions={suggestions}
+              sourceType={sourceType}
+              sourceId={sourceId!}
+              onLinkCreated={(targetId, targetType) => {
+                addToast({
+                  title: 'Connection created!',
+                  description: `Linked to ${targetType}`,
+                  variant: 'success',
+                })
+              }}
+              onDismiss={clearSuggestions}
+            />
+          )
+        }
 
         {/* Bulk Actions Bar */}
         <BulkActionsBar
@@ -1004,7 +1005,7 @@ export function ReadingPage() {
             }
           }}
         />
-      </div>
+      </div >
     </>
   )
 }

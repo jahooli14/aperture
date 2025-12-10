@@ -24,16 +24,16 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   try {
     // 1. Try RPC first
     const { data, error } = await supabase
-      .rpc('get_random_items_with_embeddings', { 
-        user_id_param: userId, 
-        limit_param: 50 
+      .rpc('get_random_items_with_embeddings', {
+        user_id_param: userId,
+        limit_param: 50
       })
-    
+
     if (error) throw error
     items = data || []
   } catch (rpcError) {
     console.warn('[Serendipity] RPC failed (migration might be missing), falling back to manual fetch:', rpcError)
-    
+
     // Fallback: Fetch recent items from projects and thoughts manually
     const { data: projects } = await supabase
       .from('projects')
@@ -41,7 +41,7 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
       .eq('user_id', userId)
       .not('embedding', 'is', null)
       .limit(25)
-      
+
     const { data: thoughts } = await supabase
       .from('memories')
       .select('id, title, body, embedding')
@@ -68,7 +68,7 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const sim = cosineSimilarity(items[i].embedding, items[j].embedding)
-      
+
       // Relaxed Goldilocks distance
       if (sim > 0.05 && sim < 0.6) {
         // Score: Lower is better (closer to target entropy)
@@ -84,11 +84,11 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   if (candidates.length > 0) {
     // Sort by score (closest to target entropy)
     candidates.sort((a, b) => a.score - b.score)
-    
+
     // Pick random from top 10 to ensure variety (Fixes "always same 2 items")
     const topCandidates = candidates.slice(0, 10)
     const selected = topCandidates[Math.floor(Math.random() * topCandidates.length)]
-    
+
     bestPair = selected.pair
     chosenSim = selected.sim
     console.log(`[Serendipity] Picked random pair from ${candidates.length} candidates. Top 10 variety applied.`)
@@ -108,7 +108,7 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   console.log(`[Serendipity] Bridging: "${source.title}" <-> "${target.title}" (Sim: ${chosenSim.toFixed(2)})`)
 
   // 3. Generate the Bridge (Bisociation)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt = `You are a Serendipity Engine. You have found two unconnected ideas in the user's database.
   
   Item A (${source.type}): "${source.title}"
