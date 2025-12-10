@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
-import { copyFileSync } from 'fs'
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
@@ -15,21 +15,20 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      {
-        name: 'copy-service-worker',
-        closeBundle() {
-          // Copy service worker to dist after build
-          try {
-            copyFileSync(
-              path.resolve(__dirname, 'public/service-worker.js'),
-              path.resolve(__dirname, 'dist/service-worker.js')
-            )
-            console.log('✓ Service worker copied to dist/')
-          } catch (error) {
-            console.warn('⚠ Failed to copy service worker:', error)
-          }
-        }
-      }
+      VitePWA({
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
+        registerType: 'autoUpdate',
+        injectManifest: {
+          maximumFileSizeToCacheInBytes: 3000000
+        },
+        devOptions: {
+          enabled: true,
+          type: 'module'
+        },
+        manifest: false // Use existing public/manifest.json
+      })
     ],
     optimizeDeps: {
       include: ['react', 'react-dom', 'react/jsx-runtime'],

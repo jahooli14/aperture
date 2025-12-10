@@ -18,6 +18,7 @@ import { isNative } from './lib/platform'
 import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
 import { setupAutoSync } from './lib/syncManager'
+import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 
@@ -133,11 +134,16 @@ export default function App() {
     // Initial online status
     setOnlineStatus(navigator.onLine)
     updateQueueSize()
+    
+    // Start periodic data sync (pull updates)
+    dataSynchronizer.startPeriodicSync()
 
     // Track online/offline status
     const handleOnline = () => {
       console.log('[App] Connection restored')
       setOnlineStatus(true)
+      // Trigger immediate pull sync
+      dataSynchronizer.sync()
     }
 
     const handleOffline = () => {
@@ -148,7 +154,7 @@ export default function App() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    // Setup auto-sync when connection is restored
+    // Setup auto-sync (push pending changes) when connection is restored
     setupAutoSync((result) => {
       console.log('[App] Sync complete:', result)
       setSyncResult(result)
@@ -158,6 +164,7 @@ export default function App() {
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      dataSynchronizer.stopPeriodicSync()
     }
   }, [])
 
