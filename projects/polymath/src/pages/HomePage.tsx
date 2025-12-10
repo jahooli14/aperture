@@ -384,7 +384,7 @@ function InsightsSection() {
             Your <span style={{ color: 'var(--premium-blue)' }}>insights</span>
           </h2>
           <button
-            onClick={() => fetchInsights(true)}
+            onClick={() => loadInsights(true)}
             disabled={refreshing}
             className="h-8 w-8 rounded-lg flex items-center justify-center transition-all hover:bg-white/5"
             style={{ color: 'var(--premium-text-tertiary)' }}
@@ -516,7 +516,7 @@ export function HomePage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
-  
+
   // Serendipity State
   const [serendipityOpen, setSerendipityOpen] = useState(false)
   const [serendipityData, setSerendipityData] = useState<any>(null)
@@ -962,10 +962,10 @@ export function HomePage() {
 
         {/* Drift Mode Overlay */}
         {driftModeOpen && (
-          <DriftMode 
+          <DriftMode
             mode="break"
-            prompts={breakPrompts} 
-            onClose={() => setDriftModeOpen(false)} 
+            prompts={breakPrompts}
+            onClose={() => setDriftModeOpen(false)}
           />
         )}
 

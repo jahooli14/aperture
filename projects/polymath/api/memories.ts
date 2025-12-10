@@ -199,7 +199,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   try {
     // Configure Gemini with Structured Outputs (JSON Schema)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 300,
@@ -229,14 +229,14 @@ Return valid JSON.`
     const result = await model.generateContent(prompt)
     const response = result.response
     const jsonText = response.text()
-    
+
     console.log('[handleCapture] Gemini response:', jsonText)
-    
+
     try {
       // Robust JSON extraction
       const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
-      
+
       if (parsed.title && parsed.bullets) {
         parsedTitle = parsed.title
         parsedBullets = parsed.bullets
@@ -861,13 +861,13 @@ async function searchMemories(query: string, supabase: any, userId: string, embe
 
     return (data || []).map(memory => {
       let score = calculateTextScore(query, memory.title, memory.body)
-      
+
       // Boost score if vector similarity matches
       if (embedding && memory.embedding) {
         const similarity = cosineSimilarity(embedding, memory.embedding)
         score += similarity * 100 // Add up to 100 points for perfect vector match
       }
-      
+
       return {
         type: 'memory',
         id: memory.id,
@@ -903,12 +903,12 @@ async function searchProjects(query: string, supabase: any, userId: string, embe
 
     return (data || []).map(project => {
       let score = calculateTextScore(query, project.title, project.description)
-      
+
       if (embedding && project.embedding) {
         const similarity = cosineSimilarity(embedding, project.embedding)
         score += similarity * 100
       }
-      
+
       return {
         type: 'project',
         id: project.id,
@@ -930,7 +930,7 @@ async function searchProjects(query: string, supabase: any, userId: string, embe
  */
 async function searchArticles(query: string, supabase: any, userId: string, embedding?: number[]): Promise<SearchResult[]> {
   try {
-    const { data, error} = await supabase
+    const { data, error } = await supabase
       .from('reading_queue')
       .select('*')
       .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%`)
@@ -943,12 +943,12 @@ async function searchArticles(query: string, supabase: any, userId: string, embe
 
     return (data || []).map(article => {
       let score = calculateTextScore(query, article.title, article.excerpt)
-      
+
       if (embedding && article.embedding) {
         const similarity = cosineSimilarity(embedding, article.embedding)
         score += similarity * 100
       }
-      
+
       return {
         type: 'article',
         id: article.id,
@@ -1072,7 +1072,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     // We import dynamically to avoid circular dependencies if any, but static import is available at top
     try {
       // Fire and forget processing
-      processMemory(memoryId).catch(err => 
+      processMemory(memoryId).catch(err =>
         console.error('[handleUpdate] Background processing failed:', err)
       )
     } catch (e) {
@@ -1129,7 +1129,7 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
     const base64Data = fileData.toString('base64')
 
     // Use Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     let prompt = ''
     if (isImage) {

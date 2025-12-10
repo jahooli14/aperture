@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
-import { useTheme } from '../../context/ThemeContext'; // Assuming this exists, or I'll mock it
+import { useTheme } from '../../hooks/useTheme';
 import * as THREE from 'three';
 import SpriteText from 'three-spritetext';
 

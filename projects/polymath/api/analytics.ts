@@ -234,7 +234,7 @@ async function getSynthesisEvolution() {
   // Process top topics in parallel
   const evolutionPromises = sortedTopics.map(async ([topic, mems]) => {
     // Ask AI to analyze evolution
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const memoryTexts = mems
       .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
@@ -291,7 +291,7 @@ Return JSON:
       .map(p => `- ${p.title}: ${p.abandoned_reason || 'No reason given'}`)
       .join('\n')
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const patternPrompt = `Analyze project abandonment patterns:
 
@@ -484,7 +484,7 @@ async function getCreativeOpportunities() {
   const interestsText = interests.slice(0, 10).join(', ')
   const projectsText = projects?.map(p => `- ${p.title} (${p.status}${p.abandoned_reason ? ', abandoned: ' + p.abandoned_reason : ''})`).join('\n') || 'No projects yet'
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const prompt = `You are a creative intelligence engine helping someone with a 9-5 job identify side project opportunities.
 
@@ -605,7 +605,7 @@ async function getShadowProjects() {
   const projectTitles = new Set(projects?.map(p => p.title.toLowerCase()) || [])
 
   // Use Gemini to cluster and identify
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const items = [
     ...(memories || []).map(m => `Memory: ${m.title} [${m.themes?.join(', ')}]`),
@@ -637,7 +637,7 @@ async function getShadowProjects() {
     const text = result.response.text()
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (!jsonMatch) return { shadow_projects: [] }
-    
+
     const shadows = JSON.parse(jsonMatch[0])
     return { shadow_projects: shadows }
   } catch (e) {
@@ -708,7 +708,7 @@ async function getSmartSuggestion() {
   if (timeOfDay === 'morning' && !isWeekend) {
     const freshProjects = projects.filter(p => {
       const nextTask = getNextTask(p)
-      
+
       // If task has energy level, prioritize that
       if (nextTask?.energy_level) {
         return nextTask.energy_level === 'high' || nextTask.energy_level === 'moderate'
@@ -758,12 +758,12 @@ async function getSmartSuggestion() {
   if (timeOfDay === 'evening') {
     const quickProjects = projects.filter(p => {
       const nextTask = getNextTask(p)
-      
+
       // If task has energy level, prioritize that
       if (nextTask?.energy_level) {
         return nextTask.energy_level === 'low'
       }
-      
+
       // Fallback to project level
       return (
         p.estimated_next_step_time &&

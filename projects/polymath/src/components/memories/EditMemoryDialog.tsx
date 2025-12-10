@@ -25,9 +25,10 @@ interface EditMemoryDialogProps {
   memory: Memory | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onMemoryUpdated?: () => void
 }
 
-export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialogProps) {
+export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }: EditMemoryDialogProps) {
   const [loading, setLoading] = useState(false)
   const { updateMemory } = useMemoryStore()
   const { addToast } = useToast()
@@ -75,6 +76,8 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
         variant: 'success',
       })
 
+      onMemoryUpdated?.()
+
       onOpenChange(false)
     } catch (error) {
       addToast({
@@ -103,132 +106,132 @@ export function EditMemoryDialog({ memory, open, onOpenChange }: EditMemoryDialo
         </BottomSheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Title <span style={{ color: '#ef4444' }}>*</span>
-              </Label>
-              <Input
-                id="title"
-                placeholder="What's this about?"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
-            </div>
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              Title <span style={{ color: '#ef4444' }}>*</span>
+            </Label>
+            <Input
+              id="title"
+              placeholder="What's this about?"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              required
+              className="text-base h-11 sm:h-12"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-primary)'
+              }}
+              autoComplete="off"
+            />
+          </div>
 
-            {/* Body Content */}
-            <div className="space-y-2">
-              <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Content <span style={{ color: '#ef4444' }}>*</span>
-              </Label>
-              <Textarea
-                id="body"
-                placeholder="Write your thoughts..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                required
-                className="text-base min-h-[200px] resize-y leading-relaxed p-4"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-              />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                AI will analyze this to extract entities and themes.
-              </p>
-            </div>
+          {/* Body Content */}
+          <div className="space-y-2">
+            <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              Content <span style={{ color: '#ef4444' }}>*</span>
+            </Label>
+            <Textarea
+              id="body"
+              placeholder="Write your thoughts..."
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              required
+              className="text-base min-h-[200px] resize-y leading-relaxed p-4"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-primary)'
+              }}
+            />
+            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              AI will analyze this to extract entities and themes.
+            </p>
+          </div>
 
-            {/* Memory Type */}
-            <div className="space-y-2">
-              <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Type (Optional)
-              </Label>
-              <Select
-                id="memory_type"
-                value={formData.memory_type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
-                  })
-                }
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-              >
-                <option value="">Auto-detect</option>
-                <option value="foundational">Foundational - Core knowledge</option>
-                <option value="event">Event - Something that happened</option>
-                <option value="insight">Insight - Realization or learning</option>
-                <option value="quick-note">Quick Note - Lightweight thought</option>
-              </Select>
-            </div>
+          {/* Memory Type */}
+          <div className="space-y-2">
+            <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              Type (Optional)
+            </Label>
+            <Select
+              id="memory_type"
+              value={formData.memory_type}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
+                })
+              }
+              className="text-base h-11 sm:h-12"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-primary)'
+              }}
+            >
+              <option value="">Auto-detect</option>
+              <option value="foundational">Foundational - Core knowledge</option>
+              <option value="event">Event - Something that happened</option>
+              <option value="insight">Insight - Realization or learning</option>
+              <option value="quick-note">Quick Note - Lightweight thought</option>
+            </Select>
+          </div>
 
-            {/* Tags */}
-            <div className="space-y-2 pb-4">
-              <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Tags (Optional)
-              </Label>
-              <Input
-                id="tags"
-                placeholder="ai, programming, health"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Comma-separated tags to categorize this memory
-              </p>
-            </div>
+          {/* Tags */}
+          <div className="space-y-2 pb-4">
+            <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
+              Tags (Optional)
+            </Label>
+            <Input
+              id="tags"
+              placeholder="ai, programming, health"
+              value={formData.tags}
+              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+              className="text-base h-11 sm:h-12"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'var(--premium-text-primary)'
+              }}
+              autoComplete="off"
+            />
+            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              Comma-separated tags to categorize this memory
+            </p>
+          </div>
 
-            <BottomSheetFooter>
-              <Button
-                type="submit"
-                disabled={loading || !formData.title || !body.trim()}
-                className="btn-primary w-full h-12 touch-manipulation"
-              >
-                {loading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={loading}
-                className="w-full h-12 touch-manipulation"
-              >
-                Cancel
-              </Button>
-            </BottomSheetFooter>
-          </form>
-        </BottomSheetContent>
-      </BottomSheet>
+          <BottomSheetFooter>
+            <Button
+              type="submit"
+              disabled={loading || !formData.title || !body.trim()}
+              className="btn-primary w-full h-12 touch-manipulation"
+            >
+              {loading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+              className="w-full h-12 touch-manipulation"
+            >
+              Cancel
+            </Button>
+          </BottomSheetFooter>
+        </form>
+      </BottomSheetContent>
+    </BottomSheet>
   )
 }

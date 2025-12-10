@@ -11,7 +11,7 @@ returns trigger as $$
 declare
   -- REPLACEME: Update this URL to your deployed Vercel project URL
   -- Example: 'https://your-project.vercel.app/api/memories?action=process'
-  project_url text := 'https://YOUR_VERCEL_PROJECT_URL.vercel.app/api/memories?action=process';
+  project_url text := 'https://clandestined.vercel.app/api/memories?action=process';
   
   -- Secret token for security (Optional: add checking in your API if desired)
   api_secret text := 'your-shared-secret';

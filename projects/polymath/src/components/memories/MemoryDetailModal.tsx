@@ -13,6 +13,8 @@ import { EditMemoryDialog } from './EditMemoryDialog'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
 
+import { useContextEngineStore } from '../../stores/useContextEngineStore'
+
 interface MemoryDetailModalProps {
   memory: Memory | null
   isOpen: boolean
@@ -24,6 +26,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const deleteMemory = useMemoryStore((state) => state.deleteMemory)
   const fetchBridgesForMemory = useMemoryStore((state) => state.fetchBridgesForMemory)
+  const { setContext, toggleSidebar } = useContextEngineStore()
 
   const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
@@ -70,6 +73,14 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
     setBridgesFetched(true);
   }, [memory, fetchBridgesForMemory, bridgesCache]);
 
+  const handleAnalyze = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!memory) return
+    // Set context for the side panel AI
+    setContext('memory', memory.id, memory.title, `${memory.title}\n\n${memory.body}`)
+    toggleSidebar(true)
+  }
+
   const handleDelete = async () => {
     if (!memory) return;
 
@@ -86,7 +97,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
         await deleteMemory(memory.id);
         addToast({
           title: 'Thought deleted',
-          description: `"${memory.title}" has been removed.`, 
+          description: `"${memory.title}" has been removed.`,
           variant: 'success',
         });
         onClose(); // Close modal after deletion
@@ -131,13 +142,15 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   }, [memory, handleCopyText]);
 
 
+  // Move hook above conditional returns to satisfy React rules
+  const memoryContent = useMemo(() => memory ? `${memory.title}\n\n${memory.body}` : '', [memory]);
+
   if (!isOpen) return null;
   if (!memory) {
-    onClose(); // Should not happen if isOpen is true, but just in case
+    // We shouldn't effect state (onClose) during render, so removing it or wrapping in useEffect if really needed. 
+    // But since this is a safeguard, just returning null is safer.
     return null;
   }
-
-  const memoryContent = useMemo(() => `${memory.title}\n\n${memory.body}`, [memory.title, memory.body]);
 
   return (
     <AnimatePresence>
@@ -146,16 +159,19 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
           onClick={onClose}
         >
           <motion.div
-            initial={{ y: 50, opacity: 0, scale: 0.95 }}
+            initial={{ y: 20, opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 50, opacity: 0, scale: 0.95 }}
+            exit={{ y: 20, opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl p-6 shadow-2xl overflow-y-auto"
-            style={{ background: 'var(--premium-bg-2)' }}
+            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl p-6 shadow-2xl overflow-y-auto"
+            style={{
+              backgroundColor: '#0f1829', // Solid dark background for readability
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}
             onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
           >
             <button
@@ -172,7 +188,17 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 {memory.title}
               </h2>
               <div className="flex items-center gap-2">
-                <SmartActionDot color="var(--premium-indigo)" title="Analyze Memory" />
+                {/* AI Analysis Dot (Interactive, Cyan) */}
+                <button
+                  onClick={handleAnalyze}
+                  className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
+                  style={{
+                    backgroundColor: '#06b6d4', // Cyan-500
+                    opacity: 1
+                  }}
+                  title="Analyze with AI"
+                />
+
                 <button
                   onClick={() => setEditDialogOpen(true)}
                   className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -205,8 +231,9 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                     key={tag}
                     className="px-3 py-1 text-xs font-medium rounded-full"
                     style={{
-                      backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                      color: 'var(--premium-indigo)'
+                      // Understated Slate/Gray styling
+                      backgroundColor: 'rgba(148, 163, 184, 0.1)', // Slate-400 at 10% opacity
+                      color: '#94a3b8' // Slate-400
                     }}
                   >
                     {tag}
@@ -214,7 +241,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 ))}
               </div>
             )}
-            
+
             {/* Connections Section */}
             <div className="mt-8 pt-6 border-t border-white/10">
               <h3 className="text-lg font-bold premium-text-platinum mb-4">
@@ -245,7 +272,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
           {confirmDialog}
         </motion.div>
       )}
-       <EditMemoryDialog
+      <EditMemoryDialog
         memory={memory}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}

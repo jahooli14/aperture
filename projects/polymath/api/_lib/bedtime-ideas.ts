@@ -14,7 +14,7 @@ export interface MorningBriefing {
   greeting: string
   focus_project: { id: string, title: string, next_step: string, unblocker?: string } | null
   quick_win: { id: string, title: string } | null
-  forgotten_gem: { type: 'article'|'thought', title: string, snippet: string, relevance: string } | null
+  forgotten_gem: { type: 'article' | 'thought', title: string, snippet: string, relevance: string } | null
 }
 
 export interface BedtimePrompt {
@@ -27,7 +27,7 @@ export interface BedtimePrompt {
 
 export async function generateBreakPrompts(userId: string): Promise<BedtimePrompt[]> {
   console.log(`[Bedtime] Generating break prompts for user ${userId}`)
-  
+
   const activeProjects = await getActiveProjects(userId)
   const capabilities = await getCapabilities(userId)
 
@@ -57,12 +57,12 @@ export async function generateBreakPrompts(userId: string): Promise<BedtimePromp
   ]`
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
     const result = await model.generateContent(prompt)
     const text = result.response.text()
     const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
     const prompts = jsonMatch ? JSON.parse(jsonMatch[0]) : []
-    
+
     return prompts.map((p: any) => ({
       ...p,
       relatedIds: [],
@@ -82,7 +82,7 @@ export async function generateBreakPrompts(userId: string): Promise<BedtimePromp
  * Generate Catalyst prompts from 2-3 specific inputs
  */
 export async function generateCatalystPrompts(
-  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>, 
+  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
   userId: string
 ): Promise<BedtimePrompt[]> {
   console.log(`[Bedtime] Generating catalyst prompts for user ${userId} with ${inputs.length} inputs`)
@@ -255,10 +255,10 @@ async function getOldInsights(userId: string, daysAgo: number) {
 }
 
 async function generateCatalystPromptsWithAI(
-  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string } >,
+  inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
   userId: string
 ): Promise<BedtimePrompt[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   if (!inputs || inputs.length === 0) {
     throw new Error('At least one input required')
@@ -317,7 +317,7 @@ async function generatePromptsWithAI(
   },
   performance?: any
 ): Promise<BedtimePrompt[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const allThemes = recentMemories
     .flatMap(m => m.themes || [])
@@ -427,8 +427,8 @@ async function getPromptPerformance(userId: string) {
 }
 
 export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
-  
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
   const projects = await getActiveProjects(userId)
   const projectContext = projects.map((p: any) => `${p.title} (${p.status})`).join(', ')
 
@@ -442,23 +442,23 @@ export async function generateMorningBriefing(userId: string): Promise<MorningBr
     "quick_win": { "id": "...", "title": "..." },
     "forgotten_gem": null
   }`
-  
+
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
     const jsonMatch = text.match(/\{[\s\S]*\}/) // Corrected escape for regex
     if (!jsonMatch) throw new Error('Invalid JSON')
-    
+
     const data = JSON.parse(jsonMatch[0])
     return data
   } catch (e) {
     return {
       greeting: "Good morning!",
-      focus_project: projects[0] ? { 
-        id: projects[0].id, 
-        title: projects[0].title, 
-        next_step: "Review current status", 
-        unblocker: "Break it down" 
+      focus_project: projects[0] ? {
+        id: projects[0].id,
+        title: projects[0].title,
+        next_step: "Review current status",
+        unblocker: "Break it down"
       } : null,
       quick_win: null,
       forgotten_gem: null

@@ -18,7 +18,7 @@ import { SmartActionDot } from '../SmartActionDot'
 import { Button } from '../ui/button'
 
 interface ArticleCardProps {
-  article: Article
+  article: Article & { is_rotting?: boolean } // Add is_rotting to Article type
   onClick?: () => void
 }
 
@@ -34,6 +34,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
   const { isCached: isArticleFullyCached } = useOfflineArticle()
+  const { is_rotting } = article; // Destructure is_rotting
 
   // Clean excerpt logic
   const cleanExcerpt = (text: string | undefined | null): string | undefined => {
@@ -170,44 +171,83 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         title={article.title || 'Article'}
       />
 
-      <GlassCard variant="muted" onClick={onClick}>
-        {/* Header: Thumbnail + Title + Actions */}
+      <div
+        onClick={onClick}
+        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative"
+        style={{
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)';
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        }}
+      >
+        {/* Row 1: Title & Menu */}
         <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
-          {/* Thumbnail */}
-          {article.thumbnail_url && (
-            <div className="flex-shrink-0">
-              <Thumbnail
-                src={article.thumbnail_url}
-                alt={article.title || 'Article thumbnail'}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover"
-                aspectRatio="1/1"
-              />
-            </div>
-          )}
-
-          {/* Title & Source */}
           <div className="flex-1 min-w-0">
             {article.title?.startsWith('http') ? (
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
                 <span className="text-sm font-medium text-blue-400">Extracting...</span>
               </div>
             ) : (
-              <h3 className="text-lg font-bold leading-tight line-clamp-2 mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="text-lg font-bold leading-tight line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                 {article.title || 'Untitled'}
               </h3>
             )}
-            <div className="text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
               {article.source || new URL(article.url).hostname.replace('www.', '')}
             </div>
           </div>
 
-          {/* Actions & Status */}
-          <div className="flex flex-col items-end gap-2">
+          {/* 3-Dot Menu (only item in header) */}
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowContextMenu(true)
+            }}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-white/10 shrink-0 -mr-2 -mt-1"
+          >
+            <MoreVertical className="h-4 w-4 text-gray-400" />
+          </Button>
+        </div>
+
+        {/* Row 2: Image & Meta/Icons */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          {/* Thumbnail (Left) */}
+          {article.thumbnail_url ? (
+            <div className="flex-shrink-0">
+              <Thumbnail
+                src={article.thumbnail_url}
+                alt={article.title || 'Article thumbnail'}
+                className="w-16 h-16 rounded-lg object-cover"
+                aspectRatio="1/1"
+              />
+            </div>
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center">
+              <div className="text-2xl opacity-20">📄</div>
+            </div>
+          )}
+
+          {/* Right Column: Icons (Top) + Meta (Bottom) */}
+          <div className="flex-1 flex flex-col items-end justify-between h-16">
+            {/* Icons Row */}
             <div className="flex items-center gap-1">
               <SuggestionBadge itemId={article.id} itemType="article" />
-              
-              {/* Offline Status */}
+
               {isContentFullyCached ? (
                 <div className="p-1 rounded-full bg-blue-500/10 text-blue-400" title="Fully available offline">
                   <Download className="h-3 w-3" />
@@ -218,52 +258,20 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 </div>
               ) : null}
 
-              {/* Pin */}
               <PinButton type="article" id={article.id} title={article.title || 'Article'} content={<></>} />
 
-              {/* Smart Dot */}
-              <SmartActionDot color="var(--premium-blue)" title="AI Analysis" />
-
-              {/* 3-Dot Menu */}
-              <Button
+              <button
+                className="w-2 h-2 rounded-full mx-1 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
+                style={{ backgroundColor: '#06b6d4' }}
+                title="AI Analysis"
                 onClick={(e) => {
                   e.stopPropagation()
-                  setShowContextMenu(true)
                 }}
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-white/10"
-              >
-                <MoreVertical className="h-4 w-4 text-gray-400" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Separator */}
-        <div className="h-px w-full my-3" style={{ background: 'rgba(255,255,255,0.05)' }} />
-
-        {/* Excerpt */}
-        {cleanExcerpt(article.excerpt) && (
-          <p className="text-sm line-clamp-3 mb-4 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-            {cleanExcerpt(article.excerpt)}
-          </p>
-        )}
-
-        {/* Footer: Progress & Metadata */}
-        <div className="space-y-3">
-          {/* Progress Bar */}
-          {progress > 0 && (
-            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-500" 
-                style={{ width: `${progress}%` }} 
               />
             </div>
-          )}
 
-          <div className="flex items-center justify-between text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-            <div className="flex items-center gap-3">
+            {/* Meta Text */}
+            <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
               {article.read_time_minutes && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -274,10 +282,26 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                 {article.created_at ? format(new Date(article.created_at), 'MMM d') : 'Recent'}
               </span>
             </div>
-            {/* Tags could go here if needed, but keeping it clean for now */}
           </div>
         </div>
-      </GlassCard>
+
+        {/* Row 3: Excerpt */}
+        {cleanExcerpt(article.excerpt) && (
+          <p className="text-sm line-clamp-4 mb-3 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
+            {cleanExcerpt(article.excerpt)}
+          </p>
+        )}
+
+        {/* Row 4: Progress Bar */}
+        {progress > 0 && (
+          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-auto">
+            <div
+              className="h-full bg-blue-500 transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
+      </div>
 
       <EditArticleDialog
         article={article}

@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function analyzeTaskEnergy(taskText: string): Promise<'low' | 'moderate' | 'high'> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const prompt = `Analyze the cognitive load and energy required for this task: "${taskText}"
 
@@ -18,7 +18,7 @@ Return ONLY the classification word: low, moderate, or high.`
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text().trim().toLowerCase()
-    
+
     if (text.includes('high')) return 'high'
     if (text.includes('low')) return 'low'
     return 'moderate'

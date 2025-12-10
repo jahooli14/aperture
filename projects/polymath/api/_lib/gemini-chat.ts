@@ -28,8 +28,8 @@ export async function generateText(
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash',
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -92,8 +92,8 @@ Source ${sourceType}: "${sourceContent.slice(0, 500)}"
 
 Related items found (sorted by relevance):
 ${matches.map((m, i) =>
-  `${i+1}. [${m.type}] "${m.title}" (${(m.similarity * 100).toFixed(0)}% match)`
-).join('\n')}
+    `${i + 1}. [${m.type}] "${m.title}" (${(m.similarity * 100).toFixed(0)}% match)`
+  ).join('\n')}
 
 For each item, write ONE concise sentence (max 15 words) explaining why it's relevant to the source.
 
