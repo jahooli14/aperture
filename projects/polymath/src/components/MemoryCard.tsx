@@ -14,8 +14,8 @@ import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 // import { ConnectionsList } from './connections/ConnectionsList' // Moved to modal
 
 import { GlassCard } from './ui/GlassCard'
-import { SmartActionDot } from '../SmartActionDot'
-import { MemoryDetailModal } from '../memories/MemoryDetailModal' // Import the new modal
+import { SmartActionDot } from './SmartActionDot'
+import { MemoryDetailModal } from './memories/MemoryDetailModal' // Import the new modal
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
 const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
