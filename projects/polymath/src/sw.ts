@@ -1,45 +1,39 @@
-/**
- * Service Worker for Polymath PWA
- * Enables offline support and background sync
- */
+/// <reference lib="webworker" />
+import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
+import { clientsClaim } from 'workbox-core'
+import { NavigationRoute, registerRoute } from 'workbox-routing'
 
-// Update this version when you want to trigger a new service worker
-const VERSION = '1.0.6-share-fix'
-const CACHE_NAME = `polymath-v${VERSION}`
-const RUNTIME_CACHE = `polymath-runtime-v${VERSION}`
+declare let self: ServiceWorkerGlobalScope
 
-// Assets to cache on install
-const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-]
+// Clean up old caches
+cleanupOutdatedCaches()
 
-// Install event - cache core assets
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(PRECACHE_ASSETS))
-      .then(() => self.skipWaiting())
-  )
-})
+// Precache build assets (JS, CSS, HTML)
+precacheAndRoute(self.__WB_MANIFEST)
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames
-            .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
-            .map((name) => caches.delete(name))
-        )
-      })
-      .then(() => self.clients.claim())
-  )
-})
+// Take control immediately
+self.skipWaiting()
+clientsClaim()
 
-// Fetch event - network first, fall back to cache
+// Handle Single Page App navigation (serve index.html for non-API routes)
+registerRoute(
+  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
+    allowlist: [
+      // Allow navigation to everything except API and specific file extensions
+      /^(?!\/api\/).*/,
+    ],
+    denylist: [
+      // Ignore API routes
+      /^\/api\//,
+      // Ignore specific file extensions (images, etc - let them hit network/cache)
+      /\.[a-z0-9]{2,4}$/i
+    ]
+  })
+)
+
+// --- Custom Logic (Share Target & Sync) ---
+
+// Fetch event - handle share target and specific API overrides
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
@@ -197,59 +191,27 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
-
-  // Skip non-GET requests
-  if (request.method !== 'GET') return
-
-  // Skip API calls from caching (always go to network)
-  if (request.url.includes('/api/')) {
-    event.respondWith(fetch(request))
-    return
-  }
-
-  // Network first strategy for everything else
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        // Cache successful responses
-        if (response.ok) {
-          const responseClone = response.clone()
-          caches.open(RUNTIME_CACHE)
-            .then((cache) => cache.put(request, responseClone))
-        }
-        return response
-      })
-      .catch(() => {
-        // Fall back to cache on network failure
-        return caches.match(request)
-          .then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse
-            }
-            // Return offline page for navigation requests
-            if (request.mode === 'navigate') {
-              return caches.match('/')
-            }
-            return new Response('Offline', { status: 503 })
-          })
-      })
-  )
+  
+  // Note: We don't need to handle other fetch requests here; Workbox handles caching.
+  // API requests fall through to network (not in NavigationRoute allowlist).
 })
 
 // Background sync for offline voice notes
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-voice-notes') {
-    event.waitUntil(syncVoiceNotes())
+  if (event.tag === 'sync-captures') {
+    event.waitUntil(syncCaptures())
   }
 })
 
-async function syncVoiceNotes() {
-  // Get pending voice notes from IndexedDB
+async function syncCaptures() {
+  console.log('[ServiceWorker] Starting background sync for captures...')
   const db = await openDB()
   const pendingNotes = await db.getAll('pending-notes')
+  console.log(`[ServiceWorker] Found ${pendingNotes.length} pending captures.`)
 
   for (const note of pendingNotes) {
     try {
+      console.log(`[ServiceWorker] Attempting to sync capture with ID: ${note.id}`)
       await fetch('/api/memories?capture=true', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -257,11 +219,13 @@ async function syncVoiceNotes() {
       })
       // Remove from pending queue on success
       await db.delete('pending-notes', note.id)
+      console.log(`[ServiceWorker] Successfully synced and removed capture with ID: ${note.id}`)
     } catch (error) {
-      console.error('Failed to sync note:', error)
+      console.error(`[ServiceWorker] Failed to sync capture with ID: ${note.id}. Error:`, error)
       // Keep in queue for next sync
     }
   }
+  console.log('[ServiceWorker] Background sync for captures finished.')
 }
 
 // Helper: Open IndexedDB

@@ -227,6 +227,15 @@ export class RosetteDatabase extends Dexie {
     })
   }
 
+  async bulkCacheMemories(memories: Omit<CachedMemory, 'cached_at'>[]): Promise<void> {
+    const timestamp = Date.now()
+    const cachedMemories = memories.map(m => ({
+      ...m,
+      cached_at: timestamp
+    }))
+    await this.memories.bulkPut(cachedMemories)
+  }
+
   async getCachedMemories(): Promise<CachedMemory[]> {
     return await this.memories.toArray()
   }

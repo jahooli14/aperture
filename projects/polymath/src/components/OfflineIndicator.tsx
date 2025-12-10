@@ -10,7 +10,7 @@ import { syncPendingOperations } from '../lib/syncManager'
 import { clearQueue } from '../lib/offlineQueue'
 
 export function OfflineIndicator() {
-  const { isOnline, isSyncing, queueSize, lastSyncTime, setSyncing, updateQueueSize, setSyncResult } = useOfflineStore()
+  const { isOnline, isSyncing, isPulling, queueSize, lastSyncTime, setSyncing, updateQueueSize, setSyncResult } = useOfflineStore()
   const [isExpanded, setIsExpanded] = useState(false)
   const [wasOffline, setWasOffline] = useState(false)
 
@@ -25,9 +25,21 @@ export function OfflineIndicator() {
     }
   }, [isOnline, queueSize, wasOffline])
 
-  // Don't show anything if online and no pending items
-  if (isOnline && queueSize === 0 && !wasOffline) {
+  // Don't show anything if online and no pending items and not pulling
+  if (isOnline && queueSize === 0 && !wasOffline && !isPulling) {
     return null
+  }
+
+  // Show Pulling (Updating) Status
+  if (isPulling && isOnline) {
+    return (
+      <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
+        <div className="flex items-center gap-2 px-4 py-2 bg-neutral-800/80 backdrop-blur text-white rounded-lg shadow-lg border border-white/10">
+          <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />
+          <span className="font-medium text-sm">Updating...</span>
+        </div>
+      </div>
+    )
   }
 
   // Show "Back online" message briefly

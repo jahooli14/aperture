@@ -44,12 +44,68 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     // Skip if we have recent data and not forcing refresh
     if (!force && state.memories.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
-      console.log('[MemoryStore] Using cached memories')
+      console.log('[MemoryStore] Using cached memories (Zustand)')
       return
     }
 
-    // Only set loading if we're actually fetching
     set({ loading: true, error: null })
+
+    // Helper to load from offline DB
+    const loadFromOfflineDB = async () => {
+      console.log('[MemoryStore] Loading memories from offline DB...')
+      try {
+        const { readingDb } = await import('../lib/db')
+        const cached = await readingDb.getCachedMemories()
+        
+        // Map cached memories (Dexie) to Memory type (Supabase)
+        // Note: CachedMemory has 'created_at' which maps to 'audiopen_created_at'
+        const mappedMemories: Memory[] = cached.map(c => ({
+          id: c.id,
+          title: c.title,
+          body: c.body,
+          tags: c.tags,
+          themes: c.themes,
+          created_at: c.created_at, // Required by Memory type
+          audiopen_created_at: c.created_at, // Mapping back
+          audiopen_id: c.id,
+          orig_transcript: c.body,
+          processed: true, // Assume processed if cached
+          // Default optional fields
+          memory_type: null,
+          entities: null,
+          emotional_tone: null,
+          embedding: null,
+          processed_at: null,
+          error: null,
+          last_reviewed_at: null,
+          review_count: 0,
+          source_reference: null
+        }))
+
+        // Sort by date desc
+        const sorted = mappedMemories.sort((a, b) => 
+          new Date(b.audiopen_created_at).getTime() - new Date(a.audiopen_created_at).getTime()
+        )
+        
+        set({ 
+          memories: sorted, 
+          loading: false, 
+          lastFetched: Date.now(),
+          error: null 
+        })
+        return true
+      } catch (err) {
+        console.error('[MemoryStore] Failed to load offline memories:', err)
+        return false
+      }
+    }
+
+    // Check offline status first
+    const { isOnline } = useOfflineStore.getState()
+    if (!isOnline) {
+      await loadFromOfflineDB()
+      return
+    }
 
     try {
       // Single-user app - no user_id filtering needed in DB
@@ -59,6 +115,22 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         .order('created_at', { ascending: false })
 
       if (error) throw error
+
+      // Cache the fetched data for offline use
+      if (data && data.length > 0) {
+        import('../lib/db').then(({ readingDb }) => {
+          const memoriesToCache = data.map(m => ({
+            id: m.id,
+            title: m.title || 'Untitled',
+            body: m.body || '',
+            tags: m.tags || [],
+            themes: m.themes || [],
+            created_at: m.audiopen_created_at || new Date().toISOString()
+          }))
+          readingDb.bulkCacheMemories(memoriesToCache)
+            .catch(e => console.warn('[MemoryStore] Failed to cache memories:', e))
+        })
+      }
 
       // Preserve optimistic memories
       const currentMemories = get().memories
@@ -72,10 +144,15 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       set({ memories: newMemories, loading: false, lastFetched: now })
     } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : 'Failed to fetch memories',
-        loading: false,
-      })
+      console.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
+      
+      const loadedOffline = await loadFromOfflineDB()
+      if (!loadedOffline) {
+        set({
+          error: error instanceof Error ? error.message : 'Failed to fetch memories',
+          loading: false,
+        })
+      }
     }
   },
 

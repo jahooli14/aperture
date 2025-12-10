@@ -8,7 +8,8 @@ import { getQueueSize } from '../lib/offlineQueue'
 
 interface OfflineState {
   isOnline: boolean
-  isSyncing: boolean
+  isSyncing: boolean // Push sync (uploading changes)
+  isPulling: boolean // Pull sync (downloading updates)
   queueSize: number
   lastSyncTime: number | null
   lastSyncResult: {
@@ -20,6 +21,7 @@ interface OfflineState {
   // Actions
   setOnlineStatus: (isOnline: boolean) => void
   setSyncing: (isSyncing: boolean) => void
+  setPulling: (isPulling: boolean) => void
   updateQueueSize: () => Promise<void>
   setSyncResult: (result: { success: number; failed: number; total: number }) => void
 }
@@ -27,6 +29,7 @@ interface OfflineState {
 export const useOfflineStore = create<OfflineState>((set) => ({
   isOnline: navigator.onLine,
   isSyncing: false,
+  isPulling: false,
   queueSize: 0,
   lastSyncTime: null,
   lastSyncResult: null,
@@ -34,6 +37,8 @@ export const useOfflineStore = create<OfflineState>((set) => ({
   setOnlineStatus: (isOnline) => set({ isOnline }),
 
   setSyncing: (isSyncing) => set({ isSyncing }),
+  
+  setPulling: (isPulling) => set({ isPulling }),
 
   updateQueueSize: async () => {
     const size = await getQueueSize()
