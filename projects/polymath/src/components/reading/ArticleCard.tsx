@@ -1,16 +1,11 @@
-/**
- * Article Card Component
- * Displays a saved article in the reading queue with offline status
- */
-
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, Wifi } from 'lucide-react'
+import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
-import { readingDb } from '../../lib/db'
+import { readingDb } from '../../lib/db' // Keep for direct db access if needed for metadata check
 import { haptic } from '../../utils/haptics'
 import { useLongPress } from '../../hooks/useLongPress'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
@@ -19,6 +14,7 @@ import { PinButton } from '../PinButton'
 import { SuggestionBadge } from '../SuggestionBadge'
 import { EditArticleDialog } from './EditArticleDialog'
 import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
+import { useOfflineArticle } from '../../hooks/useOfflineArticle' // Import useOfflineArticle
 
 interface ArticleCardProps {
   article: Article
@@ -28,12 +24,15 @@ interface ArticleCardProps {
 export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
   const { addToast } = useToast()
-  const [isOffline, setIsOffline] = useState(false)
+  const [isMetadataCached, setIsMetadataCached] = useState(false) // New state for just metadata
+  const [isContentFullyCached, setIsContentFullyCached] = useState(false) // New state for full content
   const [progress, setProgress] = useState(0)
   const [connectionCount, setConnectionCount] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
+
+  const { isCached: isArticleFullyCached } = useOfflineArticle() // Get the hook function
 
   // Clean excerpt by removing common metadata patterns and HTML/CSS
   const cleanExcerpt = (text: string | undefined | null): string | undefined => {
@@ -140,15 +139,23 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     }
   }, [article.title, article.excerpt, article.url, handleCopyLink])
 
-  const checkOfflineStatus = async () => {
+  const checkCacheStatus = async () => {
+    if (!article.id) return
     try {
       const cached = await readingDb.articles.get(article.id)
-      setIsOffline(!!cached?.offline_available)
+      setIsMetadataCached(!!cached?.offline_available)
+      const fullyCached = await isArticleFullyCached(article.id)
+      setIsContentFullyCached(fullyCached)
     } catch (error) {
       console.warn('[ArticleCard] Failed to check offline status:', error)
-      setIsOffline(false)
+      setIsMetadataCached(false)
+      setIsContentFullyCached(false)
     }
   }
+
+  useEffect(() => {
+    checkCacheStatus()
+  }, [article.id, isArticleFullyCached]) // Re-run when article ID changes or hook function itself changes
 
   // Memoize icon elements to prevent recreation (prevents flickering)
   const editIcon = React.useMemo(() => <Edit className="h-5 w-5" />, [])
@@ -158,6 +165,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const archiveIcon = React.useMemo(() => <Archive className="h-5 w-5" />, [])
   const deleteIcon = React.useMemo(() => <Trash2 className="h-5 w-5" />, [])
   const downloadIcon = React.useMemo(() => <Download className="h-5 w-5" />, [])
+  const checkCircleIcon = React.useMemo(() => <CheckCircle className="h-3.5 w-3.5" />, [])
+  const wifiOffIcon = React.useMemo(() => <WifiOff className="h-3.5 w-3.5" />, [])
 
   const contextMenuItems: ContextMenuItem[] = React.useMemo(() => [
     {
@@ -224,7 +233,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
       },
       variant: 'destructive' as const,
     },
-  ], [article.id, article.url, isOffline, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, downloadIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast])
+  ], [article.id, article.url, isMetadataCached, isContentFullyCached, editIcon, externalLinkIcon, copyIcon, shareIcon, archiveIcon, deleteIcon, downloadIcon, handleCopyLink, handleShare, updateArticleStatus, deleteArticle, addToast])
 
   return (
     <>
@@ -344,14 +353,22 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
                       </div>
                     }
                   />
-                  {isOffline && (
+                  {/* Offline Status Indicator */}
+                  {isContentFullyCached ? (
                     <div className="p-1.5 rounded-full flex items-center justify-center" style={{
                       backgroundColor: 'rgba(59, 130, 246, 0.15)',
                       color: 'var(--premium-blue)'
-                    }} title="Saved for offline">
+                    }} title="Fully available offline">
+                      <Download className="h-3.5 w-3.5" />
+                    </div>
+                  ) : isMetadataCached ? (
+                    <div className="p-1.5 rounded-full flex items-center justify-center" style={{
+                      backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                      color: 'var(--premium-amber)'
+                    }} title="Metadata cached, content loading offline">
                       <WifiOff className="h-3.5 w-3.5" />
                     </div>
-                  )}
+                  ) : null}
                 </div>
                 {/* Connection Badge */}
                 {connectionCount > 0 && (
