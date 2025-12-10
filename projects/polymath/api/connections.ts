@@ -4,29 +4,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getUserId } from './_lib/auth.js'
+import { updateItemConnections } from './_lib/connection-logic.js' // New import
+import { cosineSimilarity } from './_lib/gemini-embeddings.js' // Ensure this import is present
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-
-// Calculate cosine similarity between two vectors
-function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0
-  let dotProduct = 0
-  let normA = 0
-  let normB = 0
-  for (let i = 0; i < a.length; i++) {
-    dotProduct += a[i] * b[i]
-    normA += a[i] * a[i]
-    normB += b[i] * b[i]
-  }
-  normA = Math.sqrt(normA)
-  normB = Math.sqrt(normB)
-  if (normA === 0 || normB === 0) return 0
-  return dotProduct / (normA * normB)
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!process.env.GEMINI_API_KEY) {
@@ -123,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           for (const item of items) {
             if (!item.embedding) continue
-            const similarity = cosineSimilarity(sourceEmbedding, item.embedding)
+            const similarity = cosineSimilarity(sourceEmbedding, item.embedding) // Using imported cosineSimilarity
             if (similarity > 0.5) {
               suggestions.push({
                 id: item.id,
@@ -193,8 +178,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           let itemText = ''
           if (relatedType === 'thought') {
-            const { data } = await supabase.from('memories').select('title, body').eq('user_id', userId).eq('id', relatedId).single()
-            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'}`
+            const { data } = await supabase.from('memories').select('title, body, themes').eq('user_id', userId).eq('id', relatedId).single()
+            itemText = `[Thought] ${data?.title || data?.body?.slice(0, 100) || 'Untitled'} (themes: ${(data?.themes || []).join(', ')})`
           } else if (relatedType === 'project') {
             const { data } = await supabase.from('projects').select('title, description').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Project] ${data?.title}: ${data?.description?.slice(0, 100) || ''}`
@@ -205,7 +190,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (itemText) connectedItems.push(itemText)
         }
 
-        // Generate AI analysis
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
         // Truncate content to prevent token overflow/timeouts
