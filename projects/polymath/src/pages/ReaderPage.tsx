@@ -79,6 +79,23 @@ export function ReaderPage() {
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showProjectPicker, setShowProjectPicker] = useState(false)
 
+  // New state for Highlighter Mode
+  const [isHighlighterMode, setIsHighlighterMode] = useState(false)
+
+  // Effect to suppress native text selection when in highlighter mode
+  useEffect(() => {
+    const handleSelectStart = (event: Event) => {
+      if (isHighlighterMode) {
+        event.preventDefault()
+      }
+    }
+
+    document.addEventListener('selectstart', handleSelectStart)
+    return () => {
+      document.removeEventListener('selectstart', handleSelectStart)
+    }
+  }, [isHighlighterMode])
+
   useEffect(() => {
     if (!id) return
     // fetchArticle(id) // Handled by useArticle hook
@@ -257,27 +274,31 @@ export function ReaderPage() {
     })
   }
 
-  const handleTextSelection = () => {
-    const selection = window.getSelection()
-    const text = selection?.toString().trim()
+  const handleTextSelection = (event: React.MouseEvent | React.TouchEvent) => {
+    if (!isHighlighterMode) return; // Only handle if highlighter mode is on
+
+    event.preventDefault(); // Prevent native selection UI
+
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
 
     if (text && text.length > 0) {
-      setSelectedText(text)
+      setSelectedText(text);
 
-      const range = selection?.getRangeAt(0)
-      const rect = range?.getBoundingClientRect()
+      const range = selection?.getRangeAt(0);
+      const rect = range?.getBoundingClientRect();
 
       if (rect) {
         setMenuPosition({
           x: rect.left + rect.width / 2,
           y: rect.top - 10,
-        })
-        setShowHighlightMenu(true)
+        });
+        setShowHighlightMenu(true);
       }
     } else {
-      setShowHighlightMenu(false)
+      setShowHighlightMenu(false);
     }
-  }
+  };
 
   const handleHighlight = async (color: string = 'yellow') => {
     if (!selectedText || !article) return
@@ -638,6 +659,18 @@ export function ReaderPage() {
           </button>
 
           <div className="flex items-center gap-2">
+            {/* Highlighter Mode Toggle */}
+            <motion.button
+              whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsHighlighterMode(!isHighlighterMode)}
+              className={`p-2 rounded-lg transition-all ${isHighlighterMode ? 'bg-white/10' : 'opacity-50 hover:opacity-100'}`}
+              title="Toggle Highlighter Mode"
+              style={{ color: isHighlighterMode ? 'var(--premium-gold)' : 'var(--premium-text-primary)' }}
+            >
+              <Highlighter className="h-5 w-5" />
+            </motion.button>
+
             {/* Font Size Selector */}
             <div className="flex items-center gap-1 premium-glass-subtle rounded-lg p-1">
               {(['compact', 'comfortable', 'spacious'] as const).map((size, index) => (
@@ -748,8 +781,8 @@ export function ReaderPage() {
         {/* Article Body */}
         <div
           className={`reader-content ${settings.article}`}
-          onMouseUp={handleTextSelection}
-          onTouchEnd={handleTextSelection}
+          onMouseUp={isHighlighterMode ? handleTextSelection : undefined}
+          onTouchEnd={isHighlighterMode ? handleTextSelection : undefined}
           dangerouslySetInnerHTML={{
             __html: article.content ? getContentWithCachedImages(article.content) : ''
           }}
