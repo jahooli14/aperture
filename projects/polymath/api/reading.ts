@@ -12,6 +12,7 @@ import Parser from 'rss-parser'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
+import { updateItemConnections } from './_lib/connection-logic.js' // New import
 
 const rssParser = new Parser()
 
@@ -1054,7 +1055,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       let query = supabase
         .from('reading_queue')
-        .select('*')
+        .select('*, last_active_at, inbox_entry_at') // Select new columns
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(Number(limit))
@@ -1067,9 +1068,27 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       if (error) throw error
 
+      // Calculate rotting status
+      const THRESHOLD_DAYS = 20
+      const now = new Date()
+      const articlesWithRottingStatus = (data || []).map(article => {
+        const lastActiveDate = article.last_active_at ? new Date(article.last_active_at) : new Date(article.created_at)
+        const inboxEntryDate = article.inbox_entry_at ? new Date(article.inbox_entry_at) : new Date(article.created_at)
+        
+        const daysInInbox = Math.floor((now.getTime() - inboxEntryDate.getTime()) / (1000 * 60 * 60 * 24))
+        const daysSinceActivity = Math.floor((now.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24))
+
+        return {
+          ...article,
+          days_in_inbox: daysInInbox,
+          days_since_activity: daysSinceActivity,
+          is_rotting: daysSinceActivity >= THRESHOLD_DAYS && article.status === 'unread'
+        }
+      })
+
       return res.status(200).json({
         success: true,
-        articles: data || []
+        articles: articlesWithRottingStatus || []
       })
     } catch (error) {
       return res.status(500).json({ error: 'Failed to fetch articles' })
@@ -1269,6 +1288,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         } else if (status === 'reading') {
           updates.read_at = new Date().toISOString()
         }
+        updates.last_active_at = new Date().toISOString() // Update last_active_at on status change
       }
 
       if (tags !== undefined) {
@@ -1316,7 +1336,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // We use the same model config as memories for consistency
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
       const prompt = `Analyze this article and extract key information.
 
@@ -1710,126 +1730,7 @@ async function generateArticleEmbeddingAndConnect(
     }
 
     console.log(`[reading] Embedding stored, finding connections...`)
-
-    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
-
-    // Search projects
-    const { data: projects } = await supabase
-      .from('projects')
-      .select('id, title, description, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (projects) {
-      for (const p of projects) {
-        if (p.embedding) {
-          const similarity = cosineSimilarity(embedding, p.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-          if (similarity > 0.55) {
-            candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
-          }
-        }
-      }
-    }
-
-    // Search memories
-    const { data: memories } = await supabase
-      .from('memories')
-      .select('id, title, body, embedding')
-      .eq('user_id', userId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (memories) {
-      for (const m of memories) {
-        if (m.embedding) {
-          const similarity = cosineSimilarity(embedding, m.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-          if (similarity > 0.55) {
-            candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
-          }
-        }
-      }
-    }
-
-    // Search other articles (use reading_queue table)
-    const { data: articles } = await supabase
-      .from('reading_queue')
-      .select('id, title, excerpt, embedding')
-      .eq('user_id', userId)
-      .neq('id', articleId)
-      .not('embedding', 'is', null)
-      .limit(50)
-
-    if (articles) {
-      for (const a of articles) {
-        if (a.embedding) {
-          const similarity = cosineSimilarity(embedding, a.embedding)
-          // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-          if (similarity > 0.55) {
-            candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
-          }
-        }
-      }
-    }
-
-    // Sort by similarity
-    candidates.sort((a, b) => b.similarity - a.similarity)
-
-    console.log(`[reading] Found ${candidates.length} potential connections`)
-
-    // Auto-link >85%, suggest 55-85% (consistent with memories and projects)
-    const autoLinked = []
-    const suggestions = []
-
-    for (const candidate of candidates.slice(0, 10)) {
-      if (candidate.similarity > 0.85) {
-        // Auto-create connection (with deduplication check)
-        const { data: existing } = await supabase
-          .from('connections')
-          .select('id')
-          .or(`and(source_type.eq.article,source_id.eq.${articleId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.article,target_id.eq.${articleId})`)
-          .maybeSingle()
-
-        if (!existing) {
-          await supabase
-            .from('connections')
-            .insert({
-              source_type: 'article',
-              source_id: articleId,
-              target_type: candidate.type,
-              target_id: candidate.id,
-              connection_type: 'relates_to',
-              created_by: 'ai',
-              ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
-            })
-          autoLinked.push(candidate)
-        }
-      } else if (candidate.similarity > 0.55) {
-        suggestions.push(candidate)
-      }
-    }
-
-    console.log(`[reading] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
-
-    // Store suggestions
-    if (suggestions.length > 0) {
-      const suggestionInserts = suggestions.map(s => ({
-        from_item_type: 'article',
-        from_item_id: articleId,
-        to_item_type: s.type,
-        to_item_id: s.id,
-        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
-        confidence: s.similarity,
-        user_id: userId,
-        status: 'pending'
-      }))
-
-      await supabase
-        .from('connection_suggestions')
-        .insert(suggestionInserts)
-    }
+    await updateItemConnections(articleId, 'article', embedding, userId); // Use shared connection logic
 
   } catch (error) {
     console.error('[reading] Embedding/connection generation failed:', error)
