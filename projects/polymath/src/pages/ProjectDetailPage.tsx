@@ -105,54 +105,44 @@ export function ProjectDetailPage() {
 
     setLoading(true)
     try {
-      // Fetch projects if not already loaded
-      if (projects.length === 0) {
-        await fetchProjects()
+      // 1. Check store for optimistic/cached data first
+      const cachedProject = useProjectStore.getState().allProjects.find(p => p.id === id)
+      if (cachedProject) {
+        setProject(cachedProject)
+        setLoading(false) // Show cached data immediately
       }
 
-      // Find project in store
-      const foundProject = projects.find(p => p.id === id)
-      if (foundProject) {
-        setProject(foundProject)
-      }
-
-      // Fetch project notes from API
+      // 2. Fetch fresh data from API
+      // If offline, this will fail, but that's okay if we have cached data
       const response = await fetch(`/api/projects?id=${id}&include_notes=true`)
-
+      
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`)
+        throw new Error('Failed to fetch project details')
       }
 
       const data = await response.json()
-
-      if (data.success) {
+      
+      if (data.project) {
         setProject(data.project)
-        setNotes(data.notes || [])
-      } else {
-        throw new Error(data.error || 'Failed to load project data')
+        if (data.notes) setNotes(data.notes)
+        
+        // Update store with fresh data
+        // useProjectStore.getState().updateProject(id, data.project)
       }
     } catch (error) {
-      console.error('[ProjectDetail] Failed to load:', error)
-
-      // Clear corrupted localStorage if repeated failures
-      const failureKey = `project_load_failures_${id}`
-      const failures = parseInt(localStorage.getItem(failureKey) || '0') + 1
-      localStorage.setItem(failureKey, failures.toString())
-
-      if (failures >= 3) {
-        console.warn('[ProjectDetail] Multiple failures detected, clearing cache')
-        localStorage.clear()
-        addToast({
-          title: 'Cache cleared',
-          description: 'Please refresh the page to try again',
-          variant: 'default',
-        })
-      } else {
-        addToast({
-          title: 'Failed to load project',
-          description: error instanceof Error ? error.message : 'Unknown error',
+      console.warn('[ProjectDetail] Fetch failed:', error)
+      
+      // Only show error if we don't have cached data
+      const hasCachedData = useProjectStore.getState().allProjects.some(p => p.id === id)
+      
+      if (!hasCachedData) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load project details',
           variant: 'destructive',
         })
+      } else {
+        console.log('[ProjectDetail] Suppressing error toast - showing cached data')
       }
     } finally {
       setLoading(false)

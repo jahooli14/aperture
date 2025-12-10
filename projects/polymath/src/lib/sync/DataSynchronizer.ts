@@ -3,6 +3,7 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useOfflineStore } from '../../stores/useOfflineStore'
 import { offlineContentManager } from '../offline/OfflineContentManager'
+import { readingDb } from '../db'
 
 class DataSynchronizer {
   private static instance: DataSynchronizer
@@ -35,6 +36,8 @@ class DataSynchronizer {
    * 1. Projects
    * 2. Memories
    * 3. Reading List (Articles + Content)
+   * 4. Connections (Bridges)
+   * 5. Dashboard Data (Insights/Inspiration)
    * 
    * Fetches fresh data from API and updates Dexie cache via the stores.
    */
@@ -60,7 +63,9 @@ class DataSynchronizer {
       await Promise.allSettled([
         this.syncProjects(),
         this.syncMemories(),
-        this.syncReadingList()
+        this.syncReadingList(),
+        this.syncConnections(),
+        this.syncDashboard()
       ])
 
       console.log('[DataSynchronizer] Sync completed successfully')
@@ -116,6 +121,45 @@ class DataSynchronizer {
 
     } catch (error) {
       console.error('[DataSynchronizer] Reading list sync failed:', error)
+    }
+  }
+  
+  private async syncConnections() {
+    console.log('[DataSynchronizer] Syncing connections...')
+    try {
+      const response = await fetch('/api/connections?action=list-all')
+      if (response.ok) {
+        const { connections } = await response.json()
+        if (connections && Array.isArray(connections)) {
+          await readingDb.cacheConnections(connections)
+          console.log(`[DataSynchronizer] Cached ${connections.length} connections`)
+        }
+      }
+    } catch (error) {
+      console.error('[DataSynchronizer] Connection sync failed:', error)
+    }
+  }
+  
+  private async syncDashboard() {
+    console.log('[DataSynchronizer] Syncing dashboard data...')
+    try {
+      // Fetch Inspiration
+      const inspirationRes = await fetch('/api/analytics?resource=inspiration')
+      if (inspirationRes.ok) {
+        const data = await inspirationRes.json()
+        await readingDb.cacheDashboard('inspiration', data)
+      }
+      
+      // Fetch Evolution (Insights)
+      const evolutionRes = await fetch('/api/analytics?resource=evolution')
+      if (evolutionRes.ok) {
+        const data = await evolutionRes.json()
+        await readingDb.cacheDashboard('evolution', data)
+      }
+      
+      console.log('[DataSynchronizer] Dashboard data cached')
+    } catch (error) {
+      console.error('[DataSynchronizer] Dashboard sync failed:', error)
     }
   }
 
