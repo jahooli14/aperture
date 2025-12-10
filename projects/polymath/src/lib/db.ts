@@ -84,6 +84,10 @@ export class RosetteDatabase extends Dexie {
   // Capture & Memory Tables
   pendingCaptures!: Table<PendingCapture, number>
   memories!: Table<CachedMemory, string>
+  
+  // New Tables for Connections and Dashboard
+  connections!: Table<any, string>
+  dashboard!: Table<any, string>
 
   constructor() {
     super('RosetteDB') // New DB name to ensure clean migration
@@ -103,7 +107,11 @@ export class RosetteDatabase extends Dexie {
       pendingCaptures: '++id, timestamp, synced',
 
       // Memories Cache
-      memories: 'id, cached_at'
+      memories: 'id, cached_at',
+      
+      // Connections & Dashboard
+      connections: 'id, source_id, target_id, type',
+      dashboard: 'id, updated_at'
     })
   }
 
@@ -257,6 +265,39 @@ export class RosetteDatabase extends Dexie {
 
   async getCachedProjects(): Promise<CachedProject[]> {
     return await this.projects.toArray()
+  }
+  
+  // --- Connections & Dashboard Methods ---
+  
+  async cacheConnections(connections: any[]): Promise<void> {
+    await this.connections.bulkPut(connections)
+  }
+  
+  async getConnectionsFor(id: string): Promise<any[]> {
+    // Dexie or queries: manually filter for now as OR queries are complex without multi-entry index
+    // Ideally: this.connections.where('source_id').equals(id).or('target_id').equals(id).toArray()
+    const source = await this.connections.where('source_id').equals(id).toArray()
+    const target = await this.connections.where('target_id').equals(id).toArray()
+    
+    // De-dupe by ID
+    const map = new Map()
+    source.forEach(c => map.set(c.id, c))
+    target.forEach(c => map.set(c.id, c))
+    
+    return Array.from(map.values())
+  }
+  
+  async cacheDashboard(key: string, data: any): Promise<void> {
+    await this.dashboard.put({
+      id: key,
+      data,
+      updated_at: new Date().toISOString()
+    })
+  }
+  
+  async getDashboard(key: string): Promise<any | null> {
+    const entry = await this.dashboard.get(key)
+    return entry ? entry.data : null
   }
 }
 

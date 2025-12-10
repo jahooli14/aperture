@@ -73,24 +73,35 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
       return
     }
 
-    const fetchInspiration = async () => {
+    const loadInspiration = async () => {
       setLoading(true)
       try {
-        const excludeParam = excludeProjectIds.length > 0 ? `&exclude=${excludeProjectIds.join(',')}` : ''
-        const response = await fetch(`/api/analytics?resource=inspiration${excludeParam}`)
-        if (response.ok) {
-          const data = await response.json()
-          setInspiration(data)
+        // 1. Try cache first
+        const cached = await readingDb.getDashboard('inspiration')
+        if (cached) {
+          setInspiration(cached)
+          setLoading(false) // Show cached data immediately
+        }
+
+        // 2. Fetch fresh data if online
+        if (navigator.onLine) {
+          const excludeParam = excludeProjectIds.length > 0 ? `&exclude=${excludeProjectIds.join(',')}` : ''
+          const response = await fetch(`/api/analytics?resource=inspiration${excludeParam}`)
+          if (response.ok) {
+            const data = await response.json()
+            setInspiration(data)
+            await readingDb.cacheDashboard('inspiration', data)
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch inspiration:', error)
+        console.error('Failed to load inspiration:', error)
       } finally {
         setLoading(false)
         setHasFetched(true)
       }
     }
 
-    fetchInspiration()
+    loadInspiration()
   }, [projectsLoading, hasFetched, excludeProjectIds.join(',')])
 
   const getIconAndColor = (type: string) => {
@@ -224,6 +235,7 @@ function GetInspirationSection({ excludeProjectIds, hasPendingSuggestions, pendi
 }
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { readingDb } from '../lib/db'
 
 // Simple Dialog Component for displaying full insights
 function InsightDialog({ insight, open, onClose }: { insight: SynthesisInsight | null; open: boolean; onClose: () => void }) {
@@ -314,16 +326,30 @@ function InsightsSection() {
 
   const navigate = useNavigate()
 
-  const fetchInsights = async (isRefresh = false) => {
+  const loadInsights = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true)
     else setLoading(true)
 
     try {
-      const response = await fetch('/api/analytics?resource=evolution')
-      if (response.ok) {
-        const data = await response.json()
-        setInsights(data.insights || [])
-        setRequirements(data.requirements || null)
+      // 1. Try cache first
+      if (!isRefresh) {
+        const cached = await readingDb.getDashboard('evolution')
+        if (cached) {
+          setInsights(cached.insights || [])
+          setRequirements(cached.requirements || null)
+          setLoading(false)
+        }
+      }
+
+      // 2. Fetch fresh data if online
+      if (navigator.onLine) {
+        const response = await fetch('/api/analytics?resource=evolution')
+        if (response.ok) {
+          const data = await response.json()
+          setInsights(data.insights || [])
+          setRequirements(data.requirements || null)
+          await readingDb.cacheDashboard('evolution', data)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch insights:', error)
@@ -334,7 +360,7 @@ function InsightsSection() {
   }
 
   useEffect(() => {
-    fetchInsights()
+    loadInsights()
   }, [])
 
   const getInsightIcon = (type: string) => {
