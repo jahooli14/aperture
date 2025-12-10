@@ -248,12 +248,12 @@ export function ReaderPage() {
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
         'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr',
-        'div', 'span'
+        'div', 'span', 'math', 'semantics', 'mrow', 'mi', 'mo', 'mn'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
       ALLOW_DATA_ATTR: false,
       // Ensure no style attributes survive
-      FORBID_ATTR: ['style', 'class', 'id']
+      FORBID_ATTR: ['style', 'id']
     })
   }
 
@@ -538,6 +538,73 @@ export function ReaderPage() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#1a1f2e' }}>
+      <style>{`
+        .reader-content blockquote {
+          border-left: 4px solid var(--premium-blue);
+          padding-left: 1rem;
+          font-style: italic;
+          color: var(--premium-text-secondary);
+          margin: 1.5rem 0;
+          background: rgba(255, 255, 255, 0.03);
+          padding: 1rem;
+          border-radius: 0 0.5rem 0.5rem 0;
+        }
+        .reader-content pre {
+          background: #0f172a;
+          color: #e2e8f0;
+          padding: 1.25rem;
+          border-radius: 0.75rem;
+          overflow-x: auto;
+          margin: 1.5rem 0;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .reader-content code {
+          font-family: 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace;
+          font-size: 0.9em;
+        }
+        .reader-content p code {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 0.2rem 0.4rem;
+          border-radius: 0.25rem;
+          color: #e2e8f0;
+        }
+        .reader-content figure {
+          margin: 2.5rem 0;
+          text-align: center;
+        }
+        .reader-content img {
+          border-radius: 0.5rem;
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 0 auto;
+        }
+        .reader-content figcaption {
+          font-size: 0.85em;
+          color: var(--premium-text-tertiary);
+          text-align: center;
+          margin-top: 0.75rem;
+          font-style: italic;
+        }
+        .reader-content h1, .reader-content h2, .reader-content h3 {
+          margin-top: 2.5em;
+          margin-bottom: 1em;
+          color: #f1f5f9; /* Lighter text for headings in dark mode */
+        }
+        .reader-content a {
+          color: var(--premium-blue);
+          text-decoration: underline;
+          text-underline-offset: 2px;
+        }
+        .reader-content ul, .reader-content ol {
+          margin: 1.5rem 0;
+          padding-left: 1.5rem;
+        }
+        .reader-content li {
+          margin-bottom: 0.5rem;
+        }
+      `}</style>
+      
       {/* Sticky Header */}
       <motion.div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md transition-transform duration-300"
