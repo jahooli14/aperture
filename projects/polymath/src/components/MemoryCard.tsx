@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2 } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
