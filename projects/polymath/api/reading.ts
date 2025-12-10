@@ -477,242 +477,52 @@ async function fetchArticle(url: string) {
 }
 
 /**
- * Clean markdown content by removing navigation, UI elements, and boilerplate
+ * Clean markdown content by removing common boilerplate but preserving semantic structure
  * This runs before HTML conversion to keep processing fast
  */
 function cleanMarkdownContent(markdown: string): string {
+  if (!markdown) return ''
+
   const lines = markdown.split('\n')
   const cleaned: string[] = []
-  let inNavigationBlock = false
-  let navigationLinkCount = 0
-  let consecutiveLinks = 0
+
+  const removeLinePatterns = [
+    // Obvious ad/promo patterns
+    /^(subscribe|sign up|get unlimited access|daily digest|homepage feed|posts from)/i,
+    // Obvious privacy/legal UI
+    /^(privacy policy|terms of service|cookie policy|do not sell|opt out|manage consent|your preference signal)/i,
+    // Accessibility and UI controls that are clearly not content
+    /^(toggle|expand|collapse|show|hide)/i,
+    // Generic e-commerce/product listing UI (usually short lines)
+    /^(any price|deals|product name|retailer name)/i,
+    /^[☆★]{3,5}$/, // Star ratings
+  ]
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
-    const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : ''
+    if (line === '') {
+      cleaned.push('')
+      continue
+    }
 
-    // Skip empty lines at the start
-    if (cleaned.length === 0 && line === '') continue
-
-    // Detect navigation blocks (many links in a row)
-    const isLink = /^\*\s+\[/.test(line) || /^\-\s+\[/.test(line) || /^\d+\.\s+\[/.test(line)
-
-    if (isLink) {
-      consecutiveLinks++
-      // If we see 4+ consecutive links, it's likely navigation
-      if (consecutiveLinks >= 4) {
-        inNavigationBlock = true
-        navigationLinkCount++
-        continue
+    // Skip problematic patterns
+    let skipLine = false
+    for (const pattern of removeLinePatterns) {
+      if (pattern.test(line)) {
+        skipLine = true
+        break
       }
-    } else {
-      // End of navigation block detection
-      if (inNavigationBlock && consecutiveLinks >= 4) {
-        // Skip the navigation
-        inNavigationBlock = false
-        consecutiveLinks = 0
-        continue
-      }
-      consecutiveLinks = 0
     }
+    if (skipLine) continue
 
-    // Skip common UI patterns (case-insensitive matching)
-    const lowerLine = line.toLowerCase()
-
-    // Skip subscription/auth prompts
-    if (
-      lowerLine.startsWith('subscribe') ||
-      lowerLine.startsWith('sign in') ||
-      lowerLine.startsWith('sign up') ||
-      lowerLine === 'already have an account?' ||
-      /^by subscribing,? i agree/i.test(line) ||
-      /^over \d+[\d,]* subscribers?$/i.test(line) ||
-      /^discover more from/i.test(line) ||
-      /^continue reading with/i.test(line) ||
-      /^get unlimited access/i.test(line) ||
-      lowerLine.includes('daily digest') ||
-      lowerLine.includes('homepage feed') ||
-      lowerLine.includes('posts from')
-    ) {
-      continue
-    }
-
-    // Skip audio/video player UI
-    if (
-      lowerLine.includes('audio playback') ||
-      lowerLine.includes('please upgrade') ||
-      /^\d+:\d+$/.test(line) || // Timestamps like "0:00"
-      lowerLine === 'article voiceover'
-    ) {
-      continue
-    }
-
-    // Skip share/social buttons and follow prompts
-    if (
-      lowerLine === 'share' ||
-      lowerLine === 'follow' ||
-      lowerLine === 'comments' ||
-      lowerLine.startsWith('share this') ||
-      /^(like|comment|restack|share|follow|comments drawer)$/i.test(line) ||
-      /^posts from this (author|topic)/i.test(line) ||
-      lowerLine.includes('will be added to your') ||
-      lowerLine.includes('navigation drawer')
-    ) {
-      continue
-    }
-
-    // Skip privacy/legal UI
-    if (
-      /^©\s*\d{4}/.test(line) ||
-      lowerLine.includes('all rights reserved') ||
-      lowerLine.includes('privacy policy') ||
-      lowerLine.includes('terms of service') ||
-      lowerLine.includes('cookie policy') ||
-      lowerLine.includes('privacy center') ||
-      lowerLine.includes('do not sell') ||
-      lowerLine.includes('opt out') ||
-      lowerLine.includes('manage consent') ||
-      lowerLine.includes('your preference signal')
-    ) {
-      continue
-    }
-
-    // Skip "Most Popular" / "More in" / "Top Stories" sections
-    if (
-      lowerLine === 'most popular' ||
-      lowerLine === 'more in' ||
-      lowerLine === 'top stories' ||
-      lowerLine === 'related' ||
-      lowerLine === 'trending' ||
-      lowerLine.startsWith('more from')
-    ) {
-      continue
-    }
-
-    // Skip image labels without content
-    if (/^image \d+:?$/i.test(line)) {
-      continue
-    }
-
-    // Skip menu/navigation headers
-    if (
-      lowerLine === 'menu' ||
-      lowerLine === 'navigation' ||
-      lowerLine === 'close' ||
-      lowerLine === '[menu]' ||
-      /^\[menu\]\(#\)$/i.test(line) ||
-      lowerLine === 'search'
-    ) {
-      continue
-    }
-
-    // Skip category/section labels that are just single words
-    if (
-      /^(tech|reviews|science|entertainment|cars|videos|podcasts|newsletters)$/i.test(line) ||
-      /^(column|entertainment|music)$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip action buttons and navigation
-    if (
-      /^(apply|cancel|confirm|clear|allow all)$/i.test(line) ||
-      /^(back to|view vendor|checkbox label|switch label)$/i.test(line) ||
-      /^(arrow|filters?|category|brand|processor|showing \d+ of)$/i.test(line) ||
-      /^arrow$/i.test(line) ||
-      /^filters?[☰✕✖✗]/i.test(line) ||
-      /^sort\s*by/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip e-commerce/product listing UI
-    if (
-      /^(any price|deals|price \(|product name \(|retailer name \()/i.test(line) ||
-      /^showing \d+ of \d+/i.test(line) ||
-      /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i.test(line) ||
-      /^\(\d+[.\d]*-inch/i.test(line) ||
-      /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i.test(line) ||
-      /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip review ratings and numbers
-    if (
-      /^[☆★]{3,5}$/i.test(line) ||
-      /^our review$/i.test(line) ||
-      /^\d+$/.test(line)  // Standalone numbers (product list indexes)
-    ) {
-      continue
-    }
-
-    // Skip author bio lines (long descriptive sentences about people)
-    if (
-      line.length > 100 &&
-      (/\b(editor|journalist|author|writer|contributor|reporter)\b/i.test(line) &&
-        /\b(is an?|has been|known for)\b/i.test(line))
-    ) {
-      continue
-    }
-
-    // Skip domain names and read time indicators
-    if (
-      /^\w+\.(com|net|org|io|co|ai)$/i.test(line) ||
-      /^\d+\s+min$/i.test(line)
-    ) {
-      continue
-    }
-
-    // Skip "Latest Articles" sections
-    if (/^latest articles?$/i.test(line)) {
-      continue
-    }
-
-    // Skip image credits
-    if (/^\(image credit:/i.test(line)) {
-      continue
-    }
-
-    // Skip separators that are too long (likely decorative)
-    if (/^[=\-_*]{10,}$/.test(line)) {
-      continue
-    }
-
-    // If we're past the navigation and see actual content, keep it
     cleaned.push(lines[i]) // Keep original indentation
   }
 
-  // Remove leading/trailing empty lines
-  while (cleaned.length > 0 && cleaned[0].trim() === '') {
-    cleaned.shift()
-  }
-  while (cleaned.length > 0 && cleaned[cleaned.length - 1].trim() === '') {
-    cleaned.pop()
-  }
-
-  // Join and do final inline cleanup for concatenated patterns
+  // Remove excessive whitespace and empty lines
   let result = cleaned.join('\n')
-
-  // Remove inline e-commerce patterns that might be concatenated
-  const inlinePatterns = [
-    /Filters?[☰✕✖✗]/gi,
-    /SORT\s*BY.{0,15}?(low to high|high to low|A to Z|Z to A)/gi,  // Sort options
-    /Price \((low to high|high to low)\)/gi,
-    /Product Name \([AZ]+ to [AZ]+\)/gi,
-    /Retailer name \([AZ]+ to [AZ]+\)/gi,
-    /\(Image credit:[^)]{0,100}\)/gi,  // Limited to prevent backtracking
-    /Our Review\s*[☆★]{3,5}/gi
-  ]
-
-  inlinePatterns.forEach(pattern => {
-    result = result.replace(pattern, '')
-  })
-
-  // Clean up any resulting double spaces or empty lines
-  result = result
-    .replace(/  +/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\n{4,}/g, '\n\n\n') // Max 3 newlines
+    .replace(/[ \t]{2,}/g, ' ')   // Max 1 space
+    .replace(/\n\s+\n/g, '\n\n')  // Clean empty lines with whitespace
     .trim()
 
   return result
@@ -1008,8 +818,8 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 }
 
 /**
- * Clean article content (for Jina AI plain text output)
- * Removes navigation, footers, ads, cookie notices, UI elements, etc.
+ * Clean article content (for Jina AI plain text output from RSS)
+ * Removes common boilerplate but preserves useful text
  */
 function cleanArticleContent(content: string): string {
   if (!content) return ''
@@ -1019,134 +829,34 @@ function cleanArticleContent(content: string): string {
 
   // Patterns to remove (case-insensitive)
   const removePatterns = [
-    // Navigation and UI elements
-    /^(skip to|jump to|go to|navigate to|menu|navigation|breadcrumb)/i,
-    /^(search|sign in|log in|subscribe|register|create account|my account)/i,
-    /^(home|about|contact|privacy|terms|cookies?|legal|help|support)/i,
-    /^(view all|see all|show all|browse|explore)/i,
-    /^(back to|return to|previous|next page)/i,
-    /^(arrow|filters?|sort by|showing \d+)/i,
-
-    // Social media and sharing
-    /^(share|share on|follow us|connect with|like us|follow|tweet|pin)/i,
-    /^(facebook|twitter|instagram|linkedin|youtube|tiktok|whatsapp|reddit)/i,
-    /^(social media|social|connect|join us)/i,
-    /^follow\s+.+\s+to get\b/i,
-
-    // Newsletter and subscription
-    /^(newsletter|email|subscribe|sign up|get updates|stay updated)/i,
-    /^(get our|receive|join our|be the first)/i,
-    /^(enter your email|your email address)/i,
-
-    // Cookie notices and consent
+    // Obvious ad/promo patterns
+    /^(subscribe|sign up|get updates|stay updated|get our|receive|join our|be the first)/i,
+    /^(newsletter|email|enter your email|your email address)/i,
+    // Obvious privacy/legal UI
     /^(we use cookies|this (site|website) uses cookies|cookie (notice|policy))/i,
     /^(by (using|continuing)|accept (all )?cookies|manage cookies)/i,
     /^(consent|privacy settings|your privacy|we value your privacy)/i,
-
     // Advertising and sponsorship
     /^(advertisement|sponsored|partner content|affiliate)/i,
     /^(ad choices|why (am i|this ad)|opt out)/i,
     /^(promoted|featured|special offer)/i,
-
     // Comments and engagement
     /^(comments?|leave a comment|post a comment|add a comment)/i,
     /^(show comments|hide comments|load more|view replies)/i,
     /^(join the (discussion|conversation)|what do you think)/i,
-
-    // Related content and CTAs
-    /^(related:?|you may also|you might like|recommended|more from)/i,
-    /^(read (more|next)|continue reading|keep reading)/i,
-    /^(check out|discover|explore more|learn more)/i,
-    /^(popular|trending|latest|recent articles?)/i,
-    /^latest articles?$/i,
-
     // Footer and metadata
     /^(copyright|©|all rights reserved|\(c\))/i,
     /^(powered by|built with|designed by|created by)/i,
     /^(last updated|published|posted|updated on)/i,
     /^(tags?:|categories:|filed under|topics?:)/i,
-
     // App promotions
     /^(download (our )?app|get (the|our) app|available on|app store)/i,
     /^(open in app|use app|switch to app)/i,
-
-    // Accessibility and UI controls
-    /^(toggle|expand|collapse|show|hide|more|less)/i,
-    /^(loading|please wait|redirecting)/i,
-
-    // Product/e-commerce patterns
-    /^(category|brand|processor|ram|storage size|screen size|colou?r|condition|price)/i,
-    /^(any price|our review|deals|showing \d+ of \d+)/i,
-    /^(compare prices?|buy now|add to cart|in stock)/i,
-    /^filters?[☰✕✖✗]/i,  // Filter buttons with icons
-    /^sort\s*by/i,  // Sort options
-    /^\d+\s*(gb|tb|inch|hz|ghz|gb ram)\b/i,  // Technical specs
-    /^[☆★]{3,5}$/,  // Star ratings
-    /^\(\d+(\.\d+)?-inch\s+\d+gb\)/i,  // Product specs like "(13.3-inch 64GB)"
-    /^\(.*?(gb|tb|oled|ssd|ram).*?\)$/i,  // Product specs in parentheses
-    /^[\$€£¥]\d+[,\d]*(\.\d{2})?$/,  // Standalone prices like "$799" or "€1,299"
-
-    // Author bio indicators
-    /^.{0,50}\b(editor|journalist|author|writer|contributor|reporter)\b/i,
-    /\b(is an? (award-winning|celebrated|bestselling|leading|certified))\b/i,
-    /\b(earned (a|her|his|their) (loyal|readership))\b/i,
-    /\blives in\b.*$/i,  // Common bio ending
-    /\b(mom|dad|parent) of \d+\b/i,  // Personal bio details
-
-    // List/link dumps (common pattern: just a link text with no context)
-    /^[\[\(]?https?:\/\//i,  // Lines starting with URLs
-    /^(source|via|link|url):/i,
-
-    // Website domain names (often appear at start of articles)
-    /^\w+\.(com|net|org|io|co|ai)$/i,
-    /^\d+\s+min$/i,  // Read time estimates like "6 min"
-
-    // Short non-content lines (likely UI elements)
-    /^[\w\s]{1,3}$/,  // 1-3 character lines (buttons like "OK", "Yes", etc)
-    /^\d+$/,  // Lines with just numbers
   ]
 
-  // Track if we're in an author bio section
-  let inAuthorBio = false
-  let bioStartIndex = -1
-
-  // First pass: identify and mark author bio sections
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
-
-    // Start of author bio detection
-    if (!inAuthorBio && (
-      /\b(editor|journalist|author|writer|contributor)\b/i.test(line) &&
-      /\b(is an?|has been)\b/i.test(line) &&
-      line.length > 100  // Bio lines tend to be long
-    )) {
-      inAuthorBio = true
-      bioStartIndex = i
-    }
-
-    // End of author bio (usually after 3-5 lines or hitting next section)
-    if (inAuthorBio && (
-      i - bioStartIndex > 5 ||
-      /^#{1,3}\s/.test(line) ||  // Markdown heading
-      (line.length > 0 && !line.match(/\b(she|he|they|her|his|their)\b/i) && line.match(/^[A-Z]/))
-    )) {
-      inAuthorBio = false
-    }
-
-    // Mark bio lines for removal
-    if (inAuthorBio) {
-      lines[i] = '__REMOVE_BIO__'
-    }
-  }
-
   // Filter out lines matching removal patterns
-  lines = lines.filter((line, index) => {
+  lines = lines.filter(line => {
     const trimmed = line.trim()
-
-    // Remove marked bio lines
-    if (line === '__REMOVE_BIO__') return false
-
-    // Keep empty lines for paragraph breaks
     if (trimmed === '') return true
 
     // Remove if matches any pattern
@@ -1154,44 +864,11 @@ function cleanArticleContent(content: string): string {
       return false
     }
 
-    // Remove lines that are just markdown links without context
-    // Pattern: [text](url) with nothing else
-    if (/^\[.+?\]\(.+?\)$/.test(trimmed) && trimmed.length < 100) {
-      return false
-    }
-
-    // Remove lines that are just image references
-    if (/^!\[.*?\]\(.*?\)$/.test(trimmed)) {
-      return false
-    }
-
-    // Remove image credit lines
-    if (/^\(image credit:/i.test(trimmed)) {
-      return false
-    }
-
-    // Keep lines that seem like content (have punctuation, reasonable length)
     return true
   })
 
   // Join lines back together
   let cleaned = lines.join('\n')
-
-  // Remove common inline phrases that sneak through
-  const phrasePatterns = [
-    /\b(click here|tap here|read more|learn more|find out more)\b/gi,
-    /\b(subscribe to|sign up for|get notified|stay informed)\b/gi,
-    /\b(cookie policy|privacy policy|terms of service|terms and conditions)\b/gi,
-    /\b(view (all|more)|see (all|more)|show (all|more))\b/gi,
-    /\b(download (the |our )?app|get (the |our )?app)\b/gi,
-    /\[\d+\]/g,  // Remove citation numbers like [1], [2], etc.
-    /\(Image credit:.*?\)/gi,  // Remove image credits
-    /Our Review\s*[☆★]{3,5}/gi,  // Remove review ratings
-  ]
-
-  phrasePatterns.forEach(pattern => {
-    cleaned = cleaned.replace(pattern, '')
-  })
 
   // Remove excessive whitespace
   cleaned = cleaned
@@ -1200,20 +877,7 @@ function cleanArticleContent(content: string): string {
     .replace(/\n\s+\n/g, '\n\n')    // Clean empty lines with whitespace
     .trim()
 
-  // Final pass: remove any remaining single-word lines that are likely UI elements
-  lines = cleaned.split('\n')
-  lines = lines.filter(line => {
-    const trimmed = line.trim()
-    if (trimmed === '') return true
-
-    // Keep lines with multiple words or punctuation (likely real content)
-    const wordCount = trimmed.split(/\s+/).length
-    const hasPunctuation = /[.!?,;:]/.test(trimmed)
-
-    return wordCount > 2 || hasPunctuation
-  })
-
-  return lines.join('\n').trim()
+  return cleaned
 }
 
 function extractDomain(url: string): string {
