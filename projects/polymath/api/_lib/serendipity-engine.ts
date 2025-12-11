@@ -108,7 +108,7 @@ export async function findStructuralHole(userId: string): Promise<SerendipityMat
   console.log(`[Serendipity] Bridging: "${source.title}" <-> "${target.title}" (Sim: ${chosenSim.toFixed(2)})`)
 
   // 3. Generate the Bridge (Bisociation)
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const prompt = `You are a Serendipity Engine. You have found two unconnected ideas in the user's database.
   
   Item A (${source.type}): "${source.title}"

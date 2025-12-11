@@ -1074,7 +1074,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       const articlesWithRottingStatus = (data || []).map(article => {
         const lastActiveDate = article.last_active_at ? new Date(article.last_active_at) : new Date(article.created_at)
         const inboxEntryDate = article.inbox_entry_at ? new Date(article.inbox_entry_at) : new Date(article.created_at)
-        
+
         const daysInInbox = Math.floor((now.getTime() - inboxEntryDate.getTime()) / (1000 * 60 * 60 * 24))
         const daysSinceActivity = Math.floor((now.getTime() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24))
 
@@ -1336,7 +1336,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // We use the same model config as memories for consistency
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
       const prompt = `Analyze this article and extract key information.
 
