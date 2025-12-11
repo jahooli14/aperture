@@ -93,16 +93,13 @@ export function CapabilitiesSection() {
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
                 <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <Zap className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
-                        <div>
-                            <h2 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
-                                Your <span style={{ color: 'var(--premium-gold)' }}>Capabilities</span>
-                            </h2>
-                            <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                                Skills and interests extracted from your work
-                            </p>
-                        </div>
+                    <div>
+                        <h2 className="text-2xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+                            Your Capabilities
+                        </h2>
+                        <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                            Skills and interests extracted from your work
+                        </p>
                     </div>
                     <button
                         onClick={handleExtractCapabilities}

@@ -1190,11 +1190,11 @@ export function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(245, 158, 11, 0.1)', // Amber
+                      background: 'rgba(59, 130, 246, 0.1)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <Lightbulb className="h-5 w-5" style={{ color: '#fbbf24' }} />
+                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
@@ -1203,7 +1203,7 @@ export function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#fbbf24' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
 
@@ -1226,11 +1226,11 @@ export function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(245, 158, 11, 0.1)', // Amber
+                      background: 'rgba(59, 130, 246, 0.1)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <MapIcon className="h-5 w-5" style={{ color: '#fbbf24' }} />
+                      <MapIcon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Knowledge Map</h3>
@@ -1239,7 +1239,7 @@ export function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#fbbf24' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
 
@@ -1262,11 +1262,11 @@ export function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(139, 92, 246, 0.1)', // Violet
+                      background: 'rgba(59, 130, 246, 0.1)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(139, 92, 246, 0.2)'
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <Sparkles className="h-5 w-5" style={{ color: '#a78bfa' }} />
+                      <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Galaxy View</h3>
@@ -1275,7 +1275,7 @@ export function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#a78bfa' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
 
@@ -1298,11 +1298,11 @@ export function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(16, 185, 129, 0.1)', // Emerald
+                      background: 'rgba(59, 130, 246, 0.1)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(16, 185, 129, 0.2)'
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <TrendingUp className="h-5 w-5" style={{ color: '#34d399' }} />
+                      <TrendingUp className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Analysis</h3>
@@ -1311,7 +1311,7 @@ export function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#34d399' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
 
@@ -1334,11 +1334,11 @@ export function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(249, 115, 22, 0.1)', // Orange
+                      background: 'rgba(59, 130, 246, 0.1)',
                       backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(249, 115, 22, 0.2)'
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
                     }}>
-                      <Rss className="h-5 w-5" style={{ color: '#fb923c' }} />
+                      <Rss className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                     </div>
                     <div>
                       <h3 className="font-bold mb-1 premium-text-platinum">Auto-import</h3>
@@ -1347,7 +1347,7 @@ export function HomePage() {
                       </p>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#fb923c' }} />
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
             </div>
