@@ -74,9 +74,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
     // Tuned Thresholds - Less sensitive (v2)
     // Tuned Thresholds - Less sensitive (v3)
-    const STILL_THRESHOLD = 0.3 // Slightly easier to enter drift (was 0.2)
-    const WAKE_THRESHOLD = 5.0 // Much harder wake/jerk (was 2.5)
-    const REQUIRED_DURATION = 5000 // Longer settling time (was 4000)
+    const STILL_THRESHOLD = 0.5 // More forgiving - easier to complete (was 0.3)
+    const WAKE_THRESHOLD = 1.5 // More sensitive wake - easier to trigger (was 5.0)
+    const REQUIRED_DURATION = 5000 // Keep at 5s
 
     // Debug log (throttled)
     if (Math.random() < 0.05) {
@@ -163,11 +163,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const currentPrompt = prompts[currentPromptIndex]
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-amber-900 flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#0F1829] text-white flex flex-col items-center justify-center overflow-hidden">
       {/* Exit Button */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 p-4 rounded-full bg-white/5 text-amber-900/50 hover:bg-white/10"
+        className="absolute top-6 right-6 p-4 rounded-full bg-white/5 text-slate-400 hover:bg-white/10"
       >
         <X className="h-6 w-6" />
       </button>
@@ -188,25 +188,25 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 <circle
                   cx="50" cy="50" r="45"
                   fill="none"
-                  stroke="rgba(120, 53, 15, 0.1)"
+                  stroke="rgba(255, 255, 255, 0.1)"
                   strokeWidth="4"
                 />
                 <motion.circle
                   cx="50" cy="50" r="45"
                   fill="none"
-                  stroke="#d97706" // amber-600
+                  stroke="#8b5cf6" // violet-500
                   strokeWidth="4"
                   strokeDasharray="283"
                   strokeDashoffset={283 - (283 * progress) / 100}
-                  transition={{ duration: 0.1 }} // smooth update
+                  transition={{ duration: 0.1 }}
                 />
               </svg>
-              <Wind className="h-10 w-10 text-amber-900/40" />
+              <Wind className="h-10 w-10 text-slate-400" />
             </div>
 
-            <h2 className="text-2xl font-serif font-medium mb-4 text-amber-700">
+            <h2 className="text-2xl font-serif font-medium mb-4 text-[#E2E8F0]">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
-            </h2>            <p className="text-lg text-amber-900/60 leading-relaxed mb-8">
+            </h2>            <p className="text-lg text-slate-400 leading-relaxed mb-8">
               {mode === 'sleep'
                 ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight."
                 : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
@@ -214,13 +214,13 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
             <button
               onClick={requestMotionPermission}
-              className="px-8 py-3 rounded-full bg-amber-900/20 text-amber-600 font-medium hover:bg-amber-900/30 transition-all"
+              className="px-8 py-3 rounded-full bg-white/10 text-[#E2E8F0] font-medium hover:bg-white/20 transition-all border border-white/5"
             >
               Begin Session
             </button>
 
             {motionPermission === 'denied' && (
-              <p className="mt-4 text-red-900/50 text-sm">Motion permission required for this feature.</p>
+              <p className="mt-4 text-red-400 text-sm">Motion permission required for this feature.</p>
             )}
           </motion.div>
         )}
@@ -235,7 +235,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             transition={{ duration: 2 }}
             className="absolute inset-0 bg-black flex items-center justify-center"
           >
-            <div className="w-2 h-2 rounded-full bg-amber-900/20 animate-ping" />
+            <div className="w-3 h-3 rounded-full bg-violet-500/50 animate-ping" />
           </motion.div>
         )}
 
@@ -248,14 +248,14 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             className="text-center px-8 max-w-lg relative"
           >
             <div className="mb-8">
-              <span className="inline-block px-3 py-1 rounded-full border border-amber-900/20 text-xs font-medium tracking-widest uppercase text-amber-900/40 mb-4">
+              <span className="inline-block px-3 py-1 rounded-full border border-white/10 text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">
                 {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
               </span>
-              <h1 className="text-3xl md:text-4xl font-serif text-amber-600 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-serif text-[#E2E8F0] leading-tight">
                 {currentPrompt.prompt}
               </h1>
               {currentPrompt.metaphor && (
-                <p className="mt-6 text-xl italic text-amber-800/60 font-serif">
+                <p className="mt-6 text-xl italic text-slate-500 font-serif">
                   "{currentPrompt.metaphor}"
                 </p>
               )}
@@ -264,7 +264,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="flex items-center justify-center gap-4 mt-12">
               <button
                 onClick={resetDrift}
-                className="px-8 py-4 rounded-full bg-amber-900/10 text-amber-800 hover:bg-amber-900/20 transition-all flex items-center gap-2"
+                className="px-8 py-4 rounded-full bg-white/5 text-slate-300 hover:bg-white/10 transition-all flex items-center gap-2 border border-white/5"
               >
                 <Wind className="h-5 w-5" />
                 {mode === 'sleep' ? 'Drift Again' : 'Reset Again'}
@@ -275,8 +275,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 onClick={toggleRecording}
                 disabled={isProcessing}
                 className={`p-4 rounded-full transition-all ${isRecording
-                  ? 'bg-red-500/20 text-red-600 animate-pulse'
-                  : 'bg-amber-900/10 text-amber-800 hover:bg-amber-900/20'
+                  ? 'bg-red-500/20 text-red-400 animate-pulse border border-red-500/30'
+                  : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/5'
                   }`}
               >
                 {isProcessing ? (

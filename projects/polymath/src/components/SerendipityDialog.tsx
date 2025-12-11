@@ -1,7 +1,7 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, X, ArrowRight, Loader2, Link2 } from 'lucide-react'
-import { useThemeStore } from '../../stores/useThemeStore'
+import { Zap, X, ArrowRight, Loader2, Link2 } from 'lucide-react'
+
 
 interface SerendipityDialogProps {
   isOpen: boolean
@@ -41,7 +41,7 @@ export function SerendipityDialog({ isOpen, onClose, data, loading, onRefresh }:
 
           <div className="flex items-center gap-3 mb-8">
             <div className="p-3 rounded-xl bg-purple-500/20 text-purple-400">
-              <Sparkles className="h-6 w-6" />
+              <Zap className="h-6 w-6" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">Serendipity Engine</h2>
@@ -91,7 +91,7 @@ export function SerendipityDialog({ isOpen, onClose, data, loading, onRefresh }:
                   onClick={onRefresh}
                   className="px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 text-white transition-all flex items-center gap-2 border border-white/10"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  <Zap className="h-4 w-4" />
                   Find Another Bridge
                 </button>
               </div>
