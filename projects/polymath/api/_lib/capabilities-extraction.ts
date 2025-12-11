@@ -35,24 +35,25 @@ export async function extractCapabilities(userId: string) {
     // 2. Analyze with Gemini (with retry)
     const generateCapabilities = async () => {
       const prompt = `Analyze the following user projects and thoughts. 
-      Extract a list of "Capabilities" (skills, tools, concepts, mental models, or specific interests) that this user demonstrates.
+      Extract the TOP 10 "Capabilities" (skills, tools, concepts, mental models, or specific interests) that this user demonstrates.
       
       Return a JSON array of objects with this structure:
       {
         "name": "kebab-case-name",
-        "description": "Brief description of the capability and how the user uses it.",
+        "description": "One sentence description of how the user uses it.",
         "source": "project" or "thought"
       }
       
       Focus on specific, actionable capabilities (e.g., "react-development", "system-design", "creative-writing").
+      Keep descriptions brief to avoid token limits.
       
       Content:
       ${content}`
 
-      return generateText(prompt, { 
-        responseFormat: 'json', 
+      return generateText(prompt, {
+        responseFormat: 'json',
         temperature: 0.2,
-        maxTokens: 2000
+        maxTokens: 4000 // Increased from 2000
       })
     }
 
@@ -66,37 +67,53 @@ export async function extractCapabilities(userId: string) {
         response = await generateCapabilities()
       } catch (retryError) {
         console.error('[capabilities] Retry failed:', retryError)
-        // Return empty to prevent UI crash
         return []
       }
     }
 
-    let capabilities
+    let capabilities: any[] = []
     try {
       console.log('[capabilities] Raw response length:', response.length)
 
       if (!response || response.trim().length === 0) {
-        console.error('[capabilities] Gemini returned empty response')
         throw new Error('Gemini API returned empty response')
       }
 
-      // Attempt to find JSON array in the response
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
-      const jsonString = jsonMatch ? jsonMatch[0] : response
+      // Approach 1: Try standard parse
+      try {
+        const jsonMatch = response.match(/\[[\s\S]*\]/)
+        const jsonString = jsonMatch ? jsonMatch[0] : response
+        capabilities = JSON.parse(jsonString)
+      } catch (directParseError) {
+        console.warn('[capabilities] Direct JSON parse failed, attempting partial repair...', directParseError)
 
-      if (!jsonString || jsonString.trim().length === 0) {
-        console.error('[capabilities] No JSON found in response')
-        throw new Error('No JSON array found in response')
+        // Approach 2: Extract complete objects via regex (robust against truncation)
+        // Matches { ... } structures
+        const objectRegex = /\{[^{}]*\}/g
+        const matches = response.match(objectRegex)
+
+        if (matches && matches.length > 0) {
+          capabilities = matches.map(m => {
+            try {
+              return JSON.parse(m)
+            } catch {
+              return null
+            }
+          }).filter(item => item !== null && item.name && item.description)
+
+          console.log(`[capabilities] Successfully recovered ${capabilities.length} capabilities from truncated response`)
+        } else {
+          throw directParseError // Rethrow if repair fails
+        }
       }
 
-      capabilities = JSON.parse(jsonString)
     } catch (parseError) {
       console.error('[capabilities] JSON Parse Error. Raw response:', response)
       console.error('[capabilities] Parse error details:', parseError instanceof Error ? parseError.message : String(parseError))
       throw parseError
     }
 
-    if (!Array.isArray(capabilities)) throw new Error('Invalid AI response format: Not an array')
+    if (!Array.isArray(capabilities)) capabilities = [] // Fallback
 
     console.log(`[capabilities] Found ${capabilities.length} capabilities`)
 

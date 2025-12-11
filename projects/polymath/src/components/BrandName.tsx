@@ -18,10 +18,10 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
 
   return (
     <span className={`${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.02em' }}>
-      Ro<span style={{
-        color: 'rgba(100, 180, 255, 1)',
+      Coal<span style={{
+        color: 'rgba(6, 182, 212, 1)',
         letterSpacing: '0.01em'
-      }}>sette</span>
+      }}>esce</span>
     </span>
   )
 }
