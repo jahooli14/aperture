@@ -212,8 +212,14 @@ Output valid JSON with:
 
 Keep it brief and high-impact. No fluff.`
 
-        const result = await model.generateContent(analysisPrompt)
-        const responseText = result.response.text()
+        let responseText = ''
+        try {
+          const result = await model.generateContent(analysisPrompt)
+          responseText = result.response.text()
+        } catch (apiError: any) {
+          console.error('[connections] Gemini API Error during analyze:', apiError)
+          return res.status(502).json({ error: 'AI Service unavailable', details: apiError.message })
+        }
 
         // Parse JSON from response
         let analysis
@@ -221,12 +227,13 @@ Keep it brief and high-impact. No fluff.`
           const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/)
           analysis = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(responseText)
         } catch {
+          console.warn('[connections] Failed to parse JSON analysis, using fallback')
           // Fallback if JSON parsing fails
           analysis = {
-            summary: 'Unable to generate analysis',
+            summary: 'Analysis generated but formatting failed.',
             patterns: [],
-            insight: '',
-            suggestion: 'Try adding more connections to this item'
+            insight: responseText.slice(0, 100) + '...', // Try to show some text
+            suggestion: 'Try again.'
           }
         }
 
@@ -237,9 +244,9 @@ Keep it brief and high-impact. No fluff.`
           itemTitle: sourceItem.title || sourceItem.body?.slice(0, 50) || 'Untitled'
         })
 
-      } catch (error) {
-        console.error('[connections] Analysis error:', error)
-        return res.status(500).json({ error: 'Failed to analyze item' })
+      } catch (error: any) {
+        console.error('[connections] Analysis general error:', error)
+        return res.status(500).json({ error: 'Failed to analyze item', details: error.message })
       }
     }
 
@@ -448,168 +455,225 @@ What is the non-obvious link?`
     return res.status(400).json({ error: 'Invalid action' })
   }
 
-  // Only allow POST requests for creating connections
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+  // Handle POST requests
+  if (req.method === 'POST') {
+    const { action } = req.query
 
-  try {
-    const { sourceId, sourceType, content, embedding } = req.body // userId is now from getUserId()
+    // Manual Connection Creation
+    if (action === 'create-spark') {
+      try {
+        const { source_type, source_id, target_type, target_id, connection_type = 'relates_to' } = req.body
 
-    if (!sourceId || !sourceType) {
-      return res.status(400).json({ error: 'Missing required fields' })
-    }
-
-    console.log(`[connections] Finding connections for ${sourceType}:${sourceId} for user: ${userId}`)
-
-    // 1. Get embedding if not provided
-    let vector = embedding
-    if (!vector && content) {
-      const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
-      const result = await model.embedContent(content)
-      vector = result.embedding.values
-    }
-
-    if (!vector) {
-      return res.status(400).json({ error: 'Could not generate embedding' })
-    }
-
-    const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
-
-    // 2. Search Projects
-    if (sourceType !== 'project') {
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('id, title, description, embedding')
-        .eq('user_id', userId)
-        .not('embedding', 'is', null)
-        .limit(50)
-
-      if (projects) {
-        for (const p of projects) {
-          if (p.embedding) {
-            const similarity = cosineSimilarity(vector, p.embedding)
-            if (similarity > 0.55) {
-              candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
-            }
-          }
+        if (!source_type || !source_id || !target_type || !target_id) {
+          return res.status(400).json({ error: 'Missing required fields (source_type, source_id, target_type, target_id)' })
         }
-      }
-    }
 
-    // 3. Search Memories (Thoughts)
-    if (sourceType !== 'thought') {
-      const { data: memories } = await supabase
-        .from('memories')
-        .select('id, title, body, embedding')
-        .eq('user_id', userId)
-        .neq('id', sourceId) // Don't match self
-        .not('embedding', 'is', null)
-        .limit(50)
+        // Check for existing connection (bidirectional check)
+        const { data: existing } = await supabase
+          .from('connections')
+          .select('id')
+          .eq('user_id', userId)
+          .or(`and(source_type.eq.${source_type},source_id.eq.${source_id},target_type.eq.${target_type},target_id.eq.${target_id}),and(source_type.eq.${target_type},source_id.eq.${target_id},target_type.eq.${source_type},target_id.eq.${source_id})`)
+          .maybeSingle()
 
-      if (memories) {
-        for (const m of memories) {
-          if (m.embedding) {
-            const similarity = cosineSimilarity(vector, m.embedding)
-            if (similarity > 0.55) {
-              candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
-            }
-          }
+        if (existing) {
+          return res.status(409).json({ error: 'Connection already exists' })
         }
-      }
-    }
 
-    // 4. Search Articles
-    if (sourceType !== 'article') {
-      const { data: articles } = await supabase
-        .from('reading_queue')
-        .select('id, title, excerpt, embedding')
-        .eq('user_id', userId)
-        .neq('id', sourceId) // Don't match self
-        .not('embedding', 'is', null)
-        .limit(50)
-
-      if (articles) {
-        for (const a of articles) {
-          if (a.embedding) {
-            const similarity = cosineSimilarity(vector, a.embedding)
-            if (similarity > 0.55) {
-              candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
-            }
-          }
-        }
-      }
-    }
-
-    // Sort by similarity
-    candidates.sort((a, b) => b.similarity - a.similarity)
-
-    // 5. Create Suggestions & Auto-links
-    const suggestions = []
-    const autoLinked = []
-
-    for (const candidate of candidates.slice(0, 10)) {
-      // Check for existing connection to avoid duplicates
-      const { data: existing } = await supabase
-        .from('connections')
-        .select('id')
-        .eq('user_id', userId) // Added user_id filter
-        .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
-        .maybeSingle()
-
-      if (existing) continue
-
-      if (candidate.similarity > 0.85) {
-        // Auto-create connection
-        await supabase
+        // Create the connection
+        const { data, error } = await supabase
           .from('connections')
           .insert({
-            user_id: userId, // Ensure user_id is set
-            source_type: sourceType,
-            source_id: sourceId,
-            target_type: candidate.type,
-            target_id: candidate.id,
-            connection_type: 'relates_to',
-            created_by: 'ai',
-            ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
+            user_id: userId,
+            source_type,
+            source_id,
+            target_type,
+            target_id,
+            connection_type,
+            created_by: 'user'
           })
-        autoLinked.push(candidate)
-      } else {
-        // Create suggestion
-        suggestions.push({
-          from_item_type: sourceType,
-          from_item_id: sourceId,
-          to_item_type: candidate.type,
-          to_item_id: candidate.id,
-          reasoning: `${Math.round(candidate.similarity * 100)}% semantic similarity`,
-          confidence: candidate.similarity,
-          user_id: userId,
-          status: 'pending'
-        })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        return res.status(200).json({ success: true, connection: data })
+
+      } catch (error) {
+        console.error('[connections] Create spark error:', error)
+        return res.status(500).json({ error: 'Failed to create connection' })
       }
     }
 
-    // Batch insert suggestions
-    if (suggestions.length > 0) {
-      const { error } = await supabase
-        .from('connection_suggestions')
-        .insert(suggestions)
+    // Auto-Suggest & Link (Search mechanism)
+    // Supports both camelCase (from some calls) and snake_case (legacy/consistency)
+    try {
+      const body = req.body
+      const sourceId = body.sourceId || body.source_id
+      const sourceType = body.sourceType || body.source_type
+      const content = body.content
+      const embedding = body.embedding
 
-      if (error) console.error('Failed to insert suggestions:', error)
+      if (!sourceId || !sourceType) {
+        return res.status(400).json({ error: 'Missing required fields (sourceId/source_id, sourceType/source_type)' })
+      }
+
+      console.log(`[connections] Finding connections for ${sourceType}:${sourceId} for user: ${userId}`)
+
+      // 1. Get embedding if not provided
+      let vector = embedding
+      if (!vector && content) {
+        try {
+          const model = genAI.getGenerativeModel({ model: 'text-embedding-004' })
+          const result = await model.embedContent(content)
+          vector = result.embedding.values
+        } catch (embedError) {
+          console.error('[connections] Embedding generation failed:', embedError)
+          // Fallback or exit? If we can't get embedding, we can't search.
+          return res.status(400).json({ error: 'Failed to generate embedding for content' })
+        }
+      }
+
+      if (!vector) {
+        return res.status(400).json({ error: 'No embedding provided or generated' })
+      }
+
+      const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
+
+      // 2. Search Projects
+      if (sourceType !== 'project') {
+        const { data: projects } = await supabase
+          .from('projects')
+          .select('id, title, description, embedding')
+          .eq('user_id', userId)
+          .not('embedding', 'is', null)
+          .limit(50)
+
+        if (projects) {
+          for (const p of projects) {
+            if (p.embedding) {
+              const similarity = cosineSimilarity(vector, p.embedding)
+              if (similarity > 0.55) {
+                candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Search Memories (Thoughts)
+      if (sourceType !== 'thought') {
+        const { data: memories } = await supabase
+          .from('memories')
+          .select('id, title, body, embedding')
+          .eq('user_id', userId)
+          .neq('id', sourceId) // Don't match self
+          .not('embedding', 'is', null)
+          .limit(50)
+
+        if (memories) {
+          for (const m of memories) {
+            if (m.embedding) {
+              const similarity = cosineSimilarity(vector, m.embedding)
+              if (similarity > 0.55) {
+                candidates.push({ type: 'thought', id: m.id, title: m.title || m.body?.slice(0, 50) + '...', similarity })
+              }
+            }
+          }
+        }
+      }
+
+      // 4. Search Articles
+      if (sourceType !== 'article') {
+        const { data: articles } = await supabase
+          .from('reading_queue')
+          .select('id, title, excerpt, embedding')
+          .eq('user_id', userId)
+          .neq('id', sourceId) // Don't match self
+          .not('embedding', 'is', null)
+          .limit(50)
+
+        if (articles) {
+          for (const a of articles) {
+            if (a.embedding) {
+              const similarity = cosineSimilarity(vector, a.embedding)
+              if (similarity > 0.55) {
+                candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
+              }
+            }
+          }
+        }
+      }
+
+      // Sort by similarity
+      candidates.sort((a, b) => b.similarity - a.similarity)
+
+      // 5. Create Suggestions & Auto-links
+      const suggestions = []
+      const autoLinked = []
+
+      for (const candidate of candidates.slice(0, 10)) {
+        // Check for existing connection to avoid duplicates
+        const { data: existing } = await supabase
+          .from('connections')
+          .select('id')
+          .eq('user_id', userId)
+          .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${candidate.type},target_id.eq.${candidate.id}),and(source_type.eq.${candidate.type},source_id.eq.${candidate.id},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
+          .maybeSingle()
+
+        if (existing) continue
+
+        if (candidate.similarity > 0.85) {
+          // Auto-create connection
+          await supabase
+            .from('connections')
+            .insert({
+              user_id: userId,
+              source_type: sourceType,
+              source_id: sourceId,
+              target_type: candidate.type,
+              target_id: candidate.id,
+              connection_type: 'relates_to',
+              created_by: 'ai',
+              ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
+            })
+          autoLinked.push(candidate)
+        } else {
+          // Create suggestion
+          suggestions.push({
+            from_item_type: sourceType,
+            from_item_id: sourceId,
+            to_item_type: candidate.type,
+            to_item_id: candidate.id,
+            reasoning: `${Math.round(candidate.similarity * 100)}% semantic similarity`,
+            confidence: candidate.similarity,
+            user_id: userId,
+            status: 'pending'
+          })
+        }
+      }
+
+      // Batch insert suggestions
+      if (suggestions.length > 0) {
+        const { error } = await supabase
+          .from('connection_suggestions')
+          .insert(suggestions)
+
+        if (error) console.error('Failed to insert suggestions:', error)
+      }
+
+      return res.status(200).json({
+        success: true,
+        autoLinked: autoLinked.length,
+        suggestions: suggestions.length,
+        candidates: candidates.slice(0, 5)
+      })
+
+    } catch (error) {
+      console.error('[connections] Search error:', error)
+      return res.status(500).json({
+        error: 'Connection search failed',
+      })
     }
-
-    return res.status(200).json({
-      success: true,
-      autoLinked: autoLinked.length,
-      suggestions: suggestions.length,
-      candidates: candidates.slice(0, 5)
-    })
-
-  } catch (error) {
-    console.error('[connections] Error:', error)
-    return res.status(500).json({
-      error: 'Connection search failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    })
   }
 }

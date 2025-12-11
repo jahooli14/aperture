@@ -34,7 +34,14 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
   const { isCached: isArticleFullyCached } = useOfflineArticle()
-  const { is_rotting } = article; // Destructure is_rotting
+  const { is_rotting } = article;
+
+  // Load progress from DB
+  useEffect(() => {
+    readingDb.getProgress(article.id).then(p => {
+      if (p) setProgress(p.scroll_percentage)
+    })
+  }, [article.id])
 
   // Clean excerpt logic
   const cleanExcerpt = (text: string | undefined | null): string | undefined => {
@@ -177,7 +184,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         style={{
           borderColor: 'rgba(255, 255, 255, 0.1)',
           background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          filter: is_rotting ? 'grayscale(80%)' : 'none', // Apply grayscale for rotting
+          transition: 'filter 0.3s ease-in-out' // Smooth transition for filter
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)';
@@ -204,6 +213,9 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
               <h3 className="text-lg font-bold leading-tight line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
                 {article.title || 'Untitled'}
               </h3>
+            )}
+            {is_rotting && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium ml-2">Rotting</span>
             )}
             <div className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
               {article.source || new URL(article.url).hostname.replace('www.', '')}

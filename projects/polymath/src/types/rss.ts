@@ -24,6 +24,11 @@ export interface RSSFeedItem {
   description: string | null
   published_at: string | null
   author: string | null
+  content?: string
+  enclosure?: {
+    url: string
+    type?: string
+  }
 }
 
 export interface SaveFeedRequest {

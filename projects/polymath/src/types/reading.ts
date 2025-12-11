@@ -27,6 +27,7 @@ export interface Article {
   word_count: number | null
   notes: string | null
   processed?: boolean // Whether content extraction is complete
+  is_rotting?: boolean // Whether the article has been in the queue too long
 }
 
 export interface ArticleHighlight {

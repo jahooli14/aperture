@@ -22,7 +22,9 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
-import type { Project } from '../types'
+import type { Project, Memory } from '../types'
+import { supabase } from '../lib/supabase'
+import { useMemoryStore } from '../stores/useMemoryStore'
 
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 
@@ -41,6 +43,7 @@ export function ProjectDetailPage() {
 
   const [project, setProject] = useState<Project | null>(null)
   const [notes, setNotes] = useState<ProjectNote[]>([])
+  const [projectMemories, setProjectMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
@@ -125,6 +128,17 @@ export function ProjectDetailPage() {
       if (data.project) {
         setProject(data.project)
         if (data.notes) setNotes(data.notes)
+
+        // 3. Fetch linked memories (Quick Notes)
+        const { data: linkedMemories, error: memoryError } = await supabase
+          .from('memories')
+          .select('*')
+          .contains('source_reference', { id: id, type: 'project' }) // JSONB containment
+          .order('created_at', { ascending: false })
+
+        if (linkedMemories) {
+          setProjectMemories(linkedMemories)
+        }
 
         // Update store with fresh data
         // useProjectStore.getState().updateProject(id, data.project)
@@ -775,7 +789,14 @@ export function ProjectDetailPage() {
                   Activity
                 </h3>
                 <ProjectActivityStream
-                  notes={notes}
+                  notes={[...notes, ...projectMemories.map(m => ({
+                    id: m.id,
+                    project_id: id || '',
+                    user_id: '',
+                    bullets: m.body.split('\n').filter(l => l.trim().length > 0).map(l => l.replace(/^[•-]\s*/, '')),
+                    created_at: m.created_at,
+                    note_type: (m.memory_type === 'quick-note' ? 'text' : 'voice') as 'text' | 'voice'
+                  }))].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
                   onRefresh={loadProjectDetails}
                 />
               </div>
