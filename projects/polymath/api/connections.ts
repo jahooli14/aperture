@@ -190,7 +190,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (itemText) connectedItems.push(itemText)
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
         // Truncate content to prevent token overflow/timeouts
         const truncatedSource = sourceContent.slice(0, 1000)
@@ -304,7 +304,7 @@ Keep it brief and high-impact. No fluff.`
           if (itemText) connectedItems.push(itemText)
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
         // Truncate content
         const truncatedSource = sourceContent.slice(0, 1000)

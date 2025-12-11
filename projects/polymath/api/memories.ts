@@ -199,7 +199,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   try {
     // Configure Gemini with Structured Outputs (JSON Schema)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 300,
@@ -1129,7 +1129,7 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
     const base64Data = fileData.toString('base64')
 
     // Use Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     let prompt = ''
     if (isImage) {

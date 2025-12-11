@@ -636,13 +636,7 @@ export function ReadingPage() {
             <FileText className="h-7 w-7" />
           </div>
 
-          {/* Offline Indicator */}
-          {useReadingStore(state => state.offlineMode) && (
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-xs font-medium text-amber-500">Offline Mode</span>
-            </div>
-          )}
+
 
           {/* Filter Tabs */}
           <PremiumTabs
