@@ -227,6 +227,22 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
           {memory.body}
         </p>
 
+        {/* Attached Images */}
+        {memory.image_urls && memory.image_urls.length > 0 && (
+          <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg overflow-hidden h-24 relative">
+            {memory.image_urls.slice(0, 2).map((url, i) => (
+              <div key={i} className={`relative ${memory.image_urls!.length === 1 ? 'col-span-2' : ''} h-full`}>
+                <img src={url} alt="Attachment" className="w-full h-full object-cover" />
+                {i === 1 && memory.image_urls!.length > 2 && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">+{memory.image_urls!.length - 2}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-2 text-xs pt-3 mt-3 border-t" style={{
           color: 'var(--premium-text-tertiary)',
           borderColor: 'rgba(255, 255, 255, 0.1)'

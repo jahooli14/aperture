@@ -781,14 +781,10 @@ export function ReadingPage() {
                       }
                     />
                   ) : (
-                    <Virtuoso
-                      style={{ height: 'calc(100vh - 280px)' }}
-                      data={rssItems}
-                      overscan={200}
-                      itemContent={(index, item) => (
-                        <div className="pb-4" style={{ contain: 'layout style paint' }}>
+                    <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                      {rssItems.map((item) => (
+                        <div key={item.guid} className="break-inside-avoid mb-4" style={{ contain: 'content' }}>
                           <RSSFeedItem
-                            key={item.guid}
                             item={item}
                             onSave={() => handleSaveRSSItem(item)}
                             onDismiss={() => {
@@ -799,8 +795,8 @@ export function ReadingPage() {
                             }}
                           />
                         </div>
-                      )}
-                    />
+                      ))}
+                    </div>
                   )}
                 </>
               )}

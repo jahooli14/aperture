@@ -17,8 +17,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0)
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
   const [progress, setProgress] = useState(0) // Stability progress (0-100)
-  
-  const { addMemory } = useMemoryStore()
+
+  const { createMemory } = useMemoryStore()
   const { addToast } = useToast()
 
   // Motion tracking refs
@@ -71,11 +71,12 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     }
 
     const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
-    
+
     // Tuned Thresholds - Less sensitive (v2)
-    const STILL_THRESHOLD = 0.2 // Stricter stillness (was 0.3)
-    const WAKE_THRESHOLD = 2.5 // Harder wake/jerk (was 1.2)
-    const REQUIRED_DURATION = 4000 // Longer settling time (was 3000)
+    // Tuned Thresholds - Less sensitive (v3)
+    const STILL_THRESHOLD = 0.3 // Slightly easier to enter drift (was 0.2)
+    const WAKE_THRESHOLD = 5.0 // Much harder wake/jerk (was 2.5)
+    const REQUIRED_DURATION = 5000 // Longer settling time (was 4000)
 
     // Debug log (throttled)
     if (Math.random() < 0.05) {
@@ -101,7 +102,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     }
 
     lastAccel.current = { x, y, z }
-    
+
     // Reset stillness timer if moving too much before drift
     if (delta > STILL_THRESHOLD && !hasDrifted.current) {
       stillnessStart.current = Date.now()
@@ -126,18 +127,18 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     if (!text.trim()) return
 
     try {
-      await addMemory({
+      await createMemory({
         body: text,
-        type: 'thought',
-        source: 'drift_mode'
+        title: 'Drift Insight',
+        memory_type: 'insight'
       })
-      
+
       addToast({
         title: 'Insight Captured',
         description: 'Saved to your thoughts',
         variant: 'success'
       })
-      
+
       haptic.success()
       resetDrift()
     } catch (error) {
@@ -149,7 +150,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     }
   }
 
-  const { 
+  const {
     isRecording,
     isProcessing,
     toggleRecording
@@ -164,7 +165,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   return (
     <div className="fixed inset-0 z-50 bg-black text-amber-900 flex flex-col items-center justify-center overflow-hidden">
       {/* Exit Button */}
-      <button 
+      <button
         onClick={onClose}
         className="absolute top-6 right-6 p-4 rounded-full bg-white/5 text-amber-900/50 hover:bg-white/10"
       >
@@ -174,7 +175,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       <AnimatePresence mode="wait">
         {/* Stage 1: Settling / Instructions */}
         {stage === 'settling' && (
-          <motion.div 
+          <motion.div
             key="settling"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -184,15 +185,15 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
               {/* Stability Ring */}
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle 
-                  cx="50" cy="50" r="45" 
-                  fill="none" 
-                  stroke="rgba(120, 53, 15, 0.1)" 
-                  strokeWidth="4" 
+                <circle
+                  cx="50" cy="50" r="45"
+                  fill="none"
+                  stroke="rgba(120, 53, 15, 0.1)"
+                  strokeWidth="4"
                 />
-                <motion.circle 
-                  cx="50" cy="50" r="45" 
-                  fill="none" 
+                <motion.circle
+                  cx="50" cy="50" r="45"
+                  fill="none"
                   stroke="#d97706" // amber-600
                   strokeWidth="4"
                   strokeDasharray="283"
@@ -206,11 +207,11 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <h2 className="text-2xl font-serif font-medium mb-4 text-amber-700">
               {mode === 'sleep' ? 'The Steel Ball' : 'The Reset Sphere'}
             </h2>            <p className="text-lg text-amber-900/60 leading-relaxed mb-8">
-              {mode === 'sleep' 
-                ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight." 
+              {mode === 'sleep'
+                ? "Hold your phone loosely in your hand. Close your eyes.\n\nWhen you drift into the edge of sleep and your hand slips...\nWe will catch the insight."
                 : "Hold your phone loosely. Close your eyes.\n\nLet your mind wander away from the problem.\nWhen your focus breaks and your hand slips..."}
             </p>
-            
+
             <button
               onClick={requestMotionPermission}
               className="px-8 py-3 rounded-full bg-amber-900/20 text-amber-600 font-medium hover:bg-amber-900/30 transition-all"
@@ -226,7 +227,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
         {/* Stage 2: Drifting (Darkness) */}
         {stage === 'drifting' && (
-          <motion.div 
+          <motion.div
             key="drifting"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -240,7 +241,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
         {/* Stage 3: Awakened (The Prompt) */}
         {stage === 'awakened' && currentPrompt && (
-          <motion.div 
+          <motion.div
             key="awakened"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -261,23 +262,22 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-12">
-              <button 
+              <button
                 onClick={resetDrift}
                 className="px-8 py-4 rounded-full bg-amber-900/10 text-amber-800 hover:bg-amber-900/20 transition-all flex items-center gap-2"
               >
                 <Wind className="h-5 w-5" />
                 {mode === 'sleep' ? 'Drift Again' : 'Reset Again'}
               </button>
-              
+
               {/* Voice Capture */}
-              <button 
+              <button
                 onClick={toggleRecording}
                 disabled={isProcessing}
-                className={`p-4 rounded-full transition-all ${ 
-                  isRecording 
-                    ? 'bg-red-500/20 text-red-600 animate-pulse' 
-                    : 'bg-amber-900/10 text-amber-800 hover:bg-amber-900/20'
-                }`}
+                className={`p-4 rounded-full transition-all ${isRecording
+                  ? 'bg-red-500/20 text-red-600 animate-pulse'
+                  : 'bg-amber-900/10 text-amber-800 hover:bg-amber-900/20'
+                  }`}
               >
                 {isProcessing ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

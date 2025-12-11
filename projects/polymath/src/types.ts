@@ -55,6 +55,9 @@ export interface Memory {
   processed: boolean
   processed_at: string | null
   error: string | null
+
+  // Attachments
+  image_urls: string[] | null
 }
 
 // ============================================================================

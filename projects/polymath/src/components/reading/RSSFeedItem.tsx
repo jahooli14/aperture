@@ -1,13 +1,8 @@
-/**
- * RSS Feed Item Component
- * Displays an RSS feed item with save button
- */
-
 import { useState } from 'react'
-import { motion, useMotionValue, useTransform } from 'framer-motion'
-import { BookmarkPlus, ExternalLink, Clock, X } from 'lucide-react'
+import { BookmarkPlus, ExternalLink, Clock, X, MoreVertical } from 'lucide-react'
 import type { RSSFeedItem as RSSItem } from '../../types/rss'
-import { haptic } from '../../utils/haptics'
+import { format } from 'date-fns'
+import { Button } from '../ui/button'
 
 interface RSSFeedItemProps {
   item: RSSItem & { feed_title?: string }
@@ -16,162 +11,131 @@ interface RSSFeedItemProps {
 }
 
 export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
-  const [exitX, setExitX] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
 
-  // Motion values for swipe gesture
-  const x = useMotionValue(0)
-  const saveIndicatorOpacity = useTransform(x, [0, 100], [0, 1])
-  const dismissIndicatorOpacity = useTransform(x, [-100, 0], [1, 0])
-  const backgroundColor = useTransform(
-    x,
-    [-150, 0, 150],
-    ['rgba(239, 68, 68, 0.3)', 'rgba(20, 27, 38, 0.4)', 'rgba(59, 130, 246, 0.3)']
-  )
-
-  const handleDragEnd = (_: any, info: any) => {
-    const offset = info.offset.x
-    const velocity = info.velocity.x
-
-    // Swipe right = Save to reading queue
-    if (offset > 100 || velocity > 500) {
-      haptic.success()
-      setExitX(1000)
-      setTimeout(() => {
-        onSave()
-      }, 200)
-    }
-    // Swipe left = Dismiss
-    else if ((offset < -100 || velocity < -500) && onDismiss) {
-      haptic.light()
-      setExitX(-1000)
-      setTimeout(() => {
-        onDismiss()
-      }, 200)
-    }
-  }
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Unknown date'
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(hours / 24)
-
-    if (hours < 1) return 'Just now'
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
-    return date.toLocaleDateString()
+  // Extract image from content/description if possible (simple regex)
+  const getImageUrl = (html: string) => {
+    const match = html.match(/<img[^>]+src="([^">]+)"/)
+    return match ? match[1] : null
   }
 
-  const truncateDescription = (text: string | null, maxLength = 200) => {
-    if (!text) return ''
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength).trim() + '...'
-  }
+  const imageUrl = item.enclosure?.url || (item.content ? getImageUrl(item.content) : null) || (item.description ? getImageUrl(item.description) : null)
 
   return (
-    <motion.div
-      style={{ x }}
-      drag="x"
-      dragConstraints={{ left: -200, right: 200 }}
-      dragElastic={0.1}
-      onDragEnd={handleDragEnd}
-      animate={exitX !== 0 ? { x: exitX, opacity: 0 } : {}}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="relative"
+    <div
+      className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative mb-4"
+      style={{
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+      }}
+      onMouseEnter={(e) => {
+        setIsHovered(true)
+        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)'
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4)'
+      }}
+      onMouseLeave={(e) => {
+        setIsHovered(false)
+        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)'
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)'
+      }}
     >
-      {/* Save Indicator (Swipe Right) */}
-      <motion.div
-        style={{ opacity: saveIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-start pl-6 pointer-events-none z-10 rounded-xl"
-      >
-        <div className="flex items-center gap-2">
-          <BookmarkPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-          <span className="text-xl font-bold" style={{ color: 'var(--premium-blue)' }}>SAVE</span>
-        </div>
-      </motion.div>
-
-      {/* Dismiss Indicator (Swipe Left) */}
-      <motion.div
-        style={{ opacity: dismissIndicatorOpacity }}
-        className="absolute inset-0 flex items-center justify-end pr-6 pointer-events-none z-10 rounded-xl"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-red-500">DISMISS</span>
-          <X className="h-6 w-6 text-red-500" />
-        </div>
-      </motion.div>
-
-      <motion.div style={{ backgroundColor }}>
-        <div
-          className="premium-card p-4 hover:bg-white/5 transition-all group"
-          style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+      {/* Row 1: Title & Actions */}
+      <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
+        <a
+          href={item.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 min-w-0 group/link"
         >
-          <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          {/* Feed Title */}
+          <h3 className="text-lg font-bold leading-tight line-clamp-2 group-hover/link:text-blue-400 transition-colors" style={{ color: 'var(--premium-text-primary)' }}>
+            {item.title}
+          </h3>
           {item.feed_title && (
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-medium px-2 py-1 rounded-full" style={{
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: 'var(--premium-blue)'
-              }}>
-                {item.feed_title}
-              </span>
-              {item.published_at && (
-                <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  <Clock className="h-3 w-3" />
-                  {formatDate(item.published_at)}
-                </span>
-              )}
+            <div className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+              {item.feed_title}
             </div>
           )}
+        </a>
 
-          {/* Article Title */}
-          <a
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mb-2 group/link"
+        {/* Actions Menu */}
+        <div className="flex items-center gap-1 shrink-0 -mr-2 -mt-1">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation()
+              onSave()
+            }}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-white/10 text-blue-400"
+            title="Save to Inbox"
           >
-            <h3 className="font-semibold text-base premium-text-platinum group-hover/link:text-blue-400 transition-colors flex items-center gap-2">
-              {item.title}
-              <ExternalLink className="h-4 w-4 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-            </h3>
-          </a>
-
-          {/* Description */}
-          {item.description && (
-            <p className="text-sm leading-relaxed mb-3" style={{ color: 'var(--premium-text-secondary)' }}>
-              {truncateDescription(item.description)}
-            </p>
-          )}
-
-          {/* Author */}
-          {item.author && (
-            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-              By {item.author}
-            </p>
+            <BookmarkPlus className="h-4 w-4" />
+          </Button>
+          {onDismiss && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDismiss()
+              }}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-white/10 text-gray-400 hover:text-red-400"
+              title="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           )}
         </div>
-
-        {/* Save Button */}
-        <button
-          onClick={onSave}
-          className="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all hover:scale-110 active:scale-95"
-          style={{
-            borderColor: 'rgba(59, 130, 246, 0.3)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            color: 'var(--premium-blue)'
-          }}
-          aria-label="Save to reading queue"
-          title="Save to reading queue"
-        >
-          <BookmarkPlus className="h-5 w-5" />
-        </button>
       </div>
+
+      {/* Row 2: Image & Meta */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        {/* Thumbnail (Left) */}
+        {imageUrl ? (
+          <div className="flex-shrink-0">
+            <img
+              src={imageUrl}
+              alt={item.title || 'Feed thumbnail'}
+              className="w-16 h-16 rounded-lg object-cover bg-black/20"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+            <span className="text-2xl opacity-20">📰</span>
+          </div>
+        )}
+
+        {/* Right Column: Meta */}
+        <div className="flex-1 flex flex-col items-end justify-end h-16 text-right">
+          <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            {item.published_at && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {format(new Date(item.published_at), 'MMM d')}
+              </span>
+            )}
+          </div>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+
+      {/* Row 3: Description */}
+      {item.description && (
+        <div
+          className="text-sm line-clamp-4 mb-1 leading-relaxed"
+          style={{ color: 'var(--premium-text-secondary)' }}
+          dangerouslySetInnerHTML={{
+            __html: item.description.replace(/<[^>]+>/g, '').substring(0, 300) + (item.description.length > 300 ? '...' : '')
+          }}
+        />
+      )}
+    </div>
   )
 }

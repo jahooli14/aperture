@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { Memory, Bridge, BridgeWithMemories } from '../types'
+import type { Memory, Bridge, BridgeWithMemories, SourceReference } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 
@@ -9,6 +9,8 @@ interface CreateMemoryInput {
   body: string
   tags?: string[]
   memory_type?: 'foundational' | 'event' | 'insight' | 'quick-note'
+  image_urls?: string[]
+  source_reference?: SourceReference
 }
 
 interface MemoryStore {
@@ -56,7 +58,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       try {
         const { readingDb } = await import('../lib/db')
         const cached = await readingDb.getCachedMemories()
-        
+
         // Map cached memories (Dexie) to Memory type (Supabase)
         // Note: CachedMemory has 'created_at' which maps to 'audiopen_created_at'
         const mappedMemories: Memory[] = cached.map(c => ({
@@ -72,6 +74,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           processed: true, // Assume processed if cached
           // Default optional fields
           memory_type: null,
+          image_urls: c.image_urls || null,
           entities: null,
           emotional_tone: null,
           embedding: null,
@@ -83,15 +86,15 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         }))
 
         // Sort by date desc
-        const sorted = mappedMemories.sort((a, b) => 
+        const sorted = mappedMemories.sort((a, b) =>
           new Date(b.audiopen_created_at).getTime() - new Date(a.audiopen_created_at).getTime()
         )
-        
-        set({ 
-          memories: sorted, 
-          loading: false, 
+
+        set({
+          memories: sorted,
+          loading: false,
           lastFetched: Date.now(),
-          error: null 
+          error: null
         })
         return true
       } catch (err) {
@@ -125,6 +128,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             body: m.body || '',
             tags: m.tags || [],
             themes: m.themes || [],
+            image_urls: m.image_urls || undefined,
             created_at: m.audiopen_created_at || new Date().toISOString()
           }))
           readingDb.bulkCacheMemories(memoriesToCache)
@@ -145,7 +149,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       set({ memories: newMemories, loading: false, lastFetched: now })
     } catch (error) {
       console.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
-      
+
       const loadedOffline = await loadFromOfflineDB()
       if (!loadedOffline) {
         set({
@@ -239,6 +243,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       tags: input.tags || [],
       audiopen_created_at: now,
       memory_type: input.memory_type || null,
+      image_urls: input.image_urls || null,
       entities: null,
       themes: null,
       emotional_tone: null,
@@ -246,6 +251,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       processed: false,
       processed_at: null,
       error: null,
+      source_reference: input.source_reference || null,
     }
 
     const { isOnline } = useOfflineStore.getState()
@@ -259,7 +265,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         ...newMemory,
         last_reviewed_at: null,
         review_count: 0,
-        source_reference: null,
+        source_reference: input.source_reference || null,
       } as Memory
 
       // Add to UI immediately
@@ -325,6 +331,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
                 body: input.body,
                 tags: input.tags || [],
                 memory_type: input.memory_type || null,
+                image_urls: input.image_urls || m.image_urls,
                 processed: false,
               }
               : m
@@ -343,6 +350,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         body: input.body,
         tags: input.tags || [],
         memory_type: input.memory_type || null,
+        image_urls: input.image_urls,
         processed: false,
       }
 
@@ -363,6 +371,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           body: input.body,
           tags: input.tags || [],
           memory_type: input.memory_type || null,
+          image_urls: input.image_urls,
         })
       })
 
@@ -427,7 +436,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         .from('user_prompt_status')
         .update({ response_id: null, status: 'pending' }) // Reset prompt to pending? Or just clear link?
         .eq('response_id', id)
-      
+
       if (promptError) console.warn('[MemoryStore] Prompt status update warning:', promptError)
 
       // 3. Delete the memory
@@ -437,7 +446,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         .eq('id', id)
 
       if (error) throw error
-      
+
       if (count === 0) {
         console.warn('[MemoryStore] Memory not found in DB (already deleted?), keeping UI consistent')
         // Do NOT throw error here. If it's not in the DB, we want it gone from UI too.
@@ -448,7 +457,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     } catch (error) {
       console.error('[MemoryStore] Delete failed:', error)
-      
+
       // Only rollback if it's a genuine API error, not a "not found" (count 0) situation
       // Since we removed the count check above, this catch block handles network/permission errors
       set({ memories: previousMemories })
@@ -470,6 +479,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       tags: [],
       audiopen_created_at: now,
       memory_type: null,
+      image_urls: null,
       entities: null,
       themes: null,
       emotional_tone: null,

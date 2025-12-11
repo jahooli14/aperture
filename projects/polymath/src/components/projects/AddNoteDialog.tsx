@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { X, Mic, Plus, Trash2, FileText } from 'lucide-react'
 import { Button } from '../ui/button'
 import { useToast } from '../ui/toast'
+import { useMemoryStore } from '../../stores/useMemoryStore'
 
 interface AddNoteDialogProps {
   open: boolean
@@ -21,6 +22,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
   const [isRecording, setIsRecording] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const { addToast } = useToast()
+  const createMemory = useMemoryStore(state => state.createMemory)
 
   useEffect(() => {
     if (!open) {
@@ -63,30 +65,41 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
 
     setIsSaving(true)
 
+    setIsSaving(true)
+
     try {
-      const response = await fetch('/api/projects?resource=notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_id: projectId,
-          bullets: validBullets,
-          note_type: noteType,
-        }),
+      // Create a memory linked to this project
+      // Combine bullets into a single body for the memory
+      const body = validBullets.map(b => `• ${b}`).join('\n')
+
+      const newMemory = await createMemory({
+        title: `Note on Project`, // Generic title, AI can refine later
+        body: body,
+        memory_type: 'quick-note',
+        source_reference: {
+          type: 'project',
+          id: projectId,
+        }
       })
 
-      const data = await response.json()
+      addToast({
+        title: 'Note added',
+        description: 'Your note has been saved to your memory bank',
+        variant: 'success',
+      })
 
-      if (data.success) {
-        addToast({
-          title: 'Note added',
-          description: 'Your update has been saved',
-          variant: 'success',
-        })
-        onNoteAdded(data.note)
-        onClose()
-      } else {
-        throw new Error(data.error || 'Failed to save note')
-      }
+      // Adapt memory to ProjectNote format for immediate UI update if needed
+      // But ideally we rely on refresh.
+      // We pass a compliant object to satisfy the callback
+      onNoteAdded({
+        id: newMemory.id,
+        project_id: projectId,
+        bullets: validBullets,
+        created_at: newMemory.created_at,
+        note_type: 'text'
+      })
+
+      onClose()
     } catch (error) {
       console.error('[AddNoteDialog] Save error:', error)
       addToast({
@@ -138,11 +151,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
             <div className="flex gap-3">
               <button
                 onClick={() => setNoteType('voice')}
-                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
-                  noteType === 'voice'
-                    ? 'shadow-2xl ring-2'
-                    : 'hover:bg-white/5'
-                }`}
+                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${noteType === 'voice'
+                  ? 'shadow-2xl ring-2'
+                  : 'hover:bg-white/5'
+                  }`}
                 style={noteType === 'voice' ? {
                   background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
                   color: 'white'
@@ -162,11 +174,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               </button>
               <button
                 onClick={() => setNoteType('text')}
-                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${
-                  noteType === 'text'
-                    ? 'shadow-2xl ring-2'
-                    : 'hover:bg-white/5'
-                }`}
+                className={`flex-1 px-6 py-4 rounded-xl font-semibold transition-all ${noteType === 'text'
+                  ? 'shadow-2xl ring-2'
+                  : 'hover:bg-white/5'
+                  }`}
                 style={noteType === 'text' ? {
                   background: 'linear-gradient(135deg, var(--premium-indigo), var(--premium-purple))',
                   color: 'white'
@@ -193,11 +204,10 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               <div className="text-center py-12">
                 <button
                   onClick={handleVoiceRecord}
-                  className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all ${
-                    isRecording
-                      ? 'animate-pulse'
-                      : ''
-                  }`}
+                  className={`h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all ${isRecording
+                    ? 'animate-pulse'
+                    : ''
+                    }`}
                   style={isRecording ? {
                     background: 'linear-gradient(135deg, #ef4444, #dc2626)',
                     color: 'white'

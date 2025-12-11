@@ -68,7 +68,7 @@ export function CapabilitiesPage() {
       const result = await response.json()
       addToast({
         title: 'Capabilities Updated',
-        description: `Found ${result.extracted?.length || 0} new capabilities`,
+        description: result.extracted?.length ? `Discovered ${result.extracted.length} new capabilities!` : 'Your capabilities are up to date.',
         variant: 'success'
       })
       fetchCapabilities()

@@ -941,21 +941,7 @@ export function HomePage() {
                 <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               </button>
 
-              {/* Drift / Reset */}
-              <button
-                onClick={handleOpenDrift}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.1))',
-                  border: '1px solid rgba(251, 191, 36, 0.2)'
-                }}
-                title="Drift / Reset"
-              >
-                <div className="relative">
-                  <Wind className="h-6 w-6" style={{ color: 'var(--premium-gold)' }} />
-                  <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                </div>
-              </button>
+
             </div>
           </div>
         </section>
@@ -995,7 +981,92 @@ export function HomePage() {
               </h2>
             </div>
 
+            {/* Card of the Day - Resurfacing - Enhanced Design */}
+            {cardOfTheDay && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="premium-glass-subtle p-6 rounded-2xl relative overflow-hidden mb-6"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
+                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
+                }}
+              >
+                {/* Ambient glow effect */}
+                <div
+                  className="absolute inset-0 opacity-15"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
+                    pointerEvents: 'none'
+                  }}
+                />
+
+                {/* Content */}
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center" style={{
+                      background: 'rgba(236, 72, 153, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(236, 72, 153, 0.2)'
+                    }}>
+                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
+                    </div>
+                    <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
+                      Thought of the day
+                    </h3>
+                  </div>
+                  <p className="mb-4 leading-relaxed text-lg italic" style={{
+                    color: 'var(--premium-text-primary)',
+                    fontWeight: 500,
+                    fontFamily: 'serif'
+                  }}>
+                    "{cardOfTheDay.body}"
+                  </p>
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                    <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--premium-purple)' }} />
+                    <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {/* Drift Mode / Reset */}
+              <button
+                onClick={handleOpenDrift}
+                className="group p-5 rounded-xl transition-all text-left"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(99, 102, 241, 0.1)', // Indigo/Blue
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)'
+                    }}>
+                      <Wind className="h-5 w-5" style={{ color: '#818cf8' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Drift Mode</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Mental reset & hypnagogic insights
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+                </div>
+              </button>
               {/* Timeline */}
               <Link
                 to="/knowledge-timeline"
@@ -1100,54 +1171,7 @@ export function HomePage() {
               </button>
             </div>
 
-            {/* Card of the Day - Resurfacing - Enhanced Design */}
-            {cardOfTheDay && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="premium-glass-subtle p-6 rounded-2xl relative overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
-                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
-                }}
-              >
-                {/* Ambient glow effect */}
-                <div
-                  className="absolute inset-0 opacity-15"
-                  style={{
-                    background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
-                    pointerEvents: 'none'
-                  }}
-                />
 
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center" style={{
-                      background: 'rgba(236, 72, 153, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(236, 72, 153, 0.2)'
-                    }}>
-                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
-                    </div>
-                    <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
-                      Thought of the day
-                    </h3>
-                  </div>
-                  <p className="mb-4 leading-relaxed text-lg" style={{
-                    color: 'var(--premium-text-primary)',
-                    fontWeight: 500
-                  }}>
-                    {cardOfTheDay.body}
-                  </p>
-                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--premium-purple)' }} />
-                    <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </div>
         </section>
       </div>

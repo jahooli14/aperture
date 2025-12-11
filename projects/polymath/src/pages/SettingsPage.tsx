@@ -165,9 +165,9 @@ export function SettingsPage() {
       const response = await fetch('/api/admin/regenerate-connections', {
         method: 'POST'
       })
-      
+
       if (!response.ok) throw new Error('Regeneration failed')
-      
+
       const result = await response.json()
       addToast({
         title: 'Connections Regenerated',
@@ -196,7 +196,7 @@ export function SettingsPage() {
       const result = await response.json()
       addToast({
         title: 'Capabilities Updated',
-        description: `Found ${result.extracted?.length || 0} new capabilities`,
+        description: result.extracted?.length ? `Discovered ${result.extracted.length} new capabilities!` : 'Your capabilities are up to date.',
         variant: 'success'
       })
       fetchCapabilities()
@@ -392,21 +392,21 @@ export function SettingsPage() {
                   // Calculate RPG stats
                   const level = Math.floor(cap.strength)
                   const progress = (cap.strength - level) * 100
-                  const daysSinceUse = cap.last_used 
+                  const daysSinceUse = cap.last_used
                     ? Math.floor((Date.now() - new Date(cap.last_used).getTime()) / (1000 * 60 * 60 * 24))
                     : 0
                   const isDecaying = daysSinceUse > 30
-                  
+
                   return (
                     <div
                       key={cap.id}
                       className="group relative overflow-hidden rounded-xl p-4 transition-all border hover:scale-[1.02]"
                       style={{
-                        background: isDecaying 
+                        background: isDecaying
                           ? 'linear-gradient(135deg, rgba(120, 50, 50, 0.1), rgba(80, 40, 40, 0.2))'
                           : 'linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 255, 255, 0.02))',
-                        borderColor: isDecaying 
-                          ? 'rgba(150, 50, 50, 0.3)' 
+                        borderColor: isDecaying
+                          ? 'rgba(150, 50, 50, 0.3)'
                           : level >= 5 ? 'rgba(255, 215, 0, 0.4)' : 'rgba(255, 255, 255, 0.1)',
                         boxShadow: level >= 5 ? '0 0 15px rgba(255, 215, 0, 0.1)' : 'none'
                       }}
@@ -417,27 +417,27 @@ export function SettingsPage() {
                         {level >= 5 && <Sparkles className="h-3 w-3 text-yellow-400" />}
                       </div>
 
-                      <h3 className="font-bold text-base mb-1" style={{ 
-                        color: isDecaying ? 'rgba(255, 200, 200, 0.8)' : 'var(--premium-text-primary)' 
+                      <h3 className="font-bold text-base mb-1" style={{
+                        color: isDecaying ? 'rgba(255, 200, 200, 0.8)' : 'var(--premium-text-primary)'
                       }}>
                         {cap.name}
                       </h3>
-                      
+
                       <p className="text-xs line-clamp-2 mb-3 h-8" style={{ color: 'var(--premium-text-secondary)' }}>
                         {cap.description}
                       </p>
 
                       {/* XP Bar */}
                       <div className="relative h-1.5 w-full bg-black/30 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full transition-all duration-500"
-                          style={{ 
+                          style={{
                             width: `${progress}%`,
                             background: isDecaying ? '#ef4444' : level >= 5 ? '#fbbf24' : '#3b82f6'
                           }}
                         />
                       </div>
-                      
+
                       {/* Footer Status */}
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-[10px]" style={{ color: isDecaying ? '#fca5a5' : 'var(--premium-text-tertiary)' }}>
@@ -469,130 +469,130 @@ export function SettingsPage() {
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-          <div className="flex items-center gap-3 mb-6">
-            <Palette className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-            <h2
-              className="text-2xl font-bold"
-              style={{ color: 'var(--premium-text-primary)' }}
-            >
-              Theme customization
-            </h2>
-          </div>
+            <div className="flex items-center gap-3 mb-6">
+              <Palette className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <h2
+                className="text-2xl font-bold"
+                style={{ color: 'var(--premium-text-primary)' }}
+              >
+                Theme customization
+              </h2>
+            </div>
 
-          {/* Accent Color */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-              Accent color
-            </h3>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {getAvailableColors().map((color) => {
-                const preview = getColorPreview(color)
-                const isSelected = accentColor === color
-                return (
+            {/* Accent Color */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+                Accent color
+              </h3>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                {getAvailableColors().map((color) => {
+                  const preview = getColorPreview(color)
+                  const isSelected = accentColor === color
+                  return (
+                    <button
+                      key={color}
+                      onClick={() => setAccentColor(color)}
+                      className="relative aspect-square rounded-xl transition-transform hover:scale-110 active:scale-95"
+                      style={{
+                        background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`
+                      }}
+                    >
+                      {isSelected && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Check className="h-8 w-8 text-white drop-shadow-lg" />
+                        </div>
+                      )}
+                      <div className="sr-only">{color}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Intensity */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+                Intensity
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {intensityOptions.map((option) => (
                   <button
-                    key={color}
-                    onClick={() => setAccentColor(color)}
-                    className="relative aspect-square rounded-xl transition-transform hover:scale-110 active:scale-95"
+                    key={option.value}
+                    onClick={() => setIntensity(option.value)}
+                    className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
                     style={{
-                      background: `linear-gradient(135deg, ${preview.primary}, ${preview.light})`
+                      background: intensity === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
                     }}
                   >
-                    {isSelected && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Check className="h-8 w-8 text-white drop-shadow-lg" />
-                      </div>
-                    )}
-                    <div className="sr-only">{color}</div>
+                    <div className="font-semibold mb-1 premium-text-platinum">
+                      {option.label}
+                    </div>
+                    <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
+                      {option.description}
+                    </div>
                   </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Intensity */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-              Intensity
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {intensityOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setIntensity(option.value)}
-                  className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
-                  style={{
-                    background: intensity === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-                  }}
-                >
-                  <div className="font-semibold mb-1 premium-text-platinum">
-                    {option.label}
-                  </div>
-                  <div className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                    {option.description}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Font Size */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold mb-3 premium-text-platinum">
-              Font size
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {fontSizeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setFontSize(option.value)}
-                  className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
-                  style={{
-                    background: fontSize === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-                    fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
-                  }}
-                >
-                  <div className="font-semibold premium-text-platinum">
-                    {option.label}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Bug Tracker Toggle */}
-          <div className="pt-6 border-t border-white/10">
-            <button
-              onClick={() => setShowBugTracker(!showBugTracker)}
-              className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left"
-              style={{
-                background: 'var(--premium-bg-2)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-              }}
-            >
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{
-                background: 'rgba(239, 68, 68, 0.2)'
-              }}>
-                <Bug className="w-6 h-6" style={{ color: '#ef4444' }} />
+                ))}
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold premium-text-platinum">
-                  Bug Tracker
-                </h3>
-                <p style={{ color: 'var(--premium-text-secondary)', fontSize: '0.875rem' }}>
-                  {showBugTracker ? 'Enabled' : 'Disabled'}
-                </p>
+            </div>
+
+            {/* Font Size */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold mb-3 premium-text-platinum">
+                Font size
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {fontSizeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setFontSize(option.value)}
+                    className="p-4 rounded-xl backdrop-blur-xl transition-all text-center"
+                    style={{
+                      background: fontSize === option.value ? 'var(--premium-bg-3)' : 'var(--premium-bg-2)',
+                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+                      fontSize: option.value === 'small' ? '14px' : option.value === 'large' ? '18px' : '16px'
+                    }}
+                  >
+                    <div className="font-semibold premium-text-platinum">
+                      {option.label}
+                    </div>
+                  </button>
+                ))}
               </div>
-              <div>
-                {showBugTracker ? (
-                  <ToggleRight className="w-6 h-6" style={{ color: '#10b981' }} />
-                ) : (
-                  <ToggleLeft className="w-6 h-6" style={{ color: 'var(--premium-text-secondary)' }} />
-                )}
-              </div>
-            </button>
-          </div>
+            </div>
+
+            {/* Bug Tracker Toggle */}
+            <div className="pt-6 border-t border-white/10">
+              <button
+                onClick={() => setShowBugTracker(!showBugTracker)}
+                className="w-full flex items-center gap-4 p-4 rounded-xl backdrop-blur-xl transition-all text-left"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{
+                  background: 'rgba(239, 68, 68, 0.2)'
+                }}>
+                  <Bug className="w-6 h-6" style={{ color: '#ef4444' }} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold premium-text-platinum">
+                    Bug Tracker
+                  </h3>
+                  <p style={{ color: 'var(--premium-text-secondary)', fontSize: '0.875rem' }}>
+                    {showBugTracker ? 'Enabled' : 'Disabled'}
+                  </p>
+                </div>
+                <div>
+                  {showBugTracker ? (
+                    <ToggleRight className="w-6 h-6" style={{ color: '#10b981' }} />
+                  ) : (
+                    <ToggleLeft className="w-6 h-6" style={{ color: 'var(--premium-text-secondary)' }} />
+                  )}
+                </div>
+              </button>
+            </div>
           </div>
         </section>
 

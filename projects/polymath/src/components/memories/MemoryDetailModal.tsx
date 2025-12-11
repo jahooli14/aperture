@@ -222,6 +222,15 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>
                 {memory.body}
               </p>
+              {memory.image_urls && memory.image_urls.length > 0 && (
+                <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {memory.image_urls.map((url, i) => (
+                    <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-white/10">
+                      <img src={url} alt={`Attachment ${i + 1}`} className="w-full h-auto object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {memory.tags && memory.tags.length > 0 && (
