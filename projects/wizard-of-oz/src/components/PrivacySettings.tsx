@@ -26,7 +26,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
   const [saving, setSaving] = useState(false);
   const [reminderEmail, setReminderEmail] = useState('');
   const [remindersEnabled, setRemindersEnabled] = useState(false);
-  const [reminderTime, setReminderTime] = useState('19:00');
+  const [reminderTime, setReminderTime] = useState('18:00');
   const [savingReminders, setSavingReminders] = useState(false);
   const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
   const [pushNotificationsSupported, setPushNotificationsSupported] = useState(false);

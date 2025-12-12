@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore
 import webpush from 'web-push';
 import type { Database } from '../../src/types/database.js';
 
@@ -22,6 +23,7 @@ webpush.setVapidDetails(
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify this is a cron request (optional security measure)
+  // Vercel automatically sends this header for crons
   const authHeader = req.headers.authorization;
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -50,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Filter users whose local time matches their reminder_time
     const usersToRemind = users.filter(user => {
       const userLocalHour = getUserLocalHour(currentHour, user.timezone);
-      const reminderHour = parseInt(user.reminder_time?.split(':')[0] || '19');
+      const reminderHour = parseInt(user.reminder_time?.split(':')[0] || '18');
       return userLocalHour === reminderHour;
     });
 
@@ -62,19 +64,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Check which users haven't uploaded today
-    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD
     const emailsSent: string[] = [];
     const pushSent: string[] = [];
     const errors: { userId: string; error: string }[] = [];
 
     for (const user of usersToRemind) {
-      // Check if user uploaded today
+      // Calculate user's local date "today"
+      const userDate = getUserLocalDate(now, user.timezone);
+
+      // Check if user uploaded for THEIR today
       const { data: photos, error: photosError } = await supabase
         .from('photos')
         .select('id')
         .eq('user_id', user.user_id)
-        .gte('upload_date', today)
+        .eq('upload_date', userDate) // Check specific date
         .limit(1);
 
       if (photosError) {
@@ -109,7 +112,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (pushError.statusCode === 410 || pushError.statusCode === 404) {
             await supabase
               .from('user_settings')
-              .update({ push_subscription: null })
+              // @ts-ignore
+              .update({ push_subscription: null } as any) // Cast to any to avoid type error
               .eq('user_id', user.user_id);
             console.log(`Removed expired push subscription for user ${user.user_id}`);
           }
@@ -155,6 +159,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: error instanceof Error ? error.message : String(error)
     });
   }
+}
+
+// Helper function to get user's local date YYYY-MM-DD
+function getUserLocalDate(date: Date, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat('en-CA', { // en-CA gives YYYY-MM-DD format
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return formatter.format(date);
 }
 
 // Helper function to convert UTC hour to user's local hour
