@@ -20,9 +20,11 @@ const logger = {
 const supabase = getSupabaseClient()
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
+import { COST_OPTS } from './optimization-config.js'
+
 // Synthesis configuration
 const CONFIG = {
-  SUGGESTIONS_PER_RUN: 1, // Drastically reduced to prevent timeouts (was 5)
+  SUGGESTIONS_PER_RUN: COST_OPTS.SYNTHESIS_SUGGESTIONS_PER_RUN,
   WILDCARD_FREQUENCY: 3, // Every 3rd suggestion is a wildcard
   NOVELTY_WEIGHT: 0.3,
   FEASIBILITY_WEIGHT: 0.4,
@@ -161,7 +163,7 @@ async function extractInterestsFromArticles(): Promise<Interest[]> {
       .from('reading_queue')
       .select('entities, themes')
       .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
-      // .not('entities', 'is', null) // Removing this constraint as it might fail if column doesn't exist
+    // .not('entities', 'is', null) // Removing this constraint as it might fail if column doesn't exist
 
     if (error) throw error
 
@@ -757,7 +759,7 @@ async function isSimilarToExisting(
     .select('id, title, description')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(COST_OPTS.SYNTHESIS_DUPLICATE_CHECK_LIMIT)
 
   if (error || !existingSuggestions || existingSuggestions.length === 0) {
     return false

@@ -70,8 +70,8 @@ export function FocusStream() {
 
         projectsToPreload.forEach(project => {
             // Fire and forget - this will trigger generation if needed
-            fetch(`/api/projects?resource=next-steps&id=${project.id}`)
-                .catch(err => console.error(`Failed to pre-fetch suggestions for ${project.id}`, err))
+            // fetch(`/api/projects?resource=next-steps&id=${project.id}`)
+            //     .catch(err => console.error(`Failed to pre-fetch suggestions for ${project.id}`, err))
         })
     }, [dormantProjects])
 
