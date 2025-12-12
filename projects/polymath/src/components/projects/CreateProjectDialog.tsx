@@ -21,13 +21,24 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 
-export function CreateProjectDialog() {
-  const [open, setOpen] = useState(false)
+export interface CreateProjectDialogProps {
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
+  trigger?: React.ReactNode
+}
+
+export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false, trigger }: CreateProjectDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const { createProject } = useProjectStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
+
+  // Use controlled or uncontrolled state
+  const open = isOpen !== undefined ? isOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
 
   const [formData, setFormData] = useState({
     title: '',
@@ -36,6 +47,8 @@ export function CreateProjectDialog() {
     next_step: '',
     type: 'Creative',
   })
+
+  // ... (rest of the file as before, replacing return)
 
   const resetForm = () => {
     setFormData({
@@ -96,17 +109,19 @@ export function CreateProjectDialog() {
   return (
     <>
       {/* Trigger Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
-        style={{
-          borderColor: 'rgba(30, 42, 88, 0.2)',
-          color: 'rgba(100, 180, 255, 1)'
-        }}
-        title="New Project"
-      >
-        <Plus className="h-5 w-5" />
-      </button>
+      {!hideTrigger && (trigger || (
+        <button
+          onClick={() => setOpen(true)}
+          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+          style={{
+            borderColor: 'rgba(30, 42, 88, 0.2)',
+            color: 'rgba(100, 180, 255, 1)'
+          }}
+          title="New Project"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      ))}
 
       <BottomSheet open={open} onOpenChange={setOpen}>
         <BottomSheetContent>
@@ -174,8 +189,8 @@ export function CreateProjectDialog() {
                     type="button"
                     onClick={() => setFormData({ ...formData, type: cat })}
                     className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${formData.type === cat
-                        ? 'bg-blue-500/20 border-blue-500 text-blue-400'
-                        : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                      ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                      : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
                       }`}
                   >
                     {cat}

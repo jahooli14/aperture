@@ -1,6 +1,6 @@
 /**
  * Bedtime Ideas Page
- * Trippy prompts for creative subconscious thinking
+ * Creative prompts for subconscious synthesis
  * Generated at 9:30pm daily
  */
 
@@ -451,8 +451,8 @@ export function BedtimePage() {
                               toggleBreakthrough(prompt.id)
                             }}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${prompt.resulted_in_breakthrough
-                                ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40'
-                                : 'border border-white/10 hover:border-yellow-500/30'
+                              ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/40'
+                              : 'border border-white/10 hover:border-yellow-500/30'
                               }`}
                             title={prompt.resulted_in_breakthrough ? 'Led to a breakthrough!' : 'Mark as breakthrough'}
                           >

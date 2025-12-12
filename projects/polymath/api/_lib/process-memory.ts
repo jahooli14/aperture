@@ -81,8 +81,8 @@ export async function processMemory(memoryId: string): Promise<void> {
 
     // 6. Auto-suggest and create connections
     logger.info({ memory_id: memoryId }, '🔄 Finding and creating connections...')
-    // Use hardcoded user_id (single-user app, memories table doesn't have user_id)
-    const userId = 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
+    // Use user_id from the memory itself, or fallback to default
+    const userId = memory.user_id || 'f2404e61-2010-46c8-8edd-b8a3e702f0fb'
     // Use shared logic for Top 5 Dynamic connections
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')

@@ -27,8 +27,15 @@ import { supabase } from '../../lib/supabase'
 import { Image as ImageIcon, X, Paperclip } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export function CreateMemoryDialog() {
-  const [open, setOpen] = useState(false)
+export interface CreateMemoryDialogProps {
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
+  trigger?: React.ReactNode
+}
+
+export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, trigger }: CreateMemoryDialogProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
@@ -37,12 +44,18 @@ export function CreateMemoryDialog() {
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
 
+  // Use controlled or uncontrolled state
+  const open = isOpen !== undefined ? isOpen : internalOpen
+  const setOpen = onOpenChange || setInternalOpen
+
   const [body, setBody] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
     memory_type: '' as '' | 'foundational' | 'event' | 'insight',
   })
+
+  // ... (rest of the file logic remains same, just replacing return)
 
   const resetForm = () => {
     setFormData({
@@ -180,17 +193,19 @@ export function CreateMemoryDialog() {
   return (
     <>
       {/* Trigger Button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
-        style={{
-          borderColor: 'rgba(30, 42, 88, 0.2)',
-          color: 'rgba(100, 180, 255, 1)'
-        }}
-        title="New Thought"
-      >
-        <Plus className="h-5 w-5" />
-      </button>
+      {!hideTrigger && (trigger || (
+        <button
+          onClick={() => setOpen(true)}
+          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+          style={{
+            borderColor: 'rgba(30, 42, 88, 0.2)',
+            color: 'rgba(100, 180, 255, 1)'
+          }}
+          title="New Thought"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      ))}
 
       <BottomSheet open={open} onOpenChange={setOpen}>
         <BottomSheetContent>
@@ -250,10 +265,11 @@ export function CreateMemoryDialog() {
             </div>
 
             {/* Image Attachments */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: 'var(--premium-text-primary)' }}>
-                  Attach Images
+                  <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                  Photos
                 </Label>
                 <div className="relative">
                   <input
@@ -268,42 +284,61 @@ export function CreateMemoryDialog() {
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-3 text-xs flex items-center gap-1.5"
+                    className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-white/10 active:scale-95"
                     style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      color: 'var(--premium-text-secondary)'
+                      color: 'var(--premium-text-secondary)',
+                      borderRadius: '9999px',
+                      border: '1px solid rgba(255, 255, 255, 0.05)'
                     }}
                   >
-                    <Paperclip className="h-3.5 w-3.5" />
-                    <span>Add Photos</span>
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add</span>
                   </Button>
                 </div>
               </div>
 
-              {/* Image Preview Grid */}
-              <AnimatePresence>
+              {/* Image Preview Grid - Smart Layout */}
+              <AnimatePresence mode="popLayout">
                 {selectedFiles.length > 0 && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="grid grid-cols-3 gap-2"
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className={`grid gap-3 ${selectedFiles.length === 1 ? 'grid-cols-1' :
+                        selectedFiles.length === 2 ? 'grid-cols-2' :
+                          selectedFiles.length === 3 ? 'grid-cols-2' : // First one spans full? handled below
+                            'grid-cols-2'
+                      }`}
                   >
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden group border border-white/10">
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        key={`${file.name}-${index}`}
+                        className={`relative rounded-2xl overflow-hidden group border border-white/10 shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
+                            selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
+                          }`}
+                      >
                         <img
                           src={URL.createObjectURL(file)}
                           alt="Preview"
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
                         <button
                           type="button"
                           onClick={() => removeFile(index)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
-                      </div>
+                      </motion.div>
                     ))}
                   </motion.div>
                 )}

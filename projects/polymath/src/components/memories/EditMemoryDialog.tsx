@@ -18,7 +18,10 @@ import { Label } from '../ui/label'
 import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Sparkles } from 'lucide-react'
+import { useRef } from 'react'
+import { Sparkles, Image as ImageIcon, X, Plus } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../../lib/supabase'
 import type { Memory } from '../../types'
 
 interface EditMemoryDialogProps {
@@ -32,6 +35,12 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
   const [loading, setLoading] = useState(false)
   const { updateMemory } = useMemoryStore()
   const { addToast } = useToast()
+
+  const [uploading, setUploading] = useState(false)
+
+  // Image state
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [existingImages, setExistingImages] = useState<string[]>([])
 
   const [body, setBody] = useState('')
   const [formData, setFormData] = useState({
@@ -48,8 +57,54 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
         memory_type: memory.memory_type || '',
       })
       setBody(memory.body)
+      setExistingImages(memory.image_urls || [])
+      setSelectedFiles([]) // Reset new files on open
     }
   }, [memory, open])
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files || [])])
+    }
+  }
+
+  const removeNewFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeExistingImage = (urlToRemove: string) => {
+    setExistingImages(prev => prev.filter(url => url !== urlToRemove))
+  }
+
+  const uploadImages = async (): Promise<string[]> => {
+    if (selectedFiles.length === 0) return []
+
+    setUploading(true)
+    const urls: string[] = []
+
+    try {
+      for (const file of selectedFiles) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
+        const filePath = `${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('thought-images')
+          .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage.from('thought-images').getPublicUrl(filePath)
+        urls.push(data.publicUrl)
+      }
+      return urls
+    } catch (error) {
+      console.error('Upload failed:', error)
+      throw new Error('Failed to upload images')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,11 +118,18 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
         .map((t) => t.trim())
         .filter((t) => t.length > 0)
 
+      // Upload new images
+      const newImageUrls = await uploadImages()
+
+      // Combine existing (kept) images with new uploaded ones
+      const finalImageUrls = [...existingImages, ...newImageUrls]
+
       await updateMemory(memory.id, {
         title: formData.title,
         body: body.trim(),
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
+        image_urls: finalImageUrls.length > 0 ? finalImageUrls : undefined,
       })
 
       addToast({
@@ -150,6 +212,111 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
             </p>
           </div>
 
+          {/* Image Management */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: 'var(--premium-text-primary)' }}>
+                <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                Photos
+              </Label>
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                  id="edit-image-upload"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-white/10 active:scale-95"
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    color: 'var(--premium-text-secondary)',
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Combined Image Grid (Existing + New) */}
+            <AnimatePresence mode="popLayout">
+              {(existingImages.length > 0 || selectedFiles.length > 0) && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="grid gap-3 grid-cols-2" // Simplified to 2 cols for stability in edit mode
+                >
+                  {/* Existing Images */}
+                  {existingImages.map((url, index) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      key={`existing-${url}-${index}`}
+                      className="relative rounded-2xl overflow-hidden group border border-white/10 shadow-lg aspect-square"
+                    >
+                      <img
+                        src={url}
+                        alt="Existing attachment"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(url)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </motion.div>
+                  ))}
+
+                  {/* New Selected Files */}
+                  {selectedFiles.map((file, index) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      key={`new-${file.name}-${index}`}
+                      className="relative rounded-2xl overflow-hidden group border border-dashed border-white/20 shadow-lg aspect-square"
+                    >
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="New upload preview"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="bg-black/50 text-white text-[10px] px-2 py-1 rounded-full backdrop-blur-sm">New</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeNewFile(index)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Memory Type */}
           <div className="space-y-2">
             <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
@@ -205,7 +372,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
           <BottomSheetFooter>
             <Button
               type="submit"
-              disabled={loading || !formData.title || !body.trim()}
+              disabled={loading || !formData.title || !body.trim() || uploading}
               className="btn-primary w-full h-12 touch-manipulation"
             >
               {loading ? (

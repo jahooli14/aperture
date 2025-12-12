@@ -15,7 +15,7 @@ import {
   MoreHorizontal,
   Sparkles
 } from 'lucide-react'
-import { VoiceInput } from './VoiceInput'
+import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
@@ -51,7 +51,6 @@ const NAV_OPTIONS: NavOption[] = [
 ]
 
 export function FloatingNav() {
-  const [isVoiceOpen, setIsVoiceOpen] = React.useState(false)
   const { isOnline } = useOnlineStatus()
   const { addOptimisticMemory, replaceOptimisticMemory, removeOptimisticMemory } = useMemoryStore()
   const { addOfflineCapture } = useOfflineSync()
@@ -69,18 +68,6 @@ export function FloatingNav() {
     window.addEventListener('toggle-nav', handleToggle as EventListener)
     return () => window.removeEventListener('toggle-nav', handleToggle as EventListener)
   }, [])
-
-  // Listen for voice capture requests from AddNoteDialog
-  React.useEffect(() => {
-    const handleOpenVoiceCapture = () => {
-      console.log('[FloatingNav] Received openVoiceCapture event')
-      if (isOnline) {
-        setIsVoiceOpen(true)
-      }
-    }
-    window.addEventListener('openVoiceCapture', handleOpenVoiceCapture)
-    return () => window.removeEventListener('openVoiceCapture', handleOpenVoiceCapture)
-  }, [isOnline])
 
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
@@ -101,25 +88,23 @@ export function FloatingNav() {
     return null
   }
 
-  const handleVoiceFABClick = () => {
-    if (!isOnline) return
+  const handleVoiceFABTap = () => {
+    if (!isOnline) return true // Prevent open if offline? existing logic didn't, but let's check. 
+    // Actually existing logic said "if (!isOnline) return" before doing anything. 
+    // VoiceFAB handles its own offline check for voice modal, but for project intercept:
 
     // On project pages, trigger the project's AddNote dialog instead
     if (isProjectDetailPage) {
       console.log('[FloatingNav] Dispatching openProjectAddNote event')
       window.dispatchEvent(new CustomEvent('openProjectAddNote'))
-      return
+      return true // Intercepted
     }
 
-    // Simple click to open voice modal
-    console.log('[FloatingNav] Opening voice modal')
-    setIsVoiceOpen(true)
+    return false // Let VoiceFAB handle it
   }
 
   const handleVoiceTranscript = async (text: string) => {
     if (!text) return
-
-    setIsVoiceOpen(false)
 
     // IMMEDIATELY show optimistic memory
     const tempId = addOptimisticMemory(text)
@@ -229,77 +214,12 @@ export function FloatingNav() {
 
   return (
     <>
-      {/* Voice Input Modal - Premium Glass */}
-      <AnimatePresence>
-        {isVoiceOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{
-              backgroundColor: 'rgba(10, 14, 26, 0.6)',
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)'
-            }}
-            onClick={() => {
-              setIsVoiceOpen(false)
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className="premium-glass-strong w-full max-w-md p-6"
-            >
-              <VoiceInput
-                onTranscript={handleVoiceTranscript}
-                maxDuration={60}
-                autoSubmit={true}
-                autoStart={false}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Prominent Capture FAB - Bottom right above nav */}
-      <motion.button
-        data-voice-fab
-        onClick={handleVoiceFABClick}
-        disabled={!isOnline}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: isHidden ? 0 : 1, opacity: isHidden ? 0 : 1 }}
-        transition={{
-          type: 'spring',
-          stiffness: 260,
-          damping: 20,
-          delay: 0.2
-        }}
-        className="fixed z-30 w-16 h-16 rounded-2xl flex items-center justify-center group"
-        style={{
-          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 8rem)',
-          right: 'max(1rem, env(safe-area-inset-right, 1rem))',
-          opacity: !isOnline ? 0.3 : 1,
-          background: 'var(--premium-bg-3)',
-          backdropFilter: 'blur(32px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-        }}
-      >
-        {/* Icon */}
-        <Mic
-          className="relative z-10 w-8 h-8"
-          style={{
-            color: 'var(--premium-blue)'
-          }}
-        />
-
-        {/* No label needed for bottom-right position */}
-      </motion.button>
+      {/* Replaced inline FAB with Universal Action FAB */}
+      <VoiceFAB
+        onTranscript={handleVoiceTranscript}
+        hidden={isHidden}
+        onTap={handleVoiceFABTap}
+      />
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
