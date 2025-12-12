@@ -1319,41 +1319,7 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Auto-Import (NEW) */}
-              <Link
-                to="/rss"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Rss className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Auto-import</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        RSS & Newsletters
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
+
             </div>
           </div >
         </section >

@@ -55,39 +55,39 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       const now = Date.now()
       const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-      // Skip if we have recent data and not forcing refresh
+      // 1. In-memory cache check (fastest)
       if (!force && state.articles.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
-        console.log('[ReadingStore] Using cached articles')
+        console.log('[ReadingStore] Using in-memory cache')
         return
       }
 
-      // Only set loading if we're actually fetching
       set({ loading: true, error: null })
 
-      // Check online status
-      if (!navigator.onLine) {
-        console.log('[ReadingStore] Offline mode detected - fetching from local DB')
-        try {
-          const { readingDb } = await import('../lib/db')
-          const cachedArticles = await readingDb.articles.toArray()
+      const { readingDb } = await import('../lib/db')
 
-          // Filter by status if needed
-          const filtered = status
-            ? cachedArticles.filter(a => a.status === status)
-            : cachedArticles
+      // 2. Local DB check (Stale-While-Revalidate)
+      try {
+        const cachedArticles = await readingDb.articles.toArray()
+        const filtered = status
+          ? cachedArticles.filter(a => a.status === status)
+          : cachedArticles
 
+        if (filtered.length > 0) {
+          console.log(`[ReadingStore] Loaded ${filtered.length} articles from local DB (SWR)`)
           set({
             articles: filtered,
-            loading: false,
-            offlineMode: true,
+            loading: false, // Show data immediately
             error: null
           })
-          return
-        } catch (e) {
-          console.error('[ReadingStore] Failed to load offline articles:', e)
-          set({ error: 'Failed to load offline articles', loading: false, offlineMode: true })
-          return
         }
+      } catch (dbError) {
+        console.warn('[ReadingStore] Failed to load from DB:', dbError)
+      }
+
+      // 3. Network Fetch (Background Sync)
+      if (!navigator.onLine) {
+        set({ offlineMode: true, loading: false }) // Stop loading if we are offline
+        return
       }
 
       try {
@@ -102,69 +102,48 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         const { articles } = await response.json()
 
-        // Automatically cache fetched articles for offline use
+        // 4. Update Cache & State
         try {
-          const { readingDb } = await import('../lib/db')
-          // Map to CachedArticle type (adding offline_available flag)
+          // Map to CachedArticle type
           const cachedArticles = articles.map((a: any) => ({
             ...a,
-            offline_available: true, // Auto-cached articles are available offline
-            images_cached: false, // We don't auto-cache images yet to save bandwidth
+            offline_available: true,
+            images_cached: false,
             last_synced: new Date().toISOString()
           }))
 
-          // Bulk put to update existing or add new
           await readingDb.articles.bulkPut(cachedArticles)
-          console.log(`[ReadingStore] Auto-cached ${articles.length} articles`)
+          // Optional: Prune deleted items if needed, but bulkPut updates existing
         } catch (cacheError) {
           console.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
         }
 
-        // Skip update if data hasn't changed (prevent unnecessary re-renders)
+        // Check against current state to avoid unnecessary renders
         const currentArticles = get().articles
-        if (currentArticles.length === articles.length && articles.length > 0) {
-          // Create ID maps for efficient lookup
-          const currentById = new Map(currentArticles.map((a: any) => [a.id, a]))
 
-          // Check if same IDs exist
-          const sameIds = articles.every((a: any) => currentById.has(a.id))
+        // Simple length check + id check optimization
+        const hasChanges =
+          articles.length !== currentArticles.length ||
+          !articles.every((a: any, i: number) => a.id === currentArticles[i]?.id)
 
-          if (sameIds) {
-            // Check if status or title changed for any article
-            const hasImportantChange = articles.some((a: any) => {
-              const current = currentById.get(a.id)
-              return current && (current.status !== a.status || current.title !== a.title)
-            })
-
-            if (!hasImportantChange) {
-              console.log('[ReadingStore] Skipping state update - data unchanged')
-              set({ loading: false, offlineMode: false }) // Still need to clear loading state
-              return
-            }
-          }
+        if (hasChanges || force || currentArticles.length === 0) {
+          set({ articles, loading: false, lastFetched: now, offlineMode: false })
+        } else {
+          set({ loading: false, lastFetched: now, offlineMode: false })
         }
 
-        set({ articles, loading: false, lastFetched: now, offlineMode: false })
       } catch (error) {
+        console.error('[ReadingStore] Network fetch failed:', error)
+        // We might already have data from DB, so don't wipe it with an error screen
+        // Just set the error flag lightly or toast
         const errorMessage = error instanceof Error ? error.message : 'Unknown error'
 
-        // Fallback to offline DB on error
-        console.log('[ReadingStore] Fetch failed, falling back to offline DB')
-        try {
-          const { readingDb } = await import('../lib/db')
-          const cachedArticles = await readingDb.articles.toArray()
-          const filtered = status
-            ? cachedArticles.filter(a => a.status === status)
-            : cachedArticles
-
-          set({
-            articles: filtered,
-            loading: false,
-            offlineMode: true,
-            error: null // Clear error since we successfully loaded offline data
-          })
-        } catch (dbError) {
+        // Only set global error if we have NO data
+        if (get().articles.length === 0) {
           set({ error: errorMessage, loading: false })
+        } else {
+          // We have stale data, just stop loading
+          set({ loading: false })
         }
       }
     },
