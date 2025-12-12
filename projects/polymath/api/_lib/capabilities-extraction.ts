@@ -67,7 +67,7 @@ export async function extractCapabilities(userId: string) {
         response = await generateCapabilities()
       } catch (retryError) {
         console.error('[capabilities] Retry failed:', retryError)
-        return []
+        throw retryError
       }
     }
 
@@ -108,7 +108,7 @@ export async function extractCapabilities(userId: string) {
       }
 
     } catch (parseError) {
-      console.error('[capabilities] JSON Parse Error. Raw response:', response)
+      console.error('[capabilities] JSON Parse Error. Raw response preview:', response.slice(0, 500))
       console.error('[capabilities] Parse error details:', parseError instanceof Error ? parseError.message : String(parseError))
       throw parseError
     }
