@@ -21,7 +21,7 @@ export function BrandName({ className = '', size = 'md' }: BrandNameProps) {
       Coal<span style={{
         color: 'rgba(6, 182, 212, 1)',
         letterSpacing: '0.01em'
-      }}>esce</span>
+      }}>essence</span>
     </span>
   )
 }

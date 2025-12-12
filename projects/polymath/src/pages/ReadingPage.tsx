@@ -729,7 +729,7 @@ export function ReadingPage() {
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
             {/* Title Section */}
-            <div className="mb-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
                 {activeTab === 'updates' ? (
                   <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
@@ -739,6 +739,20 @@ export function ReadingPage() {
                   <>Your <span style={{ color: 'var(--premium-blue)' }}>reading material</span></>
                 )}
               </h2>
+
+              {activeTab === 'updates' && (
+                <button
+                  onClick={() => navigate('/rss')}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5 flex items-center gap-2"
+                  style={{
+                    color: 'var(--premium-text-secondary)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <Rss className="h-4 w-4" />
+                  Auto-import
+                </button>
+              )}
             </div>
 
             {/* Inner Content */}
