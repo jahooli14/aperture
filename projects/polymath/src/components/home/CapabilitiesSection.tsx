@@ -56,7 +56,7 @@ export function CapabilitiesSection() {
         } catch (error) {
             addToast({
                 title: 'Extraction Failed',
-                description: 'Could not analyze your data',
+                description: error instanceof Error ? error.message : 'Could not analyze your data',
                 variant: 'destructive'
             })
         } finally {
