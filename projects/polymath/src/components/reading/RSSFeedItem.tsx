@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookmarkPlus, ExternalLink, Clock, X, MoreVertical } from 'lucide-react'
+import { BookmarkPlus, X, MoreVertical } from 'lucide-react'
 import type { RSSFeedItem as RSSItem } from '../../types/rss'
 import { format } from 'date-fns'
 import { Button } from '../ui/button'
@@ -13,17 +13,9 @@ interface RSSFeedItemProps {
 export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
   const [isHovered, setIsHovered] = useState(false)
 
-  // Extract image from content/description if possible (simple regex)
-  const getImageUrl = (html: string) => {
-    const match = html.match(/<img[^>]+src="([^">]+)"/)
-    return match ? match[1] : null
-  }
-
-  const imageUrl = item.enclosure?.url || (item.content ? getImageUrl(item.content) : null) || (item.description ? getImageUrl(item.description) : null)
-
   return (
     <div
-      className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative mb-4"
+      className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative mb-3"
       style={{
         borderColor: 'rgba(255, 255, 255, 0.1)',
         background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
@@ -44,22 +36,28 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
         e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)'
       }}
     >
-      {/* Row 1: Title & Actions */}
-      <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
+      {/* Title & Header */}
+      <div className="flex items-start justify-between gap-3 mb-2 relative z-10">
         <a
           href={item.link}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 min-w-0 group/link"
         >
-          <h3 className="text-lg font-bold leading-tight line-clamp-2 group-hover/link:text-blue-400 transition-colors" style={{ color: 'var(--premium-text-primary)' }}>
+          <h3 className="text-base font-bold leading-snug line-clamp-2 group-hover/link:text-blue-400 transition-colors mb-1" style={{ color: 'var(--premium-text-primary)' }}>
             {item.title}
           </h3>
-          {item.feed_title && (
-            <div className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
-              {item.feed_title}
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
+            {item.feed_title && (
+              <span className="truncate max-w-[150px]">{item.feed_title}</span>
+            )}
+            {item.feed_title && item.published_at && <span>•</span>}
+            {item.published_at && (
+              <span className="flex items-center gap-1 shrink-0">
+                {format(new Date(item.published_at), 'MMM d')}
+              </span>
+            )}
+          </div>
         </a>
 
         {/* Actions Menu */}
@@ -93,46 +91,13 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
         </div>
       </div>
 
-      {/* Row 2: Image & Meta */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        {/* Thumbnail (Left) */}
-        {imageUrl ? (
-          <div className="flex-shrink-0">
-            <img
-              src={imageUrl}
-              alt={item.title || 'Feed thumbnail'}
-              className="w-16 h-16 rounded-lg object-cover bg-black/20"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
-          </div>
-        ) : (
-          <div className="w-16 h-16 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-            <span className="text-2xl opacity-20">📰</span>
-          </div>
-        )}
-
-        {/* Right Column: Meta */}
-        <div className="flex-1 flex flex-col items-end justify-end h-16 text-right">
-          <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-            {item.published_at && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {format(new Date(item.published_at), 'MMM d')}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Description */}
+      {/* Description */}
       {item.description && (
         <div
-          className="text-sm line-clamp-4 mb-1 leading-relaxed"
+          className="text-sm line-clamp-3 leading-relaxed"
           style={{ color: 'var(--premium-text-secondary)' }}
           dangerouslySetInnerHTML={{
-            __html: item.description.replace(/<[^>]+>/g, '').substring(0, 300) + (item.description.length > 300 ? '...' : '')
+            __html: item.description.replace(/<[^>]+>/g, '').substring(0, 200) + (item.description.length > 200 ? '...' : '')
           }}
         />
       )}

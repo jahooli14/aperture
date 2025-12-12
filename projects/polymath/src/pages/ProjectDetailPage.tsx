@@ -450,10 +450,10 @@ export function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-          <p style={{ color: 'var(--premium-text-secondary)' }}>Loading project...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" style={{ color: 'var(--premium-blue, #60a5fa)' }} />
+          <p className="text-gray-400" style={{ color: 'var(--premium-text-secondary, #9ca3af)' }}>Loading project...</p>
         </div>
       </div>
     )
@@ -461,9 +461,9 @@ export function ProjectDetailPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900" style={{ backgroundColor: 'var(--premium-surface-base, #111)' }}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>Project not found</h2>
+          <h2 className="text-xl font-semibold mb-2 text-white" style={{ color: 'var(--premium-text-primary, #fff)' }}>Project not found</h2>
           <Button onClick={() => navigate('/projects')} variant="outline">
             Back to Projects
           </Button>
