@@ -112,22 +112,7 @@ export function FocusStream() {
         }
     }
 
-    if (!initialized || (loading && allProjects.length === 0)) {
-        return (
-            <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-                <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-                    background: 'var(--premium-bg-2)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-                }}>
-                    <div className="mb-5 h-8 w-48 bg-white/5 rounded animate-pulse" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="h-64 rounded-xl bg-white/5 animate-pulse" />
-                        <div className="h-64 rounded-xl bg-white/5 animate-pulse" />
-                    </div>
-                </div>
-            </section>
-        )
-    }
+
 
     if (allProjects.length === 0) return null
 
