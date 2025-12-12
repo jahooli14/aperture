@@ -12,14 +12,14 @@ export async function extractCapabilities(userId: string) {
       .from('projects')
       .select('title, description')
       .eq('user_id', userId)
-      .limit(10)
+      .limit(30)
       .order('created_at', { ascending: false })
 
     const { data: memories } = await supabase
       .from('memories')
       .select('title, body')
       .eq('user_id', userId)
-      .limit(10)
+      .limit(30)
       .order('created_at', { ascending: false })
 
     if ((!projects || projects.length === 0) && (!memories || memories.length === 0)) {
@@ -35,7 +35,7 @@ export async function extractCapabilities(userId: string) {
     // 2. Analyze with Gemini (with retry)
     const generateCapabilities = async () => {
       const prompt = `Analyze the following user projects and thoughts. 
-      Extract the TOP 10 "Capabilities" (skills, tools, concepts, mental models, or specific interests) that this user demonstrates.
+      Extract ALL relevant "Capabilities" (skills, tools, concepts, mental models, specific interests, or recurring themes) that this user demonstrates or is exploring, up to 20 items.
       
       Return a JSON array of objects with this structure:
       {
@@ -44,15 +44,14 @@ export async function extractCapabilities(userId: string) {
         "source": "project" or "thought"
       }
       
-      Focus on specific, actionable capabilities (e.g., "react-development", "system-design", "creative-writing").
-      Keep descriptions brief to avoid token limits.
+      Be generous and infer capabilities from the context of their work. Include soft skills and emerging interests.
       
       Content:
       ${content}`
 
       return generateText(prompt, {
         responseFormat: 'json',
-        temperature: 0.2,
+        temperature: 0.4,
         maxTokens: 4000 // Increased from 2000
       })
     }
