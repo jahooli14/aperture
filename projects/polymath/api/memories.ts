@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Voice capture (supports both capture=true and action=capture)
     if (req.method === 'POST' && (capture === 'true' || action === 'capture')) {
-      return await handleCapture(req, res, supabase)
+      return await handleCapture(req, res, supabase, userId)
     }
 
     // POST: Mark memory as reviewed
@@ -180,7 +180,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 /**
  * Handle voice capture - uses raw transcript, then full AI processing enriches it
  */
-async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any) {
+async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   const startTime = Date.now()
   const { transcript, body, source_reference } = req.body
 
@@ -258,7 +258,7 @@ Return valid JSON.`
     // Generate unique ID with timestamp + random component to prevent collisions on retry
     const uniqueId = `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-    const newMemory = {
+    const newMemory: any = {
       audiopen_id: uniqueId,
       title: parsedTitle,
       body,
@@ -274,6 +274,11 @@ Return valid JSON.`
       processed: false, // Will be fully processed in background
       processed_at: null,
       error: null,
+    }
+
+    // Add user_id if available to ensure RLS visibility
+    if (userId) {
+      newMemory.user_id = userId
     }
 
     const { data: memory, error: insertError } = await supabase
@@ -294,7 +299,6 @@ Return valid JSON.`
 
     try {
       // Process memory inline with Gemini (tags, summary, linking, etc.)
-      console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
 
       // Process the memory (extract entities, generate embeddings, etc.)
       console.log(`[handleCapture] 🔄 Calling processMemory(${memory.id})...`)
@@ -659,6 +663,7 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: 
       .eq('user_id', userId)
 
     if (statusError) {
+      console.error('[handlePrompts] Failed to fetch user prompt status:', statusError)
     }
 
     // Create status map
@@ -747,6 +752,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
         })
 
       if (statusError) {
+        console.error('[handleSubmitResponse] Failed to update user prompt status:', statusError)
       }
     }
 

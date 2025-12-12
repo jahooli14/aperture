@@ -1055,7 +1055,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       let query = supabase
         .from('reading_queue')
-        .select('*, last_active_at, inbox_entry_at') // Select new columns
+        .select('*') // Select new columns -> Reverted temporarily
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(Number(limit))
@@ -1288,7 +1288,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         } else if (status === 'reading') {
           updates.read_at = new Date().toISOString()
         }
-        updates.last_active_at = new Date().toISOString() // Update last_active_at on status change
+        // updates.last_active_at = new Date().toISOString() // Update last_active_at on status change
       }
 
       if (tags !== undefined) {

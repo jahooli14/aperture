@@ -159,7 +159,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 md:pt-24 bg-black/80 backdrop-blur-md"
           onClick={onClose}
         >
           <motion.div
@@ -167,7 +167,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 20, opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-2xl max-h-[85vh] rounded-2xl p-6 shadow-2xl overflow-y-auto"
+            className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] rounded-2xl p-6 shadow-2xl overflow-y-auto"
             style={{
               backgroundColor: '#0f1829', // Solid dark background for readability
               border: '1px solid rgba(255, 255, 255, 0.1)'
