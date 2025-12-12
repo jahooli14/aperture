@@ -1004,13 +1004,6 @@ export function HomePage() {
                 {/* Content */}
                 <div className="relative z-10">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center" style={{
-                      background: 'rgba(236, 72, 153, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(236, 72, 153, 0.2)'
-                    }}>
-                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-purple)' }} />
-                    </div>
                     <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
                       Thought of the day
                     </h3>
@@ -1030,8 +1023,120 @@ export function HomePage() {
               </motion.div>
             )}
 
+            {/* Divider */}
+            <div className="w-full h-px bg-white/10 my-6" />
+
+            {/* Grid 1: Generative / Creative */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {/* Drift Mode / Reset */}
+              {/* Bedtime Ideas */}
+              <Link
+                to="/bedtime"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(99, 102, 241, 0.1)', // Indigo for sleep/dreams
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)'
+                    }}>
+                      <Moon className="h-5 w-5" style={{ color: '#818cf8' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime ideas</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Creative inspiration for sleep
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+                </div>
+              </Link>
+
+              {/* Serendipity Engine */}
+              <button
+                onClick={handleOpenSerendipity}
+                className="group p-5 rounded-xl transition-all text-left"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Serendipity Engine</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Find hidden bridges
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+              </button>
+
+              {/* Discover Projects */}
+              <Link
+                to="/suggestions"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        AI recommendations
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+              </Link>
+
+              {/* Drift Mode */}
               <button
                 onClick={handleOpenDrift}
                 className="group p-5 rounded-xl transition-all text-left"
@@ -1066,6 +1171,48 @@ export function HomePage() {
                   <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
                 </div>
               </button>
+            </div>
+
+            {/* Divider */}
+            <div className="w-full h-px bg-white/10 my-6" />
+
+            {/* Grid 2: Analytical / Visual */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Knowledge Map */}
+              <Link
+                to="/map"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <MapIcon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Knowledge Map</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        Geographic visualization
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+              </Link>
 
               {/* Timeline */}
               <Link
@@ -1103,151 +1250,7 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Bedtime Ideas */}
-              <Link
-                to="/bedtime"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(99, 102, 241, 0.1)', // Indigo for sleep/dreams
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(99, 102, 241, 0.2)'
-                    }}>
-                      <Moon className="h-5 w-5" style={{ color: '#818cf8' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime ideas</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Creative inspiration for sleep
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
-                </div>
-              </Link>
-
-              {/* Serendipity Engine (Was Button, kept as button) */}
-              <button
-                onClick={handleOpenSerendipity}
-                className="group p-5 rounded-xl transition-all text-left"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Serendipity Engine</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Find hidden bridges
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </button>
-
-              {/* Discover Projects (NEW) */}
-              <Link
-                to="/suggestions"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        AI recommendations
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
-
-              {/* Knowledge Map (NEW) */}
-              <Link
-                to="/map"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <MapIcon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Knowledge Map</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Geographic visualization
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
-
-              {/* Galaxy View (NEW) */}
+              {/* Galaxy View */}
               <Link
                 to="/constellation"
                 className="group p-5 rounded-xl transition-all"
@@ -1283,7 +1286,7 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Analysis (NEW) */}
+              {/* Analysis */}
               <Link
                 to="/insights"
                 className="group p-5 rounded-xl transition-all"
@@ -1318,8 +1321,6 @@ export function HomePage() {
                   <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
-
-
             </div>
           </div >
         </section >
