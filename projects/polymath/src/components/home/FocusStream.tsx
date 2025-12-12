@@ -136,18 +136,18 @@ export function FocusStream() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
-                                onClick={() => navigate(`/ projects / ${priorityProject.id} `)}
+                                onClick={() => navigate(`/projects/${priorityProject.id}`)}
                                 style={{
-                                    background: `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
                                     boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
                                     borderColor: theme.borderColor
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
                                     e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
                                     e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                                 }}
                             >
@@ -193,18 +193,18 @@ export function FocusStream() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.05 }}
                                 className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
-                                onClick={() => navigate(`/ projects / ${recentProject.id} `)}
+                                onClick={() => navigate(`/projects/${recentProject.id}`)}
                                 style={{
-                                    background: `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
                                     boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
                                     borderColor: theme.borderColor
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
                                     e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
                                     e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                                 }}
                             >
@@ -250,16 +250,16 @@ export function FocusStream() {
                                 className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
                                 onClick={() => setShowReviewDeck(true)}
                                 style={{
-                                    background: `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
                                     boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
                                     borderColor: theme.borderColor
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
                                     e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear - gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
                                     e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
                                 }}
                             >

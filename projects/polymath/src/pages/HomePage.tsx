@@ -211,6 +211,10 @@ function GetInspirationSection({
           {/* 2. Spark Card (Moved from FocusStream) */}
           {sparkCandidate ? (
             (() => {
+              if (!sparkCandidate.id) {
+                console.warn('Spark candidate missing ID', sparkCandidate)
+                return null
+              }
               const theme = getTheme(sparkCandidate.title)
               const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
               return (
