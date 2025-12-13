@@ -12,5 +12,6 @@
       "path": "/api/cron/send-reminders",
       "schedule": "0 15 * * *"
     }
-  ]
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
 }
