@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ZoomIn, Play, Pause } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import type { Database } from '../types/database';
 
 type Photo = Database['public']['Tables']['photos']['Row'];
@@ -14,6 +15,7 @@ interface PhotoOverlayProps {
 }
 
 export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
+  const { settings } = useSettingsStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -260,19 +262,29 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                 }}
                 className="absolute inset-0 cursor-grab active:cursor-grabbing transition-transform p-3"
               >
-                {sortedPhotos.map((photo, index) => (
-                  <motion.img
-                    key={photo.id}
-                    src={getPhotoDisplayUrl(photo)}
-                    alt={`Photo from ${photo.upload_date}`}
-                    className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover pointer-events-none rounded-2xl shadow-xl"
-                    initial={{ opacity: 0 }}
-                    animate={{
-                      opacity: index === currentIndex ? 1 : 0,
-                    }}
-                    transition={{ duration: 0.3 }}
-                  />
-                ))}
+                {sortedPhotos.map((photo, index) => {
+                  const photoScale = settings?.baby_birthdate
+                    ? 1.0 + 0.6 * Math.exp(-calculateMonthDiff(new Date(settings.baby_birthdate), new Date(photo.upload_date)) / 12)
+                    : 1.0;
+
+                  return (
+                    <motion.img
+                      key={photo.id}
+                      src={getPhotoDisplayUrl(photo)}
+                      alt={`Photo from ${photo.upload_date}`}
+                      style={{
+                        transformOrigin: '50% 40%', // Align with eye level (consistent across all ages)
+                      }}
+                      className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover pointer-events-none rounded-2xl shadow-xl transition-transform duration-500"
+                      initial={{ opacity: 0, scale: photoScale }}
+                      animate={{
+                        opacity: index === currentIndex ? 1 : 0,
+                        scale: index === currentIndex ? photoScale : photoScale * 1.05, // Subtle pulse when inactive
+                      }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -382,3 +394,8 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
     </AnimatePresence>
   );
 }
+
+function calculateMonthDiff(date1: Date, date2: Date): number {
+  return (date2.getFullYear() - date1.getFullYear()) * 12 + (date2.getMonth() - date1.getMonth());
+}
+
