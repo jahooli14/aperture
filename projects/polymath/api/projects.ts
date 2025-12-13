@@ -174,7 +174,7 @@ function scoreProject(project: any, context: UserContext): ProjectScore {
 function selectDailyQueue(scores: ProjectScore[]): ProjectScore[] {
   // Sort by score (Anti-Rot logic boosts dormant projects to top)
   const sorted = [...scores].sort((a, b) => b.total_score - a.total_score)
-  
+
   // Take top 3 unique projects
   return sorted.slice(0, 3)
 }
@@ -183,6 +183,35 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
   const userId = getUserId()
   const { resource } = req.query
+
+  // DEFAULT RESOURCE (Projects CRUD)
+  if (!resource) {
+    // GET /api/projects - List all or Get One
+    if (req.method === 'GET') {
+      const { id } = req.query
+
+      if (id) {
+        const { data: project, error } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('id', id)
+          .single()
+
+        if (error) return res.status(404).json({ error: 'Project not found' })
+        return res.status(200).json({ project })
+      }
+
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', userId)
+        .order('last_active', { ascending: false })
+
+      if (error) return res.status(500).json({ error: 'Failed to fetch projects' })
+      return res.status(200).json({ projects })
+    }
+  }
 
   // PRIORITY RESOURCE - Set project as priority (PATCH /api/projects?resource=priority&id={id})
   if (resource === 'priority' && req.method === 'PATCH') {
@@ -572,7 +601,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .from('capabilities')
           .select('*')
           .order('strength', { ascending: false })
-        
+
         if (error) throw error
         return res.status(200).json(data)
       } catch (error) {
@@ -605,7 +634,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           .from('capabilities')
           .delete()
           .eq('id', id)
-        
+
         if (error) throw error
         return res.status(200).json({ success: true })
       } catch (error) {
@@ -1617,7 +1646,7 @@ async function handleGetBedtimePrompts(req: VercelRequest, res: VercelResponse, 
         .eq('user_id', userId)
         .gte('created_at', today.toISOString())
         .order('created_at', { ascending: false })
-      
+
       if (result.error) throw result.error
       data = result.data
     } catch (dbError: any) {
