@@ -24,14 +24,11 @@ const CARD_HOVER_STYLES = {
 // Export colors for reuse
 export const PROJECT_COLORS: Record<string, string> = {
   tech: '59, 130, 246',      // Blue-500
-  technical: '59, 130, 246', // Blue-500
-  creative: '236, 72, 153',  // Pink-500
+  art: '236, 72, 153',       // Pink-500
   writing: '99, 102, 241',   // Indigo-500
+  music: '168, 85, 247',     // Purple-500
   business: '16, 185, 129',  // Emerald-500
-  learning: '245, 158, 11',  // Amber-500
   life: '6, 182, 212',       // Cyan-500
-  hobby: '249, 115, 22',     // Orange-500
-  'side-project': '139, 92, 246', // Violet-500
   default: '148, 163, 184'   // Slate-400
 }
 
@@ -46,9 +43,9 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   // Color Coding
   const getTheme = (type: string, title: string) => {
     const t = type?.toLowerCase().trim() || ''
-    
+
     let rgb = PROJECT_COLORS[t]
-    
+
     // Deterministic fallback if type is unknown or missing
     if (!rgb) {
       const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
@@ -60,8 +57,8 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     }
 
     return {
-      border: `rgba(${rgb}, 0.3)`,
-      bg: `rgba(${rgb}, 0.1)`,
+      border: `rgba(${rgb}, 0.4)`,
+      bg: `rgba(${rgb}, 0.15)`,
       text: `rgb(${rgb})`,
       rgb: rgb
     }
@@ -122,11 +119,11 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       {/* Focus Stream Mode: Prominently show Next Action if available */}
       {nextTask ? (
         <div className="mb-4">
-          <div 
-            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5" 
-            style={{ 
-              background: `rgba(${theme.rgb}, 0.1)`, 
-              border: `1px solid rgba(${theme.rgb}, 0.3)` 
+          <div
+            className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5"
+            style={{
+              background: `rgba(${theme.rgb}, 0.1)`,
+              border: `1px solid rgba(${theme.rgb}, 0.3)`
             }}
           >
             <div className="mt-0.5 flex-shrink-0" style={{ color: theme.text }}>
@@ -157,9 +154,9 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  className="h-full" 
-                  style={{ 
+                <div
+                  className="h-full"
+                  style={{
                     width: `${progress}%`,
                     background: `linear-gradient(90deg, rgba(${theme.rgb}, 0.5), rgba(${theme.rgb}, 1))`
                   }}
@@ -174,7 +171,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             </span>
           )}
         </div>
-        
+
         {prominent && (
           <div className="p-1.5 rounded-full bg-white/5 transition-colors" style={{ color: `rgba(${theme.rgb}, 0.8)` }}>
             <ArrowRight className="h-4 w-4" />

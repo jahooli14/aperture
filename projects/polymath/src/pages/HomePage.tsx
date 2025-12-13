@@ -821,7 +821,7 @@ export function HomePage() {
             color: 'var(--premium-text-secondary)',
             opacity: 0.7
           }}>
-            <BrandName className="inline" />
+            <BrandName className="inline" showLogo={true} />
           </h1>
           <button
             onClick={() => navigate('/search')}

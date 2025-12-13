@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 // import { Virtuoso } from 'react-virtuoso' // Removed Virtuoso
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
@@ -66,8 +66,57 @@ export function MemoriesPage() {
   const [resurfacing, setResurfacing] = useState<Memory[]>([])
   const [view, setView] = useState<'foundational' | 'all' | 'resurfacing'>('all')
   const [loadingResurfacing, setLoadingResurfacing] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedMemoryForModal, setSelectedMemoryForModal] = useState<Memory | null>(null) // State for the detail modal
   const [showDetailModal, setShowDetailModal] = useState(false) // State to open/close the detail modal
+
+  // Effect to handle deep linking via ID
+  useEffect(() => {
+    const memoryId = searchParams.get('id')
+
+    // If no ID or already showing this memory, skip
+    if (!memoryId || selectedMemoryForModal?.id === memoryId) return
+
+    // 1. Try to find in loaded memories
+    const memory = memories.find(m => m.id === memoryId) || resurfacing.find(m => m.id === memoryId)
+
+    if (memory) {
+      setSelectedMemoryForModal(memory)
+      setShowDetailModal(true)
+    } else {
+      // 2. If not locally available, fetch from API
+      console.log(`[MemoriesPage] Memory ${memoryId} not in list, fetching...`)
+      fetch(`/api/memories?id=${memoryId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Memory not found')
+          return res.json()
+        })
+        .then(data => {
+          if (data.memory) {
+            setSelectedMemoryForModal(data.memory)
+            setShowDetailModal(true)
+          }
+        })
+        .catch(err => {
+          console.error('[MemoriesPage] Failed to load deep-linked memory:', err)
+          addToast({
+            title: 'Thought not found',
+            description: 'Could not load the requested thought.',
+            variant: 'destructive'
+          })
+        })
+    }
+  }, [searchParams, memories, resurfacing])
+
+  // Clear URL param when modal closes
+  const handleCloseModal = () => {
+    setShowDetailModal(false)
+    setSelectedMemoryForModal(null)
+    setSearchParams(params => {
+      params.delete('id')
+      return params
+    })
+  }
   const [processingVoiceNote, setProcessingVoiceNote] = useState(false)
   const [newlyCreatedMemoryId, setNewlyCreatedMemoryId] = useState<string | null>(null)
 
@@ -200,9 +249,9 @@ export function MemoriesPage() {
     }
   }
 
-  const handleEdit = (memory: Memory) => {
-    setSelectedMemory(memory)
-    setEditDialogOpen(true)
+  const handleOpenDetail = (memory: Memory) => {
+    setSelectedMemoryForModal(memory)
+    setShowDetailModal(true)
   }
 
   const handleDelete = async (memory: Memory) => {
@@ -665,7 +714,7 @@ export function MemoriesPage() {
                           <div key={memory.id} className="mb-4 break-inside-avoid">
                             <MemoryCard
                               memory={memory}
-                              onEdit={handleEdit}
+                              onEdit={handleOpenDetail}
                               onDelete={handleDelete}
                             />
                           </div>
@@ -707,7 +756,7 @@ export function MemoriesPage() {
                         <div key={memory.id} className="mb-4 break-inside-avoid">
                           <MemoryCard
                             memory={memory}
-                            onEdit={handleEdit}
+                            onEdit={handleOpenDetail}
                             onDelete={handleDelete}
                           />
                         </div>
@@ -724,7 +773,7 @@ export function MemoriesPage() {
                     <div key={memory.id} className="flex flex-col gap-3 mb-4 break-inside-avoid">
                       <MemoryCard
                         memory={memory}
-                        onEdit={handleEdit}
+                        onEdit={handleOpenDetail}
                         onDelete={handleDelete}
                       />
                       <Button
@@ -747,6 +796,15 @@ export function MemoriesPage() {
         {/* Confirmation Dialog */}
         {confirmDialog}
       </div>
+
+      {/* Detail Modal for Deep Linking or Edit */}
+      {selectedMemoryForModal && (
+        <MemoryDetailModal
+          memory={selectedMemoryForModal}
+          isOpen={showDetailModal}
+          onClose={handleCloseModal}
+        />
+      )}
 
       {/* Connection Suggestions */}
       {suggestions.length > 0 && sourceType === 'memory' && (

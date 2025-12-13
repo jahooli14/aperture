@@ -67,7 +67,7 @@ async function searchOffline(searchQuery: string): Promise<SearchResponse> {
       score: 1, // Placeholder
       created_at: p.created_at || now,
     }))
-  
+
   const filteredArticles = articles
     .filter(a => a.title.toLowerCase().includes(lowerCaseQuery) || (a.content && a.content.toLowerCase().includes(lowerCaseQuery)) || (a.excerpt && a.excerpt.toLowerCase().includes(lowerCaseQuery)))
     .map(a => ({
@@ -149,7 +149,7 @@ export function SearchPage() {
           addToast({
             title: 'Online search failed',
             description: 'Falling back to offline results.',
-            variant: 'warning'
+            variant: 'default'
           })
           const offlineResults = await searchOffline(searchQuery)
           setResults(offlineResults)
@@ -181,12 +181,7 @@ export function SearchPage() {
     haptic.light()
     switch (result.type) {
       case 'memory':
-        navigate('/memories')
-        addToast({
-          title: 'Thought found',
-          description: result.title,
-          variant: 'default'
-        })
+        navigate(`/memories?id=${result.id}`)
         break
       case 'project':
         navigate(`/projects/${result.id}`)
@@ -390,54 +385,54 @@ export function SearchPage() {
                         e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                     >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        {/* Type Badge */}
-                        <div className="flex items-center gap-2 mb-2">
-                          {getResultIcon(result.type)}
-                          <span
-                            className="text-xs font-medium px-2 py-1 rounded-full capitalize"
-                            style={{ backgroundColor: getResultBadgeColor(result.type) }}
-                          >
-                            {result.type}
-                          </span>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* Type Badge */}
+                          <div className="flex items-center gap-2 mb-2">
+                            {getResultIcon(result.type)}
+                            <span
+                              className="text-xs font-medium px-2 py-1 rounded-full capitalize"
+                              style={{ backgroundColor: getResultBadgeColor(result.type) }}
+                            >
+                              {result.type}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="text-lg font-semibold mb-1 line-clamp-1 premium-text-platinum">
+                            {result.title}
+                          </h3>
+
+                          {/* Description */}
+                          {(result.body || result.description) && (
+                            <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                              {result.body || result.description}
+                            </p>
+                          )}
+
+                          {/* Tags */}
+                          {result.tags && result.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {result.tags.slice(0, 3).map((tag, i) => (
+                                <span
+                                  key={i}
+                                  className="text-xs px-2 py-0.5 rounded-full"
+                                  style={{
+                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                    color: 'var(--premium-blue)'
+                                  }}
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
-                        {/* Title */}
-                        <h3 className="text-lg font-semibold mb-1 line-clamp-1 premium-text-platinum">
-                          {result.title}
-                        </h3>
-
-                        {/* Description */}
-                        {(result.body || result.description) && (
-                          <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                            {result.body || result.description}
-                          </p>
-                        )}
-
-                        {/* Tags */}
-                        {result.tags && result.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {result.tags.slice(0, 3).map((tag, i) => (
-                              <span
-                                key={i}
-                                className="text-xs px-2 py-0.5 rounded-full"
-                                style={{
-                                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                  color: 'var(--premium-blue)'
-                                }}
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Arrow Icon */}
-                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <ArrowRight className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                      </div>
+                        {/* Arrow Icon */}
+                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ArrowRight className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                        </div>
                       </div>
                     </motion.div>
                   ))}

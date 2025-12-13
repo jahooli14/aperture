@@ -108,6 +108,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleResurfacing(res, supabase)
     }
 
+    // GET: Single memory by ID
+    if (req.method === 'GET' && id && !bridges) {
+      const { data, error } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) {
+        return res.status(404).json({ error: 'Memory not found' })
+      }
+
+      return res.status(200).json({ memory: data })
+    }
+
     // GET: List all memories (default)
     if (req.method === 'GET') {
       const { data: memories, error } = await supabase

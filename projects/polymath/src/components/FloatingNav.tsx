@@ -89,10 +89,6 @@ export function FloatingNav() {
   }
 
   const handleVoiceFABTap = () => {
-    if (!isOnline) return true // Prevent open if offline? existing logic didn't, but let's check. 
-    // Actually existing logic said "if (!isOnline) return" before doing anything. 
-    // VoiceFAB handles its own offline check for voice modal, but for project intercept:
-
     // On project pages, trigger the project's AddNote dialog instead
     if (isProjectDetailPage) {
       console.log('[FloatingNav] Dispatching openProjectAddNote event')
