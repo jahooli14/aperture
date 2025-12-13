@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const now = new Date();
-    const currentHour = now.getUTCHours();
+
 
     // Get all users with reminders enabled (email or push)
     type UserSettings = Pick<Database['public']['Tables']['user_settings']['Row'], 'user_id' | 'reminder_email' | 'reminder_time' | 'timezone' | 'push_subscription'>;
@@ -50,25 +50,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Filter users whose local time matches their reminder_time
-    const usersToRemind = users.filter(user => {
-      const userLocalHour = getUserLocalHour(currentHour, user.timezone);
-      const reminderHour = parseInt(user.reminder_time?.split(':')[0] || '18');
-      return userLocalHour === reminderHour;
-    });
+    // Vercel Hobby plan only allows daily cron jobs, so we check all users at once
+    // instead of checking hourly for specific reminder times.
+    console.log(`Checking reminders for ${users.length} users...`);
 
-    if (usersToRemind.length === 0) {
-      return res.status(200).json({
-        message: 'No users to remind at this hour',
-        sent: 0,
-        totalEnabled: users.length
-      });
-    }
 
     const emailsSent: string[] = [];
     const pushSent: string[] = [];
     const errors: { userId: string; error: string }[] = [];
 
-    for (const user of usersToRemind) {
+    for (const user of users) {
       // Calculate user's local date "today"
       const userDate = getUserLocalDate(now, user.timezone);
 
