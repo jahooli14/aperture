@@ -625,7 +625,7 @@ export function ReaderPage() {
           margin-bottom: 0.5rem;
         }
       `}</style>
-      
+
       {/* Sticky Header */}
       <motion.div
         className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md transition-transform duration-300"
@@ -717,7 +717,7 @@ export function ReaderPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="max-w-[680px] mx-auto px-6 sm:px-8 md:px-12 py-12 sm:py-16 md:py-20"
+        className="max-w-[680px] mx-auto px-6 sm:px-8 md:px-12 pt-24 pb-12 sm:pt-28 sm:pb-16 md:pt-32 md:pb-20"
         style={{
           backgroundColor: '#fefdfb',
           minHeight: '100vh',
