@@ -111,18 +111,19 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     }
 
     try {
-      // Single-user app - no user_id filtering needed in DB
-      const { data, error } = await supabase
-        .from('memories')
-        .select('*')
-        .order('created_at', { ascending: false })
+      // Use API endpoint to ensure consistency with search and avoiding RLS issues with client-side auth
+      const response = await fetch('/api/memories')
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error(`Failed to fetch memories: ${response.statusText}`)
+      }
+
+      const { memories: data } = await response.json()
 
       // Cache the fetched data for offline use
       if (data && data.length > 0) {
         import('../lib/db').then(({ readingDb }) => {
-          const memoriesToCache = data.map(m => ({
+          const memoriesToCache = data.map((m: Memory) => ({
             id: m.id,
             title: m.title || 'Untitled',
             body: m.body || '',

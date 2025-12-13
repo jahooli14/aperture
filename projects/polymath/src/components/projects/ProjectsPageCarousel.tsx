@@ -38,18 +38,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
-  // Color Coding - matching ProjectCard.tsx
   const PROJECT_COLORS: Record<string, string> = {
     tech: '59, 130, 246',      // Blue-500
-    technical: '59, 130, 246', // Blue-500
-    creative: '236, 72, 153',  // Pink-500
+    art: '236, 72, 153',       // Pink-500
     writing: '99, 102, 241',   // Indigo-500
+    music: '168, 85, 247',     // Purple-500
     business: '16, 185, 129',  // Emerald-500
-    learning: '245, 158, 11',  // Amber-500
     life: '6, 182, 212',       // Cyan-500
-    hobby: '249, 115, 22',     // Orange-500
-    content: '168, 85, 247',   // Purple-500
-    'side-project': '139, 92, 246', // Violet-500
     default: '148, 163, 184'   // Slate-400
   }
 
@@ -69,8 +64,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     }
 
     return {
-      borderColor: `rgba(${rgb}, 0.3)`,
-      bgGradient: `linear-gradient(135deg, rgba(${rgb}, 0.15) 0%, rgba(${rgb}, 0.05) 100%)`,
+      borderColor: `rgba(${rgb}, 0.4)`,
+      bgGradient: `linear-gradient(135deg, rgba(${rgb}, 0.20) 0%, rgba(${rgb}, 0.05) 100%)`,
       textColor: `rgb(${rgb})`,
       rgb: rgb
     }
@@ -138,7 +133,13 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
 
       {/* Next Action (The "Unblocker") */}
       {nextTask && (
-        <div className={`rounded-lg p-3 mb-3 flex items-start gap-3 bg-black/20 border border-white/5`}>
+        <div
+          className={`rounded-lg p-3 mb-3 flex items-start gap-3 transition-colors`}
+          style={{
+            backgroundColor: `rgba(${theme.rgb}, 0.08)`,
+            border: `1px solid rgba(${theme.rgb}, 0.2)`
+          }}
+        >
           <div className="mt-0.5" style={{ color: theme.textColor }}>
             <CheckCircle2 className="h-4 w-4" />
           </div>
@@ -158,8 +159,11 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
-                  style={{ width: `${progress}%` }}
+                  className="h-full"
+                  style={{
+                    width: `${progress}%`,
+                    background: `linear-gradient(90deg, rgba(${theme.rgb}, 0.5), rgba(${theme.rgb}, 1))`
+                  }}
                 />
               </div>
               <span className="text-xs text-gray-500">{completedTasks}/{totalTasks}</span>

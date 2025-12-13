@@ -85,23 +85,48 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
     try {
       for (const file of selectedFiles) {
+        // Convert file to base64 for API upload
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.readAsDataURL(file)
+          reader.onload = () => {
+            const result = reader.result as string
+            // Remove data:image/xxx;base64, prefix
+            const base64Data = result.split(',')[1]
+            resolve(base64Data)
+          }
+          reader.onerror = error => reject(error)
+        })
+
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
-        const filePath = `${fileName}`
 
-        const { error: uploadError } = await supabase.storage
-          .from('thought-images')
-          .upload(filePath, file)
+        // Call backend API to upload (bypasses RLS)
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileName,
+            fileType: file.type,
+            fileBase64: base64
+          })
+        })
 
-        if (uploadError) throw uploadError
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.details || errorData.error || 'Upload failed on server')
+        }
 
-        const { data } = supabase.storage.from('thought-images').getPublicUrl(filePath)
-        urls.push(data.publicUrl)
+        const data = await response.json()
+        urls.push(data.url)
       }
       return urls
     } catch (error) {
       console.error('Upload failed:', error)
-      throw new Error('Failed to upload images')
+      const message = error instanceof Error ? error.message : 'Unknown upload error'
+      throw new Error(`Failed to upload images: ${message}`)
     } finally {
       setUploading(false)
     }
@@ -180,10 +205,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         })
       }
     } catch (error) {
-      console.error('Submission error:', error)
+      console.log('Submission catch block caught:', error)
       addToast({
         title: 'Error',
-        description: 'Failed to prepare submission',
+        description: error instanceof Error ? error.message : 'Failed to prepare submission',
         variant: 'destructive',
       })
       setLoading(false)
@@ -308,9 +333,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
                     className={`grid gap-3 ${selectedFiles.length === 1 ? 'grid-cols-1' :
-                        selectedFiles.length === 2 ? 'grid-cols-2' :
-                          selectedFiles.length === 3 ? 'grid-cols-2' : // First one spans full? handled below
-                            'grid-cols-2'
+                      selectedFiles.length === 2 ? 'grid-cols-2' :
+                        selectedFiles.length === 3 ? 'grid-cols-2' : // First one spans full? handled below
+                          'grid-cols-2'
                       }`}
                   >
                     {selectedFiles.map((file, index) => (
@@ -321,7 +346,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                         exit={{ opacity: 0, scale: 0.8 }}
                         key={`${file.name}-${index}`}
                         className={`relative rounded-2xl overflow-hidden group border border-white/10 shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
-                            selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
+                          selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
                           }`}
                       >
                         <img
