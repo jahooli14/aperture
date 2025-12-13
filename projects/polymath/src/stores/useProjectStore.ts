@@ -89,6 +89,7 @@ interface ProjectState {
   setProjects: (projects: Project[]) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
+  syncProject: (project: Project) => void
 }
 
 export const useProjectStore = create<ProjectState>()(
@@ -447,6 +448,28 @@ export const useProjectStore = create<ProjectState>()(
         }))
       },
       setProjects: (projects) => set({ projects, allProjects: projects }), // Simplified for now
+      syncProject: (project) => {
+        set(state => {
+          const exists = state.allProjects.some(p => p.id === project.id)
+          let newAllProjects
+          if (exists) {
+            newAllProjects = state.allProjects.map(p => p.id === project.id ? project : p)
+          } else {
+            newAllProjects = [...state.allProjects, project]
+          }
+          const sorted = smartSortProjects(newAllProjects)
+
+          // Update cache silently
+          import('../lib/db').then(({ readingDb }) => {
+            readingDb.cacheProjects(sorted).catch(e => console.warn('Failed to cache synced project:', e))
+          })
+
+          return {
+            allProjects: sorted,
+            projects: filterProjects(sorted, state.filter)
+          }
+        })
+      },
       setLoading: (loading) => set({ loading }),
       setError: (error) => set({ error })
     }),

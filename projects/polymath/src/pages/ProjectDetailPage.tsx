@@ -38,7 +38,7 @@ interface ProjectNote {
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { projects, fetchProjects, deleteProject, updateProject } = useProjectStore()
+  const { projects, fetchProjects, deleteProject, updateProject, syncProject } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
 
   const [project, setProject] = useState<Project | null>(null)
@@ -141,7 +141,7 @@ export function ProjectDetailPage() {
         }
 
         // Update store with fresh data
-        // useProjectStore.getState().updateProject(id, data.project)
+        syncProject(data.project)
       }
     } catch (error) {
       console.warn('[ProjectDetail] Fetch failed:', error)
