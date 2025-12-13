@@ -266,11 +266,12 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
                     src={getPhotoDisplayUrl(photo)}
                     alt={`Photo from ${photo.upload_date}`}
                     className="absolute inset-3 w-[calc(100%-1.5rem)] h-[calc(100%-1.5rem)] object-cover pointer-events-none rounded-2xl shadow-xl"
-                    initial={{ opacity: 0 }}
+                    initial={{ opacity: 0, scale: 1.1 }}
                     animate={{
                       opacity: index === currentIndex ? 1 : 0,
+                      scale: index === currentIndex ? 1 : 1.1,
                     }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.5 }}
                   />
                 ))}
               </div>
