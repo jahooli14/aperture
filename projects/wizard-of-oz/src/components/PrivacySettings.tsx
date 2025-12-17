@@ -164,6 +164,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
         reminder_email: reminderEmail,
         reminders_enabled: remindersEnabled,
         reminder_time: reminderTime,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
       setSavingReminders(false);
     } catch (error) {
