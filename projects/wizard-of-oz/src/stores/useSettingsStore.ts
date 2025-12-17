@@ -11,14 +11,16 @@ interface SettingsState {
   fetchSettings: () => Promise<void>;
   updateSettings: (updates: Partial<Omit<UserSettings, 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
   updateBirthdate: (birthdate: string) => Promise<void>;
-  reminders_enabled: boolean;
-  reminder_time: string;
-  timezone: string;
-}) => Promise<void>;
-generateInviteCode: () => Promise<string>;
-joinWithCode: (inviteCode: string) => Promise<void>;
-getSharedUsers: () => Promise<Array<{ user_id: string; email: string | null }>>;
-removeSharedUser: (sharedUserId: string) => Promise<void>;
+  updateReminderSettings: (settings: {
+    reminder_email: string;
+    reminders_enabled: boolean;
+    reminder_time: string;
+    timezone: string;
+  }) => Promise<void>;
+  generateInviteCode: () => Promise<string>;
+  joinWithCode: (inviteCode: string) => Promise<void>;
+  getSharedUsers: () => Promise<Array<{ user_id: string; email: string | null }>>;
+  removeSharedUser: (sharedUserId: string) => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -140,6 +142,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const { data, error } = await supabase
         .from('user_settings')
         .update({
+          reminder_email: reminderSettings.reminder_email,
           reminders_enabled: reminderSettings.reminders_enabled,
           reminder_time: reminderSettings.reminder_time,
           timezone: reminderSettings.timezone,
