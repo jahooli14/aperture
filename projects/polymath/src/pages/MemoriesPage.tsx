@@ -48,6 +48,65 @@ const getIconComponent = (name: string) => {
   return Lightbulb // default icon
 }
 
+// Helper for Google Keep style masonry (Across then Down)
+function MasonryGrid({
+  memories,
+  onEdit,
+  onDelete,
+  renderExtra
+}: {
+  memories: Memory[],
+  onEdit: (m: Memory) => void,
+  onDelete: (m: Memory) => void,
+  renderExtra?: (m: Memory) => React.ReactNode
+}) {
+  const [columns, setColumns] = useState(2)
+
+  useEffect(() => {
+    const updateColumns = () => {
+      if (window.innerWidth >= 1024) setColumns(3) // lg
+      else if (window.innerWidth >= 768) setColumns(2) // md
+      // else setColumns(1) // mobile - originally code was columns-2 even on mobile, keeping 2 for consistency with "tight packing" request unless screen is very small
+      else setColumns(2)
+    }
+
+    updateColumns()
+    window.addEventListener('resize', updateColumns)
+    return () => window.removeEventListener('resize', updateColumns)
+  }, [])
+
+  // Distribute memories into columns:
+  // Col 1: Index 0, 3, 6...
+  // Col 2: Index 1, 4, 7...
+  // Col 3: Index 2, 5, 8...
+  const distributedColumns = useMemo(() => {
+    const cols: Memory[][] = Array.from({ length: columns }, () => [])
+    memories.forEach((memory, i) => {
+      cols[i % columns].push(memory)
+    })
+    return cols
+  }, [memories, columns])
+
+  return (
+    <div className="flex gap-4 items-start">
+      {distributedColumns.map((colMemories, colIndex) => (
+        <div key={colIndex} className="flex-1 flex flex-col gap-4">
+          {colMemories.map((memory, index) => (
+            <div key={memory.id || `memory-${colIndex}-${index}`}>
+              <MemoryCard
+                memory={memory}
+                onEdit={onEdit}
+                onDelete={onDelete}
+              />
+              {renderExtra && renderExtra(memory)}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function MemoriesPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -471,12 +530,13 @@ export function MemoriesPage() {
         </div>
       </div>
 
-      <div className="pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
+      <div className="pb-32 relative z-10" style={{ paddingTop: '5.5rem', isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
           <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
             background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+            transform: 'translate3d(0,0,0)' // Force hardware acceleration boundary
           }}>
             {/* Title Section */}
             <div className="mb-6">
@@ -749,43 +809,29 @@ export function MemoriesPage() {
                     </>
                   )}
 
-                  {/* Recent memories view - Masonry Grid */}
+                  {/* Recent memories view - Google Keep Style Masonry (Across then Down) */}
                   {memoryView === 'recent' && (
-                    <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                      {displayMemories.map((memory) => (
-                        <div key={memory.id} className="mb-4 break-inside-avoid">
-                          <MemoryCard
-                            memory={memory}
-                            onEdit={handleOpenDetail}
-                            onDelete={handleDelete}
-                          />
-                        </div>
-                      ))}
-                    </div>
+                    <MasonryGrid memories={displayMemories} onEdit={handleOpenDetail} onDelete={handleDelete} />
                   )}
                 </>
               )}
 
-              {/* Resurfacing Memories Grid - Masonry */}
+              {/* Resurfacing Memories Grid - Google Keep Style Masonry */}
               {view === 'resurfacing' && !isLoading && resurfacing.length > 0 && (
-                <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                  {resurfacing.map((memory) => (
-                    <div key={memory.id} className="flex flex-col gap-3 mb-4 break-inside-avoid">
-                      <MemoryCard
-                        memory={memory}
-                        onEdit={handleOpenDetail}
-                        onDelete={handleDelete}
-                      />
-                      <Button
-                        onClick={() => handleReview(memory.id)}
-                        variant="default"
-                        className="w-full btn-primary"
-                      >
-                        Reviewed
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                <MasonryGrid
+                  memories={resurfacing}
+                  onEdit={handleOpenDetail}
+                  onDelete={handleDelete}
+                  renderExtra={(memory) => (
+                    <Button
+                      onClick={() => handleReview(memory.id)}
+                      variant="default"
+                      className="w-full btn-primary mt-3"
+                    >
+                      Reviewed
+                    </Button>
+                  )}
+                />
               )}
             </div>
           </div>

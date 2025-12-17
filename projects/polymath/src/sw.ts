@@ -16,20 +16,22 @@ self.skipWaiting()
 clientsClaim()
 
 // Handle Single Page App navigation (serve index.html for non-API routes)
-registerRoute(
-  new NavigationRoute(createHandlerBoundToURL('/index.html'), {
-    allowlist: [
-      // Allow navigation to everything except API and specific file extensions
-      /^(?!\/api\/).*/,
-    ],
-    denylist: [
-      // Ignore API routes
-      /^\/api\//,
-      // Ignore specific file extensions (images, etc - let them hit network/cache)
-      /\.[a-z0-9]{2,4}$/i
-    ]
-  })
-)
+// Handle Single Page App navigation (serve index.html for non-API routes)
+try {
+  // Try to use the precached index.html
+  // Note: In dev mode, this might fail if index.html isn't in the virtual manifest
+  const handler = createHandlerBoundToURL('index.html');
+  registerRoute(
+    new NavigationRoute(handler, {
+      allowlist: [/^(?!\/api\/).*/],
+      denylist: [/^\/api\//, /\.[a-z0-9]{2,4}$/i]
+    })
+  );
+} catch (error) {
+  console.warn('[ServiceWorker] specialized navigation route failed (likely index.html not precached). SW installed without SPA navigation fallback.', error);
+  // We don't register a fallback NavigationRoute here because it might conflict or cause loops.
+  // The app will function as a standard website (online-only for navigation) which is better than crashing.
+}
 
 // --- Custom Logic (Share Target & Sync) ---
 
@@ -191,7 +193,7 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
-  
+
   // Note: We don't need to handle other fetch requests here; Workbox handles caching.
   // API requests fall through to network (not in NavigationRoute allowlist).
 })
@@ -206,30 +208,51 @@ self.addEventListener('sync', (event) => {
 async function syncCaptures() {
   console.log('[ServiceWorker] Starting background sync for captures...')
   const db = await openDB()
-  const pendingNotes = await db.getAll('pending-notes')
-  console.log(`[ServiceWorker] Found ${pendingNotes.length} pending captures.`)
 
-  for (const note of pendingNotes) {
-    try {
-      console.log(`[ServiceWorker] Attempting to sync capture with ID: ${note.id}`)
-      await fetch('/api/memories?capture=true', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note)
-      })
-      // Remove from pending queue on success
-      await db.delete('pending-notes', note.id)
-      console.log(`[ServiceWorker] Successfully synced and removed capture with ID: ${note.id}`)
-    } catch (error) {
-      console.error(`[ServiceWorker] Failed to sync capture with ID: ${note.id}. Error:`, error)
-      // Keep in queue for next sync
+  try {
+    const pendingNotes = await new Promise<any[]>((resolve, reject) => {
+      const transaction = db.transaction('pending-notes', 'readonly')
+      const store = transaction.objectStore('pending-notes')
+      const request = store.getAll()
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+
+    console.log(`[ServiceWorker] Found ${pendingNotes.length} pending captures.`)
+
+    for (const note of pendingNotes) {
+      try {
+        console.log(`[ServiceWorker] Attempting to sync capture with ID: ${note.id}`)
+        await fetch('/api/memories?capture=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(note)
+        })
+
+        // Remove from pending queue on success
+        await new Promise<void>((resolve, reject) => {
+          const transaction = db.transaction('pending-notes', 'readwrite')
+          const store = transaction.objectStore('pending-notes')
+          const request = store.delete(note.id)
+          request.onsuccess = () => resolve()
+          request.onerror = () => reject(request.error)
+        })
+
+        console.log(`[ServiceWorker] Successfully synced and removed capture with ID: ${note.id}`)
+      } catch (error) {
+        console.error(`[ServiceWorker] Failed to sync capture with ID: ${note.id}. Error:`, error)
+        // Keep in queue for next sync
+      }
     }
+  } catch (err) {
+    console.error('[ServiceWorker] Error accessing IndexedDB:', err)
   }
+
   console.log('[ServiceWorker] Background sync for captures finished.')
 }
 
 // Helper: Open IndexedDB
-function openDB() {
+function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('polymath-offline', 1)
 
@@ -237,7 +260,7 @@ function openDB() {
     request.onsuccess = () => resolve(request.result)
 
     request.onupgradeneeded = (event) => {
-      const db = event.target.result
+      const db = (event.target as IDBOpenDBRequest).result
       if (!db.objectStoreNames.contains('pending-notes')) {
         db.createObjectStore('pending-notes', { keyPath: 'id' })
       }

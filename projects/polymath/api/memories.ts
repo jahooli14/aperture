@@ -30,6 +30,46 @@ interface SearchResult {
   tags?: string[]
 }
 
+interface Memory {
+  id: string
+  audiopen_id: string
+  title: string
+  body: string
+  orig_transcript: string | null
+  tags: string[]
+  audiopen_created_at: string
+  processed: boolean
+  processed_at: string | null
+  created_at: string
+  embedding?: number[]
+  emotional_tone?: string
+  themes?: string[]
+  review_count?: number
+  last_reviewed_at?: string
+  entities?: any
+  shouldReview?: boolean
+  priority?: number
+}
+
+interface MemoryPrompt {
+  id: string
+  text: string
+  is_required: boolean
+  priority_order: number
+  status?: string
+  response?: any
+}
+
+interface UserPromptStatus {
+  id: string
+  user_id: string
+  prompt_id: string
+  status: string
+  response_id: string | null
+  completed_at: string | null
+  created_at: string
+}
+
 /**
  * Unified Memories API
  * GET /api/memories - List all memories
@@ -273,7 +313,7 @@ Return valid JSON.`
     // Generate unique ID with timestamp + random component to prevent collisions on retry
     const uniqueId = `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-    const newMemory: any = {
+    const newMemory = {
       audiopen_id: uniqueId,
       title: parsedTitle,
       body,
@@ -289,6 +329,7 @@ Return valid JSON.`
       processed: false, // Will be fully processed in background
       processed_at: null,
       error: null,
+      user_id: undefined as string | undefined
     }
 
     // Add user_id if available to ensure RLS visibility
@@ -471,7 +512,7 @@ async function handleResurfacing(res: VercelResponse, supabase: any) {
     // Calculate which memories should be resurfaced
     const now = new Date()
     const resurfacingCandidates = memories
-      .map(memory => {
+      .map((memory: Memory) => {
         const createdAt = new Date(memory.created_at)
         const lastReviewed = memory.last_reviewed_at
           ? new Date(memory.last_reviewed_at)
@@ -502,8 +543,8 @@ async function handleResurfacing(res: VercelResponse, supabase: any) {
           priority
         }
       })
-      .filter(m => m.shouldReview)
-      .sort((a, b) => b.priority - a.priority)
+      .filter((m: Memory) => m.shouldReview)
+      .sort((a: Memory, b: Memory) => (b.priority || 0) - (a.priority || 0))
       .slice(0, 5) // Return top 5
 
     return res.status(200).json({
@@ -540,7 +581,7 @@ async function handleThemes(res: VercelResponse, supabase: any) {
     const themeMap = new Map<string, any[]>()
     let uncategorizedCount = 0
 
-    memories.forEach(memory => {
+    memories.forEach((memory: Memory) => {
       const themes = memory.themes || []
 
       if (themes.length === 0) {
@@ -650,13 +691,13 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: 
 
     // If no user, return prompts with pending status
     if (!userId) {
-      const required = prompts.filter(p => p.is_required)
-      const optional = prompts.filter(p => !p.is_required)
+      const required = prompts.filter((p: MemoryPrompt) => p.is_required)
+      const optional = prompts.filter((p: MemoryPrompt) => !p.is_required)
 
       return res.status(200).json({
-        required: required.map(p => ({ ...p, status: 'pending' })),
+        required: required.map((p: MemoryPrompt) => ({ ...p, status: 'pending' })),
         suggested: [],
-        optional: optional.map(p => ({ ...p, status: 'pending' })),
+        optional: optional.map((p: MemoryPrompt) => ({ ...p, status: 'pending' })),
         progress: {
           completed_required: 0,
           total_required: required.length,
@@ -683,11 +724,11 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: 
 
     // Create status map
     const statusMap = new Map(
-      (userStatuses || []).map(s => [s.prompt_id, s])
+      (userStatuses || []).map((s: UserPromptStatus) => [s.prompt_id, s])
     )
 
     // Enrich prompts with status
-    const enrichedPrompts = prompts.map(prompt => {
+    const enrichedPrompts = prompts.map((prompt: MemoryPrompt) => {
       const userStatus = statusMap.get(prompt.id) as any
       return {
         ...prompt,
@@ -697,13 +738,13 @@ async function handlePrompts(req: VercelRequest, res: VercelResponse, supabase: 
     })
 
     // Categorize prompts
-    const required = enrichedPrompts.filter(p => p.is_required)
-    const optional = enrichedPrompts.filter(p => !p.is_required && p.status !== 'suggested')
-    const suggested = enrichedPrompts.filter(p => p.status === 'suggested')
+    const required = enrichedPrompts.filter((p: MemoryPrompt) => p.is_required)
+    const optional = enrichedPrompts.filter((p: MemoryPrompt) => !p.is_required && p.status !== 'suggested')
+    const suggested = enrichedPrompts.filter((p: MemoryPrompt) => p.status === 'suggested')
 
     // Calculate progress
-    const completedRequired = required.filter(p => p.status === 'completed').length
-    const completedTotal = enrichedPrompts.filter(p => p.status === 'completed').length
+    const completedRequired = required.filter((p: MemoryPrompt) => p.status === 'completed').length
+    const completedTotal = enrichedPrompts.filter((p: MemoryPrompt) => p.status === 'completed').length
     const totalRequired = required.length
     const completionPercentage = totalRequired > 0
       ? Math.round((completedRequired / totalRequired) * 100)
@@ -781,10 +822,10 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
       .select('*')
       .eq('user_id', userId)
 
-    const required = prompts?.filter(p => p.is_required) || []
-    const completedRequired = statuses?.filter(s =>
+    const required = prompts?.filter((p: MemoryPrompt) => p.is_required) || []
+    const completedRequired = statuses?.filter((s: UserPromptStatus) =>
       s.status === 'completed' &&
-      required.some(p => p.id === s.prompt_id)
+      required.some((p: MemoryPrompt) => p.id === s.prompt_id)
     ).length || 0
 
     return res.status(200).json({
@@ -793,7 +834,7 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
       progress: {
         completed_required: completedRequired,
         total_required: required.length,
-        completed_total: statuses?.filter(s => s.status === 'completed').length || 0,
+        completed_total: statuses?.filter((s: UserPromptStatus) => s.status === 'completed').length || 0,
         total_prompts: prompts?.length || 0,
         completion_percentage: required.length > 0
           ? Math.round((completedRequired / required.length) * 100)
@@ -880,7 +921,7 @@ async function searchMemories(query: string, supabase: any, userId: string, embe
       return []
     }
 
-    return (data || []).map(memory => {
+    return (data || []).map((memory: Memory) => {
       let score = calculateTextScore(query, memory.title, memory.body)
 
       // Boost score if vector similarity matches
@@ -906,6 +947,15 @@ async function searchMemories(query: string, supabase: any, userId: string, embe
   }
 }
 
+interface ProjectItem {
+  id: string
+  title: string
+  description: string
+  created_at: string
+  tags: string[]
+  embedding?: number[]
+}
+
 /**
  * Search projects using text search on title and description
  */
@@ -922,7 +972,7 @@ async function searchProjects(query: string, supabase: any, userId: string, embe
       return []
     }
 
-    return (data || []).map(project => {
+    return (data || []).map((project: ProjectItem) => {
       let score = calculateTextScore(query, project.title, project.description)
 
       if (embedding && project.embedding) {
@@ -946,6 +996,16 @@ async function searchProjects(query: string, supabase: any, userId: string, embe
   }
 }
 
+interface ArticleItem {
+  id: string
+  title: string
+  excerpt: string
+  url: string
+  created_at: string
+  tags: string[]
+  embedding?: number[]
+}
+
 /**
  * Search articles using text search on title, excerpt, and content
  */
@@ -962,7 +1022,7 @@ async function searchArticles(query: string, supabase: any, userId: string, embe
       return []
     }
 
-    return (data || []).map(article => {
+    return (data || []).map((article: ArticleItem) => {
       let score = calculateTextScore(query, article.title, article.excerpt)
 
       if (embedding && article.embedding) {

@@ -44,7 +44,7 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
           rel="noopener noreferrer"
           className="flex-1 min-w-0 group/link"
         >
-          <h3 className="text-base font-bold leading-snug line-clamp-2 group-hover/link:text-blue-400 transition-colors mb-1" style={{ color: 'var(--premium-text-primary)' }}>
+          <h3 className="text-base font-bold leading-snug line-clamp-4 group-hover/link:text-blue-400 transition-colors mb-1" style={{ color: 'var(--premium-text-primary)' }}>
             {item.title}
           </h3>
           <div className="flex items-center gap-2 text-xs truncate" style={{ color: 'var(--premium-text-tertiary)' }}>
@@ -94,10 +94,10 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
       {/* Description */}
       {item.description && (
         <div
-          className="text-sm line-clamp-3 leading-relaxed"
+          className="text-sm line-clamp-6 leading-relaxed"
           style={{ color: 'var(--premium-text-secondary)' }}
           dangerouslySetInnerHTML={{
-            __html: item.description.replace(/<[^>]+>/g, '').substring(0, 200) + (item.description.length > 200 ? '...' : '')
+            __html: item.description.replace(/<[^>]+>/g, '').substring(0, 500) + (item.description.length > 500 ? '...' : '')
           }}
         />
       )}

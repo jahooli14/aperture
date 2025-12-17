@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useReadingStore } from '../stores/useReadingStore'
 import type { Article } from '../types/reading'
@@ -6,7 +7,7 @@ import type { Article } from '../types/reading'
 // Fetch articles from Supabase
 const fetchArticles = async () => {
     const { data, error } = await supabase
-        .from('articles')
+        .from('reading_queue')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -24,13 +25,17 @@ export function useReadingQueue() {
     })
 
     // Sync React Query state to Zustand store
-    if (query.data && query.data !== useReadingStore.getState().articles) {
-        setArticles(query.data)
-    }
+    useEffect(() => {
+        if (query.data && query.data !== useReadingStore.getState().articles) {
+            setArticles(query.data)
+        }
+    }, [query.data, setArticles])
 
-    if (query.isLoading !== useReadingStore.getState().loading) {
-        setLoading(query.isLoading)
-    }
+    useEffect(() => {
+        if (query.isLoading !== useReadingStore.getState().loading) {
+            setLoading(query.isLoading)
+        }
+    }, [query.isLoading, setLoading])
 
     return query
 }

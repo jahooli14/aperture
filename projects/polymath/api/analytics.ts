@@ -648,7 +648,7 @@ async function getShadowProjects() {
 /**
  * Helper function to get first incomplete task from project
  */
-function getNextTask(project: any): { text: string, energy_level?: string } | null {
+function getNextTask(project: { metadata?: { tasks?: Array<{ text: string, order: number, done: boolean, energy_level?: string }> } }): { text: string, energy_level?: string } | null {
   const tasks = project.metadata?.tasks || []
   const nextTask = tasks
     .sort((a: any, b: any) => a.order - b.order)
@@ -793,7 +793,7 @@ async function getSmartSuggestion() {
   if (isWeekend) {
     const creativeProjects = projects.filter(p =>
       p.status === 'active' &&
-      p.tags?.some(tag => ['creative', 'learning', 'hobby'].includes(tag.toLowerCase()))
+      p.tags?.some((tag: string) => ['creative', 'learning', 'hobby'].includes(tag.toLowerCase()))
     )
     if (creativeProjects.length > 0) {
       const project = creativeProjects[0]

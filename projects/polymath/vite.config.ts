@@ -21,7 +21,8 @@ export default defineConfig(({ mode }) => {
         filename: 'sw.ts',
         registerType: 'autoUpdate',
         injectManifest: {
-          maximumFileSizeToCacheInBytes: 3000000
+          maximumFileSizeToCacheInBytes: 6000000,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}']
         },
         devOptions: {
           enabled: true,

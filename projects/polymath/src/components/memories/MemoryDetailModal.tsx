@@ -153,140 +153,144 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
   }
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 md:pt-24 bg-black/80 backdrop-blur-md"
-          onClick={onClose}
-        >
+    <>
+      <AnimatePresence>
+        {isOpen && (
           <motion.div
-            initial={{ y: 20, opacity: 0, scale: 0.95 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 20, opacity: 0, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] rounded-2xl p-6 shadow-2xl overflow-y-auto"
-            style={{
-              backgroundColor: '#0f1829', // Solid dark background for readability
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-            onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
+            key="modal-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 md:pt-24 bg-black/80 backdrop-blur-md"
+            onClick={onClose}
           >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
-              style={{ color: 'var(--premium-text-tertiary)' }}
-              aria-label="Close"
+            <motion.div
+              initial={{ y: 20, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 20, opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] rounded-2xl p-6 shadow-2xl overflow-y-auto"
+              style={{
+                backgroundColor: '#0f1829', // Solid dark background for readability
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+              onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
             >
-              <X className="h-5 w-5" />
-            </button>
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 transition-colors"
+                style={{ color: 'var(--premium-text-tertiary)' }}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
 
-            <div className="flex items-center justify-between gap-4 mb-6 pr-10">
-              <h2 className="text-2xl font-bold premium-text-platinum leading-tight">
-                {memory.title}
-              </h2>
-              <div className="flex items-center gap-2">
-                {/* AI Analysis Dot (Interactive, Cyan) */}
-                <button
-                  onClick={handleAnalyze}
-                  className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
-                  style={{
-                    backgroundColor: '#06b6d4', // Cyan-500
-                    opacity: 1
-                  }}
-                  title="Analyze with AI"
-                />
+              <div className="flex items-center justify-between gap-4 mb-6 pr-10">
+                <h2 className="text-2xl font-bold premium-text-platinum leading-tight">
+                  {memory.title}
+                </h2>
+                <div className="flex items-center gap-2">
+                  {/* AI Analysis Dot (Interactive, Cyan) */}
+                  <button
+                    onClick={handleAnalyze}
+                    className="w-2 h-2 rounded-full mr-2 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
+                    style={{
+                      backgroundColor: '#06b6d4', // Cyan-500
+                      opacity: 1
+                    }}
+                    title="Analyze with AI"
+                  />
 
-                <button
-                  onClick={() => setEditDialogOpen(true)}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                  style={{ color: 'var(--premium-text-tertiary)' }}
-                  title="Edit Memory"
-                >
-                  <Edit className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
-                  style={{ color: '#ef4444' }}
-                  title="Delete Memory"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                  <button
+                    onClick={() => setEditDialogOpen(true)}
+                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                    style={{ color: 'var(--premium-text-tertiary)' }}
+                    title="Edit Memory"
+                  >
+                    <Edit className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
+                    style={{ color: '#ef4444' }}
+                    title="Delete Memory"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="prose prose-invert prose-sm max-w-none mb-6">
-              <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                {memory.body}
-              </p>
-              {memory.image_urls && memory.image_urls.length > 0 && (
-                <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {memory.image_urls.map((url, i) => (
-                    <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-white/10">
-                      <img src={url} alt={`Attachment ${i + 1}`} className="w-full h-auto object-cover" />
-                    </div>
+              <div className="prose prose-invert prose-sm max-w-none mb-6">
+                <p className="leading-relaxed text-base" style={{ color: 'var(--premium-text-primary)' }}>
+                  {memory.body}
+                </p>
+                {memory.image_urls && memory.image_urls.length > 0 && (
+                  <div className={`mt-4 grid gap-4 ${memory.image_urls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                    {memory.image_urls.map((url, i) => (
+                      <div key={i} className="rounded-xl overflow-hidden shadow-sm border border-white/10">
+                        <img src={url} alt={`Attachment ${i + 1}`} className="w-full h-auto object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {memory.tags && memory.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {memory.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 text-xs font-medium rounded-full"
+                      style={{
+                        // Understated Slate/Gray styling
+                        backgroundColor: 'rgba(148, 163, 184, 0.1)', // Slate-400 at 10% opacity
+                        color: '#94a3b8' // Slate-400
+                      }}
+                    >
+                      {tag}
+                    </span>
                   ))}
                 </div>
               )}
-            </div>
 
-            {memory.tags && memory.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {memory.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-xs font-medium rounded-full"
-                    style={{
-                      // Understated Slate/Gray styling
-                      backgroundColor: 'rgba(148, 163, 184, 0.1)', // Slate-400 at 10% opacity
-                      color: '#94a3b8' // Slate-400
-                    }}
-                  >
-                    {tag}
-                  </span>
-                ))}
+              {/* Connections Section */}
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <h3 className="text-lg font-bold premium-text-platinum mb-4">
+                  Connections
+                </h3>
+                {bridgesFetched && bridges.length === 0 ? (
+                  <div className="text-sm text-gray-400">
+                    No connections found yet.
+                  </div>
+                ) : (
+                  <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
+                )}
+                <ConnectionsList
+                  itemType="thought"
+                  itemId={memory.id}
+                  content={memoryContent}
+                  onConnectionCreated={loadMemoryBridges}
+                  onConnectionDeleted={loadMemoryBridges}
+                />
               </div>
-            )}
 
-            {/* Connections Section */}
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <h3 className="text-lg font-bold premium-text-platinum mb-4">
-                Connections
-              </h3>
-              {bridgesFetched && bridges.length === 0 ? (
-                <div className="text-sm text-gray-400">
-                  No connections found yet.
-                </div>
-              ) : (
-                <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
-              )}
-              <ConnectionsList
-                itemType="thought"
-                itemId={memory.id}
-                content={memoryContent}
-                onConnectionCreated={loadMemoryBridges}
-                onConnectionDeleted={loadMemoryBridges}
-              />
-            </div>
-
-            {/* Timestamp */}
-            <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-white/10" style={{ color: 'var(--premium-text-tertiary)' }}>
-              <Calendar className="h-3 w-3" />
-              <span>{format(new Date(memory.created_at), 'PPPp')}</span>
-            </div>
+              {/* Timestamp */}
+              <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-white/10" style={{ color: 'var(--premium-text-tertiary)' }}>
+                <Calendar className="h-3 w-3" />
+                <span>{format(new Date(memory.created_at), 'PPPp')}</span>
+              </div>
+            </motion.div>
+            {confirmDialog}
           </motion.div>
-          {confirmDialog}
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
+
       <EditMemoryDialog
         memory={memory}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onMemoryUpdated={() => loadMemoryBridges()} // Reload bridges if memory content changes
       />
-    </AnimatePresence>
+    </>
   );
 };

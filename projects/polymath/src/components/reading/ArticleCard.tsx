@@ -202,38 +202,41 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         }}
       >
         {/* Row 1: Title & Menu */}
-        <div className="flex items-start justify-between gap-3 mb-3 relative z-10">
-          <div className="flex-1 min-w-0">
+        <div className="mb-3 relative z-10 block">
+          {/* 3-Dot Menu (Floated Right) */}
+          <div className="float-right ml-2 -mr-2 -mt-1">
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowContextMenu(true)
+              }}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-white/10 shrink-0"
+            >
+              <MoreVertical className="h-4 w-4 text-gray-400" />
+            </Button>
+          </div>
+
+          {/* Title Area */}
+          <div className="min-w-0">
             {article.title?.startsWith('http') ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-1">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
                 <span className="text-sm font-medium text-blue-400">Extracting...</span>
               </div>
             ) : (
-              <h3 className="text-lg font-bold leading-tight line-clamp-2" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="text-lg font-bold leading-tight inline" style={{ color: 'var(--premium-text-primary)' }}>
                 {article.title || 'Untitled'}
               </h3>
             )}
             {is_rotting && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium ml-2">Rotting</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium ml-2 align-middle">Rotting</span>
             )}
-            <div className="text-xs truncate mt-1" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="text-xs truncate mt-1 block" style={{ color: 'var(--premium-text-tertiary)' }}>
               {article.source || new URL(article.url).hostname.replace('www.', '')}
             </div>
           </div>
-
-          {/* 3-Dot Menu (only item in header) */}
-          <Button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowContextMenu(true)
-            }}
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-white/10 shrink-0 -mr-2 -mt-1"
-          >
-            <MoreVertical className="h-4 w-4 text-gray-400" />
-          </Button>
         </div>
 
         {/* Row 2: Image & Meta/Icons */}
@@ -297,12 +300,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           </div>
         </div>
 
-        {/* Row 3: Excerpt */}
-        {cleanExcerpt(article.excerpt) && (
-          <p className="text-sm line-clamp-4 mb-3 leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-            {cleanExcerpt(article.excerpt)}
-          </p>
-        )}
+
 
         {/* Row 4: Progress Bar */}
         {progress > 0 && (

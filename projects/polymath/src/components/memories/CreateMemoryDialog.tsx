@@ -85,42 +85,42 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
     try {
       for (const file of selectedFiles) {
-        // Convert file to base64 for API upload
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
-          reader.readAsDataURL(file)
-          reader.onload = () => {
-            const result = reader.result as string
-            // Remove data:image/xxx;base64, prefix
-            const base64Data = result.split(',')[1]
-            resolve(base64Data)
-          }
-          reader.onerror = error => reject(error)
-        })
-
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        // Call backend API to upload (bypasses RLS)
-        const response = await fetch('/api/upload-image', {
+        // 1. Get Signed URL from backend
+        const authResponse = await fetch('/api/upload-image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             fileName,
-            fileType: file.type,
-            fileBase64: base64
+            fileType: file.type
           })
         })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.details || errorData.error || 'Upload failed on server')
+        if (!authResponse.ok) {
+          const errorData = await authResponse.json().catch(() => ({}))
+          throw new Error(errorData.details || errorData.error || 'Failed to get upload URL')
         }
 
-        const data = await response.json()
-        urls.push(data.url)
+        const { signedUrl, publicUrl } = await authResponse.json()
+
+        // 2. Upload directly to Supabase Storage via Signed URL
+        const uploadResponse = await fetch(signedUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type,
+          },
+          body: file
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+        }
+
+        urls.push(publicUrl)
       }
       return urls
     } catch (error) {

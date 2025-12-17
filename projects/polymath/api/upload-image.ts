@@ -17,40 +17,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const supabase = getSupabaseClient()
-        const { fileName, fileType, fileBase64 } = req.body
+        const { fileName, fileType } = req.body
 
-        if (!fileName || !fileType || !fileBase64) {
-            return res.status(400).json({ error: 'Missing required fields' })
+        if (!fileName || !fileType) {
+            return res.status(400).json({ error: 'Missing required fields: fileName, fileType' })
         }
 
-        // Convert base64 to buffer
-        const buffer = Buffer.from(fileBase64, 'base64')
+        console.log('[upload-image] Generating signed URL for:', { fileName, fileType })
 
-        // Upload using the Service Role Key (from getSupabaseClient)
-        // This bypasses RLS
+        // Create a Signed Upload URL
+        // Tries to upload to 'thought-images' bucket
+        // The token allows uploading a specific file for a limited time (e.g. 60s)
         const { data, error } = await supabase.storage
             .from('thought-images')
-            .upload(fileName, buffer, {
-                contentType: fileType,
-                upsert: true
-            })
+            .createSignedUploadUrl(fileName)
 
-        if (error) throw error
+        if (error) {
+            console.error('[upload-image] Failed to create signed URL:', error)
+            throw error
+        }
 
-        // Get public URL
+        // Return the signed URL for the frontend to PUT the file to
+        // And the public URL for reference after upload
         const { data: publicUrlData } = supabase.storage
             .from('thought-images')
             .getPublicUrl(fileName)
 
         return res.status(200).json({
             success: true,
-            url: publicUrlData.publicUrl
+            signedUrl: data.signedUrl,
+            path: data.path, // Internal storage path
+            token: data.token, // Upload token if needed manually
+            publicUrl: publicUrlData.publicUrl
         })
 
     } catch (error) {
-        console.error('Upload failed:', error)
+        console.error('Upload preparation failed:', error)
         return res.status(500).json({
-            error: 'Upload failed',
+            error: 'Upload preparation failed',
             details: error instanceof Error ? error.message : String(error)
         })
     }

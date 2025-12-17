@@ -18,6 +18,11 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
   // Load existing suggestions when component mounts (only once per itemId)
   useEffect(() => {
     if (!hasLoaded) {
+      // Skip if it's a temp ID (optimistic UI)
+      if (itemId.startsWith('temp-')) {
+        return
+      }
+
       console.log(`[SuggestionBadge] Loading suggestions for ${itemType} ${itemId}`)
       loadExistingSuggestions(itemId)
       setHasLoaded(true)

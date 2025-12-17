@@ -49,6 +49,10 @@
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
     --radius-xl: 1.5rem;
+
+    /* Safe Area Variables with Fallbacks */
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 20px);
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
   }
 
 
@@ -58,6 +62,9 @@
     color: var(--premium-text-primary);
     font-family: var(--premium-font-body);
     font-size: var(--premium-text-body-lg);
+    overflow-x: hidden;
+    /* Prevent horizontal scroll causing cut-off issues */
+    width: 100%;
     font-weight: 400;
     line-height: 1.6;
     letter-spacing: var(--premium-tracking-normal);
@@ -76,12 +83,15 @@
 
   /* Hide scrollbars globally */
   * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
   }
 
   *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
+    display: none;
+    /* Chrome, Safari, Opera */
   }
 
   /* Premium ambient overlay - subtle metallic gradient */
@@ -93,16 +103,12 @@
     right: 0;
     bottom: 0;
     pointer-events: none;
-    background: radial-gradient(
-      circle at 20% 30%,
-      rgba(59, 130, 246, 0.03) 0%,
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 80% 70%,
-      rgba(229, 231, 235, 0.02) 0%,
-      transparent 50%
-    );
+    background: radial-gradient(circle at 20% 30%,
+        rgba(59, 130, 246, 0.03) 0%,
+        transparent 40%),
+      radial-gradient(circle at 80% 70%,
+        rgba(229, 231, 235, 0.02) 0%,
+        transparent 50%);
     z-index: 0;
   }
 
@@ -169,7 +175,8 @@
   }
 
   /* Raised card - level 1 elevation (default) with GPU acceleration */
-  .pro-card, .card-raised {
+  .pro-card,
+  .card-raised {
     @apply relative rounded-xl overflow-hidden;
     background-color: var(--md-sys-color-surface-1);
     color: var(--md-sys-color-on-surface);
@@ -179,7 +186,8 @@
     will-change: transform, box-shadow;
   }
 
-  .pro-card:hover, .card-raised:hover {
+  .pro-card:hover,
+  .card-raised:hover {
     background-color: var(--md-sys-color-surface-2);
     box-shadow: var(--md-sys-shadow-2);
     transform: translateY(-2px) translateZ(0);
@@ -213,11 +221,9 @@
   /* Material You gradient text */
   .gradient-text {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(
-      120deg,
-      var(--md-sys-color-primary) 0%,
-      var(--md-sys-color-tertiary) 100%
-    );
+    background-image: linear-gradient(120deg,
+        var(--md-sys-color-primary) 0%,
+        var(--md-sys-color-tertiary) 100%);
     font-weight: 600;
   }
 
@@ -302,12 +308,10 @@
   /* Material You accent line */
   .accent-line {
     @apply absolute top-0 left-0 right-0 h-px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      var(--md-sys-color-primary) 50%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--md-sys-color-primary) 50%,
+        transparent 100%);
     opacity: 0.3;
   }
 
@@ -327,7 +331,9 @@
   }
 
   /* Instant feedback transitions for buttons */
-  button, a, [role="button"] {
+  button,
+  a,
+  [role="button"] {
     transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
     user-select: none;
@@ -336,7 +342,9 @@
     will-change: transform;
   }
 
-  button:active, a:active, [role="button"]:active {
+  button:active,
+  a:active,
+  [role="button"]:active {
     transform: scale(0.98) translateZ(0);
     transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -382,6 +390,7 @@
       opacity: 0;
       transform: translateY(12px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -397,6 +406,7 @@
     from {
       transform: translateY(100%);
     }
+
     to {
       transform: translateY(0);
     }
@@ -406,23 +416,55 @@
     animation: slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .stagger-children > * {
+  .stagger-children>* {
     animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .stagger-children > *:nth-child(1) { animation-delay: 0.05s; opacity: 0; animation-fill-mode: forwards; }
-  .stagger-children > *:nth-child(2) { animation-delay: 0.10s; opacity: 0; animation-fill-mode: forwards; }
-  .stagger-children > *:nth-child(3) { animation-delay: 0.15s; opacity: 0; animation-fill-mode: forwards; }
-  .stagger-children > *:nth-child(4) { animation-delay: 0.20s; opacity: 0; animation-fill-mode: forwards; }
-  .stagger-children > *:nth-child(5) { animation-delay: 0.25s; opacity: 0; animation-fill-mode: forwards; }
-  .stagger-children > *:nth-child(6) { animation-delay: 0.30s; opacity: 0; animation-fill-mode: forwards; }
+  .stagger-children>*:nth-child(1) {
+    animation-delay: 0.05s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  .stagger-children>*:nth-child(2) {
+    animation-delay: 0.10s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  .stagger-children>*:nth-child(3) {
+    animation-delay: 0.15s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  .stagger-children>*:nth-child(4) {
+    animation-delay: 0.20s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  .stagger-children>*:nth-child(5) {
+    animation-delay: 0.25s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
+
+  .stagger-children>*:nth-child(6) {
+    animation-delay: 0.30s;
+    opacity: 0;
+    animation-fill-mode: forwards;
+  }
 
   /* Subtle pulse animation for callouts */
   @keyframes pulseSubtle {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
       transform: scale(1);
     }
+
     50% {
       opacity: 0.95;
       transform: scale(1.01);
@@ -435,9 +477,12 @@
 
   /* Slow pulse animation for attention */
   @keyframes pulseSlow {
-    0%, 100% {
+
+    0%,
+    100% {
       opacity: 1;
     }
+
     50% {
       opacity: 0.6;
     }

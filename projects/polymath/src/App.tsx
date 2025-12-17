@@ -76,7 +76,7 @@ function ShareTargetFallback() {
 
   useEffect(() => {
     console.log('[ShareTargetFallback] Activated with search:', location.search)
-    
+
     // Extract params
     const params = new URLSearchParams(location.search)
     const text = params.get('text')
@@ -85,7 +85,7 @@ function ShareTargetFallback() {
 
     // Determine URL (Android puts it in text sometimes)
     let sharedUrl = url
-    
+
     // If text looks like a URL and url param is missing/empty, use text
     if (!sharedUrl && text && (text.startsWith('http://') || text.startsWith('https://'))) {
       sharedUrl = text
@@ -99,7 +99,7 @@ function ShareTargetFallback() {
       // Also set 'text' because ReadingPage might look for it
       redirectParams.set('text', sharedUrl)
       if (title) redirectParams.set('title', title)
-      
+
       navigate(`/reading?${redirectParams.toString()}`, { replace: true })
     } else {
       console.warn('[ShareTargetFallback] No URL found, redirecting to root')
@@ -134,7 +134,7 @@ export default function App() {
     // Initial online status
     setOnlineStatus(navigator.onLine)
     updateQueueSize()
-    
+
     // Start periodic data sync (pull updates)
     dataSynchronizer.startPeriodicSync()
 
@@ -230,6 +230,10 @@ export default function App() {
             v7_relativeSplatPath: true,
           }}>
             <ScrollToTop />
+
+            {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
+            <FloatingNav />
+
             <div className="min-h-screen flex flex-col">
               <OfflineIndicator />
               <PWAInstallBanner />
@@ -264,9 +268,6 @@ export default function App() {
                   </Suspense>
                 </ErrorBoundary>
               </main>
-
-              {/* Floating Navigation */}
-              <FloatingNav />
 
               {/* Context Engine Sidebar */}
               <ContextSidebar />
