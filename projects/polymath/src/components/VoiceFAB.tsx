@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, X, Brain, Layers, BookmarkPlus, Mic } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
@@ -140,12 +141,12 @@ export function VoiceFAB({
 
       {/* Long Press Menu Overlay */}
       <AnimatePresence>
-        {isMenuOpen && (
+        {isMenuOpen && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-end p-6 md:p-8"
+            className="fixed inset-0 z-[11000] bg-black/60 backdrop-blur-sm flex items-end justify-end p-6 md:p-8"
             onClick={() => setIsMenuOpen(false)}
           >
             <div className="flex flex-col items-end gap-4 mb-20 md:mb-0">
@@ -216,14 +217,15 @@ export function VoiceFAB({
                 <X className="h-6 w-6 text-white" />
               </motion.button>
             </div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Voice Recording Modal */}
       <AnimatePresence>
-        {isVoiceOpen && (
-          <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center">
+        {isVoiceOpen && createPortal(
+          <div className="fixed inset-0 z-[11000] flex items-end md:items-center md:justify-center">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -290,7 +292,8 @@ export function VoiceFAB({
                 </div>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 

@@ -113,15 +113,30 @@ export const useProjectStore = create<ProjectState>()(
           set({ loading: true, error: null })
         }
 
+        // Helper to merge pending operations
+        const mergePending = async (baseProjects: Project[]) => {
+          const { getPendingOperations } = await import('../lib/offlineQueue')
+          const pendingOps = await getPendingOperations()
+
+          return baseProjects.map(p => {
+            const updates = pendingOps
+              .filter(op => op.type === 'update_project' && op.data.id === p.id)
+              .reduce((acc, op) => ({ ...acc, ...op.data }), {})
+
+            return Object.keys(updates).length > 0 ? { ...p, ...updates } : p
+          })
+        }
+
         // Check online status
         if (!navigator.onLine) {
           console.log('[ProjectStore] Offline mode detected - fetching from local DB')
           try {
             const { readingDb } = await import('../lib/db')
             const cachedProjects = await readingDb.getCachedProjects()
+            let projects = cachedProjects as unknown as Project[]
 
-            // Map cached projects to Project type (they are compatible)
-            const projects = cachedProjects as unknown as Project[]
+            // Merge pending local changes even when offline (they should already be there but for safety)
+            projects = await mergePending(projects)
             const sorted = smartSortProjects(projects)
 
             set(state => ({
@@ -152,6 +167,9 @@ export const useProjectStore = create<ProjectState>()(
           } catch (cacheError) {
             console.warn('[ProjectStore] Failed to cache projects:', cacheError)
           }
+
+          // Merge pending local changes to avoid clobbering optimistic updates
+          fetchedProjects = await mergePending(fetchedProjects)
 
           // Sort once
           fetchedProjects = smartSortProjects(fetchedProjects)
@@ -447,15 +465,45 @@ export const useProjectStore = create<ProjectState>()(
           projects: filterProjects(state.allProjects, filter)
         }))
       },
-      setProjects: (projects) => set({ projects, allProjects: projects }), // Simplified for now
-      syncProject: (project) => {
+      setProjects: async (projects) => {
+        // When setting projects (e.g. from sync or background fetch), 
+        // we MUST protect pending local changes
+        const { getPendingOperations } = await import('../lib/offlineQueue')
+        const pendingOps = await getPendingOperations()
+
+        const merged = projects.map(p => {
+          const updates = pendingOps
+            .filter(op => op.type === 'update_project' && op.data.id === p.id)
+            .reduce((acc, op) => ({ ...acc, ...op.data }), {})
+
+          return Object.keys(updates).length > 0 ? { ...p, ...updates } : p
+        })
+
+        const sorted = smartSortProjects(merged)
+        set({
+          allProjects: sorted,
+          projects: filterProjects(sorted, get().filter),
+          initialized: true
+        })
+      },
+      syncProject: async (project) => {
+        // Protect pending local changes during sync
+        const { getPendingOperations } = await import('../lib/offlineQueue')
+        const pendingOps = await getPendingOperations()
+
+        const updates = pendingOps
+          .filter(op => op.type === 'update_project' && op.data.id === project.id)
+          .reduce((acc, op) => ({ ...acc, ...op.data }), {})
+
+        const mergedProject = Object.keys(updates).length > 0 ? { ...project, ...updates } : project
+
         set(state => {
-          const exists = state.allProjects.some(p => p.id === project.id)
+          const exists = state.allProjects.some(p => p.id === mergedProject.id)
           let newAllProjects
           if (exists) {
-            newAllProjects = state.allProjects.map(p => p.id === project.id ? project : p)
+            newAllProjects = state.allProjects.map(p => p.id === mergedProject.id ? mergedProject : p)
           } else {
-            newAllProjects = [...state.allProjects, project]
+            newAllProjects = [...state.allProjects, mergedProject]
           }
           const sorted = smartSortProjects(newAllProjects)
 

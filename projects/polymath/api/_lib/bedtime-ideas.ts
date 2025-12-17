@@ -57,7 +57,7 @@ export async function generateBreakPrompts(userId: string): Promise<BedtimePromp
   ]`
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
     const result = await model.generateContent(prompt)
     const text = result.response.text()
     const jsonMatch = text.match(/[\[][\s\S]*[\]]/)
@@ -258,7 +258,7 @@ async function generateCatalystPromptsWithAI(
   inputs: Array<{ title: string; type: 'project' | 'article' | 'thought'; id: string }>,
   userId: string
 ): Promise<BedtimePrompt[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
   if (!inputs || inputs.length === 0) {
     throw new Error('At least one input required')
@@ -317,7 +317,7 @@ async function generatePromptsWithAI(
   },
   performance?: any
 ): Promise<BedtimePrompt[]> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
   const allThemes = recentMemories
     .flatMap(m => m.themes || [])
@@ -426,7 +426,7 @@ async function getPromptPerformance(userId: string) {
 }
 
 export async function generateMorningBriefing(userId: string): Promise<MorningBriefing> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
   const projects = await getActiveProjects(userId)
   const projectContext = projects.map((p: any) => `${p.title} (${p.status})`).join(', ')

@@ -41,7 +41,9 @@ export function ProjectDetailPage() {
   const { projects, fetchProjects, deleteProject, updateProject, syncProject } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
 
-  const [project, setProject] = useState<Project | null>(null)
+  // Reactive selection from store
+  const project = useProjectStore(state => state.allProjects.find(p => p.id === id))
+
   const [notes, setNotes] = useState<ProjectNote[]>([])
   const [projectMemories, setProjectMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(true)
@@ -106,17 +108,11 @@ export function ProjectDetailPage() {
   const loadProjectDetails = async () => {
     if (!id) return
 
-    setLoading(true)
-    try {
-      // 1. Check store for optimistic/cached data first
-      const cachedProject = useProjectStore.getState().allProjects.find(p => p.id === id)
-      if (cachedProject) {
-        setProject(cachedProject)
-        setLoading(false) // Show cached data immediately
-      }
+    // If we don't have the project yet, show loading
+    if (!project) setLoading(true)
 
-      // 2. Fetch fresh data from API
-      // If offline, this will fail, but that's okay if we have cached data
+    try {
+      // Fetch fresh data from API
       const response = await fetch(`/api/projects?id=${id}&include_notes=true`)
 
       if (!response.ok) {
@@ -126,37 +122,30 @@ export function ProjectDetailPage() {
       const data = await response.json()
 
       if (data.project) {
-        setProject(data.project)
+        // Sync project to store - this will trigger a re-render because we're subscribed
+        syncProject(data.project)
         if (data.notes) setNotes(data.notes)
 
-        // 3. Fetch linked memories (Quick Notes)
-        const { data: linkedMemories, error: memoryError } = await supabase
+        // Fetch linked memories (Quick Notes)
+        const { data: linkedMemories } = await supabase
           .from('memories')
           .select('*')
-          .contains('source_reference', { id: id, type: 'project' }) // JSONB containment
+          .contains('source_reference', { id: id, type: 'project' })
           .order('created_at', { ascending: false })
 
         if (linkedMemories) {
           setProjectMemories(linkedMemories)
         }
-
-        // Update store with fresh data
-        syncProject(data.project)
       }
     } catch (error) {
       console.warn('[ProjectDetail] Fetch failed:', error)
 
-      // Only show error if we don't have cached data
-      const hasCachedData = useProjectStore.getState().allProjects.some(p => p.id === id)
-
-      if (!hasCachedData) {
+      if (!project) {
         addToast({
-          title: 'Error',
-          description: 'Failed to load project details',
-          variant: 'destructive',
+          title: 'Offline',
+          description: 'Showing cached project content',
+          variant: 'default',
         })
-      } else {
-        console.log('[ProjectDetail] Suppressing error toast - showing cached data')
       }
     } finally {
       setLoading(false)
@@ -212,7 +201,6 @@ export function ProjectDetailPage() {
     }
 
     const oldTitle = project.title
-    setProject({ ...project, title: tempTitle.trim() })
     setEditingTitle(false)
 
     try {
@@ -222,7 +210,6 @@ export function ProjectDetailPage() {
         variant: 'success',
       })
     } catch (error) {
-      setProject({ ...project, title: oldTitle })
       addToast({
         title: 'Failed to update title',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -238,7 +225,6 @@ export function ProjectDetailPage() {
     }
 
     const oldDescription = project.description
-    setProject({ ...project, description: tempDescription.trim() })
     setEditingDescription(false)
 
     try {
@@ -248,7 +234,6 @@ export function ProjectDetailPage() {
         variant: 'success',
       })
     } catch (error) {
-      setProject({ ...project, description: oldDescription })
       addToast({
         title: 'Failed to update description',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -370,10 +355,8 @@ export function ProjectDetailPage() {
       tasks: reorderedTasks
     }
 
-    // Optimistic update handled by child component visual state usually, 
-    // but here we update parent to trigger persist
+    // Store will handle update and notify subscribers
     updateProject(project.id, { metadata: newMetadata })
-    setProject({ ...project, metadata: newMetadata })
   }, [project, updateProject])
 
   const handlePinnedDragEnd = useCallback(() => {
@@ -383,9 +366,6 @@ export function ProjectDetailPage() {
   const handleStatusChange = async (newStatus: Project['status']) => {
     if (!project) return
 
-    // Optimistic update
-    setProject({ ...project, status: newStatus })
-
     try {
       await updateProject(project.id, { status: newStatus })
       addToast({
@@ -394,8 +374,6 @@ export function ProjectDetailPage() {
         variant: 'success',
       })
     } catch (error) {
-      // Revert on failure
-      setProject(project)
       addToast({
         title: 'Failed to update status',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -406,14 +384,11 @@ export function ProjectDetailPage() {
 
   const handleCategoryChange = async (newCategory: string) => {
     if (!project) return
-    const oldType = project.type
-    setProject({ ...project, type: newCategory })
 
     try {
       await updateProject(project.id, { type: newCategory })
       addToast({ title: 'Category updated', variant: 'success' })
     } catch (error) {
-      setProject({ ...project, type: oldType })
       addToast({ title: 'Failed to update category', variant: 'destructive' })
     }
     setShowCategoryMenu(false)
@@ -744,40 +719,28 @@ export function ProjectDetailPage() {
                 <TaskList
                   tasks={project.metadata?.tasks || []}
                   onUpdate={async (tasks) => {
+                    if (!project) return
                     console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
 
-                    // Ensure metadata is properly structured
+                    const now = new Date().toISOString()
                     const newMetadata = {
                       ...project.metadata,
                       tasks: tasks,
                       progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
                     }
 
-                    const updated = {
-                      ...project,
-                      metadata: newMetadata,
-                      last_active: new Date().toISOString(),
-                      updated_at: new Date().toISOString()
-                    }
-
-                    console.log('[ProjectDetail] Updated metadata:', JSON.stringify(newMetadata, null, 2))
-
-                    // Update local state
-                    setProject(updated)
-
+                    // Update store - this is the source of truth
+                    // optimistic update is done inside store.updateProject
                     console.log('[ProjectDetail] Calling updateProject API...')
                     try {
                       await updateProject(project.id, {
                         metadata: newMetadata,
-                        last_active: updated.last_active,
-                        updated_at: updated.updated_at
+                        last_active: now,
+                        updated_at: now
                       })
                       console.log('[ProjectDetail] Update successful!')
-                      // Don't reload - local state is already correct and reloading causes stale data
                     } catch (error) {
                       console.error('[ProjectDetail] Update failed:', error)
-                      // Revert local state on error
-                      setProject(project)
                     }
                   }}
                 />

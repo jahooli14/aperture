@@ -9,7 +9,7 @@ import { resolve } from 'path'
 config({ path: resolve(process.cwd(), '.env.local') })
 
 // Import after env is loaded
-import { generateInitialMap } from './api/lib/map-generation.js'
+import { generateInitialMap } from './api/_lib/map-generation.js'
 
 async function main() {
   console.log('='.repeat(60))

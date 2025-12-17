@@ -88,11 +88,11 @@ function MasonryGrid({
   }, [memories, columns])
 
   return (
-    <div className="flex gap-4 items-start">
+    <div className="flex gap-4 items-start w-full">
       {distributedColumns.map((colMemories, colIndex) => (
-        <div key={colIndex} className="flex-1 flex flex-col gap-4">
+        <div key={colIndex} className="flex-1 flex flex-col gap-4 min-w-0">
           {colMemories.map((memory, index) => (
-            <div key={memory.id || `memory-${colIndex}-${index}`}>
+            <div key={memory.id || `memory-${colIndex}-${index}`} className="w-full">
               <MemoryCard
                 memory={memory}
                 onEdit={onEdit}
@@ -533,10 +533,11 @@ export function MemoriesPage() {
       <div className="pb-32 relative z-10" style={{ paddingTop: '5.5rem', isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2">
           {/* Outer Card Structure */}
-          <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
+          <div className="p-4 sm:p-6 rounded-xl backdrop-blur-xl mb-6 w-full max-w-full" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-            transform: 'translate3d(0,0,0)' // Force hardware acceleration boundary
+            transform: 'translate3d(0,0,0)', // Force hardware acceleration boundary
+            overflowX: 'hidden'
           }}>
             {/* Title Section */}
             <div className="mb-6">
@@ -769,7 +770,7 @@ export function MemoriesPage() {
                           ({selectedCluster.memory_count} thoughts)
                         </span>
                       </h2>
-                      <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                      <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
                         {selectedCluster.memories.map((memory) => (
                           <div key={memory.id} className="mb-4 break-inside-avoid">
                             <MemoryCard
@@ -792,7 +793,7 @@ export function MemoriesPage() {
                           <p className="text-lg" style={{ color: 'var(--premium-text-secondary)' }}>Analyzing themes...</p>
                         </div>
                       ) : clusters.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {clusters.map((cluster, index) => (
                             <ThemeClusterCard
                               key={`${cluster.id}-${index}`}

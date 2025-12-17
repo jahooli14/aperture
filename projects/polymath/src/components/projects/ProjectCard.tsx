@@ -23,12 +23,12 @@ const CARD_HOVER_STYLES = {
 
 // Export colors for reuse
 export const PROJECT_COLORS: Record<string, string> = {
-  tech: '59, 130, 246',      // Blue-500
-  art: '236, 72, 153',       // Pink-500
-  writing: '99, 102, 241',   // Indigo-500
-  music: '168, 85, 247',     // Purple-500
-  business: '16, 185, 129',  // Emerald-500
-  life: '6, 182, 212',       // Cyan-500
+  tech: '29, 78, 216',      // Blue-700 (Deep Blue)
+  art: '34, 197, 94',        // Green-500
+  writing: '103, 232, 249',  // Cyan-300 (Lighter Cyan)
+  music: '249, 115, 22',     // Orange-500
+  business: '156, 163, 175', // Gray-400
+  life: '59, 130, 246',      // Blue-500
   default: '148, 163, 184'   // Slate-400
 }
 

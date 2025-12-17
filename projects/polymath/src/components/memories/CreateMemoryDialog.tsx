@@ -205,7 +205,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         })
       }
     } catch (error) {
-      console.log('Submission catch block caught:', error)
+      console.error('[CreateMemoryDialog] Submission failed:', error)
       addToast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to prepare submission',

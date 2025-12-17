@@ -442,6 +442,7 @@ export interface Task {
   created_at: string
   order: number
   energy_level?: 'low' | 'moderate' | 'high'
+  completed_at?: string
 }
 
 export interface ProjectMetadata {

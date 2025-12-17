@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useProjectStore } from '../stores/useProjectStore'
-import { useProjects } from '../hooks/useProjects'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { ProjectsPageCarousel } from '../components/projects/ProjectsPageCarousel'
 import { CreateProjectDialog } from '../components/projects/CreateProjectDialog'
@@ -27,11 +26,10 @@ export function ProjectsPage() {
     setFilter
   } = useProjectStore()
 
-  // Use React Query for data fetching
-  const { isLoading: isQueryLoading } = useProjects()
-
-  // Combine loading states (store loading might be triggered by other actions)
-  // const isLoading = loading || isQueryLoading
+  // Check for updates on mount if we have no data
+  useEffect(() => {
+    fetchProjects()
+  }, [])
 
   const { clearSuggestions } = useSuggestionStore()
 

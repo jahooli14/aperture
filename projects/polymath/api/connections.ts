@@ -171,10 +171,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Fetch details for connected items
         const connectedItems: string[] = []
+        // Deduplicate connections (e.g. if both A->B and B->A exist for item A)
+        const uniqueRelatedItems = new Map<string, string>()
+
         for (const conn of connections || []) {
           const isSource = (conn.source_type === type || conn.source_type === 'thought' && type === 'memory') && conn.source_id === id
           const relatedType = isSource ? conn.target_type : conn.source_type
           const relatedId = isSource ? conn.target_id : conn.source_id
+          const key = `${relatedType}:${relatedId}`
+
+          if (uniqueRelatedItems.has(key)) continue
 
           let itemText = ''
           if (relatedType === 'thought') {
@@ -187,10 +193,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
           }
-          if (itemText) connectedItems.push(itemText)
+          if (itemText) {
+            connectedItems.push(itemText)
+            uniqueRelatedItems.set(key, itemText)
+          }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
         // Truncate content to prevent token overflow/timeouts
         const truncatedSource = sourceContent.slice(0, 1000)
@@ -285,10 +294,15 @@ Keep it brief and high-impact. No fluff.`
           .limit(10)
 
         const connectedItems: string[] = []
+        const uniqueRelatedItems = new Map<string, string>()
+
         for (const conn of connections || []) {
           const isSource = (conn.source_type === type || conn.source_type === 'thought' && type === 'memory') && conn.source_id === id
           const relatedType = isSource ? conn.target_type : conn.source_type
           const relatedId = isSource ? conn.target_id : conn.source_id
+          const key = `${relatedType}:${relatedId}`
+
+          if (uniqueRelatedItems.has(key)) continue
 
           let itemText = ''
           if (relatedType === 'thought') {
@@ -301,10 +315,13 @@ Keep it brief and high-impact. No fluff.`
             const { data } = await supabase.from('reading_queue').select('title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             itemText = `[Article] ${data?.title}: ${data?.excerpt?.slice(0, 100) || ''}`
           }
-          if (itemText) connectedItems.push(itemText)
+          if (itemText) {
+            connectedItems.push(itemText)
+            uniqueRelatedItems.set(key, itemText)
+          }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
         // Truncate content
         const truncatedSource = sourceContent.slice(0, 1000)
@@ -425,7 +442,12 @@ What is the non-obvious link?`
           }
         }))
 
-        return res.status(200).json({ connections: enrichedConnections })
+        // Deduplicate: If both A->B and B->A exist, only show one entry.
+        const deduplicated = Array.from(
+          new Map(enrichedConnections.map(c => [`${c.related_type}:${c.related_id}`, c])).values()
+        )
+
+        return res.status(200).json({ connections: deduplicated })
       } catch (error) {
         console.error('[connections] Error:', error)
         return res.status(500).json({ error: 'Failed to list connections' })

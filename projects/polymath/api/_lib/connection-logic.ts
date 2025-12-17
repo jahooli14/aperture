@@ -41,7 +41,7 @@ export async function updateItemConnections(
       .select('id, title, embedding')
       .eq('user_id', userId)
       .not('embedding', 'is', null)
-      
+
     if (projects) {
       for (const p of projects) {
         if (p.embedding) {
@@ -68,11 +68,11 @@ export async function updateItemConnections(
         if (m.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, m.embedding)
           if (similarity > 0.55) {
-            candidates.push({ 
-              type: 'thought', 
-              id: m.id, 
-              title: m.title || m.body?.slice(0, 50) || 'Untitled', 
-              similarity 
+            candidates.push({
+              type: 'thought',
+              id: m.id,
+              title: m.title || m.body?.slice(0, 50) || 'Untitled',
+              similarity
             })
           }
         }
@@ -94,11 +94,11 @@ export async function updateItemConnections(
         if (a.embedding) {
           const similarity = cosineSimilarity(sourceEmbedding, a.embedding)
           if (similarity > 0.55) {
-            candidates.push({ 
-              type: 'article', 
-              id: a.id, 
-              title: a.title || 'Untitled', 
-              similarity 
+            candidates.push({
+              type: 'article',
+              id: a.id,
+              title: a.title || 'Untitled',
+              similarity
             })
           }
         }
@@ -113,7 +113,7 @@ export async function updateItemConnections(
   if (topCandidates.length === 0) return
 
   // 5. Atomic Update: Delete old AI connections & Insert new ones
-  
+
   // Delete existing AI connections where this item is source
   // We use user_id filter if table has it, otherwise just by source
   await supabase
@@ -128,17 +128,33 @@ export async function updateItemConnections(
   // to avoid deleting connections created by *other* items' top 5 logic).
   // Strategy: Each item is responsible for its own "outbound" AI connections.
 
-  // Insert new top 5
-  const connectionsToInsert = topCandidates.map(candidate => ({
-    user_id: userId,
-    source_type: sourceType,
-    source_id: sourceId,
-    target_type: candidate.type,
-    target_id: candidate.id,
-    connection_type: 'relates_to',
-    created_by: 'ai',
-    ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
-  }))
+  // Fetch all existing connections for this user that involve this item (any direction)
+  // to avoid redundant connections (e.g. if B -> A already exists, don't create A -> B).
+  const { data: existing } = await supabase
+    .from('connections')
+    .select('source_id, target_id')
+    .eq('user_id', userId)
+    .or(`source_id.eq.${sourceId},target_id.eq.${sourceId}`)
+
+  const connectedIds = new Set<string>()
+  existing?.forEach(c => {
+    if (c.source_id === sourceId) connectedIds.add(c.target_id)
+    else connectedIds.add(c.source_id)
+  })
+
+  // Insert new top 5, but ONLY if they aren't already connected
+  const connectionsToInsert = topCandidates
+    .filter(candidate => !connectedIds.has(candidate.id))
+    .map(candidate => ({
+      user_id: userId,
+      source_type: sourceType,
+      source_id: sourceId,
+      target_type: candidate.type,
+      target_id: candidate.id,
+      connection_type: 'relates_to',
+      created_by: 'ai',
+      ai_reasoning: `${Math.round(candidate.similarity * 100)}% semantic match`
+    }))
 
   if (connectionsToInsert.length > 0) {
     await supabase.from('connections').insert(connectionsToInsert)

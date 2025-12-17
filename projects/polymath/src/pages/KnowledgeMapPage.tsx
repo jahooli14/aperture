@@ -4,14 +4,14 @@
  */
 
 import { Map } from 'lucide-react'
-import { TopologicalMap } from '../components/map/TopologicalMap'
+import { TopologicalMap3D } from '../components/map/TopologicalMap3D'
 import { SubtleBackground } from '../components/SubtleBackground'
 
 export function KnowledgeMapPage() {
   return (
     <div className="min-h-screen bg-[#050505] relative overflow-hidden">
       <SubtleBackground />
-      
+
       {/* Header Overlay */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 pointer-events-none">
         <div className="flex items-center justify-between pointer-events-auto">
@@ -24,7 +24,7 @@ export function KnowledgeMapPage() {
                 Topological Map
               </h1>
               <p className="text-xs text-gray-500">
-                2D Force-Directed Heatmap
+                3D Force-Directed Topography
               </p>
             </div>
           </div>
@@ -32,8 +32,8 @@ export function KnowledgeMapPage() {
       </div>
 
       {/* Map Canvas */}
-      <div className="w-full h-screen pt-20 px-4 pb-4">
-        <TopologicalMap />
+      <div className="w-full h-screen">
+        <TopologicalMap3D />
       </div>
     </div>
   )
