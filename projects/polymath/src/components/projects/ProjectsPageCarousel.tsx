@@ -11,6 +11,7 @@ import type { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useSuggestionStore } from '../../stores/useSuggestionStore'
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
+import { PROJECT_COLORS } from './ProjectCard'
 
 interface ProjectsPageCarouselProps {
   loading?: boolean
@@ -38,15 +39,6 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   const completedTasks = tasks.filter(t => t.done).length
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
 
-  const PROJECT_COLORS: Record<string, string> = {
-    tech: '59, 130, 246',      // Blue-500
-    art: '236, 72, 153',       // Pink-500
-    writing: '99, 102, 241',   // Indigo-500
-    music: '168, 85, 247',     // Purple-500
-    business: '16, 185, 129',  // Emerald-500
-    life: '6, 182, 212',       // Cyan-500
-    default: '148, 163, 184'   // Slate-400
-  }
 
   const getTheme = (type: string, title: string) => {
     const t = type?.toLowerCase().trim() || ''

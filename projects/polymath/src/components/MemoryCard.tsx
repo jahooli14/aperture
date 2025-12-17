@@ -15,19 +15,7 @@ import { useConfirmDialog } from './ui/confirm-dialog'
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
 const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
 
-// Reused color logic from ProjectCard for consistency
-const PROJECT_COLORS: Record<string, string> = {
-  tech: '59, 130, 246',      // Blue-500
-  technical: '59, 130, 246', // Blue-500
-  creative: '236, 72, 153',  // Pink-500
-  writing: '99, 102, 241',   // Indigo-500
-  business: '16, 185, 129',  // Emerald-500
-  learning: '245, 158, 11',  // Amber-500
-  life: '6, 182, 212',       // Cyan-500
-  hobby: '249, 115, 22',     // Orange-500
-  'side-project': '139, 92, 246', // Violet-500
-  default: '148, 163, 184'   // Slate-400
-}
+import { PROJECT_COLORS } from './projects/ProjectCard'
 
 const getTheme = (title: string, type: string = 'default') => {
   const t = type?.toLowerCase().trim() || ''

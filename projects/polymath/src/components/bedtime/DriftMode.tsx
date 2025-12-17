@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, X, Wind, Zap, Square, Loader2 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
+import { celebrate } from '../../utils/celebrations'
 import { useMediaRecorderVoice } from '../../hooks/useMediaRecorderVoice'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
@@ -13,10 +14,12 @@ interface DriftModeProps {
 }
 
 export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) {
-  const [stage, setStage] = useState<'settling' | 'drifting' | 'awakened'>('settling')
+  const [stage, setStage] = useState<'settling' | 'drifting' | 'awakened' | 'ending'>('settling')
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0)
   const [motionPermission, setMotionPermission] = useState<PermissionState>('prompt')
   const [progress, setProgress] = useState(0) // Stability progress (0-100)
+  const [capturedInsightsCount, setCapturedInsightsCount] = useState(0)
+  const [showFlash, setShowFlash] = useState(false)
 
   const { createMemory } = useMemoryStore()
   const { addToast } = useToast()
@@ -25,6 +28,13 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const lastAccel = useRef<{ x: number, y: number, z: number } | null>(null)
   const stillnessStart = useRef<number>(Date.now())
   const hasDrifted = useRef(false)
+  const stageRef = useRef<'settling' | 'drifting' | 'awakened' | 'ending'>('settling')
+  const [isJolt, setIsJolt] = useState(false)
+
+  // Sync ref with state
+  useEffect(() => {
+    stageRef.current = stage
+  }, [stage])
 
   // Permission Request Logic
   // REMOVED: Auto-request on mount (fails on iOS)
@@ -72,15 +82,14 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
     const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
 
-    // Tuned Thresholds - Less sensitive (v2)
-    // Tuned Thresholds - Less sensitive (v3)
-    const STILL_THRESHOLD = 0.5 // More forgiving - easier to complete (was 0.3)
-    const WAKE_THRESHOLD = 1.5 // More sensitive wake - easier to trigger (was 5.0)
-    const REQUIRED_DURATION = 5000 // Keep at 5s
+    const STILL_THRESHOLD = 0.5
+    const WAKE_THRESHOLD = 15.0 // High bar: similar to dropping or catching a falling phone
+    const JOLT_THRESHOLD = 20.0 // Extremely sharp jolt
+    const REQUIRED_DURATION = 5000
 
     // Debug log (throttled)
     if (Math.random() < 0.05) {
-      console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stage}, Drifted: ${hasDrifted.current}`)
+      console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stageRef.current}, Drifted: ${hasDrifted.current}`)
     }
 
     if (delta < STILL_THRESHOLD) {
@@ -92,12 +101,21 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       if (!hasDrifted.current && duration > REQUIRED_DURATION) {
         setStage('drifting')
         hasDrifted.current = true
-        haptic.light() // Gentle confirmation
+        haptic.light()
         console.log('[Drift] Entering drift state (stillness detected)')
       }
-    } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stage === 'drifting') {
+    } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stageRef.current === 'drifting') {
       // Sudden movement after drifting -> Trigger Insight
       console.log('[Drift] WAKE EVENT DETECTED! Delta:', delta)
+
+      if (delta > JOLT_THRESHOLD) {
+        setIsJolt(true)
+        haptic.heavy()
+      } else {
+        setIsJolt(false)
+        haptic.medium()
+      }
+
       triggerInsight()
     }
 
@@ -111,7 +129,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   }
 
   const triggerInsight = () => {
-    haptic.medium()
+    setShowFlash(true)
+    setTimeout(() => setShowFlash(false), 500)
+    celebrate.success()
     setStage('awakened')
     // Pick a random prompt or next
     setCurrentPromptIndex(prev => (prev + 1) % prompts.length)
@@ -121,6 +141,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
     setStage('settling')
     hasDrifted.current = false
     stillnessStart.current = Date.now()
+    setIsJolt(false)
   }
 
   const handleTranscript = async (text: string) => {
@@ -133,6 +154,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         memory_type: 'insight'
       })
 
+      setCapturedInsightsCount(prev => prev + 1)
       addToast({
         title: 'Insight Captured',
         description: 'Saved to your thoughts',
@@ -140,7 +162,9 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       })
 
       haptic.success()
-      resetDrift()
+
+      // After success, we could either drift again or show small celebration
+      // Let's stay in awakened so they can choose to drift again or end
     } catch (error) {
       console.error('Failed to save drift insight:', error)
       addToast({
@@ -164,6 +188,18 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
   return (
     <div className="fixed inset-0 z-50 bg-[#0F1829] text-white flex flex-col items-center justify-center overflow-hidden">
+      {/* Wake-up Flash Overlay */}
+      <AnimatePresence>
+        {showFlash && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[60] bg-white pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Exit Button */}
       <button
         onClick={onClose}
@@ -248,6 +284,16 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             className="text-center px-8 max-w-lg relative"
           >
             <div className="mb-8">
+              {isJolt && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/20 border border-yellow-500/50 text-yellow-200 text-sm font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(234,179,8,0.3)]"
+                >
+                  <Zap className="h-4 w-4 fill-current" />
+                  Jolt Detected
+                </motion.div>
+              )}
               <span className="inline-block px-3 py-1 rounded-full border border-white/10 text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">
                 {mode === 'sleep' ? 'Hypnagogic Insight' : 'Logic Breaker'}
               </span>
@@ -270,6 +316,13 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 {mode === 'sleep' ? 'Drift Again' : 'Reset Again'}
               </button>
 
+              <button
+                onClick={() => setStage('ending')}
+                className="px-6 py-4 rounded-full bg-white/5 text-slate-400 hover:bg-white/10 transition-all border border-white/5"
+              >
+                End Session
+              </button>
+
               {/* Voice Capture */}
               <button
                 onClick={toggleRecording}
@@ -288,6 +341,46 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
                 )}
               </button>
             </div>
+          </motion.div>
+        )}
+
+        {/* Stage 4: Ending (Summary) */}
+        {stage === 'ending' && (
+          <motion.div
+            key="ending"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center px-8 max-w-md"
+          >
+            <div className="mb-8 relative">
+              <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
+              <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10">
+                <Sparkles className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
+                <p className="text-slate-400">Your subconscious has been primed.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                <span className="text-slate-400">Insights Captured</span>
+                <span className="text-2xl font-bold text-violet-400">{capturedInsightsCount}</span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-violet-500/5 border border-violet-500/10 text-left">
+                <p className="text-xs uppercase tracking-widest text-violet-400 font-bold mb-2">Closing Reflection</p>
+                <p className="text-sm italic text-slate-300 leading-relaxed">
+                  "The most profound connections often emerge when we stop looking for them. Sleep well, let these seeds grow."
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full py-4 rounded-full bg-white text-black font-bold hover:bg-slate-200 transition-all shadow-xl shadow-white/5"
+            >
+              Return Home
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

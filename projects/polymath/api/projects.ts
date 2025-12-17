@@ -1180,7 +1180,7 @@ async function handleListSuggestions(req: VercelRequest, res: VercelResponse, su
 
     // Enrich suggestions with capability names
     const enrichedSuggestions = await Promise.all(
-      (data || []).map(async (suggestion) => {
+      (data || []).map(async (suggestion: any) => {
         if (suggestion.capability_ids && suggestion.capability_ids.length > 0) {
           const { data: capabilities } = await supabase
             .from('capabilities')

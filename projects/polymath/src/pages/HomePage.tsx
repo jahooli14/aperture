@@ -627,19 +627,27 @@ export function HomePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        await fetchProjects()
+        // If we have no projects, wait for initial fetch
+        if (projects.length === 0) {
+          await fetchProjects()
+        } else {
+          // background refresh
+          fetchProjects()
+        }
+
+        // Concurrent background fetches
         fetchSuggestions()
         fetchMemories()
-        await fetchCardOfTheDay()
+        fetchCardOfTheDay()
         fetchPrompts()
+
         setRefreshKey(k => k + 1)
       } catch (err) {
-        setError(`Failed to load data: ${err instanceof Error ? err.message : String(err)}`)
+        console.error('Failed to load data on mount:', err)
       }
     }
     loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key])
+  }, []) // Only on mount, rely on DataSynchronizer for the rest
 
   const handleOpenDrift = async () => {
     setDriftModeOpen(true)

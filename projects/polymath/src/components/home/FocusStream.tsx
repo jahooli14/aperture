@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Layers, Clock } from 'lucide-react'
+import { Layers, Clock, Wind, ArrowRight, Sparkles } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
@@ -13,8 +13,9 @@ export function FocusStream() {
     const [timeContext, setTimeContext] = useState({
         isWeekend: new Date().getDay() === 0 || new Date().getDay() === 6,
         hour: new Date().getHours(),
-        energy: 'moderate' // simplified for now
+        energy: 'moderate'
     })
+    const [showFreshnessCheck, setShowFreshnessCheck] = useState(false)
 
     // 1. Identify Dormant Projects (> 14 days inactive)
     const dormantProjects = useMemo(() => {
@@ -61,6 +62,55 @@ export function FocusStream() {
 
         setTimeContext(prev => ({ ...prev, hour, energy }))
     }, [])
+
+    // 5. Freshness Check Logic
+    const recentStats = useMemo(() => {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+        let completedRecently = 0
+        allProjects.forEach(p => {
+            const tasks = p.metadata?.tasks || []
+            tasks.forEach((t: any) => {
+                if (t.done && t.completed_at) {
+                    const completedAt = new Date(t.completed_at)
+                    if (completedAt > sevenDaysAgo) {
+                        completedRecently++
+                    }
+                }
+            })
+        })
+        return { completedRecently }
+    }, [allProjects])
+
+    useEffect(() => {
+        if (!initialized || !timeContext.isWeekend) return
+
+        const lastCheck = localStorage.getItem('last_weekend_freshness_check')
+        const today = new Date()
+
+        // Use the date of the most recent Saturday to identify this specific weekend
+        const saturday = new Date(today)
+        saturday.setDate(today.getDate() - (today.getDay() === 0 ? 1 : today.getDay() - 6))
+        const weekIdentifier = saturday.toISOString().split('T')[0]
+
+        if (lastCheck !== weekIdentifier) {
+            setShowFreshnessCheck(true)
+        }
+    }, [initialized, timeContext.isWeekend])
+
+    const handleDismissFreshness = (decision: 'continue' | 'different') => {
+        const today = new Date()
+        const saturday = new Date(today)
+        saturday.setDate(today.getDate() - (today.getDay() === 0 ? 1 : today.getDay() - 6))
+        const weekIdentifier = saturday.toISOString().split('T')[0]
+        localStorage.setItem('last_weekend_freshness_check', weekIdentifier)
+        setShowFreshnessCheck(false)
+
+        if (decision === 'different') {
+            navigate('/suggestions')
+        }
+    }
 
     // Pre-fetch AI suggestions for top dormant projects
     useEffect(() => {
@@ -114,6 +164,65 @@ export function FocusStream() {
                         Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
                     </h2>
                 </div>
+
+                {/* Freshness Review Card */}
+                <AnimatePresence>
+                    {showFreshnessCheck && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            animate={{ opacity: 1, height: 'auto', marginBottom: 24 }}
+                            exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                            className="overflow-hidden"
+                        >
+                            <div className="p-6 rounded-2xl border relative overflow-hidden"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))',
+                                    borderColor: 'rgba(34, 197, 94, 0.3)',
+                                    boxShadow: '0 8px 32px rgba(34, 197, 94, 0.1)'
+                                }}
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-full bg-green-500/20 text-green-400">
+                                        <Wind className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-xl font-bold text-white mb-2">Weekend Freshness Check</h3>
+                                        <p className="text-slate-300 mb-4 leading-relaxed text-sm md:text-base">
+                                            {recentStats.completedRecently > 0 ? (
+                                                <>You've crushed <span className="text-green-400 font-bold">{recentStats.completedRecently} tasks</span> this past week! </>
+                                            ) : (
+                                                <>A new weekend is here! </>
+                                            )}
+                                            Ready to keep pushing on your active projects, or should we find something completely different for a bit of cross-over inspiration?
+                                        </p>
+                                        <div className="flex flex-wrap gap-3">
+                                            <button
+                                                onClick={() => handleDismissFreshness('continue')}
+                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-600 text-white font-bold hover:bg-green-500 transition-all active:scale-95 shadow-lg shadow-green-900/20"
+                                            >
+                                                <Sparkles className="h-4 w-4" />
+                                                Keep Pushing
+                                            </button>
+                                            <button
+                                                onClick={() => handleDismissFreshness('different')}
+                                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-all active:scale-95 border border-white/10"
+                                            >
+                                                Try Something Different
+                                                <ArrowRight className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowFreshnessCheck(false)}
+                                        className="p-1 rounded-full hover:bg-white/10 transition-colors text-slate-500"
+                                    >
+                                        <Layers className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Card 0: Priority Project */}

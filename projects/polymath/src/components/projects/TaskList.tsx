@@ -15,6 +15,7 @@ export interface Task {
   done: boolean
   created_at: string
   order: number
+  completed_at?: string
 }
 
 interface TaskListProps {
@@ -51,9 +52,17 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   }
 
   const handleToggleTask = (taskId: string) => {
-    const updatedTasks = tasks.map(task =>
-      task.id === taskId ? { ...task, done: !task.done } : task
-    )
+    const updatedTasks = tasks.map(task => {
+      if (task.id === taskId) {
+        const isDone = !task.done
+        return {
+          ...task,
+          done: isDone,
+          completed_at: isDone ? new Date().toISOString() : undefined
+        }
+      }
+      return task
+    })
     onUpdate(updatedTasks)
   }
 
@@ -129,26 +138,26 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
       boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
       padding: '1.25rem'
     }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold premium-text-platinum">
-              Task Checklist
-            </h3>
-            {totalCount > 0 && (
-              <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-tertiary)' }}>
-                {completedCount} of {totalCount} completed
-              </p>
-            )}
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="font-semibold premium-text-platinum">
+            Task Checklist
+          </h3>
+          {totalCount > 0 && (
+            <p className="text-xs mt-0.5" style={{ color: 'var(--premium-text-tertiary)' }}>
+              {completedCount} of {totalCount} completed
+            </p>
+          )}
         </div>
+      </div>
 
-        {/* Task List */}
-        <div className="space-y-2">
-          {/* Incomplete Tasks */}
-          {incompleteTasks.map((task, index) => {
-            const isNextTask = index === 0
-            return (
+      {/* Task List */}
+      <div className="space-y-2">
+        {/* Incomplete Tasks */}
+        {incompleteTasks.map((task, index) => {
+          const isNextTask = index === 0
+          return (
             <div
               key={task.id}
               draggable
@@ -213,155 +222,155 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
-            )
-          })}
+          )
+        })}
 
-          {/* Completed Tasks - Collapsible */}
-          {completedTasks.length > 0 && (
-            <div className="mt-3">
-              <button
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm"
-                style={{ color: 'var(--premium-text-tertiary)' }}
-              >
-                {showCompleted ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                <span className="font-medium">
-                  {completedTasks.length} completed task{completedTasks.length !== 1 ? 's' : ''}
-                </span>
-              </button>
+        {/* Completed Tasks - Collapsible */}
+        {completedTasks.length > 0 && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-sm"
+              style={{ color: 'var(--premium-text-tertiary)' }}
+            >
+              {showCompleted ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <span className="font-medium">
+                {completedTasks.length} completed task{completedTasks.length !== 1 ? 's' : ''}
+              </span>
+            </button>
 
-              {showCompleted && (
-                <div className="space-y-2 mt-2">
-                  {completedTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="group flex items-center gap-2 p-2.5 rounded-lg transition-all"
+            {showCompleted && (
+              <div className="space-y-2 mt-2">
+                {completedTasks.map((task) => (
+                  <div
+                    key={task.id}
+                    className="group flex items-center gap-2 p-2.5 rounded-lg transition-all"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                    }}
+                  >
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => handleToggleTask(task.id)}
+                      className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
                       style={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.02)'
+                        backgroundColor: 'var(--premium-blue)',
+                        border: '2px solid var(--premium-blue)'
                       }}
                     >
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => handleToggleTask(task.id)}
-                        className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
-                        style={{
-                          backgroundColor: 'var(--premium-blue)',
-                          border: '2px solid var(--premium-blue)'
+                      <Check className="h-3 w-3 text-white" />
+                    </button>
+
+                    {/* Task Text */}
+                    {editingTaskId === task.id ? (
+                      <input
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onFocus={handleInputFocus}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(task.id)
+                          if (e.key === 'Escape') handleEditCancel()
                         }}
-                      >
-                        <Check className="h-3 w-3 text-white" />
-                      </button>
-
-                      {/* Task Text */}
-                      {editingTaskId === task.id ? (
-                        <input
-                          type="text"
-                          value={editingText}
-                          onChange={(e) => setEditingText(e.target.value)}
-                          onFocus={handleInputFocus}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleEditSave(task.id)
-                            if (e.key === 'Escape') handleEditCancel()
-                          }}
-                          className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
-                          style={{ color: 'var(--premium-text-primary)' }}
-                          autoFocus
-                        />
-                      ) : (
-                        <span
-                          className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
-                          onClick={() => handleEditStart(task.id, task.text)}
-                          style={{ color: 'var(--premium-text-tertiary)' }}
-                        >
-                          {task.text}
-                        </span>
-                      )}
-
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                        className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
+                        style={{ color: 'var(--premium-text-primary)' }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span
+                        className="flex-1 text-sm line-through cursor-text hover:opacity-70 transition-opacity"
+                        onClick={() => handleEditStart(task.id, task.text)}
                         style={{ color: 'var(--premium-text-tertiary)' }}
-                        aria-label="Delete task"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                        {task.text}
+                      </span>
+                    )}
 
-        {/* Add Task Input */}
-        {isAdding ? (
-          <div className="mt-3 flex gap-2">
-            <input
-              type="text"
-              value={newTaskText}
-              onChange={(e) => setNewTaskText(e.target.value)}
-              onFocus={handleInputFocus}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddTask()
-                if (e.key === 'Escape') {
-                  setIsAdding(false)
-                  setNewTaskText('')
-                }
-              }}
-              placeholder="Task description..."
-              autoFocus
-              className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
-              style={{
-                color: 'var(--premium-text-primary)'
-              }}
-            />
-            <button
-              onClick={handleAddTask}
-              disabled={!newTaskText.trim()}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
-              style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                color: 'white'
-              }}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                      style={{ color: 'var(--premium-text-tertiary)' }}
+                      aria-label="Delete task"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Add Task Input */}
+      {isAdding ? (
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            onFocus={handleInputFocus}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleAddTask()
+              if (e.key === 'Escape') {
                 setIsAdding(false)
                 setNewTaskText('')
-              }}
-              className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
-              style={{
-                color: 'var(--premium-text-primary)'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
+              }
+            }}
+            placeholder="Task description..."
+            autoFocus
+            className="flex-1 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2 premium-glass"
+            style={{
+              color: 'var(--premium-text-primary)'
+            }}
+          />
           <button
-            onClick={() => setIsAdding(true)}
-            className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-white/5"
-            style={{ color: 'var(--premium-blue)' }}
+            onClick={handleAddTask}
+            disabled={!newTaskText.trim()}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+            style={{
+              background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+              color: 'white'
+            }}
           >
-            <Plus className="h-4 w-4" />
-            Add task
+            Add
           </button>
-        )}
+          <button
+            onClick={() => {
+              setIsAdding(false)
+              setNewTaskText('')
+            }}
+            className="px-4 py-2 text-sm font-medium rounded-lg transition-all"
+            style={{
+              color: 'var(--premium-text-primary)'
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsAdding(true)}
+          className="mt-3 flex items-center gap-2 text-sm font-medium transition-colors w-full p-2 rounded-lg hover:bg-white/5"
+          style={{ color: 'var(--premium-blue)' }}
+        >
+          <Plus className="h-4 w-4" />
+          Add task
+        </button>
+      )}
 
-        {/* Empty State */}
-        {tasks.length === 0 && !isAdding && (
-          <div className="text-center py-8" style={{ color: 'var(--premium-text-tertiary)' }}>
-            <p className="text-sm">No tasks yet</p>
-            <p className="text-xs mt-1">Break down your project into steps</p>
-          </div>
-        )}
+      {/* Empty State */}
+      {tasks.length === 0 && !isAdding && (
+        <div className="text-center py-8" style={{ color: 'var(--premium-text-tertiary)' }}>
+          <p className="text-sm">No tasks yet</p>
+          <p className="text-xs mt-1">Break down your project into steps</p>
+        </div>
+      )}
     </div>
   )
 }

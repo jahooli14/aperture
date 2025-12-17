@@ -254,7 +254,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   try {
     // Configure Gemini with Structured Outputs (JSON Schema)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       generationConfig: {
         temperature: 0.7,
         maxOutputTokens: 300,
@@ -1124,7 +1124,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     return res.status(400).json({ error: 'Memory ID required' })
   }
 
-  const { title, body, tags, memory_type } = req.body
+  const { title, body, tags, memory_type, image_urls } = req.body
 
   try {
     const updateData: any = {
@@ -1136,6 +1136,7 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     if (body !== undefined) updateData.body = body
     if (tags !== undefined) updateData.tags = tags
     if (memory_type !== undefined) updateData.memory_type = memory_type
+    if (image_urls !== undefined) updateData.image_urls = image_urls
 
     const { data: memory, error } = await supabase
       .from('memories')
@@ -1209,8 +1210,8 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
     const fileData = fs.readFileSync(file.filepath)
     const base64Data = fileData.toString('base64')
 
-    // Use Gemini 2.5 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    // Use Gemini 3 Flash
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
 
     let prompt = ''
     if (isImage) {

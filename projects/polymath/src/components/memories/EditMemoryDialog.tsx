@@ -167,6 +167,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
       onOpenChange(false)
     } catch (error) {
+      console.error('[EditMemoryDialog] Update failed:', error)
       addToast({
         title: 'Failed to update thought',
         description: error instanceof Error ? error.message : 'Unknown error',
