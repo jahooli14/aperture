@@ -34,7 +34,8 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
       )}
       <span>
         Coal<span style={{
-          color: 'rgba(6, 182, 212, 1)',
+          color: 'var(--premium-blue)',
+          textShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
           letterSpacing: '0.01em'
         }}>essence</span>
       </span>

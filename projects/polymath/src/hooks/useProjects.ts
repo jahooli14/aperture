@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useProjectStore } from '../stores/useProjectStore'
 import type { Project } from '../types'
@@ -27,14 +28,18 @@ export function useProjects() {
 
     // Sync React Query state to Zustand store
     // Note: In a full migration, we would remove the store and use the hook directly
-    if (query.data && query.data !== useProjectStore.getState().projects) {
-        setProjects(query.data)
-    }
+    useEffect(() => {
+        if (query.data && query.data !== useProjectStore.getState().projects) {
+            setProjects(query.data)
+        }
+    }, [query.data, setProjects])
 
     // Only update loading state if it changed to avoid infinite loops
-    if (query.isLoading !== useProjectStore.getState().loading) {
-        setLoading(query.isLoading)
-    }
+    useEffect(() => {
+        if (query.isLoading !== useProjectStore.getState().loading) {
+            setLoading(query.isLoading)
+        }
+    }, [query.isLoading, setLoading])
 
     return query
 }

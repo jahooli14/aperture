@@ -535,8 +535,8 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 0 // No retries in Jina tier - fail fast to Cheerio
-  const RETRY_DELAYS = [] // No retries
+  const MAX_RETRIES = 2 // Retry up to 2 times
+  const RETRY_DELAYS = [1000, 3000] // Wait 1s, then 3s
   const TIMEOUT_MS = 15000 // 15 second timeout - we have 60s total budget
 
   try {
@@ -1491,6 +1491,7 @@ Return ONLY the JSON, no other text.`
             }
             await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)
           } catch (err) {
+            console.error(`[RSS Sync] Failed to process feed ${feed.feed_url}:`, err)
           }
         }
         return res.status(200).json({ success: true, feedsSynced: feeds.length, articlesAdded: totalArticlesAdded })

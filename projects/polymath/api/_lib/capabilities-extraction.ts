@@ -128,7 +128,7 @@ export async function extractCapabilities(userId: string) {
           name: cap.name,
           description: cap.description,
           source_project: 'user-extracted',
-          strength: 1.0,
+          strength: 1.2,
           embedding,
           last_used: new Date().toISOString()
         }, { onConflict: 'user_id,name' })

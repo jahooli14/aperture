@@ -49,6 +49,7 @@ import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { SerendipityDialog } from '../components/SerendipityDialog'
+import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
@@ -124,10 +125,28 @@ function GetInspirationSection({
     borderColor: `rgba(${rgb}, 0.2)`
   })
 
-  // Theme helper for Spark (simplified version of FocusStream's logic)
-  const getTheme = (title: string) => {
-    // Default to Cyan for Spark
-    return { rgb: '6, 182, 212', textColor: 'rgb(6, 182, 212)' }
+  // Theme helper for Spark
+  const getTheme = (type: string, title: string) => {
+    const t = type?.toLowerCase().trim() || ''
+
+    let rgb = PROJECT_COLORS[t]
+
+    // Deterministic fallback
+    if (!rgb) {
+      const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+      let hash = 0
+      for (let i = 0; i < title.length; i++) {
+        hash = title.charCodeAt(i) + ((hash << 5) - hash)
+      }
+      rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+    }
+
+    return {
+      borderColor: `rgba(${rgb}, 0.2)`,
+      backgroundColor: `rgba(${rgb}, 0.1)`,
+      textColor: `rgb(${rgb})`,
+      rgb: rgb
+    }
   }
 
   return (
@@ -155,7 +174,7 @@ function GetInspirationSection({
             >
               <Link
                 to={inspiration.url || '/projects'}
-                className="group block p-5 rounded-xl transition-all duration-300 border flex-1"
+                className="group block p-5 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
                 style={glassCardStyle('139, 92, 246')} // Violet/Purple for thought/article - keep specialized
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.1))`
@@ -164,38 +183,31 @@ function GetInspirationSection({
                   e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))`
                 }}
               >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
+                <div className="relative z-10 flex-1 flex flex-col h-full">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
+                      backgroundColor: `rgba(139, 92, 246, 0.1)`,
+                      color: 'rgb(167, 139, 250)',
+                      borderColor: `rgba(139, 92, 246, 0.3)`
+                    }}>
+                      Recommended
+                    </span>
+                  </div>
+
+                  <h3 className="premium-text-platinum font-bold text-lg mb-2">
+                    {inspiration.title}
+                  </h3>
+                  <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                    {inspiration.reasoning}
+                  </p>
+
+                  <div className="p-3 rounded-lg mt-auto" style={{
                     backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                    color: 'rgb(167, 139, 250)',
-                    borderColor: `rgba(139, 92, 246, 0.3)`
+                    border: `1px solid rgba(139, 92, 246, 0.3)`
                   }}>
-                    Recommended
-                  </span>
-                </div>
-
-                <h3 className="premium-text-platinum font-bold text-lg mb-2">
-                  {inspiration.title}
-                </h3>
-                <p className="text-sm text-slate-400 mb-4 line-clamp-2">
-                  {inspiration.reasoning}
-                </p>
-
-                <div className="p-3 rounded-lg mt-auto" style={{
-                  backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                  border: `1px solid rgba(139, 92, 246, 0.3)`
-                }}>
-                  <div className="flex items-start gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault(); e.stopPropagation(); haptic.light()
-                      }}
-                      className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all hover:bg-white/10"
-                      style={{ border: '1px solid rgba(255,255,255,0.3)' }}
-                    >
-                      <Check className="h-3 w-3 opacity-0 hover:opacity-100" />
-                    </button>
-                    <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    <div className="flex items-start gap-2">
+                      <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -215,7 +227,7 @@ function GetInspirationSection({
                 console.warn('Spark candidate missing ID', sparkCandidate)
                 return null
               }
-              const theme = getTheme(sparkCandidate.title)
+              const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
               const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
               return (
                 <motion.div
@@ -225,26 +237,25 @@ function GetInspirationSection({
                   className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
                   onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                   style={{
-                    // FORCE CYAN THEME for Spark
-                    background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05))',
-                    boxShadow: '0 4px 16px rgba(6, 182, 212, 0.1)',
-                    borderColor: 'rgba(6, 182, 212, 0.2)'
+                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                    boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.1)`,
+                    borderColor: theme.borderColor
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.1))'
+                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05))'
+                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
                   }}
                 >
                   <div className="relative z-10 flex-1 flex flex-col h-full">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                        color: 'rgb(34, 211, 238)',
-                        borderColor: 'rgba(6, 182, 212, 0.3)'
+                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                        color: theme.textColor,
+                        borderColor: `rgba(${theme.rgb}, 0.3)`
                       }}>
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> Spark
+                        <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
                       </span>
                       <span className="text-xs text-slate-500 flex items-center gap-1 ml-auto">
                         ~20 min
@@ -260,10 +271,10 @@ function GetInspirationSection({
 
                     {nextTask && (
                       <div className="p-3 rounded-lg mt-auto" style={{
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                        border: '1px solid rgba(6, 182, 212, 0.3)'
+                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                        border: `1px solid rgba(${theme.rgb}, 0.3)`
                       }}>
-                        <p className="text-xs font-medium mb-1 text-cyan-400">NEXT STEP</p>
+                        <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
                         <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
                       </div>
                     )}

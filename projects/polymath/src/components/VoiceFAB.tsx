@@ -115,7 +115,7 @@ export function VoiceFAB({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className={cn(
-              "fixed z-50",
+              "fixed z-[10000]",
               "bottom-24 md:bottom-6 right-4 md:right-6",
               "h-14 w-14 md:h-16 md:w-16 rounded-full",
               "shadow-lg hover:shadow-xl",

@@ -789,9 +789,9 @@ export function ReadingPage() {
                       }
                     />
                   ) : (
-                    <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-0">
                       {rssItems.map((item) => (
-                        <div key={item.guid} className="break-inside-avoid mb-4" style={{ contain: 'content' }}>
+                        <div key={item.guid} className="break-inside-avoid" style={{ contain: 'content' }}>
                           <RSSFeedItem
                             item={item}
                             onSave={() => handleSaveRSSItem(item)}

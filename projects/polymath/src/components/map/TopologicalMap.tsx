@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import ForceGraph2D, { type ForceGraphMethods, type NodeObject, type LinkObject } from 'react-force-graph-2d'
 import { api } from '../../lib/apiClient'
 import { Loader2, ZoomIn, ZoomOut, Focus, X, ExternalLink } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+// import { useNavigate } from 'react-router-dom'
+import * as d3 from 'd3'
 
 interface GraphNode extends NodeObject {
   id: string
@@ -11,9 +12,6 @@ interface GraphNode extends NodeObject {
   type: 'project' | 'thought' | 'article'
   val: number
   color: string
-  // For hover interactions
-  neighbors?: GraphNode[]
-  links?: GraphLink[]
 }
 
 interface GraphLink extends LinkObject {
@@ -30,12 +28,11 @@ interface GraphData {
 export function TopologicalMap() {
   const fgRef = useRef<ForceGraphMethods>()
   const containerRef = useRef<HTMLDivElement>(null)
-  const navigate = useNavigate()
+  // const navigate = useNavigate()
 
   const [data, setData] = useState<GraphData>({ nodes: [], links: [] })
   const [loading, setLoading] = useState(true)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null)
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null)
 
   // Load Data
@@ -43,7 +40,6 @@ export function TopologicalMap() {
     const loadData = async () => {
       setLoading(true)
       try {
-        // Fetch everything in parallel
         const [projectsRes, memoriesRes, connectionsRes] = await Promise.all([
           api.get('projects'),
           api.get('memories'),
@@ -56,72 +52,47 @@ export function TopologicalMap() {
 
         const nodesMap = new Map<string, GraphNode>()
 
-        // 1. Add Projects
         projects.forEach((p: any) => {
           nodesMap.set(String(p.id), {
             id: String(p.id),
             title: p.title,
-            body: p.description, // Projects usually have description
+            body: p.description,
             type: 'project',
-            val: 30, // Larger influence for projects
-            color: '#0ea5e9', // Sky 500
-            neighbors: [],
-            links: []
+            val: 5,
+            color: '#0ea5e9'
           })
         })
 
-        // 2. Add Memories (Thoughts)
         memories.forEach((m: any) => {
           nodesMap.set(String(m.id), {
             id: String(m.id),
             title: m.title || 'Untitled Thought',
             body: m.body,
             type: 'thought',
-            val: 15, // Medium influence
-            color: '#a855f7', // Purple 500
-            neighbors: [],
-            links: []
+            val: 3,
+            color: '#a855f7'
           })
         })
 
-        // 3. Process Links
         const links: GraphLink[] = []
         connections.forEach((conn: any) => {
           const sourceId = String(conn.source_id)
           const targetId = String(conn.target_id)
-
           if (nodesMap.has(sourceId) && nodesMap.has(targetId)) {
-            links.push({
-              source: sourceId,
-              target: targetId,
-              type: conn.connection_type
-            })
-
-            // Populate neighbors (for hover effects)
-            const sourceNode = nodesMap.get(sourceId)!
-            const targetNode = nodesMap.get(targetId)!
-
-            sourceNode.neighbors?.push(targetNode)
-            targetNode.neighbors?.push(sourceNode)
+            links.push({ source: sourceId, target: targetId })
           }
         })
 
-        setData({
-          nodes: Array.from(nodesMap.values()),
-          links
-        })
-
+        setData({ nodes: Array.from(nodesMap.values()), links })
       } catch (error) {
         console.error('Failed to load map data:', error)
       } finally {
         setLoading(false)
       }
     }
-
     loadData()
   }, [])
 
-  // Responsiveness
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -136,107 +107,117 @@ export function TopologicalMap() {
     return () => window.removeEventListener('resize', updateDimensions)
   }, [])
 
-  // Painting Logic
-  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    // Safety check for crash prevention
-    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return
+  // ---------------------------------------------------------------------------
+  // Heatmap / Contour Rendering
+  // ---------------------------------------------------------------------------
 
-    const isHover = node === hoverNode
-    const isSelected = node === selectedNode
-    const isNeighbor = hoverNode && (hoverNode as any).neighbors?.includes(node)
+  // Custom Color Scale for "Knowledge Terrain"
+  // Deep Blue (Space) -> Purple (Nebula) -> Cyan (Hot) -> White (Core)
+  const colorScale = useMemo(() => d3.scaleSequential()
+    .domain([0, 0.04]) // Smoothed density values are small
+    .interpolator(d3.interpolateMagma), [])
 
-    // Determine opacity/visibility based on interaction
-    let alpha = 0.8
-    if (hoverNode && !isHover && !isNeighbor && !isSelected) {
-      alpha = 0.2 // Dim unrelated nodes
-    }
+  const paintHeatmap = useCallback((ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const nodes = data.nodes
+    if (!nodes.length) return
 
-    const label = node.title || node.body?.slice(0, 15) || '...'
-    // Scale font size constraints
-    const fontSize = Math.max(3, 12 / globalScale)
+    // Density Calculation Parameters
+    // We compute density on a fixed virtual grid regardless of viewport zoom
+    // This ensures consistency. We map node simulation coordinates to this grid.
+    const densityWidth = 2000
+    const densityHeight = 2000
+    // Simulation coordinates are roughly -500 to 500 naturally, but can expand.
+    // We need to shift them to positive integers for d3.contourDensity
+    const offset = 1000
 
-    // 1. Draw "Heatmap" Glow (The Territory)
-    // We use a large radial gradient to simulate a heatmap surface
-    // Using 'screen' or 'lighter' blend mode makes overlapping areas brighter/hotter
-    ctx.globalCompositeOperation = 'screen'
+    // Compute Contours only if needed? 
+    // Ideally we'd memoize this if nodes don't move, but they DO move.
+    // So we run this presumably every frame or throttled?
+    // Doing it every frame is expensive. 
+    // Check globalScale to maybe skip detail when zoomed out? No, heatmap IS the detail.
 
-    const glowRadius = node.val * (isHover ? 1.5 : 1)
+    // Performance Optimization: limit polygon resolution
+    const contourGenerator = d3.contourDensity()
+      .x((d: any) => d.x + offset)
+      .y((d: any) => d.y + offset)
+      .size([densityWidth, densityHeight])
+      .bandwidth(30) // Smoothness (higher = smoother blobs)
+      .thresholds(25) // Number of layers
+      .cellSize(8) // Lower resolution grid (default is 4) for speed
 
-    try {
-      const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius)
-      // Node color with low opacity
-      gradient.addColorStop(0, `${node.color}40`) // ~25% opacity
-      gradient.addColorStop(1, 'transparent')
+    const contours = contourGenerator(nodes as any)
+
+    // Draw Contours
+    ctx.save()
+    // The density map was computed in 0..2000 space
+    // We must shift back to simulation space (-1000..1000)
+    ctx.translate(-offset, -offset)
+
+    // Optional: Add a "glow" effect
+    // ctx.globalCompositeOperation = 'lighter'
+
+    for (const contour of contours) {
+      if (!contour.coordinates.length) continue
 
       ctx.beginPath()
-      ctx.arc(node.x, node.y, glowRadius, 0, 2 * Math.PI, false)
-      ctx.fillStyle = gradient
+      const geoPath = d3.geoPath(null, ctx)
+      geoPath(contour)
+
+      ctx.fillStyle = colorScale(contour.value)
+      // Slight opacity to see overlapping layers
+      ctx.globalAlpha = 0.8
       ctx.fill()
-    } catch (e) {
-      // Gracefully fail if gradient creation somehow fails (though we checked finite)
     }
 
-    // Reset composite operation for solid drawing
-    ctx.globalCompositeOperation = 'source-over'
+    ctx.restore()
+  }, [data, colorScale])
 
-    // 2. Draw the visible Core Node
-    const coreRadius = isHover || isSelected ? 6 : 4
+  // Minimized Node Rendering
+  const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+    const isHover = node === hoverNode
+
+    // Completely hide nodes unless hovered, or heavily zoomed in
+    if (!isHover && globalScale < 2.5) return
+
+    // Even when visible, show as tiny data points ("Stars")
+    const radius = isHover ? 4 : 1
+
     ctx.beginPath()
-    ctx.arc(node.x, node.y, coreRadius, 0, 2 * Math.PI, false)
-    ctx.fillStyle = isSelected ? '#fff' : node.color
-    ctx.globalAlpha = alpha
+    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI)
+    ctx.fillStyle = isHover ? '#fff' : 'rgba(255, 255, 255, 0.5)'
     ctx.fill()
 
-    // Ring for selected
-    if (isSelected) {
-      ctx.beginPath()
-      ctx.arc(node.x, node.y, coreRadius + 2, 0, 2 * Math.PI, false)
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-
-    // 3. Label
-    // Show label if:
-    // - Zoom level is high enough
-    // - Node is hovered or selected
-    // - Node is a Project (high importance)
-    if (globalScale > 2 || isHover || isSelected || node.type === 'project') {
-      ctx.font = `${node.type === 'project' ? '600' : '400'} ${fontSize}px Inter, sans-serif`
+    // Labels appear only on hover or high zoom for significant items
+    if (isHover || (globalScale > 3 && node.type === 'project')) {
+      ctx.font = `${isHover ? 'bold' : ''} ${10 / globalScale}px Inter, sans-serif`
+      ctx.fillStyle = '#fff'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`
-      ctx.fillText(label, node.x, node.y + (coreRadius + fontSize))
+      const offsetY = isHover ? -8 : -4
+      ctx.fillText(node.title || 'Untitled', node.x, node.y + offsetY)
     }
-  }, [hoverNode, selectedNode])
-
-  const paintLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    // Highlight links connected to hover/selected node
-    const isConnected =
-      (hoverNode && (link.source.id === hoverNode.id || link.target.id === hoverNode.id)) ||
-      (selectedNode && (link.source.id === selectedNode.id || link.target.id === selectedNode.id))
-
-    const strokeColor = isConnected ? '#ffffff' : '#ffffff'
-    const strokeAlpha = isConnected ? 0.3 : 0.05
-    const lineWidth = isConnected ? 1.5 : 0.5 / globalScale
-
-    ctx.beginPath()
-    ctx.moveTo(link.source.x, link.source.y)
-    ctx.lineTo(link.target.x, link.target.y)
-    ctx.strokeStyle = strokeColor
-    ctx.globalAlpha = strokeAlpha
-    ctx.lineWidth = lineWidth
-    ctx.stroke()
-    ctx.globalAlpha = 1 // Reset
-  }, [hoverNode, selectedNode])
+  }, [hoverNode])
 
   return (
-    <div ref={containerRef} className="relative w-full h-full min-h-[600px] rounded-xl overflow-hidden bg-[#050505] border border-white/10 group">
+    <div ref={containerRef} className="relative w-full h-full min-h-[600px] rounded-xl overflow-hidden bg-[#020204] border border-white/10 group">
+
+      {/* Legend / HUD */}
+      <div className="absolute top-4 left-4 z-10 pointer-events-none select-none">
+        <div className="flex flex-col gap-1 bg-black/20 backdrop-blur-sm p-2 rounded-lg border border-white/5">
+          <div className="text-[10px] text-white/40 font-mono tracking-widest uppercase">Knowledge Density</div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-white/30">Low</span>
+            <div className="w-24 h-1.5 rounded-full bg-gradient-to-r from-[#000004] via-[#721F81] to-[#FCFDBF]" />
+            <span className="text-[10px] text-white/30">High</span>
+          </div>
+        </div>
+      </div>
+
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#050505]/80 backdrop-blur-sm">
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#020204]">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-            <span className="text-sm text-gray-400">Mapping Neural Pathways...</span>
+            <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+            <span className="text-xs text-purple-500/50 font-mono tracking-wide">GENERATING TOPOGRAPHY...</span>
           </div>
         </div>
       )}
@@ -248,86 +229,56 @@ export function TopologicalMap() {
             width={dimensions.width}
             height={dimensions.height}
             graphData={data}
-            nodeLabel={() => ''} // We draw our own labels
+            nodeLabel={() => ''}
+
+            // The magic happens here: Paint density layers BEHIND nodes
+            onRenderFramePre={paintHeatmap}
+
+            // Minimalist nodes/links
             nodeCanvasObject={paintNode}
-            linkCanvasObject={paintLink}
-            d3AlphaDecay={0.01} // Slower physics for "floating" feel
-            d3VelocityDecay={0.4}
+            linkColor={() => 'rgba(0,0,0,0)'} // Hide links by default
+
+            // Physics settings for clustering
+            d3AlphaDecay={0.01}
+            d3VelocityDecay={0.3}
             cooldownTicks={100}
-            onNodeClick={(node) => {
-              setSelectedNode(node as GraphNode)
-              fgRef.current?.centerAt(node.x, node.y, 1000)
-              fgRef.current?.zoom(4, 1000)
-            }}
+
             onNodeHover={(node) => setHoverNode(node as GraphNode || null)}
-            onBackgroundClick={() => setSelectedNode(null)}
+            onNodeClick={(node) => {
+              if (node) {
+                fgRef.current?.centerAt(node.x, node.y, 800)
+                fgRef.current?.zoom(4, 800)
+              }
+            }}
           />
 
           {/* Controls */}
           <div className="absolute bottom-4 right-4 flex gap-2">
             <button
               onClick={() => {
-                const currentZoom = fgRef.current?.zoom() || 1
-                fgRef.current?.zoom(currentZoom * 1.5, 400)
+                const z = fgRef.current?.zoom() || 1
+                fgRef.current?.zoom(z * 1.5, 400)
               }}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-colors backdrop-blur-md"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 backdrop-blur"
             >
               <ZoomIn className="h-5 w-5" />
             </button>
             <button
               onClick={() => {
-                const currentZoom = fgRef.current?.zoom() || 1
-                fgRef.current?.zoom(currentZoom / 1.5, 400)
+                const z = fgRef.current?.zoom() || 1
+                fgRef.current?.zoom(z / 1.5, 400)
               }}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-colors backdrop-blur-md"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 backdrop-blur"
             >
               <ZoomOut className="h-5 w-5" />
             </button>
             <button
               onClick={() => fgRef.current?.zoomToFit(400)}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-colors backdrop-blur-md"
+              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 backdrop-blur"
             >
               <Focus className="h-5 w-5" />
             </button>
           </div>
-
-          {/* Details Panel */}
-          {selectedNode && (
-            <div className="absolute top-4 right-4 w-80 bg-[#0A0A0A]/95 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl animate-in slide-in-from-right-10 fade-in duration-300">
-              <div className="flex items-start justify-between mb-3">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider
-                  ${selectedNode.type === 'project' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}
-                `}>
-                  {selectedNode.type}
-                </span>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="text-gray-500 hover:text-white transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <h3 className="text-lg font-bold text-white mb-2 leading-tight">
-                {selectedNode.title || 'Untitled'}
-              </h3>
-
-              <div className="text-sm text-gray-400 line-clamp-4 leading-relaxed mb-4">
-                {selectedNode.body || 'No content provided.'}
-              </div>
-
-              <button
-                onClick={() => {
-                  if (selectedNode.type === 'project') navigate(`/projects/${selectedNode.id}`)
-                  // TODO: Handle memory navigation
-                }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium text-white transition-all group"
-              >
-                <span>View Full Details</span>
-                <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

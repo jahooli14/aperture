@@ -1,4 +1,4 @@
-import * as React from "react"
+import React from "react"
 import * as ReactDOM from "react-dom"
 import { cn } from "../../lib/utils"
 import { X } from "lucide-react"
@@ -35,7 +35,7 @@ const DialogContext = React.createContext<{
   onOpenChange: (open: boolean) => void
 }>({
   open: false,
-  onOpenChange: () => {},
+  onOpenChange: () => { },
 })
 
 interface DialogTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

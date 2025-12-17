@@ -11,7 +11,8 @@ import {
   Zap,
   RefreshCw,
   Trash2,
-  Loader2
+  Loader2,
+  Sparkles
 } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { supabase } from '../lib/supabase'
@@ -216,15 +217,18 @@ export function CapabilitiesPage() {
                     </div>
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">Strength</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono opacity-50 uppercase tracking-wider">LVL {Math.floor(cap.strength)}</span>
+                          {Math.floor(cap.strength) >= 5 && <Sparkles className="h-3 w-3 text-yellow-400" />}
+                        </div>
                         <span className="text-xs font-medium premium-text-platinum">
-                          {Math.round(cap.strength * 100)}%
+                          {Math.round((cap.strength - Math.floor(cap.strength)) * 100)}%
                         </span>
                       </div>
                       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 transition-all"
-                          style={{ width: `${cap.strength * 100}%` }}
+                          style={{ width: `${(cap.strength - Math.floor(cap.strength)) * 100}%` }}
                         />
                       </div>
                     </div>

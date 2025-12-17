@@ -445,6 +445,16 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       }
 
       try {
+        // If it's a temporary item (optimistic), don't hit the API
+        if (id.startsWith('temp-')) {
+          set((state) => {
+            const newPending = state.pendingArticles.filter((a) => a.id !== id)
+            localStorage.setItem('pending-articles', JSON.stringify(newPending))
+            return { pendingArticles: newPending }
+          })
+          return
+        }
+
         const response = await fetch(`/api/reading?id=${id}`, {
           method: 'DELETE',
         })

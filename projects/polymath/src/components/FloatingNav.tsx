@@ -60,14 +60,29 @@ export function FloatingNav() {
   const location = useLocation()
   const [isHidden, setIsHidden] = React.useState(false)
 
+  // Only allow hiding on Reader page
+  const isReaderPage = location.pathname.startsWith('/reading/') && location.pathname !== '/reading'
+  // Explicitly ensure we never hide on memories page
+  const isMemoriesPage = location.pathname === '/memories' || location.pathname.startsWith('/memories')
+
+  const shouldHide = (isReaderPage && isHidden) && !isMemoriesPage
+
   // Listen for toggle-nav events from ReaderPage
   React.useEffect(() => {
     const handleToggle = (e: CustomEvent) => {
-      setIsHidden(e.detail.hidden)
+      // Only respect toggle events if we're actually on the reader page
+      if (location.pathname.startsWith('/reading/')) {
+        setIsHidden(e.detail.hidden)
+      }
     }
     window.addEventListener('toggle-nav', handleToggle as EventListener)
     return () => window.removeEventListener('toggle-nav', handleToggle as EventListener)
-  }, [])
+  }, [location.pathname])
+
+  // Reset visibility on route change (e.g. leaving Reader page)
+  React.useEffect(() => {
+    setIsHidden(false)
+  }, [location.pathname])
 
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
@@ -213,23 +228,29 @@ export function FloatingNav() {
       {/* Replaced inline FAB with Universal Action FAB */}
       <VoiceFAB
         onTranscript={handleVoiceTranscript}
-        hidden={isHidden}
+        hidden={shouldHide}
         onTap={handleVoiceFABTap}
       />
 
       {/* Bottom Navigation Bar - Premium Glassmorphism */}
       <motion.nav
         initial={false}
-        animate={{ y: isHidden ? 100 : 0, opacity: 1 }}
+        animate={{ y: shouldHide ? 100 : 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="fixed bottom-0 left-0 right-0 z-40 pb-safe"
+        className="fixed bottom-0 left-0 right-0 z-[9999] w-full"
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)',
+          paddingBottom: 'calc(var(--safe-area-inset-bottom, 20px) + 1rem)',
+          transform: 'translate3d(0, 0, 0)', // Force hardware acceleration
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          willChange: 'transform',
+          isolation: 'isolate'
         }}
       >
-        <div className="mx-auto max-w-2xl px-4">
+        <div className="mx-auto max-w-2xl px-2 sm:px-4">
           <div
-            className="premium-glass flex items-center justify-between gap-2 px-3 py-3"
+            className="premium-glass flex items-center justify-between gap-1 px-2 py-3"
             style={{
               borderRadius: 'var(--premium-radius-2xl)',
               backgroundColor: 'var(--premium-bg-2)'
@@ -246,13 +267,13 @@ export function FloatingNav() {
                   onClick={() => handleNavClick(option)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all relative min-w-0"
+                  className="flex flex-col items-center justify-center gap-1 px-1 sm:px-3 py-2 rounded-xl transition-all relative min-w-0"
                   style={{ flex: '1 1 0px' }}
                 >
                   {/* Active Background Glow */}
                   {active && (
                     <motion.div
-                      layoutId="activeTab"
+                      layoutId="floatingNavActiveTab"
                       className="absolute inset-0 rounded-xl"
                       style={{
                         background: colors.glow,

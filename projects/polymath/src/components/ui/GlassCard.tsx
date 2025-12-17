@@ -38,34 +38,34 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       },
       onMouseEnter: isInteractive
         ? (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-            (e.currentTarget as HTMLElement).style.background = currentHoverBg
-            ;(e.currentTarget as HTMLElement).style.boxShadow =
+          (e.currentTarget as HTMLElement).style.background = currentHoverBg
+            ; (e.currentTarget as HTMLElement).style.boxShadow =
               variant === 'vibrant' ? '0 12px 32px rgba(0, 0, 0, 0.5)' : '0 10px 28px rgba(0, 0, 0, 0.45)'
-            onMouseEnter?.(e)
-          }
+          onMouseEnter?.(e)
+        }
         : onMouseEnter,
       onMouseLeave: isInteractive
         ? (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-            (e.currentTarget as HTMLElement).style.background = currentBg
-            ;(e.currentTarget as HTMLElement).style.boxShadow = cardStyles.boxShadow
-            onMouseLeave?.(e)
-          }
+          (e.currentTarget as HTMLElement).style.background = currentBg
+            ; (e.currentTarget as HTMLElement).style.boxShadow = cardStyles.boxShadow
+          onMouseLeave?.(e)
+        }
         : onMouseLeave,
     }
 
     const interactiveProps = isInteractive
       ? {
-          whileHover: { y: -6, scale: 1.02 },
-          whileTap: { scale: 0.98 },
-          transition: {
-            type: 'spring',
-            stiffness: 400,
-            damping: 28,
-            mass: 0.6,
-            opacity: { duration: 0.3 },
-            scale: { duration: 0.3 },
-          },
-        }
+        whileHover: { y: -6, scale: 1.02 },
+        whileTap: { scale: 0.98 },
+        transition: {
+          type: 'spring' as const,
+          stiffness: 400,
+          damping: 28,
+          mass: 0.6,
+          opacity: { duration: 0.3 },
+          scale: { duration: 0.3 },
+        },
+      }
       : {}
 
     return (

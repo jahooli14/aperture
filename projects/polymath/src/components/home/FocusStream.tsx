@@ -4,6 +4,7 @@ import { Layers, Clock } from 'lucide-react'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
+import { PROJECT_COLORS } from '../projects/ProjectCard'
 
 export function FocusStream() {
     const navigate = useNavigate()
@@ -75,20 +76,6 @@ export function FocusStream() {
         })
     }, [dormantProjects])
 
-    // Color Coding - matching ProjectCard.tsx
-    const PROJECT_COLORS: Record<string, string> = {
-        tech: '59, 130, 246',      // Blue-500
-        technical: '59, 130, 246', // Blue-500
-        creative: '236, 72, 153',  // Pink-500
-        writing: '99, 102, 241',   // Indigo-500
-        business: '16, 185, 129',  // Emerald-500
-        learning: '245, 158, 11',  // Amber-500
-        life: '6, 182, 212',       // Cyan-500
-        hobby: '249, 115, 22',     // Orange-500
-        content: '168, 85, 247',   // Purple-500
-        'side-project': '139, 92, 246', // Violet-500
-        default: '148, 163, 184'   // Slate-400
-    }
 
     const getTheme = (type: string, title: string) => {
         const t = type?.toLowerCase().trim() || ''

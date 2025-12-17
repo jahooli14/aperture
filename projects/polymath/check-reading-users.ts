@@ -9,10 +9,6 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 async function checkReadingQueue() {
     console.log('Checking reading_queue table...')
 
-    const { data, error } = await supabase
-        .from('reading_queue')
-        .select('user_id, count(*)', { count: 'exact', head: false })
-
     // Since we can't do GROUP BY easily with simple select in JS client without .rpc or distinct
     // Let's just fetch all user_ids and count in JS
 
@@ -25,7 +21,7 @@ async function checkReadingQueue() {
         return
     }
 
-    const counts = {}
+    const counts: Record<string, number> = {}
     allItems.forEach(item => {
         const uid = item.user_id || 'null'
         counts[uid] = (counts[uid] || 0) + 1

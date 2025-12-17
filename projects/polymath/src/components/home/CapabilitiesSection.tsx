@@ -158,7 +158,7 @@ export function CapabilitiesSection() {
                                         <div
                                             className="h-full transition-all duration-500"
                                             style={{
-                                                width: `${progress}%`,
+                                                width: `${Math.max(5, progress)}%`,
                                                 background: isDecaying ? '#ef4444' : level >= 5 ? '#fbbf24' : '#3b82f6'
                                             }}
                                         />

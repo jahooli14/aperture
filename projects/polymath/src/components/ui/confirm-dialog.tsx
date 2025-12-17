@@ -3,7 +3,7 @@
  * Android-optimized replacement for confirm() with beautiful UI
  */
 
-import * as React from "react"
+import React from "react"
 import {
   Dialog,
   DialogContent,
