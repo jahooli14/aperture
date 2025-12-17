@@ -13,5 +13,5 @@
       "schedule": "0 15 * * *"
     }
   ],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
+  "ignoreCommand": "if [[ \"$VERCEL_GIT_COMMIT_REF\" == *\"dependabot\"* ]]; then exit 0; else git diff --quiet HEAD^ HEAD -- .; fi"
 }
