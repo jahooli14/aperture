@@ -50,8 +50,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Filter users whose local time matches their reminder_time
-    // Vercel Hobby plan only allows daily cron jobs, so we check all users at once
-    // instead of checking hourly for specific reminder times.
     console.log(`Checking reminders for ${users.length} users...`);
 
 
@@ -59,97 +57,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pushSent: string[] = [];
     const errors: { userId: string; error: string }[] = [];
 
-    for (const user of users) {
-      // Calculate user's local date "today"
-      const userDate = getUserLocalDate(now, user.timezone);
+    if (photosError) {
+      console.error(`Error checking photos for user ${user.user_id}:`, photosError);
+      errors.push({ userId: user.user_id, error: photosError.message });
+      continue;
+    }
 
-      // Check if user uploaded for THEIR today
-      const { data: photos, error: photosError } = await supabase
-        .from('photos')
-        .select('id')
-        .eq('user_id', user.user_id)
-        .eq('upload_date', userDate) // Check specific date
-        .limit(1);
+    // If user already uploaded today, skip
+    if (photos && photos.length > 0) {
+      continue;
+    }
 
-      if (photosError) {
-        console.error(`Error checking photos for user ${user.user_id}:`, photosError);
-        errors.push({ userId: user.user_id, error: photosError.message });
-        continue;
-      }
+    // Try push notification first (preferred for mobile)
+    let pushSuccess = false;
+    if (user.push_subscription) {
+      try {
+        const payload = JSON.stringify({
+          title: 'Don\'t forget today\'s photo! 📸',
+          body: 'Keep the streak alive and capture today\'s memory',
+          url: '/?upload=true'
+        });
 
-      // If user already uploaded today, skip
-      if (photos && photos.length > 0) {
-        continue;
-      }
+        await webpush.sendNotification(user.push_subscription, payload);
+        pushSent.push(user.user_id);
+        pushSuccess = true;
+        console.log(`Push notification sent to user ${user.user_id}`);
+      } catch (pushError: any) {
+        console.error(`Failed to send push to user ${user.user_id}:`, pushError);
 
-      // Try push notification first (preferred for mobile)
-      let pushSuccess = false;
-      if (user.push_subscription) {
-        try {
-          const payload = JSON.stringify({
-            title: 'Don\'t forget today\'s photo! 📸',
-            body: 'Keep the streak alive and capture today\'s memory',
-            url: '/?upload=true'
-          });
-
-          await webpush.sendNotification(user.push_subscription, payload);
-          pushSent.push(user.user_id);
-          pushSuccess = true;
-          console.log(`Push notification sent to user ${user.user_id}`);
-        } catch (pushError: any) {
-          console.error(`Failed to send push to user ${user.user_id}:`, pushError);
-
-          // If subscription is expired/invalid, remove it
-          if (pushError.statusCode === 410 || pushError.statusCode === 404) {
-            await supabase
-              .from('user_settings')
-              // @ts-ignore
-              .update({ push_subscription: null } as any) // Cast to any to avoid type error
-              .eq('user_id', user.user_id);
-            console.log(`Removed expired push subscription for user ${user.user_id}`);
-          }
-        }
-      }
-
-      // Fall back to email if push failed or not available
-      if (!pushSuccess && user.reminder_email) {
-        try {
-          await resend.emails.send({
-            from: 'Pupils <onboarding@resend.dev>', // Change to your domain once verified
-            to: user.reminder_email,
-            subject: "Don't forget today's photo! 📸",
-            html: generateEmailHTML(user.user_id),
-          });
-
-          emailsSent.push(user.reminder_email);
-          console.log(`Email reminder sent to ${user.reminder_email}`);
-        } catch (emailError) {
-          console.error(`Failed to send email to ${user.reminder_email}:`, emailError);
-          errors.push({
-            userId: user.user_id,
-            error: emailError instanceof Error ? emailError.message : String(emailError)
-          });
+        // If subscription is expired/invalid, remove it
+        if (pushError.statusCode === 410 || pushError.statusCode === 404) {
+          await supabase
+            .from('user_settings')
+            // @ts-ignore
+            .update({ push_subscription: null } as any) // Cast to any to avoid type error
+            .eq('user_id', user.user_id);
+          console.log(`Removed expired push subscription for user ${user.user_id}`);
         }
       }
     }
 
-    return res.status(200).json({
-      message: 'Reminders sent successfully',
-      pushNotifications: pushSent.length,
-      emailsSent: emailsSent.length,
-      total: pushSent.length + emailsSent.length,
-      pushRecipients: pushSent,
-      emailRecipients: emailsSent,
-      errors: errors.length > 0 ? errors : undefined,
-    });
+    // Fall back to email if push failed or not available
+    if (!pushSuccess && user.reminder_email) {
+      try {
+        await resend.emails.send({
+          from: 'Pupils <onboarding@resend.dev>', // Change to your domain once verified
+          to: user.reminder_email,
+          subject: "Don't forget today's photo! 📸",
+          html: generateEmailHTML(user.user_id),
+        });
 
-  } catch (error) {
-    console.error('Unexpected error in send-reminders:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : String(error)
-    });
+        emailsSent.push(user.reminder_email);
+        console.log(`Email reminder sent to ${user.reminder_email}`);
+      } catch (emailError) {
+        console.error(`Failed to send email to ${user.reminder_email}:`, emailError);
+        errors.push({
+          userId: user.user_id,
+          error: emailError instanceof Error ? emailError.message : String(emailError)
+        });
+      }
+    }
   }
+
+    return res.status(200).json({
+    message: 'Reminders sent successfully',
+    pushNotifications: pushSent.length,
+    emailsSent: emailsSent.length,
+    total: pushSent.length + emailsSent.length,
+    pushRecipients: pushSent,
+    emailRecipients: emailsSent,
+    errors: errors.length > 0 ? errors : undefined,
+  });
+
+} catch (error) {
+  console.error('Unexpected error in send-reminders:', error);
+  return res.status(500).json({
+    error: 'Internal server error',
+    message: error instanceof Error ? error.message : String(error)
+  });
+}
 }
 
 // Helper function to get user's local date YYYY-MM-DD
