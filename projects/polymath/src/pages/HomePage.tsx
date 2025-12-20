@@ -837,28 +837,16 @@ export function HomePage() {
           }}>
             <BrandName className="inline" showLogo={true} />
           </h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/suggestions')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="Discover projects"
-            >
-              <Sparkles className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="Search everything"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            onClick={() => navigate('/search')}
+            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+            style={{
+              color: 'var(--premium-blue)'
+            }}
+            title="Search everything"
+          >
+            <Search className="h-5 w-5" />
+          </button>
         </div>
       </div>
 

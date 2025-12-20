@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Zap, Play, ArrowRight, BookOpen, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
+import { readingDb } from '../../lib/db'
 
 interface PowerTask {
     project_id: string
@@ -24,7 +25,15 @@ export function PowerHourHero() {
     useEffect(() => {
         async function fetchPowerHour() {
             try {
-                console.log('[PowerHourHero] Fetching tasks...')
+                // 1. Load from client-side cache first (Instant)
+                const cached = await readingDb.getDashboard('power-hour')
+                if (cached && cached.tasks) {
+                    console.log('[PowerHourHero] Loaded from client-side cache')
+                    setTasks(cached.tasks)
+                    setLoading(false)
+                }
+
+                console.log('[PowerHourHero] Fetching fresh tasks from API...')
                 const res = await fetch('/api/power-hour')
                 const contentType = res.headers.get('content-type')
 
@@ -46,11 +55,18 @@ export function PowerHourHero() {
                 setDebugInfo(data)
 
                 if (data.tasks) {
+                    // 2. Save to client-side cache for next time
+                    await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
+
+                    // 3. Update UI if data changed or we didn't have cache
                     setTasks(data.tasks)
                 }
             } catch (e: any) {
                 console.error('[PowerHourHero] Fetch Error:', e)
-                setError(e.message)
+                // Only show error if we have no tasks at all
+                if (tasks.length === 0) {
+                    setError(e.message)
+                }
             } finally {
                 setLoading(false)
             }
