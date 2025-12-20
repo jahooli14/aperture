@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { motion } from 'framer-motion'
-import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2, Sparkles } from 'lucide-react'
+import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
 import type { ConnectionSourceType, Project, Memory, ReadingQueueItem, ProjectSuggestion } from '../../types'
 
 interface CreateConnectionDialogProps {
@@ -299,7 +299,7 @@ export function CreateConnectionDialog({
               {filteredSuggestions.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3 px-1">
-                    <Sparkles className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
+                    <Lightbulb className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
                     <h3 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--premium-blue)' }}>
                       Suggested Based on Similarity
                     </h3>

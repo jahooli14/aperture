@@ -18,12 +18,23 @@ export interface Task {
   completed_at?: string
 }
 
+import { Zap } from 'lucide-react'
+
+// Helper for approximate string matching
+function similar(a: string, b: string) {
+  const s1 = a.toLowerCase()
+  const s2 = b.toLowerCase()
+  if (s1.includes(s2) || s2.includes(s1)) return true
+  return false
+}
+
 interface TaskListProps {
   tasks: Task[]
+  highlightedTasks?: any[]
   onUpdate: (tasks: Task[]) => void
 }
 
-export function TaskList({ tasks, onUpdate }: TaskListProps) {
+export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListProps) {
   const [newTaskText, setNewTaskText] = useState('')
   const [isAdding, setIsAdding] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
@@ -31,7 +42,16 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
 
-  const sortedTasks = [...tasks].sort((a, b) => a.order - b.order)
+  // Sort: highlighted first, then order
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const aHit = highlightedTasks.some(h => similar(h.task_title || h.title, a.text) || similar(h.task_description || '', a.text))
+    const bHit = highlightedTasks.some(h => similar(h.task_title || h.title, b.text) || similar(h.task_description || '', b.text))
+
+    if (aHit && !bHit) return -1
+    if (!aHit && bHit) return 1
+    return a.order - b.order
+  })
+
   const incompleteTasks = sortedTasks.filter(t => !t.done)
   const completedTasks = sortedTasks.filter(t => t.done)
 
@@ -157,6 +177,8 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
         {/* Incomplete Tasks */}
         {incompleteTasks.map((task, index) => {
           const isNextTask = index === 0
+          const isHighlighted = highlightedTasks.some(h => similar(h.task_title || h.title, task.text) || similar(h.task_description || '', task.text))
+
           return (
             <div
               key={task.id}
@@ -164,12 +186,17 @@ export function TaskList({ tasks, onUpdate }: TaskListProps) {
               onDragStart={() => handleDragStart(task.id)}
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
-              className="group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move"
+              className={cn("group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move", isHighlighted ? "border border-blue-500/30 bg-blue-500/10" : "")}
               style={{
-                background: isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
+                background: isHighlighted ? 'rgba(59, 130, 246, 0.1)' : isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
+              {isHighlighted && (
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2">
+                  <Zap className="h-4 w-4 text-blue-400 fill-blue-400/20" />
+                </div>
+              )}
               {/* Drag Handle */}
               <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
                 <GripVertical className="h-4 w-4" />

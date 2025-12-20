@@ -3,14 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import {
     X,
-    Sparkles,
+    Lightbulb,
     BookOpen,
     Layers,
     Brain,
     ArrowRight,
     Link as LinkIcon,
     Loader2,
-    Lightbulb,
+    Zap,
     TrendingUp,
     RefreshCw,
     FileText,
@@ -178,7 +178,7 @@ export function ContextSidebar() {
             case 'article': return BookOpen
             case 'project': return Layers
             case 'memory': return Brain
-            default: return Sparkles
+            default: return Lightbulb
         }
     }
 
@@ -210,7 +210,7 @@ export function ContextSidebar() {
                         {/* Header */}
                         <div className="p-4 border-b border-white/10 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Sparkles className="h-5 w-5 text-purple-400" />
+                                <Lightbulb className="h-5 w-5 text-purple-400" />
                                 <h2 className="font-bold text-white">Context Engine</h2>
                             </div>
                             <button
@@ -241,7 +241,7 @@ export function ContextSidebar() {
                                 <div className="rounded-xl p-4 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
-                                            <Sparkles className="h-4 w-4 text-purple-400" />
+                                            <Lightbulb className="h-4 w-4 text-purple-400" />
                                             <span className="text-xs font-semibold text-purple-300 uppercase tracking-wider">
                                                 AI Analysis
                                             </span>

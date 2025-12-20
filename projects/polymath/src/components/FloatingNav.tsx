@@ -12,8 +12,7 @@ import {
   Layers,
   FileText,
   Mic,
-  MoreHorizontal,
-  Sparkles
+  MoreHorizontal
 } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'

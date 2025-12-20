@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Sparkles, X } from 'lucide-react'
+import { Lightbulb, X } from 'lucide-react'
 import { useOnboardingStore } from '../../stores/useOnboardingStore'
 import { PromptModal } from './PromptModal'
 import { MemoryPromptWithStatus } from '../../types'
@@ -39,7 +39,7 @@ export function SuggestedPrompts() {
   return (
     <div className="mb-6">
       <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-purple-600" />
+        <Lightbulb className="h-5 w-5 text-purple-600" />
         Suggested Prompts ({suggestedPrompts.length})
       </h3>
       <p className="text-sm text-gray-600 mb-4">
@@ -53,7 +53,7 @@ export function SuggestedPrompts() {
             className="p-4 rounded-lg border-2 border-purple-200 bg-purple-50"
           >
             <div className="flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+              <Lightbulb className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900">{prompt.prompt_text}</h4>
                 {prompt.prompt_description && (

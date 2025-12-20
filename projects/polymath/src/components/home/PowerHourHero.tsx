@@ -145,7 +145,9 @@ export function PowerHourHero() {
                             <button
                                 onClick={() => {
                                     haptic.heavy()
-                                    navigate(`/projects/${mainTask.project_id}`)
+                                    // Find all tasks for this project in the power hour plan
+                                    const projectTasks = tasks.filter(t => t.project_id === mainTask.project_id)
+                                    navigate(`/projects/${mainTask.project_id}`, { state: { powerHourTasks: projectTasks } })
                                 }}
                                 className="zebra-btn flex items-center gap-2 group"
                             >

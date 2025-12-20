@@ -18,7 +18,7 @@ import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
 import { Select } from '../ui/select'
-import { Hammer, Sparkles, TrendingUp } from 'lucide-react'
+import { Hammer, Zap, TrendingUp } from 'lucide-react'
 import type { ProjectSuggestion } from '../../types'
 
 interface BuildProjectDialogProps {
@@ -97,7 +97,7 @@ export function BuildProjectDialog({
                 <span className="font-medium">{Math.round(suggestion.feasibility_score * 100)}% Doable</span>
               </div>
               <div className="flex items-center gap-1 text-sm">
-                <Sparkles className="h-4 w-4 text-blue-900" />
+                <Zap className="h-4 w-4 text-blue-900" />
                 <span className="font-medium">{Math.round(suggestion.interest_score * 100)}% Exciting</span>
               </div>
             </div>

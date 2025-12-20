@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Sparkles, TrendingUp, AlertCircle, Lightbulb, Search } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 
@@ -56,13 +56,12 @@ export function InsightsPage() {
   }, [fetchInsights])
 
   const getInsightIcon = (type: string) => {
-    const iconStyle = { color: 'var(--premium-blue)' }
     switch (type) {
       case 'evolution': return <TrendingUp className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-      case 'pattern': return <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
+      case 'pattern': return <Zap className="h-6 w-6" style={{ color: 'var(--premium-indigo)' }} />
       case 'collision': return <AlertCircle className="h-6 w-6" style={{ color: 'var(--premium-amber)' }} />
       case 'opportunity': return <Lightbulb className="h-6 w-6" style={{ color: 'var(--premium-emerald)' }} />
-      default: return <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-text-tertiary)' }} />
+      default: return <Brain className="h-6 w-6" style={{ color: 'var(--premium-text-tertiary)' }} />
     }
   }
 
@@ -127,10 +126,7 @@ export function InsightsPage() {
             }}>
               <div className="text-center py-12">
                 <div className="relative inline-block mb-4">
-                  <Sparkles className="h-12 w-12 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
-                  <div className="absolute inset-0 animate-ping">
-                    <Sparkles className="h-12 w-12 opacity-30" style={{ color: 'var(--premium-blue)' }} />
-                  </div>
+                  <Brain className="h-12 w-12 animate-pulse" style={{ color: 'var(--premium-blue)' }} />
                 </div>
                 <p className="text-lg font-medium mb-1" style={{ color: 'var(--premium-text-primary)' }}>Analyzing your thoughts...</p>
                 <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>Finding patterns and connections</p>
@@ -164,7 +160,7 @@ export function InsightsPage() {
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="py-16 text-center">
-                <Sparkles className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
                 <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
                   Building Your Insights
                 </h2>

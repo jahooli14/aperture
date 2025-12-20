@@ -17,7 +17,7 @@ import {
   X, 
   Plus,
   Clock, 
-  Sparkles, 
+  Zap, 
   ChevronRight, 
   ChevronLeft
 } from 'lucide-react'
@@ -210,7 +210,7 @@ export function SuggestionsPage() {
             disabled={synthesizing}
             className="px-5 py-2.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-sm font-semibold hover:bg-blue-600/30 transition-all flex items-center gap-2 disabled:opacity-50"
           >
-            {synthesizing ? <Sparkles className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {synthesizing ? <Zap className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             {synthesizing ? 'Synthesizing...' : 'Generate New'}
           </button>
         </div>

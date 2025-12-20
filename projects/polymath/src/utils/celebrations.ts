@@ -151,9 +151,9 @@ function cannonShot() {
 }
 
 /**
- * Sparkles - subtle magic effect
+ * Magic Glow - subtle effect
  */
-function sparkles() {
+function magicGlow() {
   const duration = 1000
   const animationEnd = Date.now() + duration
   const colors = [COLORS.blue, COLORS.platinum]
@@ -241,7 +241,7 @@ export const celebrate = {
    */
   firstConnection() {
     haptic.success()
-    sparkles()
+    magicGlow()
   },
 
   /**
@@ -337,31 +337,31 @@ export function getMilestoneMessage(type: 'thought' | 'connection' | 'project', 
   if (type === 'thought') {
     switch (count) {
       case 1:
-        return 'Your first thought! The journey begins 🌟'
+        return 'Your first thought! The journey begins'
       case 10:
-        return '10 thoughts captured! Building momentum 🚀'
+        return '10 thoughts captured! Building momentum'
       case 50:
-        return '50 thoughts! Your knowledge graph is growing 🌱'
+        return '50 thoughts! Your knowledge graph is growing'
       case 100:
-        return '100 thoughts! Incredible milestone 🎯'
+        return '100 thoughts! Incredible milestone'
       default:
         return null
     }
   } else if (type === 'connection') {
     switch (count) {
       case 1:
-        return 'First connection! Ideas are linking ✨'
+        return 'First connection! Ideas are linking'
       case 10:
-        return '10 connections! Your graph is forming 🔗'
+        return '10 connections! Your graph is forming'
       case 50:
-        return '50 connections! A true knowledge web 🕸️'
+        return '50 connections! A true knowledge web'
       default:
         return null
     }
   } else if (type === 'project') {
     switch (count) {
       case 1:
-        return 'Your first project! Let\'s build something amazing 🎨'
+        return 'Your first project! Let\'s build something amazing'
       default:
         return null
     }

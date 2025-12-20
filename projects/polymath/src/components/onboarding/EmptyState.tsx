@@ -3,7 +3,7 @@
  * Shown when user has no data - provides guidance on next steps
  */
 
-import { Brain, Mic, Sparkles, ExternalLink } from 'lucide-react'
+import { Brain, Mic, Zap, ExternalLink } from 'lucide-react'
 import { BrandName } from '../BrandName'
 
 export function EmptyState() {
@@ -95,7 +95,7 @@ export function EmptyState() {
             }}
             className="btn-secondary inline-flex items-center justify-center gap-2"
           >
-            <Sparkles className="h-4 w-4" />
+            <Zap className="h-4 w-4" />
             Load Demo Instead
           </button>
         </div>

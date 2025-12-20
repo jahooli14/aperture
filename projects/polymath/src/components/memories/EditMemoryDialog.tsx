@@ -19,7 +19,7 @@ import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { useRef } from 'react'
-import { Sparkles, Image as ImageIcon, X, Plus } from 'lucide-react'
+import { Brain, Image as ImageIcon, X, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import type { Memory } from '../../types'
@@ -185,7 +185,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
       <BottomSheetContent>
         <BottomSheetHeader>
           <div className="flex items-center gap-3 mb-2">
-            <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+            <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
             <BottomSheetTitle>Edit thought</BottomSheetTitle>
           </div>
           <BottomSheetDescription>
@@ -408,7 +408,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
+                  <Brain className="mr-2 h-4 w-4" />
                   Save Changes
                 </>
               )}

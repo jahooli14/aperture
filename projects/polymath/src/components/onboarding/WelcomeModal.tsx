@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Brain, Sparkles, Layers, ArrowRight, X } from 'lucide-react'
+import { Brain, Zap, Layers, ArrowRight, X, Lightbulb } from 'lucide-react'
 import { BrandName } from '../BrandName'
 
 interface WelcomeModalProps {
@@ -46,7 +46,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
         {/* Header */}
         <div className="text-center pt-12 pb-8 px-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-amber-500 mb-6">
-            <Sparkles className="h-8 w-8 text-white" />
+            <Zap className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-neutral-900 mb-3">
             Welcome to <BrandName size="xl" />
@@ -77,7 +77,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
             {/* Step 2 */}
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-amber-600" />
+                <Lightbulb className="h-6 w-6 text-amber-600" />
               </div>
               <div>
                 <h3 className="font-semibold text-neutral-900 mb-1">
@@ -108,7 +108,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
           {/* Demo data explainer */}
           <div className="mt-8 p-6 rounded-xl bg-gradient-to-br from-amber-50 to-blue-50 border border-amber-200">
             <h3 className="font-semibold text-neutral-900 mb-2 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-600" />
+              <Lightbulb className="h-5 w-5 text-amber-600" />
               Try it with demo data
             </h3>
             <p className="text-sm text-neutral-700 mb-4">
@@ -132,7 +132,7 @@ export function WelcomeModal({ open, onClose, onLoadDemo, onStartFresh }: Welcom
                 'Loading demo...'
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
+                  <Zap className="h-4 w-4" />
                   Load Demo Data
                 </>
               )}

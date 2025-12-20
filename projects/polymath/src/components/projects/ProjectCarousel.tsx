@@ -12,7 +12,7 @@ import {
   Pin,
   Clock,
   AlertCircle,
-  Sparkles,
+  Zap,
   ArrowRight
 } from 'lucide-react'
 import { useToast } from '../ui/toast'
@@ -110,7 +110,7 @@ export function ProjectCarousel({ projects, loading = false, onUpdateProject }: 
         id: 'new-ideas',
         title: 'New Ideas',
         description: 'Fresh projects',
-        icon: <Sparkles className="h-5 w-5" />,
+        icon: <Zap className="h-5 w-5" />,
         color: 'rgba(16, 185, 129, 0.1)',
         projects: newIdeas
       }

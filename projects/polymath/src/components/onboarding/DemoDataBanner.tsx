@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { X, Sparkles, Trash2, Eye } from 'lucide-react'
+import { X, Lightbulb, Trash2, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 interface DemoDataBannerProps {
@@ -109,7 +109,7 @@ export function DemoDataBanner({ onDismiss, onDataCleared }: DemoDataBannerProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-start gap-4">
           <div className="flex-shrink-0">
-            <Sparkles className="h-6 w-6 text-white" />
+            <Lightbulb className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-white mb-1">

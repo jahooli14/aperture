@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ArrowRight, Sparkles } from 'lucide-react'
+import { Check, ArrowRight, Lightbulb } from 'lucide-react'
 import { VoiceInput } from '../components/VoiceInput'
 import { useOnboardingStore } from '../stores/useOnboardingStore'
 import type { OnboardingResponse, OnboardingAnalysis } from '../types'
@@ -236,7 +236,7 @@ export function OnboardingPage() {
             {/* First Insight */}
             <div className="p-6" style={{ background: 'var(--premium-bg-3)', backdropFilter: 'blur(12px)', borderRadius: 'var(--premium-radius-lg)' }}>
               <div className="flex items-start gap-3">
-                <Sparkles className="h-6 w-6 flex-shrink-0 mt-1" style={{ color: 'var(--premium-blue)' }} />
+                <Lightbulb className="h-6 w-6 flex-shrink-0 mt-1" style={{ color: 'var(--premium-blue)' }} />
                 <div>
                   <h3 className="font-semibold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
                     💡 First Insight
