@@ -1,10 +1,11 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function analyzeTaskEnergy(taskText: string): Promise<'low' | 'moderate' | 'high'> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
   const prompt = `Analyze the cognitive load and energy required for this task: "${taskText}"
 

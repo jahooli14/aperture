@@ -5,6 +5,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
+import { MODELS } from './models.js'
 
 // Use process.env directly, similar to other API lib modules
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
@@ -144,7 +145,7 @@ async function incrementTagUsage(tag: string): Promise<void> {
  * Infer category for a new tag using Gemini
  */
 async function inferCategory(tag: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
   const prompt = `Categorize this tag into ONE of these categories:
 - Technology
@@ -234,7 +235,7 @@ export async function identifyTagMerges(): Promise<any[]> {
 
   if (!tags || tags.length < 5) return []
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
   const tagList = tags.map(t => t.tag).join('\n')
 
   const prompt = `Identify clusters of tags that mean the exact same thing and should be merged. 

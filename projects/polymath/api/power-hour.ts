@@ -12,22 +12,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseClient()
     console.log('[power-hour] Fetching tasks for user:', userId)
 
+    const { refresh } = req.query
+    const isRefresh = refresh === 'true'
+
     try {
-        // 1. Check for cached plan from today ( < 20 hours old to cover timezone shifts)
-        const cutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString()
+        // 1. Check for cached plan from today ( < 20 hours old )
+        // Bypass if refresh=true
+        if (!isRefresh) {
+            const cutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString()
 
-        const { data: cached, error: cacheError } = await supabase
-            .from('daily_power_hour')
-            .select('*')
-            .eq('user_id', userId)
-            .gt('created_at', cutoff)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
+            const { data: cached, error: cacheError } = await supabase
+                .from('daily_power_hour')
+                .select('*')
+                .eq('user_id', userId)
+                .gt('created_at', cutoff)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
 
-        if (cached && cached.tasks) {
-            console.log('[power-hour] Returning cached plan from:', cached.created_at)
-            return res.status(200).json({ tasks: cached.tasks, cached: true })
+            if (cached && cached.tasks) {
+                console.log('[power-hour] Returning cached plan from:', cached.created_at)
+                return res.status(200).json({ tasks: cached.tasks, cached: true })
+            }
         }
 
         // 2. No cache? Generate on the fly (and cache it)

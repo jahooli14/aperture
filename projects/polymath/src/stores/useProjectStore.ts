@@ -313,6 +313,11 @@ export const useProjectStore = create<ProjectState>()(
           // No need to re-fetch or update from result if we trust our optimistic update.
           // But strictly we should update with server response to get generated fields.
           // For speed, we'll skip re-fetching the whole list.
+
+          // Background refresh Power Hour if tasks were likely touched
+          if (data.metadata?.tasks) {
+            fetch('/api/power-hour?refresh=true').catch(() => { })
+          }
         } catch (error) {
           logger.error('Failed to update project:', error)
           // Rollback

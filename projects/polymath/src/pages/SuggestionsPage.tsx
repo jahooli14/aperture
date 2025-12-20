@@ -1,53 +1,78 @@
 /**
- * Suggestions Page - Stunning Visual Design
+ * Suggestions Page - Focused Spotlight UI
  */
 
-import { useEffect, useState, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useSuggestionStore } from '../stores/useSuggestionStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
-import { SuggestionCard } from '../components/suggestions/SuggestionCard'
-import { SuggestionDetailDialog } from '../components/suggestions/SuggestionDetailDialog'
 import { BuildProjectDialog } from '../components/suggestions/BuildProjectDialog'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
-import { Select } from '../components/ui/select'
-import { Label } from '../components/ui/label'
-import { PremiumTabs } from '../components/ui/premium-tabs'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import { Calendar, Brain, Database, Network, Workflow } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { 
+  Database, 
+  Brain,
+  X, 
+  Plus,
+  Clock, 
+  Sparkles, 
+  ChevronRight, 
+  ChevronLeft
+} from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
 import type { ProjectSuggestion } from '../types'
+import { cn } from '../lib/utils'
+import { Textarea } from '../components/ui/textarea'
 
 export function SuggestionsPage() {
   const {
     suggestions,
     loading,
     error,
-    filter,
-    sortBy,
     synthesizing,
     fetchSuggestions,
     rateSuggestion,
     buildSuggestion,
-    triggerSynthesis,
-    clearSuggestions, // Add clearSuggestions
-    setFilter,
-    setSortBy
+    triggerSynthesis
   } = useSuggestionStore()
   const { setContext } = useContextEngineStore()
 
-  const [selectedSuggestion, setSelectedSuggestion] = useState<ProjectSuggestion | null>(null)
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [feedbackMode, setFeedbackMode] = useState<'none' | 'no' | 'later' | 'yes'>('none')
+  const [rationale, setRationale] = useState('')
   const [buildDialogOpen, setBuildDialogOpen] = useState(false)
-  const [suggestionToBuild, setSuggestionToBuild] = useState<ProjectSuggestion | null>(null)
   const [progress, setProgress] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const navigate = useNavigate()
   const { addToast } = useToast()
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
+
+  // Filter for only pending suggestions for the spotlight
+  const pendingSuggestions = useMemo(() => 
+    suggestions.filter(s => s.status === 'pending'),
+    [suggestions]
+  )
+
+  const currentSuggestion = pendingSuggestions[currentIndex]
+
+  const RATIONALE_OPTIONS = {
+    no: [
+      "Not my focus right now",
+      "Too complex",
+      "Already doing something similar",
+      "Not interested in this tech"
+    ],
+    later: [
+      "Great idea, no time now",
+      "Need to learn more first",
+      "Waiting for a better moment",
+      "Save for future inspiration"
+    ]
+  }
 
   useEffect(() => {
     setContext('page', 'suggestions', 'Suggestions')
@@ -57,23 +82,51 @@ export function SuggestionsPage() {
     fetchSuggestions()
   }, [fetchSuggestions])
 
-  const handleRate = async (id: string, rating: number) => {
-    await rateSuggestion(id, rating)
+  const handleAction = (type: 'no' | 'later' | 'yes') => {
+    if (type === 'yes') {
+      setBuildDialogOpen(true)
+    } else {
+      setFeedbackMode(type)
+    }
   }
 
-  const handleBuild = async (id: string) => {
-    const suggestion = suggestions.find(s => s.id === id)
-    if (suggestion) {
-      setSuggestionToBuild(suggestion)
-      setBuildDialogOpen(true)
+  const submitFeedback = async () => {
+    if (!currentSuggestion) return
+    
+    setIsSubmitting(true)
+    try {
+      const rating = feedbackMode === 'no' ? -1 : 1
+      
+      await rateSuggestion(currentSuggestion.id, rating as -1 | 1, rationale)
+      
+      addToast({
+        title: feedbackMode === 'no' ? 'Suggestion Dismissed' : 'Saved for later',
+        description: 'Your feedback helps improve future recommendations.',
+        variant: 'default'
+      })
+
+      setFeedbackMode('none')
+      setRationale('')
+      
+      if (currentIndex >= pendingSuggestions.length - 1 && currentIndex > 0) {
+        setCurrentIndex(prev => prev - 1)
+      }
+    } catch (err) {
+      addToast({
+        title: 'Error',
+        description: 'Failed to save feedback.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleBuildConfirm = async (projectData: { title: string; description: string }) => {
-    if (!suggestionToBuild) return
+    if (!currentSuggestion) return
 
     try {
-      await buildSuggestion(suggestionToBuild.id, projectData)
+      await buildSuggestion(currentSuggestion.id, projectData)
 
       addToast({
         title: 'Project Created',
@@ -82,38 +135,22 @@ export function SuggestionsPage() {
       })
 
       setBuildDialogOpen(false)
-
-      // Navigate to projects page after short delay
-      setTimeout(() => {
-        navigate('/projects')
-      }, 1500)
+      
+      setTimeout(() => navigate('/projects'), 1000)
     } catch (error) {
       addToast({
         title: 'Failed to build project',
         description: error instanceof Error ? error.message : 'An error occurred',
         variant: 'destructive',
       })
-      throw error // Re-throw to keep dialog open
-    }
-  }
-
-  const handleViewDetail = (id: string) => {
-    const suggestion = suggestions.find(s => s.id === id)
-    if (suggestion) {
-      setSelectedSuggestion(suggestion)
-      setDetailDialogOpen(true)
     }
   }
 
   const handleSynthesize = async () => {
     try {
-      // Reset and start progress
       setProgress(0)
-
-      // Simulate progress (real synthesis takes ~20-40 seconds)
       progressInterval.current = setInterval(() => {
         setProgress(prev => {
-          // Slow down as we approach 90% to avoid completing before API
           if (prev < 50) return prev + 3
           if (prev < 70) return prev + 2
           if (prev < 90) return prev + 1
@@ -123,254 +160,319 @@ export function SuggestionsPage() {
 
       await triggerSynthesis()
 
-      // Complete progress
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
+      if (progressInterval.current) clearInterval(progressInterval.current)
       setProgress(100)
-
-      // Reset after short delay
-      setTimeout(() => setProgress(0), 500)
+      setTimeout(() => {
+        setProgress(0)
+        setCurrentIndex(0)
+      }, 500)
     } catch (error) {
-      console.error('Synthesis failed:', error)
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
+      if (progressInterval.current) clearInterval(progressInterval.current)
       setProgress(0)
     }
   }
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
-    }
-  }, [])
+  if (error && pendingSuggestions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full premium-card border-red-500/20 bg-red-500/5">
+          <CardContent className="pt-6 text-center">
+            <Database className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Error Loading Suggestions</h3>
+            <p className="text-red-400 mb-6">{error}</p>
+            <Button onClick={() => fetchSuggestions()} variant="outline" className="w-full">
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <>
-      {/* Depth background with subtle gradients */}
+    <div className="min-h-screen pb-20 relative overflow-hidden" style={{ paddingTop: '5.5rem' }}>
+      {/* Background elements */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-0 right-0 h-96 opacity-25" style={{
-          background: 'radial-gradient(ellipse at top, rgba(251, 191, 36, 0.2), transparent 70%)'
-        }} />
-        <div className="absolute bottom-0 right-1/3 w-[600px] h-[600px] opacity-20" style={{
-          background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%)'
+        <div className="absolute top-0 left-0 right-0 h-96 opacity-10" style={{
+          background: 'radial-gradient(ellipse at top, var(--premium-blue), transparent 70%)'
         }} />
       </div>
-      <motion.div
-        className="min-h-screen pb-24 relative z-10"
-        style={{ paddingTop: '5.5rem' }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.2 }}
-      >
-        {/* Header with Action */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          {/* Button row - pushes content down */}
-          <div className="flex items-center justify-end gap-3 mb-6">
-            {suggestions.length > 0 && (
-              <Button
-                onClick={() => clearSuggestions()}
-                variant="ghost"
-                size="sm"
-                className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                disabled={synthesizing}
-              >
-                Clear All ({suggestions.length})
-              </Button>
-            )}
-            <button
-              onClick={handleSynthesize}
-              disabled={synthesizing}
-              className="premium-btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed scale-on-hover"
-              style={{ borderRadius: '9999px' }}
-            >
-              {synthesizing ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent"></div>
-                  Generating...
-                </>
-              ) : (
-                'Analyze & Generate'
-              )}
-            </button>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold premium-text-platinum tracking-tight">Discovery</h1>
+            <p className="text-slate-400 text-sm">Focused suggestions for your next move</p>
           </div>
-          {/* Centered header content below button */}
-          <div className="text-center">
-            <h1 className="premium-text-platinum mb-3" style={{
-              fontSize: 'var(--premium-text-display-sm)',
-              fontWeight: 700,
-              letterSpacing: 'var(--premium-tracking-tight)'
-            }}>
-              Project Suggestions
-            </h1>
-            <p style={{
-              fontSize: 'var(--premium-text-body-lg)',
-              color: 'var(--premium-text-secondary)'
-            }}>
-              AI-generated project recommendations based on your knowledge and interests
-            </p>
-          </div>
-          {/* Progress Bar */}
+          <button
+            onClick={handleSynthesize}
+            disabled={synthesizing}
+            className="px-5 py-2.5 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-sm font-semibold hover:bg-blue-600/30 transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            {synthesizing ? <Sparkles className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {synthesizing ? 'Synthesizing...' : 'Generate New'}
+          </button>
+        </div>
+
+        {/* Progress bar for synthesis */}
+        <AnimatePresence>
           {synthesizing && (
-            <div className="flex justify-center mt-4">
-              <div className="w-[300px] h-2 rounded-full overflow-hidden" style={{
-                background: 'var(--premium-surface-2)',
-                border: '1px solid rgba(255, 255, 255, 0.08)'
-              }}>
-                <div
-                  className="h-full transition-all duration-500 ease-out"
-                  style={{
-                    width: `${Math.min(progress, 100)}%`,
-                    background: 'var(--premium-blue)',
-                    boxShadow: 'var(--premium-glow-blue)'
-                  }}
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-8"
+            >
+              <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
+                <motion.div 
+                  className="h-full bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                  style={{ width: `${progress}%` }}
                 />
               </div>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
 
-        {/* Controls */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-center mb-10">
-            <PremiumTabs
-              tabs={[
-                { id: 'pending', label: 'New' },
-                { id: 'spark', label: 'Sparks' },
-                { id: 'saved', label: 'Saved' },
-                { id: 'built', label: 'Built' },
-                { id: 'all', label: 'All' }
-              ]}
-              activeTab={filter}
-              onChange={(tabId) => setFilter(tabId as typeof filter)}
-            />
+        {loading ? (
+          <div className="premium-card p-12 flex flex-col items-center justify-center space-y-4">
+            <div className="h-12 w-12 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+            <p className="text-slate-400 animate-pulse">Scanning knowledge graph...</p>
           </div>
-
-          {/* Error Banner */}
-          {error && (
-            <Card className="mb-6 premium-glass" style={{
-              borderColor: 'rgba(239, 68, 68, 0.3)',
-              background: 'rgba(220, 38, 38, 0.1)'
-            }}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="text-sm font-semibold" style={{ color: '#fca5a5' }}>{error}</p>
-                  <Button
-                    onClick={() => fetchSuggestions()}
-                    size="sm"
-                    variant="outline"
-                    className="whitespace-nowrap"
-                  >
-                    Retry
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Loading State */}
-          {loading ? (
-            <SkeletonCard variant="grid" count={6} />
-          ) : suggestions.length === 0 ? (
-            /* Empty State */
-            <Card className="premium-card">
-              <CardContent className="py-16">
-                <div className="max-w-2xl mx-auto text-center">
-                  <div className="inline-flex items-center justify-center mb-6">
-                    <Database className="h-12 w-12" style={{ color: 'var(--premium-blue)' }} />
-                  </div>
-                  <h3 className="premium-text-platinum mb-4" style={{
-                    fontSize: 'var(--premium-text-h1)',
-                    fontWeight: 600,
-                    letterSpacing: 'var(--premium-tracking-tight)'
-                  }}>AI-Powered Project Discovery</h3>
-                  <p className="max-w-xl mx-auto mb-8" style={{
-                    fontSize: 'var(--premium-text-body-lg)',
-                    color: 'var(--premium-text-secondary)',
-                    lineHeight: '1.6'
-                  }}>
-                    Generate intelligent project recommendations by analyzing patterns across your captured thoughts, skills, and interests. The AI identifies viable connections between domains to suggest actionable projects.
-                  </p>
-
-                  {/* Feature highlights */}
-                  <div className="grid md:grid-cols-3 gap-6 mb-10">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center mb-3">
-                        <Brain className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+        ) : pendingSuggestions.length === 0 ? (
+          <EmptyState
+            icon={Database}
+            title="All caught up"
+            description="No new suggestions at the moment. Add more thoughts or trigger a new synthesis."
+            action={
+              <Button onClick={handleSynthesize} className="btn-primary rounded-full px-8">
+                Generate Now
+              </Button>
+            }
+          />
+        ) : (
+          <div className="space-y-8">
+            {/* Spotlight Card */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSuggestion.id}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 1.05, y: -20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="relative"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20 rounded-[2rem] blur-xl opacity-50" />
+                <Card className="relative bg-slate-900/80 border-white/10 backdrop-blur-xl rounded-[2rem] overflow-hidden shadow-2xl">
+                  <CardContent className="p-8 md:p-12">
+                    {/* Top Meta */}
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold uppercase tracking-wider">
+                        {currentSuggestion.is_wildcard ? '🎲 Wildcard' : 'Recommended'}
                       </div>
-                      <p className="text-sm font-medium premium-text-platinum mb-1">Content Analysis</p>
-                      <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Extracts themes and capabilities from your knowledge base
-                      </p>
+                      <div className="text-slate-500 text-xs font-medium">
+                        {currentIndex + 1} of {pendingSuggestions.length}
+                      </div>
                     </div>
 
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center mb-3">
-                        <Network className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                      </div>
-                      <p className="text-sm font-medium premium-text-platinum mb-1">Cross-Domain Synthesis</p>
-                      <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Identifies non-obvious combinations across different areas
-                      </p>
-                    </div>
-
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center mb-3">
-                        <Workflow className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                      </div>
-                      <p className="text-sm font-medium premium-text-platinum mb-1">Actionable Recommendations</p>
-                      <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Generates concrete project proposals with implementation paths
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="premium-glass-subtle rounded-lg p-4 inline-block">
-                    <p className="text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
-                      Click <span className="premium-text-platinum font-semibold">Analyze & Generate</span> above to begin
+                    {/* Title & Description */}
+                    <h2 className="text-3xl md:text-4xl font-bold premium-text-platinum mb-6 leading-tight">
+                      {currentSuggestion.title}
+                    </h2>
+                    <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-8">
+                      {currentSuggestion.description}
                     </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            /* Suggestions Grid - Bento Box Layout with Stagger Animation */
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children mt-8">
-              {suggestions.map((suggestion) => (
-                <SuggestionCard
-                  key={suggestion.id}
-                  suggestion={suggestion}
-                  onRate={handleRate}
-                  onBuild={handleBuild}
-                  onViewDetail={handleViewDetail}
+
+                    {/* Reasoning Section */}
+                    {currentSuggestion.synthesis_reasoning && (
+                      <div className="p-6 rounded-2xl bg-white/5 border border-white/10 mb-8">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Brain className="h-4 w-4 text-purple-400" />
+                          <span className="text-sm font-bold text-purple-300 uppercase tracking-wide">AI Rationale</span>
+                        </div>
+                        <p className="text-slate-400 leading-relaxed italic">
+                          "{currentSuggestion.synthesis_reasoning}"
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Novelty</div>
+                        <div className="text-lg font-bold text-blue-400">{Math.round(currentSuggestion.novelty_score * 100)}%</div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Feasibility</div>
+                        <div className="text-lg font-bold text-emerald-400">{Math.round(currentSuggestion.feasibility_score * 100)}%</div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 font-bold">Interest</div>
+                        <div className="text-lg font-bold text-purple-400">{Math.round(currentSuggestion.interest_score * 100)}%</div>
+                      </div>
+                    </div>
+
+                    {/* Capabilities Tags */}
+                    {currentSuggestion.capabilities && currentSuggestion.capabilities.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-12">
+                        {currentSuggestion.capabilities.map(cap => (
+                          <span key={cap.id} className="px-3 py-1.5 rounded-lg bg-slate-800 border border-white/5 text-xs font-semibold text-slate-400">
+                            {cap.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Main Actions */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <button
+                        onClick={() => handleAction('no')}
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-red-500/10 hover:border-red-500/30 transition-all"
+                      >
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all">
+                          <X className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-red-400">No</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleAction('later')}
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-amber-500/10 hover:border-amber-500/30 transition-all"
+                      >
+                        <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all">
+                          <Clock className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-amber-400">Maybe Later</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleAction('yes')}
+                        className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20 hover:bg-blue-600/20 hover:border-blue-500/40 transition-all"
+                      >
+                        <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-all">
+                          <Plus className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-blue-400 group-hover:text-blue-300 text-center">Add to Projects</span>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-center gap-6">
+              <button
+                onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                disabled={currentIndex === 0}
+                className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-white/5 disabled:opacity-20 transition-all"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <div className="h-1 w-24 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500/50 transition-all duration-300"
+                  style={{ width: `${((currentIndex + 1) / pendingSuggestions.length) * 100}%` }}
                 />
-              ))}
+              </div>
+              <button
+                onClick={() => setCurrentIndex(prev => Math.min(pendingSuggestions.length - 1, prev + 1))}
+                disabled={currentIndex === pendingSuggestions.length - 1}
+                className="h-12 w-12 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-white/5 disabled:opacity-20 transition-all"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
-        {/* Detail Dialog */}
-        <SuggestionDetailDialog
-          suggestion={selectedSuggestion}
-          open={detailDialogOpen}
-          onOpenChange={setDetailDialogOpen}
-          onRate={handleRate}
-          onBuild={handleBuild}
-        />
+      {/* Rationale Modal */}
+      <AnimatePresence>
+        {feedbackMode !== 'none' && feedbackMode !== 'yes' && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setFeedbackMode('none'); setRationale('') }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-md premium-card p-8 shadow-2xl"
+              style={{ background: 'var(--premium-surface-1)' }}
+            >
+              <h3 className="text-xl font-bold premium-text-platinum mb-2">
+                {feedbackMode === 'no' ? 'Dismiss Suggestion' : 'Maybe Later'}
+              </h3>
+              <p className="text-slate-400 text-sm mb-6">
+                Briefly, why isn't this right for you today? This helps refine future suggestions.
+              </p>
 
-        {/* Build Project Dialog */}
-        <BuildProjectDialog
-          suggestion={suggestionToBuild}
-          open={buildDialogOpen}
-          onOpenChange={setBuildDialogOpen}
-          onConfirm={handleBuildConfirm}
-        />
-      </motion.div>
-    </>
+              {/* Rationale Chips */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {RATIONALE_OPTIONS[feedbackMode as 'no' | 'later'].map(option => (
+                  <button
+                    key={option}
+                    onClick={() => setRationale(option)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
+                      rationale === option 
+                        ? "bg-blue-600/20 border-blue-500 text-blue-400" 
+                        : "bg-white/5 border-white/10 text-slate-400 hover:bg-white/10"
+                    )}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
+              <Textarea
+                autoFocus
+                value={rationale}
+                onChange={(e) => setRationale(e.target.value)}
+                placeholder="Or type a custom reason..."
+                className="w-full h-32 mb-6"
+              />
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => { setFeedbackMode('none'); setRationale('') }}
+                  variant="ghost"
+                  className="flex-1 rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={submitFeedback}
+                  disabled={isSubmitting || !rationale.trim()}
+                  className={cn(
+                    "flex-1 rounded-xl font-bold transition-all",
+                    feedbackMode === 'no' 
+                      ? 'bg-red-600 hover:bg-red-700 disabled:bg-red-900/50' 
+                      : 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-900/50'
+                  )}
+                >
+                  {isSubmitting ? (
+                    <div className="h-4 w-4 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+                  ) : 'Confirm'}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Build Dialog */}
+      <BuildProjectDialog
+        suggestion={currentSuggestion}
+        open={buildDialogOpen}
+        onOpenChange={setBuildDialogOpen}
+        onConfirm={handleBuildConfirm}
+      />
+    </div>
   )
 }
