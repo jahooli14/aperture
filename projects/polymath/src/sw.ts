@@ -254,7 +254,7 @@ async function syncCaptures() {
 // Helper: Open IndexedDB
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('polymath-offline', 1)
+    const request = indexedDB.open('aperture-offline', 1)
 
     request.onerror = () => reject(request.error)
     request.onsuccess = () => resolve(request.result)

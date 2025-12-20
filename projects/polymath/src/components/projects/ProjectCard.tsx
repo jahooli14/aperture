@@ -23,13 +23,13 @@ const CARD_HOVER_STYLES = {
 
 // Export colors for reuse
 export const PROJECT_COLORS: Record<string, string> = {
-  tech: '29, 78, 216',      // Blue-700 (Deep Blue)
-  art: '34, 197, 94',        // Green-500
-  writing: '103, 232, 249',  // Cyan-300 (Lighter Cyan)
-  music: '249, 115, 22',     // Orange-500
-  business: '156, 163, 175', // Gray-400
-  life: '59, 130, 246',      // Blue-500
-  default: '148, 163, 184'   // Slate-400
+  tech: 'var(--project-tech-raw)',
+  art: 'var(--project-art-raw)',
+  writing: 'var(--project-writing-raw)',
+  music: 'var(--project-music-raw)',
+  business: 'var(--project-business-raw)',
+  life: 'var(--project-life-raw)',
+  default: 'var(--project-default-raw)'
 }
 
 export function ProjectCard({ project, prominent = false }: { project: Project, prominent?: boolean }) {
@@ -57,8 +57,8 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
     }
 
     return {
-      border: `rgba(${rgb}, 0.4)`,
-      bg: `rgba(${rgb}, 0.15)`,
+      border: `rgba(${rgb}, 0.25)`,
+      bg: `rgba(${rgb}, 0.1)`,
       text: `rgb(${rgb})`,
       rgb: rgb
     }
@@ -76,16 +76,24 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block zebra-card transition-all duration-300 break-inside-avoid border-2 ${prominent ? 'p-5 scale-105' : 'p-4'}`}
+      className={`group block aperture-card transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
       style={{
-        borderColor: project.is_priority ? 'var(--zebra-accent)' : 'white',
-        backgroundColor: 'var(--zebra-black)',
-        boxShadow: project.is_priority ? 'var(--zebra-shadow-sharp)' : 'none'
+        borderColor: project.is_priority ? 'var(--brand-primary)' : theme.border,
+        background: `rgba(${theme.rgb}, 0.08)`,
+        boxShadow: project.is_priority ? `0 8px 32px rgba(${theme.rgb}, 0.2)` : 'none'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+        e.currentTarget.style.borderColor = project.is_priority ? 'var(--brand-primary)' : theme.border
       }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className="font-bold leading-tight premium-text-platinum" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
+        <h4 className="font-bold leading-tight aperture-header text-white" style={{ fontSize: prominent ? '1.125rem' : '0.875rem' }}>
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -99,7 +107,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
           >
           </button>
           {project.is_priority && (
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.text }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--brand-primary)' }}></div>
           )}
         </div>
       </div>
@@ -111,17 +119,17 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5"
             style={{
               background: `rgba(${theme.rgb}, 0.1)`,
-              border: `1px solid rgba(${theme.rgb}, 0.3)`
+              border: `1px solid rgba(${theme.rgb}, 0.2)`
             }}
           >
             <div className="mt-0.5 flex-shrink-0" style={{ color: theme.text }}>
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70" style={{ color: theme.text }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70 aperture-header" style={{ color: theme.text }}>
                 Immediate Next Step
               </p>
-              <p className="text-sm font-medium leading-snug text-gray-100 line-clamp-3">
+              <p className="text-sm font-medium leading-snug text-gray-100 line-clamp-3 aperture-body">
                 {nextTask.text}
               </p>
             </div>
@@ -130,32 +138,32 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       ) : (
         /* Fallback: Description if no next task */
         project.description && (
-          <p className={`mb-4 italic font-serif opacity-90 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
+          <p className={`mb-4 italic opacity-90 aperture-body ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`} style={{ color: `rgba(${theme.rgb}, 0.9)` }}>
             "{project.description}"
           </p>
         )
       )}
 
       {/* Footer / Meta */}
-      <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid rgba(${theme.rgb}, 0.2)` }}>
+      <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid rgba(${theme.rgb}, 0.1)` }}>
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
-            <div className="flex flex-col gap-1">
-              <div className="momentum-progress-container w-24">
+            <div className="flex flex-col gap-1 w-full">
+              <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                 <div
-                  className="momentum-progress-fill"
+                  className="h-full transition-all duration-500"
                   style={{
                     width: `${Math.min(progress, 100)}%`,
-                    backgroundColor: progress >= 80 ? 'var(--zebra-accent)' : 'white'
+                    backgroundColor: progress >= 80 ? 'var(--brand-primary)' : theme.text
                   }}
                 />
               </div>
-              <span className="text-[10px] font-black uppercase tracking-tighter text-white/40">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
                 {progress >= 80 ? 'Concept Proved' : `${Math.round(progress)}% Momentum`}
               </span>
             </div>
           ) : (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header">
               <Clock className="h-3 w-3" />
               {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>

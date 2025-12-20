@@ -4,7 +4,7 @@
  * Enhanced with intelligent caching strategies and performance optimizations
  */
 
-const CACHE_VERSION = 'polymath-v5'
+const CACHE_VERSION = 'aperture-v1'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`
 const IMAGE_CACHE = `${CACHE_VERSION}-images`
@@ -79,11 +79,11 @@ self.addEventListener('activate', (event) => {
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName.startsWith('polymath-') &&
-                     cacheName !== STATIC_CACHE &&
-                     cacheName !== RUNTIME_CACHE &&
-                     cacheName !== IMAGE_CACHE &&
-                     cacheName !== API_CACHE
+              return cacheName.startsWith('aperture-') &&
+                cacheName !== STATIC_CACHE &&
+                cacheName !== RUNTIME_CACHE &&
+                cacheName !== IMAGE_CACHE &&
+                cacheName !== API_CACHE
             })
             .map((cacheName) => {
               console.log('[SW] Deleting old cache:', cacheName)
@@ -279,7 +279,7 @@ self.addEventListener('fetch', (event) => {
                 cache.put(request, networkResponse)
               })
             }
-          }).catch(() => {})
+          }).catch(() => { })
           return cachedResponse
         }
 
@@ -414,7 +414,7 @@ async function syncPendingCaptures() {
 // IndexedDB helpers (Promise-based wrappers)
 function openIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('polymath', 1)
+    const request = indexedDB.open('aperture', 1)
 
     // Create object stores if they don't exist
     request.onupgradeneeded = (event) => {

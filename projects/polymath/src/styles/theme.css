@@ -5,12 +5,37 @@
 
 :root {
     /* Brand Core */
-    --brand-primary: var(--zebra-accent, #ffd700);
-    /* Zebra Gold as Primary Action */
-    --brand-secondary: var(--premium-blue, #3b82f6);
-    /* Premium Blue as Secondary */
+    --brand-primary-raw: 56, 189, 248;
+    /* #38bdf8 */
+    --brand-primary: rgb(var(--brand-primary-raw));
+    /* Aperture Blue/Cyan */
     --brand-bg: #0f1829;
     /* Premium Surface Base */
+
+    /* Project Types (Raw RGB for rgba usage) */
+    --project-tech-raw: 59, 130, 246;
+    /* Blue-500 */
+    --project-art-raw: 236, 72, 153;
+    /* Pink-500 (Distinct from Red/Blue) */
+    --project-writing-raw: 6, 182, 212;
+    /* Cyan-500 */
+    --project-music-raw: 239, 68, 68;
+    /* Red-500 (High Energy) */
+    --project-business-raw: 245, 158, 11;
+    /* Amber-500 */
+    --project-life-raw: 16, 185, 129;
+    /* Emerald-500 (Life/Growth) */
+    --project-default-raw: 156, 163, 175;
+    /* Gray-400 */
+
+    /* Project Types (Direct Colors) */
+    --project-tech: rgb(var(--project-tech-raw));
+    --project-art: rgb(var(--project-art-raw));
+    --project-writing: rgb(var(--project-writing-raw));
+    --project-music: rgb(var(--project-music-raw));
+    --project-business: rgb(var(--project-business-raw));
+    --project-life: rgb(var(--project-life-raw));
+    --project-default: rgb(var(--project-default-raw));
 
     /* Text Standards */
     --brand-text-primary: #ffffff;
@@ -22,22 +47,40 @@
     --brand-font-body: 'Inter', -apple-system, sans-serif;
 
     /* Layout Standards */
-    --brand-border: 1px solid rgba(255, 255, 255, 0.1);
-    --brand-border-bold: 1px solid rgba(255, 255, 255, 0.2);
+    --brand-border: 1px solid rgba(255, 255, 255, 0.08);
+    --brand-border-bold: 1px solid rgba(255, 255, 255, 0.15);
     --brand-radius: 12px;
-    --brand-glass-bg: rgba(30, 42, 88, 0.15);
-    --brand-glass-blur: blur(12px);
+    --brand-glass-bg: rgba(15, 23, 42, 0.4);
+    /* Neutral Slate-Dark */
+    --brand-glass-blur: blur(20px);
 }
 
 /* Base Styles */
 .aperture-header {
     font-family: var(--brand-font-header);
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.04em;
+    text-transform: lowercase;
 }
 
 .aperture-body {
     font-family: var(--brand-font-body);
+}
+
+/* Two-Part Header Variant */
+.section-header {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -0.04em;
+    font-family: var(--brand-font-header);
+    margin-bottom: 2rem;
+}
+
+.section-header span {
+    color: var(--brand-primary);
+    opacity: 0.8;
 }
 
 /* The "Shelf" Separator */
@@ -45,6 +88,7 @@
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     padding-top: 3rem;
     padding-bottom: 3rem;
+    margin-top: 2rem;
 }
 
 /* Unified Glass Card */

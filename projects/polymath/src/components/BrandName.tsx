@@ -31,7 +31,7 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
         </div>
       )}
       <span className="font-black">
-        APER<span className="zebra-text-accent">TURE</span>
+        APER<span style={{ color: 'var(--brand-primary)' }}>TURE</span>
       </span>
     </span>
   )

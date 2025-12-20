@@ -12,6 +12,7 @@ interface ListStore {
     createList: (input: CreateListInput) => Promise<string> // Returns ID
     fetchListItems: (listId: string) => Promise<void>
     addListItem: (input: CreateListItemInput) => Promise<void>
+    deleteListItem: (itemId: string, listId: string) => Promise<void>
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
 }
 
@@ -156,5 +157,35 @@ export const useListStore = create<ListStore>((set, get) => ({
 
         // TODO: Implement API call for update
         // For now this serves the UI demo
+    },
+
+    deleteListItem: async (itemId, listId) => {
+        const previousItems = get().currentListItems
+        const previousLists = get().lists
+
+        // Optimistic Delete
+        set(state => ({
+            currentListItems: state.currentListItems.filter(i => i.id !== itemId),
+            lists: state.lists.map(l =>
+                l.id === listId
+                    ? { ...l, item_count: Math.max(0, (l.item_count || 0) - 1) }
+                    : l
+            )
+        }))
+
+        try {
+            const response = await fetch(`/api/list-items?id=${itemId}`, {
+                method: 'DELETE'
+            })
+
+            if (!response.ok) throw new Error('Failed to delete item')
+        } catch (error: any) {
+            // Revert
+            set({
+                currentListItems: previousItems,
+                lists: previousLists,
+                error: error.message
+            })
+        }
     }
 }))

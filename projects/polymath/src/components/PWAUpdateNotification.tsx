@@ -119,7 +119,7 @@ export function PWAUpdateNotification() {
                 Update Available
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>
-                A new version of Clandestined is ready. Refresh to get the latest features and improvements.
+                A new version of Aperture is ready. Refresh to get the latest features and improvements.
               </p>
             </div>
           </div>

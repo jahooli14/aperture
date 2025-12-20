@@ -6,6 +6,8 @@ import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
 import { useProjectStore } from '../../stores/useProjectStore'
 
+import { PROJECT_COLORS } from '../projects/ProjectCard'
+
 interface PowerTask {
     project_id: string
     project_title: string
@@ -30,6 +32,27 @@ export function PowerHourHero() {
     // Get all projects for the manual picker
     const { allProjects, updateProject } = useProjectStore()
     const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
+
+    const getTheme = (type: string, title: string) => {
+        const t = type?.toLowerCase().trim() || ''
+        let rgb = PROJECT_COLORS[t]
+        if (!rgb) {
+            const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
+            let hash = 0
+            for (let i = 0; i < title.length; i++) {
+                hash = title.charCodeAt(i) + ((hash << 5) - hash)
+            }
+            rgb = PROJECT_COLORS[keys[Math.abs(hash) % keys.length]]
+        }
+        return {
+            text: `rgb(${rgb})`,
+            rgb: rgb
+        }
+    }
+
+    const mainTask = tasks[selectedIndex] || tasks[0]
+    const currentProject = allProjects.find(p => p.id === mainTask?.project_id)
+    const theme = getTheme(currentProject?.type || 'other', mainTask?.project_title || '')
 
     async function fetchPowerHour(refreshProjectId?: string) {
         if (refreshProjectId) setIsRefreshing(true)
@@ -102,8 +125,6 @@ export function PowerHourHero() {
         </div>
     )
 
-    const mainTask = tasks[selectedIndex] || tasks[0]
-
     const handleStartPowerHour = async () => {
         haptic.heavy()
         const project = allProjects.find(p => p.id === mainTask.project_id)
@@ -146,10 +167,13 @@ export function PowerHourHero() {
 
     return (
         <div className="relative mb-12 group/hero">
-            <div className="zebra-card p-0 rounded-2xl overflow-hidden border-2 border-white relative">
+            <div className="aperture-hero-card p-0 rounded-2xl overflow-hidden relative">
                 {/* Header Overlays */}
                 <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
-                    <div className="bg-white text-black px-4 py-1 font-black text-[10px] uppercase tracking-widest">
+                    <div
+                        className="text-black px-4 py-1 font-black text-[10px] uppercase tracking-widest aperture-header"
+                        style={{ backgroundColor: theme.text }}
+                    >
                         Power Hour
                     </div>
                 </div>
@@ -157,7 +181,7 @@ export function PowerHourHero() {
                 <div className="absolute top-4 right-4 z-20 flex gap-2">
                     <button
                         onClick={() => setShowProjectPicker(!showProjectPicker)}
-                        className="bg-black/80 backdrop-blur-md border border-white/20 text-white p-2 hover:bg-white hover:text-black transition-all group/picker"
+                        className="bg-white/5 backdrop-blur-md border border-white/10 text-white p-2 rounded-lg hover:bg-white/10 transition-all group/picker"
                         title="Change Project Focus"
                     >
                         {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
@@ -171,31 +195,37 @@ export function PowerHourHero() {
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            className="absolute top-16 right-4 z-30 w-64 bg-black border-2 border-white shadow-2xl max-h-80 overflow-y-auto"
+                            className="absolute top-16 right-4 z-30 w-72 aperture-card shadow-2xl max-h-80 overflow-y-auto"
                         >
-                            <div className="p-3 bg-zebra-gray border-b border-white/10 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                            <div className="p-3 bg-white/5 border-b border-white/10 text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
                                 Select Project Target
                             </div>
-                            {activeProjects.map(p => (
-                                <button
-                                    key={p.id}
-                                    onClick={() => {
-                                        haptic.light()
-                                        fetchPowerHour(p.id)
-                                    }}
-                                    className="w-full p-4 text-left hover:bg-white hover:text-black transition-colors border-b border-white/5 last:border-0 group"
-                                >
-                                    <div className="font-black uppercase italic text-sm group-hover:underline">{p.title}</div>
-                                    <div className="text-[10px] opacity-60 line-clamp-1">{p.description}</div>
-                                </button>
-                            ))}
+                            {activeProjects.map(p => {
+                                const pTheme = getTheme(p.type || 'other', p.title)
+                                return (
+                                    <button
+                                        key={p.id}
+                                        onClick={() => {
+                                            haptic.light()
+                                            fetchPowerHour(p.id)
+                                        }}
+                                        className="w-full p-4 text-left hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 group"
+                                    >
+                                        <div className="font-bold text-sm group-hover:text-white mt-1 flex items-center gap-2 aperture-header uppercase">
+                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pTheme.text }} />
+                                            {p.title}
+                                        </div>
+                                        <div className="text-[10px] opacity-60 line-clamp-1 pl-3.5 aperture-body">{p.description}</div>
+                                    </button>
+                                )
+                            })}
                         </motion.div>
                     )}
                 </AnimatePresence>
 
-                <div className="grid grid-cols-1 md:grid-cols-2">
+                <div className="flex flex-col md:flex-row relative">
                     {/* Main Action Area */}
-                    <div className="p-8 pb-10 md:p-12 relative">
+                    <div className="p-6 md:p-8 flex-1 relative z-10">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={mainTask.project_id + mainTask.task_title}
@@ -204,35 +234,45 @@ export function PowerHourHero() {
                                 exit={{ opacity: 0, x: 20 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <div className="text-zebra-accent mb-3 flex items-center gap-2 font-black text-xs uppercase tracking-widest">
-                                    <Zap className="h-3 w-3 fill-current" />
-                                    <span>{mainTask.project_title}</span>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest aperture-header" style={{ color: theme.text }}>
+                                        <Zap className="h-3 w-3 fill-current" />
+                                        <span>{mainTask.project_title}</span>
+                                    </div>
+                                    <div className="md:hidden flex items-center gap-1 text-[var(--brand-text-muted)] opacity-60">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest aperture-header">Impact</span>
+                                        <span className="text-xs font-bold aperture-header text-white">{Math.round(mainTask.impact_score * 100)}%</span>
+                                    </div>
                                 </div>
 
-                                <h1 className="text-3xl md:text-5xl font-black mb-6 uppercase leading-[0.9] italic tracking-tighter text-white">
+                                <h1 className="text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2">
                                     {mainTask.task_title}
                                 </h1>
 
-                                <p className="text-gray-400 mb-10 max-w-sm text-sm leading-relaxed">
+                                <p className="text-[var(--brand-text-secondary)] mb-6 text-sm leading-relaxed aperture-body line-clamp-2">
                                     {mainTask.task_description}
                                 </p>
 
-                                <div className="flex flex-wrap gap-4">
+                                <div className="flex flex-wrap gap-3">
                                     <button
                                         onClick={handleStartPowerHour}
-                                        className="zebra-btn flex items-center gap-3 group px-8 py-4"
+                                        className="flex items-center gap-2 group px-6 py-3 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        style={{
+                                            background: theme.text,
+                                            color: 'black',
+                                            boxShadow: `0 8px 24px rgba(${theme.rgb}, 0.2)`
+                                        }}
                                     >
-                                        <Play className="h-4 w-4 fill-current" />
-                                        <span className="text-sm">Start Power Hour</span>
-                                        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                        <Play className="h-3.5 w-3.5 fill-current" />
+                                        <span className="text-xs uppercase tracking-widest aperture-header">Start</span>
                                     </button>
 
                                     {mainTask.fuel_id && (
                                         <button
                                             onClick={() => navigate(`/reading/${mainTask.fuel_id}`)}
-                                            className="flex items-center gap-2 px-5 py-3 border border-white/20 hover:border-white transition-colors uppercase text-[10px] font-black tracking-widest bg-black/50 backdrop-blur-sm text-white"
+                                            className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header"
                                         >
-                                            <BookOpen className="h-4 w-4" />
+                                            <BookOpen className="h-3.5 w-3.5" />
                                             <span>Read Fuel</span>
                                         </button>
                                     )}
@@ -241,53 +281,58 @@ export function PowerHourHero() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Stats Area */}
-                    <div className="bg-zebra flex items-center justify-center p-8 md:p-12 border-t md:border-t-0 md:border-l border-white/20 relative overflow-hidden">
-                        <div className="absolute top-4 right-4 text-white/40 flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest italic">60m Cap</span>
+                    {/* Stats Area - Side Panel (Desktop Only) */}
+                    <div className="hidden md:flex flex-col justify-center items-center p-6 border-l border-white/5 relative w-48 bg-white/[0.02]">
+                        {/* Aesthetic Grid Mask */}
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+                            backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                            backgroundSize: '16px 16px',
+                            maskImage: 'linear-gradient(to bottom, black, transparent)'
+                        }} />
+
+                        <div className="text-center relative z-10">
+                            <div className="text-5xl font-bold mb-1 lining-nums text-white aperture-header">
+                                {Math.round(mainTask.impact_score * 100)}<span className="text-xl opacity-50">%</span>
+                            </div>
+                            <div className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-40 text-white aperture-header">
+                                Momentum
+                            </div>
                         </div>
 
-                        <div className="text-center relative z-10 transition-transform group-hover/hero:scale-110 duration-700">
-                            <div className="text-7xl md:text-8xl font-black mb-2 lining-nums italic tracking-tighter text-white">
-                                {Math.round(mainTask.impact_score * 100)}%
+                        <div className="mt-4 pt-4 border-t border-white/5 w-full flex justify-center text-white/30">
+                            <div className="flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest aperture-header">60m</span>
                             </div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 text-white/60">
-                                Momentum Delta
-                            </div>
-                        </div>
-
-                        {/* Aesthetic Stripes */}
-                        <div className="absolute inset-0 opacity-5 pointer-events-none flex flex-col gap-4 p-4 transform rotate-12">
-                            {[1, 2, 3, 4, 5, 6].map(i => (
-                                <div key={i} className="w-[200%] h-4 bg-white" />
-                            ))}
                         </div>
                     </div>
                 </div>
 
                 {/* Alternative Toggle Bar */}
                 {tasks.length > 1 && (
-                    <div className="border-t border-white/10 bg-black/40 backdrop-blur-xl p-2 flex gap-2">
-                        {tasks.map((task, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => {
-                                    haptic.light()
-                                    setSelectedIndex(idx)
-                                }}
-                                className={`flex-1 flex items-center gap-3 p-3 transition-all ${selectedIndex === idx
-                                    ? 'bg-white text-black'
-                                    : 'hover:bg-white/5 text-gray-500'
-                                    }`}
-                            >
-                                <span className={`font-black italic text-xs lining-nums ${selectedIndex === idx ? 'text-black' : 'text-gray-500'}`}>0{idx + 1}</span>
-                                <div className={`text-[10px] font-black uppercase tracking-tighter truncate max-w-[120px] ${selectedIndex === idx ? 'text-black' : 'text-gray-500'}`}>
-                                    {task.project_title}
-                                </div>
-                                {selectedIndex === idx && <div className="ml-auto w-1 h-1 bg-black rounded-full" />}
-                            </button>
-                        ))}
+                    <div className="border-t border-white/10 bg-black/20 backdrop-blur-xl p-2 flex gap-2">
+                        {tasks.map((task, idx) => {
+                            const tTheme = getTheme(allProjects.find(p => p.id === task.project_id)?.type || 'other', task.project_title)
+                            return (
+                                <button
+                                    key={idx}
+                                    onClick={() => {
+                                        haptic.light()
+                                        setSelectedIndex(idx)
+                                    }}
+                                    className={`flex-1 flex items-center gap-3 p-3 rounded-xl transition-all ${selectedIndex === idx
+                                        ? 'bg-white/10 text-white shadow-lg'
+                                        : 'hover:bg-white/5 text-[var(--brand-text-muted)]'
+                                        }`}
+                                >
+                                    <span className={`font-bold text-xs aperture-header ${selectedIndex === idx ? '' : 'opacity-40'}`} style={{ color: selectedIndex === idx ? tTheme.text : 'inherit' }}>0{idx + 1}</span>
+                                    <div className={`text-[10px] font-bold uppercase tracking-tight truncate max-w-[120px] aperture-header ${selectedIndex === idx ? 'text-white' : ''}`}>
+                                        {task.project_title}
+                                    </div>
+                                    {selectedIndex === idx && <div className="ml-auto w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: tTheme.text }} />}
+                                </button>
+                            )
+                        })}
                     </div>
                 )}
             </div>
