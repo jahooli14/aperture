@@ -119,20 +119,14 @@ function GetInspirationSection({
     return 'moderate'
   })()
 
-  // Reusable Glass Card Style
-  const glassCardStyle = (rgb: string = '59, 130, 246') => ({
-    background: `linear-gradient(135deg, rgba(${rgb}, 0.15), rgba(${rgb}, 0.05))`,
-    boxShadow: `0 4px 16px rgba(${rgb}, 0.1)`,
-    borderColor: `rgba(${rgb}, 0.2)`
-  })
 
-  // Theme helper for Spark
+  // Theme helper for Cards (Standardized)
   const getTheme = (type: string, title: string) => {
     const t = type?.toLowerCase().trim() || ''
 
     let rgb = PROJECT_COLORS[t]
 
-    // Deterministic fallback
+    // Deterministic fallback if type is unknown or missing
     if (!rgb) {
       const keys = Object.keys(PROJECT_COLORS).filter(k => k !== 'default')
       let hash = 0
@@ -143,8 +137,8 @@ function GetInspirationSection({
     }
 
     return {
-      borderColor: `rgba(${rgb}, 0.2)`,
-      backgroundColor: `rgba(${rgb}, 0.1)`,
+      borderColor: `rgba(${rgb}, 0.25)`,
+      backgroundColor: `rgba(${rgb}, 0.08)`,
       textColor: `rgb(${rgb})`,
       rgb: rgb
     }
@@ -152,9 +146,9 @@ function GetInspirationSection({
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold aperture-header">
-          Get <span className="text-[var(--brand-secondary)]">inspiration</span>
+      <div className="mb-0">
+        <h2 className="section-header">
+          get <span>inspiration</span>
         </h2>
       </div>
 
@@ -171,22 +165,52 @@ function GetInspirationSection({
           >
             <Link
               to={inspiration.url || '/projects'}
-              className="group block p-5 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
-              style={glassCardStyle('139, 92, 246')} // Violet/Purple for thought/article - keep specialized
+              className="group block p-6 rounded-2xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
+              style={{
+                background: inspiration.type === 'project'
+                  ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).backgroundColor
+                  : 'rgba(255, 255, 255, 0.03)',
+                borderColor: inspiration.type === 'project'
+                  ? getTheme(projects.find(p => p.id === inspiration.url?.split('/').pop())?.type || 'other', inspiration.title).borderColor
+                  : 'rgba(255, 255, 255, 0.05)'
+              }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.1))`
+                const projId = inspiration.url?.split('/').pop()
+                if (inspiration.type === 'project') {
+                  const project = projects.find(p => p.id === projId)
+                  const theme = getTheme(project?.type || 'other', inspiration.title)
+                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
+                } else {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))`
+                const projId = inspiration.url?.split('/').pop()
+                if (inspiration.type === 'project') {
+                  const project = projects.find(p => p.id === projId)
+                  const theme = getTheme(project?.type || 'other', inspiration.title)
+                  e.currentTarget.style.background = theme.backgroundColor
+                  e.currentTarget.style.borderColor = theme.borderColor
+                } else {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'
+                }
               }}
             >
               <div className="relative z-10 flex-1 flex flex-col h-full">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
-                    backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                    color: 'rgb(167, 139, 250)',
-                    borderColor: `rgba(139, 92, 246, 0.3)`
-                  }}>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header"
+                    style={(() => {
+                      const projId = inspiration.url?.split('/').pop()
+                      const project = projects.find(p => p.id === projId)
+                      const theme = getTheme(project?.type || 'other', inspiration.title)
+                      return {
+                        borderColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.3)` : 'rgba(var(--brand-primary-raw), 0.3)',
+                        color: inspiration.type === 'project' ? theme.textColor : 'var(--brand-primary)',
+                        backgroundColor: inspiration.type === 'project' ? `rgba(${theme.rgb}, 0.1)` : 'rgba(var(--brand-primary-raw), 0.1)'
+                      }
+                    })()}
+                  >
                     Recommended
                   </span>
                 </div>
@@ -198,18 +222,17 @@ function GetInspirationSection({
                   {inspiration.reasoning}
                 </p>
 
-                <div className="p-3 rounded-lg mt-auto" style={{
-                  backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                  border: `1px solid rgba(139, 92, 246, 0.3)`
-                }}>
+                <div className="p-4 rounded-xl mt-auto bg-white/5 border border-white/10">
                   {inspiration.type === 'project' && (() => {
                     const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
                     const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
                     if (nextT) {
                       return (
                         <>
-                          <p className="text-[10px] font-bold mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
-                          <p className="text-sm text-gray-200 line-clamp-2">{nextT.text}</p>
+                          <>
+                            <p className="text-[10px] font-bold mb-1 text-[var(--brand-primary)] aperture-header uppercase tracking-wider">NEXT STEP</p>
+                            <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextT.text}</p>
+                          </>
                         </>
                       )
                     }
@@ -249,15 +272,17 @@ function GetInspirationSection({
                 className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
                 onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
                 style={{
-                  background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
-                  boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.1)`,
+                  background: theme.backgroundColor,
+                  boxShadow: `0 8px 24px rgba(${theme.rgb}, 0.1)`,
                   borderColor: theme.borderColor
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
+                  e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                  e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
+                  e.currentTarget.style.background = theme.backgroundColor
+                  e.currentTarget.style.borderColor = theme.borderColor
                 }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
@@ -314,33 +339,18 @@ function GetInspirationSection({
 
       </div>
 
-      {/* Suggestion Call to Action - Footer */}
-      <div className="mt-4">
-        {hasPendingSuggestions ? (
-          <Link
-            to="/suggestions"
-            className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{
-              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.1))',
-              color: '#22d3ee', // Cyan-400
-              border: '1px solid rgba(6, 182, 212, 0.3)'
-            }}
-          >
-            <Zap className="inline h-4 w-4 mr-2" />
-            {pendingSuggestionsCount} {pendingSuggestionsCount === 1 ? 'Idea' : 'Ideas'} Waiting to be reviewed
-            <ArrowRight className="inline h-4 w-4 ml-2" />
-          </Link>
-        ) : (
-          <Link
-            to="/suggestions"
-            className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5 active:scale-[0.99]"
-            style={{
-              color: 'var(--premium-cyan, #06b6d4)'
-            }}
-          >
-            See all project suggestions <ArrowRight className="inline h-4 w-4 ml-1" />
-          </Link>
-        )}
+      <div className="mt-6">
+        <Link
+          to="/suggestions"
+          className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
+        >
+          <Zap className="h-4 w-4" />
+          {hasPendingSuggestions
+            ? `${pendingSuggestionsCount} ${pendingSuggestionsCount === 1 ? 'Idea' : 'Ideas'} Waiting to be reviewed`
+            : "See all project suggestions"
+          }
+          <ArrowRight className="h-4 w-4 ml-1" />
+        </Link>
       </div>
     </section>
   )
@@ -477,19 +487,19 @@ function InsightsSection() {
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'evolution': return <TrendingUp className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-      case 'pattern': return <Zap className="h-5 w-5" style={{ color: 'var(--premium-indigo)' }} />
-      case 'collision': return <AlertCircle className="h-5 w-5" style={{ color: 'var(--premium-amber)' }} />
-      case 'opportunity': return <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-emerald)' }} />
-      default: return <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-text-tertiary)' }} />
+      case 'evolution': return <TrendingUp className="h-5 w-5 text-[var(--brand-primary)]" />
+      case 'pattern': return <Zap className="h-5 w-5 text-[var(--brand-primary)]" />
+      case 'collision': return <AlertCircle className="h-5 w-5 text-amber-400" />
+      case 'opportunity': return <Lightbulb className="h-5 w-5 text-emerald-400" />
+      default: return <Lightbulb className="h-5 w-5 text-slate-400" />
     }
   }
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-bold aperture-header">
-          Your <span className="text-[var(--brand-secondary)]">insights</span>
+      <div className="flex items-center justify-between mb-0">
+        <h2 className="section-header">
+          your <span>insights</span>
         </h2>
         <button
           onClick={() => loadInsights(true)}
@@ -529,10 +539,9 @@ function InsightsSection() {
             <button
               key={index}
               onClick={() => setSelectedInsight(insight)}
-              className="w-full text-left p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="w-full text-left p-5 rounded-2xl transition-all hover:border-white/20 active:scale-[0.99] aperture-card mt-2"
               style={{
-                background: 'var(--premium-bg-3)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+                boxShadow: '0 4px 24px rgba(0, 0, 0, 0.4)'
               }}
             >
               <div className="flex items-start gap-3">
@@ -555,10 +564,9 @@ function InsightsSection() {
           {insights.length > 2 && (
             <button
               onClick={() => navigate('/insights')}
-              className="block w-full text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-              style={{ color: 'var(--premium-blue)' }}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold transition-all hover:bg-white/10 border border-white/5 text-[var(--brand-primary)] aperture-header"
             >
-              View All Insights ({insights.length}) <ArrowRight className="inline h-4 w-4 ml-1" />
+              View All Insights ({insights.length}) <ArrowRight className="h-4 w-4 ml-1" />
             </button>
           )}
         </div>
@@ -911,16 +919,11 @@ export function HomePage() {
           )}
         </AnimatePresence>
 
-        {/* Aperture Power Hour - The Hero Engine */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-          <PowerHourHero />
-        </section>
-
         {/* 1. ADD SOMETHING NEW */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 aperture-shelf">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold aperture-header">
-              Add something <span className="text-[var(--brand-secondary)]">new</span>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold aperture-header text-white/50 uppercase tracking-widest text-xs">
+              Quick Actions
             </h2>
           </div>
 
@@ -932,42 +935,47 @@ export function HomePage() {
                 window.dispatchEvent(new CustomEvent('openVoiceCapture'))
               }}
               className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--premium-bg-3)' }}
+              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
               title="Voice Note"
             >
-              <Mic className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+              <Mic className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             </button>
 
             {/* Written Thought */}
             <button
               onClick={() => setCreateThoughtOpen(true)}
               className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--premium-bg-3)' }}
+              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
               title="Thought"
             >
-              <Brain className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+              <Brain className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             </button>
 
             {/* Article */}
             <button
               onClick={() => setSaveArticleOpen(true)}
               className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--premium-bg-3)' }}
+              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
               title="Article"
             >
-              <FileText className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+              <FileText className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             </button>
 
             {/* Project */}
             <button
               onClick={() => setCreateProjectOpen(true)}
               className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{ background: 'var(--premium-bg-3)' }}
+              style={{ background: 'var(--brand-glass-bg)', border: '1px solid rgba(255,255,255,0.05)' }}
               title="Project"
             >
-              <Layers className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+              <Layers className="h-6 w-6" style={{ color: 'var(--brand-primary)' }} />
             </button>
           </div>
+        </section>
+
+        {/* Aperture Power Hour - The Hero Engine */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 aperture-shelf">
+          <PowerHourHero />
         </section>
 
         {/* Drift Mode Overlay */}
@@ -1002,9 +1010,9 @@ export function HomePage() {
 
         {/* 6. EXPLORE (Bottom Links) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold aperture-header">
-              Or just <span className="text-[var(--brand-secondary)]">explore</span>
+          <div className="mb-0">
+            <h2 className="section-header">
+              or just <span>explore</span>
             </h2>
           </div>
 
@@ -1014,17 +1022,16 @@ export function HomePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="aperture-card p-6 relative overflow-hidden mb-6"
+              className="aperture-card p-6 relative overflow-hidden mb-6 bg-white/[0.03] border-white/5"
               style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
-                boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)'
               }}
             >
               {/* Ambient glow effect */}
               <div
-                className="absolute inset-0 opacity-15"
+                className="absolute inset-0 opacity-5"
                 style={{
-                  background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
+                  background: 'radial-gradient(circle at 30% 30%, var(--brand-primary), transparent 60%)',
                   pointerEvents: 'none'
                 }}
               />
@@ -1065,21 +1072,17 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                    background: 'rgba(99, 102, 241, 0.1)', // Indigo for sleep/dreams
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(99, 102, 241, 0.2)'
-                  }}>
-                    <Moon className="h-5 w-5" style={{ color: '#818cf8' }} />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                    <Moon className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Bedtime ideas</h3>
-                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <p className="text-sm aperture-body text-slate-400">
                       Creative inspiration for sleep
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
 
@@ -1096,21 +1099,17 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                    background: 'rgba(99, 102, 241, 0.1)', // Indigo
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(99, 102, 241, 0.2)'
-                  }}>
-                    <Wind className="h-5 w-5" style={{ color: '#818cf8' }} />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                    <Wind className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Drift Mode</h3>
-                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <p className="text-sm aperture-body text-slate-400">
                       Mental reset & hypnagogic insights
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </button>
 
@@ -1127,21 +1126,17 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)'
-                  }}>
-                    <Lightbulb className="h-5 w-5" style={{ color: 'var(--brand-secondary)' }} />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                    <Lightbulb className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
-                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <p className="text-sm aperture-body text-slate-400">
                       AI recommendations
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-secondary)' }} />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
 
@@ -1158,21 +1153,17 @@ export function HomePage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)'
-                  }}>
-                    <TrendingUp className="h-5 w-5" style={{ color: 'var(--brand-secondary)' }} />
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1 bg-white/5 border border-white/10">
+                    <TrendingUp className="h-5 w-5 text-slate-400" />
                   </div>
                   <div>
                     <h3 className="font-bold mb-1 aperture-header">Analysis</h3>
-                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                    <p className="text-sm aperture-body text-slate-400">
                       Patterns & Insights
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-secondary)' }} />
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all text-[var(--brand-primary)]" />
               </div>
             </Link>
           </div>

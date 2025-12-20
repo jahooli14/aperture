@@ -1,6 +1,6 @@
 /**
  * Welcome Modal Component
- * Shown to first-time users to explain Clandestined and offer demo data
+ * Shown to first-time users to explain Aperture and offer demo data
  */
 
 import { useState } from 'react'

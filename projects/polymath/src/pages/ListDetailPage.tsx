@@ -97,7 +97,20 @@ export default function ListDetailPage() {
 
                                 {/* Hover Actions */}
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {/* Actions placeholder */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            // Handle delete
+                                            const { deleteListItem } = useListStore.getState()
+                                            if (item.list_id && item.id) {
+                                                deleteListItem(item.id, item.list_id)
+                                            }
+                                        }}
+                                        className="p-1.5 bg-black/50 hover:bg-black/80 backdrop-blur-md rounded-full text-zinc-400 hover:text-red-400 transition-colors"
+                                        title="Delete Item"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
                             </motion.div>
                         ))}

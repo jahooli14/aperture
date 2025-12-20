@@ -56,8 +56,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
     }
 
     return {
-      borderColor: `rgba(${rgb}, 0.4)`,
-      bgGradient: `linear-gradient(135deg, rgba(${rgb}, 0.20) 0%, rgba(${rgb}, 0.05) 100%)`,
+      borderColor: `rgba(${rgb}, 0.25)`,
+      bg: `rgba(${rgb}, 0.1)`,
       textColor: `rgb(${rgb})`,
       rgb: rgb
     }
@@ -75,28 +75,26 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block aperture-card transition-all duration-300 break-inside-avoid ${prominent ? 'p-5 scale-[1.02]' : 'p-4'}`}
       style={{
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-        borderColor: theme.borderColor,
-        background: theme.bgGradient
+        boxShadow: prominent || project.is_priority ? `0 12px 40px rgba(${theme.rgb}, 0.2)` : '0 4px 12px rgba(0, 0, 0, 0.2)',
+        borderColor: prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor,
+        background: `rgba(${theme.rgb}, 0.08)`
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25) 0%, rgba(${theme.rgb}, 0.1) 100%)`
-        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.5)`
+        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.4)`
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `0 12px 32px rgba(${theme.rgb}, 0.15)`
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = theme.bgGradient
-        e.currentTarget.style.borderColor = theme.borderColor
+        e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+        e.currentTarget.style.borderColor = prominent || project.is_priority ? 'var(--brand-primary)' : theme.borderColor
         e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)'
       }}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
-        <h4 className={`premium-text-platinum font-bold leading-tight ${prominent ? 'text-lg' : 'text-sm'}`}>
+        <h4 className={`text-white font-bold leading-tight aperture-header ${prominent ? 'text-lg' : 'text-sm'}`}>
           {project.title}
         </h4>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -111,14 +109,14 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
           >
           </button>
           {project.is_priority && (
-            <Star className="h-4 w-4 fill-current" style={{ color: theme.textColor }} />
+            <Star className="h-4 w-4 fill-current text-[var(--brand-primary)]" />
           )}
         </div>
       </div>
 
       {/* Description */}
       {project.description && (
-        <p className={`text-gray-400 mb-4 italic font-serif opacity-90 ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}>
+        <p className={`text-[var(--brand-text-secondary)] mb-4 italic aperture-body ${prominent ? 'text-sm line-clamp-3' : 'text-xs line-clamp-4'}`}>
           "{project.description}"
         </p>
       )}
@@ -126,9 +124,9 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
       {/* Next Action (The "Unblocker") */}
       {nextTask && (
         <div
-          className={`rounded-lg p-3 mb-3 flex items-start gap-3 transition-colors`}
+          className={`rounded-xl p-3 mb-3 flex items-start gap-3 transition-colors`}
           style={{
-            backgroundColor: `rgba(${theme.rgb}, 0.08)`,
+            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
             border: `1px solid rgba(${theme.rgb}, 0.2)`
           }}
         >
@@ -136,8 +134,8 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
             <CheckCircle2 className="h-4 w-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-0.5">Next Step</p>
-            <p className={`text-sm font-medium text-gray-200 line-clamp-2`}>
+            <p className="text-[10px] font-bold text-[var(--brand-text-muted)] uppercase tracking-wider mb-0.5 aperture-header">Next Step</p>
+            <p className={`text-sm font-medium text-gray-100 line-clamp-2 aperture-body`}>
               {nextTask.text}
             </p>
           </div>
@@ -149,19 +147,19 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
             <div className="flex items-center gap-2">
-              <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1 w-16 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full"
                   style={{
                     width: `${progress}%`,
-                    background: `linear-gradient(90deg, rgba(${theme.rgb}, 0.5), rgba(${theme.rgb}, 1))`
+                    background: theme.textColor
                   }}
                 />
               </div>
-              <span className="text-xs text-gray-500">{completedTasks}/{totalTasks}</span>
+              <span className="text-[10px] font-bold text-[var(--brand-text-muted)] aperture-header uppercase tracking-wider">{completedTasks}/{totalTasks}</span>
             </div>
           ) : (
-            <span className="text-xs text-gray-500 flex items-center gap-1">
+            <span className="text-[10px] font-bold text-[var(--brand-text-muted)] flex items-center gap-1 aperture-header uppercase tracking-wider">
               <Clock className="h-3 w-3" />
               {new Date(project.last_active || project.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </span>
@@ -169,7 +167,7 @@ function ProjectCard({ project, prominent = false }: { project: Project, promine
         </div>
 
         {prominent && (
-          <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-blue-500 group-hover:text-white transition-colors text-gray-500">
+          <div className="p-1.5 rounded-full bg-white/5 group-hover:bg-[var(--brand-secondary)] group-hover:text-black transition-colors text-[var(--brand-secondary)]">
             <ArrowRight className="h-4 w-4" />
           </div>
         )}
@@ -189,7 +187,7 @@ export function ProjectsPageCarousel({
 
   // Categorization logic moved to parent (ProjectsPage)
 
-  if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading dashboard...</div>
+  if (loading) return <div className="p-8 text-center text-[var(--brand-text-muted)] animate-pulse aperture-header uppercase tracking-widest text-xs">Loading dashboard...</div>
 
   return (
     <div className="space-y-8 pb-20">
@@ -198,7 +196,7 @@ export function ProjectsPageCarousel({
       {activeList.length > 0 && (
         <section>
           <div className="mb-4 px-1">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Active Focus</h3>
+            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">Active Focus</h3>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -219,7 +217,7 @@ export function ProjectsPageCarousel({
       {drawerList.length > 0 && (
         <section>
           <div className="mb-4 px-1 mt-8 border-t border-white/5 pt-8">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">The Drawer</h3>
+            <h3 className="text-xs font-bold text-[var(--brand-text-muted)] uppercase tracking-widest aperture-header">The Drawer</h3>
           </div>
 
           <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
@@ -239,7 +237,7 @@ export function ProjectsPageCarousel({
       )}
 
       {activeList.length === 0 && drawerList.length === 0 && (
-        <div className="text-center py-20 text-gray-500">
+        <div className="text-center py-20 text-[var(--brand-text-muted)] aperture-body italic">
           <p>No projects yet. Capture a thought to start.</p>
         </div>
       )}

@@ -78,7 +78,8 @@ export function FocusStream() {
         }
 
         return {
-            borderColor: `rgba(${rgb}, 0.3)`,
+            borderColor: `rgba(${rgb}, 0.25)`,
+            backgroundColor: `rgba(${rgb}, 0.08)`,
             textColor: `rgb(${rgb})`,
             rgb: rgb
         }
@@ -90,184 +91,165 @@ export function FocusStream() {
 
     return (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-            <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-                background: 'var(--premium-bg-2)',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-            }}>
-                <div className="mb-5">
-                    <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                        Keep the <span style={{ color: 'var(--premium-blue)' }}>momentum</span>
-                    </h2>
-                </div>
+            <div className="mb-0">
+                <h2 className="section-header">
+                    keep the <span>momentum</span>
+                </h2>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Card 0: Priority Project */}
-                    {priorityProject && (() => {
-                        const theme = getTheme(priorityProject.type || 'other', priorityProject.title)
-                        const nextTask = (priorityProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
-                        return (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
-                                onClick={() => navigate(`/projects/${priorityProject.id}`)}
-                                style={{
-                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
-                                    boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
-                                    borderColor: theme.borderColor
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
-                                }}
-                            >
-                                <div className="relative z-10 flex-1">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
-                                            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                            color: theme.textColor,
-                                            borderColor: `rgba(${theme.rgb}, 0.3)`
-                                        }}>
-                                            Priority
-                                        </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card 0: Priority Project */}
+                {priorityProject && (() => {
+                    const theme = getTheme(priorityProject.type || 'other', priorityProject.title)
+                    const nextTask = (priorityProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 flex flex-col"
+                            style={{
+                                borderColor: theme.borderColor,
+                                background: `rgba(${theme.rgb}, 0.08)`,
+                                boxShadow: `0 8px 32px rgba(${theme.rgb}, 0.15)`
+                            }}
+                            onClick={() => navigate(`/projects/${priorityProject.id}`)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                                e.currentTarget.style.borderColor = theme.textColor
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+                                e.currentTarget.style.borderColor = theme.borderColor
+                            }}
+                        >
+                            <div className="relative z-10 flex-1">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
+                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                        color: theme.textColor,
+                                        borderColor: `rgba(${theme.rgb}, 0.3)`
+                                    }}>
+                                        Priority
+                                    </span>
+                                </div>
+
+                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
+                                    {priorityProject.title}
+                                </h3>
+                                <p className="text-sm text-[var(--brand-text-secondary)] mb-6 line-clamp-2 leading-relaxed aperture-body">
+                                    {priorityProject.description || 'Keep moving forward on your top priority.'}
+                                </p>
+
+                                {nextTask && (
+                                    <div className="p-4 rounded-xl" style={{
+                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                        border: `1px solid rgba(${theme.rgb}, 0.2)`
+                                    }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 aperture-header" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                        <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask.text}</p>
                                     </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )
+                })()}
 
-                                    <h3 className="text-lg font-bold text-white mb-2">
-                                        {priorityProject.title}
-                                    </h3>
-                                    <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                                        {priorityProject.description || 'Keep moving forward on your top priority.'}
-                                    </p>
-
-                                    {nextTask && (
-                                        <div className="p-3 rounded-lg" style={{
-                                            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                            border: `1px solid rgba(${theme.rgb}, 0.3)`
-                                        }}>
-                                            <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
-                                            <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
-                                        </div>
-                                    )}
+                {/* Card 0.5: Recent Project */}
+                {recentProject && (() => {
+                    const theme = getTheme(recentProject.type || 'other', recentProject.title)
+                    const nextTask = (recentProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.05 }}
+                            style={{
+                                borderColor: theme.borderColor,
+                                background: theme.backgroundColor || `rgba(${theme.rgb}, 0.08)`,
+                                boxShadow: 'none'
+                            }}
+                            onClick={() => navigate(`/projects/${recentProject.id}`)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.15)`
+                                e.currentTarget.style.borderColor = theme.textColor
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `rgba(${theme.rgb}, 0.08)`
+                                e.currentTarget.style.borderColor = theme.borderColor
+                            }}
+                        >
+                            <div className="relative z-10 flex-1">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
+                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                        color: theme.textColor,
+                                        borderColor: `rgba(${theme.rgb}, 0.3)`
+                                    }}>
+                                        <Clock className="h-3 w-3" /> Recent
+                                    </span>
                                 </div>
-                            </motion.div>
-                        )
-                    })()}
 
-                    {/* Card 0.5: Recent Project */}
-                    {recentProject && (() => {
-                        const theme = getTheme(recentProject.type || 'other', recentProject.title)
-                        const nextTask = (recentProject.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
-                        return (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.05 }}
-                                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
-                                onClick={() => navigate(`/projects/${recentProject.id}`)}
-                                style={{
-                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
-                                    boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
-                                    borderColor: theme.borderColor
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
-                                }}
-                            >
-                                <div className="relative z-10 flex-1">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 border" style={{
-                                            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                            color: theme.textColor,
-                                            borderColor: `rgba(${theme.rgb}, 0.3)`
-                                        }}>
-                                            <Clock className="h-3 w-3" /> Recent
-                                        </span>
+                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
+                                    {recentProject.title}
+                                </h3>
+                                <p className="text-sm text-[var(--brand-text-secondary)] mb-6 line-clamp-2 leading-relaxed aperture-body">
+                                    {recentProject.description || 'Pick up where you left off.'}
+                                </p>
+
+                                {nextTask && (
+                                    <div className="p-4 rounded-xl" style={{
+                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                        border: `1px solid rgba(${theme.rgb}, 0.2)`
+                                    }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 aperture-header" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                        <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask.text}</p>
                                     </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )
+                })()}
 
-                                    <h3 className="text-lg font-bold text-white mb-2">
-                                        {recentProject.title}
-                                    </h3>
-                                    <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                                        {recentProject.description || 'Pick up where you left off.'}
-                                    </p>
+                {/* Card 1: Review Dormant Projects */}
+                {dormantProjects.length > 0 && (() => {
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 md:col-span-2 flex flex-col"
+                            onClick={() => setShowReviewDeck(true)}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+                            }}
+                        >
+                            <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Layers className="h-24 w-24" />
+                            </div>
 
-                                    {nextTask && (
-                                        <div className="p-3 rounded-lg" style={{
-                                            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                            border: `1px solid rgba(${theme.rgb}, 0.3)`
-                                        }}>
-                                            <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
-                                            <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </motion.div>
-                        )
-                    })()}
-
-                    {/* Card 1: Review Dormant Projects */}
-                    {dormantProjects.length > 0 && (() => {
-                        const theme = getTheme('business', 'Review')
-                        return (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border"
-                                onClick={() => setShowReviewDeck(true)}
-                                style={{
-                                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
-                                    boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.2)`,
-                                    borderColor: theme.borderColor
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
-                                    e.currentTarget.style.boxShadow = `0 8px 24px rgba(${theme.rgb}, 0.3)`
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
-                                    e.currentTarget.style.boxShadow = `0 4px 16px rgba(${theme.rgb}, 0.2)`
-                                }}
-                            >
-                                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <Layers className="h-24 w-24" />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-white/10 aperture-header text-[var(--brand-text-muted)] bg-white/5">
+                                        Review Mode
+                                    </span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--brand-text-muted)] aperture-header">
+                                        {dormantProjects.length} projects waiting
+                                    </span>
                                 </div>
 
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="px-2 py-0.5 rounded text-xs font-medium border" style={{
-                                            backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                            color: theme.textColor,
-                                            borderColor: `rgba(${theme.rgb}, 0.3)`
-                                        }}>
-                                            Review Mode
-                                        </span>
-                                        <span className="text-xs text-slate-500">
-                                            {dormantProjects.length} projects waiting
-                                        </span>
-                                    </div>
-
-                                    <h3 className="text-lg font-bold text-white mb-2">
-                                        Dust off your archives
-                                    </h3>
-                                    <p className="text-sm text-slate-400 line-clamp-2 leading-relaxed">
-                                        You have {dormantProjects.length} projects that haven't been touched in over 2 weeks.
-                                        Take a moment to decide their future.
-                                    </p>
-                                </div>
-                            </motion.div>
-                        )
-                    })()}
-
-                </div>
+                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
+                                    Dust off your archives
+                                </h3>
+                                <p className="text-sm text-[var(--brand-text-secondary)] line-clamp-2 leading-relaxed aperture-body">
+                                    You have {dormantProjects.length} projects that haven't been touched in over 2 weeks.
+                                    Take a moment to decide their future.
+                                </p>
+                            </div>
+                        </motion.div>
+                    )
+                })()}
             </div>
 
             {/* Review Deck Modal */}

@@ -1,6 +1,6 @@
 {
-  "name": "Fragments - Personal Knowledge Graph",
-  "short_name": "Fragments",
+  "name": "Aperture - Personal Knowledge Graph",
+  "short_name": "Aperture",
   "description": "Voice-to-memory personal knowledge graph & creative project tracker. Capture thoughts, track projects, and build your second brain.",
   "start_url": "/?v=7",
   "scope": "/",
@@ -10,25 +10,29 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/favicon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any"
     }
   ],
-  "categories": ["productivity", "education", "lifestyle"],
+  "categories": [
+    "productivity",
+    "education",
+    "lifestyle"
+  ],
   "shortcuts": [
     {
       "name": "Capture Thought",
@@ -64,6 +68,9 @@
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "prefer_related_applications": false
 }

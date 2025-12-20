@@ -50,12 +50,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (error) throw error
 
-            // 2. Trigger async enrichment (Background)
-            import('./_lib/list-enrichment.js')
-                .then(m => m.enrichListItem(userId, listId as string, data.id, content))
-                .catch(err => console.error('[API] Background enrichment trigger failed:', err))
+            // 2. Trigger enrichment (Must await in Vercel/Lambda environment)
+            // We await it to ensure the process finishes before the lambda freezes.
+            // Gemini Flash is fast enough (~500ms) to not excessively delay the response.
+            try {
+                const { enrichListItem } = await import('./_lib/list-enrichment.js')
+                await enrichListItem(userId, listId as string, data.id, content)
+            } catch (err) {
+                console.error('[API] Enrichment failed:', err)
+                // Don't fail the request, just log it
+            }
 
             return res.status(201).json(data)
+        }
+
+        // DELETE /api/list-items?id=... (Delete specific item)
+        if (req.method === 'DELETE') {
+            const { id } = req.query
+
+            if (!id || typeof id !== 'string') {
+                return res.status(400).json({ error: 'Item ID is required' })
+            }
+
+            const { error } = await supabase
+                .from('list_items')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return res.status(204).end()
         }
 
         return res.status(405).json({ error: 'Method not allowed' })
