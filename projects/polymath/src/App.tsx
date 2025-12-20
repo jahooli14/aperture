@@ -21,6 +21,7 @@ import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
+import './styles/theme.css'
 
 // Lazy load pages for better bundle splitting (code splitting enabled for all routes)
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })))

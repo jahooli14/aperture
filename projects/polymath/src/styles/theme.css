@@ -1,0 +1,73 @@
+/**
+ * Unified Aperture Modern Theme
+ * Bridges the gap between Premium Dark (Glassy/Deep) and Zebra (Bold/High Contrast)
+ */
+
+:root {
+    /* Brand Core */
+    --brand-primary: var(--zebra-accent, #ffd700);
+    /* Zebra Gold as Primary Action */
+    --brand-secondary: var(--premium-blue, #3b82f6);
+    /* Premium Blue as Secondary */
+    --brand-bg: #0f1829;
+    /* Premium Surface Base */
+
+    /* Text Standards */
+    --brand-text-primary: #ffffff;
+    --brand-text-secondary: #d1d5db;
+    --brand-text-muted: #9ca3af;
+
+    /* Font Standards */
+    --brand-font-header: 'Outfit', 'Inter', sans-serif;
+    --brand-font-body: 'Inter', -apple-system, sans-serif;
+
+    /* Layout Standards */
+    --brand-border: 1px solid rgba(255, 255, 255, 0.1);
+    --brand-border-bold: 1px solid rgba(255, 255, 255, 0.2);
+    --brand-radius: 12px;
+    --brand-glass-bg: rgba(30, 42, 88, 0.15);
+    --brand-glass-blur: blur(12px);
+}
+
+/* Base Styles */
+.aperture-header {
+    font-family: var(--brand-font-header);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.aperture-body {
+    font-family: var(--brand-font-body);
+}
+
+/* The "Shelf" Separator */
+.aperture-shelf {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+}
+
+/* Unified Glass Card */
+.aperture-card {
+    background: var(--brand-glass-bg);
+    backdrop-filter: var(--brand-glass-blur);
+    -webkit-backdrop-filter: var(--brand-glass-blur);
+    border: var(--brand-border);
+    border-radius: var(--brand-radius);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.aperture-card:hover {
+    background: rgba(30, 42, 88, 0.25);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Zebra Hero Override (Aperture Hero) */
+.aperture-hero-card {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    border: 1px solid #ffffff;
+    border-radius: 16px;
+}

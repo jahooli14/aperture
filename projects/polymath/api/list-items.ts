@@ -50,8 +50,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (error) throw error
 
-            // 2. Trigger async enrichment (Future)
-            // We will add the background job call here in the next step.
+            // 2. Trigger async enrichment (Background)
+            import('./_lib/list-enrichment.js')
+                .then(m => m.enrichListItem(userId, listId as string, data.id, content))
+                .catch(err => console.error('[API] Background enrichment trigger failed:', err))
 
             return res.status(201).json(data)
         }
