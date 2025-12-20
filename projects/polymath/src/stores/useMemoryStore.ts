@@ -82,7 +82,8 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
           error: null,
           last_reviewed_at: null,
           review_count: 0,
-          source_reference: null
+          source_reference: null,
+          triage: null
         }))
 
         // Sort by date desc
@@ -267,6 +268,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         last_reviewed_at: null,
         review_count: 0,
         source_reference: input.source_reference || null,
+        triage: null
       } as Memory
 
       // Add to UI immediately
@@ -491,6 +493,7 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       last_reviewed_at: null,
       review_count: 0,
       source_reference: null,
+      triage: null
     } as Memory
 
     // Add to top of list immediately and update cache timestamp

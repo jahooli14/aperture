@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { Plus, Layers } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -40,6 +41,10 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
   const open = isOpen !== undefined ? isOpen : internalOpen
   const setOpen = onOpenChange || setInternalOpen
 
+  // Wizard State
+  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [direction, setDirection] = useState(0)
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,6 +52,11 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
     next_step: '',
     type: 'Creative',
   })
+
+  // Data Validation for Steps
+  const isStep1Valid = formData.title.length > 2
+  const isStep2Valid = formData.description.length > 10 && formData.motivation.length > 5
+
 
   // ... (rest of the file as before, replacing return)
 
@@ -58,7 +68,20 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
       next_step: '',
       type: 'Creative',
     })
+    setStep(1)
+    setDirection(0)
   }
+
+  const nextStep = () => {
+    setDirection(1)
+    setStep((prev) => (prev < 3 ? (prev + 1 as 1 | 2 | 3) : prev))
+  }
+
+  const prevStep = () => {
+    setDirection(-1)
+    setStep((prev) => (prev > 1 ? (prev - 1 as 1 | 2 | 3) : prev))
+  }
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,145 +158,202 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
             </BottomSheetDescription>
           </BottomSheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Project Name <span style={{ color: 'var(--premium-red)' }}>*</span>
-              </Label>
-              <Input
-                id="title"
-                placeholder="My Next Big Thing"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
+          <div className="mt-6">
+            <AnimatePresence mode="wait" custom={direction}>
+              {step === 1 && (
+                <motion.div
+                  key="step1"
+                  custom={direction}
+                  initial={{ opacity: 0, x: direction > 0 ? 50 : -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -50 : 50 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="space-y-4">
+                    <div className="text-center mb-6">
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter">The Identity</h3>
+                      <p className="text-sm text-gray-400">What are we building?</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">Project Name</Label>
+                      <Input
+                        id="title"
+                        placeholder="Project Aperture"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="text-2xl h-16 font-bold bg-white/5 border-white/10 focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-white/10"
+                        autoComplete="off"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Classification</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {['Creative', 'Tech', 'Learning', 'Business'].map((cat) => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, type: cat })}
+                            className={`p-4 rounded-xl text-sm font-bold border transition-all text-left flex items-center justify-between group ${formData.type === cat
+                                ? 'bg-white text-black border-white'
+                                : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                              }`}
+                          >
+                            <span>{cat}</span>
+                            {formData.type === cat && <Layers className="h-4 w-4" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 2 && (
+                <motion.div
+                  key="step2"
+                  custom={direction}
+                  initial={{ opacity: 0, x: direction > 0 ? 50 : -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -50 : 50 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter">The Vision</h3>
+                    <p className="text-sm text-gray-400">Context is fuel for the Engine.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">
+                      Description <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="description"
+                      placeholder="A short sentence explaining the project..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                      autoComplete="off"
+                      autoFocus
+                    />
+                    <p className="text-[10px] text-gray-500 text-right">{formData.description.length}/10 chars min</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="motivation" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">
+                      The "Why" <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="motivation"
+                      placeholder="Why does this matter? What is the goal?"
+                      value={formData.motivation}
+                      onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
+                      className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                      autoComplete="off"
+                    />
+                    <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                      <strong>AI Tip:</strong> Specific motivation ("To learn React" vs "To build an app") drastically changes the Power Hour tasks generated.
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 3 && (
+                <motion.div
+                  key="step3"
+                  custom={direction}
+                  initial={{ opacity: 0, x: direction > 0 ? 50 : -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: direction > 0 ? -50 : 50 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="text-center mb-6">
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter">Ignition</h3>
+                    <p className="text-sm text-gray-400">Ready to launch.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="next_step" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                      First Step (Optional)
+                    </Label>
+                    <Input
+                      id="next_step"
+                      placeholder="e.g., Create repo, Buy domain..."
+                      value={formData.next_step}
+                      onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
+                      className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                      autoComplete="off"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="p-6 rounded-2xl bg-zebra border border-white/10 text-center relative overflow-hidden group">
+                    <div className="relative z-10">
+                      <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Analyzing Context</div>
+                      <div className="text-white font-black italic text-lg">{formData.title}</div>
+                      <div className="text-sm text-gray-400 mt-1 line-clamp-1">{formData.description}</div>
+
+                      <div className="mt-4 flex justify-center gap-2">
+                        <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-mono text-zebra-accent">Scaffolding Ready</span>
+                        <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-mono text-zebra-accent">AI Context Loaded</span>
+                      </div>
+                    </div>
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex gap-3 mt-8">
+              {step > 1 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={prevStep}
+                  className="flex-1 h-14 bg-white/5 hover:bg-white/10"
+                >
+                  Back
+                </Button>
+              )}
+
+              {step < 3 ? (
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={step === 1 ? !isStep1Valid : !isStep2Valid}
+                  className="flex-[2] h-14 btn-primary font-bold uppercase tracking-widest"
+                >
+                  Next Step
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="flex-[2] h-14 bg-white text-black hover:bg-zebra-accent font-black uppercase tracking-widest"
+                >
+                  {loading ? 'Launching...' : 'Initialize Project'}
+                </Button>
+              )}
             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Description (Optional)
-              </Label>
-              <Input
-                id="description"
-                placeholder="What's this project about?"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
+            {/* Stepper Dots */}
+            <div className="flex justify-center gap-2 mt-6">
+              {[1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full transition-all ${step === i ? 'bg-white w-4' : 'bg-white/20'}`}
+                />
+              ))}
             </div>
+          </div>
 
-            {/* Category */}
-            <div className="space-y-2">
-              <Label htmlFor="category" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Category
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {['Creative', 'Tech', 'Writing', 'Business', 'Life', 'Learning'].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, type: cat })}
-                    className={`px-2 py-2 rounded-lg text-xs font-medium transition-all border ${formData.type === cat
-                      ? 'bg-blue-500/20 border-blue-500 text-blue-400'
-                      : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Motivation - The "So What" */}
-            <div className="space-y-2">
-              <Label htmlFor="motivation" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Motivation (Why?)
-              </Label>
-              <Input
-                id="motivation"
-                placeholder="Why is this project important right now?"
-                value={formData.motivation}
-                onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.2)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Defining the "why" helps the AI align suggestions with your goals.
-              </p>
-            </div>
-
-            {/* Next Step */}
-            <div className="space-y-2 pb-4">
-              <Label htmlFor="next_step" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                First Step (Optional)
-              </Label>
-              <Input
-                id="next_step"
-                placeholder="e.g., Research ideas, Build prototype, Write outline"
-                value={formData.next_step}
-                onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
-            </div>
-
-            <BottomSheetFooter>
-              <Button
-                type="submit"
-                disabled={loading || !formData.title}
-                className="btn-primary w-full h-12 touch-manipulation"
-              >
-                {loading ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Layers className="mr-2 h-4 w-4" />
-                    Create Project
-                  </>
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  resetForm()
-                  setOpen(false)
-                }}
-                disabled={loading}
-                className="w-full h-12 touch-manipulation"
-              >
-                Cancel
-              </Button>
-            </BottomSheetFooter>
-          </form>
         </BottomSheetContent>
       </BottomSheet>
 

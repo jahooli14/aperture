@@ -12,7 +12,9 @@ interface ProjectSuggestion {
   user_id: string
   title: string
   description: string
+  synthesis_reasoning?: string
   capability_ids: string[]
+  capabilities?: Array<{ id: string; name: string }>
   novelty_score: number
   feasibility_score: number
   interest_score: number
@@ -33,7 +35,7 @@ interface SuggestionState {
 
   // Actions
   fetchSuggestions: () => Promise<void>
-  rateSuggestion: (id: string, rating: number) => Promise<void>
+  rateSuggestion: (id: string, rating: number, feedback?: string) => Promise<void>
   buildSuggestion: (id: string, projectData?: {
     title?: string
     description?: string
@@ -91,13 +93,13 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     }
   },
 
-  rateSuggestion: async (id: string, rating: number) => {
+  rateSuggestion: async (id: string, rating: number, feedback?: string) => {
     try {
-      console.log('[store] Rating suggestion:', id, 'with rating:', rating)
+      console.log('[store] Rating suggestion:', id, 'with rating:', rating, 'feedback:', feedback)
       const response = await fetch(`${API_BASE}/projects?resource=suggestions&action=rate&id=${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rating })
+        body: JSON.stringify({ rating, feedback })
       })
 
       if (!response.ok) {

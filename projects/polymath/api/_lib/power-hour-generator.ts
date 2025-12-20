@@ -15,18 +15,33 @@ interface PowerHourTask {
     fuel_title?: string
 }
 
-export async function generatePowerHourPlan(userId: string): Promise<PowerHourTask[]> {
+import { repairAllUserProjects } from './project-repair.js'
+
+export async function generatePowerHourPlan(userId: string, projectId?: string): Promise<PowerHourTask[]> {
     const supabase = getSupabaseClient()
-    console.log('[PowerHour] Generating plan for user:', userId)
+    console.log('[PowerHour] Generating plan for user:', userId, projectId ? `focused on ${projectId}` : '')
+
+    // 0. Ensure existing projects have tasks (Auto-repair/scaffold)
+    try {
+        await repairAllUserProjects(userId)
+    } catch (err) {
+        console.error('[PowerHour] Project repair failed:', err)
+    }
 
     // 1. Fetch active projects
-    const { data: projects, error: projectsError } = await supabase
+    let query = supabase
         .from('projects')
         .select('id, title, description, status, metadata')
-        .in('status', ['active', 'upcoming', 'maintaining'])
+        .in('status', ['active', 'upcoming', 'maintaining', 'Active', 'Upcoming', 'Maintaining'])
         .eq('user_id', userId)
-        .order('last_active', { ascending: false })
-        .limit(5)
+
+    if (projectId) {
+        query = query.eq('id', projectId)
+    } else {
+        query = query.order('last_active', { ascending: false }).limit(5)
+    }
+
+    const { data: projects, error: projectsError } = await query
 
     if (projectsError) throw projectsError
 

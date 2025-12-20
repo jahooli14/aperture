@@ -938,3 +938,53 @@ export interface ReadingQueueItem {
 }
 
 // Build trigger
+
+// ============================================================================
+// LISTS PILLAR
+// ============================================================================
+
+export type ListType = 'film' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'generic'
+export type ListItemStatus = 'pending' | 'active' | 'completed' | 'abandoned'
+
+export interface List {
+  id: string
+  user_id: string
+  title: string
+  type: ListType
+  description?: string | null
+  icon?: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+  // Virtual field for frontend convenience
+  items?: ListItem[]
+  item_count?: number
+}
+
+export interface ListItem {
+  id: string
+  list_id: string
+  user_id: string
+  content: string
+  status: ListItemStatus
+  user_rating?: number | null // 1-5
+  metadata?: any // Flexible JSONB
+  enrichment_status: 'pending' | 'completed' | 'failed'
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateListInput {
+  title: string
+  type: ListType
+  description?: string
+  icon?: string
+}
+
+export interface CreateListItemInput {
+  list_id: string
+  content: string
+  status?: ListItemStatus
+}
+

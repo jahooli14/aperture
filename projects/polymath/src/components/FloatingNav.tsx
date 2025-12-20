@@ -12,7 +12,8 @@ import {
   Layers,
   FileText,
   Mic,
-  MoreHorizontal
+  MoreHorizontal,
+  AlignLeft,
 } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -27,7 +28,8 @@ const SCHEMA_COLORS = {
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' }
+  context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
+  lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' }
 } as const
 
 interface NavOption {
@@ -39,13 +41,13 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Core navigation: Home + 3 tenets + Settings
+// Core navigation: Home + 3 tenets
 const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'lists', label: 'Lists', icon: AlignLeft, path: '/lists', action: 'navigate', color: 'lists' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'settings', label: 'More', icon: MoreHorizontal, path: '/settings', action: 'navigate', color: 'home' },
 ]
 
 export function FloatingNav() {
