@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './supabase.js'
 import { GapAnalysisResult } from '../../src/types'
+import { MODELS } from './models.js'
 
 const supabase = getSupabaseClient()
 
@@ -47,9 +48,9 @@ export async function detectGaps(
     .join('\n\n---\n\n')
 
   try {
-    // Call Gemini Flash 2.5
+    // Call Gemini
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODELS.DEFAULT_CHAT}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

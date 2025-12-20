@@ -3,6 +3,7 @@ import { getSupabaseClient } from './supabase.js'
 import type { Memory, Entities, MemoryType, ExtractedMetadata } from '../../src/types'
 import { normalizeTags } from './tag-normalizer.js'
 import { updateItemConnections } from './connection-logic.js'
+import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 const supabase = getSupabaseClient()
@@ -169,7 +170,7 @@ export async function processMemory(memoryId: string): Promise<void> {
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
 async function extractMetadata(title: string, body: string, projects: any[]): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' }) // Consistent model usage
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT }) // Consistent model usage
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 

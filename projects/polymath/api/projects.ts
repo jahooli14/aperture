@@ -12,6 +12,7 @@ import { generateText } from './_lib/gemini-chat.js'
 import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
+import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject } from './_lib/project-maintenance.js'
 
 // Daily Queue Scoring Logic
@@ -950,6 +951,21 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       }
 
       console.log('[PATCH] Successfully updated project')
+
+      // Trigger Power Hour refresh in background if tasks changed
+      if (updates.metadata?.tasks) {
+        console.log('[PATCH] Tasks changed, refreshing Power Hour plan in background...')
+        generatePowerHourPlan(userId).then(tasks => {
+          if (tasks.length > 0) {
+            supabase.from('daily_power_hour').insert({
+              user_id: userId,
+              tasks: tasks,
+              created_at: new Date().toISOString()
+            }).then(() => console.log('[PATCH] Power Hour refreshed and cached.'))
+          }
+        }).catch(err => console.error('[PATCH] Failed to background refresh Power Hour:', err))
+      }
+
       return res.status(200).json(data)
     } catch (error) {
       console.error('[PATCH] Unexpected error:', error)

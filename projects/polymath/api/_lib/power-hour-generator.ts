@@ -1,6 +1,7 @@
 
 import { getSupabaseClient } from './supabase.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -44,7 +45,7 @@ export async function generatePowerHourPlan(userId: string): Promise<PowerHourTa
     if (fuelError) throw fuelError
 
     // 3. Use Gemini 3 Flash to synthesize Power Hour suggestions
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' }) // Use gemini-3-flash-preview as requested
+    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
     const projectsContext = projects.map(p => {
         const tasksList = (p.metadata?.tasks || [])

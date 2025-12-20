@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from './models.js'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 interface ProjectScaffold {
@@ -69,7 +70,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }`
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: MODELS.DEFAULT_CHAT,
     generationConfig: {
       temperature: 0.7,
       maxOutputTokens: 2048,
@@ -134,7 +135,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }`
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: MODELS.DEFAULT_CHAT,
     generationConfig: {
       temperature: 0.8,
       maxOutputTokens: 2048,

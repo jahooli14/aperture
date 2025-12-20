@@ -1,6 +1,7 @@
 import { getSupabaseClient } from './supabase.js'
 import { generateEmbedding } from './gemini-embeddings.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
@@ -38,7 +39,7 @@ export async function extractCapabilities(userId: string) {
 
     // 2. Analyze with Gemini 3 Flash (Reliable JSON)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: MODELS.DEFAULT_CHAT,
       generationConfig: { responseMimeType: 'application/json' }
     })
 

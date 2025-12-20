@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+import { MODELS } from './models.js'
 
 // Validate API key at module load
 if (!process.env.GEMINI_API_KEY) {
@@ -13,7 +14,7 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-key-for-initialization')
 
 /**
- * Generate text using Gemini 3 Flash Preview (fast, cost-effective)
+ * Generate text using Gemini (fast, cost-effective)
  */
 export async function generateText(
   prompt: string,
@@ -29,7 +30,7 @@ export async function generateText(
 
   try {
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3-flash-preview',
+      model: MODELS.DEFAULT_CHAT,
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
         { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
