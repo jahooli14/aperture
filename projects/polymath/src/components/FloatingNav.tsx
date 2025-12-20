@@ -98,14 +98,8 @@ export function FloatingNav() {
 
 
   const handleVoiceFABTap = () => {
-    // On project pages, trigger the project's AddNote dialog instead
-    if (isProjectDetailPage) {
-      console.log('[FloatingNav] Dispatching openProjectAddNote event')
-      window.dispatchEvent(new CustomEvent('openProjectAddNote'))
-      return true // Intercepted
-    }
-
-    return false // Let VoiceFAB handle it
+    // Force voice capture as requested by user, bypassing project-specific interception
+    return false
   }
 
   const handleVoiceTranscript = async (text: string) => {
