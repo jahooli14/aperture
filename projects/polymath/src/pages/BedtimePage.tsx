@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Sparkles, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind } from 'lucide-react'
+import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
@@ -183,7 +183,7 @@ export function BedtimePage() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'connection': return <Link2 className="h-5 w-5" />
-      case 'divergent': return <Sparkles className="h-5 w-5" />
+      case 'divergent': return <Zap className="h-5 w-5" />
       case 'revisit': return <Eye className="h-5 w-5" />
       case 'transform': return <Star className="h-5 w-5" />
       default: return <Moon className="h-5 w-5" />
@@ -248,19 +248,6 @@ export function BedtimePage() {
           className="max-w-2xl mx-auto mb-8 relative z-10"
         >
           <div className="flex items-center gap-4 mb-4">
-            <motion.div
-              className="p-4 rounded-2xl premium-glass-subtle relative"
-              animate={{
-                boxShadow: [
-                  '0 0 20px rgba(251, 191, 36, 0.2)',
-                  '0 0 30px rgba(251, 191, 36, 0.4)',
-                  '0 0 20px rgba(251, 191, 36, 0.2)'
-                ]
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Sparkles className="h-8 w-8" style={{ color: 'var(--premium-gold)' }} />
-            </motion.div>
             <div>
               <h2 className="premium-text-platinum text-2xl font-bold">
                 Thoughts Before Bed
@@ -274,7 +261,6 @@ export function BedtimePage() {
           {/* Time indicator */}
           <div className="premium-glass-subtle rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-gold)' }} />
               <div>
                 <p className="text-sm font-medium premium-text-platinum">
                   {prompts.length > 0 ? "Tonight's Prompts Ready" : "Waiting for 9:30pm"}
@@ -540,7 +526,6 @@ export function BedtimePage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
                   Generate Now
                 </>
               )}
