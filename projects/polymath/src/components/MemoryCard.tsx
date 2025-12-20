@@ -11,6 +11,7 @@ import { ContextMenu, type ContextMenuItem } from './ui/context-menu'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { MemoryDetailModal } from './memories/MemoryDetailModal'
 import { useConfirmDialog } from './ui/confirm-dialog'
+import { motion } from 'framer-motion'
 
 // Module-level cache for bridges remains, but will be managed by MemoryDetailModal
 const bridgesCache = new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>()
@@ -40,6 +41,8 @@ interface MemoryCardProps {
   onEdit?: (memory: Memory) => void
   onDelete?: (memory: Memory) => void
 }
+
+import { OptimizedImage } from './ui/optimized-image'
 
 export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }: MemoryCardProps) {
   const navigate = useNavigate()
@@ -155,25 +158,19 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         title={memory.title}
       />
 
-      <div
+      <motion.div
         onClick={() => setShowDetailModal(true)}
+        whileHover={{
+          y: -2,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          borderColor: 'rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)'
+        }}
         className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative"
         style={{
           borderColor: 'rgba(255, 255, 255, 0.1)',
           background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
         }}
       >
         <CardHeader className="relative z-10 flex flex-row items-start justify-between p-0 pb-2">
@@ -219,10 +216,15 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         {memory.image_urls && memory.image_urls.length > 0 && (
           <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg overflow-hidden h-24 relative">
             {memory.image_urls.slice(0, 2).map((url, i) => (
-              <div key={i} className={`relative ${memory.image_urls!.length === 1 ? 'col-span-2' : ''} h-full`}>
-                <img src={url} alt="Attachment" className="w-full h-full object-cover" />
+              <div key={url} className={`relative ${memory.image_urls!.length === 1 ? 'col-span-2' : ''} h-full`}>
+                <OptimizedImage
+                  src={url}
+                  alt="Attachment"
+                  className="w-full h-full"
+                  aspectRatio="1/1"
+                />
                 {i === 1 && memory.image_urls!.length > 2 && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
                     <span className="text-white font-bold text-xs">+{memory.image_urls!.length - 2}</span>
                   </div>
                 )}
@@ -262,7 +264,7 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       <MemoryDetailModal
         memory={memory}

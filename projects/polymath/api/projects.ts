@@ -837,36 +837,9 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         try {
           await generateProjectEmbeddingAndConnect(project.id, project.title, project.description, userId)
 
-          // Generate scaffolding (Tasks)
-          // Import dynamically to avoid circular deps if needed, or assume imports are available at top
-          const { generateProjectScaffold, generateCreativeScaffold } = await import('./_lib/generate-project-scaffold.js')
-
-          let scaffold;
-          if (project.type === 'Tech' || project.type === 'tech') {
-            scaffold = await generateProjectScaffold(project.title, project.description, [])
-          } else {
-            scaffold = await generateCreativeScaffold(project.title, project.description)
-          }
-
-          if (scaffold) {
-            const existingTasks = project.metadata?.tasks || []
-            // Map MVP features to tasks
-            const newTasks = (scaffold.mvpFeatures || []).map((feature: string, i: number) => ({
-              id: crypto.randomUUID(),
-              text: feature,
-              done: false,
-              created_at: new Date().toISOString(),
-              order: existingTasks.length + i
-            }))
-
-            // Update project with new tasks
-            if (newTasks.length > 0) {
-              const allTasks = [...existingTasks, ...newTasks]
-              await supabase.from('projects').update({
-                metadata: { ...project.metadata, tasks: allTasks, scaffold: scaffold }
-              }).eq('id', project.id)
-            }
-          }
+          // Generate scaffolding (Tasks) using the unified repair utility
+          const { ensureProjectHasTasks } = await import('./_lib/project-repair.js')
+          await ensureProjectHasTasks(project.id, userId)
         } catch (err) {
           console.error('[projects] Background scaffolding error:', err)
         }

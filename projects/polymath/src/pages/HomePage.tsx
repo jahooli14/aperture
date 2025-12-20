@@ -41,7 +41,8 @@ import {
   RefreshCw,
   Wind,
   Rss,
-  Map as MapIcon
+  Map as MapIcon,
+  MoreHorizontal
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -63,13 +64,15 @@ function GetInspirationSection({
   hasPendingSuggestions,
   pendingSuggestionsCount,
   projectsLoading,
-  sparkCandidate
+  sparkCandidate,
+  projects
 }: {
   excludeProjectIds: string[]
   hasPendingSuggestions: boolean
   pendingSuggestionsCount: number
   projectsLoading: boolean
   sparkCandidate: Project | null
+  projects: Project[]
 }) {
   const [inspiration, setInspiration] = useState<InspirationData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -203,8 +206,24 @@ function GetInspirationSection({
                     backgroundColor: `rgba(139, 92, 246, 0.1)`,
                     border: `1px solid rgba(139, 92, 246, 0.3)`
                   }}>
-                    <p className="text-xs font-medium mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
-                    <p className="text-sm text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    {inspiration.type === 'project' && (() => {
+                      const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
+                      const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
+                      if (nextT) {
+                        return (
+                          <>
+                            <p className="text-[10px] font-bold mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
+                            <p className="text-sm text-gray-200 line-clamp-2">{nextT.text}</p>
+                          </>
+                        )
+                      }
+                      return <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    })()}
+                    {inspiration.type !== 'project' && (
+                      <div className="flex items-start gap-2">
+                        <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>
@@ -727,7 +746,7 @@ export function HomePage() {
     if (hour >= 14 && hour < 16) energy = 'low'
     if (hour >= 20) energy = 'low'
 
-    // Filter by energy
+    // Filter by energy and prioritize those with tasks
     const matching = activeProjects.filter(p => {
       const nextTask = p.metadata?.tasks?.find((t: any) => !t.done)
       if (nextTask?.energy_level) return nextTask.energy_level === energy
@@ -735,9 +754,17 @@ export function HomePage() {
     })
 
     const pool = matching.length > 0 ? matching : activeProjects
+
+    // Sort pool so those with tasks are first
+    const sortedPool = [...pool].sort((a, b) => {
+      const aHasTasks = (a.metadata?.tasks?.some((t: any) => !t.done)) ? 1 : 0
+      const bHasTasks = (b.metadata?.tasks?.some((t: any) => !t.done)) ? 1 : 0
+      return bHasTasks - aHasTasks
+    })
+
     // Deterministic "random" based on date to avoid flickering on re-renders
     const seed = new Date().getDate()
-    return pool[seed % pool.length]
+    return sortedPool[seed % sortedPool.length]
   }, [projects])
 
   // Get stored errors from localStorage
@@ -979,6 +1006,7 @@ export function HomePage() {
           pendingSuggestionsCount={pendingSuggestions.length}
           projectsLoading={projectsLoading}
           sparkCandidate={sparkCandidate}
+          projects={projects}
         />
 
         {/* 4. YOUR INSIGHTS (Cyan Theme) */}
@@ -1192,6 +1220,19 @@ export function HomePage() {
           </div >
         </section >
 
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
+          <Link
+            to="/settings"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all border border-white/5 hover:bg-white/5 premium-text-platinum text-sm font-medium"
+            style={{
+              background: 'var(--premium-bg-2)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            More Settings
+          </Link>
+        </div>
 
       </div >
 

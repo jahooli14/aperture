@@ -37,6 +37,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const RSSFeedsPage = lazy(() => import('./pages/RSSFeedsPage').then(m => ({ default: m.RSSFeedsPage })))
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })))
 const BedtimePage = lazy(() => import('./pages/BedtimePage').then(m => ({ default: m.BedtimePage })))
+const ListsPage = lazy(() => import('./pages/ListsPage'))
+const ListDetailPage = lazy(() => import('./pages/ListDetailPage'))
 
 // Loading fallback component with skeleton
 import { useBedtimeNotifications } from './hooks/useBedtimeNotifications'
@@ -254,6 +256,8 @@ export default function App() {
                       <Route path="/rss" element={<RSSFeedsPage />} />
                       <Route path="/search" element={<SearchPage />} />
                       <Route path="/bedtime" element={<BedtimePage />} />
+                      <Route path="/lists" element={<ListsPage />} />
+                      <Route path="/lists/:id" element={<ListDetailPage />} />
                       <Route path="/share-target" element={<ShareTargetFallback />} />
                     </Routes>
                   </Suspense>

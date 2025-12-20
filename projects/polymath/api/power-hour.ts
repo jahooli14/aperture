@@ -12,8 +12,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseClient()
     console.log('[power-hour] Fetching tasks for user:', userId)
 
-    const { refresh } = req.query
-    const isRefresh = refresh === 'true'
+    const { refresh, projectId } = req.query
+    const isRefresh = refresh === 'true' || !!projectId
+    const targetProject = projectId as string | undefined
 
     try {
         // 1. Check for cached plan from today ( < 20 hours old )
@@ -37,8 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // 2. No cache? Generate on the fly (and cache it)
-        console.log('[power-hour] No cache found. Generating on-fly...')
-        const tasks = await generatePowerHourPlan(userId)
+        console.log('[power-hour] No cache found or forced refresh. Generating on-fly...')
+        const tasks = await generatePowerHourPlan(userId, targetProject)
 
         // Cache it for next time
         if (tasks.length > 0) {

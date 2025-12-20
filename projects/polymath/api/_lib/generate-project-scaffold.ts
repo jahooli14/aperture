@@ -21,12 +21,14 @@ interface ProjectScaffold {
 export async function generateProjectScaffold(
   title: string,
   description: string,
-  capabilities: string[]
+  capabilities: string[],
+  motivation?: string
 ): Promise<ProjectScaffold> {
   const prompt = `You are a project scaffolding expert. Generate a complete, production-ready project structure and README.
-
+  
 Project Title: ${title}
 Description: ${description}
+Context/Motivation: ${motivation || 'Build a solid foundation.'}
 Technologies: ${capabilities.join(', ')}
 
 Generate a comprehensive project scaffold including:
@@ -92,12 +94,14 @@ Return ONLY valid JSON (no markdown, no code blocks):
  */
 export async function generateCreativeScaffold(
   title: string,
-  description: string
+  description: string,
+  motivation?: string
 ): Promise<ProjectScaffold> {
   const prompt = `You are a creative project planner. Generate a project plan for a creative (non-technical) project.
 
 Project Title: ${title}
 Description: ${description}
+Motivation/Why: ${motivation || 'Personal expression.'}
 
 Generate a project plan including:
 
