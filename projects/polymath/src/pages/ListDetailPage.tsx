@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Sparkles, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Trash2 } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -89,8 +89,8 @@ export default function ListDetailPage() {
                                 </div>
 
                                 {item.enrichment_status === 'pending' && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-indigo-400">
-                                        <Sparkles className="h-3 w-3 animate-pulse" />
+                                    <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500 italic">
+                                        <div className="h-1 w-1 rounded-full bg-zinc-500 animate-pulse" />
                                         <span>Enriching...</span>
                                     </div>
                                 )}
@@ -105,20 +105,9 @@ export default function ListDetailPage() {
                 </div>
 
                 {currentListItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-32 text-zinc-600">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.5 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                repeatType: "reverse"
-                            }}
-                        >
-                            <Sparkles className="h-12 w-12 mb-4 text-cyan-500/40" />
-                        </motion.div>
-                        <p className="text-zinc-500 font-medium">Type below to add your first item.</p>
-                        <p className="text-xs text-zinc-700 mt-1">AI will automatically add photos and details.</p>
+                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                        <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
+                        <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
                     </div>
                 )}
             </div>
