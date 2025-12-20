@@ -169,8 +169,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error('[cron/jobs/daily] Bedtime prompts failed:', error)
       }
 
+      // 4b. Generate Power Hour Plan (Pre-calculation for instant load)
+      try {
+        const { generatePowerHourPlan } = await import('../_lib/power-hour-generator.js')
+        console.log('[cron/jobs/daily] Generating Power Hour plan...')
+        const tasks = await generatePowerHourPlan(userId)
+
+        if (tasks && tasks.length > 0) {
+          const { error: insertError } = await supabase
+            .from('daily_power_hour')
+            .insert({
+              user_id: userId,
+              tasks: tasks,
+              created_at: new Date().toISOString()
+            })
+
+          if (insertError) throw insertError
+
+          results.tasks.power_hour = { success: true, count: tasks.length }
+          console.log(`[cron/jobs/daily] Saved Power Hour plan with ${tasks.length} tasks`)
+        } else {
+          results.tasks.power_hour = { success: true, count: 0, message: 'No tasks generated' }
+        }
+      } catch (error) {
+        console.error('[cron/jobs/daily] Power Hour generation failed:', error)
+        results.tasks.power_hour = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }
+
       // 5. Send Bedtime Push Notifications (if enabled)
-      if (webpush.VapidDetails && now.getHours() === 21 && now.getMinutes() >= 30) { // Check if it's 9:30 PM UTC
+      if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && now.getHours() === 21 && now.getMinutes() >= 30) { // Check if it's 9:30 PM UTC
         try {
           const { data: subscriptions, error: subError } = await supabase
             .from('push_subscriptions')

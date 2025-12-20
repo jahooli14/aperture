@@ -189,14 +189,24 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       const { id } = req.query
 
       if (id) {
-        const { data: project, error } = await supabase
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id))
+
+        let query = supabase
           .from('projects')
           .select('*')
           .eq('user_id', userId)
-          .eq('id', id)
-          .single()
 
-        if (error) return res.status(404).json({ error: 'Project not found' })
+        if (isUUID) {
+          query = query.eq('id', id)
+        } else {
+          // Fallback: Check metadata for slug
+          // Note: using filter for JSONb operator
+          query = query.filter('metadata->>slug', 'eq', id)
+        }
+
+        const { data: project, error } = await query.single()
+
+        if (error || !project) return res.status(404).json({ error: 'Project not found' })
         return res.status(200).json({ project })
       }
 

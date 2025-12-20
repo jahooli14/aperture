@@ -4,7 +4,7 @@ import { generateText } from './gemini-chat.js'
 const supabase = getSupabaseClient()
 
 export async function identifyRottingProjects(userId: string): Promise<any[]> {
-  const cutoffDays = 45 // Projects inactive for 45 days or more are "rotting"
+  const cutoffDays = 14 // Projects inactive for 14 days or more are "rotting"
 
   const { data: projects, error } = await supabase
     .from('projects')

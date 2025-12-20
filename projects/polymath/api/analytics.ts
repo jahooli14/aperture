@@ -789,6 +789,53 @@ async function getSmartSuggestion() {
     }
   }
 
+  // 4a. Resurfacing Wildcard (Add to low-energy or as a bonus)
+  // Check for memories not reviewed in > 30 days
+  const cutoffDate = new Date()
+  cutoffDate.setDate(cutoffDate.getDate() - 30)
+
+  // Use existing memories fetch or fetch specific
+  // We can just filter from the memories we already fetched (lines 680)
+  // Assuming fetchMemories returns recent ones or all? Usually it limits.
+  // Let's rely on a quick DB check for resurfacing specifically if we don't have enough suggestions
+  // OR just always try to inject one if available.
+
+  if (suggestions.length < 3) {
+    const { data: resurfacingMems } = await getSupabaseClient()
+      .from('memories')
+      .select('*')
+      .lt('last_reviewed_at', cutoffDate.toISOString())
+      .limit(1)
+      .maybeSingle()
+
+    // If we found one via single (or if array/object returned)
+    // Supabase .maybeSingle() returns data object or null.
+    // Wait, .limit(1) with maybeSingle? 
+    // Actually let's just use array check.
+
+    // Let's do a robust query
+    const { data: lostMemories } = await getSupabaseClient()
+      .from('memories')
+      .select('*')
+      .or(`last_reviewed_at.is.null,last_reviewed_at.lt.${cutoffDate.toISOString()}`)
+      .range(0, 0) // Limit to 1
+
+    if (lostMemories && lostMemories.length > 0) {
+      const lostMem = lostMemories[0]
+      suggestions.push({
+        type: 'memory',
+        title: `Resurfacing: "${lostMem.title}"`,
+        description: lostMem.body?.substring(0, 80) + '...',
+        reasoning: '🧠 Spaced Repetition: This thought is fading. Review it now.',
+        item: lostMem,
+        estimatedTime: 5,
+        energyLevel: 'low',
+        priority: 6,
+        action_url: `/memories?highlight=${lostMem.id}`
+      })
+    }
+  }
+
   // 5. Weekend = creative exploration
   if (isWeekend) {
     const creativeProjects = projects.filter(p =>
