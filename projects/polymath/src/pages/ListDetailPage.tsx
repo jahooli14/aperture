@@ -105,34 +105,47 @@ export default function ListDetailPage() {
                 </div>
 
                 {currentListItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-zinc-600">
-                        <Sparkles className="h-10 w-10 mb-4 opacity-20" />
-                        <p>Type below to add your first item.</p>
+                    <div className="flex flex-col items-center justify-center py-32 text-zinc-600">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                repeatType: "reverse"
+                            }}
+                        >
+                            <Sparkles className="h-12 w-12 mb-4 text-cyan-500/40" />
+                        </motion.div>
+                        <p className="text-zinc-500 font-medium">Type below to add your first item.</p>
+                        <p className="text-xs text-zinc-700 mt-1">AI will automatically add photos and details.</p>
                     </div>
                 )}
             </div>
 
-            {/* Fixed Bottom Input Bar */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black to-transparent z-50">
-                <div className="max-w-3xl mx-auto backdrop-blur-xl bg-zinc-900/90 border border-white/10 rounded-full p-2 flex items-center gap-2 shadow-2xl">
+            {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
+            <div className="fixed bottom-[90px] left-0 right-0 p-4 z-[100]">
+                <div className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                     <form onSubmit={handleAddItem} className="flex-1 flex px-2">
                         <Input
                             ref={inputRef}
                             value={inputText}
                             onChange={e => setInputText(e.target.value)}
                             placeholder={`Add to ${list.title}...`}
-                            className="border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10"
+                            className="border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10 text-base"
                             autoFocus
                         />
                         <Button
                             type="submit"
                             disabled={!inputText.trim()}
-                            className="rounded-full bg-white text-black hover:bg-zinc-200 h-10 w-10 p-0 shrink-0"
+                            className="rounded-full bg-white text-black hover:bg-zinc-200 h-9 w-9 p-0 shrink-0 transition-all duration-300"
                         >
                             <Send className="h-4 w-4" />
                         </Button>
                     </form>
                 </div>
+                {/* Visual anchor for the bar */}
+                <div className="absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none -z-10" />
             </div>
         </div>
     )
