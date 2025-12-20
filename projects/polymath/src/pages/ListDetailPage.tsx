@@ -95,6 +95,42 @@ export default function ListDetailPage() {
                                     </div>
                                 )}
 
+                                {/* Metadata Rendering */}
+                                {item.metadata?.subtitle && (
+                                    <p className="text-zinc-400 text-sm mb-2 line-clamp-1">{item.metadata.subtitle}</p>
+                                )}
+
+                                {item.metadata?.specs && (
+                                    <div className="flex flex-wrap gap-2 mb-3">
+                                        {Object.entries(item.metadata.specs).slice(0, 2).map(([key, value]) => (
+                                            <span key={key} className="text-[10px] uppercase font-mono bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 border border-white/5">
+                                                {value as string}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {item.metadata?.tags && item.metadata.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {item.metadata.tags.map((tag: string) => (
+                                            <span key={tag} className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-zinc-300">
+                                                #{tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {item.metadata?.link && (
+                                    <a
+                                        href={item.metadata.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-blue-400 hover:text-blue-300 hover:underline block mt-2"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        View Details &rarr;
+                                    </a>
+                                )}
                                 {/* Hover Actions */}
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
@@ -115,18 +151,20 @@ export default function ListDetailPage() {
                             </motion.div>
                         ))}
                     </AnimatePresence>
-                </div>
+                </div >
 
-                {currentListItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                        <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
-                        <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
-                    </div>
-                )}
-            </div>
+                {
+                    currentListItems.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                            <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
+                            <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
+                        </div>
+                    )
+                }
+            </div >
 
             {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
-            <div className="fixed bottom-[90px] left-0 right-0 p-4 z-[100]">
+            < div className="fixed bottom-[90px] left-0 right-0 p-4 z-[100]" >
                 <div className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
                     <form onSubmit={handleAddItem} className="flex-1 flex px-2">
                         <Input
@@ -148,7 +186,7 @@ export default function ListDetailPage() {
                 </div>
                 {/* Visual anchor for the bar */}
                 <div className="absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none -z-10" />
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }

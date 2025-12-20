@@ -7,17 +7,17 @@ import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
 import type { ListType } from '../types'
 
-const ListIcon = ({ type, className }: { type: ListType, className?: string }) => {
+const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
     switch (type) {
-        case 'film': return <Film className={className} />
-        case 'music': return <Music className={className} />
-        case 'tech': return <Monitor className={className} />
-        case 'book': return <Book className={className} />
-        case 'place': return <MapPin className={className} />
-        case 'game': return <Gamepad2 className={className} />
-        case 'software': return <Box className={className} /> // Using Box for software/SaaS
-        case 'event': return <Calendar className={className} />
-        default: return <Box className={className} />
+        case 'film': return <Film className={className} style={style} />
+        case 'music': return <Music className={className} style={style} />
+        case 'tech': return <Monitor className={className} style={style} />
+        case 'book': return <Book className={className} style={style} />
+        case 'place': return <MapPin className={className} style={style} />
+        case 'game': return <Gamepad2 className={className} style={style} />
+        case 'software': return <Box className={className} style={style} />
+        case 'event': return <Calendar className={className} style={style} />
+        default: return <Box className={className} style={style} />
     }
 }
 
@@ -43,17 +43,19 @@ export default function ListsPage() {
     }, [])
 
     return (
-        <div className="min-h-screen pb-20 pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="min-h-screen pb-20 pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Collections</h1>
-                    <p className="text-slate-400">Curate your existence.</p>
+                    <h1 className="section-header">
+                        your <span>collections</span>
+                    </h1>
+                    <p className="aperture-body text-[var(--brand-text-secondary)] mt-1">Curate your existence.</p>
                 </div>
                 <Button
                     onClick={() => setCreateOpen(true)}
-                    className="rounded-full bg-white text-black hover:bg-slate-200"
+                    className="flex items-center gap-2 px-5 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header bg-transparent"
                 >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4" />
                     New List
                 </Button>
             </div>
@@ -67,28 +69,46 @@ export default function ListsPage() {
                             layoutId={list.id}
                             onClick={() => navigate(`/lists/${list.id}`)}
                             whileHover={{ y: -4 }}
-                            className="group relative overflow-hidden rounded-2xl border p-6 cursor-pointer h-48 flex flex-col justify-between"
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer h-56 flex flex-col justify-between aperture-card backdrop-blur-xl transition-all duration-300"
                             style={{
-                                borderColor: 'rgba(255,255,255,0.1)',
-                                background: `linear-gradient(135deg, rgba(${rgb}, 0.1), rgba(${rgb}, 0.02))`,
-                                boxShadow: `0 4px 20px rgba(0,0,0,0.2)`
+                                borderColor: `rgba(${rgb}, 0.25)`,
+                                background: `rgba(${rgb}, 0.08)`,
+                                boxShadow: `0 8px 32px rgba(${rgb}, 0.1)`
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = `rgba(${rgb}, 0.15)`
+                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.4)`
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = `rgba(${rgb}, 0.08)`
+                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.25)`
                             }}
                         >
-                            {/* Background Glow */}
-                            <div className="absolute -right-10 -top-10 w-32 h-32 blur-3xl rounded-full opacity-20 pointer-events-none"
-                                style={{ background: `rgb(${rgb})` }}
-                            />
+                            {/* Aesthetic Grid Mask */}
+                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+                                backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+                                backgroundSize: '16px 16px',
+                                maskImage: 'linear-gradient(to bottom, black, transparent)'
+                            }} />
 
-                            <div className="relative z-10">
-                                <div className="p-3 w-fit rounded-xl mb-4" style={{ background: `rgba(${rgb}, 0.2)` }}>
-                                    <ListIcon type={list.type} className="h-6 w-6 text-white" />
+                            <div className="relative z-10 p-6 flex-1 flex flex-col">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="p-2 rounded-lg" style={{ background: `rgba(${rgb}, 0.1)` }}>
+                                        <ListIcon type={list.type} className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-50 aperture-header" style={{ color: `rgb(${rgb})` }}>
+                                        {list.type}
+                                    </span>
                                 </div>
-                                <h3 className="text-xl font-bold text-white mb-1">{list.title}</h3>
-                                <p className="text-sm text-white/50">{list.item_count || 0} items</p>
+
+                                <h3 className="text-xl font-bold text-white mb-2 aperture-header leading-tight">{list.title}</h3>
+                                <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">{list.item_count || 0} items</p>
                             </div>
 
-                            <div className="relative z-10 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end">
-                                <span className="text-xs font-medium text-white/70">View Collection →</span>
+                            <div className="relative z-10 p-4 pt-0 flex justify-end">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white transition-colors aperture-header flex items-center gap-1">
+                                    View Collection <span className="group-hover:translate-x-1 transition-transform">→</span>
+                                </span>
                             </div>
                         </motion.div>
                     )

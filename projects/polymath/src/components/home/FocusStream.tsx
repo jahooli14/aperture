@@ -162,6 +162,7 @@ export function FocusStream() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
+                            className="p-6 relative overflow-hidden group cursor-pointer aperture-card transition-all duration-300 flex flex-col"
                             transition={{ delay: 0.05 }}
                             style={{
                                 borderColor: theme.borderColor,

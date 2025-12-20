@@ -55,7 +55,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Gemini Flash is fast enough (~500ms) to not excessively delay the response.
             try {
                 const { enrichListItem } = await import('./_lib/list-enrichment.js')
-                await enrichListItem(userId, listId as string, data.id, content)
+                const metadata = await enrichListItem(userId, listId as string, data.id, content)
+
+                // If successful, attach to response for instant UI update
+                if (metadata) {
+                    data.metadata = metadata
+                    data.enrichment_status = 'complete'
+                }
             } catch (err) {
                 console.error('[API] Enrichment failed:', err)
                 // Don't fail the request, just log it
