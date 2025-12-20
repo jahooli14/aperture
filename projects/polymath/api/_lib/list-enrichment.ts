@@ -69,6 +69,7 @@ RESPONSE FORMAT:
 
         if (error) throw error
         console.log(`[Enrichment] Successfully enriched: ${content}`)
+        return metadata
 
     } catch (error) {
         console.error(`[Enrichment] Failed for ${content}:`, error)
@@ -84,5 +85,6 @@ RESPONSE FORMAT:
         } catch (dbErr) {
             console.error('[Enrichment] Total failure - could not even update status:', dbErr)
         }
+        return null
     }
 }
