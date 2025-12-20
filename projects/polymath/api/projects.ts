@@ -489,61 +489,6 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     return res.status(410).json({ error: 'Knowledge Map feature has been deprecated.' })
   }
 
-  // CAPABILITIES RESOURCE
-  if (resource === 'capabilities') {
-    const action = req.query.action as string
-    const id = req.query.id as string
-
-    if (req.method === 'GET') {
-      try {
-        const { data, error } = await supabase
-          .from('capabilities')
-          .select('*')
-          .order('strength', { ascending: false })
-
-        if (error) throw error
-        return res.status(200).json(data)
-      } catch (error) {
-        return res.status(500).json({ error: 'Failed to fetch capabilities' })
-      }
-    }
-
-    if (req.method === 'POST') {
-      if (action === 'extract') {
-        try {
-          console.log('[capabilities] Starting extraction for user:', userId)
-          const caps = await extractCapabilities(userId)
-          console.log('[capabilities] Extraction complete, found:', caps.length, 'capabilities')
-          return res.status(200).json({ success: true, extracted: caps })
-        } catch (error) {
-          console.error('[capabilities] Extraction error:', error instanceof Error ? error.message : String(error))
-          console.error('[capabilities] Error stack:', error instanceof Error ? error.stack : 'No stack')
-          return res.status(500).json({
-            error: 'Extraction failed',
-            details: error instanceof Error ? error.message : String(error)
-          })
-        }
-      }
-    }
-
-    if (req.method === 'DELETE') {
-      if (!id) return res.status(400).json({ error: 'ID required' })
-      try {
-        const { error } = await supabase
-          .from('capabilities')
-          .delete()
-          .eq('id', id)
-
-        if (error) throw error
-        return res.status(200).json({ success: true })
-      } catch (error) {
-        return res.status(500).json({ error: 'Delete failed' })
-      }
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   // REAPER RESOURCE (for managing rotting projects)
   if (resource === 'reaper') {
     const action = req.query.action as string
