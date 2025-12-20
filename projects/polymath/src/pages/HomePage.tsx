@@ -151,201 +151,196 @@ function GetInspirationSection({
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-      <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-        background: 'var(--premium-bg-2)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-      }}>
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-            Get <span style={{ color: 'var(--premium-blue)' }}>inspiration</span>
-          </h2>
-        </div>
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold aperture-header">
+          Get <span className="text-[var(--brand-secondary)]">inspiration</span>
+        </h2>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* 1. AI Inspiration Card */}
-          {loading ? (
-            <SkeletonCard variant="list" count={1} />
-          ) : inspiration && inspiration.type !== 'empty' ? (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col"
+        {/* 1. AI Inspiration Card */}
+        {loading ? (
+          <SkeletonCard variant="list" count={1} />
+        ) : inspiration && inspiration.type !== 'empty' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col"
+          >
+            <Link
+              to={inspiration.url || '/projects'}
+              className="group block p-5 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
+              style={glassCardStyle('139, 92, 246')} // Violet/Purple for thought/article - keep specialized
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.1))`
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))`
+              }}
             >
-              <Link
-                to={inspiration.url || '/projects'}
-                className="group block p-5 rounded-xl transition-all duration-300 border flex-1 flex flex-col relative overflow-hidden backdrop-blur-xl"
-                style={glassCardStyle('139, 92, 246')} // Violet/Purple for thought/article - keep specialized
+              <div className="relative z-10 flex-1 flex flex-col h-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
+                    backgroundColor: `rgba(139, 92, 246, 0.1)`,
+                    color: 'rgb(167, 139, 250)',
+                    borderColor: `rgba(139, 92, 246, 0.3)`
+                  }}>
+                    Recommended
+                  </span>
+                </div>
+
+                <h3 className="premium-text-platinum font-bold text-lg mb-2">
+                  {inspiration.title}
+                </h3>
+                <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
+                  {inspiration.reasoning}
+                </p>
+
+                <div className="p-3 rounded-lg mt-auto" style={{
+                  backgroundColor: `rgba(139, 92, 246, 0.1)`,
+                  border: `1px solid rgba(139, 92, 246, 0.3)`
+                }}>
+                  {inspiration.type === 'project' && (() => {
+                    const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
+                    const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
+                    if (nextT) {
+                      return (
+                        <>
+                          <p className="text-[10px] font-bold mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
+                          <p className="text-sm text-gray-200 line-clamp-2">{nextT.text}</p>
+                        </>
+                      )
+                    }
+                    return <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                  })()}
+                  {inspiration.type !== 'project' && (
+                    <div className="flex items-start gap-2">
+                      <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          </motion.div>
+        ) : (
+          <EmptyState
+            icon={Zap}
+            title="No inspiration yet"
+            description="Add content to get suggestions!"
+          />
+        )}
+
+        {/* 2. Spark Card (Moved from FocusStream) */}
+        {sparkCandidate ? (
+          (() => {
+            if (!sparkCandidate.id) {
+              console.warn('Spark candidate missing ID', sparkCandidate)
+              return null
+            }
+            const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
+            const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
+                onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
+                style={{
+                  background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
+                  boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.1)`,
+                  borderColor: theme.borderColor
+                }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(139, 92, 246, 0.1))`
+                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05))`
+                  e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
                 }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
-                      backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                      color: 'rgb(167, 139, 250)',
-                      borderColor: `rgba(139, 92, 246, 0.3)`
+                      backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                      color: theme.textColor,
+                      borderColor: `rgba(${theme.rgb}, 0.3)`
                     }}>
-                      Recommended
+                      <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
+                    </span>
+                    <span className="text-xs text-slate-500 flex items-center gap-1 ml-auto">
+                      ~20 min
                     </span>
                   </div>
 
-                  <h3 className="premium-text-platinum font-bold text-lg mb-2">
-                    {inspiration.title}
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    {sparkCandidate.title}
                   </h3>
-                  <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                    {inspiration.reasoning}
+                  <p className="text-sm text-slate-400 mb-4 leading-relaxed">
+                    Perfect for your current {timeContextEnergy} energy.
                   </p>
 
-                  <div className="p-3 rounded-lg mt-auto" style={{
-                    backgroundColor: `rgba(139, 92, 246, 0.1)`,
-                    border: `1px solid rgba(139, 92, 246, 0.3)`
-                  }}>
-                    {inspiration.type === 'project' && (() => {
-                      const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
-                      const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
-                      if (nextT) {
-                        return (
-                          <>
-                            <p className="text-[10px] font-bold mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
-                            <p className="text-sm text-gray-200 line-clamp-2">{nextT.text}</p>
-                          </>
-                        )
-                      }
-                      return <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
-                    })()}
-                    {inspiration.type !== 'project' && (
-                      <div className="flex items-start gap-2">
-                        <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ) : (
-            <EmptyState
-              icon={Zap}
-              title="No inspiration yet"
-              description="Add content to get suggestions!"
-            />
-          )}
-
-          {/* 2. Spark Card (Moved from FocusStream) */}
-          {sparkCandidate ? (
-            (() => {
-              if (!sparkCandidate.id) {
-                console.warn('Spark candidate missing ID', sparkCandidate)
-                return null
-              }
-              const theme = getTheme(sparkCandidate.type || 'other', sparkCandidate.title)
-              const nextTask = (sparkCandidate.metadata?.tasks || []).sort((a: any, b: any) => a.order - b.order).find((t: any) => !t.done)
-              return (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="p-5 relative overflow-hidden group cursor-pointer rounded-xl backdrop-blur-xl transition-all duration-300 border flex flex-col"
-                  onClick={() => navigate(`/projects/${sparkCandidate.id}`)}
-                  style={{
-                    background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`,
-                    boxShadow: `0 4px 16px rgba(${theme.rgb}, 0.1)`,
-                    borderColor: theme.borderColor
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25), rgba(${theme.rgb}, 0.1))`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15), rgba(${theme.rgb}, 0.05))`
-                  }}
-                >
-                  <div className="relative z-10 flex-1 flex flex-col h-full">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
-                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                        color: theme.textColor,
-                        borderColor: `rgba(${theme.rgb}, 0.3)`
-                      }}>
-                        <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
-                      </span>
-                      <span className="text-xs text-slate-500 flex items-center gap-1 ml-auto">
-                        ~20 min
-                      </span>
+                  {nextTask && (
+                    <div className="p-3 rounded-lg mt-auto" style={{
+                      backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                      border: `1px solid rgba(${theme.rgb}, 0.3)`
+                    }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
+                      <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
                     </div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })()
+        ) : (
+          // Placeholder if no Spark (e.g. "Suggest Projects" button could live here or be full width below)
+          <Link
+            to="/suggestions"
+            className="group p-5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderColor: 'rgba(255, 255, 255, 0.05)'
+            }}
+          >
+            <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-2">
+              <Lightbulb className="h-6 w-6" />
+            </div>
+            <h3 className="font-bold text-slate-200">Need more ideas?</h3>
+            <p className="text-sm text-slate-500">Generate new project suggestions based on your interests.</p>
+          </Link>
+        )}
 
-                    <h3 className="text-lg font-bold text-white mb-2">
-                      {sparkCandidate.title}
-                    </h3>
-                    <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                      Perfect for your current {timeContextEnergy} energy.
-                    </p>
+      </div>
 
-                    {nextTask && (
-                      <div className="p-3 rounded-lg mt-auto" style={{
-                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                        border: `1px solid rgba(${theme.rgb}, 0.3)`
-                      }}>
-                        <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
-                        <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )
-            })()
-          ) : (
-            // Placeholder if no Spark (e.g. "Suggest Projects" button could live here or be full width below)
-            <Link
-              to="/suggestions"
-              className="group p-5 rounded-xl transition-all duration-300 border flex flex-col items-center justify-center text-center gap-3 h-full min-h-[200px]"
-              style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                borderColor: 'rgba(255, 255, 255, 0.05)'
-              }}
-            >
-              <div className="h-12 w-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-2">
-                <Lightbulb className="h-6 w-6" />
-              </div>
-              <h3 className="font-bold text-slate-200">Need more ideas?</h3>
-              <p className="text-sm text-slate-500">Generate new project suggestions based on your interests.</p>
-            </Link>
-          )}
-
-        </div>
-
-        {/* Suggestion Call to Action - Footer */}
-        <div className="mt-4">
-          {hasPendingSuggestions ? (
-            <Link
-              to="/suggestions"
-              className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99]"
-              style={{
-                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.1))',
-                color: '#22d3ee', // Cyan-400
-                border: '1px solid rgba(6, 182, 212, 0.3)'
-              }}
-            >
-              <Zap className="inline h-4 w-4 mr-2" />
-              {pendingSuggestionsCount} {pendingSuggestionsCount === 1 ? 'Idea' : 'Ideas'} Waiting to be reviewed
-              <ArrowRight className="inline h-4 w-4 ml-2" />
-            </Link>
-          ) : (
-            <Link
-              to="/suggestions"
-              className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5 active:scale-[0.99]"
-              style={{
-                color: 'var(--premium-cyan, #06b6d4)'
-              }}
-            >
-              See all project suggestions <ArrowRight className="inline h-4 w-4 ml-1" />
-            </Link>
-          )}
-        </div>
+      {/* Suggestion Call to Action - Footer */}
+      <div className="mt-4">
+        {hasPendingSuggestions ? (
+          <Link
+            to="/suggestions"
+            className="block text-center py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.1))',
+              color: '#22d3ee', // Cyan-400
+              border: '1px solid rgba(6, 182, 212, 0.3)'
+            }}
+          >
+            <Zap className="inline h-4 w-4 mr-2" />
+            {pendingSuggestionsCount} {pendingSuggestionsCount === 1 ? 'Idea' : 'Ideas'} Waiting to be reviewed
+            <ArrowRight className="inline h-4 w-4 ml-2" />
+          </Link>
+        ) : (
+          <Link
+            to="/suggestions"
+            className="block text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5 active:scale-[0.99]"
+            style={{
+              color: 'var(--premium-cyan, #06b6d4)'
+            }}
+          >
+            See all project suggestions <ArrowRight className="inline h-4 w-4 ml-1" />
+          </Link>
+        )}
       </div>
     </section>
   )
@@ -491,109 +486,104 @@ function InsightsSection() {
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-      <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-        background: 'var(--premium-bg-2)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-      }}>
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-            Your <span style={{ color: 'var(--premium-blue)' }}>insights</span>
-          </h2>
-          <button
-            onClick={() => loadInsights(true)}
-            disabled={refreshing}
-            className="h-8 w-8 rounded-lg flex items-center justify-center transition-all hover:bg-white/5"
-            style={{ color: 'var(--premium-text-tertiary)' }}
-            title="Refresh insights"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-              </div>
-              <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
-                  Analyzing your thoughts...
-                </p>
-                <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  Finding patterns and connections
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)' }} />
-              <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)', animationDelay: '150ms' }} />
-            </div>
-          </div>
-        ) : insights.length > 0 ? (
-          <div className="space-y-3">
-            {/* Show first 2 insights */}
-            {insights.slice(0, 2).map((insight, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedInsight(insight)}
-                className="w-full text-left p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{
-                  background: 'var(--premium-bg-3)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    {getInsightIcon(insight.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm mb-1 premium-text-platinum">
-                      {insight.title}
-                    </h3>
-                    <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
-                      {insight.description}
-                    </p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--premium-text-tertiary)' }} />
-                </div>
-              </button>
-            ))}
-
-            {insights.length > 2 && (
-              <button
-                onClick={() => navigate('/insights')}
-                className="block w-full text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-                style={{ color: 'var(--premium-blue)' }}
-              >
-                View All Insights ({insights.length}) <ArrowRight className="inline h-4 w-4 ml-1" />
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.5 }} />
-            <p className="text-sm mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
-              Building your insights...
-            </p>
-            {requirements ? (
-              <>
-                <p className="text-xs mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                  {requirements.tip}
-                </p>
-              </>
-            ) : (
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Add more thoughts with themes to see patterns emerge
-              </p>
-            )}
-          </div>
-        )}
+    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-3xl font-bold aperture-header">
+          Your <span className="text-[var(--brand-secondary)]">insights</span>
+        </h2>
+        <button
+          onClick={() => loadInsights(true)}
+          disabled={refreshing}
+          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+          style={{ color: 'var(--premium-text-tertiary)' }}
+          title="Refresh insights"
+        >
+          <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
+
+      {loading ? (
+        <div className="space-y-4 py-4">
+          <div className="flex items-center gap-3">
+            <div>
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+            </div>
+            <div>
+              <p className="text-sm font-medium" style={{ color: 'var(--premium-text-primary)' }}>
+                Analyzing your thoughts...
+              </p>
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                Finding patterns and connections
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)' }} />
+            <div className="h-16 rounded-lg animate-pulse" style={{ background: 'var(--premium-bg-3)', animationDelay: '150ms' }} />
+          </div>
+        </div>
+      ) : insights.length > 0 ? (
+        <div className="space-y-3">
+          {/* Show first 2 insights */}
+          {insights.slice(0, 2).map((insight, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedInsight(insight)}
+              className="w-full text-left p-4 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                background: 'var(--premium-bg-3)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  {getInsightIcon(insight.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm mb-1 premium-text-platinum">
+                    {insight.title}
+                  </h3>
+                  <p className="text-sm line-clamp-2" style={{ color: 'var(--premium-text-secondary)' }}>
+                    {insight.description}
+                  </p>
+                </div>
+                <ArrowRight className="h-4 w-4 mt-1 opacity-50" style={{ color: 'var(--premium-text-tertiary)' }} />
+              </div>
+            </button>
+          ))}
+
+          {insights.length > 2 && (
+            <button
+              onClick={() => navigate('/insights')}
+              className="block w-full text-center py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
+              style={{ color: 'var(--premium-blue)' }}
+            >
+              View All Insights ({insights.length}) <ArrowRight className="inline h-4 w-4 ml-1" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="text-center py-6">
+          <TrendingUp className="h-10 w-10 mx-auto mb-3" style={{ color: 'var(--premium-text-tertiary)', opacity: 0.5 }} />
+          <p className="text-sm mb-1" style={{ color: 'var(--premium-text-secondary)' }}>
+            Building your insights...
+          </p>
+          {requirements ? (
+            <>
+              <p className="text-xs mb-2" style={{ color: 'var(--premium-text-tertiary)' }}>
+                {requirements.current}/{requirements.needed} {requirements.needed === 5 ? 'thoughts' : 'with themes'}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+                {requirements.tip}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+              Add more thoughts with themes to see patterns emerge
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Full Insight Modal */}
       <InsightDialog
@@ -847,17 +837,15 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 border-b border-white"
+        className="fixed top-0 left-0 right-0 z-40 border-b border-white/5 backdrop-blur-md"
         style={{
-          backgroundColor: 'var(--zebra-black)'
+          backgroundColor: 'rgba(15, 24, 41, 0.7)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <h1 className="text-2xl sm:text-3xl" style={{
-            fontWeight: 600,
-            letterSpacing: 'var(--premium-tracking-tight)',
-            color: 'var(--premium-text-secondary)',
-            opacity: 0.7
+          <h1 className="text-2xl sm:text-3xl aperture-header" style={{
+            color: 'var(--brand-text-secondary)',
+            opacity: 0.9
           }}>
             <BrandName className="inline" showLogo={true} />
           </h1>
@@ -865,7 +853,7 @@ export function HomePage() {
             onClick={() => navigate('/search')}
             className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
             style={{
-              color: 'var(--premium-blue)'
+              color: 'var(--brand-secondary)'
             }}
             title="Search everything"
           >
@@ -924,80 +912,79 @@ export function HomePage() {
         </AnimatePresence>
 
         {/* Aperture Power Hour - The Hero Engine */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
           <PowerHourHero />
         </section>
 
         {/* 1. ADD SOMETHING NEW */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="mb-4">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Add something <span style={{ color: 'var(--premium-blue)' }}>new</span>
-              </h2>
-            </div>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 aperture-shelf">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold aperture-header">
+              Add something <span className="text-[var(--brand-secondary)]">new</span>
+            </h2>
+          </div>
 
-            <div className="flex items-center gap-3">
-              {/* Voice Note */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  window.dispatchEvent(new CustomEvent('openVoiceCapture'))
-                }}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{ background: 'var(--premium-bg-3)' }}
-                title="Voice Note"
-              >
-                <Mic className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              </button>
+          <div className="flex items-center gap-3">
+            {/* Voice Note */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('openVoiceCapture'))
+              }}
+              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--premium-bg-3)' }}
+              title="Voice Note"
+            >
+              <Mic className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+            </button>
 
-              {/* Written Thought */}
-              <button
-                onClick={() => setCreateThoughtOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{ background: 'var(--premium-bg-3)' }}
-                title="Thought"
-              >
-                <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              </button>
+            {/* Written Thought */}
+            <button
+              onClick={() => setCreateThoughtOpen(true)}
+              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--premium-bg-3)' }}
+              title="Thought"
+            >
+              <Brain className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+            </button>
 
-              {/* Article */}
-              <button
-                onClick={() => setSaveArticleOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{ background: 'var(--premium-bg-3)' }}
-                title="Article"
-              >
-                <FileText className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              </button>
+            {/* Article */}
+            <button
+              onClick={() => setSaveArticleOpen(true)}
+              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--premium-bg-3)' }}
+              title="Article"
+            >
+              <FileText className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+            </button>
 
-              {/* Project */}
-              <button
-                onClick={() => setCreateProjectOpen(true)}
-                className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-                style={{ background: 'var(--premium-bg-3)' }}
-                title="Project"
-              >
-                <Layers className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
-              </button>
-            </div>
+            {/* Project */}
+            <button
+              onClick={() => setCreateProjectOpen(true)}
+              className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{ background: 'var(--premium-bg-3)' }}
+              title="Project"
+            >
+              <Layers className="h-6 w-6" style={{ color: 'var(--brand-secondary)' }} />
+            </button>
           </div>
         </section>
 
         {/* Drift Mode Overlay */}
-        {driftModeOpen && (
-          <DriftMode
-            mode="break"
-            prompts={breakPrompts}
-            onClose={() => setDriftModeOpen(false)}
-          />
-        )}
+        {
+          driftModeOpen && (
+            <DriftMode
+              mode="break"
+              prompts={breakPrompts}
+              onClose={() => setDriftModeOpen(false)}
+            />
+          )
+        }
 
         {/* 2. KEEP THE MOMENTUM (Focus Stream) */}
-        <FocusStream />
+        <div className="aperture-shelf">
+          <FocusStream />
+        </div>
 
         {/* 3. GET INSPIRATION (Glass Cards + Spark) */}
         <GetInspirationSection
@@ -1014,218 +1001,188 @@ export function HomePage() {
 
 
         {/* 6. EXPLORE (Bottom Links) */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
-            background: 'var(--premium-bg-2)',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
-          }}>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold premium-text-platinum" style={{ opacity: 0.7 }}>
-                Or just <span style={{ color: 'var(--premium-blue)' }}>explore</span>
-              </h2>
-            </div>
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold aperture-header">
+              Or just <span className="text-[var(--brand-secondary)]">explore</span>
+            </h2>
+          </div>
 
-            {/* Card of the Day - Resurfacing - Enhanced Design */}
-            {cardOfTheDay && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="premium-glass-subtle p-6 rounded-2xl relative overflow-hidden mb-6"
+          {/* Card of the Day - Resurfacing - Enhanced Design */}
+          {cardOfTheDay && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="aperture-card p-6 relative overflow-hidden mb-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
+                boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
+              }}
+            >
+              {/* Ambient glow effect */}
+              <div
+                className="absolute inset-0 opacity-15"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.20))',
-                  boxShadow: '0 12px 40px rgba(139, 92, 246, 0.2)'
+                  background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
+                  pointerEvents: 'none'
                 }}
-              >
-                {/* Ambient glow effect */}
-                <div
-                  className="absolute inset-0 opacity-15"
-                  style={{
-                    background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.3), transparent 60%)',
-                    pointerEvents: 'none'
-                  }}
-                />
+              />
 
-                {/* Content */}
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <h3 className="font-bold text-lg" style={{ color: 'var(--premium-text-primary)' }}>
-                      Thought of the day
-                    </h3>
-                  </div>
-                  <p className="mb-4 leading-relaxed text-lg italic" style={{
-                    color: 'var(--premium-text-primary)',
-                    fontWeight: 500,
-                    fontFamily: 'serif'
+              {/* Content */}
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="font-bold text-lg aperture-header" style={{ color: 'var(--brand-text-primary)' }}>
+                    Thought of the day
+                  </h3>
+                </div>
+                <p className="mb-4 leading-relaxed text-lg italic aperture-body" style={{
+                  color: 'var(--brand-text-primary)',
+                  fontWeight: 500
+                }}>
+                  "{cardOfTheDay.body}"
+                </p>
+                <div className="flex items-center gap-2 text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                  <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--brand-secondary)' }} />
+                  <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Grid: Mindset & Discovery Tools */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+            {/* Bedtime Ideas */}
+            <Link
+              to="/bedtime"
+              className="group p-5 aperture-card transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                    background: 'rgba(99, 102, 241, 0.1)', // Indigo for sleep/dreams
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)'
                   }}>
-                    "{cardOfTheDay.body}"
-                  </p>
-                  <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                    <span className="inline-block h-1 w-1 rounded-full" style={{ backgroundColor: 'var(--premium-purple)' }} />
-                    <span>From {new Date(cardOfTheDay.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <Moon className="h-5 w-5" style={{ color: '#818cf8' }} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold mb-1 aperture-header">Bedtime ideas</h3>
+                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                      Creative inspiration for sleep
+                    </p>
                   </div>
                 </div>
-              </motion.div>
-            )}
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+              </div>
+            </Link>
 
-            {/* Divider */}
-            <div className="w-full h-px bg-white/10 my-6" />
-
-            {/* Grid: Mindset & Discovery Tools */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Bedtime Ideas */}
-              <Link
-                to="/bedtime"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(99, 102, 241, 0.1)', // Indigo for sleep/dreams
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(99, 102, 241, 0.2)'
-                    }}>
-                      <Moon className="h-5 w-5" style={{ color: '#818cf8' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Bedtime ideas</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Creative inspiration for sleep
-                      </p>
-                    </div>
+            {/* Drift Mode */}
+            <button
+              onClick={handleOpenDrift}
+              className="group p-5 aperture-card transition-all text-left"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                    background: 'rgba(99, 102, 241, 0.1)', // Indigo
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)'
+                  }}>
+                    <Wind className="h-5 w-5" style={{ color: '#818cf8' }} />
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
-                </div>
-              </Link>
-
-              {/* Drift Mode */}
-              <button
-                onClick={handleOpenDrift}
-                className="group p-5 rounded-xl transition-all text-left"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(99, 102, 241, 0.1)', // Indigo
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(99, 102, 241, 0.2)'
-                    }}>
-                      <Wind className="h-5 w-5" style={{ color: '#818cf8' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Drift Mode</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Mental reset & hypnagogic insights
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="font-bold mb-1 aperture-header">Drift Mode</h3>
+                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                      Mental reset & hypnagogic insights
+                    </p>
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
                 </div>
-              </button>
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
+              </div>
+            </button>
 
-              {/* Discover Projects */}
-              <Link
-                to="/suggestions"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        AI recommendations
-                      </p>
-                    </div>
+            {/* Discover Projects */}
+            <Link
+              to="/suggestions"
+              className="group p-5 aperture-card transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <Lightbulb className="h-5 w-5" style={{ color: 'var(--brand-secondary)' }} />
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                  <div>
+                    <h3 className="font-bold mb-1 aperture-header">Discover Projects</h3>
+                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                      AI recommendations
+                    </p>
+                  </div>
                 </div>
-              </Link>
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-secondary)' }} />
+              </div>
+            </Link>
 
-              {/* Analysis */}
-              <Link
-                to="/insights"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <TrendingUp className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Analysis</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Patterns & Insights
-                      </p>
-                    </div>
+            {/* Analysis */}
+            <Link
+              to="/insights"
+              className="group p-5 aperture-card transition-all"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'var(--premium-bg-3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--brand-glass-bg)'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)'
+                  }}>
+                    <TrendingUp className="h-5 w-5" style={{ color: 'var(--brand-secondary)' }} />
                   </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                  <div>
+                    <h3 className="font-bold mb-1 aperture-header">Analysis</h3>
+                    <p className="text-sm aperture-body" style={{ color: 'var(--brand-text-secondary)' }}>
+                      Patterns & Insights
+                    </p>
+                  </div>
                 </div>
-              </Link>
-            </div>
-          </div >
-        </section >
+                <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-secondary)' }} />
+              </div>
+            </Link>
+          </div>
+        </section>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 flex justify-center">
           <Link
             to="/settings"
-            className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all border border-white/5 hover:bg-white/5 premium-text-platinum text-sm font-medium"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl transition-all border border-white/5 hover:bg-white/5 aperture-card text-sm font-medium"
             style={{
-              background: 'var(--premium-bg-2)',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
             }}
           >
@@ -1234,10 +1191,11 @@ export function HomePage() {
           </Link>
         </div>
 
-      </div >
+      </div>
 
       {/* Dialogs */}
-      < SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
+      < SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)
+      } />
 
 
       {/* Hidden trigger buttons for dialogs */}
@@ -1249,6 +1207,6 @@ export function HomePage() {
           <CreateProjectDialog />
         </div>
       </div>
-    </motion.div >
+    </motion.div>
   )
 }
