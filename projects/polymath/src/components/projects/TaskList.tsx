@@ -186,67 +186,81 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
               onDragStart={() => handleDragStart(task.id)}
               onDragOver={(e) => handleDragOver(e, task.id)}
               onDragEnd={handleDragEnd}
-              className={cn("group flex items-center gap-2 p-2.5 rounded-lg transition-all cursor-move", isHighlighted ? "border border-blue-500/30 bg-blue-500/10" : "")}
+              className={cn(
+                "group relative flex items-center gap-3 p-3.5 rounded-xl transition-all cursor-move border border-white/5",
+                isHighlighted
+                  ? "border-blue-500/40 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                  : isNextTask
+                    ? "bg-white/[0.05] border-white/10"
+                    : "hover:bg-white/[0.02]"
+              )}
               style={{
-                background: isHighlighted ? 'rgba(59, 130, 246, 0.1)' : isNextTask ? 'var(--premium-bg-3)' : 'rgba(255, 255, 255, 0.03)',
                 opacity: draggedTaskId === task.id ? 0.5 : 1
               }}
             >
               {isHighlighted && (
-                <div className="absolute -left-2 top-1/2 -translate-y-1/2">
-                  <Zap className="h-4 w-4 text-blue-400 fill-blue-400/20" />
-                </div>
+                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
               )}
+
               {/* Drag Handle */}
-              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" style={{ color: 'var(--premium-text-tertiary)' }}>
+              <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-white/20">
                 <GripVertical className="h-4 w-4" />
               </div>
 
               {/* Checkbox */}
               <button
                 onClick={() => handleToggleTask(task.id)}
-                className="flex-shrink-0 h-5 w-5 rounded flex items-center justify-center transition-all"
-                style={{
-                  backgroundColor: 'transparent',
-                  border: '2px solid rgba(255, 255, 255, 0.3)'
-                }}
+                className={cn(
+                  "flex-shrink-0 h-6 w-6 rounded-lg flex items-center justify-center transition-all border-2",
+                  isHighlighted ? "border-blue-500/50 bg-blue-500/5" : "border-white/20 bg-black/20"
+                )}
               >
-                {task.done && <Check className="h-3 w-3 text-white" />}
+                {task.done && <Check className="h-3.5 w-3.5 text-white" />}
               </button>
 
               {/* Task Text */}
-              {editingTaskId === task.id ? (
-                <input
-                  type="text"
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                  onFocus={handleInputFocus}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleEditSave(task.id)
-                    if (e.key === 'Escape') handleEditCancel()
-                  }}
-                  className="flex-1 px-2 py-1 text-sm rounded focus:outline-none focus:ring-2 bg-white/10"
-                  style={{ color: 'var(--premium-text-primary)' }}
-                  autoFocus
-                />
-              ) : (
-                <span
-                  className="flex-1 text-sm cursor-text hover:opacity-70 transition-opacity"
-                  onClick={() => handleEditStart(task.id, task.text)}
-                  style={{ color: 'var(--premium-text-primary)' }}
-                >
-                  {task.text}
-                </span>
-              )}
+              <div className="flex-1 min-w-0">
+                {editingTaskId === task.id ? (
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onFocus={handleInputFocus}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleEditSave(task.id)
+                      if (e.key === 'Escape') handleEditCancel()
+                    }}
+                    className="w-full px-2 py-1 text-sm rounded bg-white/10 outline-none ring-1 ring-blue-500/50"
+                    style={{ color: 'white' }}
+                    autoFocus
+                  />
+                ) : (
+                  <div className="flex flex-col">
+                    <span
+                      className={cn(
+                        "text-sm font-medium cursor-text transition-all",
+                        isHighlighted ? "text-blue-500" : "text-white/90"
+                      )}
+                      onClick={() => handleEditStart(task.id, task.text)}
+                    >
+                      {task.text}
+                    </span>
+                    {isHighlighted && (
+                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/50 mt-1">
+                        Power Hour Priority
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Delete Button */}
               <button
                 onClick={() => handleDeleteTask(task.id)}
-                className="flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all"
-                style={{ color: 'var(--premium-text-tertiary)' }}
+                className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/10 text-white/20 hover:text-red-500"
                 aria-label="Delete task"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
           )

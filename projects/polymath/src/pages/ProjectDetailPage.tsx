@@ -663,29 +663,56 @@ export function ProjectDetailPage() {
             >
               {/* Power Hour Focus Mode */}
               {powerHourTask && (
-                <div className="premium-card p-6 border border-blue-500/50 relative overflow-hidden group mb-6 bg-blue-900/10">
-                  <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Zap className="h-24 w-24" />
+                <div className="premium-card p-8 border-2 border-blue-500/50 relative overflow-hidden group mb-8 bg-blue-900/20 backdrop-blur-xl">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                    <Zap className="h-48 w-48 text-blue-400" />
                   </div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3 text-blue-400 font-bold uppercase tracking-wider text-xs">
-                      <Zap className="h-4 w-4" />
-                      Power Hour Objective
+                    <div className="flex items-center gap-2 mb-4 text-blue-400 font-black uppercase tracking-[0.2em] text-[10px]">
+                      <Zap className="h-4 w-4 fill-current" />
+                      Power Hour Session
                     </div>
-                    <h2 className="text-xl font-bold text-white mb-2">{powerHourTask.task_title}</h2>
-                    <p className="text-slate-300 mb-6 max-w-2xl leading-relaxed">{powerHourTask.task_description}</p>
 
-                    <button
-                      onClick={() => {
-                        window.scrollTo({ top: document.querySelector('[data-task-list]')?.getBoundingClientRect().top! + window.scrollY - 100, behavior: 'smooth' })
-                        addToast({ title: 'Focus on checklists below', variant: 'default' })
-                      }}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Check className="h-4 w-4" />
-                      Ready to execute
-                    </button>
+                    <h2 className="text-3xl font-black text-white mb-3 uppercase italic tracking-tighter leading-none">
+                      {powerHourTask.task_title}
+                    </h2>
+
+                    {powerHourTask.session_summary ? (
+                      <p className="text-xl font-medium text-blue-100/80 mb-6 max-w-2xl leading-relaxed italic font-serif">
+                        "{powerHourTask.session_summary}"
+                      </p>
+                    ) : (
+                      <p className="text-lg text-slate-300 mb-6 max-w-2xl leading-relaxed">
+                        {powerHourTask.task_description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => {
+                          const el = document.querySelector('[data-task-list]')
+                          if (el) {
+                            window.scrollTo({
+                              top: el.getBoundingClientRect().top + window.scrollY - 120,
+                              behavior: 'smooth'
+                            })
+                          }
+                          addToast({ title: 'Focus on your hit-list below', variant: 'default' })
+                        }}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs tracking-widest rounded transition-all flex items-center gap-3 group/btn"
+                      >
+                        <Check className="h-4 w-4 group-hover/btn:scale-125 transition-transform" />
+                        Execute Hit-List
+                      </button>
+
+                      <div className="text-[10px] font-black uppercase tracking-widest text-blue-400/50">
+                        60 Minutes Remaining
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Aesthetic Lines */}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-30" />
                 </div>
               )}
 

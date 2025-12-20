@@ -41,6 +41,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[power-hour] No cache found or forced refresh. Generating on-fly...')
         const tasks = await generatePowerHourPlan(userId, targetProject)
 
+        // 3. Proactive Enrichment: If enrich is true, save new tasks immediately
+        if (req.query.enrich === 'true' && targetProject && tasks.length > 0) {
+            console.log('[power-hour] Proactive enrichment triggered for project:', targetProject)
+            const { data: project } = await supabase
+                .from('projects')
+                .select('metadata')
+                .eq('id', targetProject)
+                .single()
+
+            if (project) {
+                const newItems = tasks
+                    .find(t => t.project_id === targetProject)
+                    ?.checklist_items?.filter(i => i.is_new) || []
+
+                if (newItems.length > 0) {
+                    const existingTasks = project.metadata?.tasks || []
+                    const freshTasks = newItems.map((item, idx) => ({
+                        id: crypto.randomUUID(),
+                        text: item.text,
+                        done: false,
+                        created_at: new Date().toISOString(),
+                        order: existingTasks.length + idx
+                    }))
+
+                    await supabase
+                        .from('projects')
+                        .update({
+                            metadata: {
+                                ...project.metadata,
+                                tasks: [...existingTasks, ...freshTasks]
+                            }
+                        })
+                        .eq('id', targetProject)
+
+                    console.log(`[power-hour] Enriched project ${targetProject} with ${freshTasks.length} new tasks.`)
+                }
+            }
+        }
+
         // Cache it for next time
         if (tasks.length > 0) {
             await supabase.from('daily_power_hour').insert({

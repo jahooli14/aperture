@@ -11,6 +11,8 @@ interface PowerTask {
     project_title: string
     task_title: string
     task_description: string
+    session_summary?: string
+    checklist_items?: { text: string; is_new: boolean }[]
     impact_score: number
     fuel_id?: string
     fuel_title?: string
@@ -26,7 +28,7 @@ export function PowerHourHero() {
     const navigate = useNavigate()
 
     // Get all projects for the manual picker
-    const { allProjects } = useProjectStore()
+    const { allProjects, updateProject } = useProjectStore()
     const activeProjects = allProjects.filter(p => ['active', 'upcoming', 'maintaining'].includes(p.status))
 
     async function fetchPowerHour(refreshProjectId?: string) {
@@ -48,8 +50,6 @@ export function PowerHourHero() {
                 : '/api/power-hour'
 
             const res = await fetch(url)
-            const contentType = res.headers.get('content-type')
-
             if (!res.ok) throw new Error(`Engine offline: ${res.status}`)
 
             const data = await res.json()
@@ -103,6 +103,46 @@ export function PowerHourHero() {
     )
 
     const mainTask = tasks[selectedIndex] || tasks[0]
+
+    const handleStartPowerHour = async () => {
+        haptic.heavy()
+        const project = allProjects.find(p => p.id === mainTask.project_id)
+        if (!project) return
+
+        let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
+
+        // 1. Identify new tasks to add
+        const newTasksFromAI = mainTask.checklist_items?.filter(item => item.is_new) || []
+
+        if (newTasksFromAI.length > 0) {
+            const freshTasks = newTasksFromAI.map((t, idx) => ({
+                id: crypto.randomUUID(),
+                text: t.text,
+                done: false,
+                created_at: new Date().toISOString(),
+                order: updatedTasks.length + idx
+            }))
+
+            updatedTasks = [...updatedTasks, ...freshTasks]
+
+            // Force immediate update to store and backend
+            await updateProject(project.id, {
+                metadata: {
+                    ...project.metadata,
+                    tasks: updatedTasks
+                }
+            })
+        }
+
+        // 2. Navigate with full context
+        navigate(`/projects/${mainTask.project_id}`, {
+            state: {
+                powerHourTask: mainTask,
+                // Pass the specific tasks we want highlighted, based on text matching
+                highlightedTasks: mainTask.checklist_items?.map(i => ({ task_title: i.text })) || []
+            }
+        })
+    }
 
     return (
         <div className="relative mb-12 group/hero">
@@ -169,7 +209,7 @@ export function PowerHourHero() {
                                     <span>{mainTask.project_title}</span>
                                 </div>
 
-                                <h1 className="text-3xl md:text-5xl font-black mb-6 uppercase leading-[0.9] italic tracking-tighter">
+                                <h1 className="text-3xl md:text-5xl font-black mb-6 uppercase leading-[0.9] italic tracking-tighter text-white">
                                     {mainTask.task_title}
                                 </h1>
 
@@ -179,22 +219,18 @@ export function PowerHourHero() {
 
                                 <div className="flex flex-wrap gap-4">
                                     <button
-                                        onClick={() => {
-                                            haptic.heavy()
-                                            const projectTasks = tasks.filter(t => t.project_id === mainTask.project_id)
-                                            navigate(`/projects/${mainTask.project_id}`, { state: { powerHourTasks: projectTasks } })
-                                        }}
+                                        onClick={handleStartPowerHour}
                                         className="zebra-btn flex items-center gap-3 group px-8 py-4"
                                     >
                                         <Play className="h-4 w-4 fill-current" />
-                                        <span className="text-sm">Initiate Sprint</span>
+                                        <span className="text-sm">Start Power Hour</span>
                                         <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                     </button>
 
                                     {mainTask.fuel_id && (
                                         <button
                                             onClick={() => navigate(`/reading/${mainTask.fuel_id}`)}
-                                            className="flex items-center gap-2 px-5 py-3 border border-white/20 hover:border-white transition-colors uppercase text-[10px] font-black tracking-widest bg-black/50 backdrop-blur-sm"
+                                            className="flex items-center gap-2 px-5 py-3 border border-white/20 hover:border-white transition-colors uppercase text-[10px] font-black tracking-widest bg-black/50 backdrop-blur-sm text-white"
                                         >
                                             <BookOpen className="h-4 w-4" />
                                             <span>Read Fuel</span>
@@ -213,10 +249,10 @@ export function PowerHourHero() {
                         </div>
 
                         <div className="text-center relative z-10 transition-transform group-hover/hero:scale-110 duration-700">
-                            <div className="text-7xl md:text-8xl font-black mb-2 lining-nums italic tracking-tighter">
+                            <div className="text-7xl md:text-8xl font-black mb-2 lining-nums italic tracking-tighter text-white">
                                 {Math.round(mainTask.impact_score * 100)}%
                             </div>
-                            <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">
+                            <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 text-white/60">
                                 Momentum Delta
                             </div>
                         </div>
@@ -241,12 +277,12 @@ export function PowerHourHero() {
                                     setSelectedIndex(idx)
                                 }}
                                 className={`flex-1 flex items-center gap-3 p-3 transition-all ${selectedIndex === idx
-                                        ? 'bg-white text-black'
-                                        : 'hover:bg-white/5 text-gray-500'
+                                    ? 'bg-white text-black'
+                                    : 'hover:bg-white/5 text-gray-500'
                                     }`}
                             >
-                                <span className="font-black italic text-xs lining-nums">0{idx + 1}</span>
-                                <div className="text-[10px] font-black uppercase tracking-tighter truncate max-w-[120px]">
+                                <span className={`font-black italic text-xs lining-nums ${selectedIndex === idx ? 'text-black' : 'text-gray-500'}`}>0{idx + 1}</span>
+                                <div className={`text-[10px] font-black uppercase tracking-tighter truncate max-w-[120px] ${selectedIndex === idx ? 'text-black' : 'text-gray-500'}`}>
                                     {task.project_title}
                                 </div>
                                 {selectedIndex === idx && <div className="ml-auto w-1 h-1 bg-black rounded-full" />}

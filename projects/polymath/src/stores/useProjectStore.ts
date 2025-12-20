@@ -316,7 +316,7 @@ export const useProjectStore = create<ProjectState>()(
 
           // Background refresh Power Hour if tasks were likely touched
           if (data.metadata?.tasks) {
-            fetch('/api/power-hour?refresh=true').catch(() => { })
+            fetch(`/api/power-hour?projectId=${id}&refresh=true&enrich=true`).catch(() => { })
           }
         } catch (error) {
           logger.error('Failed to update project:', error)
