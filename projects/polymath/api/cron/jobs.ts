@@ -137,7 +137,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 3. Run synthesis on Mondays
       if (isMonday) {
         try {
-          const userId = process.env.userId || 'default-user'
           const suggestions = await runSynthesis(userId)
           results.tasks.synthesis = {
             success: true,
