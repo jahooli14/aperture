@@ -1089,12 +1089,28 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     // Get single article with highlights
     if (id && typeof id === 'string') {
       try {
-        const { data: article, error: articleError } = await supabase
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+        let query = supabase
           .from('reading_queue')
           .select('*')
-          .eq('id', id)
           .eq('user_id', userId)
-          .single()
+
+        if (isUUID) {
+          query = query.eq('id', id)
+        } else {
+          // Handle slug/legacy ID passing
+          // For now, if it's not a UUID, exact match against URL or return 404
+          try {
+            const url = new URL(id).toString()
+            query = query.eq('url', url)
+          } catch {
+            // Not a URL, try metadata->>slug just in case
+            query = query.filter('metadata->>slug', 'eq', id)
+          }
+        }
+
+        const { data: article, error: articleError } = await query.maybeSingle()
 
         if (articleError) throw articleError
         if (!article) {

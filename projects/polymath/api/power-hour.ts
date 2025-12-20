@@ -1,10 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-const supabase = getSupabaseClient()
+import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -12,81 +9,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const userId = getUserId()
+    const supabase = getSupabaseClient()
     console.log('[power-hour] Fetching tasks for user:', userId)
 
     try {
-        // 1. Fetch active projects
-        const { data: projects, error: projectsError } = await supabase
-            .from('projects')
-            .select('id, title, description, status, metadata')
-            .in('status', ['active', 'upcoming', 'maintaining'])
+        // 1. Check for cached plan from today ( < 20 hours old to cover timezone shifts)
+        const cutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString()
+
+        const { data: cached, error: cacheError } = await supabase
+            .from('daily_power_hour')
+            .select('*')
             .eq('user_id', userId)
-            .order('last_active', { ascending: false })
-            .limit(5)
+            .gt('created_at', cutoff)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
 
-        if (projectsError) throw projectsError
-
-        if (!projects || projects.length === 0) {
-            return res.status(200).json({ tasks: [], message: 'No active projects found. Start something to see Power Hour tasks!' })
+        if (cached && cached.tasks) {
+            console.log('[power-hour] Returning cached plan from:', cached.created_at)
+            return res.status(200).json({ tasks: cached.tasks, cached: true })
         }
 
-        // 2. Fetch recent unread articles (Fuel)
-        const { data: fuel, error: fuelError } = await supabase
-            .from('reading_queue')
-            .select('id, title, excerpt, content')
-            .eq('status', 'unread')
-            .eq('user_id', userId)
-            .limit(10)
+        // 2. No cache? Generate on the fly (and cache it)
+        console.log('[power-hour] No cache found. Generating on-fly...')
+        const tasks = await generatePowerHourPlan(userId)
 
-        if (fuelError) throw fuelError
+        // Cache it for next time
+        if (tasks.length > 0) {
+            await supabase.from('daily_power_hour').insert({
+                user_id: userId,
+                tasks: tasks,
+                created_at: new Date().toISOString()
+            })
+        }
 
-        // 3. Use Gemini 3 Flash to synthesize Power Hour suggestions
-        const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
-
-        const projectsContext = projects.map(p => {
-            const tasksList = (p.metadata?.tasks || [])
-                .filter((t: any) => !t.completed)
-                .map((t: any) => t.text)
-                .join(', ')
-            return `- ${p.title} (${p.status}): ${p.description}. Current Tasks: ${tasksList || 'None listed yet.'}`
-        }).join('\n')
-        const fuelContext = fuel?.slice(0, 5).map(f => `- ${f.title}: ${f.excerpt}`).join('\n') || 'No new fuel available.'
-
-        const prompt = `You are the APERTURE ENGINE. Your goal is MOMENTUM.
-Reach 80% completion with 20% effort.
-
-CURRENT PROJECTS:
-${projectsContext}
-
-AVAILABLE FUEL (Reading Material):
-${fuelContext}
-
-TASK:
-Generate three high-impact "Power Hour" tasks (60 minutes each).
-Each task must be tied to an active project and use specific fuel if available.
-Focus on the "Next Step" that eliminates the most decision fatigue.
-
-Output JSON only in this format:
-{
-  "tasks": [
-    {
-      "project_id": "string",
-      "project_title": "string",
-      "task_title": "string",
-      "task_description": "string (actionable, 1-2 sentences)",
-      "impact_score": 0-1,
-      "fuel_id": "string (optional id of article to read)",
-      "fuel_title": "string (optional)"
-    }
-  ]
-}`
-
-        const result = await model.generateContent(prompt)
-        const responseText = result.response.text()
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-        const tasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : { tasks: [] }
-
-        return res.status(200).json(tasksData)
+        return res.status(200).json({ tasks })
 
     } catch (error) {
         console.error('Power Hour Error:', error)

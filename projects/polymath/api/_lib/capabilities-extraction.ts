@@ -1,25 +1,27 @@
 import { getSupabaseClient } from './supabase.js'
-import { generateText } from './gemini-chat.js'
 import { generateEmbedding } from './gemini-embeddings.js'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function extractCapabilities(userId: string) {
   const supabase = getSupabaseClient()
   console.log('[capabilities] Starting extraction for user:', userId)
 
   try {
-    // 1. Fetch recent data
+    // 1. Fetch recent data (Increased limit for better context)
     const { data: projects } = await supabase
       .from('projects')
       .select('title, description')
       .eq('user_id', userId)
-      .limit(30)
+      .limit(50)
       .order('created_at', { ascending: false })
 
     const { data: memories } = await supabase
       .from('memories')
       .select('title, body')
       .eq('user_id', userId)
-      .limit(30)
+      .limit(50)
       .order('created_at', { ascending: false })
 
     if ((!projects || projects.length === 0) && (!memories || memories.length === 0)) {
@@ -28,91 +30,52 @@ export async function extractCapabilities(userId: string) {
     }
 
     const content = [
-      ...(projects || []).map(p => `Project: ${p.title}\n${p.description || ''}`),
-      ...(memories || []).map(m => `Thought: ${m.title || ''}\n${m.body}`)
+      "PROJECTS:",
+      ...(projects || []).map(p => `Title: ${p.title}\nDescription: ${p.description || 'No description'}`),
+      "\nTHOUGHTS:",
+      ...(memories || []).map(m => `Title: ${m.title || 'Untitled'}\nBody: ${m.body}`)
     ].join('\n\n')
 
-    // 2. Analyze with Gemini (with retry)
-    const generateCapabilities = async () => {
-      const prompt = `Analyze the following user projects and thoughts. 
-      Extract ALL relevant "Capabilities" (skills, tools, concepts, mental models, specific interests, or recurring themes) that this user demonstrates or is exploring, up to 20 items.
-      
-      Return a JSON array of objects with this structure:
-      {
-        "name": "kebab-case-name",
-        "description": "One sentence description of how the user uses it.",
-        "source": "project" or "thought"
-      }
-      
-      Be generous and infer capabilities from the context of their work. Include soft skills and emerging interests.
-      
-      Content:
-      ${content}`
+    // 2. Analyze with Gemini 1.5 Flash (Reliable JSON)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    })
 
-      return generateText(prompt, {
-        responseFormat: 'json',
-        temperature: 0.4,
-        maxTokens: 4000 // Increased from 2000
-      })
-    }
+    const prompt = `Analyze the provided User Projects and Thoughts to extract a list of the user's "Capabilities".
+    
+    Capabilities are:
+    - Skills (e.g., React, Writing, Public Speaking)
+    - Tools (e.g., VS Code, Figma)
+    - Concepts/Mental Models (e.g., Systems Thinking, Agile)
+    - Specific Interests that imply ability (e.g., Medieval History, GenAI)
 
-    let response = ''
-    try {
-      response = await generateCapabilities()
-    } catch (e) {
-      console.warn('[capabilities] First attempt failed, retrying...', e)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      try {
-        response = await generateCapabilities()
-      } catch (retryError) {
-        console.error('[capabilities] Retry failed:', retryError)
-        throw retryError
-      }
-    }
+    INSTRUCTIONS:
+    1. Be generous. Infer skills from context (e.g., if they write about code, they can code).
+    2. Extract up to 20 DISTINCT items.
+    3. Return strictly a JSON array of objects.
+
+    SCHEMA:
+    Array<{
+      "name": string (Title Case, e.g., "Systems Thinking"),
+      "description": string (How the user demonstrates this, max 15 words)
+    }>`
+
+    const result = await model.generateContent([prompt, content])
+    const responseText = result.response.text()
+
+    console.log('[capabilities] Gemini response length:', responseText.length)
 
     let capabilities: any[] = []
     try {
-      console.log('[capabilities] Raw response length:', response.length)
-
-      if (!response || response.trim().length === 0) {
-        throw new Error('Gemini API returned empty response')
-      }
-
-      // Approach 1: Try standard parse
-      try {
-        const jsonMatch = response.match(/\[[\s\S]*\]/)
-        const jsonString = jsonMatch ? jsonMatch[0] : response
-        capabilities = JSON.parse(jsonString)
-      } catch (directParseError) {
-        console.warn('[capabilities] Direct JSON parse failed, attempting partial repair...', directParseError)
-
-        // Approach 2: Extract complete objects via regex (robust against truncation)
-        // Matches { ... } structures
-        const objectRegex = /\{[^{}]*\}/g
-        const matches = response.match(objectRegex)
-
-        if (matches && matches.length > 0) {
-          capabilities = matches.map(m => {
-            try {
-              return JSON.parse(m)
-            } catch {
-              return null
-            }
-          }).filter(item => item !== null && item.name && item.description)
-
-          console.log(`[capabilities] Successfully recovered ${capabilities.length} capabilities from truncated response`)
-        } else {
-          throw directParseError // Rethrow if repair fails
-        }
-      }
-
-    } catch (parseError) {
-      console.error('[capabilities] JSON Parse Error. Raw response preview:', response.slice(0, 500))
-      console.error('[capabilities] Parse error details:', parseError instanceof Error ? parseError.message : String(parseError))
-      throw parseError
+      capabilities = JSON.parse(responseText)
+    } catch (e) {
+      console.error('[capabilities] JSON parse failed, attempting regex repair')
+      const match = responseText.match(/\[[\s\S]*\]/)
+      if (match) capabilities = JSON.parse(match[0])
     }
 
-    if (!Array.isArray(capabilities)) capabilities = [] // Fallback
+    if (!Array.isArray(capabilities)) capabilities = []
 
     console.log(`[capabilities] Found ${capabilities.length} capabilities`)
 
@@ -121,13 +84,24 @@ export async function extractCapabilities(userId: string) {
     for (const cap of capabilities) {
       const embedding = await generateEmbedding(`${cap.name}: ${cap.description}`)
 
+      // We assume if it exists, we update the description/embedding but keep strength if > 1.2
+      // Actually, upsert overwrites. We want to increment strength or initialize it.
+
+      // Check existing first
+      const { data: existing } = await supabase.from('capabilities').select('id, strength').eq('name', cap.name).single()
+
+      let strength = 1.2
+      if (existing) {
+        strength = Math.min(existing.strength + 0.1, 5.0) // Increment existing
+      }
+
       const { data, error } = await supabase
         .from('capabilities')
         .upsert({
           name: cap.name,
           description: cap.description,
           source_project: 'user-extracted',
-          strength: 1.2,
+          strength: strength,
           embedding,
           last_used: new Date().toISOString()
         }, { onConflict: 'name' })
@@ -145,6 +119,6 @@ export async function extractCapabilities(userId: string) {
 
   } catch (error) {
     console.error('[capabilities] Extraction failed:', error)
-    throw error
+    throw error // Let the API handler catch it
   }
 }

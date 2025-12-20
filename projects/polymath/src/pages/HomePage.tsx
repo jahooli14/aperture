@@ -50,7 +50,6 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
-import { SystemNarrator } from '../components/home/SystemNarrator'
 import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
@@ -838,16 +837,28 @@ export function HomePage() {
           }}>
             <BrandName className="inline" showLogo={true} />
           </h1>
-          <button
-            onClick={() => navigate('/search')}
-            className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-            style={{
-              color: 'var(--premium-blue)'
-            }}
-            title="Search everything"
-          >
-            <Search className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/suggestions')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{
+                color: 'var(--premium-blue)'
+              }}
+              title="Discover projects"
+            >
+              <Sparkles className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => navigate('/search')}
+              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
+              style={{
+                color: 'var(--premium-blue)'
+              }}
+              title="Search everything"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -964,8 +975,6 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* system personality */}
-        <SystemNarrator />
         {/* Drift Mode Overlay */}
         {driftModeOpen && (
           <DriftMode
@@ -1049,8 +1058,8 @@ export function HomePage() {
             {/* Divider */}
             <div className="w-full h-px bg-white/10 my-6" />
 
-            {/* Grid 1: Generative / Creative */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Grid: Mindset & Discovery Tools */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Bedtime Ideas */}
               <Link
                 to="/bedtime"
@@ -1084,43 +1093,6 @@ export function HomePage() {
                     </div>
                   </div>
                   <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
-                </div>
-              </Link>
-
-
-              {/* Discover Projects */}
-              <Link
-                to="/suggestions"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        AI recommendations
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
                 </div>
               </Link>
 
@@ -1159,13 +1131,43 @@ export function HomePage() {
                   <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#818cf8' }} />
                 </div>
               </button>
-            </div>
 
-            {/* Divider */}
-            <div className="w-full h-px bg-white/10 my-6" />
+              {/* Discover Projects */}
+              <Link
+                to="/suggestions"
+                className="group p-5 rounded-xl transition-all"
+                style={{
+                  background: 'var(--premium-bg-2)',
+                  backdropFilter: 'blur(12px)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--premium-bg-2)'
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
+                      background: 'rgba(59, 130, 246, 0.1)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)'
+                    }}>
+                      <Lightbulb className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-1 premium-text-platinum">Discover Projects</h3>
+                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
+                        AI recommendations
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
+                </div>
+              </Link>
 
-            {/* Grid 2: Analytical / Visual */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Analysis */}
               <Link
                 to="/insights"

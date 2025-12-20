@@ -94,7 +94,8 @@ export function VoiceFAB({
 
     // Handle touch snappy behavior but prevent ghost clicks
     if (e.type === 'touchend' && !isLongPress.current && !isMenuOpen) {
-      e.preventDefault() // Stop ghost click from hitting whatever appears underneath
+      e.preventDefault() // Stop ghost click
+      e.stopPropagation()
 
       if (onTap) {
         const handled = onTap()

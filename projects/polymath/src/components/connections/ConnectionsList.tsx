@@ -11,6 +11,7 @@ import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Brain, Layers, BookO
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
 import { useConnectionStore } from '../../stores/useConnectionStore'
+import { ConnectionSuggestion } from '../ConnectionSuggestion'
 
 interface ConnectionsListProps {
   itemType: ConnectionSourceType
@@ -233,7 +234,30 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* AI Suggestions */}
+      <div className="mb-2">
+        <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: 'var(--premium-text-secondary)' }}>
+          <Sparkles className="h-3 w-3 text-purple-400" />
+          Smart Suggestions
+        </h3>
+        <ConnectionSuggestion
+          suggestions={suggestions.map(s => ({
+            targetId: s.id,
+            targetType: s.type as any,
+            targetTitle: s.title,
+            reason: s.reasoning || '',
+            confidence: s.similarity || 0
+          }))}
+          sourceId={itemId}
+          sourceType={itemType === 'thought' ? 'memory' : itemType as any}
+          onLinkCreated={() => {
+            invalidateConnections(itemType, itemId)
+            loadData()
+          }}
+        />
+      </div>
+
       {/* List */}
       <div className="space-y-3">
         {displayItems.map((item, index) => {
