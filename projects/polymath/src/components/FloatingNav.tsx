@@ -28,7 +28,6 @@ const SCHEMA_COLORS = {
   projects: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  constellation: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' }
 } as const
 
@@ -97,11 +96,6 @@ export function FloatingNav() {
   // Check if we're on a project detail page
   const isProjectDetailPage = location.pathname.startsWith('/projects/') && location.pathname !== '/projects'
 
-  // Hide on Knowledge Map page (has its own controls)
-  const isMapPage = location.pathname === '/map'
-  if (isMapPage) {
-    return null
-  }
 
   const handleVoiceFABTap = () => {
     // On project pages, trigger the project's AddNote dialog instead

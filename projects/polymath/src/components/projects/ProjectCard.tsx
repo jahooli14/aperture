@@ -76,23 +76,11 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
   return (
     <Link
       to={`/projects/${project.id}`}
-      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border ${prominent ? 'p-5' : 'p-4'}`}
+      className={`group block zebra-card transition-all duration-300 break-inside-avoid border-2 ${prominent ? 'p-5 scale-105' : 'p-4'}`}
       style={{
-        borderColor: theme.border,
-        background: `linear-gradient(135deg, rgba(${theme.rgb}, 0.15) 0%, rgba(${theme.rgb}, 0.05) 100%)`,
-        boxShadow: `0 4px 16px rgba(0, 0, 0, 0.2)`
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.25) 0%, rgba(${theme.rgb}, 0.1) 100%)`
-        e.currentTarget.style.borderColor = `rgba(${theme.rgb}, 0.5)`
-        e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `0 12px 32px rgba(${theme.rgb}, 0.15)`
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = `linear-gradient(135deg, rgba(${theme.rgb}, 0.15) 0%, rgba(${theme.rgb}, 0.05) 100%)`
-        e.currentTarget.style.borderColor = theme.border
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.2)`
+        borderColor: project.is_priority ? 'var(--zebra-accent)' : 'white',
+        backgroundColor: 'var(--zebra-black)',
+        boxShadow: project.is_priority ? 'var(--zebra-shadow-sharp)' : 'none'
       }}
     >
       {/* Header */}
@@ -152,17 +140,19 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
       <div className="flex items-center justify-between pt-2" style={{ borderTop: `1px solid rgba(${theme.rgb}, 0.2)` }}>
         <div className="flex items-center gap-2">
           {totalTasks > 0 ? (
-            <div className="flex items-center gap-2">
-              <div className="h-1.5 w-16 bg-white/10 rounded-full overflow-hidden">
+            <div className="flex flex-col gap-1">
+              <div className="momentum-progress-container w-24">
                 <div
-                  className="h-full"
+                  className="momentum-progress-fill"
                   style={{
-                    width: `${progress}%`,
-                    background: `linear-gradient(90deg, rgba(${theme.rgb}, 0.5), rgba(${theme.rgb}, 1))`
+                    width: `${Math.min(progress, 100)}%`,
+                    backgroundColor: progress >= 80 ? 'var(--zebra-accent)' : 'white'
                   }}
                 />
               </div>
-              <span className="text-xs text-gray-500">{completedTasks}/{totalTasks}</span>
+              <span className="text-[10px] font-black uppercase tracking-tighter text-white/40">
+                {progress >= 80 ? 'Concept Proved' : `${Math.round(progress)}% Momentum`}
+              </span>
             </div>
           ) : (
             <span className="text-xs text-gray-500 flex items-center gap-1">

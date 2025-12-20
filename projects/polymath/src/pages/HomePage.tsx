@@ -48,8 +48,9 @@ import { CapabilitiesSection } from '../components/home/CapabilitiesSection'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
-import { SerendipityDialog } from '../components/SerendipityDialog'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
+import { PowerHourHero } from '../components/home/PowerHourHero'
+import { SystemNarrator } from '../components/home/SystemNarrator'
 import type { Memory, Project, SynthesisInsight } from '../types'
 
 interface InspirationData {
@@ -618,10 +619,6 @@ export function HomePage() {
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
 
-  // Serendipity State
-  const [serendipityOpen, setSerendipityOpen] = useState(false)
-  const [serendipityData, setSerendipityData] = useState<any>(null)
-  const [serendipityLoading, setSerendipityLoading] = useState(false)
 
   // Refetch data whenever user navigates to this page
   useEffect(() => {
@@ -662,19 +659,6 @@ export function HomePage() {
     }
   }
 
-  const handleOpenSerendipity = async () => {
-    setSerendipityOpen(true)
-    setSerendipityLoading(true)
-    try {
-      const response = await fetch('/api/connections?action=serendipity')
-      const data = await response.json()
-      setSerendipityData(data)
-    } catch (e) {
-      console.error('Failed to fetch serendipity', e)
-    } finally {
-      setSerendipityLoading(false)
-    }
-  }
 
   // Show onboarding banner after delay if not completed
   useEffect(() => {
@@ -772,17 +756,29 @@ export function HomePage() {
 
   // Show error if initialization failed
   if (error) {
-    // ... [Same error rendering] ... -> To keep chunk size manageable I assume Error handling is below this or can be kept.
-    // Actually I should just return the error view here if I'm replacing the whole block.
-    // For brevity in diff, I will just call getStoredErrors and proceed.
-    const storedErrors = getStoredErrors()
     return (
-      <div className="min-h-screen py-12 px-4">
-        {/* ... Error UI ... */}
-        <div className="max-w-2xl mx-auto premium-card p-8">
-          <h2 className="text-2xl font-bold mb-4" style={{ color: '#ef4444' }}>Initialization Error</h2>
-          <p className="text-red-400 mb-4">{error}</p>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 rounded">Reload</button>
+      <div className="min-h-screen py-12 px-4 flex items-center justify-center" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
+        <div className="max-w-2xl w-full premium-card p-8 border-red-500/20 bg-red-500/5">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-12 w-12 rounded-xl bg-red-500/20 flex items-center justify-center text-red-500">
+              <AlertCircle className="h-6 w-6" />
+            </div>
+            <h2 className="text-2xl font-bold premium-text-platinum">Initialization Error</h2>
+          </div>
+          <p className="text-red-400 mb-8 font-mono text-sm p-4 bg-black/30 rounded-lg border border-red-500/10">
+            {error}
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20"
+            >
+              Try Again
+            </button>
+            <Link to="/settings" className="text-red-400/70 hover:text-red-400 underline text-sm transition-colors">
+              Reset Application
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -828,9 +824,9 @@ export function HomePage() {
 
       {/* Fixed Header Bar - Brand & Search */}
       <div
-        className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md"
+        className="fixed top-0 left-0 right-0 z-40 border-b border-white"
         style={{
-          backgroundColor: 'rgba(15, 24, 41, 0.7)'
+          backgroundColor: 'var(--zebra-black)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -904,6 +900,11 @@ export function HomePage() {
           )}
         </AnimatePresence>
 
+        {/* Aperture Power Hour - The Hero Engine */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
+          <PowerHourHero />
+        </section>
+
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
@@ -919,9 +920,9 @@ export function HomePage() {
             <div className="flex items-center gap-3">
               {/* Voice Note */}
               <button
-                onClick={() => {
-                  const voiceFab = document.querySelector('[data-voice-fab]') as HTMLButtonElement
-                  if (voiceFab) voiceFab.click()
+                onClick={(e) => {
+                  e.stopPropagation()
+                  window.dispatchEvent(new CustomEvent('openVoiceCapture'))
                 }}
                 className="flex-1 h-14 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
                 style={{ background: 'var(--premium-bg-3)' }}
@@ -963,6 +964,8 @@ export function HomePage() {
           </div>
         </section>
 
+        {/* system personality */}
+        <SystemNarrator />
         {/* Drift Mode Overlay */}
         {driftModeOpen && (
           <DriftMode
@@ -987,7 +990,8 @@ export function HomePage() {
         {/* 4. YOUR INSIGHTS (Cyan Theme) */}
         <InsightsSection />
 
-        {/* 5. EXPLORE (Bottom Links) */}
+
+        {/* 6. EXPLORE (Bottom Links) */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
           <div className="p-6 rounded-xl backdrop-blur-xl" style={{
             background: 'var(--premium-bg-2)',
@@ -1083,41 +1087,6 @@ export function HomePage() {
                 </div>
               </Link>
 
-              {/* Serendipity Engine */}
-              <button
-                onClick={handleOpenSerendipity}
-                className="group p-5 rounded-xl transition-all text-left"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Zap className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Serendipity Engine</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Find hidden bridges
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </button>
 
               {/* Discover Projects */}
               <Link
@@ -1197,114 +1166,6 @@ export function HomePage() {
 
             {/* Grid 2: Analytical / Visual */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Knowledge Map */}
-              <Link
-                to="/map"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <MapIcon className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Knowledge Map</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Geographic visualization
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
-
-              {/* Timeline */}
-              <Link
-                to="/knowledge-timeline"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Calendar className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Timeline</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        See your knowledge journey
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
-
-              {/* Galaxy View */}
-              <Link
-                to="/constellation"
-                className="group p-5 rounded-xl transition-all"
-                style={{
-                  background: 'var(--premium-bg-2)',
-                  backdropFilter: 'blur(12px)',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-3)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--premium-bg-2)'
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 h-10 w-10 rounded-lg flex items-center justify-center mt-1" style={{
-                      background: 'rgba(59, 130, 246, 0.1)',
-                      backdropFilter: 'blur(8px)',
-                      border: '1px solid rgba(59, 130, 246, 0.2)'
-                    }}>
-                      <Sparkles className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold mb-1 premium-text-platinum">Galaxy View</h3>
-                      <p className="text-sm" style={{ color: 'var(--premium-text-tertiary)' }}>
-                        Explore in 3D
-                      </p>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-5 w-5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--premium-blue)' }} />
-                </div>
-              </Link>
-
               {/* Analysis */}
               <Link
                 to="/insights"
@@ -1350,14 +1211,6 @@ export function HomePage() {
       {/* Dialogs */}
       < SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
 
-      {/* Serendipity Dialog */}
-      <SerendipityDialog
-        isOpen={serendipityOpen}
-        onClose={() => setSerendipityOpen(false)}
-        data={serendipityData}
-        loading={serendipityLoading}
-        onRefresh={handleOpenSerendipity}
-      />
 
       {/* Hidden trigger buttons for dialogs */}
       <div style={{ display: 'none' }}>

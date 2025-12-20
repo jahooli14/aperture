@@ -4,7 +4,7 @@
  * Transcription happens via Gemini API (could be swapped for Deepgram/AssemblyAI)
  */
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { VoiceRecorder } from 'capacitor-voice-recorder'
 import { isNative, base64ToBlob } from '../lib/platform'
 
@@ -24,11 +24,20 @@ export function useMediaRecorderVoice({
   const [timeLeft, setTimeLeft] = useState(maxDuration)
   const [isProcessing, setIsProcessing] = useState(false)
   const [hasPermission, setHasPermission] = useState(false)
+  const [isSupported, setIsSupported] = useState(true)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Check support on mount
+  useEffect(() => {
+    if (typeof MediaRecorder === 'undefined' && !isNative()) {
+      console.error('[MediaRecorder] Not supported in this browser')
+      setIsSupported(false)
+    }
+  }, [])
 
   /**
    * Get best supported audio format for MediaRecorder
@@ -401,6 +410,7 @@ export function useMediaRecorderVoice({
     timeLeft,
     hasPermission,
     isProcessing,
+    isSupported,
     startRecording,
     stopRecording,
     toggleRecording

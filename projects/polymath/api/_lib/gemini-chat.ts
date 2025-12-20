@@ -13,7 +13,7 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-key-for-initialization')
 
 /**
- * Generate text using Gemini 2.5 Flash (fast, cost-effective)
+ * Generate text using Gemini 3 Flash Preview (fast, cost-effective)
  */
 export async function generateText(
   prompt: string,

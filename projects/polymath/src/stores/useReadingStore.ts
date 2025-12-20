@@ -132,6 +132,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           set({ loading: false, lastFetched: now, offlineMode: false })
         }
 
+        // 5. Trigger offline sync in background
+        const { syncAllArticlesForOffline } = await import('../lib/offlineSync')
+        syncAllArticlesForOffline(articles).catch(console.error)
+
       } catch (error) {
         console.error('[ReadingStore] Network fetch failed:', error)
         // We might already have data from DB, so don't wipe it with an error screen
@@ -228,6 +232,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             lastFetched: Date.now(),
           }
         })
+
+        // Synchronize for offline immediately
+        const { syncArticleForOffline } = await import('../lib/offlineSync')
+        syncArticleForOffline(article).catch(console.error)
 
         return article
       } catch (error) {

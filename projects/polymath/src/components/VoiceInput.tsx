@@ -21,6 +21,7 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
     transcript,
     timeLeft,
     isProcessing,
+    isSupported,
     toggleRecording,
     startRecording
   } = useMediaRecorderVoice({
@@ -40,17 +41,28 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
     }
   }, [autoStart, isRecording, isProcessing, startRecording])
 
+  if (!isSupported) {
+    return (
+      <div className="p-6 text-center premium-card border-red-500/30 bg-red-500/10">
+        <Mic className="h-10 w-10 mx-auto mb-4 text-red-400 opacity-50" />
+        <p className="text-red-200 font-medium mb-1">Recording Unsupported</p>
+        <p className="text-sm text-red-300/70">
+          Your browser doesn't support voice recording. Try using Chrome, Firefox or a recent Safari.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       <Button
         type="button"
         onClick={toggleRecording}
         disabled={isProcessing}
-        className={`w-full py-4 rounded-lg border-2 flex items-center justify-center gap-3 transition-smooth ${
-          isRecording
-            ? 'border-red-500 bg-red-50 text-red-700 hover:bg-red-100'
-            : 'border-neutral-300 bg-white text-neutral-700 hover:border-blue-500 hover:bg-blue-50'
-        }`}
+        className={`w-full py-4 rounded-xl border flex items-center justify-center gap-3 transition-all duration-300 ${isRecording
+          ? 'border-red-500/50 bg-red-500/20 text-red-200'
+          : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:border-white/20'
+          }`}
       >
         {isProcessing ? (
           <>
@@ -71,9 +83,9 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
       </Button>
 
       {transcript && !isProcessing && (
-        <div className="p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-          <p className="text-sm text-neutral-700">
-            {transcript}
+        <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+          <p className="text-sm text-slate-300 italic leading-relaxed">
+            "{transcript}"
           </p>
         </div>
       )}

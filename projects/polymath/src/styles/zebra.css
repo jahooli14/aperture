@@ -1,0 +1,121 @@
+/**
+ * Zebra Design System - High Contrast, Bold, Premium
+ * Reflecting the intersection of complex ideas through simplicity.
+ */
+
+:root {
+  /* Core Palette */
+  --zebra-white: #ffffff;
+  --zebra-black: #000000;
+  --zebra-accent: #ffd700; /* Bold Gold */
+  --zebra-gray-dark: #121212;
+  --zebra-gray-mid: #2a2a2a;
+  --zebra-gray-light: #f5f5f5;
+
+  /* Aperture Brand Colors */
+  --aperture-bg: var(--zebra-black);
+  --aperture-text: var(--zebra-white);
+  --aperture-surface: var(--zebra-gray-dark);
+  --aperture-surface-hover: var(--zebra-gray-mid);
+
+  /* Shadows */
+  --zebra-shadow-sharp: 4px 4px 0px var(--zebra-accent);
+  --zebra-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
+
+  /* Borders */
+  --zebra-border: 1px solid var(--zebra-white);
+  --zebra-border-bold: 2px solid var(--zebra-white);
+
+  /* Typography */
+  --zebra-font: 'Outfit', 'Inter', sans-serif;
+}
+
+/* Base Body Styles */
+body {
+  background-color: var(--zebra-black);
+  color: var(--zebra-white);
+  font-family: var(--zebra-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Zebra Components */
+
+.zebra-card {
+  background: var(--zebra-black);
+  border: var(--zebra-border);
+  padding: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.zebra-card:hover {
+  background: var(--zebra-white);
+  color: var(--zebra-black);
+  transform: translate(-4px, -4px);
+  box-shadow: 4px 4px 0px var(--zebra-accent);
+}
+
+.zebra-card-active {
+  background: var(--zebra-white);
+  color: var(--zebra-black);
+  box-shadow: var(--zebra-shadow-sharp);
+}
+
+.zebra-btn {
+  background: var(--zebra-white);
+  color: var(--zebra-black);
+  border: none;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.75rem 1.5rem;
+  letter-spacing: 0.1em;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.zebra-btn:hover {
+  background: var(--zebra-accent);
+  transform: scale(1.05);
+}
+
+.zebra-btn:active {
+  transform: scale(0.95);
+}
+
+.zebra-text-display {
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+}
+
+.zebra-text-accent {
+  color: var(--zebra-accent);
+}
+
+/* Momentum Goal Progress Bar */
+.momentum-progress-container {
+  height: 8px;
+  background: var(--zebra-gray-mid);
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--zebra-white);
+}
+
+.momentum-progress-fill {
+  height: 100%;
+  background: var(--zebra-accent);
+  transition: width 0.5s ease-out;
+}
+
+/* Zebra Stripe Utilities */
+.bg-zebra {
+  background: repeating-linear-gradient(
+    45deg,
+    #000,
+    #000 10px,
+    #111 10px,
+    #111 20px
+  );
+}

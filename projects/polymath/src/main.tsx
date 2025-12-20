@@ -9,7 +9,8 @@ import '@fontsource/inter/500.css' // Medium
 import '@fontsource/inter/600.css' // Semibold
 import '@fontsource/inter/700.css' // Bold
 
-// Import Premium Dark design system
+// Import Zebra design system
+import './styles/zebra.css'
 import './styles/premium-dark.css'
 import './styles/ripple.css'
 

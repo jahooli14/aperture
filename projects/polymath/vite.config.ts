@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'https://clandestined.vercel.app',
+          target: env.VITE_API_URL || 'https://clandestined.vercel.app',
           changeOrigin: true,
           secure: false,
         }

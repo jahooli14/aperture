@@ -22,14 +22,95 @@ const SCRAPERAPI_KEY = process.env.SCRAPERAPI_KEY || '' // 1k credits/month free
 
 /**
  * Decode HTML entities in text
- * Converts &rsquo; to ', &mdash; to —, &amp; to &, etc.
  */
 function decodeHTMLEntities(text: string): string {
   if (!text) return text
-
   // Use linkedom's HTML parsing to decode entities
   const { document } = parseHTML(`<div>${text}</div>`) as any
   return document.querySelector('div')?.textContent || text
+}
+
+/**
+ * Strip HTML tags from a string for excerpts/titles.
+ */
+function stripHtml(html: string): string {
+  if (!html) return ''
+  const { document } = parseHTML(`<div>${html}</div>`) as any
+  return document.querySelector('div')?.textContent || ''
+}
+
+/**
+ * Clean extracted HTML to ensure a beautiful reading experience.
+ * Removes boilerplate, ads, navigation, and problematic styling.
+ */
+function cleanHtml(html: string, url: string): string {
+  if (!html) return ''
+
+  const { document } = parseHTML(html) as any
+
+  // 1. Remove obvious junk
+  const selectorsToRemove = [
+    'nav', 'header', 'footer', 'aside', '.sidebar', '.ad', '.ads', '.advertisement',
+    '.social', '.share', '.comments', '.newsletter', '.subscribe', '.popup', '.modal',
+    '.cookie-banner', '.promo', '.promotion', '.related', '.recommended',
+    '[class*="ad-"]', '[class*="ads-"]', '[id*="ad-"]', '[id*="ads-"]',
+    'iframe', 'script', 'style', 'noscript', 'canvas', 'svg', 'embed', 'object'
+  ]
+
+  selectorsToRemove.forEach(selector => {
+    document.querySelectorAll(selector).forEach((el: any) => el.remove())
+  })
+
+  // 2. Clean up attributes - only keep essential ones
+  const allowedAttributes = ['src', 'href', 'alt', 'title', 'class']
+  document.querySelectorAll('*').forEach((el: any) => {
+    const attributes = Array.from(el.attributes) as any[]
+    attributes.forEach(attr => {
+      if (!allowedAttributes.includes(attr.name)) {
+        el.removeAttribute(attr.name)
+      }
+    })
+
+    // Remove empty classes
+    if (el.getAttribute('class') === '') {
+      el.removeAttribute('class')
+    }
+  })
+
+  // 3. Normalize link URLs
+  const baseURL = new URL(url)
+  document.querySelectorAll('a').forEach((el: any) => {
+    const href = el.getAttribute('href')
+    if (href && !href.startsWith('http') && !href.startsWith('#')) {
+      try {
+        el.setAttribute('href', new URL(href, baseURL.origin).toString())
+      } catch (e) { }
+    }
+    el.setAttribute('target', '_blank')
+    el.setAttribute('rel', 'noopener noreferrer')
+  })
+
+  // 4. Normalize image URLs
+  document.querySelectorAll('img').forEach((el: any) => {
+    const src = el.getAttribute('src')
+    if (src && !src.startsWith('http')) {
+      try {
+        el.setAttribute('src', new URL(src, baseURL.origin).toString())
+      } catch (e) { }
+    }
+    // High quality display
+    el.setAttribute('loading', 'lazy')
+    el.style = 'max-width: 100%; height: auto; border-radius: 0.5rem; margin: 2rem auto; display: block;'
+  })
+
+  // 5. Remove empty paragraphs or segments
+  document.querySelectorAll('p, div, span').forEach((el: any) => {
+    if (el.textContent.trim() === '' && el.children.length === 0) {
+      el.remove()
+    }
+  })
+
+  return document.body.innerHTML
 }
 
 /**
@@ -133,8 +214,8 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
     // Return in format expected by rest of codebase
     return {
       title: decodeHTMLEntities(article.title || getMetaContent(['og:title', 'twitter:title']) || 'Untitled'),
-      content: article.content || '',
-      excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
+      content: cleanHtml(article.content || '', url),
+      excerpt: stripHtml(article.excerpt || getMetaContent(['og:description', 'description']) || '').substring(0, 300),
       author: article.byline || getMetaContent(['author', 'article:author']) || null,
       source: article.siteName || getMetaContent(['og:site_name']) || extractDomain(url),
       publishedDate: getMetaContent(['article:published_time']),
@@ -185,8 +266,8 @@ async function fetchArticleWithDiffbot(url: string): Promise<any> {
 
     return {
       title: decodeHTMLEntities(article.title || 'Untitled'),
-      content: article.html || article.text || '',
-      excerpt: article.text?.substring(0, 200) + '...' || '',
+      content: cleanHtml(article.html || article.text || '', url),
+      excerpt: stripHtml(article.text || article.html || '').substring(0, 300),
       author: article.author || null,
       source: article.siteName || extractDomain(url),
       publishedDate: article.date || null,
@@ -268,8 +349,8 @@ async function fetchArticleWithScraperAPI(url: string): Promise<any> {
 
     return {
       title: decodeHTMLEntities(article.title || 'Untitled'),
-      content: article.content || '',
-      excerpt: article.excerpt || getMetaContent(['og:description', 'description']) || '',
+      content: cleanHtml(article.content || '', url),
+      excerpt: stripHtml(article.excerpt || getMetaContent(['og:description', 'description']) || '').substring(0, 300),
       author: article.byline || getMetaContent(['author']) || null,
       source: article.siteName || extractDomain(url),
       publishedDate: getMetaContent(['article:published_time']),
@@ -696,10 +777,10 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 
     // Create excerpt from description or first 200 chars of text content
     // First remove style and script tags and their contents
-    let cleanHtml = html
+    let htmlForExcerpt = html
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    const textContent = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    const textContent = htmlForExcerpt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
     // Always limit excerpt to 100 chars max (2 lines on mobile)
     let excerpt = ''
@@ -776,8 +857,8 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 
     return {
       title: decodeHTMLEntities(title || 'Untitled'),
-      content: cleanedContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`,
-      excerpt,
+      content: cleanHtml(cleanedContent || `<p>Unable to extract content. <a href="${url}" target="_blank">View original article</a></p>`, url),
+      excerpt: stripHtml(cleanedContent).substring(0, 300),
       author: data.data.author || null,
       publishedDate: data.data.publishedTime || null,
       thumbnailUrl,
@@ -1466,11 +1547,16 @@ Return ONLY the JSON, no other text.`
                 try {
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
-                  // Clean the content before storing
-                  content = cleanArticleContent(rawContent)
+                  // Convert Markdown to HTML and then clean it
+                  content = cleanHtml(marked.parse(rawContent).toString(), item.link || '')
                 } catch (e) {
                   console.error('[RSS Sync] Failed to parse Jina response for', item.link)
+                  // Fallback to basic cleaning if Jina fails
+                  content = cleanHtml(content, item.link || '')
                 }
+              } else {
+                // If Jina not used or fails, clean the existing item content
+                content = cleanHtml(content, item.link || '')
               }
 
               await supabase.from('reading_queue').insert([{
@@ -1478,12 +1564,12 @@ Return ONLY the JSON, no other text.`
                 url: item.link || '',
                 title: decodeHTMLEntities(item.title || 'Untitled'),
                 author: item.creator || item.author || null,
-                content,
-                excerpt: content.substring(0, 200),
+                content: content || '',
+                excerpt: stripHtml(content).substring(0, 200),
                 published_date: item.pubDate || item.isoDate || null,
                 source: new URL(item.link || '').hostname.replace('www.', ''),
-                read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
-                word_count: content.split(/\s+/).length,
+                read_time_minutes: Math.ceil(stripHtml(content).split(/\s+/).length / 225),
+                word_count: stripHtml(content).split(/\s+/).length,
                 status: 'unread',
                 tags: ['rss', 'auto-imported']
               }])
@@ -1530,7 +1616,7 @@ Return ONLY the JSON, no other text.`
           feed_id: feed.id,
           title: decodeHTMLEntities(item.title || 'Untitled'),
           link: item.link || '',
-          description: item.contentSnippet || item.description || null,
+          description: cleanHtml(item.contentSnippet || item.description || '', item.link || ''),
           published_at: item.pubDate || item.isoDate || null,
           author: item.creator || item.author || null
         }))

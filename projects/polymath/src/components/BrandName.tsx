@@ -13,7 +13,7 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
     sm: 'text-sm',
     md: 'text-base',
     lg: 'text-lg',
-    xl: 'text-xl'
+    xl: 'text-2xl font-black'
   }
 
   const iconSizes = {
@@ -24,20 +24,14 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
   }
 
   return (
-    <span className={`inline-flex items-center gap-2 ${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.02em' }}>
+    <span className={`inline-flex items-center gap-2 ${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
       {showLogo && (
-        <img
-          src="/coalessence-logo.svg"
-          alt="Coalessence Logo"
-          className={`${iconSizes[size]} object-contain`}
-        />
+        <div className={`${iconSizes[size]} bg-white flex items-center justify-center rounded-sm`}>
+          <div className="w-2/3 h-2/3 bg-black rounded-full" />
+        </div>
       )}
-      <span>
-        Coal<span style={{
-          color: 'var(--premium-blue)',
-          textShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
-          letterSpacing: '0.01em'
-        }}>essence</span>
+      <span className="font-black">
+        APER<span className="zebra-text-accent">TURE</span>
       </span>
     </span>
   )

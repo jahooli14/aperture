@@ -20,6 +20,12 @@ export interface Entities {
   skills: string[]
 }
 
+export interface TriageInfo {
+  category: 'task_update' | 'new_thought' | 'reading_lead' | 'new_project_idea'
+  project_id?: string
+  confidence: number
+}
+
 export interface SourceReference {
   type: 'article' | 'project' | 'suggestion'
   id: string
@@ -44,6 +50,7 @@ export interface Memory {
   entities: Entities | null
   themes: string[] | null
   emotional_tone: string | null
+  triage: TriageInfo | null
 
   // Source reference (article, project, etc.)
   source_reference: SourceReference | null
@@ -300,6 +307,7 @@ export interface ExtractedMetadata {
   emotional_tone: string
   summary_title: string
   insightful_body: string
+  triage?: TriageInfo
 }
 
 export interface BridgeCandidate {
