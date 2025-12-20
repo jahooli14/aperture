@@ -20,12 +20,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from '../_lib/supabase.js'
 import { getUserId } from '../_lib/auth.js'
 import { runSynthesis } from '../_lib/synthesis.js'
-import { strengthenNodes } from '../_lib/strengthen-nodes.js'
 import { processMemory } from '../_lib/process-memory.js'
 import { generateBedtimePrompts } from '../_lib/bedtime-ideas.js'
 import { maintainEmbeddings } from '../_lib/embeddings-maintenance.js'
 import { extractCapabilities } from '../_lib/capabilities-extraction.js'
-import { identifyRottingProjects, generateProjectEulogy } from '../_lib/project-maintenance.js'
+import { identifyRottingProjects } from '../_lib/project-maintenance.js'
 import webpush from 'web-push'
 
 // Configure web-push (globally or within the handler if needed per-request)
@@ -75,21 +74,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tasks: {}
       }
 
-      // 1. Strengthen nodes
-      try {
-        const updates = await strengthenNodes(24)
-        results.tasks.strengthen = {
-          success: true,
-          nodes_strengthened: updates?.length || 0
-        }
-        console.log(`[cron/jobs/daily] Strengthened ${updates?.length || 0} nodes`)
-      } catch (error) {
-        results.tasks.strengthen = {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-        console.error('[cron/jobs/daily] Strengthen failed:', error)
-      }
+      // 1. Strengthen nodes (Archived Feature)
+      // try {
+      //   const updates = await strengthenNodes(24)
+      //   results.tasks.strengthen = {
+      //     success: true,
+      //     nodes_strengthened: updates?.length || 0
+      //   }
+      //   console.log(`[cron/jobs/daily] Strengthened ${updates?.length || 0} nodes`)
+      // } catch (error) {
+      //   results.tasks.strengthen = {
+      //     success: false,
+      //     error: error instanceof Error ? error.message : 'Unknown error'
+      //   }
+      //   console.error('[cron/jobs/daily] Strengthen failed:', error)
+      // }
+      results.tasks.strengthen = { success: true, nodes_strengthened: 0, message: 'Feature archived' }
 
       // 2. Process stuck memories
       try {
@@ -222,7 +222,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           error: error instanceof Error ? error.message : 'Unknown error'
         }
       }
-      
+
       // 7. Maintenance (Embeddings & Capabilities)
       try {
         // Daily: Update embeddings for new/stale items (limit 20)
@@ -238,9 +238,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } catch (error) {
         console.error('[cron/jobs/daily] Maintenance failed:', error)
-        results.tasks.maintenance = { 
-          success: false, 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        results.tasks.maintenance = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
         }
       }
 
@@ -260,16 +260,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else if (job === 'strengthen') {
-      const updates = await strengthenNodes(24)
-
-      console.log(`[cron/jobs] Strengthened ${updates?.length || 0} nodes`)
-
+      // const updates = await strengthenNodes(24)
+      // console.log(`[cron/jobs] Strengthened ${updates?.length || 0} nodes`)
       return res.status(200).json({
         success: true,
         job: 'strengthen',
-        nodes_strengthened: updates?.length || 0,
-        updates: updates || [],
-        timestamp: new Date().toISOString()
+        message: 'Feature archived'
       })
 
     } else if (job === 'process_stuck' || job === 'process-memories') {
