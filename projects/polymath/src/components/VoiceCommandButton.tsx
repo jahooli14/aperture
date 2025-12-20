@@ -6,7 +6,7 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, X, Sparkles } from 'lucide-react'
+import { Mic, MicOff, X } from 'lucide-react'
 import { useVoiceCommands } from '../hooks/useVoiceCommands'
 import { haptic } from '../utils/haptics'
 
@@ -97,7 +97,7 @@ export function VoiceCommandButton() {
                       color: 'white'
                     }}
                   >
-                    <Sparkles className="h-5 w-5" />
+                    <Mic className="h-5 w-5" />
                   </div>
                   <h2 className="text-xl font-bold premium-text-platinum">
                     Voice Commands

@@ -7,7 +7,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Clock, Battery, ChevronRight, RefreshCw, Loader2, Brain, BookOpen, Edit, Moon } from 'lucide-react'
+import { Zap, Clock, Battery, ChevronRight, RefreshCw, Loader2, Brain, BookOpen, Edit, Moon, Lightbulb } from 'lucide-react'
 import { haptic } from '../utils/haptics'
 
 interface SmartSuggestion {
@@ -75,7 +75,7 @@ export function SmartSuggestionWidget() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'project':
-        return <Sparkles className="h-5 w-5" />
+        return <Lightbulb className="h-5 w-5" />
       case 'reading':
         return <BookOpen className="h-5 w-5" />
       case 'capture':
@@ -85,7 +85,7 @@ export function SmartSuggestionWidget() {
       case 'rest':
         return <Moon className="h-5 w-5" />
       default:
-        return <Sparkles className="h-5 w-5" />
+        return <Lightbulb className="h-5 w-5" />
     }
   }
 

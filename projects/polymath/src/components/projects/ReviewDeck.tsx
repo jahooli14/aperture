@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2, Sparkles } from 'lucide-react'
+import { X, Check, Zap, Clock, ArrowRight, Plus, Brain, Link2 } from 'lucide-react'
 import { Project } from '../../types'
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useToast } from '../ui/toast'
@@ -241,9 +241,9 @@ export function ReviewDeck({ projects, onClose }: ReviewDeckProps) {
                                     disabled={isLoadingSuggestions}
                                 >
                                     {isLoadingSuggestions ? (
-                                        <Sparkles className="h-3 w-3 animate-spin" />
+                                        <Zap className="h-3 w-3 animate-spin" />
                                     ) : (
-                                        <Sparkles className="h-3 w-3" />
+                                        <Zap className="h-3 w-3" />
                                     )}
                                     {suggestions.length > 1 ? `Suggest (${suggestionIndex + 1}/${suggestions.length})` : 'Suggest'}
                                 </button>

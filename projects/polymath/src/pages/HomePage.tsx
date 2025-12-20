@@ -41,8 +41,7 @@ import {
   RefreshCw,
   Wind,
   Rss,
-  Map as MapIcon,
-  Sparkles
+  Map as MapIcon
 } from 'lucide-react'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
@@ -204,9 +203,8 @@ function GetInspirationSection({
                     backgroundColor: `rgba(139, 92, 246, 0.1)`,
                     border: `1px solid rgba(139, 92, 246, 0.3)`
                   }}>
-                    <div className="flex items-start gap-2">
-                      <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
-                    </div>
+                    <p className="text-xs font-medium mb-1" style={{ color: 'rgb(167, 139, 250)' }}>NEXT STEP</p>
+                    <p className="text-sm text-gray-200 line-clamp-2">{inspiration.description}</p>
                   </div>
                 </div>
               </Link>

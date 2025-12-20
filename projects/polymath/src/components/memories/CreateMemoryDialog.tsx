@@ -19,7 +19,7 @@ import { Label } from '../ui/label'
 import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Brain } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
@@ -236,7 +236,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         <BottomSheetContent>
           <BottomSheetHeader>
             <div className="flex items-center gap-3 mb-2">
-              <Sparkles className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+              <Brain className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
               <BottomSheetTitle>Capture thought</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
@@ -434,7 +434,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   </>
                 ) : (
                   <>
-                    <Sparkles className="mr-2 h-4 w-4" />
+                    <Brain className="mr-2 h-4 w-4" />
                     Capture Thought
                   </>
                 )}

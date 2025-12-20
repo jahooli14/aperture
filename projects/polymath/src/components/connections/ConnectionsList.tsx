@@ -7,7 +7,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ArrowRight, ArrowLeft, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Plus, Check } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Plus, Check, Zap } from 'lucide-react'
 import type { ItemConnection, ConnectionSourceType } from '../../types'
 import { CreateConnectionDialog } from './CreateConnectionDialog'
 import { useConnectionStore } from '../../stores/useConnectionStore'
@@ -238,7 +238,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
       {/* AI Suggestions */}
       <div className="mb-2">
         <h3 className="text-xs font-medium mb-3 flex items-center gap-2 uppercase tracking-wider opacity-60" style={{ color: 'var(--premium-text-secondary)' }}>
-          <Sparkles className="h-3 w-3 text-purple-400" />
+          <Lightbulb className="h-3 w-3 text-purple-400" />
           Smart Suggestions
         </h3>
         <ConnectionSuggestion
@@ -296,7 +296,7 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
                       </span>
                       {isAI && (
                         <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 text-[10px] font-medium">
-                          <Sparkles className="h-2.5 w-2.5" />
+                          <Zap className="h-2.5 w-2.5" />
                           Auto
                         </div>
                       )}

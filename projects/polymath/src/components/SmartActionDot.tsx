@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Zap } from 'lucide-react'
 
 interface SmartActionDotProps {
   color?: string
@@ -28,7 +28,7 @@ export const SmartActionDot: React.FC<SmartActionDotProps> = ({
       }}
       title={title}
     >
-      <Sparkles className="h-4 w-4" />
+      <Zap className="h-4 w-4" />
       {isActive && (
         <motion.div
           initial={{ scale: 0.8, opacity: 1 }}

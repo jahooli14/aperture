@@ -7,7 +7,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
-import { Sparkles, ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X, Star } from 'lucide-react'
+import { ThumbsDown, Hammer, MoreHorizontal, Lightbulb, Loader2, X, Star } from 'lucide-react'
 import type { SuggestionCardProps } from '../../types'
 
 type InterestRating = 1 | 2 | 3
@@ -182,7 +182,7 @@ export const SuggestionCard = memo(function SuggestionCard({
           {suggestion.synthesis_reasoning && (
             <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
               <div className="flex items-center gap-2 mb-1">
-                <Sparkles className="h-3 w-3 text-amber-400" />
+                <Lightbulb className="h-3 w-3 text-amber-400" />
                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">Why this suggestion?</span>
               </div>
               <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-secondary)' }}>

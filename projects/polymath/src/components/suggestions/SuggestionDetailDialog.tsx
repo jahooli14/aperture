@@ -14,7 +14,7 @@ import {
 } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
-import { Sparkles, ThumbsDown, Hammer, Lightbulb, Brain, Code2, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
+import { Zap, ThumbsDown, Hammer, Lightbulb, Brain, Code2, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react'
 import type { ProjectSuggestion } from '../../types'
 
 interface SuggestionDetailDialogProps {
@@ -90,7 +90,7 @@ export function SuggestionDetailDialog({
                     borderColor: 'rgba(168, 85, 247, 0.3)'
                   }}
                 >
-                  <Sparkles className="h-3 w-3 mr-1" />
+                  <Zap className="h-3 w-3 mr-1" />
                   Wildcard
                 </Badge>
               )}
@@ -157,7 +157,7 @@ export function SuggestionDetailDialog({
 
                 {suggestion.interest_score > 0.5 && (
                   <div className="flex gap-2">
-                    <Sparkles className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: '#a855f7' }} />
+                    <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: '#a855f7' }} />
                     <p><strong>Matches your vibe:</strong> Based on your memories and interests, this aligns with what you care about right now.</p>
                   </div>
                 )}
@@ -187,7 +187,7 @@ export function SuggestionDetailDialog({
               description="Within reach"
             />
             <ScoreCard
-              icon={<Sparkles className="h-4 w-4" />}
+              icon={<Zap className="h-4 w-4" />}
               label="Exciting"
               score={suggestion.interest_score}
               description="Matches you"
@@ -319,7 +319,7 @@ export function SuggestionDetailDialog({
             variant="outline"
             className="flex-1 btn-secondary"
           >
-            <Sparkles className="h-4 w-4 mr-2" />
+            <Zap className="h-4 w-4 mr-2" />
             Spark
           </Button>
           <Button

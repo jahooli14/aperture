@@ -4,7 +4,7 @@
  */
 
 import { ReactNode, useState, useEffect } from 'react'
-import { Loader2, ArrowDown, Sparkles } from 'lucide-react'
+import { Loader2, ArrowDown, RefreshCw } from 'lucide-react'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { cn } from '../lib/utils'
 import { haptic } from '../utils/haptics'
@@ -96,7 +96,7 @@ export function PullToRefresh({
           {justCompleted ? (
             <span className="text-2xl">✓</span>
           ) : isRefreshing ? (
-            <Sparkles className="h-6 w-6 animate-spin" style={{ color: 'var(--premium-blue)' }} />
+            <RefreshCw className="h-6 w-6 animate-spin" style={{ color: 'var(--premium-blue)' }} />
           ) : (
             <ArrowDown
               className={cn(

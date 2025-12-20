@@ -355,7 +355,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             <div className="mb-8 relative">
               <div className="absolute inset-0 bg-violet-500/20 blur-3xl rounded-full" />
               <div className="relative p-6 rounded-2xl bg-white/5 border border-white/10">
-                <Sparkles className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                <Zap className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
                 <h2 className="text-3xl font-serif text-[#E2E8F0] mb-2">Session Complete</h2>
                 <p className="text-slate-400">Your subconscious has been primed.</p>
               </div>

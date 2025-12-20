@@ -4,9 +4,9 @@
  */
 
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -38,6 +38,9 @@ interface ProjectNote {
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const powerHourTask = location.state?.powerHourTask
+
   const { projects, fetchProjects, deleteProject, updateProject, syncProject } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
 
@@ -658,6 +661,34 @@ export function ProjectDetailPage() {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
+              {/* Power Hour Focus Mode */}
+              {powerHourTask && (
+                <div className="premium-card p-6 border border-blue-500/50 relative overflow-hidden group mb-6 bg-blue-900/10">
+                  <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <Zap className="h-24 w-24" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-3 text-blue-400 font-bold uppercase tracking-wider text-xs">
+                      <Zap className="h-4 w-4" />
+                      Power Hour Objective
+                    </div>
+                    <h2 className="text-xl font-bold text-white mb-2">{powerHourTask.task_title}</h2>
+                    <p className="text-slate-300 mb-6 max-w-2xl leading-relaxed">{powerHourTask.task_description}</p>
+
+                    <button
+                      onClick={() => {
+                        window.scrollTo({ top: document.querySelector('[data-task-list]')?.getBoundingClientRect().top! + window.scrollY - 100, behavior: 'smooth' })
+                        addToast({ title: 'Focus on checklists below', variant: 'default' })
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Check className="h-4 w-4" />
+                      Ready to execute
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Description */}
               <div className="premium-card p-4">
                 {editingDescription ? (
@@ -718,6 +749,7 @@ export function ProjectDetailPage() {
               <div data-task-list>
                 <TaskList
                   tasks={project.metadata?.tasks || []}
+                  highlightedTasks={location.state?.powerHourTasks || []}
                   onUpdate={async (tasks) => {
                     if (!project) return
                     console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))

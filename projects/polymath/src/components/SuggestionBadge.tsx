@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Link2, X } from 'lucide-react'
+import { Zap, Link2, X } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
 import { useState, useEffect } from 'react'
 import { useToast } from './ui/toast'
@@ -116,7 +116,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
           animate={{ rotate: [0, 10, -10, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <Sparkles size={12} color="white" fill="white" />
+          <Zap size={12} color="white" fill="white" />
         </motion.div>
       </motion.button>
 
@@ -158,7 +158,7 @@ export function SuggestionBadge({ itemId, itemType }: SuggestionBadgeProps) {
               {/* Header */}
               <div className="px-6 pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={20} style={{ color: 'var(--premium-purple)' }} />
+                  <Zap size={20} style={{ color: 'var(--premium-purple)' }} />
                   <h3
                     className="text-lg font-semibold"
                     style={{ color: 'rgba(255, 255, 255, 0.95)' }}

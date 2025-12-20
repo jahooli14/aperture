@@ -1,6 +1,6 @@
 import React from 'react'
 import { ConnectionsList } from '../connections/ConnectionsList'
-import { Sparkles, Brain, BookOpen } from 'lucide-react'
+import { Lightbulb, Brain, BookOpen } from 'lucide-react'
 import { Project } from '../../types'
 
 interface StudioTabProps {
@@ -14,7 +14,7 @@ export function StudioTab({ project }: StudioTabProps) {
             <div className="premium-card p-6 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 border-indigo-500/20">
                 <div className="flex items-start gap-4">
                     <div className="p-3 rounded-xl bg-indigo-500/20 text-indigo-300">
-                        <Sparkles className="h-6 w-6" />
+                        <Lightbulb className="h-6 w-6" />
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-white mb-1">The Studio</h3>

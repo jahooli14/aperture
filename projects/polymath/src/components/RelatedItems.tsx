@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ExternalLink, Layers, FolderKanban, FileText, Sparkles } from 'lucide-react'
+import { ExternalLink, Layers, FolderKanban, FileText, Lightbulb } from 'lucide-react'
 import { Card, CardContent } from './ui/card'
 
 interface RelatedItem {
@@ -53,7 +53,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
       <Card className="pro-card">
         <CardContent className="p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="h-4 w-4 text-blue-900" />
+            <Lightbulb className="h-4 w-4 text-blue-900" />
             <h3 className="font-semibold text-neutral-900">Related</h3>
           </div>
           <div className="space-y-2">
@@ -74,7 +74,7 @@ export function RelatedItems({ sourceId, sourceType, sourceText, limit = 5 }: Re
     <Card className="pro-card">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Sparkles className="h-4 w-4 text-blue-900" />
+          <Lightbulb className="h-4 w-4 text-blue-900" />
           <h3 className="font-semibold text-neutral-900">Related</h3>
           <span className="text-xs text-neutral-500">({items.length})</span>
         </div>

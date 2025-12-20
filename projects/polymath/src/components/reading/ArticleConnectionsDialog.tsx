@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Sparkles, Check, ChevronRight, Brain, Rocket, BookmarkCheck } from 'lucide-react'
+import { X, Zap, Check, ChevronRight, Brain, Rocket, BookmarkCheck } from 'lucide-react'
 import { ConnectionsList } from '../connections/ConnectionsList'
 
 interface ArticleConnectionsDialogProps {
@@ -102,7 +102,7 @@ export function ArticleConnectionsDialog({
                       className="px-6 py-3 rounded-lg font-medium inline-flex items-center justify-center gap-2 transition-all"
                       style={{ background: 'var(--premium-blue-gradient)', color: 'white' }}
                     >
-                      <Sparkles className="h-5 w-5" />
+                      <Zap className="h-5 w-5" />
                       Discover Connections
                       <ChevronRight className="h-4 w-4" />
                     </button>

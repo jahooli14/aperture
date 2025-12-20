@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, X, Sparkles, ArrowRight } from 'lucide-react'
+import { Link2, X, Zap, ArrowRight } from 'lucide-react'
 import { useAutoSuggestion } from '../contexts/AutoSuggestionContext'
 import { useState, useEffect } from 'react'
 import { useToast } from './ui/toast'
@@ -114,7 +114,7 @@ export function SuggestionToast({ itemId, itemType, itemTitle }: SuggestionToast
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 1, repeat: Infinity, repeatDelay: 2 }}
                 >
-                  <Sparkles size={18} style={{ color: 'var(--premium-purple)' }} />
+                  <Zap size={18} style={{ color: 'var(--premium-purple)' }} />
                 </motion.div>
                 <span
                   className="text-sm font-medium"
