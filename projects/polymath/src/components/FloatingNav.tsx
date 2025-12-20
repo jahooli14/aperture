@@ -46,8 +46,8 @@ const NAV_OPTIONS: NavOption[] = [
   { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
   { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
   { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'lists', label: 'Lists', icon: AlignLeft, path: '/lists', action: 'navigate', color: 'lists' },
   { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'lists', label: 'Lists', icon: AlignLeft, path: '/lists', action: 'navigate', color: 'lists' },
 ]
 
 export function FloatingNav() {

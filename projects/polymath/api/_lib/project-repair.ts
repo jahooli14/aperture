@@ -19,7 +19,7 @@ export async function ensureProjectHasTasks(projectId: string, userId: string): 
     if (error || !project) return false
 
     const tasks = project.metadata?.tasks || []
-    if (tasks.length > 0) return true // Already has tasks
+    if (tasks.length >= 3) return true // Already has enough tasks
 
     console.log(`[Repair] Scaffolding project: ${project.title} (${project.id})`)
 
@@ -79,7 +79,7 @@ export async function repairAllUserProjects(userId: string) {
 
     if (error || !projects) return
 
-    const emptyProjects = projects.filter(p => !p.metadata?.tasks || p.metadata.tasks.length === 0)
+    const emptyProjects = projects.filter(p => !p.metadata?.tasks || p.metadata.tasks.length < 3)
 
     console.log(`[Repair] Found ${emptyProjects.length} empty projects for user ${userId}`)
 
