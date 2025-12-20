@@ -44,7 +44,6 @@ import {
   Map as MapIcon,
   Sparkles
 } from 'lucide-react'
-import { CapabilitiesSection } from '../components/home/CapabilitiesSection'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
@@ -1195,7 +1194,7 @@ export function HomePage() {
           </div >
         </section >
 
-        <CapabilitiesSection />
+
       </div >
 
       {/* Dialogs */}
