@@ -4,6 +4,8 @@
  * Implements point allocation, diversity injection, and suggestion storage
  */
 
+declare var process: any;
+
 import { getSupabaseClient } from './supabase.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { generateProjectScaffold, generateCreativeScaffold } from './generate-project-scaffold.js'
@@ -81,8 +83,8 @@ async function generateEmbedding(text: string): Promise<number[]> {
 /**
  * Extract interests from recent MemoryOS memories
  */
-async function extractInterests(): Promise<Interest[]> {
-  logger.info('Extracting interests from MemoryOS')
+async function extractInterests(userId: string): Promise<Interest[]> {
+  logger.info({ userId }, 'Extracting interests from MemoryOS')
 
   // Get entities that appear frequently
   const { data: entities, error } = await supabase
@@ -155,13 +157,14 @@ async function extractInterests(): Promise<Interest[]> {
 /**
  * Extract interests from recent articles
  */
-async function extractInterestsFromArticles(): Promise<Interest[]> {
-  logger.info('Extracting interests from articles')
+async function extractInterestsFromArticles(userId: string): Promise<Interest[]> {
+  logger.info({ userId }, 'Extracting interests from articles')
 
   try {
     const { data: articles, error } = await supabase
       .from('reading_queue')
       .select('entities, themes')
+      .eq('user_id', userId)
       .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
     // .not('entities', 'is', null) // Removing this constraint as it might fail if column doesn't exist
 
@@ -206,8 +209,8 @@ async function extractInterestsFromArticles(): Promise<Interest[]> {
 /**
  * Get all capabilities from database
  */
-async function getCapabilities(): Promise<Capability[]> {
-  logger.info('Loading capabilities')
+async function getCapabilities(userId: string): Promise<Capability[]> {
+  logger.info({ userId }, 'Loading capabilities')
 
   const { data, error } = await supabase
     .from('capabilities')
@@ -748,33 +751,24 @@ async function isSimilarToExisting(
   title: string,
   description: string,
   userId: string,
+  existingEmbeddings: number[][],
   threshold: number = 0.85
 ): Promise<boolean> {
   // Generate embedding for new suggestion
   const newEmbedding = await generateEmbedding(`${title}\n${description}`)
 
-  // Get recent suggestions (last 100 to avoid checking entire history)
-  const { data: existingSuggestions, error } = await supabase
-    .from('project_suggestions')
-    .select('id, title, description')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(COST_OPTS.SYNTHESIS_DUPLICATE_CHECK_LIMIT)
-
-  if (error || !existingSuggestions || existingSuggestions.length === 0) {
+  if (!existingEmbeddings || existingEmbeddings.length === 0) {
     return false
   }
 
-  // Check similarity against each existing suggestion
-  for (const existing of existingSuggestions) {
-    const existingEmbedding = await generateEmbedding(`${existing.title}\n${existing.description}`)
+  // Check similarity against each existing suggestion's cached embedding
+  for (const existingEmbedding of existingEmbeddings) {
     const similarity = cosineSimilarity(newEmbedding, existingEmbedding)
 
     if (similarity > threshold) {
       logger.debug(
         {
           new_title: title,
-          existing_title: existing.title,
           similarity: similarity.toFixed(3)
         },
         'Found similar existing suggestion'
@@ -798,8 +792,8 @@ export async function runSynthesis(userId: string) {
   }
 
   // 1. Extract interests from memories and articles
-  const memoryInterests = await extractInterests()
-  const articleInterests = await extractInterestsFromArticles()
+  const memoryInterests = await extractInterests(userId)
+  const articleInterests = await extractInterestsFromArticles(userId)
 
   // Merge and deduplicate interests
   const interestMap = new Map<string, Interest>()
@@ -824,15 +818,38 @@ export async function runSynthesis(userId: string) {
     .sort((a, b) => b.strength - a.strength)
 
   // 2. Load capabilities
-  const capabilities = await getCapabilities()
-
-  if (capabilities.length < 2) {
-    logger.error('Need at least 2 capabilities to generate suggestions')
-    return
-  }
+  const capabilities = await getCapabilities(userId)
 
   // 3. Generate suggestions with diversity enforcement
-  logger.info({ count: CONFIG.SUGGESTIONS_PER_RUN }, 'Generating suggestions')
+  logger.info({ count: CONFIG.SUGGESTIONS_PER_RUN, caps: capabilities.length, interests: interests.length }, 'Generating suggestions')
+
+  // Pre-fetch and pre-embed existing suggestions to avoid redundant API calls
+  const { data: existingSuggestions } = await supabase
+    .from('project_suggestions')
+    .select('title, description')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(COST_OPTS.SYNTHESIS_DUPLICATE_CHECK_LIMIT)
+
+  const existingEmbeddings: number[][] = []
+  if (existingSuggestions && existingSuggestions.length > 0) {
+    logger.info({ count: existingSuggestions.length }, 'Pre-embedding existing suggestions for similarity check')
+    for (const existing of existingSuggestions) {
+      try {
+        const emb = await generateEmbedding(`${existing.title}\n${existing.description}`)
+        existingEmbeddings.push(emb)
+      } catch (e) {
+        logger.warn('Failed to generate embedding for existing suggestion, skipping')
+      }
+    }
+  }
+
+  if (capabilities.length < 2 && interests.length < 2) {
+    logger.warn('Insufficient capabilities and interests to generate suggestions')
+
+    // Fallback: If absolutely nothing, generate some "Seed" project ideas to get them started
+    // This ensures new users don't see a blank screen
+  }
 
   const suggestions: ProjectIdea[] = []
   const usedCapabilitySets = new Set<string>() // Track used combinations in this batch
@@ -849,16 +866,41 @@ export async function runSynthesis(userId: string) {
     const maxAttempts = 10 // Increased for similarity checks
 
     try {
-      let suggestion: ProjectIdea
+      let suggestion: ProjectIdea = {
+        title: "Project Discovery",
+        description: "Record a few more thoughts or start a project to get personalized AI suggestions.",
+        reasoning: "Initialization fallback.",
+        capabilityIds: [],
+        memoryIds: [],
+        noveltyScore: 0.5,
+        feasibilityScore: 0.5,
+        interestScore: 0.5,
+        totalPoints: 0,
+        isWildcard: false
+      }
 
       // Retry until we get a unique combination AND not similar to existing
       while (attempts < maxAttempts) {
-        if (isWildcardSlot) {
+        if (isWildcardSlot && capabilities.length >= 2) {
           suggestion = await generateWildcard(capabilities, interests, i)
-        } else if (isCreativeSlot) {
+        } else if (isCreativeSlot || (capabilities.length < 2 && interests.length >= 2)) {
           suggestion = await generateCreativeSuggestion(interests)
-        } else {
+        } else if (capabilities.length >= 2) {
           suggestion = await generateSuggestion(capabilities, interests)
+        } else {
+          // Fallback if neither capabilities nor interests are sufficient
+          suggestion = {
+            title: "Project Discovery",
+            description: "Record a few more thoughts or start a project to get personalized AI suggestions.",
+            reasoning: "We need more data about your skills and interests to synthesize novel project ideas.",
+            capabilityIds: [],
+            memoryIds: [],
+            noveltyScore: 0.5,
+            feasibilityScore: 0.5,
+            interestScore: 0.5,
+            totalPoints: 50,
+            isWildcard: false
+          }
         }
 
         // Check 1: Is this capability combination unique in this batch?
@@ -870,6 +912,7 @@ export async function runSynthesis(userId: string) {
           suggestion.title,
           suggestion.description,
           userId,
+          existingEmbeddings,
           0.85 // 85% similarity threshold
         )
 
@@ -920,6 +963,7 @@ export async function runSynthesis(userId: string) {
             suggestion.title,
             suggestion.description,
             userId,
+            existingEmbeddings,
             0.90 // Relaxed to 90% for last attempts
           )
           if (!relaxedSimilar && !isDuplicateCombo && !isSimilarToBatch) {

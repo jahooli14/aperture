@@ -9,12 +9,10 @@ import { getUserId } from './_lib/auth.js'
 import { z } from 'zod'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { generateText } from './_lib/gemini-chat.js'
-import { generateDoorSuggestions } from './_lib/map-suggestions.js'
-import { generateInitialMap } from './_lib/map-generation.js'
 import { generateBedtimePrompts, generateCatalystPrompts, generateBreakPrompts } from './_lib/bedtime-ideas.js'
 import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
-import { identifyRottingProjects, generateProjectEulogy, buryProject, resurrectProject } from './_lib/project-maintenance.js'
+import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject } from './_lib/project-maintenance.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -476,118 +474,9 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // KNOWLEDGE MAP RESOURCE
+  // KNOWLEDGE MAP RESOURCE - DEPRECATED
   if (resource === 'knowledge_map') {
-    const action = req.query.action as string
-
-    try {
-      // GET: Load map state or generate initial map
-      if (req.method === 'GET') {
-        if (action === 'suggestions') {
-          // ... (existing suggestions logic)
-          const { data: mapState, error: fetchError } = await supabase
-            .from('knowledge_map_state')
-            .select('map_data')
-            .eq('user_id', userId)
-            .single()
-
-          if (fetchError) throw fetchError
-          if (!mapState) return res.status(404).json({ error: 'Map not found' })
-
-          const doors = await generateDoorSuggestions(userId, mapState.map_data)
-          return res.status(200).json({ doors })
-        }
-
-        // Default: Load existing map or generate initial
-        const { data: existingMap, error: loadError } = await supabase
-          .from('knowledge_map_state')
-          .select('*')
-          .eq('user_id', userId)
-          .single()
-
-        if (existingMap) {
-          return res.status(200).json({
-            mapData: existingMap.map_data,
-            version: existingMap.version
-          })
-        }
-
-        // No map exists - generate initial
-        const initialMap = await generateInitialMap(userId)
-
-        // Save it
-        const { error: insertError } = await supabase
-          .from('knowledge_map_state')
-          .insert({
-            user_id: userId,
-            map_data: initialMap,
-            version: 1
-          })
-
-        if (insertError) throw insertError
-
-        return res.status(200).json({
-          mapData: initialMap,
-          version: 1,
-          generated: true
-        })
-      }
-
-      // POST: Save map state OR Regenerate
-      if (req.method === 'POST') {
-        // REGENERATE ACTION
-        if (action === 'regenerate') {
-          console.log('[knowledge_map] Regenerating map for user:', userId)
-
-          // Generate fresh map from current data
-          const newMapData = await generateInitialMap(userId)
-
-          // Overwrite existing state
-          const { error: upsertError } = await supabase
-            .from('knowledge_map_state')
-            .upsert({
-              user_id: userId,
-              map_data: newMapData,
-              version: 1, // Reset version
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id'
-            })
-
-          if (upsertError) throw upsertError
-
-          return res.status(200).json({
-            success: true,
-            mapData: newMapData
-          })
-        }
-
-        // SAVE STATE
-        const { mapData } = req.body
-        const { error } = await supabase
-          .from('knowledge_map_state')
-          .upsert({
-            user_id: userId,
-            map_data: mapData,
-            version: mapData.version,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id'
-          })
-
-        if (error) throw error
-
-        return res.status(200).json({ success: true })
-      }
-
-      return res.status(405).json({ error: 'Method not allowed' })
-    } catch (error) {
-      console.error('[knowledge_map] Error:', error)
-      return res.status(500).json({
-        error: 'Knowledge map operation failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
-    }
+    return res.status(410).json({ error: 'Knowledge Map feature has been deprecated.' })
   }
 
   // CAPABILITIES RESOURCE
@@ -674,8 +563,9 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           if (fetchError) throw fetchError
           if (!project) return res.status(404).json({ error: 'Project not found' })
 
-          const eulogy = await generateProjectEulogy(project)
-          return res.status(200).json({ eulogy })
+          const zebraReport = await generateZebraReport(project)
+          return res.status(200).json({ eulogy: zebraReport }) // Keep key as 'eulogy' or change to 'zebraReport' if frontend is updated. 
+          // Actually, I'll keep the key as 'eulogy' for backward compatibility unless I find the frontend.
         } catch (error) {
           console.error('[reaper] Failed to generate eulogy:', error)
           return res.status(500).json({ error: 'Failed to generate eulogy' })

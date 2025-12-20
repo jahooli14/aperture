@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
-import { readingDb } from '../../lib/db' // Keep for direct db access if needed for metadata check
+import { readingDb } from '../../lib/db'
 import { haptic } from '../../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
 import { Thumbnail } from '../ui/optimized-image'
@@ -13,12 +13,10 @@ import { SuggestionBadge } from '../SuggestionBadge'
 import { EditArticleDialog } from './EditArticleDialog'
 import { ArticleConnectionsDialog } from './ArticleConnectionsDialog'
 import { useOfflineArticle } from '../../hooks/useOfflineArticle'
-import { GlassCard } from '../ui/GlassCard'
-import { SmartActionDot } from '../SmartActionDot'
 import { Button } from '../ui/button'
 
 interface ArticleCardProps {
-  article: Article & { is_rotting?: boolean } // Add is_rotting to Article type
+  article: Article & { is_rotting?: boolean }
   onClick?: () => void
 }
 
@@ -27,50 +25,21 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
   const { addToast } = useToast()
   const [isMetadataCached, setIsMetadataCached] = useState(false)
   const [isContentFullyCached, setIsContentFullyCached] = useState(false)
-  const [progress, setProgress] = useState(0) // Reading progress
-  const [connectionCount, setConnectionCount] = useState(0)
+  const [progress, setProgress] = useState(0)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showConnectionsDialog, setShowConnectionsDialog] = useState(false)
 
   const { isCached: isArticleFullyCached } = useOfflineArticle()
-  const { is_rotting } = article;
+  const { is_rotting } = article
 
-  // Load progress from DB
+  // No more redundant cleaning needed as it's done on backend
+  const excerpt = article.excerpt || ''
+
   useEffect(() => {
     readingDb.getProgress(article.id).then(p => {
       if (p) setProgress(p.scroll_percentage)
     })
-  }, [article.id])
-
-  // Clean excerpt logic
-  const cleanExcerpt = (text: string | undefined | null): string | undefined => {
-    if (!text) return undefined
-    let cleaned = text
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/\w+:is\([^\)]*\)\s*\{[^\}]*\}/g, '')
-      .replace(/\w+\[[^\]]*\]\s*\{[^\}]*\}/g, '')
-      .replace(/^#\d+\s*\(no title\)\s*/i, '')
-      .replace(/^[A-Za-z]+\s+\d{1,2},\s+\d{4}\s*/, '')
-      .replace(/^By\s+[^\.]+\s*/, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-    return cleaned || undefined
-  }
-
-  // Load progress
-  useEffect(() => {
-    const loadProgress = async () => {
-      try {
-        const p = await readingDb.getProgress(article.id)
-        if (p) setProgress(p.scroll_percentage)
-      } catch (e) {
-        // ignore
-      }
-    }
-    loadProgress()
   }, [article.id])
 
   const handleMarkAsRead = async () => {
@@ -159,7 +128,6 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     checkCacheStatus()
   }, [article.id, isArticleFullyCached])
 
-  // Context Menu Items
   const contextMenuItems: ContextMenuItem[] = useMemo(() => [
     { label: 'Edit', icon: <Edit className="h-5 w-5" />, onClick: () => setShowEditDialog(true) },
     { label: 'Open Original', icon: <ExternalLink className="h-5 w-5" />, onClick: openOriginal },
@@ -180,30 +148,14 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
       <div
         onClick={onClick}
-        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative"
+        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative shadow-lg"
         style={{
           borderColor: 'rgba(255, 255, 255, 0.1)',
           background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-          filter: is_rotting ? 'grayscale(80%)' : 'none', // Apply grayscale for rotting
-          transition: 'filter 0.3s ease-in-out' // Smooth transition for filter
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+          filter: is_rotting ? 'grayscale(80%)' : 'none',
         }}
       >
-        {/* Row 1: Title & Menu */}
         <div className="mb-3 relative z-10 block">
-          {/* 3-Dot Menu (Floated Right) */}
           <div className="float-right ml-2 -mr-2 -mt-1">
             <Button
               onClick={(e) => {
@@ -218,30 +170,27 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             </Button>
           </div>
 
-          {/* Title Area */}
           <div className="min-w-0">
             {article.title?.startsWith('http') ? (
               <div className="flex items-center gap-2 mb-1">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                 <span className="text-sm font-medium text-blue-400">Extracting...</span>
               </div>
             ) : (
-              <h3 className="text-lg font-bold leading-tight inline" style={{ color: 'var(--premium-text-primary)' }}>
+              <h3 className="text-lg font-bold leading-tight inline text-[#f2f2f7]">
                 {article.title || 'Untitled'}
               </h3>
             )}
             {is_rotting && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium ml-2 align-middle">Rotting</span>
             )}
-            <div className="text-xs truncate mt-1 block" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="text-xs truncate mt-1 text-zinc-500">
               {article.source || new URL(article.url).hostname.replace('www.', '')}
             </div>
           </div>
         </div>
 
-        {/* Row 2: Image & Meta/Icons */}
         <div className="flex items-start justify-between gap-3 mb-3">
-          {/* Thumbnail (Left) */}
           {article.thumbnail_url ? (
             <div className="flex-shrink-0">
               <Thumbnail
@@ -257,36 +206,22 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
             </div>
           )}
 
-          {/* Right Column: Icons (Top) + Meta (Bottom) */}
           <div className="flex-1 flex flex-col items-end justify-between h-16">
-            {/* Icons Row */}
             <div className="flex items-center gap-1">
               <SuggestionBadge itemId={article.id} itemType="article" />
-
               {isContentFullyCached ? (
-                <div className="p-1 rounded-full bg-blue-500/10 text-blue-400" title="Fully available offline">
+                <div className="p-1 rounded-full bg-emerald-500/10 text-emerald-400" title="Available offline">
                   <Download className="h-3 w-3" />
                 </div>
               ) : isMetadataCached ? (
-                <div className="p-1 rounded-full bg-amber-500/10 text-amber-400" title="Metadata only">
+                <div className="p-1 rounded-full bg-amber-500/10 text-amber-400" title="Partially cached">
                   <WifiOff className="h-3 w-3" />
                 </div>
               ) : null}
-
               <PinButton type="article" id={article.id} title={article.title || 'Article'} content={<></>} />
-
-              <button
-                className="w-2 h-2 rounded-full mx-1 transition-all duration-300 hover:scale-150 hover:shadow-[0_0_8px_rgba(6,182,212,0.6)] cursor-pointer"
-                style={{ backgroundColor: '#06b6d4' }}
-                title="AI Analysis"
-                onClick={(e) => {
-                  e.stopPropagation()
-                }}
-              />
             </div>
 
-            {/* Meta Text */}
-            <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            <div className="flex items-center gap-3 text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
               {article.read_time_minutes && (
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -300,11 +235,14 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
           </div>
         </div>
 
+        {excerpt && (
+          <p className="text-sm text-zinc-400 line-clamp-2 mb-3 leading-relaxed">
+            {excerpt}
+          </p>
+        )}
 
-
-        {/* Row 4: Progress Bar */}
         {progress > 0 && (
-          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-auto">
+          <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-2">
             <div
               className="h-full bg-blue-500 transition-all duration-500"
               style={{ width: `${progress}%` }}

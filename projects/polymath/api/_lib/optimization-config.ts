@@ -1,7 +1,7 @@
 export const COST_OPTS = {
     // Synthesis
     SYNTHESIS_DUPLICATE_CHECK_LIMIT: 10, // Max items to check for similarity (saves embeddings)
-    SYNTHESIS_SUGGESTIONS_PER_RUN: 1,    // Items to generate per run
+    SYNTHESIS_SUGGESTIONS_PER_RUN: 6,    // Items to generate per run
 
     // Embeddings
     MAINTENANCE_BATCH_SIZE: 20,          // Daily embedding limit per type

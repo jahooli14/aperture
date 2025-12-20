@@ -5,7 +5,7 @@ const supabase = getSupabaseClient()
 
 /**
  * Analyzes user's memories and detects gaps for follow-up prompts
- * Uses Gemini Flash 2.5 with full memory context
+ * Uses Gemini 3 Flash Preview with full memory context
  */
 export async function detectGaps(
   userId: string,
@@ -42,7 +42,7 @@ export async function detectGaps(
   const memoryContext = allMemories
     .map(m => {
       const promptText = m.memory_prompts?.prompt_text || m.custom_title || 'Untitled'
-      return `Prompt: ${promptText}\nResponse:\n${m.bullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
+      return `Prompt: ${promptText}\nResponse:\n${m.bullets.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n')}`
     })
     .join('\n\n---\n\n')
 
@@ -60,7 +60,7 @@ export async function detectGaps(
 
 User just answered: "${latestMemory.memory_prompts?.prompt_text || latestMemory.custom_title}"
 Their response:
-${latestMemory.bullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}
+${latestMemory.bullets.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n')}
 
 All their memories so far (${allMemories.length} total):
 

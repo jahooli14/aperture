@@ -1,4 +1,3 @@
-import { findStructuralHole } from './_lib/serendipity-engine.js'
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
@@ -25,15 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const { action, id, type } = req.query
 
-    // SERENDIPITY ENGINE (Phase 4)
+    // SERENDIPITY ENGINE - DEPRECATED
     if (action === 'serendipity') {
-      try {
-        const result = await findStructuralHole(userId)
-        return res.status(200).json(result || { message: 'No serendipity found (yet)' })
-      } catch (error) {
-        console.error('[connections] Serendipity error:', error)
-        return res.status(500).json({ error: 'Failed to find structural hole' })
-      }
+      return res.status(410).json({ error: 'Serendipity Engine has been deprecated.' })
     }
 
     // Get suggestions for an item via vector similarity

@@ -27,21 +27,26 @@ export async function identifyRottingProjects(userId: string): Promise<any[]> {
   return rottingProjects
 }
 
-export async function generateProjectEulogy(project: any): Promise<string> {
-  const prompt = `You are a melancholic AI poet. Write a very brief, poignant eulogy (2-3 sentences) for a project that has been left to languish. 
-  It should capture the project's original promise and the sadness of its neglect.
-
+export async function generateZebraReport(project: any): Promise<string> {
+  const prompt = `You are the APERTURE NARRATOR. This project is being archived. 
+  Generate a high-contrast "Zebra Report" (max 150 words).
+  
+  Focus on:
+  1. Lessons Learned: Why did we stall? What did we prove?
+  2. Scavenge: Which parts of this project (code, ideas, research) should be saved for the next hunt?
+  3. The 80/20 Exit: Why is 80% completion good enough for now?
+  
   Project Title: "${project.title}"
   Project Description: "${project.description || 'No description provided.'}"
-
-  Eulogy:`
+  
+  Format: Bold, bulleted, high-impact.`
 
   try {
-    const eulogy = await generateText(prompt, { temperature: 0.8, maxTokens: 100 })
-    return eulogy.trim()
+    const report = await generateText(prompt, { temperature: 0.7, maxTokens: 300 })
+    return report.trim()
   } catch (error) {
-    console.error('[generateProjectEulogy] Error generating eulogy:', error)
-    return `Alas, the dream of "${project.title}" now sleeps, its purpose unfulfilled.`
+    console.error('[generateZebraReport] Error generating report:', error)
+    return `The hunt for "${project.title}" has concluded. Lessons archived.`
   }
 }
 

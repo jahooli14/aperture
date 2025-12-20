@@ -46,7 +46,7 @@ export function VoiceFAB({
   // Listen for external open triggers
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
-      if (isOnline && !hidden) {
+      if (!hidden) {
         setIsVoiceOpen(true)
       }
     }
@@ -70,20 +70,38 @@ export function VoiceFAB({
     }, 500) // 500ms long press
   }
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Stop propagation to prevent accidental backdrop clicks if any
+    e.stopPropagation()
+
+    if (!isLongPress.current && !isMenuOpen) {
+      if (onTap) {
+        const handled = onTap()
+        if (handled) return
+      }
+
+      console.log('[VoiceFAB] Short press - opening voice capture')
+      haptic.light()
+      setIsVoiceOpen(true)
+    }
+  }
+
   const endPress = (e: React.MouseEvent | React.TouchEvent) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
 
-    if (!isLongPress.current && !isMenuOpen) {
-      // Short press behavior
-      // Allow parent to intercept tap (e.g. for project page context)
+    // Handle touch snappy behavior but prevent ghost clicks
+    if (e.type === 'touchend' && !isLongPress.current && !isMenuOpen) {
+      e.preventDefault() // Stop ghost click from hitting whatever appears underneath
+
       if (onTap) {
         const handled = onTap()
         if (handled) return
       }
 
+      console.log('[VoiceFAB] Touchend - opening voice capture')
       haptic.light()
       setIsVoiceOpen(true)
     }
@@ -105,6 +123,7 @@ export function VoiceFAB({
         {!isVoiceOpen && !isMenuOpen && !hidden && (
           <motion.button
             data-voice-fab
+            onClick={handleClick}
             onMouseDown={startPress}
             onMouseUp={endPress}
             onMouseLeave={cancelPress}
@@ -232,7 +251,12 @@ export function VoiceFAB({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setIsVoiceOpen(false)}
+              onClick={(e) => {
+                e.stopPropagation()
+                // Small delay to prevent accidental closures from the same event
+                console.log('[VoiceFAB] Backdrop clicked - closing')
+                setIsVoiceOpen(false)
+              }}
             />
 
             {/* Bottom Sheet / Modal */}
@@ -241,8 +265,8 @@ export function VoiceFAB({
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full md:w-[500px] premium-card rounded-t-3xl md:rounded-2xl shadow-2xl z-10"
-              style={{ backgroundColor: 'var(--premium-surface-elevated)' }}
+              className="relative w-full md:w-[500px] premium-card rounded-t-3xl md:rounded-2xl shadow-2xl z-10 overflow-hidden"
+              style={{ backgroundColor: 'var(--premium-surface-1)' }}
             >
               <div style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 {/* Handle */}

@@ -35,9 +35,15 @@ export async function processMemory(memoryId: string): Promise<void> {
     logger.info({ memory_id: memoryId, title: memory.title }, 'Processing memory')
 
     // 2. Extract entities and metadata using Gemini (also generates summary title and insightful body)
+    // Fetch active projects to help with triage
+    const { data: projects } = await supabase
+      .from('projects')
+      .select('id, title, description')
+      .eq('status', 'active')
+
     logger.info({ memory_id: memoryId }, '🔄 Extracting metadata...')
-    const metadata = await extractMetadata(memory.title, memory.body)
-    logger.info({ memory_id: memoryId, summary_title: metadata.summary_title }, '✅ Metadata extracted')
+    const metadata = await extractMetadata(memory.title, memory.body, projects || [])
+    logger.info({ memory_id: memoryId, summary_title: metadata.summary_title, triage: metadata.triage?.category }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content
     const embeddingText = `${metadata.summary_title}\n\n${metadata.insightful_body}`
@@ -57,6 +63,7 @@ export async function processMemory(memoryId: string): Promise<void> {
         themes: metadata.themes,
         tags: metadata.tags || [], // Use raw tags from Gemini (skip normalization bottleneck)
         emotional_tone: metadata.emotional_tone,
+        triage: metadata.triage,
         embedding,
         processed: true,
         processed_at: new Date().toISOString(),
@@ -87,6 +94,52 @@ export async function processMemory(memoryId: string): Promise<void> {
     await updateItemConnections(memoryId, 'thought', embedding, userId)
     logger.info({ memory_id: memoryId }, '✅ Connections processed')
 
+    // 7. Act on Triage
+    if (metadata.triage) {
+      const { category, project_id } = metadata.triage
+      if (category === 'task_update' && project_id) {
+        logger.info({ project_id }, '🔄 Adding task to project from triage...')
+        // Fetch project to get current tasks
+        const { data: project } = await supabase
+          .from('projects')
+          .select('metadata')
+          .eq('id', project_id)
+          .single()
+
+        if (project) {
+          const currentTasks = project.metadata?.tasks || []
+          const newTask = {
+            id: crypto.randomUUID(),
+            text: metadata.summary_title,
+            done: false,
+            created_at: new Date().toISOString(),
+            order: currentTasks.length
+          }
+          const updatedMetadata = {
+            ...project.metadata,
+            tasks: [...currentTasks, newTask]
+          }
+          await supabase
+            .from('projects')
+            .update({ metadata: updatedMetadata, last_active: new Date().toISOString() })
+            .eq('id', project_id)
+          logger.info({ project_id }, '✅ Task added to project')
+        }
+      } else if (category === 'reading_lead') {
+        logger.info('🔄 Adding to reading queue from triage...')
+        await supabase
+          .from('reading_queue')
+          .insert({
+            user_id: userId,
+            title: metadata.summary_title,
+            excerpt: metadata.insightful_body.slice(0, 200),
+            status: 'unread',
+            url: metadata.entities?.topics?.[0] || 'thought://' + memoryId // Pseudo-URL
+          })
+        logger.info('✅ Added to reading queue')
+      }
+    }
+
     logger.info({
       memory_id: memoryId,
       summary_title: metadata.summary_title,
@@ -115,10 +168,15 @@ export async function processMemory(memoryId: string): Promise<void> {
 /**
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
-async function extractMetadata(title: string, body: string): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+async function extractMetadata(title: string, body: string, projects: any[]): Promise<ExtractedMetadata> {
+  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' }) // Consistent model usage
+
+  const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
   const prompt = `Clean up this voice note into something natural and readable.
+  
+  CURRENT ACTIVE PROJECTS:
+  ${projectList || 'No active projects.'}
 
 Raw Voice Transcript:
 Title: ${title}
@@ -137,7 +195,12 @@ Extract the following in JSON format:
   },
   "themes": ["high-level life themes - max 3"],
   "tags": ["searchable tags - 3-5 tags"],
-  "emotional_tone": "brief emotional description"
+  "emotional_tone": "brief emotional description",
+  "triage": {
+    "category": "task_update" | "new_thought" | "reading_lead",
+    "project_id": "string (uuid of identified project if task_update)",
+    "confidence": 0-1
+  }
 }
 
 Rules:
@@ -151,6 +214,8 @@ Rules:
 - themes: Broad life categories ONLY (max 3) - e.g., "career", "health", "creativity", "relationships", "learning", "family"
 - tags: Short searchable keywords (3-5) - overlap with topics is OK but keep minimal. Use for: mood, context, or specifics not captured elsewhere
 - emotional_tone: One short phrase (e.g., "excited", "reflective and calm", "frustrated")
+- triage.category: "task_update" (update to existing project), "new_thought" (standalone idea), "reading_lead" (something to read/watch later)
+- triage.project_id: If "task_update", try to match to a known project ID if context allows. If it's a new project, leave null.
 
 **Key difference:**
 - topics = what is this about? (nouns: React, meditation, design)
