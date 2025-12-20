@@ -36,9 +36,9 @@ export async function extractCapabilities(userId: string) {
       ...(memories || []).map(m => `Title: ${m.title || 'Untitled'}\nBody: ${m.body}`)
     ].join('\n\n')
 
-    // 2. Analyze with Gemini 1.5 Flash (Reliable JSON)
+    // 2. Analyze with Gemini 3 Flash (Reliable JSON)
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3-flash-preview',
       generationConfig: { responseMimeType: 'application/json' }
     })
 

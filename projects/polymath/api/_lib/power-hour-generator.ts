@@ -44,7 +44,7 @@ export async function generatePowerHourPlan(userId: string): Promise<PowerHourTa
     if (fuelError) throw fuelError
 
     // 3. Use Gemini 3 Flash to synthesize Power Hour suggestions
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }) // Updated to latest available flash model
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' }) // Use gemini-3-flash-preview as requested
 
     const projectsContext = projects.map(p => {
         const tasksList = (p.metadata?.tasks || [])
