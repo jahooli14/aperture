@@ -51,31 +51,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .single()
 
             if (project) {
-                const newItems = tasks
-                    .find(t => t.project_id === targetProject)
-                    ?.checklist_items?.filter(i => i.is_new) || []
+                const existingTasks = project.metadata?.tasks || []
 
-                if (newItems.length > 0) {
-                    const existingTasks = project.metadata?.tasks || []
-                    const freshTasks = newItems.map((item, idx) => ({
-                        id: crypto.randomUUID(),
-                        text: item.text,
-                        done: false,
-                        created_at: new Date().toISOString(),
-                        order: existingTasks.length + idx
-                    }))
+                // A. Task Cap Shield (Max 12 tasks)
+                if (existingTasks.length >= 12) {
+                    console.log(`[power-hour] Project ${targetProject} at capacity (${existingTasks.length} tasks). Skipping enrichment.`)
+                } else {
+                    const newItems = tasks
+                        .find(t => t.project_id === targetProject)
+                        ?.checklist_items?.filter(i => i.is_new) || []
 
-                    await supabase
-                        .from('projects')
-                        .update({
-                            metadata: {
-                                ...project.metadata,
-                                tasks: [...existingTasks, ...freshTasks]
+                    if (newItems.length > 0) {
+                        // B. De-Duplication Logic
+                        const isSimilar = (a: string, b: string) => {
+                            const s1 = a.toLowerCase().trim()
+                            const s2 = b.toLowerCase().trim()
+                            if (s1 === s2) return true
+                            if (s1.includes(s2) || s2.includes(s1)) return true
+
+                            // Simple Levenshtein for typos/minor phrasing diffs
+                            const track = Array(s2.length + 1).fill(null).map(() =>
+                                Array(s1.length + 1).fill(null))
+                            for (let i = 0; i <= s1.length; i += 1) track[0][i] = i
+                            for (let j = 0; j <= s2.length; j += 1) track[j][0] = j
+                            for (let j = 1; j <= s2.length; j += 1) {
+                                for (let i = 1; i <= s1.length; i += 1) {
+                                    const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1
+                                    track[j][i] = Math.min(
+                                        track[j][i - 1] + 1,
+                                        track[j - 1][i] + 1,
+                                        track[j - 1][i - 1] + indicator,
+                                    )
+                                }
                             }
-                        })
-                        .eq('id', targetProject)
+                            const distance = track[s2.length][s1.length]
+                            const maxLength = Math.max(s1.length, s2.length)
+                            // If difference is less than 30% of length, call it a duplicate
+                            return distance < (maxLength * 0.3)
+                        }
 
-                    console.log(`[power-hour] Enriched project ${targetProject} with ${freshTasks.length} new tasks.`)
+                        // Filter out duplicates against ALL existing tasks
+                        const uniqueNewTasks = newItems.filter(newItem => {
+                            const duplicate = existingTasks.some((existing: any) => isSimilar(existing.text, newItem.text))
+                            if (duplicate) console.log(`[power-hour] Deduped: "${newItem.text}"`)
+                            return !duplicate
+                        })
+
+                        // Only add what fits under the cap
+                        const slotsRemaining = 12 - existingTasks.length
+                        const tasksToAdd = uniqueNewTasks.slice(0, slotsRemaining)
+
+                        if (tasksToAdd.length > 0) {
+                            const freshTasks = tasksToAdd.map((item, idx) => ({
+                                id: crypto.randomUUID(),
+                                text: item.text,
+                                done: false,
+                                created_at: new Date().toISOString(),
+                                order: existingTasks.length + idx
+                            }))
+
+                            await supabase
+                                .from('projects')
+                                .update({
+                                    metadata: {
+                                        ...project.metadata,
+                                        tasks: [...existingTasks, ...freshTasks]
+                                    }
+                                })
+                                .eq('id', targetProject)
+
+                            console.log(`[power-hour] Enriched project ${targetProject} with ${freshTasks.length} new tasks.`)
+                        }
+                    }
                 }
             }
         }
