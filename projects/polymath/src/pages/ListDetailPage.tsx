@@ -95,6 +95,12 @@ export default function ListDetailPage() {
                                     </div>
                                 )}
 
+                                {item.enrichment_status === 'failed' && (
+                                    <div className="mt-2 text-xs text-red-500/50 italic">
+                                        <span>Failed: {item.metadata?.error || 'Unknown'}</span>
+                                    </div>
+                                )}
+
                                 {/* Metadata Rendering */}
                                 {item.metadata?.subtitle && (
                                     <p className="text-zinc-400 text-sm mb-2 line-clamp-1">{item.metadata.subtitle}</p>

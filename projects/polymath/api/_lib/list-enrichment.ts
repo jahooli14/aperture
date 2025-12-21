@@ -55,7 +55,8 @@ RESPONSE FORMAT:
             temperature: 0.3 // Keep it factual
         })
 
-        const metadata = JSON.parse(response)
+        const cleanResponse = response.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+        const metadata = JSON.parse(cleanResponse)
 
         // 3. Update the item in Supabase
         const { error } = await supabase
@@ -71,7 +72,7 @@ RESPONSE FORMAT:
         console.log(`[Enrichment] Successfully enriched: ${content}`)
         return metadata
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`[Enrichment] Failed for ${content}:`, error)
 
         // Set to failed so we don't keep spinner forever
@@ -79,7 +80,11 @@ RESPONSE FORMAT:
             const supabase = getSupabaseClient()
             await supabase
                 .from('list_items')
-                .update({ enrichment_status: 'failed' })
+                .update({
+                    enrichment_status: 'failed',
+                    // Save error to metadata for debugging
+                    metadata: { error: error.message || 'Unknown error' }
+                })
                 .eq('id', itemId)
                 .eq('user_id', userId)
         } catch (dbErr) {
