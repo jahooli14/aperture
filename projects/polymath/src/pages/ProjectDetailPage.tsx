@@ -22,6 +22,7 @@ import { Button } from '../components/ui/button'
 import { useToast } from '../components/ui/toast'
 import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { handleInputFocus } from '../utils/keyboard'
+import { EditProjectDialog } from '../components/projects/EditProjectDialog'
 import type { Project, Memory } from '../types'
 import { supabase } from '../lib/supabase'
 import { useMemoryStore } from '../stores/useMemoryStore'
@@ -55,6 +56,7 @@ export function ProjectDetailPage() {
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
+  const [showEditDialog, setShowEditDialog] = useState(false)
 
 
   // Listen for custom event from FloatingNav to open AddNote dialog
@@ -607,6 +609,16 @@ export function ProjectDetailPage() {
                     >
                       Delete Project
                     </button>
+                    <button
+                      onClick={() => {
+                        setShowMenu(false)
+                        setShowEditDialog(true)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-white/10"
+                      style={{ color: 'var(--premium-text-primary)' }}
+                    >
+                      Edit Project Details
+                    </button>
                   </div>
                 </>
               )}
@@ -805,8 +817,28 @@ export function ProjectDetailPage() {
                 />
               </div>
 
+              {/* Smart Connections Section */}
+              <div className="mt-8 pt-8 border-t border-white/10">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                    <p className="text-xs text-zinc-500">Semantic bridges discovered by the Aperture Engine.</p>
+                  </div>
+                  <div className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-[8px] font-black uppercase tracking-widest text-blue-400">
+                    Neural Bridge
+                  </div>
+                </div>
+
+                <ConnectionsList
+                  itemType="project"
+                  itemId={project.id}
+                  content={`${project.title} ${project.description || ''} ${project.metadata?.motivation || ''}`}
+                  onConnectionCreated={loadProjectDetails}
+                />
+              </div>
+
               {/* Activity */}
-              <div>
+              <div className="mt-12">
                 <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
                   Activity
                 </h3>
@@ -873,7 +905,15 @@ export function ProjectDetailPage() {
           />
         )
       }
-    </div >
+      {/* Edit Project Dialog */}
+      {project && (
+        <EditProjectDialog
+          project={project}
+          isOpen={showEditDialog}
+          onOpenChange={setShowEditDialog}
+        />
+      )}
+    </div>
   )
 }
 

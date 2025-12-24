@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { motion, AnimatePresence } from 'framer-motion'
 import { OptimizedImage } from '../components/ui/optimized-image'
+import { ConnectionsList } from '../components/connections/ConnectionsList'
 
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
@@ -68,106 +69,146 @@ export default function ListDetailPage() {
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-32">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <AnimatePresence initial={false}>
-                        {currentListItems.map((item) => (
-                            <motion.div
-                                key={item.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden"
-                            >
-                                {/* TODO: Render Metadata logic here later */}
-                                {item.metadata?.image ? (
-                                    <div className="aspect-video mb-3 rounded-lg overflow-hidden bg-zinc-800">
-                                        <OptimizedImage src={item.metadata.image} alt={item.content} className="w-full h-full object-cover" />
-                                    </div>
-                                ) : null}
+                        {currentListItems.map((item) => {
+                            const isBook = list.type === 'book';
+                            return (
+                                <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className={`bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col ${isBook ? 'min-h-[400px]' : ''
+                                        }`}
+                                >
+                                    {/* Item Image / Cover */}
+                                    {item.metadata?.image ? (
+                                        <div className={`${isBook ? 'aspect-[2/3] mb-4' : 'aspect-video mb-3'
+                                            } rounded-lg overflow-hidden bg-zinc-800 shadow-xl ring-1 ring-white/10`}>
+                                            <OptimizedImage
+                                                src={item.metadata.image}
+                                                alt={item.content}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
+                                        </div>
+                                    ) : isBook ? (
+                                        <div className="aspect-[2/3] mb-4 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5 border-dashed">
+                                            <span className="text-zinc-600 text-xs font-mono">NO COVER</span>
+                                        </div>
+                                    ) : null}
 
-                                <div className="flex items-start justify-between gap-2">
-                                    <span className="text-white font-medium">{item.content}</span>
-                                </div>
-
-                                {item.enrichment_status === 'pending' && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500 italic">
-                                        <div className="h-1 w-1 rounded-full bg-zinc-500 animate-pulse" />
-                                        <span>Enriching...</span>
-                                    </div>
-                                )}
-
-                                {item.enrichment_status === 'failed' && (
-                                    <div className="mt-2 text-xs text-red-500/50 italic">
-                                        <span>Failed: {item.metadata?.error || 'Unknown'}</span>
-                                    </div>
-                                )}
-
-                                {/* Metadata Rendering */}
-                                {item.metadata?.subtitle && (
-                                    <p className="text-zinc-400 text-sm mb-2 line-clamp-1">{item.metadata.subtitle}</p>
-                                )}
-
-                                {item.metadata?.specs && (
-                                    <div className="flex flex-wrap gap-2 mb-3">
-                                        {Object.entries(item.metadata.specs).slice(0, 2).map(([key, value]) => (
-                                            <span key={key} className="text-[10px] uppercase font-mono bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 border border-white/5">
-                                                {value as string}
+                                    <div className="flex-1">
+                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                            <span className="text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight">
+                                                {item.content}
                                             </span>
-                                        ))}
-                                    </div>
-                                )}
+                                        </div>
 
-                                {item.metadata?.tags && item.metadata.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1.5 mb-2">
-                                        {item.metadata.tags.map((tag: string) => (
-                                            <span key={tag} className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full text-zinc-300">
-                                                #{tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
+                                        {/* Metadata Rendering */}
+                                        {item.metadata?.subtitle && (
+                                            <p className="text-zinc-400 text-xs mb-3 line-clamp-2 leading-relaxed italic">{item.metadata.subtitle}</p>
+                                        )}
 
-                                {item.metadata?.link && (
-                                    <a
-                                        href={item.metadata.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs text-blue-400 hover:text-blue-300 hover:underline block mt-2"
-                                        onClick={e => e.stopPropagation()}
-                                    >
-                                        View Details &rarr;
-                                    </a>
-                                )}
-                                {/* Hover Actions */}
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            // Handle delete
-                                            const { deleteListItem } = useListStore.getState()
-                                            if (item.list_id && item.id) {
-                                                deleteListItem(item.id, item.list_id)
-                                            }
-                                        }}
-                                        className="p-1.5 bg-black/50 hover:bg-black/80 backdrop-blur-md rounded-full text-zinc-400 hover:text-red-400 transition-colors"
-                                        title="Delete Item"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
+                                        {item.metadata?.specs && (
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                {Object.entries(item.metadata.specs).map(([key, value]) => (
+                                                    <div key={key} className="flex flex-col">
+                                                        <span className="text-[8px] uppercase font-bold text-zinc-600 tracking-tighter">{key}</span>
+                                                        <span className="text-[10px] font-mono text-zinc-300">
+                                                            {value as string}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {item.metadata?.tags && item.metadata.tags.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mb-3">
+                                                {item.metadata.tags.map((tag: string) => (
+                                                    <span key={tag} className="text-[10px] bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded text-sky-300 font-medium">
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-auto flex items-center justify-between">
+                                        {item.metadata?.link ? (
+                                            <a
+                                                href={item.metadata.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                Details &rarr;
+                                            </a>
+                                        ) : <div />}
+
+                                        {item.enrichment_status === 'pending' && (
+                                            <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-bold animate-pulse uppercase tracking-widest">
+                                                <div className="h-1 w-1 rounded-full bg-sky-400" />
+                                                <span>Analyzing</span>
+                                            </div>
+                                        )}
+
+                                        {item.enrichment_status === 'failed' && (
+                                            <div className="text-[10px] text-red-500/50 font-medium uppercase tracking-widest">
+                                                <span>Analysis Failed</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Hover Actions */}
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                const { deleteListItem } = useListStore.getState()
+                                                if (item.list_id && item.id) {
+                                                    deleteListItem(item.id, item.list_id)
+                                                }
+                                            }}
+                                            className="p-1.5 bg-black/80 hover:bg-red-500/20 backdrop-blur-md rounded-lg text-zinc-500 hover:text-red-400 border border-white/5 transition-all shadow-xl"
+                                            title="Delete Item"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </AnimatePresence>
                 </div >
-
-                {
-                    currentListItems.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                            <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
-                            <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
-                        </div>
-                    )
-                }
+                {currentListItems.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                        <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
+                        <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
+                    </div>
+                )}
             </div >
+
+            {/* Smart Connections Section */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+                <div className="p-8 rounded-2xl border border-white/5 bg-zinc-900/30 backdrop-blur-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                            <p className="text-sm text-zinc-500">Connections discovered by the Aperture Neural Bridge.</p>
+                        </div>
+                        <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
+                            Neural Sync
+                        </div>
+                    </div>
+
+                    <ConnectionsList
+                        itemType="list"
+                        itemId={list.id}
+                        content={`${list.title} ${list.description || ''} ${currentListItems.map(i => i.content).join(', ')}`}
+                    />
+                </div>
+            </div>
 
             {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
             < div className="fixed bottom-[90px] left-0 right-0 p-4 z-[100]" >

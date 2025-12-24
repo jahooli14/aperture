@@ -5,6 +5,36 @@ import { useProjectStore } from '../../stores/useProjectStore'
 import { useNavigate } from 'react-router-dom'
 import { ReviewDeck } from '../projects/ReviewDeck'
 import { PROJECT_COLORS } from '../projects/ProjectCard'
+import {
+    Code,
+    PenTool,
+    Terminal,
+    Lightbulb,
+    Globe,
+    Music,
+    Video,
+    BookOpen,
+    Dribbble,
+    Atom,
+    Cpu
+} from 'lucide-react'
+
+const getProjectIcon = (type: string) => {
+    const t = type?.toLowerCase().trim() || ''
+    switch (t) {
+        case 'tech': return <Terminal className="h-4 w-4" />
+        case 'writing': return <PenTool className="h-4 w-4" />
+        case 'coding': return <Code className="h-4 w-4" />
+        case 'web': return <Globe className="h-4 w-4" />
+        case 'music': return <Music className="h-4 w-4" />
+        case 'video': return <Video className="h-4 w-4" />
+        case 'book': return <BookOpen className="h-4 w-4" />
+        case 'design': return <Dribbble className="h-4 w-4" />
+        case 'science': return <Atom className="h-4 w-4" />
+        case 'hardware': return <Cpu className="h-4 w-4" />
+        default: return <Lightbulb className="h-4 w-4" />
+    }
+}
 
 export function FocusStream() {
     const navigate = useNavigate()
@@ -131,6 +161,14 @@ export function FocusStream() {
                                     }}>
                                         Priority
                                     </span>
+                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header ml-auto" style={{
+                                        backgroundColor: 'rgba(255,255,255,0.03)',
+                                        color: 'var(--brand-text-muted)',
+                                        borderColor: 'rgba(255,255,255,0.08)'
+                                    }}>
+                                        {getProjectIcon(priorityProject.type || 'other')}
+                                        {priorityProject.type?.toUpperCase() || 'OTHER'}
+                                    </span>
                                 </div>
 
                                 <h3 className="text-xl font-bold text-white mb-2 aperture-header">
@@ -187,6 +225,14 @@ export function FocusStream() {
                                         borderColor: `rgba(${theme.rgb}, 0.3)`
                                     }}>
                                         <Clock className="h-3 w-3" /> Recent
+                                    </span>
+                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header ml-auto" style={{
+                                        backgroundColor: 'rgba(255,255,255,0.03)',
+                                        color: 'var(--brand-text-muted)',
+                                        borderColor: 'rgba(255,255,255,0.08)'
+                                    }}>
+                                        {getProjectIcon(recentProject.type || 'other')}
+                                        {recentProject.type?.toUpperCase() || 'OTHER'}
                                     </span>
                                 </div>
 

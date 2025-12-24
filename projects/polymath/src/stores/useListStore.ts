@@ -14,6 +14,8 @@ interface ListStore {
     addListItem: (input: CreateListItemInput) => Promise<void>
     deleteListItem: (itemId: string, listId: string) => Promise<void>
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
+    deleteList: (listId: string) => Promise<void>
+    reorderItems: (listId: string, itemIds: string[]) => Promise<void>
 }
 
 export const useListStore = create<ListStore>((set, get) => ({
@@ -186,6 +188,44 @@ export const useListStore = create<ListStore>((set, get) => ({
                 lists: previousLists,
                 error: error.message
             })
+        }
+    },
+
+    deleteList: async (listId) => {
+        const previousLists = get().lists
+        set(state => ({
+            lists: state.lists.filter(l => l.id !== listId)
+        }))
+
+        try {
+            const response = await fetch(`/api/lists?id=${listId}`, {
+                method: 'DELETE'
+            })
+            if (!response.ok) throw new Error('Failed to delete list')
+        } catch (error: any) {
+            set({ lists: previousLists, error: error.message })
+        }
+    },
+
+    reorderItems: async (listId, itemIds) => {
+        // Optimistic
+        const currentItems = get().currentListItems
+        const newItems = [...currentItems].sort((a, b) => {
+            const indexA = itemIds.indexOf(a.id)
+            const indexB = itemIds.indexOf(b.id)
+            return indexA - indexB
+        })
+        set({ currentListItems: newItems })
+
+        try {
+            const response = await fetch(`/api/list-items?resource=reorder&listId=${listId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemIds })
+            })
+            if (!response.ok) throw new Error('Failed to reorder items')
+        } catch (error: any) {
+            set({ currentListItems: currentItems, error: error.message })
         }
     }
 }))

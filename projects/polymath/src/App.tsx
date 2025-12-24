@@ -239,7 +239,7 @@ export default function App() {
               {/* Safe area spacer for mobile status bar */}
               <div className="md:hidden" style={{ height: 'env(safe-area-inset-top)' }} />
 
-              <main className="flex-1">
+              <main className="flex-1 pb-floating-nav">
                 <ErrorBoundary>
                   <Suspense fallback={<PageLoader />}>
                     <Routes>

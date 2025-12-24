@@ -52,6 +52,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const { data } = await supabase.from('reading_queue').select('title, embedding').eq('user_id', userId).eq('id', id).single()
           sourceEmbedding = data?.embedding
           sourceTitle = data?.title || ''
+        } else if (type === 'list') {
+          const { data } = await supabase.from('lists').select('title, description').eq('user_id', userId).eq('id', id).single()
+          // No embedding for lists yet, but we can generate one if content is available
+          sourceTitle = data?.title || ''
         }
 
         if (!sourceEmbedding) {
@@ -148,6 +152,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const { data } = await supabase.from('reading_queue').select('*').eq('id', id).single()
           sourceItem = data
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+        } else if (type === 'list') {
+          const { data } = await supabase.from('lists').select('*').eq('id', id).single()
+          sourceItem = data
+          sourceContent = `List: ${data?.title}\n${data?.description || ''}`
         }
 
         if (!sourceItem) {
@@ -276,6 +284,10 @@ Keep it brief and high-impact. No fluff.`
           const { data } = await supabase.from('reading_queue').select('*').eq('user_id', userId).eq('id', id).single()
           sourceTitle = data?.title || 'Untitled'
           sourceContent = `Article: ${data?.title}\n${data?.excerpt || data?.summary || ''}`
+        } else if (type === 'list') {
+          const { data } = await supabase.from('lists').select('*').eq('user_id', userId).eq('id', id).single()
+          sourceTitle = data?.title || 'Untitled'
+          sourceContent = `List: ${data?.title}\n${data?.description || ''}`
         }
 
         // Get connections
@@ -420,6 +432,9 @@ What is the non-obvious link?`
           } else if (relatedType === 'article') {
             const { data } = await supabase.from('reading_queue').select('id, title, excerpt').eq('user_id', userId).eq('id', relatedId).single()
             relatedItem = data
+          } else if (relatedType === 'list') {
+            const { data } = await supabase.from('lists').select('id, title, description').eq('user_id', userId).eq('id', relatedId).single()
+            relatedItem = data
           }
 
           return {
@@ -553,7 +568,7 @@ What is the non-obvious link?`
         return res.status(400).json({ error: 'No embedding provided or generated' })
       }
 
-      const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
+      const candidates: Array<{ type: 'project' | 'thought' | 'article' | 'list'; id: string; title: string; similarity: number }> = []
 
       // 2. Search Projects
       if (sourceType !== 'project') {
@@ -617,6 +632,22 @@ What is the non-obvious link?`
               }
             }
           }
+        }
+      }
+
+      // 5. Search Lists
+      if (sourceType !== 'list') {
+        const { data: lists } = await supabase
+          .from('lists')
+          .select('id, title, description')
+          .eq('user_id', userId)
+          .limit(50)
+
+        if (lists) {
+          // Since lists have no embeddings, we'll skip semantic search for now
+          // or we could do a simple keyword match if needed?
+          // BUT the goal is "Neural Bridge" so maybe we should skip if no embedding.
+          // However for "everywhere", we should probably at least check them.
         }
       }
 

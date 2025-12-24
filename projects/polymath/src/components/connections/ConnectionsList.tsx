@@ -370,6 +370,7 @@ function getItemUrl(type: string, id: string): string {
     case 'thought':
     case 'memory': return `/memories?highlight=${id}` // Handle mapping 'thought' -> 'memory'
     case 'article': return `/reading?highlight=${id}`
+    case 'list': return `/lists/${id}`
     default: return '#'
   }
 }
