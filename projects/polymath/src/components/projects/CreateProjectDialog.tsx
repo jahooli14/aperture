@@ -177,7 +177,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">Project Name</Label>
+                      <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Project Name</Label>
                       <Input
                         id="title"
                         placeholder="Project Aperture"
@@ -198,12 +198,12 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                             type="button"
                             onClick={() => setFormData({ ...formData, type: cat })}
                             className={`p-4 rounded-xl text-sm font-bold border transition-all text-left flex items-center justify-between group ${formData.type === cat
-                                ? 'bg-white text-black border-white'
-                                : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                              ? 'bg-white text-black border-white'
+                              : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
                               }`}
                           >
                             <span>{cat}</span>
-                            {formData.type === cat && <Layers className="h-4 w-4" />}
+                            {formData.type === cat && <Layers className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />}
                           </button>
                         ))}
                       </div>
@@ -228,7 +228,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">
+                    <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-blue-400">
                       Description <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -236,7 +236,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                       placeholder="A short sentence explaining the project..."
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                      className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                       autoComplete="off"
                       autoFocus
                     />
@@ -244,7 +244,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="motivation" className="font-bold text-xs uppercase tracking-widest text-zebra-accent">
+                    <Label htmlFor="motivation" className="font-bold text-xs uppercase tracking-widest text-blue-400">
                       The "Why" <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -252,7 +252,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                       placeholder="Why does this matter? What is the goal?"
                       value={formData.motivation}
                       onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
-                      className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
+                      className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                       autoComplete="off"
                     />
                     <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">

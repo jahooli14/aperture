@@ -456,6 +456,11 @@
     animation-fill-mode: forwards;
   }
 
+  /* Padding to clear the Floating Navigation bar */
+  .pb-floating-nav {
+    padding-bottom: 120px;
+  }
+
   /* Subtle pulse animation for callouts */
   @keyframes pulseSubtle {
 

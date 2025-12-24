@@ -53,7 +53,9 @@ function cleanHtml(html: string, url: string): string {
     'nav', 'header', 'footer', 'aside', '.sidebar', '.ad', '.ads', '.advertisement',
     '.social', '.share', '.comments', '.newsletter', '.subscribe', '.popup', '.modal',
     '.cookie-banner', '.promo', '.promotion', '.related', '.recommended',
+    '.bottom-bar', '.top-bar', '.modal-backdrop', '.overlay', '.loading',
     '[class*="ad-"]', '[class*="ads-"]', '[id*="ad-"]', '[id*="ads-"]',
+    '[class*="social-"]', '[class*="share-"]', '[class*="newsletter-"]',
     'iframe', 'script', 'style', 'noscript', 'canvas', 'svg', 'embed', 'object'
   ]
 
@@ -1563,8 +1565,9 @@ Return ONLY the JSON, no other text.`
                 try {
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
-                  // Convert Markdown to HTML and then clean it
-                  content = cleanHtml(marked.parse(rawContent).toString(), item.link || '')
+                  // Convert Markdown to HTML after cleaning the markdown
+                  const cleanedMarkdown = cleanMarkdownContent(rawContent)
+                  content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
                 } catch (e) {
                   console.error('[RSS Sync] Failed to parse Jina response for', item.link)
                   // Fallback to basic cleaning if Jina fails
@@ -1727,7 +1730,8 @@ Return ONLY the JSON, no other text.`
               try {
                 const result = JSON.parse(text)
                 const rawContent = result.data?.content || result.content || content
-                content = cleanArticleContent(rawContent)
+                const cleanedMarkdown = cleanMarkdownContent(rawContent)
+                content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
               } catch (e) {
                 console.error('[RSS Subscribe] Failed to parse Jina response for', item.link)
               }

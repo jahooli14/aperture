@@ -854,8 +854,8 @@ export interface DailyQueueResponse {
 // Explicit linking system between all content types
 // ============================================================================
 
-export type ConnectionSourceType = 'project' | 'thought' | 'article' | 'suggestion'
-export type ConnectionTargetType = 'project' | 'thought' | 'article' | 'suggestion'
+export type ConnectionSourceType = 'project' | 'thought' | 'article' | 'suggestion' | 'list'
+export type ConnectionTargetType = 'project' | 'thought' | 'article' | 'suggestion' | 'list'
 export type ConnectionType = 'inspired_by' | 'relates_to' | 'evolves_from' | 'ai_suggested' | 'manual' | 'reading_flow'
 export type ConnectionCreator = 'ai' | 'user' | 'system'
 
@@ -882,8 +882,8 @@ export interface CreateConnectionInput {
 }
 
 export interface ConnectionWithDetails extends Connection {
-  source_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
-  target_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+  source_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion | List
+  target_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion | List
 }
 
 export interface ItemConnection {
@@ -895,14 +895,14 @@ export interface ItemConnection {
   created_by: ConnectionCreator
   created_at: string
   ai_reasoning?: string
-  related_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+  related_item?: Project | Memory | ReadingQueueItem | ProjectSuggestion | List
 }
 
 export interface ThreadItem {
   item_type: ConnectionSourceType | ConnectionTargetType
   item_id: string
   depth: number
-  item?: Project | Memory | ReadingQueueItem | ProjectSuggestion
+  item?: Project | Memory | ReadingQueueItem | ProjectSuggestion | List
 }
 
 export interface ConnectionsResponse {

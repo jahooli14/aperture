@@ -27,6 +27,9 @@ import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { useReadingProgress } from '../hooks/useReadingProgress'
 import { ArticleCompletionDialog } from '../components/reading/ArticleCompletionDialog'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
+import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
+import { supabase } from '../lib/supabase'
 
 export function ReaderPage() {
   const { id } = useParams<{ id: string }>()
@@ -63,6 +66,8 @@ export function ReaderPage() {
   const [isOfflineCached, setIsOfflineCached] = useState(false)
   const [cachedImageUrls, setCachedImageUrls] = useState<Map<string, string>>(new Map())
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [showConnectionSuggestions, setShowConnectionSuggestions] = useState(true)
+  const [suggestions, setSuggestions] = useState<any[]>([])
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
 
@@ -109,10 +114,24 @@ export function ReaderPage() {
   useEffect(() => {
     if (!id) return
     checkOfflineStatus()
+    fetchSuggestions()
     return () => {
       clearContext()
     }
   }, [id])
+
+  const fetchSuggestions = async () => {
+    if (!id) return
+    try {
+      const response = await fetch(`/api/connections?action=suggestions&id=${id}&type=article`)
+      if (response.ok) {
+        const data = await response.json()
+        setSuggestions(data.suggestions || [])
+      }
+    } catch (error) {
+      console.error('[Reader] Failed to fetch suggestions:', error)
+    }
+  }
 
   useEffect(() => {
     if (article) {
@@ -478,6 +497,25 @@ export function ReaderPage() {
           onMouseUp={handleTextSelection}
           dangerouslySetInnerHTML={{ __html: processedContent }}
         />
+
+        {/* Smart Connections Section */}
+        <div className="mt-20 pt-12 border-t border-white/5">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+              <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
+            </div>
+            <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
+              AI Connected
+            </div>
+          </div>
+
+          <ConnectionsList
+            itemType="article"
+            itemId={article.id}
+            content={article.title + ' ' + (article.excerpt || '')}
+          />
+        </div>
       </main>
 
       {/* Highlight Menu */}
@@ -505,6 +543,16 @@ export function ReaderPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Suggestions */}
+      {showConnectionSuggestions && suggestions.length > 0 && (
+        <ConnectionSuggestion
+          suggestions={suggestions}
+          sourceId={article.id}
+          sourceType="article"
+          onDismiss={() => setShowConnectionSuggestions(false)}
+        />
+      )}
 
       <ArticleCompletionDialog
         open={showCompletionDialog}

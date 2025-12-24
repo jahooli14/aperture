@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar } from 'lucide-react'
+import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -105,7 +105,20 @@ export default function ListsPage() {
                                 <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">{list.item_count || 0} items</p>
                             </div>
 
-                            <div className="relative z-10 p-4 pt-0 flex justify-end">
+                            <div className="relative z-10 p-4 pt-0 flex justify-between items-center">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (confirm(`Delete collection "${list.title}" and all its items?`)) {
+                                            const { deleteList } = useListStore.getState()
+                                            deleteList(list.id)
+                                        }
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/20 hover:text-red-400 transition-all"
+                                    title="Delete Collection"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white transition-colors aperture-header flex items-center gap-1">
                                     View Collection <span className="group-hover:translate-x-1 transition-transform">→</span>
                                 </span>

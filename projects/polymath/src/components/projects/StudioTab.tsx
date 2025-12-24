@@ -1,38 +1,138 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { ConnectionsList } from '../connections/ConnectionsList'
-import { Lightbulb, Brain, BookOpen } from 'lucide-react'
+import { Lightbulb, Brain, BookOpen, Save, Send, Sparkles, Wand2, PenTool } from 'lucide-react'
 import { Project } from '../../types'
+import { useProjectStore } from '../../stores/useProjectStore'
+import { useToast } from '../ui/toast'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface StudioTabProps {
     project: Project
 }
 
 export function StudioTab({ project }: StudioTabProps) {
+    const { updateProject } = useProjectStore()
+    const { addToast } = useToast()
+    const [draft, setDraft] = useState(project.metadata?.studio_draft || '')
+    const [isSaving, setIsSaving] = useState(false)
+    const [lastSaved, setLastSaved] = useState<Date | null>(null)
+
+    // Auto-save logic
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (draft !== (project.metadata?.studio_draft || '')) {
+                handleSave()
+            }
+        }, 3000)
+        return () => clearTimeout(timer)
+    }, [draft])
+
+    const handleSave = async () => {
+        if (isSaving) return
+        setIsSaving(true)
+        try {
+            await updateProject(project.id, {
+                metadata: {
+                    ...project.metadata,
+                    studio_draft: draft
+                }
+            })
+            setLastSaved(new Date())
+        } catch (error) {
+            console.error('Failed to save draft:', error)
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
     return (
-        <div className="space-y-6">
-            {/* Header / Context */}
-            <div className="premium-card p-6 bg-gradient-to-br from-indigo-900/20 to-purple-900/20 border-indigo-500/20">
-                <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-xl bg-indigo-500/20 text-indigo-300">
-                        <Lightbulb className="h-6 w-6" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Drafting Area */}
+            <div className="lg:col-span-2 space-y-6">
+                <div className="premium-card p-6 bg-gradient-to-br from-indigo-900/10 to-purple-900/10 border-indigo-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300">
+                                <PenTool className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white leading-none">The Studio</h3>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Brainstorming Workspace</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            {lastSaved && (
+                                <span className="text-[10px] text-zinc-500 font-mono">
+                                    LAST SAVED: {lastSaved.toLocaleTimeString()}
+                                </span>
+                            )}
+                            {isSaving && (
+                                <div className="h-1.5 w-12 bg-zinc-800 rounded-full overflow-hidden">
+                                    <motion.div
+                                        className="h-full bg-indigo-500"
+                                        animate={{ x: [-48, 48] }}
+                                        transition={{ repeat: Infinity, duration: 1 }}
+                                    />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-white mb-1">The Studio</h3>
-                        <p className="text-sm text-slate-300">
-                            Your creative workspace for {project.title}.
-                            Connect ideas, find inspiration, and let AI help you connect the dots.
-                        </p>
+
+                    <textarea
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        placeholder="Unstructured thoughts, grand visions, or scratchpad notes for this project..."
+                        className="w-full h-96 bg-transparent border-0 focus:ring-0 text-zinc-200 placeholder:text-zinc-600 resize-none font-serif text-lg leading-relaxed scroll-minimal"
+                    />
+
+                    <div className="mt-4 flex justify-between items-center border-t border-white/5 pt-4">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    // Potential AI help trigger
+                                    addToast({
+                                        title: 'AI Analysis',
+                                        description: 'Coming soon: Let Aperture refine your vision.',
+                                    })
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5 flex items-center gap-2"
+                            >
+                                <Sparkles className="h-3 w-3" />
+                                Refine Vision
+                            </button>
+                        </div>
+                        <span className="text-[10px] text-zinc-600 font-mono">
+                            {draft.length} CHARACTERS
+                        </span>
                     </div>
                 </div>
             </div>
 
-            {/* Connections & Inspiration */}
-            <div className="premium-card p-6">
-                <ConnectionsList
-                    itemType="project"
-                    itemId={project.id}
-                    content={`${project.title}\n${project.description || ''}`}
-                />
+            {/* Sidebar: Connections & Inspiration */}
+            <div className="space-y-6">
+                <div className="premium-card p-6 border-zinc-500/10">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="h-4 w-4 text-sky-400" />
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Contextual Sparks</h4>
+                    </div>
+                    <ConnectionsList
+                        itemType="project"
+                        itemId={project.id}
+                        content={`${project.title}\n${project.description || ''}\n${draft}`}
+                    />
+                </div>
+
+                <div className="premium-card p-6 border-zinc-500/10 bg-gradient-to-tr from-sky-500/5 to-transparent">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Lightbulb className="h-4 w-4 text-amber-400" />
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Project Canvas</h4>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed mb-4">
+                        This workspace is your unstructured scratchpad.
+                        Feel free to dump raw research, links, or messy ideas here.
+                        Aperture uses this context to suggest "Sparks" and refine project tasks.
+                    </p>
+                </div>
             </div>
         </div>
     )
