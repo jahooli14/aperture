@@ -24,21 +24,47 @@ export function BrandName({ className = '', size = 'md', showLogo = false }: Bra
   }
 
   return (
-    <span className={`inline-flex items-center gap-3 ${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+    <span className={`inline-flex items-center gap-3 ${sizeClasses[size]} ${className}`} style={{ letterSpacing: '0.05em' }}>
       {showLogo && (
         <svg
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className={iconSizes[size]}
-          style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.5))' }}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.4))' }}
         >
-          <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2ZM12 4V10L17.1962 7M12 12L17.1962 17M12 12H18M12 12L6.80385 17M12 12L6.80385 7M12 12V6M12 12H6" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <circle cx="12" cy="12" r="2.5" stroke="#3b82f6" strokeWidth="1.5" />
+          {/* Outer Ring */}
+          <circle cx="12" cy="12" r="10" stroke="#3b82f6" strokeWidth="1" strokeOpacity="0.4" />
+
+          {/* Iris Blades - Tangential Design */}
+          <g stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round">
+            <path d="M12 2L18.5 6" />
+            <path d="M18.5 6L22 12" />
+            <path d="M22 12L18.5 18" />
+            <path d="M18.5 18L12 22" />
+            <path d="M12 22L5.5 18" />
+            <path d="M5.5 18L2 12" />
+            <path d="M2 12L5.5 6" />
+            <path d="M5.5 6L12 2" />
+
+            {/* Inner Tangents */}
+            <path d="M12 2L18 12" strokeOpacity="0.3" />
+            <path d="M22 12L12 18" strokeOpacity="0.3" />
+            <path d="M12 22L6 12" strokeOpacity="0.3" />
+            <path d="M2 12L12 6" strokeOpacity="0.3" />
+          </g>
+
+          {/* Center Aperture Hole */}
+          <circle cx="12" cy="12" r="3.5" fill="black" stroke="#3b82f6" strokeWidth="1" />
+          {/* Iris shutter lines */}
+          <path d="M12 8.5V10.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M12 13.5V15.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M8.5 12H10.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
+          <path d="M13.5 12H15.5" stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.5" />
         </svg>
       )}
-      <span className="font-black tracking-tighter">
-        APER<span style={{ color: 'var(--brand-primary)' }}>TURE</span>
+      <span className="font-black tracking-tighter lowercase">
+        aper<span style={{ color: 'var(--brand-primary)' }}>ture</span>
       </span>
     </span>
   )
