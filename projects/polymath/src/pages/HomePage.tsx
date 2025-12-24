@@ -198,8 +198,11 @@ function GetInspirationSection({
               }}
             >
               <div className="relative z-10 flex-1 flex flex-col h-full">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header"
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <h3 className="premium-text-platinum font-bold text-lg truncate">
+                    {inspiration.title}
+                  </h3>
+                  <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header"
                     style={(() => {
                       const projId = inspiration.url?.split('/').pop()
                       const project = projects.find(p => p.id === projId)
@@ -214,34 +217,19 @@ function GetInspirationSection({
                     Recommended
                   </span>
                 </div>
-
-                <h3 className="premium-text-platinum font-bold text-lg mb-2">
-                  {inspiration.title}
-                </h3>
-                <p className="text-sm text-slate-400 mb-4 line-clamp-2 leading-relaxed">
-                  {inspiration.reasoning}
-                </p>
-
-                <div className="p-4 rounded-xl mt-auto bg-white/5 border border-white/10">
+                <div className="p-4 rounded-xl mt-6 bg-white/5 border border-white/10 group-hover:bg-white/10 transition-colors">
+                  <p className="text-[10px] font-bold mb-2 text-[var(--brand-primary)] uppercase tracking-wider opacity-50">NEXT STEP</p>
                   {inspiration.type === 'project' && (() => {
                     const proj = projects.find(p => p.id === inspiration.url?.split('/').pop())
                     const nextT = proj?.metadata?.tasks?.find((t: any) => !t.done)
-                    if (nextT) {
-                      return (
-                        <>
-                          <>
-                            <p className="text-[10px] font-bold mb-1 text-[var(--brand-primary)] aperture-header uppercase tracking-wider">NEXT STEP</p>
-                            <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextT.text}</p>
-                          </>
-                        </>
-                      )
-                    }
-                    return <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
+                    return (
+                      <p className="text-sm text-gray-200 line-clamp-2 aperture-body">
+                        {nextT?.text || inspiration.description}
+                      </p>
+                    )
                   })()}
                   {inspiration.type !== 'project' && (
-                    <div className="flex items-start gap-2">
-                      <p className="text-xs text-gray-200 line-clamp-2">{inspiration.description}</p>
-                    </div>
+                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{inspiration.description}</p>
                   )}
                 </div>
               </div>
@@ -286,35 +274,27 @@ function GetInspirationSection({
                 }}
               >
                 <div className="relative z-10 flex-1 flex flex-col h-full">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <h3 className="text-lg font-bold text-white truncate">
+                      {sparkCandidate.title}
+                    </h3>
+                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-xs font-medium border flex items-center gap-1" style={{
                       backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                       color: theme.textColor,
                       borderColor: `rgba(${theme.rgb}, 0.3)`
                     }}>
                       <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: theme.textColor }} /> Spark
                     </span>
-                    <span className="text-xs text-slate-500 flex items-center gap-1 ml-auto">
-                      ~20 min
-                    </span>
                   </div>
-
-                  <h3 className="text-lg font-bold text-white mb-2">
-                    {sparkCandidate.title}
-                  </h3>
-                  <p className="text-sm text-slate-400 mb-4 leading-relaxed">
-                    Perfect for your current {timeContextEnergy} energy.
-                  </p>
-
-                  {nextTask && (
-                    <div className="p-3 rounded-lg mt-auto" style={{
-                      backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                      border: `1px solid rgba(${theme.rgb}, 0.3)`
-                    }}>
-                      <p className="text-xs font-medium mb-1" style={{ color: theme.textColor }}>NEXT STEP</p>
-                      <p className="text-sm text-gray-200 line-clamp-2">{nextTask.text}</p>
-                    </div>
-                  )}
+                  <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                    border: `1px solid rgba(${theme.rgb}, 0.2)`
+                  }}>
+                    <p className="text-[10px] font-bold mb-2 uppercase tracking-wider opacity-50" style={{ color: theme.textColor }}>NEXT STEP</p>
+                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">
+                      {nextTask?.text || sparkCandidate.description || `Perfect for your current ${timeContextEnergy} energy.`}
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             )
@@ -921,11 +901,6 @@ export function HomePage() {
 
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold aperture-header text-white/50 uppercase tracking-widest text-xs">
-              Quick Actions
-            </h2>
-          </div>
 
           <div className="flex items-center gap-3">
             {/* Voice Note */}
@@ -974,9 +949,14 @@ export function HomePage() {
         </section>
 
         {/* Aperture Power Hour - The Hero Engine */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 aperture-shelf">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4 aperture-shelf">
           <PowerHourHero />
         </section>
+
+        {/* Subtle Divider */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 opacity-20">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+        </div>
 
         {/* Drift Mode Overlay */}
         {

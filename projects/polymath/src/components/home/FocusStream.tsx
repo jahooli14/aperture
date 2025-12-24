@@ -153,40 +153,25 @@ export function FocusStream() {
                             }}
                         >
                             <div className="relative z-10 flex-1">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
+                                <div className="flex items-center justify-between gap-4 mb-4">
+                                    <h3 className="text-xl font-bold text-white aperture-header truncate">
+                                        {priorityProject.title}
+                                    </h3>
+                                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header" style={{
                                         backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                         color: theme.textColor,
                                         borderColor: `rgba(${theme.rgb}, 0.3)`
                                     }}>
                                         Priority
                                     </span>
-                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header ml-auto" style={{
-                                        backgroundColor: 'rgba(255,255,255,0.03)',
-                                        color: 'var(--brand-text-muted)',
-                                        borderColor: 'rgba(255,255,255,0.08)'
-                                    }}>
-                                        {getProjectIcon(priorityProject.type || 'other')}
-                                        {priorityProject.type?.toUpperCase() || 'OTHER'}
-                                    </span>
                                 </div>
-
-                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
-                                    {priorityProject.title}
-                                </h3>
-                                <p className="text-sm text-[var(--brand-text-secondary)] mb-6 line-clamp-2 leading-relaxed aperture-body">
-                                    {priorityProject.description || 'Keep moving forward on your top priority.'}
-                                </p>
-
-                                {nextTask && (
-                                    <div className="p-4 rounded-xl" style={{
-                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                        border: `1px solid rgba(${theme.rgb}, 0.2)`
-                                    }}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 aperture-header" style={{ color: theme.textColor }}>NEXT STEP</p>
-                                        <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask.text}</p>
-                                    </div>
-                                )}
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    border: `1px solid rgba(${theme.rgb}, 0.2)`
+                                }}>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2 opacity-50" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask?.text || priorityProject.description || 'Initialize project to see next steps.'}</p>
+                                </div>
                             </div>
                         </motion.div>
                     )
@@ -218,40 +203,25 @@ export function FocusStream() {
                             }}
                         >
                             <div className="relative z-10 flex-1">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
+                                <div className="flex items-center justify-between gap-4 mb-4">
+                                    <h3 className="text-xl font-bold text-white aperture-header truncate">
+                                        {recentProject.title}
+                                    </h3>
+                                    <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest flex items-center gap-1 border aperture-header" style={{
                                         backgroundColor: `rgba(${theme.rgb}, 0.1)`,
                                         color: theme.textColor,
                                         borderColor: `rgba(${theme.rgb}, 0.3)`
                                     }}>
-                                        <Clock className="h-3 w-3" /> Recent
-                                    </span>
-                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border aperture-header ml-auto" style={{
-                                        backgroundColor: 'rgba(255,255,255,0.03)',
-                                        color: 'var(--brand-text-muted)',
-                                        borderColor: 'rgba(255,255,255,0.08)'
-                                    }}>
-                                        {getProjectIcon(recentProject.type || 'other')}
-                                        {recentProject.type?.toUpperCase() || 'OTHER'}
+                                        Recent
                                     </span>
                                 </div>
-
-                                <h3 className="text-xl font-bold text-white mb-2 aperture-header">
-                                    {recentProject.title}
-                                </h3>
-                                <p className="text-sm text-[var(--brand-text-secondary)] mb-6 line-clamp-2 leading-relaxed aperture-body">
-                                    {recentProject.description || 'Pick up where you left off.'}
-                                </p>
-
-                                {nextTask && (
-                                    <div className="p-4 rounded-xl" style={{
-                                        backgroundColor: `rgba(${theme.rgb}, 0.1)`,
-                                        border: `1px solid rgba(${theme.rgb}, 0.2)`
-                                    }}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2 aperture-header" style={{ color: theme.textColor }}>NEXT STEP</p>
-                                        <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask.text}</p>
-                                    </div>
-                                )}
+                                <div className="p-4 rounded-xl mt-6 group-hover:bg-white/5 transition-colors" style={{
+                                    backgroundColor: `rgba(${theme.rgb}, 0.1)`,
+                                    border: `1px solid rgba(${theme.rgb}, 0.2)`
+                                }}>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest mb-2 opacity-50" style={{ color: theme.textColor }}>NEXT STEP</p>
+                                    <p className="text-sm text-gray-200 line-clamp-2 aperture-body">{nextTask?.text || recentProject.description || 'Pick up where you left off.'}</p>
+                                </div>
                             </div>
                         </motion.div>
                     )

@@ -86,9 +86,9 @@
 /* The "Shelf" Separator */
 .aperture-shelf {
     border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 3rem;
-    padding-bottom: 3rem;
-    margin-top: 2rem;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+    margin-top: 1.5rem;
 }
 
 /* Unified Glass Card */

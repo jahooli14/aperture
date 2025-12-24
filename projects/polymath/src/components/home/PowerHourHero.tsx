@@ -166,7 +166,7 @@ export function PowerHourHero() {
     }
 
     return (
-        <div className="relative mb-12 group/hero">
+        <div className="relative mb-2 group/hero">
             <div className="aperture-hero-card p-0 rounded-2xl overflow-hidden relative">
                 {/* Header Overlays */}
                 <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
