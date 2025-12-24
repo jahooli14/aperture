@@ -39,7 +39,10 @@ FIELDS TO PROVIDE:
 
 RULES:
 - Be precise. If it's a book, find the author. If it's a film, find the director.
-- RETURN ONLY VALID JSON. No preamble.
+- RETURN ONLY RAW VALID JSON. 
+- DO NOT use markdown code blocks (no backticks).
+- DO NOT include any preamble or conversational text.
+- THE RESPONSE MUST START WITH { AND END WITH }.
 
 RESPONSE FORMAT:
 {
@@ -52,7 +55,7 @@ RESPONSE FORMAT:
 
         const response = await generateText(prompt, {
             responseFormat: 'json',
-            temperature: 0.3 // Keep it factual
+            temperature: 0.0 // Maximum stability
         })
         console.log(`[Enrichment] Gemini Raw Response for "${content}":`, response.slice(0, 100))
 
