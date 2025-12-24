@@ -66,7 +66,7 @@ export default function ListDetailPage() {
             </div>
 
             {/* Items Grid (Scrollable Area) */}
-            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-32">
+            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <AnimatePresence initial={false}>
                         {currentListItems.map((item) => {
@@ -190,7 +190,7 @@ export default function ListDetailPage() {
             </div >
 
             {/* Smart Connections Section */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
                 <div className="p-8 rounded-2xl border border-white/5 bg-zinc-900/30 backdrop-blur-sm">
                     <div className="flex items-center justify-between mb-8">
                         <div>
@@ -211,9 +211,9 @@ export default function ListDetailPage() {
             </div>
 
             {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
-            < div className="fixed bottom-[90px] left-0 right-0 p-4 z-[100]" >
+            <div className="fixed bottom-[100px] left-0 right-0 p-4 z-[100] pr-20 md:pr-4">
                 <div className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                    <form onSubmit={handleAddItem} className="flex-1 flex px-2">
+                    <form onSubmit={handleAddItem} className="flex-1 flex px-2 text-white">
                         <Input
                             ref={inputRef}
                             value={inputText}
@@ -233,7 +233,7 @@ export default function ListDetailPage() {
                 </div>
                 {/* Visual anchor for the bar */}
                 <div className="absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none -z-10" />
-            </div >
+            </div>
         </div >
     )
 }

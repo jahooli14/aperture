@@ -54,9 +54,16 @@ RESPONSE FORMAT:
             responseFormat: 'json',
             temperature: 0.3 // Keep it factual
         })
+        console.log(`[Enrichment] Gemini Raw Response for "${content}":`, response.slice(0, 100))
 
-        const cleanResponse = response.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-        const metadata = JSON.parse(cleanResponse)
+        // Robust JSON extraction
+        let jsonStr = response.trim()
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+            jsonStr = jsonMatch[0]
+        }
+
+        const metadata = JSON.parse(jsonStr)
 
         // 3. Update the item in Supabase
         const { error } = await supabase

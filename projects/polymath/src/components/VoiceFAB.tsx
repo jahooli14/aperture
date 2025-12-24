@@ -137,22 +137,24 @@ export function VoiceFAB({
       onPointerCancel={onCancel}
       className={cn(
         "fixed z-[20000]",
-        "bottom-24 md:bottom-8 right-4 md:right-8",
+        "bottom-28 md:bottom-10 right-5 md:right-10",
         "h-14 w-14 md:h-16 md:w-16 rounded-full",
         "flex items-center justify-center",
         "shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
-        "active:scale-90 transition-transform",
-        "group"
+        "active:scale-95 transition-all duration-300",
+        "group overflow-hidden"
       )}
       style={{
-        background: 'linear-gradient(135deg, var(--premium-blue) 0%, #1d4ed8 100%)',
-        border: '1px solid rgba(255,255,255,0.2)',
-        boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)'
+        background: 'rgba(56, 189, 248, 0.15)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.05)'
       }}
       aria-label="Create - Tap for Voice, Hold for Menu"
     >
-      <Plus className="h-6 w-6 text-white transition-transform group-hover:rotate-90" />
-      <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:animate-ping group-hover:opacity-10" />
+      <Plus className="h-6 w-6 text-sky-400 transition-transform group-hover:rotate-90 group-hover:text-white" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-sky-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
     </motion.button>
   )
 
