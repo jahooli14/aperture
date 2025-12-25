@@ -1,17 +1,18 @@
 /**
  * AI List Enrichment Agent
- * Uses Gemini to fetch and structure metadata for list items based on their category.
+ * Uses external APIs (OMDb, Google Books, Wikipedia) + Gemini fallback
  */
 
 import { generateText } from './gemini-chat.js'
 import { getSupabaseClient } from './supabase.js'
+import { enrichFilm, enrichBook, enrichFromWikipedia } from './enrichment-apis.js'
 
 export async function enrichListItem(userId: string, listId: string, itemId: string, content: string, listType?: string) {
     console.log(`[Enrichment] Starting for item: ${content}`)
     console.log(`[Enrichment] Environment check:`, {
         hasGeminiKey: !!process.env.GEMINI_API_KEY,
-        keyLength: process.env.GEMINI_API_KEY?.length || 0,
-        keyPrefix: process.env.GEMINI_API_KEY?.substring(0, 10) || 'NOT_SET'
+        hasOmdbKey: !!process.env.OMDB_API_KEY,
+        hasGoogleBooksKey: !!process.env.GOOGLE_BOOKS_API_KEY
     })
 
     try {
@@ -28,53 +29,33 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             category = list?.type || 'generic'
         }
 
-        // 2. Build prompt for Gemini
-        const prompt = `Provide enrichment metadata for this ${category}:
+        // 2. Try external APIs first, then fallback chain
+        let metadata = null
 
-"${content}"
-
-Return JSON with these exact fields:
-- subtitle: One descriptive line (e.g., "Director: Name" for films, "Author: Name" for books)
-- tags: Array of exactly 3 relevant tags
-- specs: Object with 2-3 key details (e.g., {"Year": "2010", "Runtime": "148min"} for films)
-
-Return ONLY valid JSON, no markdown, no explanation.
-
-Example format:
-{"subtitle": "Director: Christopher Nolan", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
-
-        const response = await generateText(prompt, {
-            responseFormat: 'json',
-            temperature: 0.0, // Maximum stability
-            maxTokens: 1500 // Increased for rich metadata
-        })
-        console.log(`[Enrichment] Gemini Raw Response for "${content}":`, response.slice(0, 100))
-
-        // Robust JSON extraction - handle markdown code blocks
-        let jsonStr = response.trim()
-
-        // Remove markdown code blocks if present
-        jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/,'')
-
-        // Extract JSON object
-        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-        if (!jsonMatch) {
-            throw new Error(`No valid JSON found in response: ${response.slice(0, 200)}`)
-        }
-        jsonStr = jsonMatch[0]
-
-        const metadata = JSON.parse(jsonStr)
-
-        // Validate required fields
-        if (!metadata.subtitle || !metadata.tags || !metadata.specs) {
-            console.warn('[Enrichment] Missing required fields:', metadata)
-            console.warn('[Enrichment] Expected: subtitle, tags, specs')
+        // Try category-specific API first
+        if (category === 'film' || category === 'tv' || category === 'movie') {
+            console.log(`[Enrichment] Trying OMDb for film: ${content}`)
+            metadata = await enrichFilm(content)
+        } else if (category === 'book') {
+            console.log(`[Enrichment] Trying Google Books for book: ${content}`)
+            metadata = await enrichBook(content)
         }
 
-        // Ensure tags is an array
-        if (!Array.isArray(metadata.tags)) {
-            console.warn('[Enrichment] Tags is not an array, converting')
-            metadata.tags = []
+        // Fallback to Wikipedia if category API didn't work or no category API
+        if (!metadata) {
+            console.log(`[Enrichment] Trying Wikipedia for: ${content}`)
+            metadata = await enrichFromWikipedia(content)
+        }
+
+        // Final fallback to Gemini if all APIs failed
+        if (!metadata) {
+            console.log(`[Enrichment] All APIs failed, using Gemini for: ${content}`)
+            metadata = await enrichWithGemini(content, category)
+        }
+
+        // Ensure metadata has required fields
+        if (!metadata || !metadata.subtitle) {
+            throw new Error('Enrichment produced no valid metadata')
         }
 
         // 3. Update the item in Supabase
@@ -88,7 +69,7 @@ Example format:
             .eq('user_id', userId)
 
         if (error) throw error
-        console.log(`[Enrichment] Successfully enriched: ${content}`)
+        console.log(`[Enrichment] Successfully enriched: ${content} (source: ${metadata.source})`)
         return metadata
 
     } catch (error: any) {
@@ -106,7 +87,6 @@ Example format:
                 .from('list_items')
                 .update({
                     enrichment_status: 'failed',
-                    // Save error to metadata for debugging
                     metadata: {
                         error: error.message || 'Unknown error',
                         errorType: error.name,
@@ -118,6 +98,53 @@ Example format:
         } catch (dbErr) {
             console.error('[Enrichment] Total failure - could not even update status:', dbErr)
         }
-        throw error // Re-throw to surface in API logs
+        throw error
     }
+}
+
+/**
+ * Gemini fallback - for when APIs don't have data
+ */
+async function enrichWithGemini(content: string, category: string) {
+    const prompt = `Provide enrichment metadata for this ${category}:
+
+"${content}"
+
+Return JSON with these exact fields:
+- subtitle: One descriptive line (e.g., "Director: Name" for films, "Author: Name" for books)
+- tags: Array of exactly 3 relevant tags
+- specs: Object with 2-3 key details (e.g., {"Year": "2010", "Runtime": "148min"} for films)
+
+Return ONLY valid JSON, no markdown, no explanation.
+
+Example format:
+{"subtitle": "Director: Christopher Nolan", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
+
+    const response = await generateText(prompt, {
+        responseFormat: 'json',
+        temperature: 0.0,
+        maxTokens: 1500
+    })
+
+    // Robust JSON extraction
+    let jsonStr = response.trim()
+    jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
+
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+        throw new Error(`No valid JSON found in Gemini response: ${response.slice(0, 200)}`)
+    }
+    jsonStr = jsonMatch[0]
+
+    const metadata = JSON.parse(jsonStr)
+
+    // Ensure tags is an array
+    if (!Array.isArray(metadata.tags)) {
+        metadata.tags = []
+    }
+
+    // Add source
+    metadata.source = 'gemini'
+
+    return metadata
 }
