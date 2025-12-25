@@ -8,6 +8,11 @@ import { getSupabaseClient } from './supabase.js'
 
 export async function enrichListItem(userId: string, listId: string, itemId: string, content: string, listType?: string) {
     console.log(`[Enrichment] Starting for item: ${content}`)
+    console.log(`[Enrichment] Environment check:`, {
+        hasGeminiKey: !!process.env.GEMINI_API_KEY,
+        keyLength: process.env.GEMINI_API_KEY?.length || 0,
+        keyPrefix: process.env.GEMINI_API_KEY?.substring(0, 10) || 'NOT_SET'
+    })
 
     try {
         const supabase = getSupabaseClient()

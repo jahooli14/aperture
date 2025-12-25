@@ -62,9 +62,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     data.metadata = metadata
                     data.enrichment_status = 'complete'
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error('[API] Enrichment failed:', err)
-                // Don't fail the request, just log it
+                console.error('[API] Error details:', {
+                    message: err?.message,
+                    name: err?.name,
+                    hasGeminiKey: !!process.env.GEMINI_API_KEY
+                })
+                // Mark as failed in response (db already updated)
+                data.enrichment_status = 'failed'
+                data.metadata = {
+                    error: err?.message || 'Unknown error',
+                    errorType: err?.name
+                }
             }
 
             return res.status(201).json(data)
