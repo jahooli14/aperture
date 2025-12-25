@@ -1,6 +1,7 @@
 /**
  * Centralized Model Configuration
- * Use gemini-3-flash-preview globally
+ * Using gemini-2.0-flash-exp for stability
+ * Note: gemini-3-flash-preview may not be available in all regions yet
  */
 
 export const MODELS = {
