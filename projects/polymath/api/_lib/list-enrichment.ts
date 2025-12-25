@@ -29,34 +29,19 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         }
 
         // 2. Build prompt for Gemini
-        const prompt = `You are a high-end data enrichment agent for "Aperture", a premium personal hub.
-Target Item: "${content}"
-List Category: "${category}"
+        const prompt = `Provide enrichment metadata for this ${category}:
 
-Your goal is to provide rich, structured metadata that makes this item look beautiful in a gallery or list view.
+"${content}"
 
-FIELDS TO PROVIDE:
-1. image: A direct, public, high-quality URL for a representative image (poster, book cover, product photo, landmark). Search for stable URLs from media databases.
-2. subtitle: A single descriptive line (e.g. "Director: Christopher Nolan", "Author: Milan Kundera", "Location: Kyoto, Japan").
-3. tags: Exactly 3 highly relevant tags (e.g. ["Sci-Fi", "Classic", "Must-Watch"]).
-4. link: A high-authority URL for more info (IMDb, Goodreads, Wikipedia, Official Site).
-5. specs: A small JSON object of key attributes specific to this category (e.g. {"Year": "1984", "Runtime": "112m"} or {"Price": "$25", "Rating": "4.8"}).
+Return JSON with these exact fields:
+- subtitle: One descriptive line (e.g., "Director: Name" for films, "Author: Name" for books)
+- tags: Array of exactly 3 relevant tags
+- specs: Object with 2-3 key details (e.g., {"Year": "2010", "Runtime": "148min"} for films)
 
-RULES:
-- Be precise. If it's a book, find the author. If it's a film, find the director.
-- RETURN ONLY RAW VALID JSON. 
-- DO NOT use markdown code blocks (no backticks).
-- DO NOT include any preamble or conversational text.
-- THE RESPONSE MUST START WITH { AND END WITH }.
+Return ONLY valid JSON, no markdown, no explanation.
 
-RESPONSE FORMAT:
-{
-  "image": "https://...",
-  "subtitle": "...",
-  "tags": ["...", "...", "..."],
-  "link": "https://...",
-  "specs": { ... }
-}`
+Example format:
+{"subtitle": "Director: Christopher Nolan", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
 
         const response = await generateText(prompt, {
             responseFormat: 'json',
@@ -81,8 +66,15 @@ RESPONSE FORMAT:
         const metadata = JSON.parse(jsonStr)
 
         // Validate required fields
-        if (!metadata.image || !metadata.subtitle || !metadata.tags || !metadata.link) {
+        if (!metadata.subtitle || !metadata.tags || !metadata.specs) {
             console.warn('[Enrichment] Missing required fields:', metadata)
+            console.warn('[Enrichment] Expected: subtitle, tags, specs')
+        }
+
+        // Ensure tags is an array
+        if (!Array.isArray(metadata.tags)) {
+            console.warn('[Enrichment] Tags is not an array, converting')
+            metadata.tags = []
         }
 
         // 3. Update the item in Supabase
