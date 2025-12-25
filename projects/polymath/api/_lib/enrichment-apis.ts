@@ -18,12 +18,30 @@ interface EnrichmentMetadata {
  * https://en.wikipedia.org/api/rest_v1/
  */
 export async function enrichFromWikipedia(title: string): Promise<EnrichmentMetadata | null> {
-    try {
-        console.log(`[Wikipedia] Fetching data for: ${title}`)
+    // Input validation
+    if (!title || title.trim().length === 0) {
+        console.log('[Wikipedia] Empty title provided')
+        return null
+    }
 
-        // Search for the article
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(title)}&format=json&origin=*`
-        const searchRes = await fetch(searchUrl)
+    // Trim and limit title length
+    const cleanTitle = title.trim().substring(0, 300)
+
+    try {
+        console.log(`[Wikipedia] Fetching data for: ${cleanTitle}`)
+
+        // Search for the article with timeout
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(cleanTitle)}&format=json&origin=*`
+        const searchController = new AbortController()
+        const searchTimeout = setTimeout(() => searchController.abort(), 10000) // 10s timeout
+
+        const searchRes = await fetch(searchUrl, { signal: searchController.signal })
+        clearTimeout(searchTimeout)
+
+        if (!searchRes.ok) {
+            throw new Error(`Wikipedia search failed: ${searchRes.status}`)
+        }
+
         const searchData: any = await searchRes.json()
 
         if (!searchData.query?.search?.[0]) {
@@ -33,9 +51,18 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
 
         const pageTitle = searchData.query.search[0].title
 
-        // Get page summary and image
+        // Get page summary and image with timeout
         const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle)}`
-        const summaryRes = await fetch(summaryUrl)
+        const summaryController = new AbortController()
+        const summaryTimeout = setTimeout(() => summaryController.abort(), 10000) // 10s timeout
+
+        const summaryRes = await fetch(summaryUrl, { signal: summaryController.signal })
+        clearTimeout(summaryTimeout)
+
+        if (!summaryRes.ok) {
+            throw new Error(`Wikipedia summary failed: ${summaryRes.status}`)
+        }
+
         const summary: any = await summaryRes.json()
 
         // Extract metadata
@@ -60,7 +87,11 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
         return metadata
 
     } catch (error: any) {
-        console.error(`[Wikipedia] Failed for ${title}:`, error.message)
+        if (error.name === 'AbortError') {
+            console.error(`[Wikipedia] Request timeout for ${cleanTitle}`)
+        } else {
+            console.error(`[Wikipedia] Failed for ${cleanTitle}:`, error.message)
+        }
         return null
     }
 }
@@ -78,11 +109,28 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
         return null
     }
 
-    try {
-        console.log(`[OMDb] Fetching data for: ${title}`)
+    // Input validation
+    if (!title || title.trim().length === 0) {
+        console.log('[OMDb] Empty title provided')
+        return null
+    }
 
-        const url = `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${apiKey}`
-        const res = await fetch(url)
+    const cleanTitle = title.trim().substring(0, 300)
+
+    try {
+        console.log(`[OMDb] Fetching data for: ${cleanTitle}`)
+
+        const url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeout)
+
+        if (!res.ok) {
+            throw new Error(`OMDb API error: ${res.status}`)
+        }
+
         const data: any = await res.json()
 
         if (data.Response === 'False') {
@@ -108,7 +156,11 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
         return metadata
 
     } catch (error: any) {
-        console.error(`[OMDb] Failed for ${title}:`, error.message)
+        if (error.name === 'AbortError') {
+            console.error(`[OMDb] Request timeout for ${cleanTitle}`)
+        } else {
+            console.error(`[OMDb] Failed for ${cleanTitle}:`, error.message)
+        }
         return null
     }
 }
@@ -126,11 +178,28 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
         return null
     }
 
-    try {
-        console.log(`[Google Books] Fetching data for: ${title}`)
+    // Input validation
+    if (!title || title.trim().length === 0) {
+        console.log('[Google Books] Empty title provided')
+        return null
+    }
 
-        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&key=${apiKey}`
-        const res = await fetch(url)
+    const cleanTitle = title.trim().substring(0, 300)
+
+    try {
+        console.log(`[Google Books] Fetching data for: ${cleanTitle}`)
+
+        const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanTitle)}&key=${apiKey}`
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeout)
+
+        if (!res.ok) {
+            throw new Error(`Google Books API error: ${res.status}`)
+        }
+
         const data: any = await res.json()
 
         if (!data.items?.[0]) {
@@ -158,7 +227,11 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
         return metadata
 
     } catch (error: any) {
-        console.error(`[Google Books] Failed for ${title}:`, error.message)
+        if (error.name === 'AbortError') {
+            console.error(`[Google Books] Request timeout for ${cleanTitle}`)
+        } else {
+            console.error(`[Google Books] Failed for ${cleanTitle}:`, error.message)
+        }
         return null
     }
 }
