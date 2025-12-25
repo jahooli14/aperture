@@ -55,18 +55,30 @@ RESPONSE FORMAT:
 
         const response = await generateText(prompt, {
             responseFormat: 'json',
-            temperature: 0.0 // Maximum stability
+            temperature: 0.0, // Maximum stability
+            maxTokens: 1500 // Increased for rich metadata
         })
         console.log(`[Enrichment] Gemini Raw Response for "${content}":`, response.slice(0, 100))
 
-        // Robust JSON extraction
+        // Robust JSON extraction - handle markdown code blocks
         let jsonStr = response.trim()
+
+        // Remove markdown code blocks if present
+        jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/,'')
+
+        // Extract JSON object
         const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-            jsonStr = jsonMatch[0]
+        if (!jsonMatch) {
+            throw new Error(`No valid JSON found in response: ${response.slice(0, 200)}`)
         }
+        jsonStr = jsonMatch[0]
 
         const metadata = JSON.parse(jsonStr)
+
+        // Validate required fields
+        if (!metadata.image || !metadata.subtitle || !metadata.tags || !metadata.link) {
+            console.warn('[Enrichment] Missing required fields:', metadata)
+        }
 
         // 3. Update the item in Supabase
         const { error } = await supabase
@@ -84,6 +96,11 @@ RESPONSE FORMAT:
 
     } catch (error: any) {
         console.error(`[Enrichment] Failed for ${content}:`, error)
+        console.error('[Enrichment] Error details:', {
+            name: error?.name,
+            message: error?.message,
+            stack: error?.stack?.split('\n').slice(0, 3).join('\n')
+        })
 
         // Set to failed so we don't keep spinner forever
         try {
@@ -93,13 +110,17 @@ RESPONSE FORMAT:
                 .update({
                     enrichment_status: 'failed',
                     // Save error to metadata for debugging
-                    metadata: { error: error.message || 'Unknown error' }
+                    metadata: {
+                        error: error.message || 'Unknown error',
+                        errorType: error.name,
+                        timestamp: new Date().toISOString()
+                    }
                 })
                 .eq('id', itemId)
                 .eq('user_id', userId)
         } catch (dbErr) {
             console.error('[Enrichment] Total failure - could not even update status:', dbErr)
         }
-        return null
+        throw error // Re-throw to surface in API logs
     }
 }
