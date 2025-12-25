@@ -128,8 +128,10 @@ Output JSON only:
 
     const result = await model.generateContent(prompt)
     const responseText = result.response.text()
+    console.log('[PowerHour] Raw Gemini response (first 500 chars):', responseText.substring(0, 500))
     const jsonMatch = responseText.match(/\{[\s\S]*\}/)
     const tasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : { tasks: [] }
+    console.log('[PowerHour] Parsed tasks data:', JSON.stringify(tasksData, null, 2))
 
     // 4. Validate Fuel IDs & Cleanup
     const validatedTasks: PowerHourTask[] = tasksData.tasks.map((task: any) => {

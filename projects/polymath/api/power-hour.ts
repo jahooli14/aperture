@@ -39,10 +39,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 2. No cache? Generate on the fly (and cache it)
         console.log('[power-hour] No cache found or forced refresh. Generating on-fly...')
-        const tasks = await generatePowerHourPlan(userId, targetProject)
+        let tasks
+        try {
+            tasks = await generatePowerHourPlan(userId, targetProject)
+            console.log(`[power-hour] Generated ${tasks.length} power hour tasks`)
+        } catch (error) {
+            console.error('[power-hour] Error generating power hour plan:', error)
+            return res.status(500).json({ error: 'Failed to generate power hour plan' })
+        }
 
         // 3. Proactive Enrichment: If enrich is true, save new tasks immediately
-        if (req.query.enrich === 'true' && targetProject && tasks.length > 0) {
+        if (req.query.enrich === 'true' && targetProject) {
+            if (tasks.length === 0) {
+                console.log('[power-hour] No tasks generated, skipping enrichment')
+            } else {
             console.log('[power-hour] Proactive enrichment triggered for project:', targetProject)
             const { data: project } = await supabase
                 .from('projects')
@@ -60,6 +70,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const newItems = tasks
                         .find(t => t.project_id === targetProject)
                         ?.checklist_items?.filter(i => i.is_new) || []
+
+                    console.log(`[power-hour] Found ${newItems.length} new items to potentially add:`, newItems.map(i => i.text))
+
+                    if (newItems.length === 0) {
+                        console.log(`[power-hour] No new items marked as is_new=true. Check AI response.`)
+                        const allItems = tasks.find(t => t.project_id === targetProject)?.checklist_items || []
+                        console.log(`[power-hour] All checklist items (${allItems.length}):`, allItems)
+                    }
 
                     if (newItems.length > 0) {
                         // B. De-Duplication Logic
@@ -97,9 +115,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             return !duplicate
                         })
 
+                        console.log(`[power-hour] After deduplication: ${uniqueNewTasks.length} unique tasks remain`)
+
                         // Only add what fits under the cap
                         const slotsRemaining = 12 - existingTasks.length
                         const tasksToAdd = uniqueNewTasks.slice(0, slotsRemaining)
+
+                        console.log(`[power-hour] Slots remaining: ${slotsRemaining}, will add ${tasksToAdd.length} tasks`)
 
                         if (tasksToAdd.length > 0) {
                             const freshTasks = tasksToAdd.map((item, idx) => ({
@@ -110,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 order: existingTasks.length + idx
                             }))
 
-                            await supabase
+                            const { error: updateError } = await supabase
                                 .from('projects')
                                 .update({
                                     metadata: {
@@ -120,10 +142,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 })
                                 .eq('id', targetProject)
 
-                            console.log(`[power-hour] Enriched project ${targetProject} with ${freshTasks.length} new tasks.`)
+                            if (updateError) {
+                                console.error(`[power-hour] Failed to update project ${targetProject}:`, updateError)
+                            } else {
+                                console.log(`[power-hour] Enriched project ${targetProject} with ${freshTasks.length} new tasks.`)
+                            }
                         }
                     }
                 }
+            }
             }
         }
 
