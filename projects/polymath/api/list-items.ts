@@ -10,14 +10,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseClient()
     const { listId } = req.query
 
-    // Common check: listId required for most ops
-    if (!listId || typeof listId !== 'string') {
-        return res.status(400).json({ error: 'listId query parameter required' })
-    }
-
     try {
         // GET /api/list-items?listId=...
         if (req.method === 'GET') {
+            if (!listId || typeof listId !== 'string') {
+                return res.status(400).json({ error: 'listId query parameter required' })
+            }
+
             const { data, error } = await supabase
                 .from('list_items')
                 .select('*')
@@ -31,6 +30,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // POST /api/list-items?listId=... (Body: { content })
         if (req.method === 'POST') {
+            if (!listId || typeof listId !== 'string') {
+                return res.status(400).json({ error: 'listId query parameter required' })
+            }
+
             const { content } = req.body
 
             if (!content) return res.status(400).json({ error: 'Content is required' })
