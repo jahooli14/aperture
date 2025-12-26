@@ -1,12 +1,16 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { v4 as uuidv4 } from 'uuid'
 import type { List, ListItem, CreateListInput, CreateListItemInput, ListType } from '../types'
+import { queueOperation } from '../lib/offlineQueue'
+import { useOfflineStore } from './useOfflineStore'
 
 interface ListStore {
     lists: List[]
     currentListItems: ListItem[]
     loading: boolean
     error: string | null
+    offlineMode: boolean
 
     fetchLists: () => Promise<void>
     createList: (input: CreateListInput) => Promise<string> // Returns ID
@@ -18,25 +22,40 @@ interface ListStore {
     reorderItems: (listId: string, itemIds: string[]) => Promise<void>
 }
 
-export const useListStore = create<ListStore>((set, get) => ({
+export const useListStore = create<ListStore>()(
+  persist(
+    (set, get) => ({
     lists: [],
     currentListItems: [],
     loading: false,
     error: null,
+    offlineMode: false,
 
     fetchLists: async () => {
+        const { isOnline } = useOfflineStore.getState()
+
+        // If offline, use cached data
+        if (!isOnline) {
+            console.log('[ListStore] Offline mode - using cached lists')
+            set({ offlineMode: true })
+            return
+        }
+
         set({ loading: true })
         try {
             const response = await fetch('/api/lists')
             if (!response.ok) throw new Error('Failed to fetch lists')
             const data = await response.json()
-            set({ lists: data, loading: false })
+            set({ lists: data, loading: false, offlineMode: false })
         } catch (error: any) {
-            set({ error: error.message, loading: false })
+            console.error('[ListStore] Fetch failed, using cached data:', error)
+            set({ error: error.message, loading: false, offlineMode: true })
         }
     },
 
     createList: async (input) => {
+        const { isOnline } = useOfflineStore.getState()
+
         // Optimistic Update
         const tempId = uuidv4()
         const optimisticList: List = {
@@ -53,6 +72,19 @@ export const useListStore = create<ListStore>((set, get) => ({
         }
 
         set(state => ({ lists: [optimisticList, ...state.lists] }))
+
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('create_list', {
+                id: tempId,
+                ...input,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued create_list for offline sync')
+            return tempId
+        }
 
         try {
             const response = await fetch('/api/lists', {
@@ -72,6 +104,18 @@ export const useListStore = create<ListStore>((set, get) => ({
 
             return realList.id
         } catch (error: any) {
+            // If network error, queue for later
+            if (!navigator.onLine) {
+                await queueOperation('create_list', {
+                    id: tempId,
+                    ...input,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                await useOfflineStore.getState().updateQueueSize()
+                console.log('[ListStore] Queued create_list after failed attempt')
+                return tempId
+            }
             // Revert on failure
             set(state => ({
                 lists: state.lists.filter(l => l.id !== tempId),
@@ -95,6 +139,8 @@ export const useListStore = create<ListStore>((set, get) => ({
     },
 
     addListItem: async (input) => {
+        const { isOnline } = useOfflineStore.getState()
+
         // Optimistic Update
         const tempId = uuidv4()
         const optimisticItem: ListItem = {
@@ -119,6 +165,21 @@ export const useListStore = create<ListStore>((set, get) => ({
             )
         }))
 
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('add_list_item', {
+                id: tempId,
+                list_id: input.list_id,
+                content: input.content,
+                status: input.status || 'pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued add_list_item for offline sync')
+            return
+        }
+
         try {
             const response = await fetch(`/api/list-items?listId=${input.list_id}`, {
                 method: 'POST',
@@ -135,6 +196,20 @@ export const useListStore = create<ListStore>((set, get) => ({
                 currentListItems: state.currentListItems.map(i => i.id === tempId ? realItem : i)
             }))
         } catch (error: any) {
+            // If network error, queue for later
+            if (!navigator.onLine) {
+                await queueOperation('add_list_item', {
+                    id: tempId,
+                    list_id: input.list_id,
+                    content: input.content,
+                    status: input.status || 'pending',
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                })
+                await useOfflineStore.getState().updateQueueSize()
+                console.log('[ListStore] Queued add_list_item after failed attempt')
+                return
+            }
             // Revert
             set(state => ({
                 currentListItems: state.currentListItems.filter(i => i.id !== tempId),
@@ -150,6 +225,8 @@ export const useListStore = create<ListStore>((set, get) => ({
     },
 
     updateListItemStatus: async (itemId, status) => {
+        const { isOnline } = useOfflineStore.getState()
+
         // Optimistic
         set(state => ({
             currentListItems: state.currentListItems.map(i =>
@@ -157,11 +234,20 @@ export const useListStore = create<ListStore>((set, get) => ({
             )
         }))
 
-        // TODO: Implement API call for update
-        // For now this serves the UI demo
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('update_list_item', { id: itemId, status })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued update_list_item for offline sync')
+            return
+        }
+
+        // TODO: Implement API call for update when online
+        // For now the optimistic update handles the UI
     },
 
     deleteListItem: async (itemId, listId) => {
+        const { isOnline } = useOfflineStore.getState()
         const previousItems = get().currentListItems
         const previousLists = get().lists
 
@@ -175,6 +261,14 @@ export const useListStore = create<ListStore>((set, get) => ({
             )
         }))
 
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('delete_list_item', { id: itemId })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued delete_list_item for offline sync')
+            return
+        }
+
         try {
             const response = await fetch(`/api/list-items?id=${itemId}`, {
                 method: 'DELETE'
@@ -182,6 +276,13 @@ export const useListStore = create<ListStore>((set, get) => ({
 
             if (!response.ok) throw new Error('Failed to delete item')
         } catch (error: any) {
+            // If network error, queue for later
+            if (!navigator.onLine) {
+                await queueOperation('delete_list_item', { id: itemId })
+                await useOfflineStore.getState().updateQueueSize()
+                console.log('[ListStore] Queued delete_list_item after failed attempt')
+                return
+            }
             // Revert
             set({
                 currentListItems: previousItems,
@@ -192,10 +293,19 @@ export const useListStore = create<ListStore>((set, get) => ({
     },
 
     deleteList: async (listId) => {
+        const { isOnline } = useOfflineStore.getState()
         const previousLists = get().lists
         set(state => ({
             lists: state.lists.filter(l => l.id !== listId)
         }))
+
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('delete_list', { id: listId })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued delete_list for offline sync')
+            return
+        }
 
         try {
             const response = await fetch(`/api/lists?id=${listId}`, {
@@ -203,11 +313,20 @@ export const useListStore = create<ListStore>((set, get) => ({
             })
             if (!response.ok) throw new Error('Failed to delete list')
         } catch (error: any) {
+            // If network error, queue for later
+            if (!navigator.onLine) {
+                await queueOperation('delete_list', { id: listId })
+                await useOfflineStore.getState().updateQueueSize()
+                console.log('[ListStore] Queued delete_list after failed attempt')
+                return
+            }
             set({ lists: previousLists, error: error.message })
         }
     },
 
     reorderItems: async (listId, itemIds) => {
+        const { isOnline } = useOfflineStore.getState()
+
         // Optimistic
         const currentItems = get().currentListItems
         const newItems = [...currentItems].sort((a, b) => {
@@ -217,6 +336,14 @@ export const useListStore = create<ListStore>((set, get) => ({
         })
         set({ currentListItems: newItems })
 
+        // If offline, queue operation
+        if (!isOnline) {
+            await queueOperation('reorder_list_items', { listId, itemIds })
+            await useOfflineStore.getState().updateQueueSize()
+            console.log('[ListStore] Queued reorder_list_items for offline sync')
+            return
+        }
+
         try {
             const response = await fetch(`/api/list-items?resource=reorder&listId=${listId}`, {
                 method: 'PATCH',
@@ -225,7 +352,20 @@ export const useListStore = create<ListStore>((set, get) => ({
             })
             if (!response.ok) throw new Error('Failed to reorder items')
         } catch (error: any) {
+            // If network error, queue for later
+            if (!navigator.onLine) {
+                await queueOperation('reorder_list_items', { listId, itemIds })
+                await useOfflineStore.getState().updateQueueSize()
+                console.log('[ListStore] Queued reorder_list_items after failed attempt')
+                return
+            }
             set({ currentListItems: currentItems, error: error.message })
         }
     }
-}))
+    }),
+    {
+      name: 'rosette-lists-store',
+      partialize: (state) => ({ lists: state.lists, currentListItems: state.currentListItems })
+    }
+  )
+)

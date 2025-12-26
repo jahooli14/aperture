@@ -10,11 +10,15 @@ import {
   updateOperationRetry,
   type QueuedOperation,
 } from './offlineQueue'
+import { triggerImmediateEnrichment } from './aiEnrichmentManager'
 
 const MAX_RETRIES = 3
 let isSyncing = false
 let syncScheduled = false
 let autoSyncSetup = false
+
+// Track projects that need AI enrichment after sync
+const projectsNeedingEnrichment = new Set<string>()
 
 /**
  * Process a single queued operation
@@ -74,6 +78,11 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
           .eq('id', id)
 
         if (error) throw error
+
+        // Track for AI enrichment if tasks were updated
+        if (updateData.metadata?.tasks) {
+          projectsNeedingEnrichment.add(id)
+        }
         return true
       }
 
@@ -84,6 +93,69 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
           .eq('id', operation.data.id)
 
         if (error) throw error
+        return true
+      }
+
+      // List operations
+      case 'create_list': {
+        const { error } = await supabase
+          .from('lists')
+          .insert(operation.data)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'delete_list': {
+        const { error } = await supabase
+          .from('lists')
+          .delete()
+          .eq('id', operation.data.id)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'add_list_item': {
+        const { error } = await supabase
+          .from('list_items')
+          .insert(operation.data)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'delete_list_item': {
+        const { error } = await supabase
+          .from('list_items')
+          .delete()
+          .eq('id', operation.data.id)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'update_list_item': {
+        const { id, ...updateData } = operation.data
+        const { error } = await supabase
+          .from('list_items')
+          .update(updateData)
+          .eq('id', id)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'reorder_list_items': {
+        const { listId, itemIds } = operation.data
+        // Update each item's sort_order
+        for (let i = 0; i < itemIds.length; i++) {
+          const { error } = await supabase
+            .from('list_items')
+            .update({ sort_order: i })
+            .eq('id', itemIds[i])
+          if (error) throw error
+        }
         return true
       }
 
@@ -153,6 +225,15 @@ export async function syncPendingOperations(): Promise<{
     console.log(
       `[SyncManager] Sync complete: ${success} succeeded, ${failed} failed, ${operations.length} total`
     )
+
+    // Trigger AI enrichment for projects that had task updates (immediate, no debounce)
+    if (projectsNeedingEnrichment.size > 0) {
+      console.log(`[SyncManager] Triggering immediate AI enrichment for ${projectsNeedingEnrichment.size} projects`)
+      for (const projectId of projectsNeedingEnrichment) {
+        triggerImmediateEnrichment(projectId)
+      }
+      projectsNeedingEnrichment.clear()
+    }
 
     return { success, failed, total: operations.length }
   } finally {
