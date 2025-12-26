@@ -29,7 +29,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
   const { user, loading, initialize, signOut } = useAuthStore();
-  const { settings, updateSettings } = useSettingsStore();
+  const { settings, fetchSettings, updateSettings } = useSettingsStore();
   const { fetchPhotos } = usePhotoStore();
   const [view, setView] = useState<ViewType>('calendar');
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -82,7 +82,14 @@ function App() {
     }
   }, [user]);
 
-  // Check if user has completed onboarding & join code prompt & fetch settings + photos
+  // Fetch settings when user is authenticated
+  useEffect(() => {
+    if (user) {
+      fetchSettings();
+    }
+  }, [user, fetchSettings]);
+
+  // Check if user has completed onboarding & join code prompt & fetch photos
   useEffect(() => {
     if (user && settings) {
       if (!settings.join_code_prompted) {
