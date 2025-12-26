@@ -62,22 +62,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (project) {
                 const existingTasks = project.metadata?.tasks || []
+                const existingTaskTexts = existingTasks.map((t: any) => t.text?.toLowerCase().trim())
 
                 // A. Task Cap Shield (Max 12 tasks)
                 if (existingTasks.length >= 12) {
                     console.log(`[power-hour] Project ${targetProject} at capacity (${existingTasks.length} tasks). Skipping enrichment.`)
                 } else {
-                    const newItems = tasks
-                        .find(t => t.project_id === targetProject)
-                        ?.checklist_items?.filter(i => i.is_new) || []
+                    // Find the matching task for this project (handle UUID matching flexibly)
+                    const matchingTask = tasks.find(t =>
+                        t.project_id === targetProject ||
+                        t.project_id?.toLowerCase() === targetProject.toLowerCase()
+                    )
 
-                    console.log(`[power-hour] Found ${newItems.length} new items to potentially add:`, newItems.map(i => i.text))
-
-                    if (newItems.length === 0) {
-                        console.log(`[power-hour] No new items marked as is_new=true. Check AI response.`)
-                        const allItems = tasks.find(t => t.project_id === targetProject)?.checklist_items || []
-                        console.log(`[power-hour] All checklist items (${allItems.length}):`, allItems)
+                    if (!matchingTask) {
+                        console.log(`[power-hour] No matching task found for project ${targetProject}. Available project_ids:`, tasks.map(t => t.project_id))
                     }
+
+                    const allItems = matchingTask?.checklist_items || []
+                    console.log(`[power-hour] All checklist items (${allItems.length}):`, allItems)
+
+                    // Check for is_new (handle both boolean true and string "true")
+                    let newItems = allItems.filter((i: any) => i.is_new === true || i.is_new === 'true')
+
+                    // FALLBACK: If no items marked as is_new, try to infer new items
+                    // by checking if they don't exist in current tasks
+                    if (newItems.length === 0 && allItems.length > 0) {
+                        console.log(`[power-hour] No is_new=true items found. Using fallback: inferring new tasks...`)
+
+                        // Infer new tasks as those that don't match existing tasks
+                        newItems = allItems.filter((item: any) => {
+                            const itemText = item.text?.toLowerCase().trim()
+                            const isExisting = existingTaskTexts.some((existing: string) => {
+                                if (!existing || !itemText) return false
+                                return existing === itemText ||
+                                    existing.includes(itemText) ||
+                                    itemText.includes(existing)
+                            })
+                            return !isExisting
+                        })
+
+                        console.log(`[power-hour] Fallback inferred ${newItems.length} new tasks from ${allItems.length} total`)
+                    }
+
+                    console.log(`[power-hour] Found ${newItems.length} new items to potentially add:`, newItems.map((i: any) => i.text))
 
                     if (newItems.length > 0) {
                         // B. De-Duplication Logic
@@ -129,7 +156,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 text: item.text,
                                 done: false,
                                 created_at: new Date().toISOString(),
-                                order: existingTasks.length + idx
+                                order: existingTasks.length + idx,
+                                is_ai_suggested: true // Mark as AI-suggested task
                             }))
 
                             const { error: updateError } = await supabase

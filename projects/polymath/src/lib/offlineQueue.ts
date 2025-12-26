@@ -7,7 +7,7 @@ import Dexie, { Table } from 'dexie'
 
 export interface QueuedOperation {
   id?: number
-  type: 'create_memory' | 'update_memory' | 'delete_memory' | 'update_project' | 'delete_project'
+  type: 'create_memory' | 'update_memory' | 'delete_memory' | 'update_project' | 'delete_project' | 'create_list' | 'delete_list' | 'add_list_item' | 'delete_list_item' | 'update_list_item' | 'reorder_list_items'
   data: any
   timestamp: number
   retryCount: number
