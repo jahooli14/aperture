@@ -60,11 +60,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Get user's push subscription from database
+      type UserSettings = Pick<Database['public']['Tables']['user_settings']['Row'], 'push_subscription'>
       const { data: settings, error: fetchError } = await supabase
         .from('user_settings')
         .select('push_subscription')
         .eq('user_id', userId)
-        .single()
+        .single() as { data: UserSettings | null; error: unknown }
 
       if (fetchError || !settings) {
         logger.error('Failed to fetch user settings', { userId, error: fetchError })
@@ -95,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (pushError.statusCode === 410 || pushError.statusCode === 404) {
           await supabase
             .from('user_settings')
+            // @ts-ignore - Supabase type inference issue with null values
             .update({ push_subscription: null })
             .eq('user_id', userId)
 
