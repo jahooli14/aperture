@@ -116,13 +116,14 @@ async function enrichWithGemini(content: string, category: string) {
 
 Return JSON with these exact fields:
 - subtitle: One descriptive line (e.g., "Director: Name" for films, "Author: Name" for books)
+- description: Brief 2-line description of what it's about (max 140 chars)
 - tags: Array of exactly 3 relevant tags
 - specs: Object with 2-3 key details (e.g., {"Year": "2010", "Runtime": "148min"} for films)
 
 Return ONLY valid JSON, no markdown, no explanation.
 
 Example format:
-{"subtitle": "Director: Christopher Nolan", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
+{"subtitle": "Director: Christopher Nolan", "description": "A thief who enters dreams to steal secrets faces his toughest job: planting an idea in someone's mind.", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
 
     const response = await generateText(prompt, {
         responseFormat: 'json',
