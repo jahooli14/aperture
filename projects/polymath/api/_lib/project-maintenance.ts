@@ -42,7 +42,7 @@ export async function generateZebraReport(project: any): Promise<string> {
   Format: Bold, bulleted, high-impact.`
 
   try {
-    const report = await generateText(prompt, { temperature: 0.7, maxTokens: 300 })
+    const report = await generateText(prompt, { temperature: 0.7, maxTokens: 500 })
     return report.trim()
   } catch (error) {
     console.error('[generateZebraReport] Error generating report:', error)
