@@ -68,6 +68,23 @@ export function ProjectDetailPage() {
     window.addEventListener('openProjectAddNote', handleOpenAddNote)
     return () => window.removeEventListener('openProjectAddNote', handleOpenAddNote)
   }, [])
+
+  // Listen for AI enrichment completion to refresh tasks
+  useEffect(() => {
+    const handleEnriched = (e: CustomEvent<{ projectId: string }>) => {
+      if (e.detail.projectId === id) {
+        console.log('[ProjectDetailPage] AI enrichment completed, refreshing...')
+        loadProjectDetails()
+        addToast({
+          title: 'AI suggested new tasks',
+          description: 'New task suggestions have been added',
+          variant: 'default',
+        })
+      }
+    }
+    window.addEventListener('projectEnriched', handleEnriched as EventListener)
+    return () => window.removeEventListener('projectEnriched', handleEnriched as EventListener)
+  }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
