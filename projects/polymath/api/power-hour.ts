@@ -62,11 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (project) {
                 const existingTasks = project.metadata?.tasks || []
+                const incompleteTasks = existingTasks.filter((t: any) => !t.done)
                 const existingTaskTexts = existingTasks.map((t: any) => t.text?.toLowerCase().trim())
 
-                // A. Task Cap Shield (Max 12 tasks)
-                if (existingTasks.length >= 12) {
-                    console.log(`[power-hour] Project ${targetProject} at capacity (${existingTasks.length} tasks). Skipping enrichment.`)
+                // A. Task Cap Shield (Max 12 INCOMPLETE tasks)
+                if (incompleteTasks.length >= 12) {
+                    console.log(`[power-hour] Project ${targetProject} at capacity (${incompleteTasks.length} incomplete tasks). Skipping enrichment.`)
                 } else {
                     // Find the matching task for this project (handle UUID matching flexibly)
                     const matchingTask = tasks.find(t =>
@@ -144,11 +145,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                         console.log(`[power-hour] After deduplication: ${uniqueNewTasks.length} unique tasks remain`)
 
-                        // Only add what fits under the cap
-                        const slotsRemaining = 12 - existingTasks.length
+                        // Only add what fits under the cap (12 incomplete tasks max)
+                        const slotsRemaining = 12 - incompleteTasks.length
                         const tasksToAdd = uniqueNewTasks.slice(0, slotsRemaining)
 
-                        console.log(`[power-hour] Slots remaining: ${slotsRemaining}, will add ${tasksToAdd.length} tasks`)
+                        console.log(`[power-hour] Slots remaining: ${slotsRemaining} (${incompleteTasks.length}/12 incomplete), will add ${tasksToAdd.length} tasks`)
 
                         if (tasksToAdd.length > 0) {
                             const freshTasks = tasksToAdd.map((item, idx) => ({

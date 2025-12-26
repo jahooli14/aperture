@@ -234,7 +234,7 @@ async function getSynthesisEvolution() {
   // Process top topics in parallel
   const evolutionPromises = sortedTopics.map(async ([topic, mems]) => {
     // Ask AI to analyze evolution
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
     const memoryTexts = mems
       .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
@@ -291,7 +291,7 @@ Return JSON:
       .map(p => `- ${p.title}: ${p.abandoned_reason || 'No reason given'}`)
       .join('\n')
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
     const patternPrompt = `Analyze project abandonment patterns:
 
@@ -484,7 +484,7 @@ async function getCreativeOpportunities() {
   const interestsText = interests.slice(0, 10).join(', ')
   const projectsText = projects?.map(p => `- ${p.title} (${p.status}${p.abandoned_reason ? ', abandoned: ' + p.abandoned_reason : ''})`).join('\n') || 'No projects yet'
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
   const prompt = `You are a creative intelligence engine helping someone with a 9-5 job identify side project opportunities.
 
@@ -605,7 +605,7 @@ async function getShadowProjects() {
   const projectTitles = new Set(projects?.map(p => p.title.toLowerCase()) || [])
 
   // Use Gemini to cluster and identify
-  const model = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
 
   const items = [
     ...(memories || []).map(m => `Memory: ${m.title} [${m.themes?.join(', ')}]`),
