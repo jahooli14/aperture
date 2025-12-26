@@ -8,9 +8,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!userId) return res.status(401).json({ error: 'Unauthorized' })
 
     const supabase = getSupabaseClient()
-    const { listId } = req.query
+    const { listId, id } = req.query
 
-    // Common check: listId required for most ops
+    // DELETE only needs item id, not listId
+    if (req.method === 'DELETE') {
+        if (!id || typeof id !== 'string') {
+            return res.status(400).json({ error: 'Item ID is required' })
+        }
+
+        try {
+            const { error } = await supabase
+                .from('list_items')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return res.status(204).end()
+        } catch (error: unknown) {
+            console.error('[API Error] Delete List Item:', error)
+            return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' })
+        }
+    }
+
+    // GET and POST require listId
     if (!listId || typeof listId !== 'string') {
         return res.status(400).json({ error: 'listId query parameter required' })
     }
@@ -61,31 +82,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (metadata) {
                     data.metadata = metadata
                     data.enrichment_status = 'complete'
+                } else {
+                    // enrichListItem returns null on failure (DB already updated to 'failed')
+                    data.enrichment_status = 'failed'
                 }
             } catch (err) {
                 console.error('[API] Enrichment failed:', err)
-                // Don't fail the request, just log it
+                // Enrichment failed - let the client know so UI shows "Analysis Failed" immediately
+                data.enrichment_status = 'failed'
             }
 
             return res.status(201).json(data)
-        }
-
-        // DELETE /api/list-items?id=... (Delete specific item)
-        if (req.method === 'DELETE') {
-            const { id } = req.query
-
-            if (!id || typeof id !== 'string') {
-                return res.status(400).json({ error: 'Item ID is required' })
-            }
-
-            const { error } = await supabase
-                .from('list_items')
-                .delete()
-                .eq('id', id)
-                .eq('user_id', userId)
-
-            if (error) throw error
-            return res.status(204).end()
         }
 
         return res.status(405).json({ error: 'Method not allowed' })

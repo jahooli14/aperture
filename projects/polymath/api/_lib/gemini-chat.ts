@@ -42,7 +42,7 @@ export async function generateText(
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
-        maxOutputTokens: options.maxTokens || 500,
+        maxOutputTokens: options.maxTokens || 2048,
         temperature: options.temperature || 0.7,
         ...(options.responseFormat === 'json' && {
           responseMimeType: 'application/json'
@@ -106,7 +106,7 @@ Output as JSON array:
 ]`
 
   const response = await generateText(prompt, {
-    maxTokens: 500,
+    maxTokens: 1024,
     temperature: 0.7,
     responseFormat: 'json'
   })
