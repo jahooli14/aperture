@@ -7,6 +7,7 @@ interface EnrichmentMetadata {
     image?: string
     thumbnail?: string
     subtitle: string
+    description?: string  // Brief 2-line description (max ~140 chars)
     tags: string[]
     link?: string
     specs: Record<string, any>
@@ -74,6 +75,7 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
         // Extract metadata
         const metadata: EnrichmentMetadata = {
             subtitle: summary.description || summary.extract?.split('.')[0] || 'Wikipedia article',
+            description: extractBriefDescription(summary.extract || ''),
             tags: extractTagsFromSummary(summary.extract || ''),
             link: summary.content_urls?.desktop?.page,
             specs: {
@@ -148,6 +150,7 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
             image: data.Poster !== 'N/A' ? data.Poster : undefined,
             thumbnail: data.Poster !== 'N/A' ? data.Poster : undefined,
             subtitle: `Director: ${data.Director}`,
+            description: data.Plot && data.Plot !== 'N/A' ? extractBriefDescription(data.Plot) : undefined,
             tags: data.Genre ? data.Genre.split(', ').slice(0, 3) : [],
             link: `https://www.imdb.com/title/${data.imdbID}/`,
             specs: {
@@ -219,6 +222,7 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
             image: book.imageLinks?.large || book.imageLinks?.medium || book.imageLinks?.thumbnail,
             thumbnail: book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail,
             subtitle: `Author: ${book.authors?.[0] || 'Unknown'}`,
+            description: book.description ? extractBriefDescription(book.description) : undefined,
             tags: book.categories?.slice(0, 3) || [],
             link: book.infoLink,
             specs: {
@@ -249,4 +253,30 @@ function extractTagsFromSummary(text: string): string[] {
     // Simple keyword extraction - can be improved with NLP
     const keywords = text.match(/\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b/g) || []
     return keywords.slice(0, 3)
+}
+
+/**
+ * Helper: Extract brief 2-line description from text (max ~140 chars)
+ */
+function extractBriefDescription(text: string): string {
+    if (!text) return ''
+
+    // Remove HTML tags if present
+    const cleanText = text.replace(/<[^>]*>/g, '')
+
+    // Get first 1-2 sentences
+    const sentences = cleanText.split(/[.!?]+/).filter(s => s.trim().length > 0)
+    let description = sentences[0]?.trim() || ''
+
+    // Add second sentence if first is very short
+    if (description.length < 80 && sentences[1]) {
+        description += '. ' + sentences[1].trim()
+    }
+
+    // Limit to ~140 characters (approximately 2 lines)
+    if (description.length > 140) {
+        description = description.substring(0, 137) + '...'
+    }
+
+    return description
 }

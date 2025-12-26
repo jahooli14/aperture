@@ -109,6 +109,10 @@ export default function ListDetailPage() {
                                             <p className="text-zinc-400 text-xs mb-3 line-clamp-2 leading-relaxed italic">{item.metadata.subtitle}</p>
                                         )}
 
+                                        {item.metadata?.description && (
+                                            <p className="text-zinc-300 text-xs mb-3 line-clamp-2 leading-relaxed">{item.metadata.description}</p>
+                                        )}
+
                                         {item.metadata?.specs && (
                                             <div className="flex flex-wrap gap-2 mb-3">
                                                 {Object.entries(item.metadata.specs).map(([key, value]) => (
