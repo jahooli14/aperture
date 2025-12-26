@@ -316,7 +316,17 @@ export const useProjectStore = create<ProjectState>()(
 
           // Background refresh Power Hour if tasks were likely touched
           if (data.metadata?.tasks) {
-            fetch(`/api/power-hour?projectId=${id}&refresh=true&enrich=true`).catch(() => { })
+            fetch(`/api/power-hour?projectId=${id}&refresh=true&enrich=true`)
+              .then(res => {
+                if (!res.ok) {
+                  console.error('[PowerHour] Failed to enrich tasks:', res.status, res.statusText)
+                  return res.text().then(text => console.error('[PowerHour] Response:', text))
+                }
+                console.log('[PowerHour] Successfully triggered enrichment for project:', id)
+              })
+              .catch(err => {
+                console.error('[PowerHour] Error triggering enrichment:', err)
+              })
           }
         } catch (error) {
           logger.error('Failed to update project:', error)
