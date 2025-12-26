@@ -55,7 +55,11 @@ export async function generateText(
     }
 
     try {
-      return result.response.text()
+      const text = result.response.text()
+      if (!text || text.trim() === '') {
+        throw new Error('Gemini returned empty response')
+      }
+      return text
     } catch (e) {
       // Check for safety blocks
       if (result.response.promptFeedback?.blockReason) {
@@ -63,8 +67,20 @@ export async function generateText(
       }
       // Check for empty candidates
       if (!result.response.candidates || result.response.candidates.length === 0) {
-        throw new Error('Gemini returned no candidates')
+        throw new Error('Gemini returned no candidates - possibly safety filtered')
       }
+      // Check for finish reason
+      if (result.response.candidates?.[0]?.finishReason) {
+        const reason = result.response.candidates[0].finishReason
+        if (reason !== 'STOP') {
+          throw new Error(`Gemini stopped generation: ${reason}`)
+        }
+      }
+      console.error('[Gemini Chat] Response parsing error:', {
+        hasResponse: !!result.response,
+        candidatesCount: result.response.candidates?.length,
+        finishReason: result.response.candidates?.[0]?.finishReason
+      })
       throw e
     }
   } catch (error: any) {

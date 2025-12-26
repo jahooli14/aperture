@@ -78,6 +78,7 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.20.0",
     "react-virtuoso": "^4.14.1",
+    "resend": "^4.8.0",
     "rss-parser": "^3.13.0",
     "three": "^0.180.0",
     "three-spritetext": "^1.10.0",
