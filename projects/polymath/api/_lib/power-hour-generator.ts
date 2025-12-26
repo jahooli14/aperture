@@ -68,11 +68,16 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
     const projectsContext = projects.map(p => {
-        const tasksList = (p.metadata?.tasks || [])
-            .filter((t: any) => !t.done)
-            .map((t: any) => t.text)
-            .join(', ')
-        return `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description}. Existing Unfinished Tasks: ${tasksList || 'None listed yet.'}`
+        const allTasks = p.metadata?.tasks || []
+        const unfinishedTasks = allTasks.filter((t: any) => !t.done).map((t: any) => t.text)
+        const completedTasks = allTasks.filter((t: any) => t.done).map((t: any) => t.text)
+
+        const unfinishedList = unfinishedTasks.length > 0 ? unfinishedTasks.join(', ') : 'None yet'
+        const completedList = completedTasks.length > 0 ? completedTasks.slice(-5).join(', ') : 'None yet'
+
+        return `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
+    Completed Tasks: ${completedList}
+    Remaining Tasks: ${unfinishedList}`
     }).join('\n')
 
     const validFuelIds = new Set(fuel?.map(f => f.id) || [])
@@ -99,15 +104,19 @@ For each plan:
 5. Create a "Checklist Hit-List" with 3-5 tasks:
    - Include any relevant existing unfinished tasks from the project (set is_new: false)
    - MUST include 2-3 NEW suggested tasks (set is_new: true) - these are AI recommendations
+   - New tasks should be FORWARD-LOOKING: they should logically follow from what's already done and remaining
+   - New tasks should BREAK DOWN the project into achievable next steps that move toward completion
    - New tasks should be concrete, actionable steps starting with verbs
+   - NEVER duplicate or repeat existing tasks (completed or remaining)
    - Examples: "Set up CI/CD pipeline", "Write unit tests", "Create user documentation", "Implement error handling"
 
 CRITICAL RULES:
 1. EVERY checklist item MUST have "is_new" as a boolean (true for AI suggestions, false for existing tasks).
 2. You MUST suggest at least 2 new tasks per project with is_new: true.
-3. ONLY use Fuel Items from the list provided above. Do not invent articles.
-4. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
-5. If no relevant fuel exists, omit the fuel_id.
+3. New tasks must NOT overlap with completed or remaining tasks - they should be genuinely new next steps.
+4. ONLY use Fuel Items from the list provided above. Do not invent articles.
+5. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
+6. If no relevant fuel exists, omit the fuel_id.
 
 Output JSON only (no markdown, no explanation):
 {
