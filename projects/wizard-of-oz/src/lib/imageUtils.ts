@@ -22,6 +22,7 @@ export interface AlignmentResult {
 
 /**
  * Compresses an image to reduce file size while maintaining quality
+ * Uses createImageBitmap for proper EXIF orientation handling (important for camera photos)
  * @param file - The image file to compress
  * @param maxWidth - Maximum width (default 1920)
  * @param quality - JPEG quality 0-1 (default 0.85)
@@ -32,42 +33,41 @@ export async function compressImage(
   maxWidth = 1920,
   quality = 0.85
 ): Promise<File> {
+  // Use createImageBitmap which correctly handles EXIF orientation from camera photos
+  // This is essential for photos taken directly with the camera to have correct orientation
+  const bitmap = await createImageBitmap(file);
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
+
+  // Calculate new dimensions maintaining aspect ratio
+  let width = bitmap.width;
+  let height = bitmap.height;
+
+  if (width > maxWidth) {
+    height = (height * maxWidth) / width;
+    width = maxWidth;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+
+  // Draw image (EXIF orientation is already applied by createImageBitmap)
+  ctx.drawImage(bitmap, 0, 0, width, height);
+
+  // Clean up bitmap
+  bitmap.close();
+
+  // Convert to blob with compression
   return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-
-      // Calculate new dimensions maintaining aspect ratio
-      let width = img.width;
-      let height = img.height;
-
-      if (width > maxWidth) {
-        height = (height * maxWidth) / width;
-        width = maxWidth;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-
-      // Draw image
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Convert to blob with compression
-      canvas.toBlob(
-        (blob) => {
-          const compressedFile = new File([blob!], file.name, { type: 'image/jpeg' });
-          URL.revokeObjectURL(url);
-          resolve(compressedFile);
-        },
-        'image/jpeg',
-        quality
-      );
-    };
-
-    img.src = url;
+    canvas.toBlob(
+      (blob) => {
+        const compressedFile = new File([blob!], file.name, { type: 'image/jpeg' });
+        resolve(compressedFile);
+      },
+      'image/jpeg',
+      quality
+    );
   });
 }
 
