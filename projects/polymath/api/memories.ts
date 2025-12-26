@@ -257,7 +257,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       model: 'gemini-3-flash-preview',
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 300,
+        maxOutputTokens: 500,
         responseMimeType: 'application/json',
         responseSchema: {
           type: SchemaType.OBJECT,
