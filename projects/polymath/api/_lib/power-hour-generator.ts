@@ -88,36 +88,39 @@ AVAILABLE FUEL (Reading Material):
 ${fuelContext}
 
 TASK:
-Generate three distinct "Power Hour" session plans.
+Generate Power Hour session plans for each project above.
 Each plan must be a joyous, motivating blueprint for 60 minutes of work.
 
 For each plan:
-1. Select a focus project.
+1. Select a focus project (use the exact project_id from the list above).
 2. Create a "Task Title" (the core theme of the hour).
 3. Create a "Task Description" (the high-level mission).
 4. Create a "Session Summary" - A 2-sentence motivating vision of exactly what will be better in the user's world after this hour.
-5. Create a "Checklist Hit-List":
-   - Select 2-4 specific tasks to complete.
-   - You MUST prioritize using existing unfinished tasks from the project list if they fit the theme.
-   - You SHOULD suggest 1-2 NEW tasks if they are the logical next step or a "quick win" that helps the theme.
-   - For each item, indicate if it is a new suggestion or an existing one.
+5. Create a "Checklist Hit-List" with 3-5 tasks:
+   - Include any relevant existing unfinished tasks from the project (set is_new: false)
+   - MUST include 2-3 NEW suggested tasks (set is_new: true) - these are AI recommendations
+   - New tasks should be concrete, actionable steps starting with verbs
+   - Examples: "Set up CI/CD pipeline", "Write unit tests", "Create user documentation", "Implement error handling"
 
-CRITICAL INSTRUCTIONS:
-1. ONLY use Fuel Items from the list provided above. Do not invent articles.
-2. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
-3. If no relevant fuel exists, omit the fuel_id.
+CRITICAL RULES:
+1. EVERY checklist item MUST have "is_new" as a boolean (true for AI suggestions, false for existing tasks).
+2. You MUST suggest at least 2 new tasks per project with is_new: true.
+3. ONLY use Fuel Items from the list provided above. Do not invent articles.
+4. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
+5. If no relevant fuel exists, omit the fuel_id.
 
-Output JSON only:
+Output JSON only (no markdown, no explanation):
 {
   "tasks": [
     {
-      "project_id": "string",
+      "project_id": "exact-uuid-from-above",
       "project_title": "string",
       "task_title": "string",
       "task_description": "string",
       "session_summary": "string",
       "checklist_items": [
-        { "text": "string", "is_new": boolean }
+        { "text": "string", "is_new": true },
+        { "text": "string", "is_new": false }
       ],
       "impact_score": 0.1-1.0,
       "fuel_id": "string (optional valid id)",

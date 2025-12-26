@@ -14,6 +14,7 @@ import { api } from '../lib/apiClient'
 import { logger } from '../lib/logger'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
+import { scheduleAIEnrichment } from '../lib/aiEnrichmentManager'
 
 /**
  * Smart project sorting with resurfacing algorithm
@@ -314,19 +315,20 @@ export const useProjectStore = create<ProjectState>()(
           // But strictly we should update with server response to get generated fields.
           // For speed, we'll skip re-fetching the whole list.
 
-          // Background refresh Power Hour if tasks were likely touched
+          // Schedule AI enrichment if tasks were touched (debounced 1 min)
           if (data.metadata?.tasks) {
-            fetch(`/api/power-hour?projectId=${id}&refresh=true&enrich=true`)
-              .then(res => {
-                if (!res.ok) {
-                  console.error('[PowerHour] Failed to enrich tasks:', res.status, res.statusText)
-                  return res.text().then(text => console.error('[PowerHour] Response:', text))
-                }
-                console.log('[PowerHour] Successfully triggered enrichment for project:', id)
-              })
-              .catch(err => {
-                console.error('[PowerHour] Error triggering enrichment:', err)
-              })
+            const tasks = data.metadata.tasks
+            const currentTaskCount = tasks.length
+            const hasCompletedTasks = tasks.some((t: { done?: boolean; completed_at?: string }) =>
+              t.done || t.completed_at
+            )
+
+            // Check if this is a new task or completion
+            const previousProject = get().allProjects.find(p => p.id === id)
+            const previousTaskCount = previousProject?.metadata?.tasks?.length || 0
+            const hasNewOrCompletedTasks = currentTaskCount !== previousTaskCount || hasCompletedTasks
+
+            scheduleAIEnrichment(id, currentTaskCount, hasNewOrCompletedTasks)
           }
         } catch (error) {
           logger.error('Failed to update project:', error)
