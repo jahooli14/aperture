@@ -44,7 +44,11 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         // Fallback to Wikipedia if category API didn't work or no category API
         if (!metadata) {
             console.log(`[Enrichment] Trying Wikipedia for: ${content}`)
-            metadata = await enrichFromWikipedia(content)
+            // For films, try searching with "(film)" suffix to avoid disambiguation pages
+            const searchTerm = (category === 'film' || category === 'tv' || category === 'movie')
+                ? `${content} (film)`
+                : content
+            metadata = await enrichFromWikipedia(searchTerm)
         }
 
         // Final fallback to Gemini if all APIs failed
