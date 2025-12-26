@@ -1,211 +1,160 @@
 /**
- * AI List Enrichment Agent v3
+ * AI List Enrichment Agent v4
  *
- * Comprehensive architecture for all list types:
+ * Pragmatic architecture:
+ * 1. Use Gemini for metadata (training data is sufficient for films/books/etc.)
+ * 2. Use reliable free APIs for images (the key improvement)
+ * 3. Robust error handling with graceful degradation
  *
- * 1. Use Gemini WITH Google Search grounding for real metadata
- * 2. Category-specific image APIs:
- *    - book: Open Library (free, no key)
- *    - film: TMDB (free key)
- *    - music: MusicBrainz + Cover Art Archive (free, no key)
- *    - game: RAWG (free, no key)
- *    - place/tech/software/event/generic: Wikipedia (free, no key)
+ * Image sources (all free):
+ * - book: Open Library
+ * - film: TMDB (with key) or Wikipedia
+ * - music: MusicBrainz + Cover Art Archive
+ * - game: RAWG
+ * - others: Wikipedia
  */
 
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, DynamicRetrievalMode } from '@google/generative-ai'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { getSupabaseClient } from './supabase.js'
 import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-interface EnrichmentResult {
-    title: string
-    subtitle: string
-    image: string | null
-    link: string | null
-    tags: string[]
-    specs: Record<string, string>
-    sources?: string[]
+// ============================================================================
+// IMAGE FETCHERS - Reliable free APIs
+// ============================================================================
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 5000): Promise<Response> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal })
+        return response
+    } finally {
+        clearTimeout(timeout)
+    }
 }
 
-// ============================================================================
-// IMAGE FETCHERS - One per category, all free
-// ============================================================================
-
-/**
- * Books: Open Library (free, no key)
- */
+/** Books: Open Library (free, no key) */
 async function fetchBookCover(title: string, author?: string): Promise<string | null> {
     try {
         const query = author ? `${title} ${author}` : title
-        const searchUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`
-
-        const response = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) })
+        const response = await fetchWithTimeout(
+            `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`
+        )
         if (!response.ok) return null
 
         const data = await response.json() as { docs?: Array<{ cover_i?: number; isbn?: string[] }> }
-        if (!data.docs || data.docs.length === 0) return null
+        const book = data.docs?.[0]
+        if (!book) return null
 
-        const book = data.docs[0]
-        if (book.cover_i) {
-            return `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`
-        }
-        if (book.isbn && book.isbn.length > 0) {
-            return `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`
-        }
+        if (book.cover_i) return `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`
+        if (book.isbn?.[0]) return `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`
         return null
-    } catch (error) {
-        console.error('[BookCover] Failed:', error)
+    } catch (e) {
+        console.error('[BookCover]', e)
         return null
     }
 }
 
-/**
- * Films: TMDB (free key required)
- */
+/** Films: TMDB (free key) with Wikipedia fallback */
 async function fetchMoviePoster(title: string, year?: string): Promise<string | null> {
     const tmdbKey = process.env.TMDB_API_KEY
-    if (!tmdbKey) {
-        console.log('[MoviePoster] No TMDB_API_KEY, trying Wikipedia fallback')
-        return fetchWikipediaImage(title)
-    }
-
-    try {
-        const yearParam = year ? `&year=${year}` : ''
-        const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(title)}${yearParam}`
-
-        const response = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) })
-        if (!response.ok) return null
-
-        const data = await response.json() as { results?: Array<{ poster_path?: string }> }
-        if (!data.results || data.results.length === 0) return null
-
-        const movie = data.results[0]
-        if (movie.poster_path) {
-            return `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+    if (tmdbKey) {
+        try {
+            const yearParam = year ? `&year=${year}` : ''
+            const response = await fetchWithTimeout(
+                `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(title)}${yearParam}`
+            )
+            if (response.ok) {
+                const data = await response.json() as { results?: Array<{ poster_path?: string }> }
+                if (data.results?.[0]?.poster_path) {
+                    return `https://image.tmdb.org/t/p/w500${data.results[0].poster_path}`
+                }
+            }
+        } catch (e) {
+            console.error('[MoviePoster TMDB]', e)
         }
-        return null
-    } catch (error) {
-        console.error('[MoviePoster] Failed:', error)
-        return null
     }
+    // Fallback to Wikipedia
+    return fetchWikipediaImage(title + ' film')
 }
 
-/**
- * Music: MusicBrainz + Cover Art Archive (free, no key)
- */
+/** Music: MusicBrainz + Cover Art Archive (free, no key) */
 async function fetchAlbumCover(query: string): Promise<string | null> {
     try {
-        // Search MusicBrainz for release
-        const searchUrl = `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(query)}&limit=1&fmt=json`
-
-        const response = await fetch(searchUrl, {
-            signal: AbortSignal.timeout(5000),
-            headers: { 'User-Agent': 'Aperture/1.0 (polymath app)' } // MusicBrainz requires User-Agent
-        })
+        const response = await fetchWithTimeout(
+            `https://musicbrainz.org/ws/2/release/?query=${encodeURIComponent(query)}&limit=1&fmt=json`,
+            { headers: { 'User-Agent': 'Aperture/1.0 (contact@example.com)' } }
+        )
         if (!response.ok) return null
 
         const data = await response.json() as { releases?: Array<{ id: string }> }
-        if (!data.releases || data.releases.length === 0) return null
+        const releaseId = data.releases?.[0]?.id
+        if (!releaseId) return null
 
-        const releaseId = data.releases[0].id
-
-        // Get cover from Cover Art Archive
-        const coverUrl = `https://coverartarchive.org/release/${releaseId}/front-500`
-
-        // Check if cover exists (CAA returns redirect to actual image)
-        const coverResponse = await fetch(coverUrl, {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(3000),
-            redirect: 'follow'
-        })
-
-        if (coverResponse.ok) {
-            return coverUrl
-        }
-        return null
-    } catch (error) {
-        console.error('[AlbumCover] Failed:', error)
+        // Cover Art Archive - just return the URL, let the browser handle it
+        return `https://coverartarchive.org/release/${releaseId}/front-500`
+    } catch (e) {
+        console.error('[AlbumCover]', e)
         return null
     }
 }
 
-/**
- * Games: RAWG (free, no key for basic use)
- */
+/** Games: RAWG (free tier) */
 async function fetchGameImage(title: string): Promise<string | null> {
     try {
-        // RAWG allows limited requests without API key
-        const searchUrl = `https://api.rawg.io/api/games?search=${encodeURIComponent(title)}&page_size=1`
-
-        const response = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) })
+        const response = await fetchWithTimeout(
+            `https://api.rawg.io/api/games?search=${encodeURIComponent(title)}&page_size=1`
+        )
         if (!response.ok) return null
 
         const data = await response.json() as { results?: Array<{ background_image?: string }> }
-        if (!data.results || data.results.length === 0) return null
-
-        return data.results[0].background_image || null
-    } catch (error) {
-        console.error('[GameImage] Failed:', error)
+        return data.results?.[0]?.background_image || null
+    } catch (e) {
+        console.error('[GameImage]', e)
         return null
     }
 }
 
-/**
- * Wikipedia: Universal fallback for places, tech, software, events, generic
- * Uses Wikipedia API to find page and extract main image
- */
+/** Wikipedia: Universal fallback */
 async function fetchWikipediaImage(query: string): Promise<string | null> {
     try {
-        // Search Wikipedia for the page
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`
-
-        const searchResponse = await fetch(searchUrl, { signal: AbortSignal.timeout(5000) })
+        // Step 1: Search for page
+        const searchResponse = await fetchWithTimeout(
+            `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=1&format=json&origin=*`
+        )
         if (!searchResponse.ok) return null
 
         const searchData = await searchResponse.json() as {
-            query?: { search?: Array<{ pageid: number; title: string }> }
+            query?: { search?: Array<{ title: string }> }
         }
+        const pageTitle = searchData.query?.search?.[0]?.title
+        if (!pageTitle) return null
 
-        if (!searchData.query?.search || searchData.query.search.length === 0) return null
-
-        const pageTitle = searchData.query.search[0].title
-
-        // Get page images using pageimages API
-        const imageUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=pageimages&pithumbsize=500&format=json&origin=*`
-
-        const imageResponse = await fetch(imageUrl, { signal: AbortSignal.timeout(5000) })
+        // Step 2: Get page thumbnail
+        const imageResponse = await fetchWithTimeout(
+            `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(pageTitle)}&prop=pageimages&pithumbsize=500&format=json&origin=*`
+        )
         if (!imageResponse.ok) return null
 
         const imageData = await imageResponse.json() as {
             query?: { pages?: Record<string, { thumbnail?: { source: string } }> }
         }
-
-        if (!imageData.query?.pages) return null
-
-        // Get first page's thumbnail
-        const pages = Object.values(imageData.query.pages)
-        if (pages.length > 0 && pages[0].thumbnail?.source) {
-            return pages[0].thumbnail.source
-        }
-
-        return null
-    } catch (error) {
-        console.error('[WikipediaImage] Failed:', error)
+        const pages = Object.values(imageData.query?.pages || {})
+        return pages[0]?.thumbnail?.source || null
+    } catch (e) {
+        console.error('[WikipediaImage]', e)
         return null
     }
 }
 
 // ============================================================================
-// MAIN IMAGE ROUTER
+// IMAGE ROUTER
 // ============================================================================
 
-async function fetchImageForCategory(
-    category: string,
-    content: string,
-    metadata: { subtitle?: string; specs?: Record<string, string> }
-): Promise<string | null> {
-    console.log(`[ImageFetch] Category: ${category}, Item: "${content}"`)
+async function fetchImageForCategory(category: string, content: string, metadata: { subtitle?: string; specs?: Record<string, string> }): Promise<string | null> {
+    console.log(`[Image] Fetching for ${category}: "${content}"`)
 
     let image: string | null = null
 
@@ -215,51 +164,77 @@ async function fetchImageForCategory(
             image = await fetchBookCover(content, authorMatch?.[1])
             break
         }
-
         case 'film': {
-            const year = metadata.specs?.Year || metadata.specs?.year
-            image = await fetchMoviePoster(content, year)
+            image = await fetchMoviePoster(content, metadata.specs?.Year || metadata.specs?.year)
             break
         }
-
         case 'music': {
             image = await fetchAlbumCover(content)
+            if (!image) image = await fetchWikipediaImage(content + ' album')
             break
         }
-
         case 'game': {
             image = await fetchGameImage(content)
+            if (!image) image = await fetchWikipediaImage(content + ' video game')
             break
         }
-
-        case 'place':
-        case 'tech':
-        case 'software':
-        case 'event':
-        case 'generic':
         default: {
             image = await fetchWikipediaImage(content)
             break
         }
     }
 
-    // Fallback to Wikipedia if category-specific failed
-    if (!image && category !== 'generic' && category !== 'place' && category !== 'tech') {
-        console.log(`[ImageFetch] Trying Wikipedia fallback for ${category}`)
+    // Final fallback to Wikipedia for all categories
+    if (!image && !['place', 'tech', 'software', 'event', 'generic'].includes(category)) {
         image = await fetchWikipediaImage(content)
     }
 
-    console.log(`[ImageFetch] Result: ${image ? 'found' : 'not found'}`)
+    console.log(`[Image] Result: ${image ? 'found' : 'not found'}`)
     return image
 }
 
 // ============================================================================
-// GEMINI WITH GOOGLE SEARCH GROUNDING
+// METADATA FROM GEMINI (using training data, no grounding needed)
 // ============================================================================
 
-async function getGroundedMetadata(content: string, category: string): Promise<EnrichmentResult> {
-    const model = genAI.getGenerativeModel(
-        {
+interface Metadata {
+    title: string
+    subtitle: string
+    tags: string[]
+    specs: Record<string, string>
+    link: string | null
+}
+
+async function getMetadataFromGemini(content: string, category: string): Promise<Metadata> {
+    const categoryHints: Record<string, string> = {
+        book: 'Include author name in subtitle (e.g., "by George Orwell"). Specs: Year, Pages, Genre.',
+        film: 'Include director in subtitle (e.g., "Directed by Christopher Nolan"). Specs: Year, Runtime, Genre, Rating.',
+        music: 'Include artist in subtitle (e.g., "by Pink Floyd"). Specs: Year, Genre, Label.',
+        game: 'Include developer in subtitle. Specs: Year, Platform, Genre.',
+        place: 'Include location/country in subtitle. Specs: Country, Type, Population.',
+        tech: 'Include company in subtitle. Specs: Year, Category.',
+        software: 'Include developer in subtitle. Specs: Platform, Price, Category.',
+        event: 'Include date/location in subtitle. Specs: Date, Location, Type.',
+        generic: 'Include key info in subtitle. Specs: relevant attributes.',
+    }
+
+    const prompt = `Provide metadata for "${content}" (category: ${category}).
+
+${categoryHints[category] || categoryHints.generic}
+
+Return JSON:
+{
+  "title": "Official/full title",
+  "subtitle": "Key descriptive line",
+  "tags": ["tag1", "tag2", "tag3"],
+  "specs": {"Key": "Value", ...},
+  "link": "Wikipedia or official URL"
+}
+
+Return ONLY valid JSON, no other text.`
+
+    try {
+        const model = genAI.getGenerativeModel({
             model: MODELS.DEFAULT_CHAT,
             safetySettings: [
                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -267,77 +242,43 @@ async function getGroundedMetadata(content: string, category: string): Promise<E
                 { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
                 { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
             ],
-            tools: [{
-                googleSearchRetrieval: {
-                    dynamicRetrievalConfig: {
-                        mode: DynamicRetrievalMode.MODE_DYNAMIC,
-                        dynamicThreshold: 0.3,
-                    },
-                },
-            }],
-        },
-        { apiVersion: 'v1beta' }
-    )
+        })
 
-    // Category-specific prompts for better results
-    const categoryPrompts: Record<string, string> = {
-        book: 'author, publication year, genre, page count, publisher',
-        film: 'director, release year, runtime, genre, rating',
-        music: 'artist/band, album, release year, genre, record label',
-        game: 'developer, publisher, release year, platform, genre',
-        place: 'location, country, type (city/landmark/etc), notable features',
-        tech: 'company/creator, release year, category, key features',
-        software: 'developer, platform, category, pricing (free/paid)',
-        event: 'date, location, organizer, type',
-        generic: 'relevant details, category, notable attributes',
-    }
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: {
+                maxOutputTokens: 1024,
+                temperature: 0.1,
+                responseMimeType: 'application/json',
+            },
+        })
 
-    const categoryHint = categoryPrompts[category] || categoryPrompts.generic
+        const text = result.response.text()
+        console.log(`[Gemini] Response for "${content}":`, text.slice(0, 100))
 
-    const prompt = `Find information about "${content}" (category: ${category}).
+        // Robust JSON extraction
+        let jsonStr = text.trim()
+        const match = jsonStr.match(/\{[\s\S]*\}/)
+        if (match) jsonStr = match[0]
 
-Return a JSON object with:
-- title: The official/full title
-- subtitle: Key info (${categoryHint})
-- year: Release/publication year if applicable
-- tags: Array of 3 relevant tags
-- specs: Object with details like {${categoryHint.split(', ').slice(0, 3).map(s => `"${s}": "..."`).join(', ')}}
-- link: Official or authoritative URL (Wikipedia, IMDb, official site, etc.)
-
-Use real, current information from search. Return ONLY valid JSON.`
-
-    const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-            maxOutputTokens: 1024,
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-        },
-    })
-
-    const text = result.response.text()
-    console.log(`[Grounding] Response for "${content}":`, text.slice(0, 150))
-
-    // Extract sources from grounding metadata
-    const groundingMetadata = result.response.candidates?.[0]?.groundingMetadata
-    const chunks = (groundingMetadata as { groundingChuncks?: Array<{ web?: { uri?: string } }> })?.groundingChuncks || []
-    const sources = chunks.map(c => c.web?.uri).filter(Boolean) as string[]
-
-    // Parse response
-    let jsonStr = text.trim()
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-    if (jsonMatch) jsonStr = jsonMatch[0]
-
-    const parsed = JSON.parse(jsonStr)
-
-    return {
-        title: parsed.title || content,
-        subtitle: parsed.subtitle || '',
-        image: null,
-        link: parsed.link || sources[0] || null,
-        tags: parsed.tags || [],
-        specs: parsed.specs || {},
-        sources,
+        const parsed = JSON.parse(jsonStr)
+        return {
+            title: parsed.title || content,
+            subtitle: parsed.subtitle || '',
+            tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 3) : [],
+            specs: typeof parsed.specs === 'object' ? parsed.specs : {},
+            link: parsed.link || null,
+        }
+    } catch (error) {
+        console.error(`[Gemini] Failed for "${content}":`, error)
+        // Return minimal metadata on failure
+        return {
+            title: content,
+            subtitle: '',
+            tags: [],
+            specs: {},
+            link: null,
+        }
     }
 }
 
@@ -369,10 +310,13 @@ export async function enrichListItem(
         }
         console.log(`[Enrichment] Category: ${category}`)
 
-        // 2. Get grounded metadata from Gemini
-        const metadata = await getGroundedMetadata(content, category)
+        // 2. Get metadata from Gemini (parallel with image fetch for speed)
+        const [metadata, _] = await Promise.all([
+            getMetadataFromGemini(content, category),
+            Promise.resolve() // placeholder for now
+        ])
 
-        // 3. Fetch image from reliable source
+        // 3. Fetch image from reliable API
         const imageUrl = await fetchImageForCategory(category, content, {
             subtitle: metadata.subtitle,
             specs: metadata.specs,
@@ -387,7 +331,6 @@ export async function enrichListItem(
             tags: metadata.tags,
             specs: metadata.specs,
             enriched_at: new Date().toISOString(),
-            grounded: (metadata.sources?.length || 0) > 0,
         }
 
         // 5. Save to database
@@ -402,12 +345,12 @@ export async function enrichListItem(
 
         if (error) throw error
 
-        console.log(`[Enrichment] Success: "${content}" (image: ${imageUrl ? 'yes' : 'no'})`)
+        console.log(`[Enrichment] Success: "${content}"`)
         return finalMetadata
 
     } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : 'Unknown error'
-        console.error(`[Enrichment] Failed for "${content}":`, msg)
+        const msg = error instanceof Error ? error.message : String(error)
+        console.error(`[Enrichment] Failed: "${content}" -`, msg)
 
         try {
             const supabase = getSupabaseClient()
@@ -420,7 +363,7 @@ export async function enrichListItem(
                 .eq('id', itemId)
                 .eq('user_id', userId)
         } catch (dbErr) {
-            console.error('[Enrichment] Could not update status:', dbErr)
+            console.error('[Enrichment] DB update failed:', dbErr)
         }
         return null
     }
