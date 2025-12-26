@@ -104,6 +104,12 @@ async function triggerEnrichment(projectId: string): Promise<void> {
         tasksGenerated: data.tasks?.length || 0,
         cached: data.cached
       })
+
+      // Refresh the project in the store to show new tasks
+      // Dispatch a custom event that the store/components can listen to
+      window.dispatchEvent(new CustomEvent('projectEnriched', {
+        detail: { projectId }
+      }))
     }
   } catch (error) {
     console.error(`[AIEnrichment] Error for ${projectId}:`, error)
