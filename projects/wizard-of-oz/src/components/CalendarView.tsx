@@ -12,20 +12,21 @@ interface CalendarViewProps {
 }
 
 export function CalendarView({ onUploadClick }: CalendarViewProps = {}) {
-  const { photos } = usePhotoStore();
+  const { photos, fetchPhotos } = usePhotoStore();
   const { achievements, fetchAchievements } = useMilestoneStore();
   const { photoPlaces, places, placeVisits, fetchPhotoPlaces, fetchPlaces, fetchPlaceVisits } = usePlaceStore();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'calendar' | 'timeline'>('calendar');
 
-  // Fetch places, achievements, and visits on mount
+  // Fetch photos, places, achievements, and visits on mount
   useEffect(() => {
+    fetchPhotos();
     fetchPhotoPlaces();
     fetchPlaces();
     fetchAchievements();
     fetchPlaceVisits();
-  }, [fetchPhotoPlaces, fetchPlaces, fetchAchievements, fetchPlaceVisits]);
+  }, [fetchPhotos, fetchPhotoPlaces, fetchPlaces, fetchAchievements, fetchPlaceVisits]);
 
   // Get milestones by date
   const milestonesByDate = useMemo(() => {
