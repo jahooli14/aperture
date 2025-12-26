@@ -65,6 +65,12 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
 
         const summary: any = await summaryRes.json()
 
+        // Reject disambiguation pages - they don't contain useful item data
+        if (summary.type === 'disambiguation') {
+            console.log(`[Wikipedia] Skipping disambiguation page for: ${title}`)
+            return null
+        }
+
         // Extract metadata
         const metadata: EnrichmentMetadata = {
             subtitle: summary.description || summary.extract?.split('.')[0] || 'Wikipedia article',
