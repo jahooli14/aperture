@@ -55,7 +55,8 @@ RESPONSE FORMAT:
 
         const response = await generateText(prompt, {
             responseFormat: 'json',
-            temperature: 0.0 // Maximum stability
+            temperature: 0.0, // Maximum stability
+            maxTokens: 1024 // Sufficient for rich metadata with URLs
         })
         console.log(`[Enrichment] Gemini Raw Response for "${content}":`, response.slice(0, 100))
 
