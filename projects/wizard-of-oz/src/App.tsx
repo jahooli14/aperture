@@ -85,13 +85,19 @@ function App() {
   // Fetch settings when user is authenticated
   useEffect(() => {
     if (user) {
+      console.log('[App] User authenticated, fetching settings...', user.id);
       fetchSettings();
     }
   }, [user, fetchSettings]);
 
   // Check if user has completed onboarding & join code prompt & fetch photos
   useEffect(() => {
+    console.log('[App] Settings effect - user:', !!user, 'settings:', !!settings);
     if (user && settings) {
+      console.log('[App] User and settings loaded, settings:', {
+        join_code_prompted: settings.join_code_prompted,
+        onboarding_completed: settings.onboarding_completed
+      });
       if (!settings.join_code_prompted) {
         setShowJoinCodePrompt(true);
       } else if (!settings.onboarding_completed) {
@@ -99,6 +105,7 @@ function App() {
       }
 
       // Fetch photos once on login
+      console.log('[App] Fetching photos...');
       fetchPhotos();
     }
   }, [user, settings, fetchPhotos]);
@@ -162,15 +169,23 @@ function App() {
       }
     }, 8000);
 
-    // Nuclear option - if still loading after 30 seconds, force clear and reload
+    // Nuclear option - if still loading after 30 seconds, force clear app cache (preserve auth) and reload
     const nuclearTimer = setTimeout(() => {
       if (loadingRef.current) {
-        console.error('Force reloading after 30 seconds of loading');
+        console.error('[App] Force reloading after 30 seconds of loading');
         try {
-          localStorage.clear();
+          // Clear app-specific localStorage but PRESERVE auth session
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth')) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
           sessionStorage.clear();
         } catch (e) {
-          console.error('Failed to clear storage:', e);
+          console.error('[App] Failed to clear storage:', e);
         }
         window.location.reload();
       }
@@ -186,10 +201,30 @@ function App() {
   if (loading) {
     const handleClearCache = () => {
       try {
-        // Clear all localStorage
-        localStorage.clear();
-        // Clear all sessionStorage
+        // Clear app-specific localStorage but PRESERVE auth session
+        // This prevents users from being logged out when clearing cache
+        const authKeys: string[] = [];
+        const keysToRemove: string[] = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            // Preserve Supabase auth keys
+            if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+              authKeys.push(key);
+            } else {
+              keysToRemove.push(key);
+            }
+          }
+        }
+
+        // Only remove non-auth keys
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('[App] Cleared cache, preserved auth keys:', authKeys);
+
+        // Clear sessionStorage (doesn't contain auth)
         sessionStorage.clear();
+
         // Reload the page
         window.location.reload();
       } catch (error) {
