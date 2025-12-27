@@ -350,6 +350,40 @@ function App() {
             </motion.button>
             <motion.button
               type="button"
+              onClick={() => setView('places')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'places'}
+              className={`
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                ${view === 'places'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              📍 Places
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setView('milestones')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'milestones'}
+              className={`
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                ${view === 'milestones'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              🌱 Milestones
+            </motion.button>
+            <motion.button
+              type="button"
               onClick={() => setView('calendar')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -381,40 +415,6 @@ function App() {
               `}
             >
               ↔️ Compare
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('milestones')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'milestones'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'milestones'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              🌱 Milestones
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('places')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'places'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'places'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              📍 Places
             </motion.button>
             </div>
           </div>
