@@ -6,11 +6,12 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind } from 'lucide-react'
+import { Moon, Eye, EyeOff, RefreshCw, Loader2, Star, Maximize2, Link2, Search, Zap, StarIcon, Wind, WifiOff } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { ZenMode } from '../components/bedtime/ZenMode'
 import { DriftMode } from '../components/bedtime/DriftMode'
+import { readingDb } from '../lib/db'
 
 interface BedtimePrompt {
   id: string
@@ -33,6 +34,7 @@ export function BedtimePage() {
   const [zenModeOpen, setZenModeOpen] = useState(false)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [showWelcome, setShowWelcome] = useState(false)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const { addToast } = useToast()
 
   useEffect(() => {
@@ -45,6 +47,29 @@ export function BedtimePage() {
   const fetchPrompts = async () => {
     setLoading(true)
     try {
+      // 1. Load from cache first (instant)
+      const cached = await readingDb.getDashboard('bedtime')
+      if (cached) {
+        const rawPrompts = cached.prompts || []
+        const uniquePrompts = rawPrompts.map((p: any, index: number) => ({
+          ...p,
+          id: p.id || `generated-${Date.now()}-${index}`,
+          _uniqueId: `${p.id || 'no-id'}-${index}`
+        }))
+        setPrompts(uniquePrompts)
+        setMessage(cached.message || '')
+        setLoading(false)
+      }
+
+      // 2. If offline, stop here
+      if (!navigator.onLine) {
+        setIsOffline(true)
+        if (!cached) setLoading(false)
+        return
+      }
+
+      // 3. Fetch fresh data from network
+      setIsOffline(false)
       const response = await fetch('/api/projects?resource=bedtime')
       const data = await response.json()
 
@@ -59,12 +84,17 @@ export function BedtimePage() {
 
       setPrompts(uniquePrompts)
       setMessage(data.message || '')
+
+      // 4. Cache for offline use
+      await readingDb.cacheDashboard('bedtime', data)
     } catch (error) {
-      addToast({
-        title: 'Failed to load prompts',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive'
-      })
+      if (prompts.length === 0) {
+        addToast({
+          title: 'Failed to load prompts',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'destructive'
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -501,35 +531,51 @@ export function BedtimePage() {
             animate={{ opacity: 1 }}
             className="max-w-md mx-auto text-center py-16"
           >
-            <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
-              <Moon className="h-12 w-12" style={{ color: 'var(--premium-gold)' }} />
-            </div>
-            <h2 className="text-xl font-semibold premium-text-platinum mb-2">
-              No prompts yet
-            </h2>
-            <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
-              {message || 'Check back at 9:30pm for tonight\'s ideas'}
-            </p>
-            <button
-              onClick={generateNew}
-              disabled={generating}
-              className="px-6 py-3 rounded-lg transition-all inline-flex items-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-purple))',
-                color: 'white'
-              }}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  Generate Now
-                </>
-              )}
-            </button>
+            {isOffline ? (
+              <>
+                <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
+                  <WifiOff className="h-12 w-12" style={{ color: 'var(--premium-text-tertiary)' }} />
+                </div>
+                <h2 className="text-xl font-semibold premium-text-platinum mb-2">
+                  Offline
+                </h2>
+                <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                  Bedtime prompts will be available when you're back online
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="p-8 rounded-full premium-glass-subtle inline-flex mb-6">
+                  <Moon className="h-12 w-12" style={{ color: 'var(--premium-gold)' }} />
+                </div>
+                <h2 className="text-xl font-semibold premium-text-platinum mb-2">
+                  No prompts yet
+                </h2>
+                <p className="text-sm mb-6" style={{ color: 'var(--premium-text-secondary)' }}>
+                  {message || 'Check back at 9:30pm for tonight\'s ideas'}
+                </p>
+                <button
+                  onClick={generateNew}
+                  disabled={generating}
+                  className="px-6 py-3 rounded-lg transition-all inline-flex items-center gap-2"
+                  style={{
+                    background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-purple))',
+                    color: 'white'
+                  }}
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      Generate Now
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
 

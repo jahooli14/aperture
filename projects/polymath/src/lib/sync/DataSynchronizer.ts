@@ -166,21 +166,62 @@ class DataSynchronizer {
   private async syncDashboard() {
     console.log('[DataSynchronizer] Syncing dashboard data...')
     try {
-      // Fetch Inspiration
-      const inspirationRes = await fetch('/api/analytics?resource=inspiration')
-      if (inspirationRes.ok) {
-        const data = await inspirationRes.json()
-        await readingDb.cacheDashboard('inspiration', data)
-      }
-      
-      // Fetch Evolution (Insights)
-      const evolutionRes = await fetch('/api/analytics?resource=evolution')
-      if (evolutionRes.ok) {
-        const data = await evolutionRes.json()
-        await readingDb.cacheDashboard('evolution', data)
-      }
-      
-      console.log('[DataSynchronizer] Dashboard data cached')
+      // Sync all dashboard resources in parallel
+      await Promise.allSettled([
+        // Inspiration
+        fetch('/api/analytics?resource=inspiration').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('inspiration', data)
+          }
+        }),
+
+        // Evolution (Insights)
+        fetch('/api/analytics?resource=evolution').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('evolution', data)
+          }
+        }),
+
+        // Patterns (Timeline)
+        fetch('/api/analytics?resource=patterns').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('patterns', data)
+          }
+        }),
+
+        // Bedtime prompts
+        fetch('/api/projects?resource=bedtime').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('bedtime', data)
+          }
+        }),
+
+        // Power Hour tasks
+        fetch('/api/power-hour').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (data.tasks) {
+              await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
+            }
+          }
+        }),
+
+        // RSS Feeds
+        fetch('/api/reading?resource=rss').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data.feeds)) {
+              await readingDb.cacheDashboard('rss-feeds', data.feeds)
+            }
+          }
+        })
+      ])
+
+      console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, power-hour, rss)')
     } catch (error) {
       console.error('[DataSynchronizer] Dashboard sync failed:', error)
     }

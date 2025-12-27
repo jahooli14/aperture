@@ -12,42 +12,11 @@ export function useArticle(id: string | undefined) {
     setError(null)
 
     try {
-      // 1. Try fetching from network if online
-      if (navigator.onLine) {
-        try {
-          const response = await fetch(`/api/reading?id=${articleId}`)
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`)
-          }
-
-          const result = await response.json()
-          
-          // API returns { article, highlights } directly or inside { success: true, ... }
-          // Handle both formats to be safe
-          const articleData = result.article || result
-          const highlightsData = result.highlights || []
-
-          if (articleData) {
-            setData({
-              article: articleData,
-              highlights: highlightsData
-            })
-            setIsLoading(false)
-            return
-          }
-        } catch (apiError) {
-          console.warn('[useArticle] API fetch failed, falling back to cache:', apiError)
-          // Fall through to offline cache
-        }
-      }
-
-      // 2. Offline fallback: Fetch from IndexedDB
-      console.log('[useArticle] Attempting to load from offline cache...')
+      // 1. ALWAYS try cache first for instant loading (stale-while-revalidate)
       const cachedArticle = await readingDb.articles.get(articleId)
-      
-      if (cachedArticle) {
-        // Fetch associated highlights
+
+      if (cachedArticle && cachedArticle.content) {
+        // Show cached content immediately
         const cachedHighlights = await readingDb.highlights
           .where('article_id')
           .equals(articleId)
@@ -57,9 +26,64 @@ export function useArticle(id: string | undefined) {
           article: cachedArticle as Article,
           highlights: cachedHighlights as ArticleHighlight[]
         })
-        console.log('[useArticle] Loaded from offline cache')
+        console.log('[useArticle] Loaded from cache (instant)')
+        setIsLoading(false)
+
+        // If offline, we're done
+        if (!navigator.onLine) {
+          console.log('[useArticle] Offline - using cached version')
+          return
+        }
+
+        // If online, revalidate in background (don't await)
+        fetch(`/api/reading?id=${articleId}`)
+          .then(async (response) => {
+            if (response.ok) {
+              const result = await response.json()
+              const articleData = result.article || result
+              const highlightsData = result.highlights || []
+
+              if (articleData) {
+                setData({
+                  article: articleData,
+                  highlights: highlightsData
+                })
+                // Update cache silently
+                readingDb.cacheArticle(articleData).catch(console.warn)
+              }
+            }
+          })
+          .catch((err) => console.warn('[useArticle] Background refresh failed:', err))
+
+        return
+      }
+
+      // 2. No cache - must fetch from network
+      if (!navigator.onLine) {
+        throw new Error('Article not available offline')
+      }
+
+      console.log('[useArticle] No cache found, fetching from network...')
+      const response = await fetch(`/api/reading?id=${articleId}`)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const result = await response.json()
+      const articleData = result.article || result
+      const highlightsData = result.highlights || []
+
+      if (articleData) {
+        setData({
+          article: articleData,
+          highlights: highlightsData
+        })
+
+        // Cache for offline
+        readingDb.cacheArticle(articleData).catch(console.warn)
       } else {
-        throw new Error('Article not found in cache or on server')
+        throw new Error('Article not found')
       }
 
     } catch (err) {
