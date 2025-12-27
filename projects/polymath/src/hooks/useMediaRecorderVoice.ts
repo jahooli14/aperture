@@ -373,36 +373,41 @@ export function useMediaRecorderVoice({
 
   /**
    * Start recording (platform-agnostic)
+   * Memoized to ensure stable reference for useEffect dependencies
    */
-  const startRecording = async () => {
+  const startRecording = useCallback(async () => {
+    if (isRecording || isProcessing) {
+      console.log('[MediaRecorder] Already recording or processing, skipping start')
+      return
+    }
     if (isNative()) {
       await startNativeRecording()
     } else {
       await startWebRecording()
     }
-  }
+  }, [isRecording, isProcessing])
 
   /**
    * Stop recording (platform-agnostic)
    */
-  const stopRecording = async () => {
+  const stopRecording = useCallback(async () => {
     if (isNative()) {
       await stopNativeRecording()
     } else {
       await stopWebRecording()
     }
-  }
+  }, [])
 
   /**
    * Toggle recording
    */
-  const toggleRecording = () => {
+  const toggleRecording = useCallback(() => {
     if (isRecording) {
       stopRecording()
     } else {
       startRecording()
     }
-  }
+  }, [isRecording, startRecording, stopRecording])
 
   return {
     isRecording,

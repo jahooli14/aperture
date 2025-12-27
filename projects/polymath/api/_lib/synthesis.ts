@@ -156,10 +156,16 @@ async function getCapabilities(userId: string): Promise<Capability[]> {
 async function generateSuggestionsBatch(
   capabilities: Capability[],
   interests: Interest[],
-  count: number
+  count: number,
+  previousSuggestions: string[] = []
 ): Promise<any[]> {
   const capabilityList = capabilities.slice(0, 15).map(c => `- ${c.name}: ${c.description}`).join('\n')
   const interestList = interests.slice(0, 15).map(i => `- ${i.name} (${i.type})`).join('\n')
+
+  // Include previous suggestions to avoid repetition
+  const avoidSection = previousSuggestions.length > 0
+    ? `\nAVOID THESE (already suggested before):\n${previousSuggestions.map(s => `- ${s}`).join('\n')}\n`
+    : ''
 
   const prompt = `You are a high-speed strategic synthesis engine. Generate ${count} diverse project concepts that bridge the user's technical capabilities and personal interests.
 
@@ -169,9 +175,9 @@ ${capabilityList}
 
 Interests & Themes:
 ${interestList}
-
+${avoidSection}
 TASK:
-Create ${count} unique project ideas.
+Create ${count} COMPLETELY NEW and unique project ideas.${previousSuggestions.length > 0 ? ' Do NOT repeat or closely resemble any ideas from the AVOID list above.' : ''}
 For each idea, assign 1-3 relevant capabilities from the list above.
 Diversity requirements:
 - 1 idea must be a "Wildcard" (high novelty, unexpected combo).
@@ -191,7 +197,7 @@ Return ONLY a JSON array of objects:
   const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
   const result = await model.generateContent(prompt)
   const text = result.response.text()
-  
+
   try {
     const jsonMatch = text.match(/[\[\s\S]*\]/)
     return JSON.parse(jsonMatch ? jsonMatch[0] : text)
@@ -260,7 +266,18 @@ export async function runSynthesis(userId: string) {
     return []
   }
 
-  const rawIdeas = await generateSuggestionsBatch(capabilities, interests, CONFIG.SUGGESTIONS_PER_RUN)
+  // Fetch recent suggestions to avoid repetition (last 50 titles)
+  const { data: recentSuggestions } = await supabase
+    .from('project_suggestions')
+    .select('title')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const previousTitles = (recentSuggestions || []).map(s => s.title)
+  logger.info({ count: previousTitles.length }, 'Loaded previous suggestions to avoid')
+
+  const rawIdeas = await generateSuggestionsBatch(capabilities, interests, CONFIG.SUGGESTIONS_PER_RUN, previousTitles)
   const suggestions = await filterAndScoreSuggestions(rawIdeas, userId, interests, capabilities)
 
   if (suggestions.length > 0) {

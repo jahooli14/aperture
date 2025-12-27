@@ -32,14 +32,18 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
 
   // Auto-start recording if requested
   useEffect(() => {
-    if (autoStart && !isRecording && !isProcessing) {
-      // Small delay to ensure component is fully mounted
+    if (autoStart && !isRecording && !isProcessing && isSupported) {
+      console.log('[VoiceInput] Auto-starting recording...')
+      // Small delay to ensure component is fully mounted and modal animation complete
       const timer = setTimeout(() => {
-        startRecording()
-      }, 100)
+        console.log('[VoiceInput] Calling startRecording()')
+        startRecording().catch(err => {
+          console.error('[VoiceInput] Auto-start failed:', err)
+        })
+      }, 200) // Increased from 100ms for animation buffer
       return () => clearTimeout(timer)
     }
-  }, [autoStart, isRecording, isProcessing, startRecording])
+  }, [autoStart, isSupported]) // Reduced dependencies to prevent re-triggers
 
   if (!isSupported) {
     return (
