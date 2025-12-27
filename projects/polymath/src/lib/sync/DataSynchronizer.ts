@@ -1,6 +1,7 @@
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useReadingStore } from '../../stores/useReadingStore'
+import { useListStore } from '../../stores/useListStore'
 import { useOfflineStore } from '../../stores/useOfflineStore'
 import { offlineContentManager } from '../offline/OfflineContentManager'
 import { readingDb } from '../db'
@@ -36,10 +37,12 @@ class DataSynchronizer {
    * 1. Projects
    * 2. Memories
    * 3. Reading List (Articles + Content)
-   * 4. Connections (Bridges)
-   * 5. Dashboard Data (Insights/Inspiration)
-   * 
+   * 4. Lists & List Items (films, books, etc.)
+   * 5. Connections (Bridges)
+   * 6. Dashboard Data (Insights/Inspiration)
+   *
    * Fetches fresh data from API and updates Dexie cache via the stores.
+   * All content is available offline immediately after sync.
    */
   public async sync() {
     if (this.isSyncing) {
@@ -55,7 +58,7 @@ class DataSynchronizer {
 
     this.isSyncing = true
     useOfflineStore.getState().setPulling(true)
-    console.log('[DataSynchronizer] Starting sync...')
+    console.log('[DataSynchronizer] Starting comprehensive sync...')
 
     try {
       // Run fetches in parallel for speed
@@ -64,6 +67,7 @@ class DataSynchronizer {
         this.syncProjects(),
         this.syncMemories(),
         this.syncReadingList(),
+        this.syncLists(),
         this.syncConnections(),
         this.syncDashboard()
       ])
@@ -124,6 +128,25 @@ class DataSynchronizer {
     }
   }
   
+  private async syncLists() {
+    console.log('[DataSynchronizer] Syncing lists...')
+    try {
+      // 1. Fetch all lists
+      await useListStore.getState().fetchLists()
+
+      const lists = useListStore.getState().lists
+
+      // 2. Fetch items for each list (ensures all items are cached)
+      for (const list of lists) {
+        await useListStore.getState().fetchListItems(list.id)
+      }
+
+      console.log(`[DataSynchronizer] Synced ${lists.length} lists with items`)
+    } catch (error) {
+      console.error('[DataSynchronizer] Lists sync failed:', error)
+    }
+  }
+
   private async syncConnections() {
     console.log('[DataSynchronizer] Syncing connections...')
     try {
