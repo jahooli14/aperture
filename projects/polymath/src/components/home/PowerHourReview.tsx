@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, Zap, Play, Minus, Plus, AlertTriangle, Check } from 'lucide-react'
+import { X, Clock, Zap, AlertTriangle } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
 
 interface ChecklistItem {
@@ -54,27 +54,16 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
     const isOvertime = totalMinutes > MAX_MINUTES
     const isIdeal = totalMinutes >= 40 && totalMinutes <= 55
 
-    const updateDuration = (index: number, newDuration: number) => {
+    // Tap to cycle through duration options
+    const cycleDuration = (index: number) => {
         haptic.light()
-        setItems(prev => prev.map((item, i) =>
-            i === index ? { ...item, estimated_minutes: newDuration } : item
-        ))
-    }
-
-    const cycleDuration = (index: number, direction: 'up' | 'down') => {
         const currentDuration = items[index].estimated_minutes
         const currentIndex = DURATION_OPTIONS.indexOf(currentDuration)
+        const nextIndex = (currentIndex + 1) % DURATION_OPTIONS.length
 
-        let newIndex: number
-        if (direction === 'up') {
-            newIndex = currentIndex < DURATION_OPTIONS.length - 1 ? currentIndex + 1 : currentIndex
-        } else {
-            newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex
-        }
-
-        if (newIndex !== currentIndex) {
-            updateDuration(index, DURATION_OPTIONS[newIndex])
-        }
+        setItems(prev => prev.map((item, i) =>
+            i === index ? { ...item, estimated_minutes: DURATION_OPTIONS[nextIndex] } : item
+        ))
     }
 
     const toggleRemove = (index: number) => {
@@ -120,8 +109,9 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
                             {task.project_title}
                         </div>
                         <h2 className="text-lg font-bold uppercase tracking-tight text-white">
-                            Review Your Session
+                            Adjust Session
                         </h2>
+                        <p className="text-xs text-white/40 mt-1">Tap tasks to exclude, tap time to adjust</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -140,22 +130,23 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
                                 key={idx}
                                 layout
                                 className={`flex items-center gap-3 p-3 rounded-xl transition-all ${isRemoved
-                                    ? 'bg-white/5 opacity-40'
+                                    ? 'bg-white/5'
                                     : 'bg-white/10'
                                     }`}
                             >
-                                {/* Remove/Add Toggle */}
+                                {/* Toggle - tap to include/exclude */}
                                 <button
                                     onClick={() => toggleRemove(idx)}
-                                    className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isRemoved
-                                        ? 'bg-white/10 text-white/30'
-                                        : 'text-white/50 hover:bg-white/10'
-                                        }`}
+                                    className="w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all"
+                                    style={{
+                                        borderColor: isRemoved ? 'rgba(255,255,255,0.2)' : projectColor,
+                                        backgroundColor: isRemoved ? 'transparent' : projectColor
+                                    }}
                                 >
-                                    {isRemoved ? (
-                                        <Plus className="h-3 w-3" />
-                                    ) : (
-                                        <Check className="h-3 w-3" />
+                                    {!isRemoved && (
+                                        <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
                                     )}
                                 </button>
 
@@ -166,38 +157,25 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
                                     </div>
                                     {item.is_new && !isRemoved && (
                                         <div
-                                            className="text-[9px] font-bold uppercase tracking-wider mt-0.5"
+                                            className="text-[9px] font-bold uppercase tracking-wider mt-0.5 opacity-70"
                                             style={{ color: projectColor }}
                                         >
-                                            AI Suggested
+                                            New
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Duration Controls */}
+                                {/* Duration - tap to cycle */}
                                 {!isRemoved && (
-                                    <div className="flex items-center gap-1 flex-shrink-0">
-                                        <button
-                                            onClick={() => cycleDuration(idx, 'down')}
-                                            className="p-1 hover:bg-white/10 rounded transition-colors"
-                                            disabled={item.estimated_minutes === DURATION_OPTIONS[0]}
-                                        >
-                                            <Minus className="h-3 w-3 text-white/50" />
-                                        </button>
-                                        <div className="w-12 text-center">
-                                            <span className="text-sm font-bold text-white">
-                                                {item.estimated_minutes}
-                                            </span>
-                                            <span className="text-[10px] text-white/50 ml-0.5">m</span>
-                                        </div>
-                                        <button
-                                            onClick={() => cycleDuration(idx, 'up')}
-                                            className="p-1 hover:bg-white/10 rounded transition-colors"
-                                            disabled={item.estimated_minutes === DURATION_OPTIONS[DURATION_OPTIONS.length - 1]}
-                                        >
-                                            <Plus className="h-3 w-3 text-white/50" />
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => cycleDuration(idx)}
+                                        className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex-shrink-0"
+                                    >
+                                        <span className="text-sm font-bold text-white">
+                                            {item.estimated_minutes}
+                                        </span>
+                                        <span className="text-[10px] text-white/50 ml-0.5">m</span>
+                                    </button>
                                 )}
                             </motion.div>
                         )
@@ -230,21 +208,15 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
                         />
                     </div>
 
-                    {/* Status Message */}
-                    <div className="mt-2 text-[11px] text-center">
-                        {isOvertime ? (
+                    {/* Status Message - only show if there's an issue */}
+                    {isOvertime && (
+                        <div className="mt-2 text-[11px] text-center">
                             <span className="text-red-400 flex items-center justify-center gap-1">
                                 <AlertTriangle className="h-3 w-3" />
-                                Over time limit - remove or shorten tasks
+                                Remove tasks to fit in 60 min
                             </span>
-                        ) : isIdeal ? (
-                            <span className="text-green-400">Perfect session length</span>
-                        ) : totalMinutes < 40 ? (
-                            <span className="text-white/50">Consider adding more tasks for a full session</span>
-                        ) : (
-                            <span className="text-yellow-400">Tight schedule - leave some buffer</span>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Action Button */}

@@ -128,11 +128,53 @@ export function PowerHourHero() {
         </div>
     )
 
-    const handleStartPowerHour = () => {
-        haptic.light()
-        setShowReview(true)
+    // Quick start - bypass review, use AI suggestions as-is
+    const handleStartPowerHour = async () => {
+        haptic.heavy()
+
+        const project = allProjects.find(p => p.id === mainTask.project_id)
+        if (!project) return
+
+        const items = mainTask.checklist_items?.map(item => ({
+            ...item,
+            estimated_minutes: item.estimated_minutes || 15
+        })) || []
+
+        let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
+
+        // Add new AI-suggested tasks
+        const newTasksFromAI = items.filter(item => item.is_new)
+
+        if (newTasksFromAI.length > 0) {
+            const freshTasks = newTasksFromAI.map((t, idx) => ({
+                id: crypto.randomUUID(),
+                text: t.text,
+                done: false,
+                created_at: new Date().toISOString(),
+                order: updatedTasks.length + idx,
+                estimated_minutes: t.estimated_minutes
+            }))
+
+            updatedTasks = [...updatedTasks, ...freshTasks]
+
+            await updateProject(project.id, {
+                metadata: {
+                    ...project.metadata,
+                    tasks: updatedTasks
+                }
+            })
+        }
+
+        navigate(`/projects/${mainTask.project_id}`, {
+            state: {
+                powerHourTask: mainTask,
+                highlightedTasks: items.map(i => ({ task_title: i.text })),
+                sessionDuration: mainTask.total_estimated_minutes || 50
+            }
+        })
     }
 
+    // From review modal - adjusted items
     const handleConfirmSession = async (
         adjustedItems: { text: string; is_new: boolean; estimated_minutes: number }[],
         totalMinutes: number
@@ -313,16 +355,26 @@ export function PowerHourHero() {
                                         }}
                                     >
                                         <Play className="h-3.5 w-3.5 fill-current" />
-                                        <span className="text-xs uppercase tracking-widest aperture-header">Start</span>
+                                        <span className="text-xs uppercase tracking-widest aperture-header">
+                                            Go ({mainTask.total_estimated_minutes || 50}m)
+                                        </span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowReview(true)}
+                                        className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white/70 aperture-header"
+                                    >
+                                        <Clock className="h-3.5 w-3.5" />
+                                        <span>Adjust</span>
                                     </button>
 
                                     {mainTask.fuel_id && (
                                         <button
                                             onClick={() => navigate(`/reading/${mainTask.fuel_id}`)}
-                                            className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header"
+                                            className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white/70 aperture-header"
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
-                                            <span>Read Fuel</span>
+                                            <span>Fuel</span>
                                         </button>
                                     )}
                                 </div>
