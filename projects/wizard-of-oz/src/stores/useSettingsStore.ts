@@ -83,6 +83,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 
   updateSettings: async (updates) => {
+    console.log('[SettingsStore] Updating settings:', updates);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -101,13 +102,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         .single();
 
       if (error) {
+        console.error('[SettingsStore] Error updating settings:', error.message, error.code);
         logger.error('Error updating settings', { error: error.message }, 'SettingsStore');
         throw error;
       }
 
+      console.log('[SettingsStore] Settings updated successfully');
       set({ settings: data as UserSettings });
       logger.info('Settings updated', { updates }, 'SettingsStore');
     } catch (error) {
+      console.error('[SettingsStore] Unexpected error updating settings:', error);
       logger.error('Unexpected error updating settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
@@ -146,6 +150,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 
   updateReminderSettings: async (reminderSettings) => {
+    console.log('[SettingsStore] Updating reminder settings:', reminderSettings);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -167,13 +172,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         .single();
 
       if (error) {
+        console.error('[SettingsStore] Error updating reminder settings:', error.message, error.code, error.details);
         logger.error('Error updating reminder settings', { error: error.message }, 'SettingsStore');
         throw error;
       }
 
+      console.log('[SettingsStore] Reminder settings updated successfully');
       set({ settings: data as UserSettings });
       logger.info('Reminder settings updated', reminderSettings, 'SettingsStore');
     } catch (error) {
+      console.error('[SettingsStore] Unexpected error updating reminder settings:', error);
       logger.error('Unexpected error updating reminder settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
