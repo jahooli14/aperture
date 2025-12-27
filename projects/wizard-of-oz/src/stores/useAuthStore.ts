@@ -14,7 +14,7 @@ interface AuthState {
 // Track if we've already set up the auth listener
 let authListenerInitialized = false;
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
 
