@@ -1,12 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Send, Trash2, Mic, MicOff } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { motion, AnimatePresence } from 'framer-motion'
-import { OptimizedImage } from '../components/ui/optimized-image'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
 
@@ -92,24 +90,33 @@ export default function ListDetailPage() {
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    className={`bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col ${isBook ? 'min-h-[400px]' : ''
-                                        }`}
+                                    className="bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col"
                                 >
                                     {/* Item Image / Cover */}
-                                    {item.metadata?.image ? (
-                                        <div className={`${isBook ? 'aspect-[2/3] mb-4' : 'aspect-video mb-3'
-                                            } rounded-lg overflow-hidden bg-zinc-800 shadow-xl ring-1 ring-white/10`}>
-                                            <OptimizedImage
-                                                src={item.metadata.image}
-                                                alt={item.content}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            />
-                                        </div>
-                                    ) : isBook ? (
-                                        <div className="aspect-[2/3] mb-4 rounded-lg bg-zinc-800 flex items-center justify-center border border-white/5 border-dashed">
-                                            <span className="text-zinc-600 text-xs font-mono">NO COVER</span>
-                                        </div>
-                                    ) : null}
+                                    {(() => {
+                                        const isPosterType = isBook || list.type === 'film' || list.type === 'movie' || list.type === 'show' || list.type === 'tv';
+                                        const hasImage = item.metadata?.image;
+
+                                        if (hasImage) {
+                                            return (
+                                                <div className={`${isPosterType ? 'aspect-[2/3]' : 'aspect-video'} mb-3 rounded-lg overflow-hidden bg-zinc-800/50 shadow-xl ring-1 ring-white/10 flex items-center justify-center`}>
+                                                    <img
+                                                        src={item.metadata.image}
+                                                        alt={item.content}
+                                                        className="max-w-full max-h-full w-auto h-auto object-contain transition-transform duration-500 group-hover:scale-105"
+                                                        loading="lazy"
+                                                    />
+                                                </div>
+                                            );
+                                        } else if (isPosterType) {
+                                            return (
+                                                <div className="aspect-[2/3] mb-3 rounded-lg bg-zinc-800/50 flex items-center justify-center border border-white/5 border-dashed">
+                                                    <span className="text-zinc-600 text-xs font-mono">NO COVER</span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
 
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between gap-2 mb-1">
