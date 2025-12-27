@@ -60,16 +60,20 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
     setQuickAddingPlaceId(place.id);
     try {
       const today = new Date().toISOString().split('T')[0];
+      console.log('[PlacesList] Quick adding visit for place:', place.id, 'date:', today);
       await addPlaceVisit({
         place_id: place.id,
         visit_date: today,
         notes: null,
       });
+      console.log('[PlacesList] Quick add visit success');
       setQuickAddSuccess(place.id);
       // Show success briefly then clear
       setTimeout(() => setQuickAddSuccess(null), 1500);
     } catch (error) {
-      console.error('Quick add visit failed:', error);
+      console.error('[PlacesList] Quick add visit failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to add place visit: ${errorMessage}`);
     } finally {
       setQuickAddingPlaceId(null);
     }

@@ -16,6 +16,8 @@ import { MilestoneBanner } from './components/MilestoneBanner';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { UpdateNotification } from './components/UpdateNotification';
+import { QuickAddFAB } from './components/QuickAddFAB';
+import { AddPlaceModal } from './components/AddPlaceModal';
 
 // Lazy load heavy components
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -36,6 +38,7 @@ function App() {
   const [showJoinCodePrompt, setShowJoinCodePrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPWAGuide, setShowPWAGuide] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
@@ -85,13 +88,19 @@ function App() {
   // Fetch settings when user is authenticated
   useEffect(() => {
     if (user) {
+      console.log('[App] User authenticated, fetching settings...', user.id);
       fetchSettings();
     }
   }, [user, fetchSettings]);
 
   // Check if user has completed onboarding & join code prompt & fetch photos
   useEffect(() => {
+    console.log('[App] Settings effect - user:', !!user, 'settings:', !!settings);
     if (user && settings) {
+      console.log('[App] User and settings loaded, settings:', {
+        join_code_prompted: settings.join_code_prompted,
+        onboarding_completed: settings.onboarding_completed
+      });
       if (!settings.join_code_prompted) {
         setShowJoinCodePrompt(true);
       } else if (!settings.onboarding_completed) {
@@ -99,6 +108,7 @@ function App() {
       }
 
       // Fetch photos once on login
+      console.log('[App] Fetching photos...');
       fetchPhotos();
     }
   }, [user, settings, fetchPhotos]);
@@ -162,15 +172,23 @@ function App() {
       }
     }, 8000);
 
-    // Nuclear option - if still loading after 30 seconds, force clear and reload
+    // Nuclear option - if still loading after 30 seconds, force clear app cache (preserve auth) and reload
     const nuclearTimer = setTimeout(() => {
       if (loadingRef.current) {
-        console.error('Force reloading after 30 seconds of loading');
+        console.error('[App] Force reloading after 30 seconds of loading');
         try {
-          localStorage.clear();
+          // Clear app-specific localStorage but PRESERVE auth session
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && !key.startsWith('sb-') && !key.includes('supabase') && !key.includes('auth')) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
           sessionStorage.clear();
         } catch (e) {
-          console.error('Failed to clear storage:', e);
+          console.error('[App] Failed to clear storage:', e);
         }
         window.location.reload();
       }
@@ -186,10 +204,30 @@ function App() {
   if (loading) {
     const handleClearCache = () => {
       try {
-        // Clear all localStorage
-        localStorage.clear();
-        // Clear all sessionStorage
+        // Clear app-specific localStorage but PRESERVE auth session
+        // This prevents users from being logged out when clearing cache
+        const authKeys: string[] = [];
+        const keysToRemove: string[] = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            // Preserve Supabase auth keys
+            if (key.startsWith('sb-') || key.includes('supabase') || key.includes('auth')) {
+              authKeys.push(key);
+            } else {
+              keysToRemove.push(key);
+            }
+          }
+        }
+
+        // Only remove non-auth keys
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('[App] Cleared cache, preserved auth keys:', authKeys);
+
+        // Clear sessionStorage (doesn't contain auth)
         sessionStorage.clear();
+
         // Reload the page
         window.location.reload();
       } catch (error) {
@@ -315,6 +353,40 @@ function App() {
             </motion.button>
             <motion.button
               type="button"
+              onClick={() => setView('places')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'places'}
+              className={`
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                ${view === 'places'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              📍 Places
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => setView('milestones')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              data-active={view === 'milestones'}
+              className={`
+                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
+                ${view === 'milestones'
+                  ? 'bg-primary-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }
+              `}
+            >
+              🌱 Milestones
+            </motion.button>
+            <motion.button
+              type="button"
               onClick={() => setView('calendar')}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -346,40 +418,6 @@ function App() {
               `}
             >
               ↔️ Compare
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('milestones')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'milestones'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'milestones'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              🌱 Milestones
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setView('places')}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              data-active={view === 'places'}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all min-h-[44px] touch-manipulation whitespace-nowrap flex items-center justify-center
-                ${view === 'places'
-                  ? 'bg-primary-600 text-white shadow-md'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }
-              `}
-            >
-              📍 Places
             </motion.button>
             </div>
           </div>
@@ -482,6 +520,23 @@ function App() {
 
       {/* PWA Update Notification */}
       <UpdateNotification />
+
+      {/* Quick Add FAB */}
+      <QuickAddFAB
+        onAddPhoto={() => setView('gallery')}
+        onAddPlace={() => setShowAddPlace(true)}
+        onAddMilestone={() => setView('milestones')}
+      />
+
+      {/* Add Place Modal */}
+      <AddPlaceModal
+        isOpen={showAddPlace}
+        onClose={() => setShowAddPlace(false)}
+        onSuccess={() => {
+          setShowAddPlace(false);
+          showToast('Place added successfully!', 'success');
+        }}
+      />
     </div>
   );
 }

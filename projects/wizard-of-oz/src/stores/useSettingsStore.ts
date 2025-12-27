@@ -21,6 +21,7 @@ interface SettingsState {
   joinWithCode: (inviteCode: string) => Promise<void>;
   getSharedUsers: () => Promise<Array<{ user_id: string; email: string | null }>>;
   removeSharedUser: (sharedUserId: string) => Promise<void>;
+  getJoinedAccount: () => Promise<{ owner_user_id: string } | null>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -29,16 +30,23 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   fetchSettings: async () => {
     set({ loading: true });
+    console.log('[SettingsStore] Fetching settings...');
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        console.error('[SettingsStore] Not authenticated');
+        throw new Error('Not authenticated');
+      }
+      console.log('[SettingsStore] User ID:', user.id);
 
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
         .single();
+
+      console.log('[SettingsStore] Settings query result:', { data: !!data, error: error?.message });
 
       if (error && error.code !== 'PGRST116') {
         // PGRST116 = no rows returned
@@ -75,6 +83,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 
   updateSettings: async (updates) => {
+    console.log('[SettingsStore] Updating settings:', updates);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -93,13 +102,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         .single();
 
       if (error) {
+        console.error('[SettingsStore] Error updating settings:', error.message, error.code);
         logger.error('Error updating settings', { error: error.message }, 'SettingsStore');
         throw error;
       }
 
+      console.log('[SettingsStore] Settings updated successfully');
       set({ settings: data as UserSettings });
       logger.info('Settings updated', { updates }, 'SettingsStore');
     } catch (error) {
+      console.error('[SettingsStore] Unexpected error updating settings:', error);
       logger.error('Unexpected error updating settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
@@ -138,6 +150,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   },
 
   updateReminderSettings: async (reminderSettings) => {
+    console.log('[SettingsStore] Updating reminder settings:', reminderSettings);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -159,13 +172,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         .single();
 
       if (error) {
+        console.error('[SettingsStore] Error updating reminder settings:', error.message, error.code, error.details);
         logger.error('Error updating reminder settings', { error: error.message }, 'SettingsStore');
         throw error;
       }
 
+      console.log('[SettingsStore] Reminder settings updated successfully');
       set({ settings: data as UserSettings });
       logger.info('Reminder settings updated', reminderSettings, 'SettingsStore');
     } catch (error) {
+      console.error('[SettingsStore] Unexpected error updating reminder settings:', error);
       logger.error('Unexpected error updating reminder settings', {
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
@@ -315,6 +331,36 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
       throw error;
+    }
+  },
+
+  getJoinedAccount: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      console.log('[SettingsStore] Checking if user has joined an account, user ID:', user.id);
+
+      // Check if this user has joined another account (they are the shared_user)
+      const { data: share, error } = await supabase
+        .from('user_shares')
+        .select('owner_user_id')
+        .eq('shared_user_id', user.id)
+        .maybeSingle();
+
+      console.log('[SettingsStore] Joined account check result:', { share, error: error?.message });
+
+      if (error) {
+        logger.error('Error checking joined account', { error: error.message }, 'SettingsStore');
+        return null;
+      }
+
+      return share;
+    } catch (error) {
+      logger.error('Unexpected error checking joined account', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'SettingsStore');
+      return null;
     }
   },
 }));

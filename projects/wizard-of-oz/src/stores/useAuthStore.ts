@@ -50,14 +50,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   initialize: async () => {
+    const startTime = Date.now();
+    console.log('[Auth] Starting initialization...');
     set({ loading: true });
 
     // Set up auth listener FIRST (before getSession) to ensure we don't miss any changes
     // This listener persists across the app lifecycle
     if (!authListenerInitialized) {
       authListenerInitialized = true;
+      console.log('[Auth] Setting up auth state listener...');
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        console.log('[Auth] State change:', event, session?.user?.id);
+        console.log('[Auth] State change:', event, 'user:', session?.user?.id, 'time:', Date.now() - startTime, 'ms');
         set({ user: session?.user ?? null, loading: false });
       });
 
@@ -65,14 +68,17 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (typeof window !== 'undefined') {
         (window as any).__authSubscription = subscription;
       }
+    } else {
+      console.log('[Auth] Auth listener already initialized');
     }
 
     try {
       // Try to get the current session with a longer timeout (15 seconds)
       // This is more forgiving on slow networks
+      console.log('[Auth] Calling getSession()...');
       const timeoutPromise = new Promise<{ data: { session: null } }>((resolve) => {
         setTimeout(() => {
-          console.warn('[Auth] Session check timed out, will rely on auth listener');
+          console.warn('[Auth] Session check timed out after 15s, will rely on auth listener');
           resolve({ data: { session: null } });
         }, 15000);
       });
@@ -80,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Race between session check and timeout
       const sessionPromise = supabase.auth.getSession();
       const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+      console.log('[Auth] getSession completed in', Date.now() - startTime, 'ms, hasSession:', !!session);
 
       // Only update if we got a valid session response
       // The auth listener will handle the rest
