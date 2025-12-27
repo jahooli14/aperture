@@ -30,16 +30,23 @@ export const useSettingsStore = create<SettingsState>((set) => ({
 
   fetchSettings: async () => {
     set({ loading: true });
+    console.log('[SettingsStore] Fetching settings...');
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        console.error('[SettingsStore] Not authenticated');
+        throw new Error('Not authenticated');
+      }
+      console.log('[SettingsStore] User ID:', user.id);
 
       const { data, error } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
         .single();
+
+      console.log('[SettingsStore] Settings query result:', { data: !!data, error: error?.message });
 
       if (error && error.code !== 'PGRST116') {
         // PGRST116 = no rows returned
@@ -324,12 +331,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      console.log('[SettingsStore] Checking if user has joined an account, user ID:', user.id);
+
       // Check if this user has joined another account (they are the shared_user)
       const { data: share, error } = await supabase
         .from('user_shares')
         .select('owner_user_id')
         .eq('shared_user_id', user.id)
         .maybeSingle();
+
+      console.log('[SettingsStore] Joined account check result:', { share, error: error?.message });
 
       if (error) {
         logger.error('Error checking joined account', { error: error.message }, 'SettingsStore');
