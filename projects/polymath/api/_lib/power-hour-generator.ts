@@ -83,13 +83,16 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         const allTasks = p.metadata?.tasks || []
         const unfinishedTasks = allTasks.filter((t: any) => !t.done).map((t: any) => t.text)
         const completedTasks = allTasks.filter((t: any) => t.done).map((t: any) => t.text)
+        const totalIncomplete = unfinishedTasks.length
+        const slotsAvailable = Math.max(0, 12 - totalIncomplete)
 
         const unfinishedList = unfinishedTasks.length > 0 ? unfinishedTasks.join(', ') : 'None yet'
         const completedList = completedTasks.length > 0 ? completedTasks.slice(-5).join(', ') : 'None yet'
 
         return `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
     Completed Tasks: ${completedList}
-    Remaining Tasks: ${unfinishedList}`
+    Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
+    Available Slots for New Tasks: ${slotsAvailable}`
     }).join('\n')
 
     const validFuelIds = new Set(fuel?.map(f => f.id) || [])
@@ -125,20 +128,37 @@ For each plan:
 4. Create a "Session Summary" - A 2-sentence motivating vision of exactly what will be better in the user's world after this hour.
 5. Create a "Checklist Hit-List" with 3-5 tasks:
    - Include any relevant existing unfinished tasks from the project (set is_new: false)
-   - MUST include 2-3 NEW suggested tasks (set is_new: true) - these are AI recommendations
+   - Add NEW suggested tasks (is_new: true) ONLY if "Available Slots for New Tasks" > 0
+   - The number of new tasks MUST NOT exceed the "Available Slots for New Tasks" shown for that project
    - New tasks should be FORWARD-LOOKING: they should logically follow from what's already done and remaining
    - New tasks should BREAK DOWN the project into achievable next steps that move toward completion
    - New tasks should be concrete, actionable steps starting with verbs
-   - NEVER duplicate or repeat existing tasks (completed or remaining)
-   - Examples: "Set up CI/CD pipeline", "Write unit tests", "Create user documentation", "Implement error handling"
 
-CRITICAL RULES:
-1. EVERY checklist item MUST have "is_new" as a boolean (true for AI suggestions, false for existing tasks).
-2. You MUST suggest at least 2 new tasks per project with is_new: true.
-3. New tasks must NOT overlap with completed or remaining tasks - they should be genuinely new next steps.
-4. ONLY use Fuel Items from the list provided above. Do not invent articles.
-5. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
-6. If no relevant fuel exists, omit the fuel_id.
+CRITICAL RULES FOR NEW TASKS (is_new: true):
+
+1. HARD CAP: Each project has a maximum of 12 incomplete tasks. Check "Available Slots for New Tasks" - if it's 0, DO NOT suggest any new tasks for that project.
+
+2. NO SEMANTIC DUPLICATES: Before suggesting a new task, analyze the MEANING of every existing task (completed and remaining). Ask yourself:
+   - "Does this new task describe the same work as an existing task, just worded differently?"
+   - "Would completing this new task also complete an existing task, or vice versa?"
+   If YES to either question, DO NOT suggest that task.
+
+   Examples of DUPLICATE tasks to AVOID:
+   - Existing: "Write tests" → DO NOT suggest: "Add unit tests", "Create test coverage", "Implement testing"
+   - Existing: "Set up deployment" → DO NOT suggest: "Configure deployment pipeline", "Deploy to production"
+   - Existing: "Design the UI" → DO NOT suggest: "Create user interface", "Build the frontend design"
+
+3. GENUINELY NEW WORK ONLY: New tasks must represent work that is NOT covered by any existing task. They should fill GAPS - things the user hasn't thought of yet that will move the project forward.
+
+4. PLAIN ENGLISH: Write tasks in simple, clear language. No jargon, no fancy rewording. If the user wrote "Make homepage", don't suggest "Architect the landing experience" - instead suggest something genuinely different like "Add contact form" or "Optimize images".
+
+5. EVERY checklist item MUST have "is_new" as a boolean (true for AI suggestions, false for existing tasks).
+
+6. ONLY use Fuel Items from the list provided above. Do not invent articles.
+
+7. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
+
+8. If no relevant fuel exists, omit the fuel_id.
 
 Output JSON only (no markdown, no explanation):
 {
