@@ -324,7 +324,8 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     set({ deleting: true });
 
     try {
-      const apiUrl = window.location.origin + '/api/delete-photo';
+      // Use the consolidated pupils API endpoint
+      const apiUrl = window.location.origin + '/api/pupils?action=delete-photo';
 
       const response = await fetch(apiUrl, {
         method: 'DELETE',
