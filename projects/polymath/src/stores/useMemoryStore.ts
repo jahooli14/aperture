@@ -284,15 +284,29 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       return optimisticMemory
     }
 
-    // Online flow
+    // Online flow - use API endpoint which handles auth and user_id properly
     try {
-      const { data, error } = await supabase
-        .from('memories')
-        .insert(newMemory)
-        .select()
-        .single()
+      console.log('[MemoryStore] Creating memory via API...')
+      const response = await fetch('/api/memories?capture=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          body: input.body,
+          title: input.title,
+          tags: input.tags,
+          memory_type: input.memory_type,
+          image_urls: input.image_urls,
+          source_reference: input.source_reference
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('[MemoryStore] API error:', errorData)
+        throw new Error(errorData.details || errorData.error || `Failed to create memory (${response.status})`)
+      }
+
+      const { memory: data } = await response.json()
 
       // Add to local state and update cache timestamp
       set((state) => ({
@@ -300,20 +314,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         lastFetched: Date.now(),
       }))
 
-      // Trigger background processing
-      try {
-        await fetch('/api/memories?action=process', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memory_id: data.id })
-        })
-      } catch (processError) {
-        console.error('Failed to trigger processing:', processError)
-        // Don't throw - memory was created successfully
-      }
-
+      console.log('[MemoryStore] Memory created successfully:', data.id)
       return data
     } catch (error) {
+      console.error('[MemoryStore] Create memory failed:', error)
       throw error instanceof Error ? error : new Error('Failed to create memory')
     }
   },
