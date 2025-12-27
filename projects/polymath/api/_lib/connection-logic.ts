@@ -7,7 +7,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface ConnectionCandidate {
-  type: 'project' | 'thought' | 'article'
+  type: 'project' | 'thought' | 'article' | 'list_item'
   id: string
   title: string
   similarity: number
@@ -26,7 +26,7 @@ interface ConnectionCandidate {
  */
 export async function updateItemConnections(
   sourceId: string,
-  sourceType: 'project' | 'thought' | 'article',
+  sourceType: 'project' | 'thought' | 'article' | 'list_item',
   sourceEmbedding: number[],
   userId: string
 ): Promise<void> {
@@ -106,7 +106,34 @@ export async function updateItemConnections(
     }
   }
 
-  // 4. Sort and Take Top 5
+  // 4. Search List Items (films, books, etc.)
+  // This enables cross-pollination: "Rothko film" → "paint pouring project"
+  if (sourceType !== 'list_item') {
+    const { data: listItems } = await supabase
+      .from('list_items')
+      .select('id, content, metadata, embedding')
+      .eq('user_id', userId)
+      .neq('id', sourceId)
+      .not('embedding', 'is', null)
+
+    if (listItems) {
+      for (const item of listItems) {
+        if (item.embedding) {
+          const similarity = cosineSimilarity(sourceEmbedding, item.embedding)
+          if (similarity > 0.55) {
+            candidates.push({
+              type: 'list_item',
+              id: item.id,
+              title: item.content || item.metadata?.title || 'Untitled',
+              similarity
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // 5. Sort and Take Top 5
   candidates.sort((a, b) => b.similarity - a.similarity)
   const topCandidates = candidates.slice(0, 5)
 
