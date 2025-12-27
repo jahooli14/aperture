@@ -62,6 +62,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
   fetchPhotos: async () => {
     set({ loading: true, fetchError: null });
+    console.log('[PhotoStore] Fetching photos...');
 
     // Add timeout to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) => {
@@ -86,6 +87,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       if (error) {
         logger.error('Error fetching photos', { error: error.message }, 'PhotoStore');
+        console.error('[PhotoStore] Error fetching photos:', error.message);
         const errorMsg = `Database error: ${error.message}`;
         set({ loading: false, fetchError: errorMsg });
         return;
@@ -93,6 +95,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
 
       // Generate signed URLs using batch API for performance
       const dataArray: Photo[] = data || [];
+      console.log(`[PhotoStore] Fetched ${dataArray.length} photos from database`);
 
       // Collect all paths that need signed URLs (check cache first)
       const pathsToGenerate: { type: 'original' | 'aligned', path: string, photoIndex: number }[] = [];
@@ -321,7 +324,8 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     set({ deleting: true });
 
     try {
-      const apiUrl = window.location.origin + '/api/delete-photo';
+      // Use the consolidated pupils API endpoint
+      const apiUrl = window.location.origin + '/api/pupils?action=delete-photo';
 
       const response = await fetch(apiUrl, {
         method: 'DELETE',

@@ -15,7 +15,7 @@ const PASSCODE_KEY = 'wizard-passcode';
 
 export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps) {
   const { photos, fetchPhotos } = usePhotoStore();
-  const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser, joinWithCode } = useSettingsStore();
+  const { settings, updateBirthdate, updateReminderSettings, generateInviteCode, getSharedUsers, removeSharedUser, joinWithCode, getJoinedAccount } = useSettingsStore();
   const [privacyMode, setPrivacyMode] = useState(false);
   const [hasPasscode, setHasPasscode] = useState(false);
   const [showPasscodeSetup, setShowPasscodeSetup] = useState(false);
@@ -38,6 +38,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
   const [joinCode, setJoinCode] = useState('');
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
+  const [joinedAccount, setJoinedAccount] = useState<{ owner_user_id: string } | null>(null);
 
   useEffect(() => {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
@@ -88,18 +89,22 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
     return () => clearTimeout(timer);
   }, [pushStatusChecked]);
 
-  // Load shared users
+  // Load shared users and check if user has joined another account
   useEffect(() => {
-    async function loadSharedUsers() {
+    async function loadSharingInfo() {
       try {
-        const users = await getSharedUsers();
+        const [users, joined] = await Promise.all([
+          getSharedUsers(),
+          getJoinedAccount()
+        ]);
         setSharedUsers(users);
+        setJoinedAccount(joined);
       } catch (error) {
-        console.warn('Could not load shared users:', error);
+        console.warn('Could not load sharing info:', error);
       }
     }
-    loadSharedUsers();
-  }, [getSharedUsers]);
+    loadSharingInfo();
+  }, [getSharedUsers, getJoinedAccount]);
 
   const handlePrivacyModeToggle = () => {
     const newValue = !privacyMode;
@@ -242,12 +247,16 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
 
     try {
       await joinWithCode(joinCode.trim());
+      // Update joined account state
+      const joined = await getJoinedAccount();
+      setJoinedAccount(joined);
       await fetchPhotos();
       setJoinCode('');
+      setJoining(false);
       if (onJoinSuccess) {
         onJoinSuccess();
       }
-      alert('Successfully joined the shared album!');
+      alert('Successfully joined the shared album! You should now see shared photos.');
     } catch (err) {
       setJoinError(err instanceof Error ? err.message : 'Failed to join with code');
       setJoining(false);
@@ -528,40 +537,66 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 mb-1">Join Shared Album</h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  Enter your partner's invite code to access their photos
-                </p>
 
-                <form onSubmit={handleJoinAlbum} className="space-y-3">
-                  <div>
-                    <label htmlFor="joinCodeSettings" className="block text-xs font-medium text-gray-700 mb-1">
-                      6-Digit Invite Code
-                    </label>
-                    <input
-                      id="joinCodeSettings"
-                      type="text"
-                      value={joinCode}
-                      onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="000000"
-                      maxLength={6}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-center text-lg tracking-wider font-mono"
-                    />
-                  </div>
-
-                  {joinError && (
-                    <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
-                      {joinError}
+                {joinedAccount ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-green-100 border border-green-300 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+                        <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                        Connected to a shared album
+                      </p>
+                      <p className="text-xs text-green-700 mt-1">
+                        You are viewing photos shared with you. Owner ID: {joinedAccount.owner_user_id.slice(0, 8)}...
+                      </p>
                     </div>
-                  )}
+                    <p className="text-xs text-gray-600">
+                      You can see all photos uploaded by the album owner and any other connected users.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Enter your partner's invite code to access their photos
+                    </p>
 
-                  <button
-                    type="submit"
-                    disabled={joining || joinCode.length !== 6}
-                    className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
-                  >
-                    {joining ? 'Joining...' : 'Join Album'}
-                  </button>
-                </form>
+                    <form onSubmit={handleJoinAlbum} className="space-y-3">
+                      <div>
+                        <label htmlFor="joinCodeSettings" className="block text-xs font-medium text-gray-700 mb-1">
+                          6-Digit Invite Code
+                        </label>
+                        <input
+                          id="joinCodeSettings"
+                          type="text"
+                          value={joinCode}
+                          onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000"
+                          maxLength={6}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-center text-lg tracking-wider font-mono"
+                        />
+                      </div>
+
+                      {joinError && (
+                        <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs">
+                          {joinError}
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={joining || joinCode.length !== 6}
+                        className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                      >
+                        {joining ? 'Joining...' : 'Join Album'}
+                      </button>
+                    </form>
+
+                    <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-800">
+                        <strong>Not seeing photos?</strong> You need to enter your partner's invite code to see their photos. Ask them to generate a code in their Settings.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
