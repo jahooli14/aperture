@@ -16,6 +16,8 @@ import { MilestoneBanner } from './components/MilestoneBanner';
 import { Toast } from './components/Toast';
 import { useToast } from './hooks/useToast';
 import { UpdateNotification } from './components/UpdateNotification';
+import { QuickAddFAB } from './components/QuickAddFAB';
+import { AddPlaceModal } from './components/AddPlaceModal';
 
 // Lazy load heavy components
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -36,6 +38,7 @@ function App() {
   const [showJoinCodePrompt, setShowJoinCodePrompt] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPWAGuide, setShowPWAGuide] = useState(false);
+  const [showAddPlace, setShowAddPlace] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passcode, setPasscode] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
@@ -517,6 +520,23 @@ function App() {
 
       {/* PWA Update Notification */}
       <UpdateNotification />
+
+      {/* Quick Add FAB */}
+      <QuickAddFAB
+        onAddPhoto={() => setView('gallery')}
+        onAddPlace={() => setShowAddPlace(true)}
+        onAddMilestone={() => setView('milestones')}
+      />
+
+      {/* Add Place Modal */}
+      <AddPlaceModal
+        isOpen={showAddPlace}
+        onClose={() => setShowAddPlace(false)}
+        onSuccess={() => {
+          setShowAddPlace(false);
+          showToast('Place added successfully!', 'success');
+        }}
+      />
     </div>
   );
 }
