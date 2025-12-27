@@ -72,6 +72,32 @@ export interface CachedProject {
   cached_at: string
 }
 
+// Cached List interface
+export interface CachedList {
+  id: string
+  user_id: string
+  title: string
+  description: string | null
+  type: string
+  created_at: string
+  updated_at?: string
+  cached_at: string
+}
+
+// Cached List Item interface
+export interface CachedListItem {
+  id: string
+  list_id: string
+  user_id: string
+  content: string
+  status: string
+  metadata?: any
+  enrichment_status: string
+  sort_order?: number
+  created_at: string
+  cached_at: string
+}
+
 export class RosetteDatabase extends Dexie {
   // Reading Tables
   articles!: Table<CachedArticle, string>
@@ -81,6 +107,10 @@ export class RosetteDatabase extends Dexie {
 
   // Project Tables
   projects!: Table<CachedProject, string>
+
+  // List Tables
+  lists!: Table<CachedList, string>
+  listItems!: Table<CachedListItem, string>
 
   // Capture & Memory Tables
   pendingCaptures!: Table<PendingCapture, number>
@@ -103,6 +133,32 @@ export class RosetteDatabase extends Dexie {
 
       // Projects
       projects: 'id, status, is_priority, updated_at, last_active',
+
+      // Captures
+      pendingCaptures: '++id, timestamp, synced',
+
+      // Memories Cache
+      memories: 'id, cached_at',
+
+      // Connections & Dashboard
+      connections: 'id, source_id, target_id, type',
+      dashboard: 'id, updated_at'
+    })
+
+    // Version 2: Add lists and list items for offline
+    this.version(2).stores({
+      // Reading
+      articles: 'id, user_id, status, created_at, last_synced, offline_available',
+      images: '++id, article_id, url, cached_at',
+      highlights: 'id, article_id, created_at',
+      progress: '++id, article_id, updated_at',
+
+      // Projects
+      projects: 'id, status, is_priority, updated_at, last_active',
+
+      // Lists (NEW)
+      lists: 'id, user_id, type, created_at',
+      listItems: 'id, list_id, user_id, enrichment_status, created_at',
 
       // Captures
       pendingCaptures: '++id, timestamp, synced',
@@ -299,6 +355,46 @@ export class RosetteDatabase extends Dexie {
   async getDashboard(key: string): Promise<any | null> {
     const entry = await this.dashboard.get(key)
     return entry ? entry.data : null
+  }
+
+  // --- List Cache Methods ---
+
+  async cacheLists(lists: any[]): Promise<void> {
+    const cachedLists: CachedList[] = lists.map(l => ({
+      ...l,
+      cached_at: new Date().toISOString()
+    }))
+    await this.lists.bulkPut(cachedLists)
+  }
+
+  async getCachedLists(): Promise<CachedList[]> {
+    return await this.lists.toArray()
+  }
+
+  async cacheListItems(items: any[]): Promise<void> {
+    const cachedItems: CachedListItem[] = items.map(i => ({
+      ...i,
+      cached_at: new Date().toISOString()
+    }))
+    await this.listItems.bulkPut(cachedItems)
+  }
+
+  async getCachedListItems(listId: string): Promise<CachedListItem[]> {
+    return await this.listItems.where('list_id').equals(listId).toArray()
+  }
+
+  async getAllCachedListItems(): Promise<CachedListItem[]> {
+    return await this.listItems.toArray()
+  }
+
+  async deleteListItemFromCache(id: string): Promise<void> {
+    await this.listItems.delete(id)
+  }
+
+  async deleteListFromCache(id: string): Promise<void> {
+    await this.lists.delete(id)
+    // Also delete associated items
+    await this.listItems.where('list_id').equals(id).delete()
   }
 }
 
