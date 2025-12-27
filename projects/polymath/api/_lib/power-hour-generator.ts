@@ -14,7 +14,9 @@ interface PowerHourTask {
     checklist_items: {
         text: string
         is_new: boolean
+        estimated_minutes: number // Duration estimate: 5, 15, 25, or 45
     }[] // The specific "hit list" for the hour
+    total_estimated_minutes: number // Sum of all checklist item durations
     impact_score: number
     fuel_id?: string
     fuel_title?: string
@@ -105,7 +107,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     }).join('\n') || 'No recent list items.'
 
     const prompt = `You are the APERTURE ENGINE. Your goal is JOYOUS MOMENTUM.
-It is a "Power Hour" - 60 minutes of high-focus, high-impact work.
+It is a "Power Hour" - 50 minutes of focused work (with 10 min buffer for planning/wrap-up).
 
 CURRENT PROJECTS:
 ${projectsContext}
@@ -119,13 +121,13 @@ Use this as creative cross-pollination - a film about an artist might inspire te
 
 TASK:
 Generate Power Hour session plans for each project above.
-Each plan must be a joyous, motivating blueprint for 60 minutes of work.
+Each plan must be a joyous, motivating blueprint for ~50 minutes of focused work.
 
 For each plan:
 1. Select a focus project (use the exact project_id from the list above).
-2. Create a "Task Title" (the core theme of the hour).
+2. Create a "Task Title" (the core theme of the session).
 3. Create a "Task Description" (the high-level mission).
-4. Create a "Session Summary" - A 2-sentence motivating vision of exactly what will be better in the user's world after this hour.
+4. Create a "Session Summary" - A 2-sentence motivating vision of exactly what will be better in the user's world after this session.
 5. Create a "Checklist Hit-List" with 3-5 tasks:
    - Include any relevant existing unfinished tasks from the project (set is_new: false)
    - Add NEW suggested tasks (is_new: true) ONLY if "Available Slots for New Tasks" > 0
@@ -133,6 +135,17 @@ For each plan:
    - New tasks should be FORWARD-LOOKING: they should logically follow from what's already done and remaining
    - New tasks should BREAK DOWN the project into achievable next steps that move toward completion
    - New tasks should be concrete, actionable steps starting with verbs
+
+DURATION ESTIMATION (REQUIRED for every checklist item):
+
+Each task MUST include an "estimated_minutes" field. Use these buckets:
+- 5 min: Quick tasks (send a message, make a small tweak, review something brief)
+- 15 min: Short tasks (write a function, sketch an idea, research a topic)
+- 25 min: Standard tasks (implement a feature, write a section, design a component)
+- 45 min: Deep work (complex debugging, architectural decisions, creative flow work)
+
+The total "total_estimated_minutes" for all checklist items should be 40-55 minutes (ideal: ~50).
+If the total exceeds 55 minutes, remove lower-priority tasks until it fits.
 
 CRITICAL RULES FOR NEW TASKS (is_new: true):
 
@@ -152,7 +165,7 @@ CRITICAL RULES FOR NEW TASKS (is_new: true):
 
 4. PLAIN ENGLISH: Write tasks in simple, clear language. No jargon, no fancy rewording. If the user wrote "Make homepage", don't suggest "Architect the landing experience" - instead suggest something genuinely different like "Add contact form" or "Optimize images".
 
-5. EVERY checklist item MUST have "is_new" as a boolean (true for AI suggestions, false for existing tasks).
+5. EVERY checklist item MUST have "is_new" as a boolean AND "estimated_minutes" as a number.
 
 6. ONLY use Fuel Items from the list provided above. Do not invent articles.
 
@@ -170,9 +183,10 @@ Output JSON only (no markdown, no explanation):
       "task_description": "string",
       "session_summary": "string",
       "checklist_items": [
-        { "text": "string", "is_new": true },
-        { "text": "string", "is_new": false }
+        { "text": "string", "is_new": true, "estimated_minutes": 25 },
+        { "text": "string", "is_new": false, "estimated_minutes": 15 }
       ],
+      "total_estimated_minutes": 50,
       "impact_score": 0.1-1.0,
       "fuel_id": "string (optional valid id)",
       "fuel_title": "string (optional)"
@@ -187,7 +201,9 @@ Output JSON only (no markdown, no explanation):
     const tasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : { tasks: [] }
     console.log('[PowerHour] Parsed tasks data:', JSON.stringify(tasksData, null, 2))
 
-    // 4. Validate Fuel IDs & Cleanup
+    // 4. Validate Fuel IDs, Duration Estimates & Cleanup
+    const validDurations = [5, 15, 25, 45]
+
     const validatedTasks: PowerHourTask[] = tasksData.tasks.map((task: any) => {
         let validFuelId = task.fuel_id
         let validFuelTitle = task.fuel_title
@@ -198,12 +214,43 @@ Output JSON only (no markdown, no explanation):
             validFuelTitle = undefined
         }
 
+        // Validate and normalize duration estimates for each checklist item
+        const validatedItems = (task.checklist_items || []).map((item: any) => {
+            let estimatedMinutes = item.estimated_minutes
+
+            // If missing or invalid, assign a reasonable default based on is_new
+            if (typeof estimatedMinutes !== 'number' || !validDurations.includes(estimatedMinutes)) {
+                // Default: 15 min for existing tasks, 25 min for new suggestions
+                estimatedMinutes = item.is_new ? 25 : 15
+                console.warn(`[PowerHour] Fixed invalid duration for "${item.text}": ${estimatedMinutes}min`)
+            }
+
+            return {
+                ...item,
+                estimated_minutes: estimatedMinutes
+            }
+        })
+
+        // Calculate total estimated minutes
+        const totalEstimatedMinutes = validatedItems.reduce(
+            (sum: number, item: any) => sum + (item.estimated_minutes || 15),
+            0
+        )
+
         return {
             ...task,
+            checklist_items: validatedItems,
+            total_estimated_minutes: totalEstimatedMinutes,
             fuel_id: validFuelId,
             fuel_title: validFuelTitle
         }
     })
+
+    console.log('[PowerHour] Validated tasks with durations:', validatedTasks.map(t => ({
+        project: t.project_title,
+        total_minutes: t.total_estimated_minutes,
+        items: t.checklist_items.map((i: any) => `${i.text} (${i.estimated_minutes}min)`)
+    })))
 
     return validatedTasks
 }

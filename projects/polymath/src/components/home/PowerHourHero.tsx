@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { PowerHourReview } from './PowerHourReview'
 
 import { PROJECT_COLORS } from '../projects/ProjectCard'
 
@@ -14,7 +15,8 @@ interface PowerTask {
     task_title: string
     task_description: string
     session_summary?: string
-    checklist_items?: { text: string; is_new: boolean }[]
+    checklist_items?: { text: string; is_new: boolean; estimated_minutes?: number }[]
+    total_estimated_minutes?: number
     impact_score: number
     fuel_id?: string
     fuel_title?: string
@@ -27,6 +29,7 @@ export function PowerHourHero() {
     const [selectedIndex, setSelectedIndex] = useState(0)
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [showProjectPicker, setShowProjectPicker] = useState(false)
+    const [showReview, setShowReview] = useState(false)
     const navigate = useNavigate()
 
     // Get all projects for the manual picker
@@ -125,15 +128,25 @@ export function PowerHourHero() {
         </div>
     )
 
-    const handleStartPowerHour = async () => {
+    const handleStartPowerHour = () => {
+        haptic.light()
+        setShowReview(true)
+    }
+
+    const handleConfirmSession = async (
+        adjustedItems: { text: string; is_new: boolean; estimated_minutes: number }[],
+        totalMinutes: number
+    ) => {
+        setShowReview(false)
         haptic.heavy()
+
         const project = allProjects.find(p => p.id === mainTask.project_id)
         if (!project) return
 
         let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
 
-        // 1. Identify new tasks to add
-        const newTasksFromAI = mainTask.checklist_items?.filter(item => item.is_new) || []
+        // 1. Identify new tasks to add (only from adjusted/confirmed items)
+        const newTasksFromAI = adjustedItems.filter(item => item.is_new)
 
         if (newTasksFromAI.length > 0) {
             const freshTasks = newTasksFromAI.map((t, idx) => ({
@@ -141,7 +154,8 @@ export function PowerHourHero() {
                 text: t.text,
                 done: false,
                 created_at: new Date().toISOString(),
-                order: updatedTasks.length + idx
+                order: updatedTasks.length + idx,
+                estimated_minutes: t.estimated_minutes
             }))
 
             updatedTasks = [...updatedTasks, ...freshTasks]
@@ -155,12 +169,17 @@ export function PowerHourHero() {
             })
         }
 
-        // 2. Navigate with full context
+        // 2. Navigate with full context including session duration
         navigate(`/projects/${mainTask.project_id}`, {
             state: {
-                powerHourTask: mainTask,
-                // Pass the specific tasks we want highlighted, based on text matching
-                highlightedTasks: mainTask.checklist_items?.map(i => ({ task_title: i.text })) || []
+                powerHourTask: {
+                    ...mainTask,
+                    checklist_items: adjustedItems,
+                    total_estimated_minutes: totalMinutes
+                },
+                // Pass the specific tasks we want highlighted
+                highlightedTasks: adjustedItems.map(i => ({ task_title: i.text })),
+                sessionDuration: totalMinutes
             }
         })
     }
@@ -249,9 +268,39 @@ export function PowerHourHero() {
                                     {mainTask.task_title}
                                 </h1>
 
-                                <p className="text-[var(--brand-text-secondary)] mb-6 text-sm leading-relaxed aperture-body line-clamp-2">
+                                <p className="text-[var(--brand-text-secondary)] mb-4 text-sm leading-relaxed aperture-body line-clamp-2">
                                     {mainTask.task_description}
                                 </p>
+
+                                {/* Task Preview with Durations */}
+                                {mainTask.checklist_items && mainTask.checklist_items.length > 0 && (
+                                    <div className="mb-5 space-y-1.5">
+                                        {mainTask.checklist_items.slice(0, 4).map((item, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center gap-2 text-xs"
+                                            >
+                                                <div
+                                                    className="w-1 h-1 rounded-full flex-shrink-0"
+                                                    style={{ backgroundColor: item.is_new ? theme.text : 'rgba(255,255,255,0.3)' }}
+                                                />
+                                                <span className={`truncate flex-1 ${item.is_new ? 'text-white/80' : 'text-white/50'}`}>
+                                                    {item.text}
+                                                </span>
+                                                <span
+                                                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-white/50 flex-shrink-0"
+                                                >
+                                                    {item.estimated_minutes || 15}m
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {mainTask.checklist_items.length > 4 && (
+                                            <div className="text-[10px] text-white/30 pl-3">
+                                                +{mainTask.checklist_items.length - 4} more
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="flex flex-wrap gap-3">
                                     <button
@@ -302,7 +351,9 @@ export function PowerHourHero() {
                         <div className="mt-4 pt-4 border-t border-white/5 w-full flex justify-center text-white/30">
                             <div className="flex items-center gap-1.5">
                                 <Clock className="h-3 w-3" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest aperture-header">60m</span>
+                                <span className="text-[9px] font-bold uppercase tracking-widest aperture-header">
+                                    {mainTask.total_estimated_minutes || 50}m
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -336,6 +387,25 @@ export function PowerHourHero() {
                     </div>
                 )}
             </div>
+
+            {/* Review Modal */}
+            <AnimatePresence>
+                {showReview && mainTask && mainTask.checklist_items && (
+                    <PowerHourReview
+                        task={{
+                            ...mainTask,
+                            checklist_items: mainTask.checklist_items.map(item => ({
+                                ...item,
+                                estimated_minutes: item.estimated_minutes || 15
+                            })),
+                            total_estimated_minutes: mainTask.total_estimated_minutes || 50
+                        }}
+                        projectColor={theme.text}
+                        onClose={() => setShowReview(false)}
+                        onStart={handleConfirmSession}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 }
