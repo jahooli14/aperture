@@ -1,6 +1,7 @@
 import { useProjectStore } from '../../stores/useProjectStore'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useReadingStore } from '../../stores/useReadingStore'
+import { useListStore } from '../../stores/useListStore'
 import { useOfflineStore } from '../../stores/useOfflineStore'
 import { offlineContentManager } from '../offline/OfflineContentManager'
 import { readingDb } from '../db'
@@ -36,10 +37,12 @@ class DataSynchronizer {
    * 1. Projects
    * 2. Memories
    * 3. Reading List (Articles + Content)
-   * 4. Connections (Bridges)
-   * 5. Dashboard Data (Insights/Inspiration)
-   * 
+   * 4. Lists & List Items (films, books, etc.)
+   * 5. Connections (Bridges)
+   * 6. Dashboard Data (Insights/Inspiration)
+   *
    * Fetches fresh data from API and updates Dexie cache via the stores.
+   * All content is available offline immediately after sync.
    */
   public async sync() {
     if (this.isSyncing) {
@@ -55,7 +58,7 @@ class DataSynchronizer {
 
     this.isSyncing = true
     useOfflineStore.getState().setPulling(true)
-    console.log('[DataSynchronizer] Starting sync...')
+    console.log('[DataSynchronizer] Starting comprehensive sync...')
 
     try {
       // Run fetches in parallel for speed
@@ -64,6 +67,7 @@ class DataSynchronizer {
         this.syncProjects(),
         this.syncMemories(),
         this.syncReadingList(),
+        this.syncLists(),
         this.syncConnections(),
         this.syncDashboard()
       ])
@@ -124,6 +128,25 @@ class DataSynchronizer {
     }
   }
   
+  private async syncLists() {
+    console.log('[DataSynchronizer] Syncing lists...')
+    try {
+      // 1. Fetch all lists
+      await useListStore.getState().fetchLists()
+
+      const lists = useListStore.getState().lists
+
+      // 2. Fetch items for each list (ensures all items are cached)
+      for (const list of lists) {
+        await useListStore.getState().fetchListItems(list.id)
+      }
+
+      console.log(`[DataSynchronizer] Synced ${lists.length} lists with items`)
+    } catch (error) {
+      console.error('[DataSynchronizer] Lists sync failed:', error)
+    }
+  }
+
   private async syncConnections() {
     console.log('[DataSynchronizer] Syncing connections...')
     try {
@@ -143,21 +166,62 @@ class DataSynchronizer {
   private async syncDashboard() {
     console.log('[DataSynchronizer] Syncing dashboard data...')
     try {
-      // Fetch Inspiration
-      const inspirationRes = await fetch('/api/analytics?resource=inspiration')
-      if (inspirationRes.ok) {
-        const data = await inspirationRes.json()
-        await readingDb.cacheDashboard('inspiration', data)
-      }
-      
-      // Fetch Evolution (Insights)
-      const evolutionRes = await fetch('/api/analytics?resource=evolution')
-      if (evolutionRes.ok) {
-        const data = await evolutionRes.json()
-        await readingDb.cacheDashboard('evolution', data)
-      }
-      
-      console.log('[DataSynchronizer] Dashboard data cached')
+      // Sync all dashboard resources in parallel
+      await Promise.allSettled([
+        // Inspiration
+        fetch('/api/analytics?resource=inspiration').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('inspiration', data)
+          }
+        }),
+
+        // Evolution (Insights)
+        fetch('/api/analytics?resource=evolution').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('evolution', data)
+          }
+        }),
+
+        // Patterns (Timeline)
+        fetch('/api/analytics?resource=patterns').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('patterns', data)
+          }
+        }),
+
+        // Bedtime prompts
+        fetch('/api/projects?resource=bedtime').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            await readingDb.cacheDashboard('bedtime', data)
+          }
+        }),
+
+        // Power Hour tasks
+        fetch('/api/power-hour').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (data.tasks) {
+              await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
+            }
+          }
+        }),
+
+        // RSS Feeds
+        fetch('/api/reading?resource=rss').then(async (res) => {
+          if (res.ok) {
+            const data = await res.json()
+            if (Array.isArray(data.feeds)) {
+              await readingDb.cacheDashboard('rss-feeds', data.feeds)
+            }
+          }
+        })
+      ])
+
+      console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, power-hour, rss)')
     } catch (error) {
       console.error('[DataSynchronizer] Dashboard sync failed:', error)
     }

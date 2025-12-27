@@ -117,11 +117,28 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
       }
 
       case 'add_list_item': {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('list_items')
           .insert(operation.data)
+          .select()
+          .single()
 
         if (error) throw error
+
+        // Trigger enrichment for items added offline
+        // This ensures AI enrichment happens when back online
+        if (data) {
+          try {
+            await fetch(`/api/list-items?listId=${data.list_id}&action=enrich`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ itemId: data.id, content: data.content })
+            })
+            console.log('[SyncManager] Triggered enrichment for offline list item:', data.id)
+          } catch (enrichError) {
+            console.warn('[SyncManager] Enrichment trigger failed, item will remain pending:', enrichError)
+          }
+        }
         return true
       }
 
@@ -156,6 +173,28 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
             .eq('id', itemIds[i])
           if (error) throw error
         }
+        return true
+      }
+
+      // Article/Reading operations
+      case 'update_article': {
+        const { id, ...updateData } = operation.data
+        const { error } = await supabase
+          .from('reading_queue')
+          .update(updateData)
+          .eq('id', id)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'delete_article': {
+        const { error } = await supabase
+          .from('reading_queue')
+          .delete()
+          .eq('id', operation.data.id)
+
+        if (error) throw error
         return true
       }
 

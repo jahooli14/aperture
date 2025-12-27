@@ -136,6 +136,13 @@ export default function App() {
     // Start periodic data sync (pull updates)
     dataSynchronizer.startPeriodicSync()
 
+    // Trigger immediate sync on startup if online
+    // This ensures all content is fresh and available for offline use
+    if (navigator.onLine) {
+      console.log('[App] Triggering initial sync...')
+      dataSynchronizer.sync()
+    }
+
     // Track online/offline status
     const handleOnline = () => {
       console.log('[App] Connection restored')

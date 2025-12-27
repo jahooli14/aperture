@@ -6,24 +6,47 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent } from '../components/ui/card'
-import { Clock, TrendingUp, Calendar, Zap } from 'lucide-react'
+import { Clock, TrendingUp, Calendar, Zap, WifiOff } from 'lucide-react'
 import type { CognitivePattern, TimelinePattern } from '../types'
+import { readingDb } from '../lib/db'
 
 export function TimelinePage() {
   const [patterns, setPatterns] = useState<CognitivePattern[]>([])
   const [timeline, setTimeline] = useState<TimelinePattern | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   const fetchPatterns = useCallback(async () => {
     setLoading(true)
     try {
+      // 1. Load from cache first (instant)
+      const cached = await readingDb.getDashboard('patterns')
+      if (cached) {
+        setPatterns(cached.patterns || [])
+        setTimeline(cached.timeline || null)
+        setLoading(false)
+      }
+
+      // 2. If offline, stop here
+      if (!navigator.onLine) {
+        setIsOffline(true)
+        if (!cached) setLoading(false)
+        return
+      }
+
+      // 3. Fetch fresh data from network
+      setIsOffline(false)
       const response = await fetch('/api/analytics?resource=patterns')
       if (!response.ok) throw new Error('Failed to fetch patterns')
       const data = await response.json()
       setPatterns(data.patterns || [])
       setTimeline(data.timeline || null)
+
+      // 4. Cache for offline use
+      await readingDb.cacheDashboard('patterns', data)
     } catch (error) {
       console.error('Error fetching patterns:', error)
+      // If fetch failed but we have cached data, we're fine
     } finally {
       setLoading(false)
     }
@@ -52,13 +75,27 @@ export function TimelinePage() {
         <div className="max-w-6xl mx-auto px-4">
           <Card className="premium-card">
             <CardContent className="py-16 text-center">
-              <Clock className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-              <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
-                Not Enough Data Yet
-              </h2>
-              <p style={{ color: 'var(--premium-text-secondary)' }}>
-                Capture at least 5 memories to see your cognitive patterns
-              </p>
+              {isOffline ? (
+                <>
+                  <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                    Offline
+                  </h2>
+                  <p style={{ color: 'var(--premium-text-secondary)' }}>
+                    Timeline data will be available when you're back online
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Clock className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                  <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--premium-text-primary)' }}>
+                    Not Enough Data Yet
+                  </h2>
+                  <p style={{ color: 'var(--premium-text-secondary)' }}>
+                    Capture at least 5 memories to see your cognitive patterns
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

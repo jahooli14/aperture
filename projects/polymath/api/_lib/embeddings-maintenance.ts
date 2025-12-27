@@ -36,6 +36,13 @@ export async function maintainEmbeddings(userId: string, limit = 50, reEmbed = f
       await processItem(supabase, 'article', item, userId, stats)
     }
 
+    // 4. List Items (films, books, etc.)
+    // Cross-pollination: film recommendations can inspire creative projects
+    const listItems = await fetchItems(supabase, 'list_items', userId, limit, reEmbed)
+    for (const item of listItems) {
+      await processItem(supabase, 'list_item', item, userId, stats)
+    }
+
   } catch (error) {
     console.error('[embeddings] Maintenance failed:', error)
   }
@@ -55,6 +62,7 @@ async function fetchItems(supabase: any, table: string, userId: string, limit: n
   if (table === 'projects') query = query.select('id, title, description, embedding, user_id')
   if (table === 'memories') query = query.select('id, title, body, embedding, user_id')
   if (table === 'reading_queue') query = query.select('id, title, excerpt, embedding, user_id').eq('processed', true)
+  if (table === 'list_items') query = query.select('id, content, metadata, embedding, user_id').eq('enrichment_status', 'complete')
 
   const { data, error } = await query.limit(limit)
 
@@ -65,12 +73,17 @@ async function fetchItems(supabase: any, table: string, userId: string, limit: n
   return data || []
 }
 
-async function processItem(supabase: any, type: 'project' | 'thought' | 'article', item: any, userId: string, stats: MaintenanceStats) {
+async function processItem(supabase: any, type: 'project' | 'thought' | 'article' | 'list_item', item: any, userId: string, stats: MaintenanceStats) {
   try {
     let content = ''
     if (type === 'project') content = `${item.title}\n\n${item.description || ''}`
     if (type === 'thought') content = `${item.title || ''}\n\n${item.body || ''}`
     if (type === 'article') content = `${item.title}\n\n${item.excerpt || ''}`
+    if (type === 'list_item') {
+      // Build rich content from item + enriched metadata
+      const meta = item.metadata || {}
+      content = `${item.content}. ${meta.subtitle || ''}. ${meta.description || ''}. ${(meta.tags || []).join(', ')}`
+    }
 
     if (!content.trim()) return
 
@@ -78,7 +91,13 @@ async function processItem(supabase: any, type: 'project' | 'thought' | 'article
     const embedding = await generateEmbedding(content)
 
     // Update item
-    const table = type === 'project' ? 'projects' : type === 'thought' ? 'memories' : 'reading_queue'
+    const tableMap: Record<string, string> = {
+      'project': 'projects',
+      'thought': 'memories',
+      'article': 'reading_queue',
+      'list_item': 'list_items'
+    }
+    const table = tableMap[type]
     const { error } = await supabase.from(table).update({ embedding }).eq('id', item.id)
 
     if (error) throw error
@@ -125,6 +144,7 @@ async function findAndCreateConnections(supabase: any, sourceType: string, sourc
   await searchTable('projects', 'project')
   await searchTable('memories', 'thought')
   await searchTable('reading_queue', 'article')
+  await searchTable('list_items', 'list_item')
 
   return count
 }
