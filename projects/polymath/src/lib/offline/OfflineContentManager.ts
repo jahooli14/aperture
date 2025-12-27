@@ -22,6 +22,14 @@ export class OfflineContentManager {
   }
 
   /**
+   * Check if article content is cached (readable offline, even without all images)
+   */
+  public async isContentCached(articleId: string): Promise<boolean> {
+    const cached = await readingDb.articles.get(articleId)
+    return !!(cached?.offline_available && cached?.content)
+  }
+
+  /**
    * Download article and all its images for offline reading
    */
   public async downloadArticle(article: Article): Promise<void> {

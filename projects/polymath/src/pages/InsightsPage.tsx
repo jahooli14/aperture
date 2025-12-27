@@ -9,25 +9,42 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
+import { readingDb } from '../lib/db'
 
 export function InsightsPage() {
   const navigate = useNavigate()
   const [insights, setInsights] = useState<SynthesisInsight[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   const fetchInsights = useCallback(async () => {
     setLoading(true)
     setError(null)
 
-    // Add timeout to prevent infinite loading
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
-
     try {
+      // 1. Load from cache first (instant)
+      const cached = await readingDb.getDashboard('evolution')
+      if (cached) {
+        setInsights(cached.insights || [])
+        setLoading(false)
+      }
+
+      // 2. If offline, stop here
+      if (!navigator.onLine) {
+        setIsOffline(true)
+        if (!cached) setLoading(false)
+        return
+      }
+
+      // 3. Fetch fresh data from network
+      setIsOffline(false)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s timeout
+
       const response = await fetch('/api/analytics?resource=evolution', {
         signal: controller.signal
       })
@@ -39,11 +56,15 @@ export function InsightsPage() {
       }
       const data = await response.json()
       setInsights(data.insights || [])
+
+      // 4. Cache for offline use
+      await readingDb.cacheDashboard('evolution', data)
     } catch (error) {
       console.error('Error fetching insights:', error)
       if (error instanceof Error && error.name === 'AbortError') {
         setError('Request timed out. The analysis is taking too long.')
-      } else {
+      } else if (insights.length === 0) {
+        // Only show error if we don't have cached data
         setError(error instanceof Error ? error.message : 'Failed to load insights')
       }
     } finally {
@@ -160,13 +181,27 @@ export function InsightsPage() {
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
             }}>
               <div className="py-16 text-center">
-                <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
-                <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
-                  Building Your Insights
-                </h2>
-                <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
-                  Capture at least 10 thoughts to see evolution patterns and synthesis insights
-                </p>
+                {isOffline ? (
+                  <>
+                    <WifiOff className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                    <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
+                      Offline
+                    </h2>
+                    <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
+                      Insights will be available when you're back online
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <TrendingUp className="h-16 w-16 mx-auto mb-4" style={{ color: 'var(--premium-blue)' }} />
+                    <h2 className="text-2xl font-bold mb-2 premium-text-platinum">
+                      Building Your Insights
+                    </h2>
+                    <p style={{ color: 'var(--premium-text-secondary)' }} className="mb-6">
+                      Capture at least 10 thoughts to see evolution patterns and synthesis insights
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </section>

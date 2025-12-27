@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import type { RSSFeed, SaveFeedRequest, UpdateFeedRequest } from '../types/rss'
+import { readingDb } from '../lib/db'
 
 interface RSSState {
   feeds: RSSFeed[]
@@ -30,6 +31,19 @@ export const useRSSStore = create<RSSState>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
+      // 1. Load from cache first (instant)
+      const cached = await readingDb.getDashboard('rss-feeds')
+      if (cached && Array.isArray(cached)) {
+        set({ feeds: cached, loading: false })
+      }
+
+      // 2. If offline, stop here
+      if (!navigator.onLine) {
+        if (!cached) set({ loading: false })
+        return
+      }
+
+      // 3. Fetch fresh data from network
       const response = await fetch('/api/reading?resource=rss')
 
       if (!response.ok) {
@@ -40,9 +54,17 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       const feeds = Array.isArray(data.feeds) ? data.feeds : []
 
       set({ feeds, loading: false })
+
+      // 4. Cache for offline use
+      await readingDb.cacheDashboard('rss-feeds', feeds)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      set({ error: errorMessage, loading: false, feeds: [] })
+      // Only show error if we don't have cached data
+      if (get().feeds.length === 0) {
+        set({ error: errorMessage, loading: false })
+      } else {
+        set({ loading: false })
+      }
       console.error('[useRSSStore] Fetch feeds error:', error)
     }
   },
@@ -74,10 +96,11 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       const { feed } = await response.json()
 
       // Add to feeds list
-      set((state) => ({
-        feeds: [feed, ...(Array.isArray(state.feeds) ? state.feeds : [])],
-        loading: false,
-      }))
+      const updatedFeeds = [feed, ...(Array.isArray(get().feeds) ? get().feeds : [])]
+      set({ feeds: updatedFeeds, loading: false })
+
+      // Update cache
+      await readingDb.cacheDashboard('rss-feeds', updatedFeeds)
 
       return feed
     } catch (error) {
@@ -103,11 +126,13 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       const { feed } = await response.json()
 
       // Update in local state
-      set((state) => ({
-        feeds: Array.isArray(state.feeds)
-          ? state.feeds.map((f) => (f.id === request.id ? feed : f))
-          : [feed],
-      }))
+      const updatedFeeds = Array.isArray(get().feeds)
+        ? get().feeds.map((f) => (f.id === request.id ? feed : f))
+        : [feed]
+      set({ feeds: updatedFeeds })
+
+      // Update cache
+      await readingDb.cacheDashboard('rss-feeds', updatedFeeds)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage })
@@ -126,11 +151,13 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       }
 
       // Remove from local state
-      set((state) => ({
-        feeds: Array.isArray(state.feeds)
-          ? state.feeds.filter((f) => f.id !== id)
-          : [],
-      }))
+      const updatedFeeds = Array.isArray(get().feeds)
+        ? get().feeds.filter((f) => f.id !== id)
+        : []
+      set({ feeds: updatedFeeds })
+
+      // Update cache
+      await readingDb.cacheDashboard('rss-feeds', updatedFeeds)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage })

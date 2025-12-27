@@ -87,10 +87,12 @@ export function useOfflineArticle(): UseOfflineArticleResult {
 
   /**
    * Check if article is cached for offline reading
+   * Returns true if article content is available (even if images aren't fully cached)
    */
   const isCached = useCallback(async (articleId: string): Promise<boolean> => {
     const cached = await readingDb.articles.get(articleId)
-    return cached?.offline_available && cached?.images_cached || false
+    // Article is readable offline if we have the content, even without images
+    return !!(cached?.offline_available && cached?.content)
   }, [])
 
   /**
