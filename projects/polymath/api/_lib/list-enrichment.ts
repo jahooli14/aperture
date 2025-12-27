@@ -6,6 +6,8 @@
 import { generateText } from './gemini-chat.js'
 import { getSupabaseClient } from './supabase.js'
 import { enrichFilm, enrichBook, enrichFromWikipedia } from './enrichment-apis.js'
+import { generateEmbedding } from './gemini-embeddings.js'
+import { updateItemConnections } from './connection-logic.js'
 
 export async function enrichListItem(userId: string, listId: string, itemId: string, content: string, listType?: string) {
     console.log(`[Enrichment] Starting for item: ${content}`)
@@ -62,17 +64,48 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             throw new Error('Enrichment produced no valid metadata')
         }
 
-        // 3. Update the item in Supabase
+        // 3. Generate embedding for semantic connections
+        // This enables the "Rothko article → paint pouring project" cross-pollination
+        const embeddingText = `${content}. ${metadata.subtitle || ''}. ${metadata.description || ''}. ${(metadata.tags || []).join(', ')}`
+        let embedding: number[] | null = null
+
+        try {
+            embedding = await generateEmbedding(embeddingText)
+            console.log(`[Enrichment] Generated embedding for: ${content}`)
+        } catch (embErr) {
+            console.warn(`[Enrichment] Embedding generation failed for ${content}:`, embErr)
+            // Continue without embedding - enrichment still succeeds
+        }
+
+        // 4. Update the item in Supabase (with embedding if available)
+        const updateData: any = {
+            metadata,
+            enrichment_status: 'complete'
+        }
+        if (embedding) {
+            updateData.embedding = embedding
+        }
+
         const { error } = await supabase
             .from('list_items')
-            .update({
-                metadata,
-                enrichment_status: 'complete'
-            })
+            .update(updateData)
             .eq('id', itemId)
             .eq('user_id', userId)
 
         if (error) throw error
+
+        // 5. Create semantic connections to projects/thoughts/articles
+        // This is where "film you saved" can inspire "your paint pouring project"
+        if (embedding) {
+            try {
+                await updateItemConnections(itemId, 'list_item', embedding, userId)
+                console.log(`[Enrichment] Created connections for: ${content}`)
+            } catch (connErr) {
+                console.warn(`[Enrichment] Connection creation failed for ${content}:`, connErr)
+                // Non-fatal - item is still enriched
+            }
+        }
+
         console.log(`[Enrichment] Successfully enriched: ${content} (source: ${metadata.source})`)
         return metadata
 

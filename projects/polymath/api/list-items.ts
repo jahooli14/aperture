@@ -28,6 +28,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json(data)
         }
 
+        // POST /api/list-items?listId=...&action=enrich (Enrich existing item)
+        // Used by syncManager for offline items
+        if (req.method === 'POST' && req.query.action === 'enrich') {
+            const { itemId, content } = req.body
+
+            if (!itemId || !content) {
+                return res.status(400).json({ error: 'itemId and content are required' })
+            }
+
+            try {
+                const { enrichListItem } = await import('./_lib/list-enrichment.js')
+                const metadata = await enrichListItem(userId, listId as string, itemId, content)
+                return res.status(200).json({ success: true, metadata })
+            } catch (err: any) {
+                console.error('[API] Offline item enrichment failed:', err)
+                return res.status(500).json({ error: err.message })
+            }
+        }
+
         // POST /api/list-items?listId=... (Body: { content })
         if (req.method === 'POST') {
             if (!listId || typeof listId !== 'string') {
