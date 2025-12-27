@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input'
 import { motion, AnimatePresence } from 'framer-motion'
 import { OptimizedImage } from '../components/ui/optimized-image'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
+import { VoiceInput } from '../components/VoiceInput'
 
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
@@ -18,6 +19,7 @@ export default function ListDetailPage() {
     const list = lists.find(l => l.id === id)
 
     const [inputText, setInputText] = useState('')
+    const [isVoiceMode, setIsVoiceMode] = useState(false)
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -41,6 +43,18 @@ export default function ListDetailPage() {
         await addListItem({
             list_id: id,
             content,
+            status: 'pending'
+        })
+    }
+
+    // Voice transcript handler - instant add on voice completion
+    const handleVoiceTranscript = async (text: string) => {
+        if (!text.trim() || !id) return
+        setIsVoiceMode(false)
+
+        await addListItem({
+            list_id: id,
+            content: text.trim(),
             status: 'pending'
         })
     }
@@ -216,25 +230,65 @@ export default function ListDetailPage() {
 
             {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
             <div className="fixed bottom-[100px] left-0 right-0 p-4 z-[100] pr-20 md:pr-4">
-                <div className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                    <form onSubmit={handleAddItem} className="flex-1 flex px-2 text-white">
-                        <Input
-                            ref={inputRef}
-                            value={inputText}
-                            onChange={e => setInputText(e.target.value)}
-                            placeholder={`Add to ${list.title}...`}
-                            className="border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10 text-base"
-                            autoFocus
-                        />
-                        <Button
-                            type="submit"
-                            disabled={!inputText.trim()}
-                            className="rounded-full bg-white text-black hover:bg-zinc-200 h-9 w-9 p-0 shrink-0 transition-all duration-300"
+                <AnimatePresence mode="wait">
+                    {isVoiceMode ? (
+                        <motion.div
+                            key="voice-mode"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
                         >
-                            <Send className="h-4 w-4" />
-                        </Button>
-                    </form>
-                </div>
+                            <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
+                                <button
+                                    onClick={() => setIsVoiceMode(false)}
+                                    className="text-zinc-500 hover:text-white transition-colors"
+                                >
+                                    <MicOff className="h-4 w-4" />
+                                </button>
+                            </div>
+                            <VoiceInput
+                                onTranscript={handleVoiceTranscript}
+                                autoSubmit={true}
+                                autoStart={true}
+                            />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="text-mode"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
+                        >
+                            <form onSubmit={handleAddItem} className="flex-1 flex px-2 text-white items-center gap-2">
+                                <Input
+                                    ref={inputRef}
+                                    value={inputText}
+                                    onChange={e => setInputText(e.target.value)}
+                                    placeholder={`Add to ${list.title}...`}
+                                    className="border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10 text-base"
+                                    autoFocus
+                                />
+                                <Button
+                                    type="button"
+                                    onClick={() => setIsVoiceMode(true)}
+                                    className="rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-sky-400 h-9 w-9 p-0 shrink-0 transition-all duration-300"
+                                >
+                                    <Mic className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={!inputText.trim()}
+                                    className="rounded-full bg-white text-black hover:bg-zinc-200 h-9 w-9 p-0 shrink-0 transition-all duration-300"
+                                >
+                                    <Send className="h-4 w-4" />
+                                </Button>
+                            </form>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
                 {/* Visual anchor for the bar */}
                 <div className="absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none -z-10" />
             </div>

@@ -64,6 +64,18 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
 
     if (fuelError) throw fuelError
 
+    // 2b. Fetch recent list items (Inspiration - films, books, etc.)
+    // Cross-pollination: "Rothko documentary" → inspires "paint pouring project"
+    const { data: listInspiration, error: listError } = await supabase
+        .from('list_items')
+        .select('id, content, metadata, list_id')
+        .eq('user_id', userId)
+        .eq('enrichment_status', 'complete')
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+    if (listError) console.warn('[PowerHour] Failed to fetch list inspiration:', listError)
+
     // 3. Use Gemini 1.5 Flash to synthesize Power Hour suggestions
     const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
@@ -83,6 +95,12 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     const validFuelIds = new Set(fuel?.map(f => f.id) || [])
     const fuelContext = fuel?.slice(0, 5).map(f => `- ${f.title} [ID: ${f.id}]: ${f.excerpt}`).join('\n') || 'No new fuel available.'
 
+    // Build inspiration context from list items
+    const inspirationContext = listInspiration?.slice(0, 5).map(item => {
+        const meta = item.metadata || {}
+        return `- ${item.content}: ${meta.subtitle || ''} ${meta.description ? `(${meta.description})` : ''}`
+    }).join('\n') || 'No recent list items.'
+
     const prompt = `You are the APERTURE ENGINE. Your goal is JOYOUS MOMENTUM.
 It is a "Power Hour" - 60 minutes of high-focus, high-impact work.
 
@@ -91,6 +109,10 @@ ${projectsContext}
 
 AVAILABLE FUEL (Reading Material):
 ${fuelContext}
+
+RECENT INSPIRATION (Films, Books, etc. the user has saved):
+${inspirationContext}
+Use this as creative cross-pollination - a film about an artist might inspire techniques for a painting project, etc.
 
 TASK:
 Generate Power Hour session plans for each project above.
