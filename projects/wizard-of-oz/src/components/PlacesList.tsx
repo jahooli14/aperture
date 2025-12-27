@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Plus, Trash2, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Plus, Trash2, Edit2, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlaceStore } from '../stores/usePlaceStore';
 import type { Database } from '../types/database';
@@ -43,12 +43,37 @@ interface PlacesListProps {
 }
 
 export function PlacesList({ onEditPlace }: PlacesListProps) {
-  const { placesWithStats, placeVisits, fetchPlacesWithStats, fetchPlaceVisits, deletePlaceVisit, loading } = usePlaceStore();
+  const { placesWithStats, placeVisits, fetchPlacesWithStats, fetchPlaceVisits, deletePlaceVisit, addPlaceVisit, loading } = usePlaceStore();
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithStats | null>(null);
   const [showAddVisitModal, setShowAddVisitModal] = useState(false);
   const [sortBy, setSortBy] = useState<'first-visit' | 'name'>('first-visit');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedPlaceId, setExpandedPlaceId] = useState<string | null>(null);
+  const [quickAddingPlaceId, setQuickAddingPlaceId] = useState<string | null>(null);
+  const [quickAddSuccess, setQuickAddSuccess] = useState<string | null>(null);
+
+  // Quick add visit for today (one-tap action)
+  const handleQuickAddVisit = async (e: React.MouseEvent, place: PlaceWithStats) => {
+    e.stopPropagation();
+    if (quickAddingPlaceId) return; // Prevent double-clicks
+
+    setQuickAddingPlaceId(place.id);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await addPlaceVisit({
+        place_id: place.id,
+        visit_date: today,
+        notes: null,
+      });
+      setQuickAddSuccess(place.id);
+      // Show success briefly then clear
+      setTimeout(() => setQuickAddSuccess(null), 1500);
+    } catch (error) {
+      console.error('Quick add visit failed:', error);
+    } finally {
+      setQuickAddingPlaceId(null);
+    }
+  };
 
   useEffect(() => {
     fetchPlacesWithStats();
@@ -199,28 +224,53 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
                 initial={false}
               >
                 {/* Compact Row - Always Visible */}
-                <button
-                  onClick={() => setExpandedPlaceId(isExpanded ? null : place.id)}
-                  className="w-full flex items-center justify-between py-4 px-4 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-2xl flex-shrink-0">{CATEGORY_ICONS[place.category || 'other'] || '📍'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">{place.name}</p>
-                      <p className="text-xs text-gray-500">{visits.length} {visits.length === 1 ? 'visit' : 'visits'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                      {CATEGORY_LABELS[place.category || 'other'] || 'Other'}
-                    </span>
-                    {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                <div className="flex items-center py-3 px-4 hover:bg-gray-50 transition-colors">
+                  {/* Quick Add Button - One tap to add visit for today */}
+                  <button
+                    onClick={(e) => handleQuickAddVisit(e, place)}
+                    disabled={quickAddingPlaceId === place.id}
+                    className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3 transition-all ${
+                      quickAddSuccess === place.id
+                        ? 'bg-green-500 text-white'
+                        : quickAddingPlaceId === place.id
+                        ? 'bg-blue-100 text-blue-400'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white active:scale-95'
+                    }`}
+                    title="Quick add visit for today"
+                  >
+                    {quickAddSuccess === place.id ? (
+                      <Check className="w-5 h-5" />
+                    ) : quickAddingPlaceId === place.id ? (
+                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                      <Plus className="w-5 h-5" />
                     )}
-                  </div>
-                </button>
+                  </button>
+
+                  {/* Main row content - clickable to expand */}
+                  <button
+                    onClick={() => setExpandedPlaceId(isExpanded ? null : place.id)}
+                    className="flex items-center justify-between flex-1 min-w-0 text-left"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-2xl flex-shrink-0">{CATEGORY_ICONS[place.category || 'other'] || '📍'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">{place.name}</p>
+                        <p className="text-xs text-gray-500">{visits.length} {visits.length === 1 ? 'visit' : 'visits'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded hidden sm:block">
+                        {CATEGORY_LABELS[place.category || 'other'] || 'Other'}
+                      </span>
+                      {isExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      )}
+                    </div>
+                  </button>
+                </div>
 
                 {/* Expanded Content */}
                 <AnimatePresence>
@@ -310,7 +360,7 @@ export function PlacesList({ onEditPlace }: PlacesListProps) {
                             className="flex-1 flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors font-medium"
                           >
                             <Edit2 className="w-4 h-4" />
-                            Edit
+                            Edit / Delete
                           </button>
                         </div>
                       </div>
