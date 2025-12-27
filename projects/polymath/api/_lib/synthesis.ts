@@ -213,12 +213,13 @@ async function filterAndScoreSuggestions(
   interests: Interest[],
   capabilities: Capability[]
 ): Promise<ProjectIdea[]> {
+  // Fetch more history for better deduplication, but use less strict threshold
   const { data: history } = await supabase
     .from('project_suggestions')
     .select('title, description, embedding')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(50)
 
   const ideaTexts = ideas.map(i => `${i.title}\n${i.description}`)
   const newEmbeddings = await batchGenerateEmbeddings(ideaTexts)
@@ -229,8 +230,20 @@ async function filterAndScoreSuggestions(
     const idea = ideas[i]
     const emb = newEmbeddings[i]
 
-    const isDuplicate = (history || []).some(h => h.embedding && cosineSimilarity(emb, h.embedding) > 0.85)
-    if (isDuplicate) continue
+    // Use a more lenient threshold (0.92 instead of 0.85) to allow similar-ish but not identical ideas
+    // Also check title similarity to catch near-duplicates
+    const isDuplicate = (history || []).some(h => {
+      // Check embedding similarity
+      const embeddingSimilar = h.embedding && cosineSimilarity(emb, h.embedding) > 0.92
+      // Also check title similarity (case-insensitive)
+      const titleSimilar = h.title?.toLowerCase().trim() === idea.title?.toLowerCase().trim()
+      return embeddingSimilar || titleSimilar
+    })
+
+    if (isDuplicate) {
+      logger.info({ title: idea.title }, 'Skipping duplicate suggestion')
+      continue
+    }
 
     const noveltyScore = 0.7 + (Math.random() * 0.3)
     const feasibilityScore = idea.isCreative ? 0.9 : 0.6

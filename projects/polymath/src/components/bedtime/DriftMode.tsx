@@ -49,11 +49,33 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   // Use a ref to always have the latest handleMotion logic
   const handleMotionRef = useRef<(event: DeviceMotionEvent) => void>(() => {})
 
+  // Track if we've received any motion events
+  const motionEventsReceived = useRef(false)
+  const driftFallbackTimer = useRef<NodeJS.Timeout | null>(null)
+
   // Update the ref whenever dependencies change
   useEffect(() => {
     handleMotionRef.current = (event: DeviceMotionEvent) => {
-      const accel = event.accelerationIncludingGravity
-      if (!accel) return
+      // Try accelerationIncludingGravity first, fall back to acceleration
+      const accel = event.accelerationIncludingGravity || event.acceleration
+      if (!accel || (accel.x === null && accel.y === null && accel.z === null)) {
+        // Motion sensor not providing data - log once
+        if (!motionEventsReceived.current) {
+          console.warn('[Drift] Motion sensor not providing acceleration data')
+        }
+        return
+      }
+
+      // Mark that we're receiving motion events
+      if (!motionEventsReceived.current) {
+        motionEventsReceived.current = true
+        console.log('[Drift] Motion events are being received')
+        // Clear fallback timer since motion is working
+        if (driftFallbackTimer.current) {
+          clearTimeout(driftFallbackTimer.current)
+          driftFallbackTimer.current = null
+        }
+      }
 
       const x = accel.x || 0
       const y = accel.y || 0
@@ -66,14 +88,15 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
 
       const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
 
-      const STILL_THRESHOLD = 0.5
-      const WAKE_THRESHOLD = 12.0 // Lowered from 15.0 for better phone drop detection
-      const JOLT_THRESHOLD = 18.0 // Lowered from 20.0
-      const REQUIRED_DURATION = 5000
+      // More lenient thresholds for better detection
+      const STILL_THRESHOLD = 1.0  // Increased from 0.5 - phones have natural micro-vibrations
+      const WAKE_THRESHOLD = 8.0   // Lowered from 12.0 for easier wake detection
+      const JOLT_THRESHOLD = 15.0  // Lowered from 18.0
+      const REQUIRED_DURATION = 4000 // Reduced from 5000 for faster entry
 
-      // Debug log (throttled)
-      if (Math.random() < 0.05) {
-        console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stageRef.current}, Drifted: ${hasDrifted.current}`)
+      // Debug log (more frequent for testing)
+      if (Math.random() < 0.1) {
+        console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stageRef.current}, Drifted: ${hasDrifted.current}, Progress: ${progress.toFixed(0)}%`)
       }
 
       if (delta < STILL_THRESHOLD) {
@@ -111,7 +134,7 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         setProgress(0)
       }
     }
-  }, [triggerInsight])
+  }, [triggerInsight, progress])
 
   // Stable event handler that delegates to ref
   const stableMotionHandler = useCallback((event: DeviceMotionEvent) => {
@@ -125,10 +148,20 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         window.removeEventListener('devicemotion', stableMotionHandler)
         motionListenerActive.current = false
       }
+      if (driftFallbackTimer.current) {
+        clearTimeout(driftFallbackTimer.current)
+        driftFallbackTimer.current = null
+      }
     }
   }, [stableMotionHandler])
 
   const requestMotionPermission = async () => {
+    // Reset state for new session
+    stillnessStart.current = Date.now()
+    lastAccel.current = null
+    motionEventsReceived.current = false
+    hasDrifted.current = false
+
     if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
       try {
         const response = await (DeviceMotionEvent as any).requestPermission()
@@ -137,19 +170,40 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
           window.addEventListener('devicemotion', stableMotionHandler)
           motionListenerActive.current = true
           haptic.success()
+          startFallbackTimer()
         } else {
           setMotionPermission('denied')
         }
       } catch (e) {
-        console.error(e)
-        // If not https, it might fail
+        console.error('[Drift] Motion permission error:', e)
+        // If not https or other error, try adding listener anyway (for Android/desktop)
+        setMotionPermission('granted')
+        window.addEventListener('devicemotion', stableMotionHandler)
+        motionListenerActive.current = true
+        startFallbackTimer()
       }
     } else {
+      // Non-iOS devices don't need permission
       setMotionPermission('granted')
       window.addEventListener('devicemotion', stableMotionHandler)
       motionListenerActive.current = true
       haptic.success()
+      startFallbackTimer()
     }
+  }
+
+  // Fallback: if no motion events received after 3 seconds, auto-enter drift mode
+  const startFallbackTimer = () => {
+    console.log('[Drift] Starting fallback timer (3s)')
+    driftFallbackTimer.current = setTimeout(() => {
+      if (!motionEventsReceived.current && !hasDrifted.current) {
+        console.log('[Drift] No motion events detected - using fallback mode')
+        // Enter drift mode anyway, and use a simple touch-based wake
+        setStage('drifting')
+        hasDrifted.current = true
+        haptic.light()
+      }
+    }, 3000)
   }
 
   const resetDrift = () => {
@@ -285,8 +339,27 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
             exit={{ opacity: 0 }}
             transition={{ duration: 2 }}
             className="absolute inset-0 bg-black flex items-center justify-center"
+            // Touch-based wake for fallback mode (when motion isn't working)
+            onClick={() => {
+              if (!motionEventsReceived.current) {
+                console.log('[Drift] Touch-based wake triggered (fallback mode)')
+                haptic.medium()
+                triggerInsight()
+              }
+            }}
           >
             <div className="w-3 h-3 rounded-full bg-violet-500/50 animate-ping" />
+            {/* Show hint if no motion detected after entering drift */}
+            {!motionEventsReceived.current && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 2 }}
+                className="absolute bottom-20 text-slate-600 text-sm text-center px-8"
+              >
+                Tap anywhere when you're ready to capture your insight
+              </motion.p>
+            )}
           </motion.div>
         )}
 
