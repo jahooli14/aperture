@@ -136,6 +136,8 @@ export function fileToDataURL(file: File): Promise<string> {
 
 /**
  * Validates an image file
+ * Note: Size validation is relaxed because images are automatically compressed before upload.
+ * We only reject extremely large files (>50MB) that would cause memory issues during compression.
  * @param file - The file to validate
  * @returns Object with isValid flag and optional error message
  */
@@ -145,9 +147,10 @@ export function validateImageFile(file: File): { isValid: boolean; error?: strin
     return { isValid: false, error: 'Please select an image file' };
   }
 
-  // Validate file size (max 10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    return { isValid: false, error: 'Image must be smaller than 10MB' };
+  // Only reject extremely large files that would cause memory issues
+  // Normal large photos (10-30MB from modern cameras) are fine - we compress them
+  if (file.size > 50 * 1024 * 1024) {
+    return { isValid: false, error: 'Image is too large (max 50MB). Please select a smaller image.' };
   }
 
   return { isValid: true };
@@ -216,110 +219,100 @@ export async function alignPhoto(
   eyeCoords: EyeCoordinates,
   zoomLevel: number = 0.40
 ): Promise<AlignmentResult> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
+  try {
+    // Use createImageBitmap to ensure consistent EXIF orientation handling
+    // This matches how the EyeDetector processes images, ensuring coordinates match
+    const bitmap = await createImageBitmap(file);
 
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d')!;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
 
-        // Set output dimensions
-        canvas.width = TARGET_WIDTH;
-        canvas.height = TARGET_HEIGHT;
+    // Set output dimensions
+    canvas.width = TARGET_WIDTH;
+    canvas.height = TARGET_HEIGHT;
 
-        // Get target eye positions for the specified zoom level
-        const targetPositions = getTargetEyePositions(zoomLevel);
+    // Get target eye positions for the specified zoom level
+    const targetPositions = getTargetEyePositions(zoomLevel);
 
-        // Calculate transformation parameters
-        const { leftEye, rightEye } = eyeCoords;
+    // Calculate transformation parameters
+    const { leftEye, rightEye } = eyeCoords;
 
-        // Calculate angle between eyes
-        const dx = rightEye.x - leftEye.x;
-        const dy = rightEye.y - leftEye.y;
-        const angle = Math.atan2(dy, dx);
+    // Calculate angle between eyes
+    const dx = rightEye.x - leftEye.x;
+    const dy = rightEye.y - leftEye.y;
+    const angle = Math.atan2(dy, dx);
 
-        // Calculate scale to match target eye distance
-        const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
-        const targetEyeDistance = targetPositions.rightEye.x - targetPositions.leftEye.x;
-        const scale = targetEyeDistance / currentEyeDistance;
+    // Calculate scale to match target eye distance
+    const currentEyeDistance = Math.sqrt(dx * dx + dy * dy);
+    const targetEyeDistance = targetPositions.rightEye.x - targetPositions.leftEye.x;
+    const scale = targetEyeDistance / currentEyeDistance;
 
-        // Calculate center point between eyes (source)
-        const sourceCenterX = (leftEye.x + rightEye.x) / 2;
-        const sourceCenterY = (leftEye.y + rightEye.y) / 2;
+    // Calculate center point between eyes (source)
+    const sourceCenterX = (leftEye.x + rightEye.x) / 2;
+    const sourceCenterY = (leftEye.y + rightEye.y) / 2;
 
-        // Calculate center point between eyes (target)
-        const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
-        const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
+    // Calculate center point between eyes (target)
+    const targetCenterX = (targetPositions.leftEye.x + targetPositions.rightEye.x) / 2;
+    const targetCenterY = (targetPositions.leftEye.y + targetPositions.rightEye.y) / 2;
 
-        // Determine if image needs 180° rotation based on eye left-right order
-        // If leftEye.x > rightEye.x, eyes are swapped (upside-down) and need flipping
-        const eyesSwapped = leftEye.x > rightEye.x;
-        const needsFlip = eyesSwapped;
+    // Determine if image needs 180° rotation based on eye left-right order
+    // If leftEye.x > rightEye.x, eyes are swapped (upside-down) and need flipping
+    const eyesSwapped = leftEye.x > rightEye.x;
+    const needsFlip = eyesSwapped;
 
-        // Fill with white background first
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fill with white background first
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Apply transformation
-        ctx.save();
+    // Apply transformation
+    ctx.save();
 
-        // Move origin to target eye center
-        ctx.translate(targetCenterX, targetCenterY);
+    // Move origin to target eye center
+    ctx.translate(targetCenterX, targetCenterY);
 
-        // Rotate to align eyes
-        ctx.rotate(-angle);
+    // Rotate to align eyes
+    ctx.rotate(-angle);
 
-        // Scale to match target eye distance
-        ctx.scale(scale, scale);
+    // Scale to match target eye distance
+    ctx.scale(scale, scale);
 
-        // Rotate 180 degrees to flip image right-side up (only if needed)
-        if (needsFlip) {
-          ctx.rotate(Math.PI);
+    // Rotate 180 degrees to flip image right-side up (only if needed)
+    if (needsFlip) {
+      ctx.rotate(Math.PI);
+    }
+
+    // Draw bitmap centered at origin (use bitmap dimensions for proper alignment)
+    ctx.drawImage(bitmap, -sourceCenterX, -sourceCenterY);
+
+    ctx.restore();
+    bitmap.close();
+
+    // Convert canvas to blob then to file
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create aligned image'));
+          return;
         }
 
-        // Draw image centered at origin
-        ctx.drawImage(img, -sourceCenterX, -sourceCenterY);
+        const alignedFile = new File(
+          [blob],
+          file.name.replace(/\.(jpg|jpeg|png)$/i, '-aligned.$1'),
+          { type: file.type || 'image/jpeg' }
+        );
 
-        ctx.restore();
-
-        // Convert canvas to blob then to file
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Failed to create aligned image'));
-            return;
-          }
-
-          const alignedFile = new File(
-            [blob],
-            file.name.replace(/\.(jpg|jpeg|png)$/i, '-aligned.$1'),
-            { type: file.type }
-          );
-
-          resolve({
-            alignedImage: alignedFile,
-            transform: {
-              rotation: -angle * (180 / Math.PI), // Convert to degrees
-              scale,
-              translateX: targetCenterX - sourceCenterX * scale,
-              translateY: targetCenterY - sourceCenterY * scale,
-            },
-          });
-
-          URL.revokeObjectURL(url);
-        }, file.type, 0.95);
-      } catch (error) {
-        URL.revokeObjectURL(url);
-        reject(error);
-      }
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image for alignment'));
-    };
-
-    img.src = url;
-  });
+        resolve({
+          alignedImage: alignedFile,
+          transform: {
+            rotation: -angle * (180 / Math.PI), // Convert to degrees
+            scale,
+            translateX: targetCenterX - sourceCenterX * scale,
+            translateY: targetCenterY - sourceCenterY * scale,
+          },
+        });
+      }, file.type || 'image/jpeg', 0.95);
+    });
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('Failed to align image');
+  }
 }
