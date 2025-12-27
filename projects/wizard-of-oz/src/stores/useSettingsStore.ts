@@ -21,6 +21,7 @@ interface SettingsState {
   joinWithCode: (inviteCode: string) => Promise<void>;
   getSharedUsers: () => Promise<Array<{ user_id: string; email: string | null }>>;
   removeSharedUser: (sharedUserId: string) => Promise<void>;
+  getJoinedAccount: () => Promise<{ owner_user_id: string } | null>;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -315,6 +316,32 @@ export const useSettingsStore = create<SettingsState>((set) => ({
         error: error instanceof Error ? error.message : String(error)
       }, 'SettingsStore');
       throw error;
+    }
+  },
+
+  getJoinedAccount: async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Check if this user has joined another account (they are the shared_user)
+      const { data: share, error } = await supabase
+        .from('user_shares')
+        .select('owner_user_id')
+        .eq('shared_user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        logger.error('Error checking joined account', { error: error.message }, 'SettingsStore');
+        return null;
+      }
+
+      return share;
+    } catch (error) {
+      logger.error('Unexpected error checking joined account', {
+        error: error instanceof Error ? error.message : String(error)
+      }, 'SettingsStore');
+      return null;
     }
   },
 }));
