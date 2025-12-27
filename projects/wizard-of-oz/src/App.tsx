@@ -104,17 +104,20 @@ function App() {
   }, [user, settings, fetchPhotos]);
 
   const handleJoinCodeComplete = async () => {
+    // Always dismiss the prompt first so user isn't stuck
+    setShowJoinCodePrompt(false);
+
+    // Show onboarding if they haven't completed it
+    if (settings && !settings.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+
+    // Try to save the setting (but don't block dismissal on failure)
     try {
       await updateSettings({ join_code_prompted: true });
-      setShowJoinCodePrompt(false);
-
-      // Show onboarding if they haven't completed it
-      if (settings && !settings.onboarding_completed) {
-        setShowOnboarding(true);
-      }
     } catch (error) {
       console.error('Failed to update join code prompt:', error);
-      showToast('Failed to save progress. Please try again.', 'error');
+      // Don't show error toast - user can proceed, they may just see the prompt again next time
     }
   };
 
