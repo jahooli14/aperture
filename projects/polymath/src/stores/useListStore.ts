@@ -34,10 +34,26 @@ export const useListStore = create<ListStore>()(
     fetchLists: async () => {
         const { isOnline } = useOfflineStore.getState()
 
+        // Helper to load from Dexie
+        const loadFromDexie = async () => {
+            try {
+                const { readingDb } = await import('../lib/db')
+                const cachedLists = await readingDb.getCachedLists()
+                if (cachedLists.length > 0) {
+                    console.log(`[ListStore] Loaded ${cachedLists.length} lists from Dexie cache`)
+                    set({ lists: cachedLists as any, offlineMode: true, loading: false })
+                    return true
+                }
+            } catch (e) {
+                console.warn('[ListStore] Failed to load from Dexie:', e)
+            }
+            return false
+        }
+
         // If offline, use cached data
         if (!isOnline) {
-            console.log('[ListStore] Offline mode - using cached lists')
-            set({ offlineMode: true })
+            console.log('[ListStore] Offline mode - loading from Dexie')
+            await loadFromDexie()
             return
         }
 
@@ -47,9 +63,21 @@ export const useListStore = create<ListStore>()(
             if (!response.ok) throw new Error('Failed to fetch lists')
             const data = await response.json()
             set({ lists: data, loading: false, offlineMode: false })
+
+            // Cache to Dexie for offline viewing
+            try {
+                const { readingDb } = await import('../lib/db')
+                await readingDb.cacheLists(data)
+                console.log(`[ListStore] Cached ${data.length} lists to Dexie`)
+            } catch (cacheError) {
+                console.warn('[ListStore] Failed to cache lists:', cacheError)
+            }
         } catch (error: any) {
-            console.error('[ListStore] Fetch failed, using cached data:', error)
-            set({ error: error.message, loading: false, offlineMode: true })
+            console.error('[ListStore] Fetch failed, loading from cache:', error)
+            const loaded = await loadFromDexie()
+            if (!loaded) {
+                set({ error: error.message, loading: false, offlineMode: true })
+            }
         }
     },
 
@@ -126,14 +154,47 @@ export const useListStore = create<ListStore>()(
     },
 
     fetchListItems: async (listId) => {
-        // set({ loading: true }) // Don't block UI with loading state for switching lists if we can help it
+        const { isOnline } = useOfflineStore.getState()
+
+        // Helper to load from Dexie
+        const loadFromDexie = async () => {
+            try {
+                const { readingDb } = await import('../lib/db')
+                const cachedItems = await readingDb.getCachedListItems(listId)
+                if (cachedItems.length > 0) {
+                    console.log(`[ListStore] Loaded ${cachedItems.length} items from Dexie cache`)
+                    set({ currentListItems: cachedItems as any })
+                    return true
+                }
+            } catch (e) {
+                console.warn('[ListStore] Failed to load items from Dexie:', e)
+            }
+            return false
+        }
+
+        // If offline, load from cache
+        if (!isOnline) {
+            await loadFromDexie()
+            return
+        }
+
         try {
             const response = await fetch(`/api/list-items?listId=${listId}`)
             if (!response.ok) throw new Error('Failed to fetch items')
             const data = await response.json()
             set({ currentListItems: data })
+
+            // Cache to Dexie for offline viewing
+            try {
+                const { readingDb } = await import('../lib/db')
+                await readingDb.cacheListItems(data)
+                console.log(`[ListStore] Cached ${data.length} items to Dexie`)
+            } catch (cacheError) {
+                console.warn('[ListStore] Failed to cache items:', cacheError)
+            }
         } catch (error: any) {
-            console.error(error)
+            console.error('[ListStore] Fetch failed, loading from cache:', error)
+            await loadFromDexie()
             set({ error: error.message })
         }
     },
@@ -164,6 +225,14 @@ export const useListStore = create<ListStore>()(
                     : l
             )
         }))
+
+        // Also cache to Dexie for offline viewing
+        try {
+            const { readingDb } = await import('../lib/db')
+            await readingDb.cacheListItems([optimisticItem])
+        } catch (e) {
+            console.warn('[ListStore] Failed to cache optimistic item:', e)
+        }
 
         // If offline, queue operation
         if (!isOnline) {
@@ -260,6 +329,14 @@ export const useListStore = create<ListStore>()(
                     : l
             )
         }))
+
+        // Also remove from Dexie cache
+        try {
+            const { readingDb } = await import('../lib/db')
+            await readingDb.deleteListItemFromCache(itemId)
+        } catch (e) {
+            console.warn('[ListStore] Failed to delete item from cache:', e)
+        }
 
         // If offline, queue operation
         if (!isOnline) {
