@@ -108,12 +108,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     console.log(`[power-hour] Found ${newItems.length} new items to potentially add:`, newItems.map((i: any) => i.text))
 
                     if (newItems.length > 0) {
-                        // B. De-Duplication Logic
+                        // B. Enhanced De-Duplication Logic (syntactic + semantic)
+
+                        // Extract core action words (verbs/nouns) for semantic matching
+                        const extractKeywords = (text: string): Set<string> => {
+                            const stopWords = new Set(['the', 'a', 'an', 'to', 'for', 'of', 'and', 'or', 'in', 'on', 'at', 'up', 'out', 'with', 'this', 'that', 'it', 'is', 'be', 'do', 'does', 'will', 'would', 'could', 'should', 'can', 'may', 'might', 'must', 'shall'])
+                            const words = text.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, ' ')
+                                .split(/\s+/)
+                                .filter(w => w.length > 2 && !stopWords.has(w))
+                            return new Set(words)
+                        }
+
+                        // Calculate keyword overlap ratio
+                        const keywordOverlap = (a: string, b: string): number => {
+                            const setA = extractKeywords(a)
+                            const setB = extractKeywords(b)
+                            if (setA.size === 0 || setB.size === 0) return 0
+
+                            let overlap = 0
+                            for (const word of setA) {
+                                if (setB.has(word)) overlap++
+                            }
+                            // Return the higher ratio (overlap relative to smaller set)
+                            const minSize = Math.min(setA.size, setB.size)
+                            return overlap / minSize
+                        }
+
                         const isSimilar = (a: string, b: string) => {
                             const s1 = a.toLowerCase().trim()
                             const s2 = b.toLowerCase().trim()
                             if (s1 === s2) return true
                             if (s1.includes(s2) || s2.includes(s1)) return true
+
+                            // Check keyword overlap (semantic similarity)
+                            // If 60%+ of keywords overlap, consider it a semantic duplicate
+                            if (keywordOverlap(s1, s2) >= 0.6) {
+                                console.log(`[power-hour] Semantic overlap detected: "${a}" vs "${b}"`)
+                                return true
+                            }
 
                             // Simple Levenshtein for typos/minor phrasing diffs
                             const track = Array(s2.length + 1).fill(null).map(() =>
@@ -146,10 +179,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         console.log(`[power-hour] After deduplication: ${uniqueNewTasks.length} unique tasks remain`)
 
                         // Only add what fits under the cap (12 incomplete tasks max)
-                        const slotsRemaining = 12 - incompleteTasks.length
+                        // STRICT ENFORCEMENT: Never exceed 12 incomplete tasks total
+                        const slotsRemaining = Math.max(0, 12 - incompleteTasks.length)
                         const tasksToAdd = uniqueNewTasks.slice(0, slotsRemaining)
 
                         console.log(`[power-hour] Slots remaining: ${slotsRemaining} (${incompleteTasks.length}/12 incomplete), will add ${tasksToAdd.length} tasks`)
+
+                        // Safety check: Skip entirely if at or over capacity
+                        if (slotsRemaining <= 0) {
+                            console.log(`[power-hour] Project at capacity, skipping task addition`)
+                        }
 
                         if (tasksToAdd.length > 0) {
                             const freshTasks = tasksToAdd.map((item, idx) => ({
