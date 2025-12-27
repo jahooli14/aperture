@@ -122,12 +122,15 @@ function App() {
   };
 
   const handleOnboardingComplete = async () => {
+    // Always dismiss the onboarding first so user isn't stuck
+    setShowOnboarding(false);
+
+    // Try to save the setting (but don't block dismissal on failure)
     try {
       await updateSettings({ onboarding_completed: true });
-      setShowOnboarding(false);
     } catch (error) {
       console.error('Failed to update onboarding:', error);
-      showToast('Failed to save progress. Please try again.', 'error');
+      // Don't show error toast - user can proceed, they may just see onboarding again next time
     }
   };
 
