@@ -176,6 +176,28 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      // Article/Reading operations
+      case 'update_article': {
+        const { id, ...updateData } = operation.data
+        const { error } = await supabase
+          .from('reading_queue')
+          .update(updateData)
+          .eq('id', id)
+
+        if (error) throw error
+        return true
+      }
+
+      case 'delete_article': {
+        const { error } = await supabase
+          .from('reading_queue')
+          .delete()
+          .eq('id', operation.data.id)
+
+        if (error) throw error
+        return true
+      }
+
       default:
         console.error('[SyncManager] Unknown operation type:', operation.type)
         return false
