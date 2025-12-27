@@ -73,126 +73,127 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
     let mounted = true;
 
     async function detectEyes() {
-      const img = new Image();
-      const url = URL.createObjectURL(imageFile);
+      try {
+        // Use createImageBitmap to ensure consistent EXIF orientation handling
+        // This is critical for camera photos which may have rotation metadata
+        // Without this, eye detection coordinates would be for the un-rotated image
+        // but the compressed image (which uses createImageBitmap) would be rotated
+        const bitmap = await createImageBitmap(imageFile);
 
-      img.onload = async () => {
-        try {
-          if (!detector) {
-            onDetection(null);
-            return;
-          }
+        // Create a canvas to draw the bitmap (MediaPipe needs an HTMLImageElement or canvas)
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
 
-          const results: FaceLandmarkerResult = detector.detect(img);
-
-          if (!mounted) {
-            URL.revokeObjectURL(url);
-            return;
-          }
-
-          if (results.faceLandmarks && results.faceLandmarks.length > 0) {
-            const landmarks = results.faceLandmarks[0];
-
-            // Try multiple landmark combinations to find the best detection
-            const landmarkCombinations = [
-              // Best: Iris centers (most accurate)
-              landmarks.length > 473 ? {
-                leftEye: landmarks[473],
-                rightEye: landmarks[468],
-                name: 'iris centers'
-              } : null,
-              // Good: Eye outer corners (reliable for alignment)
-              {
-                leftEye: landmarks[263],  // Left eye outer corner
-                rightEye: landmarks[33],   // Right eye outer corner
-                name: 'outer corners'
-              },
-              // Fallback: Eye inner corners
-              {
-                leftEye: landmarks[362],  // Left eye inner corner
-                rightEye: landmarks[133],  // Right eye inner corner
-                name: 'inner corners'
-              },
-              // Last resort: Average of multiple eye landmarks
-              {
-                leftEye: {
-                  x: (landmarks[362].x + landmarks[263].x) / 2,
-                  y: (landmarks[362].y + landmarks[263].y) / 2,
-                  z: (landmarks[362].z + landmarks[263].z) / 2
-                },
-                rightEye: {
-                  x: (landmarks[133].x + landmarks[33].x) / 2,
-                  y: (landmarks[133].y + landmarks[33].y) / 2,
-                  z: (landmarks[133].z + landmarks[33].z) / 2
-                },
-                name: 'averaged landmarks'
-              }
-            ].filter(Boolean);
-
-            // Try each combination until one validates
-            for (const combination of landmarkCombinations) {
-              if (!combination) continue;
-
-              const { leftEye, rightEye, name } = combination;
-
-              // MediaPipe returns normalized coordinates (0-1), convert to pixels
-              const coords: EyeCoordinates = {
-                leftEye: {
-                  x: leftEye.x * img.width,
-                  y: leftEye.y * img.height
-                },
-                rightEye: {
-                  x: rightEye.x * img.width,
-                  y: rightEye.y * img.height
-                },
-                confidence: 0.8, // MediaPipe doesn't provide per-landmark confidence
-                imageWidth: img.width,
-                imageHeight: img.height
-              };
-
-              logger.info('Trying landmark combination', {
-                method: name,
-                leftEye: coords.leftEye,
-                rightEye: coords.rightEye,
-                imageSize: { width: img.width, height: img.height }
-              }, 'EyeDetector');
-
-              // Validate detection
-              const isValid = validateEyeDetection(coords);
-
-              if (isValid) {
-                logger.info('Eye detection validation passed', { method: name }, 'EyeDetector');
-                onDetection(coords);
-                return; // Success - exit function
-              } else {
-                logger.warn('Eye detection validation failed for method', { method: name }, 'EyeDetector');
-              }
-            }
-
-            // All combinations failed
-            logger.warn('All landmark combinations failed validation', {}, 'EyeDetector');
-            onDetection(null);
-          } else {
-            logger.warn('No face landmarks detected', {}, 'EyeDetector');
-            onDetection(null);
-          }
-        } catch (error) {
-          logger.error('Eye detection failed', { error: error instanceof Error ? error.message : String(error) }, 'EyeDetector');
-          onError?.(error instanceof Error ? error : new Error('Eye detection failed'));
-          onDetection(null);
-        } finally {
-          URL.revokeObjectURL(url);
+        if (!mounted) {
+          return;
         }
-      };
 
-      img.onerror = () => {
-        logger.error('Failed to load image for detection', {}, 'EyeDetector');
-        URL.revokeObjectURL(url);
-        onError?.(new Error('Failed to load image for detection'));
+        if (!detector) {
+          onDetection(null);
+          return;
+        }
+
+        const results: FaceLandmarkerResult = detector.detect(canvas);
+
+        if (!mounted) {
+          return;
+        }
+
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          const landmarks = results.faceLandmarks[0];
+
+          // Try multiple landmark combinations to find the best detection
+          const landmarkCombinations = [
+            // Best: Iris centers (most accurate)
+            landmarks.length > 473 ? {
+              leftEye: landmarks[473],
+              rightEye: landmarks[468],
+              name: 'iris centers'
+            } : null,
+            // Good: Eye outer corners (reliable for alignment)
+            {
+              leftEye: landmarks[263],  // Left eye outer corner
+              rightEye: landmarks[33],   // Right eye outer corner
+              name: 'outer corners'
+            },
+            // Fallback: Eye inner corners
+            {
+              leftEye: landmarks[362],  // Left eye inner corner
+              rightEye: landmarks[133],  // Right eye inner corner
+              name: 'inner corners'
+            },
+            // Last resort: Average of multiple eye landmarks
+            {
+              leftEye: {
+                x: (landmarks[362].x + landmarks[263].x) / 2,
+                y: (landmarks[362].y + landmarks[263].y) / 2,
+                z: (landmarks[362].z + landmarks[263].z) / 2
+              },
+              rightEye: {
+                x: (landmarks[133].x + landmarks[33].x) / 2,
+                y: (landmarks[133].y + landmarks[33].y) / 2,
+                z: (landmarks[133].z + landmarks[33].z) / 2
+              },
+              name: 'averaged landmarks'
+            }
+          ].filter(Boolean);
+
+          // Try each combination until one validates
+          for (const combination of landmarkCombinations) {
+            if (!combination) continue;
+
+            const { leftEye, rightEye, name } = combination;
+
+            // MediaPipe returns normalized coordinates (0-1), convert to pixels
+            const coords: EyeCoordinates = {
+              leftEye: {
+                x: leftEye.x * canvas.width,
+                y: leftEye.y * canvas.height
+              },
+              rightEye: {
+                x: rightEye.x * canvas.width,
+                y: rightEye.y * canvas.height
+              },
+              confidence: 0.8, // MediaPipe doesn't provide per-landmark confidence
+              imageWidth: canvas.width,
+              imageHeight: canvas.height
+            };
+
+            logger.info('Trying landmark combination', {
+              method: name,
+              leftEye: coords.leftEye,
+              rightEye: coords.rightEye,
+              imageSize: { width: canvas.width, height: canvas.height }
+            }, 'EyeDetector');
+
+            // Validate detection
+            const isValid = validateEyeDetection(coords);
+
+            if (isValid) {
+              logger.info('Eye detection validation passed', { method: name }, 'EyeDetector');
+              onDetection(coords);
+              return; // Success - exit function
+            } else {
+              logger.warn('Eye detection validation failed for method', { method: name }, 'EyeDetector');
+            }
+          }
+
+          // All combinations failed
+          logger.warn('All landmark combinations failed validation', {}, 'EyeDetector');
+          onDetection(null);
+        } else {
+          logger.warn('No face landmarks detected', {}, 'EyeDetector');
+          onDetection(null);
+        }
+      } catch (error) {
+        logger.error('Eye detection failed', { error: error instanceof Error ? error.message : String(error) }, 'EyeDetector');
+        onError?.(error instanceof Error ? error : new Error('Eye detection failed'));
         onDetection(null);
-      };
-
-      img.src = url;
+      }
     }
 
     detectEyes();
