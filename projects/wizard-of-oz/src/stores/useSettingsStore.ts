@@ -79,13 +79,16 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Use upsert to handle case where settings record doesn't exist yet
       const { data, error } = await supabase
         .from('user_settings')
-        .update({
+        .upsert({
+          user_id: user.id,
           ...updates,
           updated_at: new Date().toISOString()
-        } as never)
-        .eq('user_id', user.id)
+        } as never, {
+          onConflict: 'user_id'
+        })
         .select()
         .single();
 
