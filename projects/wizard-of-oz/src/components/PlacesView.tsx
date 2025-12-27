@@ -54,17 +54,23 @@ const getMarkerIcon = (category: string | null, isSelected: boolean) => {
 };
 
 export default function PlacesView() {
-  const { placesWithStats, fetchPlacesWithStats, loading, error } = usePlaceStore();
+  const { placesWithStats, placeVisits, fetchPlacesWithStats, fetchPlaceVisits, loading, error } = usePlaceStore();
+
+  // Helper to get accurate visit count from local placeVisits array
+  const getVisitCount = (placeId: string) => {
+    return placeVisits.filter((pv) => pv.place_id === placeId).length;
+  };
   const [selectedPlace, setSelectedPlace] = useState<PlaceWithStats | null>(null);
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM);
   const [isAddPlaceModalOpen, setIsAddPlaceModalOpen] = useState(false);
   const [editingPlace, setEditingPlace] = useState<PlaceWithStats | null>(null);
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('list');
 
-  // Fetch places on mount
+  // Fetch places and visits on mount
   useEffect(() => {
     fetchPlacesWithStats();
+    fetchPlaceVisits();
   }, []);
 
   // Auto-center map on places
@@ -253,7 +259,7 @@ export default function PlacesView() {
                       >
                         <div className="p-2">
                           <h3 className="font-semibold">{selectedPlace.name}</h3>
-                          <p className="text-sm text-gray-600">{selectedPlace.visit_count || 0} visits</p>
+                          <p className="text-sm text-gray-600">{getVisitCount(selectedPlace.id)} visits</p>
                         </div>
                       </InfoWindow>
                     )}
@@ -264,29 +270,32 @@ export default function PlacesView() {
             {/* Places table below map - compact summary */}
             <div className="bg-white border-t border-gray-200 overflow-y-auto max-h-48">
               <div className="divide-y divide-gray-200">
-                {placesWithStats.map((place) => (
-                  <button
-                    key={place.id}
-                    onClick={() => handleMarkerClick(place)}
-                    className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
-                      selectedPlace?.id === place.id ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-gray-50 border-l-4 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <span className="text-lg flex-shrink-0">{CATEGORY_ICONS[place.category || 'other'] || '📍'}</span>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{place.name}</p>
-                        <p className="text-xs text-gray-500">{place.visit_count || 0} visits</p>
+                {placesWithStats.map((place) => {
+                  const visitCount = getVisitCount(place.id);
+                  return (
+                    <button
+                      key={place.id}
+                      onClick={() => handleMarkerClick(place)}
+                      className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
+                        selectedPlace?.id === place.id ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-gray-50 border-l-4 border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <span className="text-lg flex-shrink-0">{CATEGORY_ICONS[place.category || 'other'] || '📍'}</span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{place.name}</p>
+                          <p className="text-xs text-gray-500">{visitCount} {visitCount === 1 ? 'visit' : 'visits'}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                      <div className="text-right">
-                        <p className="text-xs font-medium text-gray-600">{place.photo_count || 0}</p>
-                        <p className="text-xs text-gray-500">photos</p>
+                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-gray-600">{place.photo_count || 0}</p>
+                          <p className="text-xs text-gray-500">photos</p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
