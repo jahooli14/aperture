@@ -44,22 +44,45 @@ export default defineConfig({
       workbox: {
         // Enable navigation preload for faster page loads
         navigationPreload: true,
+        // Immediately activate new service workers
+        skipWaiting: true,
+        clientsClaim: true,
         // Runtime caching strategies
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            // Cache Supabase REST API data requests (but NOT auth or realtime)
+            // Use negative lookahead to exclude auth, realtime, and storage endpoints
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/(?!auth).*$/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'supabase-data-cache',
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 5 // 5 minutes - shorter TTL for data freshness
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200] // Only cache successful responses, not CORS errors (status 0)
+              },
+              networkTimeoutSeconds: 10 // Don't wait too long for network
+            }
+          },
+          {
+            // Cache Supabase Storage images for longer
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'supabase-storage-cache',
+              expiration: {
+                maxEntries: 200,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days for images
+              },
+              cacheableResponse: {
+                statuses: [200]
               }
             }
           }
+          // Note: Auth endpoints (/auth/*) are NOT cached - they always go to network
+          // Note: Realtime endpoints are websockets and not cacheable
         ],
         // Add custom service worker code for push notifications
         importScripts: ['sw-push.js'],
