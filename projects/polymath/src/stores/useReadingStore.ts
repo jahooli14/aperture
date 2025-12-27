@@ -5,6 +5,8 @@
 
 import { create } from 'zustand'
 import type { Article, ArticleStatus, SaveArticleRequest } from '../types/reading'
+import { queueOperation } from '../lib/offlineQueue'
+import { useOfflineStore } from './useOfflineStore'
 
 interface ReadingState {
   articles: Article[]
@@ -397,6 +399,15 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         }
       }
 
+      // If offline, queue operation and return (optimistic update already done)
+      const { isOnline } = useOfflineStore.getState()
+      if (!isOnline) {
+        await queueOperation('update_article', { id, status })
+        await useOfflineStore.getState().updateQueueSize()
+        console.log('[ReadingStore] Article status update queued for offline sync')
+        return
+      }
+
       try {
         const response = await fetch('/api/reading', {
           method: 'PATCH',
@@ -452,17 +463,26 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         console.warn('[ReadingStore] Failed to delete cached article:', cacheError)
       }
 
-      try {
-        // If it's a temporary item (optimistic), don't hit the API
-        if (id.startsWith('temp-')) {
-          set((state) => {
-            const newPending = state.pendingArticles.filter((a) => a.id !== id)
-            localStorage.setItem('pending-articles', JSON.stringify(newPending))
-            return { pendingArticles: newPending }
-          })
-          return
-        }
+      // If it's a temporary item (optimistic), just remove from pending
+      if (id.startsWith('temp-')) {
+        set((state) => {
+          const newPending = state.pendingArticles.filter((a) => a.id !== id)
+          localStorage.setItem('pending-articles', JSON.stringify(newPending))
+          return { pendingArticles: newPending }
+        })
+        return
+      }
 
+      // If offline, queue operation and return (optimistic update already done)
+      const { isOnline } = useOfflineStore.getState()
+      if (!isOnline) {
+        await queueOperation('delete_article', { id })
+        await useOfflineStore.getState().updateQueueSize()
+        console.log('[ReadingStore] Article deletion queued for offline sync')
+        return
+      }
+
+      try {
         const response = await fetch(`/api/reading?id=${id}`, {
           method: 'DELETE',
         })
