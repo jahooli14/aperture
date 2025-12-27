@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
+import { useSettingsStore } from '../stores/useSettingsStore';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { PhotoBottomSheet } from './PhotoBottomSheet';
 import { triggerHaptic } from '../lib/haptics';
@@ -23,11 +24,13 @@ const PRIVACY_MODE_KEY = 'wizard-privacy-mode';
 
 export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
   const { photos, loading, fetchError, fetchPhotos, deletePhoto, restorePhoto, deleting } = usePhotoStore();
+  const { getJoinedAccount } = useSettingsStore();
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [undoTimer, setUndoTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isConnectedToAlbum, setIsConnectedToAlbum] = useState<boolean | null>(null);
   const [privacyMode, setPrivacyMode] = useState(false);
 
   // Load privacy mode setting
@@ -35,6 +38,19 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
     const savedPrivacyMode = localStorage.getItem(PRIVACY_MODE_KEY) === 'true';
     setPrivacyMode(savedPrivacyMode);
   }, []);
+
+  // Check if user is connected to a shared album
+  useEffect(() => {
+    async function checkConnection() {
+      try {
+        const joined = await getJoinedAccount();
+        setIsConnectedToAlbum(joined !== null);
+      } catch {
+        setIsConnectedToAlbum(false);
+      }
+    }
+    checkConnection();
+  }, [getJoinedAccount]);
 
   // Fetch photos on mount
   useEffect(() => {
@@ -109,6 +125,25 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
         <p className="text-gray-600 mb-6">
           Capture one photo each day and watch your baby grow over time
         </p>
+
+        {/* Shared Album Notice - show if user is not connected */}
+        {isConnectedToAlbum === false && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-5 h-5 mt-0.5">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-amber-900 mb-1">Join a Shared Album?</p>
+                <p className="text-xs text-amber-700">
+                  If your partner has already uploaded photos, ask them for their invite code. Go to <strong>Settings</strong> and enter the code under "Join Shared Album" to see their photos.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Privacy Indicator */}
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
