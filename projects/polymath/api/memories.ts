@@ -237,7 +237,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
  */
 async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: any, userId: string) {
   const startTime = Date.now()
-  const { transcript, body, source_reference } = req.body
+  const { transcript, body, title: providedTitle, source_reference, tags, memory_type, image_urls } = req.body
 
   // Accept both 'transcript' (voice) and 'body' (manual text) field names
   const text = transcript || body
@@ -246,81 +246,97 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     return res.status(400).json({ error: 'transcript or body field required' })
   }
 
-  console.log('[handleCapture] Starting capture processing')
+  console.log('[handleCapture] Starting capture processing', { hasProvidedTitle: !!providedTitle })
 
-  let parsedTitle = text.substring(0, 100) + (text.length > 100 ? '...' : '')
+  // If title is provided (manual entry), use it directly
+  let parsedTitle = providedTitle || text.substring(0, 100) + (text.length > 100 ? '...' : '')
   let parsedBullets = [text]
+  const isManualEntry = !!providedTitle
 
-  try {
-    // Configure Gemini with Structured Outputs (JSON Schema)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-flash-latest',
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            title: { type: SchemaType.STRING, description: "A concise, first-person title (5-10 words)" },
-            bullets: {
-              type: SchemaType.ARRAY,
-              items: { type: SchemaType.STRING },
-              description: "2-4 bullet points capturing key ideas in first person"
-            }
-          },
-          required: ["title", "bullets"]
+  // Only run AI title parsing for voice captures (not manual entries with provided title)
+  if (!isManualEntry) {
+    try {
+      // Configure Gemini with Structured Outputs (JSON Schema)
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-flash-latest',
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 500,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              title: { type: SchemaType.STRING, description: "A concise, first-person title (5-10 words)" },
+              bullets: {
+                type: SchemaType.ARRAY,
+                items: { type: SchemaType.STRING },
+                description: "2-4 bullet points capturing key ideas in first person"
+              }
+            },
+            required: ["title", "bullets"]
+          }
         }
-      }
-    })
+      })
 
-    const prompt = `Transform this text into a clear, first-person thought.
+      const prompt = `Transform this text into a clear, first-person thought.
 Text: ${text}
 
 Return valid JSON.`
 
-    console.log('[handleCapture] Calling Gemini with Structured Outputs...')
+      console.log('[handleCapture] Calling Gemini with Structured Outputs...')
 
-    const result = await model.generateContent(prompt)
-    const response = result.response
-    const jsonText = response.text()
+      const result = await model.generateContent(prompt)
+      const response = result.response
+      const jsonText = response.text()
 
-    console.log('[handleCapture] Gemini response:', jsonText)
+      console.log('[handleCapture] Gemini response:', jsonText)
 
-    try {
-      // Robust JSON extraction
-      const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
-      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
+      try {
+        // Robust JSON extraction
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
 
-      if (parsed.title && parsed.bullets) {
-        parsedTitle = parsed.title
-        parsedBullets = parsed.bullets
-        console.log('[handleCapture] Successfully parsed structured response')
+        if (parsed.title && parsed.bullets) {
+          parsedTitle = parsed.title
+          parsedBullets = parsed.bullets
+          console.log('[handleCapture] Successfully parsed structured response')
+        }
+      } catch (parseError) {
+        console.warn('[handleCapture] Failed to parse Gemini JSON, using raw text fallback:', parseError)
       }
-    } catch (parseError) {
-      console.warn('[handleCapture] Failed to parse Gemini JSON, using raw text fallback:', parseError)
-    }
 
-  } catch (geminiError) {
-    console.error('[handleCapture] Gemini generation error, using fallback:', geminiError)
+    } catch (geminiError) {
+      console.error('[handleCapture] Gemini generation error, using fallback:', geminiError)
+    }
+  } else {
+    console.log('[handleCapture] Manual entry - skipping AI title parsing')
   }
 
   // Always create memory with raw transcript
   try {
     const now = new Date().toISOString()
-    const body = Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text
+    // For manual entries, use body directly; for voice, join bullets
+    const memoryBody = isManualEntry ? text : (Array.isArray(parsedBullets) ? parsedBullets.join('\n\n') : text)
 
     // Generate unique ID with timestamp + random component to prevent collisions on retry
-    const uniqueId = `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+    const uniqueId = isManualEntry
+      ? `manual_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+      : `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+
+    // Use provided tags or default to voice-note tag
+    const memoryTags = tags && Array.isArray(tags) && tags.length > 0
+      ? tags
+      : (isManualEntry ? [] : ['voice-note'])
 
     const newMemory = {
       audiopen_id: uniqueId,
       title: parsedTitle,
-      body,
-      orig_transcript: text,
-      tags: ['voice-note'],
+      body: memoryBody,
+      orig_transcript: isManualEntry ? null : text,
+      tags: memoryTags,
       audiopen_created_at: now,
-      memory_type: null,
+      memory_type: memory_type || null,
+      image_urls: image_urls || null,
       entities: null,
       themes: null,
       emotional_tone: null,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mic, X, Wind, Zap, Square, Loader2 } from 'lucide-react'
 import { haptic } from '../../utils/haptics'
@@ -30,20 +30,103 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
   const hasDrifted = useRef(false)
   const stageRef = useRef<'settling' | 'drifting' | 'awakened' | 'ending'>('settling')
   const [isJolt, setIsJolt] = useState(false)
+  const motionListenerActive = useRef(false)
 
-  // Sync ref with state
+  // Sync ref with state immediately
   useEffect(() => {
     stageRef.current = stage
   }, [stage])
 
-  // Permission Request Logic
-  // REMOVED: Auto-request on mount (fails on iOS)
-  // MOVED: To "Begin Session" button click
+  const triggerInsight = useCallback(() => {
+    setShowFlash(true)
+    setTimeout(() => setShowFlash(false), 500)
+    celebrate.success()
+    setStage('awakened')
+    // Pick a random prompt or next
+    setCurrentPromptIndex(prev => (prev + 1) % prompts.length)
+  }, [prompts.length])
+
+  // Use a ref to always have the latest handleMotion logic
+  const handleMotionRef = useRef<(event: DeviceMotionEvent) => void>(() => {})
+
+  // Update the ref whenever dependencies change
+  useEffect(() => {
+    handleMotionRef.current = (event: DeviceMotionEvent) => {
+      const accel = event.accelerationIncludingGravity
+      if (!accel) return
+
+      const x = accel.x || 0
+      const y = accel.y || 0
+      const z = accel.z || 0
+
+      if (!lastAccel.current) {
+        lastAccel.current = { x, y, z }
+        return
+      }
+
+      const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
+
+      const STILL_THRESHOLD = 0.5
+      const WAKE_THRESHOLD = 12.0 // Lowered from 15.0 for better phone drop detection
+      const JOLT_THRESHOLD = 18.0 // Lowered from 20.0
+      const REQUIRED_DURATION = 5000
+
+      // Debug log (throttled)
+      if (Math.random() < 0.05) {
+        console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stageRef.current}, Drifted: ${hasDrifted.current}`)
+      }
+
+      if (delta < STILL_THRESHOLD) {
+        // User is still
+        const duration = Date.now() - stillnessStart.current
+        const newProgress = Math.min(100, (duration / REQUIRED_DURATION) * 100)
+        setProgress(newProgress)
+
+        if (!hasDrifted.current && duration > REQUIRED_DURATION) {
+          setStage('drifting')
+          hasDrifted.current = true
+          haptic.light()
+          console.log('[Drift] Entering drift state (stillness detected)')
+        }
+      } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stageRef.current === 'drifting') {
+        // Sudden movement after drifting -> Trigger Insight
+        console.log('[Drift] WAKE EVENT DETECTED! Delta:', delta)
+
+        if (delta > JOLT_THRESHOLD) {
+          setIsJolt(true)
+          haptic.heavy()
+        } else {
+          setIsJolt(false)
+          haptic.medium()
+        }
+
+        triggerInsight()
+      }
+
+      lastAccel.current = { x, y, z }
+
+      // Reset stillness timer if moving too much before drift
+      if (delta > STILL_THRESHOLD && !hasDrifted.current) {
+        stillnessStart.current = Date.now()
+        setProgress(0)
+      }
+    }
+  }, [triggerInsight])
+
+  // Stable event handler that delegates to ref
+  const stableMotionHandler = useCallback((event: DeviceMotionEvent) => {
+    handleMotionRef.current(event)
+  }, [])
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      window.removeEventListener('devicemotion', handleMotion)
+      if (motionListenerActive.current) {
+        window.removeEventListener('devicemotion', stableMotionHandler)
+        motionListenerActive.current = false
+      }
     }
-  }, [])
+  }, [stableMotionHandler])
 
   const requestMotionPermission = async () => {
     if (typeof (DeviceMotionEvent as any).requestPermission === 'function') {
@@ -51,7 +134,8 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
         const response = await (DeviceMotionEvent as any).requestPermission()
         if (response === 'granted') {
           setMotionPermission('granted')
-          window.addEventListener('devicemotion', handleMotion)
+          window.addEventListener('devicemotion', stableMotionHandler)
+          motionListenerActive.current = true
           haptic.success()
         } else {
           setMotionPermission('denied')
@@ -62,79 +146,10 @@ export function DriftMode({ prompts, onClose, mode = 'sleep' }: DriftModeProps) 
       }
     } else {
       setMotionPermission('granted')
-      window.addEventListener('devicemotion', handleMotion)
+      window.addEventListener('devicemotion', stableMotionHandler)
+      motionListenerActive.current = true
       haptic.success()
     }
-  }
-
-  const handleMotion = (event: DeviceMotionEvent) => {
-    const accel = event.accelerationIncludingGravity
-    if (!accel) return
-
-    const x = accel.x || 0
-    const y = accel.y || 0
-    const z = accel.z || 0
-
-    if (!lastAccel.current) {
-      lastAccel.current = { x, y, z }
-      return
-    }
-
-    const delta = Math.abs(x - lastAccel.current.x) + Math.abs(y - lastAccel.current.y) + Math.abs(z - lastAccel.current.z)
-
-    const STILL_THRESHOLD = 0.5
-    const WAKE_THRESHOLD = 15.0 // High bar: similar to dropping or catching a falling phone
-    const JOLT_THRESHOLD = 20.0 // Extremely sharp jolt
-    const REQUIRED_DURATION = 5000
-
-    // Debug log (throttled)
-    if (Math.random() < 0.05) {
-      console.log(`[Drift] Delta: ${delta.toFixed(2)}, State: ${stageRef.current}, Drifted: ${hasDrifted.current}`)
-    }
-
-    if (delta < STILL_THRESHOLD) {
-      // User is still
-      const duration = Date.now() - stillnessStart.current
-      const newProgress = Math.min(100, (duration / REQUIRED_DURATION) * 100)
-      setProgress(newProgress)
-
-      if (!hasDrifted.current && duration > REQUIRED_DURATION) {
-        setStage('drifting')
-        hasDrifted.current = true
-        haptic.light()
-        console.log('[Drift] Entering drift state (stillness detected)')
-      }
-    } else if (delta > WAKE_THRESHOLD && hasDrifted.current && stageRef.current === 'drifting') {
-      // Sudden movement after drifting -> Trigger Insight
-      console.log('[Drift] WAKE EVENT DETECTED! Delta:', delta)
-
-      if (delta > JOLT_THRESHOLD) {
-        setIsJolt(true)
-        haptic.heavy()
-      } else {
-        setIsJolt(false)
-        haptic.medium()
-      }
-
-      triggerInsight()
-    }
-
-    lastAccel.current = { x, y, z }
-
-    // Reset stillness timer if moving too much before drift
-    if (delta > STILL_THRESHOLD && !hasDrifted.current) {
-      stillnessStart.current = Date.now()
-      setProgress(0)
-    }
-  }
-
-  const triggerInsight = () => {
-    setShowFlash(true)
-    setTimeout(() => setShowFlash(false), 500)
-    celebrate.success()
-    setStage('awakened')
-    // Pick a random prompt or next
-    setCurrentPromptIndex(prev => (prev + 1) % prompts.length)
   }
 
   const resetDrift = () => {
