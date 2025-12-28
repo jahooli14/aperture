@@ -83,24 +83,56 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
 
     const projectsContext = projects.map(p => {
         const allTasks = p.metadata?.tasks || []
-        const unfinishedTasks = allTasks.filter((t: any) => !t.done).map((t: any) => t.text)
-        const completedTasks = allTasks.filter((t: any) => t.done).map((t: any) => t.text)
+        const unfinishedTasks = allTasks.filter((t: any) => !t.done)
+        const completedTasks = allTasks.filter((t: any) => t.done)
         const totalIncomplete = unfinishedTasks.length
         const slotsAvailable = Math.max(0, 12 - totalIncomplete)
 
-        const unfinishedList = unfinishedTasks.length > 0 ? unfinishedTasks.join(', ') : 'None yet'
-        const completedList = completedTasks.length > 0 ? completedTasks.slice(-5).join(', ') : 'None yet'
+        // Calculate progress toward goal
+        const totalTasks = allTasks.length
+        const progress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
+
+        // Identify stale tasks (incomplete for > 14 days)
+        const now = Date.now()
+        const staleTasks = unfinishedTasks.filter((t: any) => {
+            if (!t.created_at) return false
+            const ageInDays = (now - new Date(t.created_at).getTime()) / (1000 * 60 * 60 * 24)
+            return ageInDays > 14
+        }).map((t: any) => t.text)
+
+        // Get rejected/removed suggestions to avoid repeating
+        const rejectedSuggestions = p.metadata?.rejected_suggestions || []
+
+        const unfinishedList = unfinishedTasks.length > 0
+            ? unfinishedTasks.map((t: any) => t.text).join(', ')
+            : 'None yet'
+        const completedList = completedTasks.length > 0
+            ? completedTasks.slice(-5).map((t: any) => t.text).join(', ')
+            : 'None yet'
 
         // Get motivation and end_goal for goal-driven AI
         const motivation = p.metadata?.motivation || ''
         const endGoal = p.metadata?.end_goal || ''
 
-        return `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
+        let context = `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
     Motivation: ${motivation || 'Not specified'}
     Definition of Done: ${endGoal || 'Not specified - help user define completion'}
+    Progress: ${progress}% complete (${completedTasks.length}/${totalTasks} tasks done)
     Completed Tasks: ${completedList}
     Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
     Available Slots for New Tasks: ${slotsAvailable}`
+
+        // Add stale task warning if any
+        if (staleTasks.length > 0) {
+            context += `\n    ⚠️ STALE TASKS (>14 days old, may need review): ${staleTasks.join(', ')}`
+        }
+
+        // Add rejected suggestions to avoid repeating
+        if (rejectedSuggestions.length > 0) {
+            context += `\n    🚫 DO NOT SUGGEST (user removed these before): ${rejectedSuggestions.slice(-10).join(', ')}`
+        }
+
+        return context
     }).join('\n')
 
     const validFuelIds = new Set(fuel?.map(f => f.id) || [])
@@ -149,6 +181,21 @@ For each plan:
    - New tasks should DIRECTLY ADVANCE toward the Definition of Done
    - New tasks should be concrete, actionable steps starting with verbs
    - PRIORITIZE existing incomplete tasks over adding new ones - focus on FINISHING, not expanding scope
+
+STALE TASK HANDLING:
+- If a project has ⚠️ STALE TASKS listed, these have been incomplete for 14+ days
+- Suggest revisiting stale tasks: either complete them OR recommend removing/updating them
+- In session_summary, acknowledge if stale tasks are being addressed: "Let's finally tackle X that's been waiting..."
+
+REJECTION MEMORY:
+- If a project has 🚫 DO NOT SUGGEST items, NEVER suggest those tasks again
+- The user has explicitly removed these before - suggesting them again would erode trust
+- Instead, find genuinely different work that advances the goal
+
+PROGRESS AWARENESS:
+- Each project shows "Progress: X% complete"
+- For projects at 70%+, focus on FINISHING - suggest the final push tasks
+- For projects at <30%, focus on MOMENTUM - suggest quick wins to build confidence
 
 DURATION ESTIMATION (REQUIRED for every checklist item):
 
