@@ -90,31 +90,50 @@ export function UploadPhoto({ showToast }: UploadPhotoProps = {}) {
       return;
     }
 
+    // Reset all state before processing new file
+    setEyeCoords(null);
+    setAlignedFile(null);
+    hasAlignedRef.current = false;
+    setDetectingEyes(false);
+    setError('');
+
     try {
+      logger.info('Processing new photo', {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size
+      }, 'UploadPhoto');
+
       // Compress image before processing (reduces upload time and storage costs)
+      // This also handles EXIF orientation correction via createImageBitmap
       const compressedFile = await compressImage(file, 1920, 0.85);
 
-      // Store both original and current file in state
-      setOriginalFile(compressedFile);
-      setSelectedFile(compressedFile);
-      setRotation(0); // Reset rotation for new file
-      setEyeCoords(null); // Reset eye coordinates
-      setAlignedFile(null); // Reset alignment
-      hasAlignedRef.current = false; // Reset alignment flag
-      setDetectingEyes(true); // Start detection
+      logger.info('Image compressed successfully', {
+        originalSize: file.size,
+        compressedSize: compressedFile.size
+      }, 'UploadPhoto');
 
-      // Safety timeout: If detection doesn't complete in 15 seconds, allow upload anyway
-      setTimeout(() => {
-        setDetectingEyes(false);
-      }, 15000);
-
-      // Show preview
+      // Show preview first so user sees immediate feedback
       const dataURL = await fileToDataURL(compressedFile);
       setPreview(dataURL);
-      setError('');
+      setRotation(0);
+
+      // Set files in state - this will trigger eye detection via useEffect in EyeDetector
+      setOriginalFile(compressedFile);
+      setSelectedFile(compressedFile);
+
+      // Start eye detection after a small delay to ensure state is updated
+      // This prevents race conditions with React's state batching
+      await new Promise(resolve => setTimeout(resolve, 50));
+      setDetectingEyes(true);
+
+      // Safety timeout: If detection doesn't complete in 20 seconds, allow upload anyway
+      setTimeout(() => {
+        setDetectingEyes(false);
+      }, 20000);
     } catch (err) {
       logger.error('Error processing image', { error: err instanceof Error ? err.message : String(err) }, 'UploadPhoto');
-      setError('Failed to process image');
+      setError('Failed to process image. Please try again.');
     }
   };
 
