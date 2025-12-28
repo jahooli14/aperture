@@ -300,8 +300,8 @@ export function PowerHourHero() {
                 </AnimatePresence>
 
                 <div className="flex flex-col md:flex-row relative">
-                    {/* Main Action Area */}
-                    <div className="p-6 md:p-8 flex-1 relative z-10">
+                    {/* Main Action Area - pt-14 clears the absolute header badges */}
+                    <div className="pt-14 px-6 pb-6 md:pt-14 md:px-8 md:pb-8 flex-1 relative z-10">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={mainTask.project_id + mainTask.task_title}
