@@ -40,6 +40,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         title: project.title,
         description: project.description || '',
         motivation: project.metadata?.motivation || '',
+        end_goal: project.metadata?.end_goal || '',
         type: project.type || 'Creative',
     })
 
@@ -49,6 +50,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
             title: project.title,
             description: project.description || '',
             motivation: project.metadata?.motivation || '',
+            end_goal: project.metadata?.end_goal || '',
             type: project.type || 'Creative',
         })
     }, [project])
@@ -67,6 +69,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                 metadata: {
                     ...project.metadata,
                     motivation: formData.motivation,
+                    end_goal: formData.end_goal || undefined,
                 },
             })
 
@@ -203,6 +206,21 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                                         className="h-14 bg-white/5 border-white/10 focus:border-blue-400"
                                         autoComplete="off"
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                                        Definition of Done
+                                    </Label>
+                                    <Input
+                                        id="end_goal"
+                                        placeholder="What does 'complete' look like?"
+                                        value={formData.end_goal}
+                                        onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                                        className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
+                                        autoComplete="off"
+                                    />
+                                    <p className="text-[10px] text-gray-500">Helps AI suggest tasks that drive toward completion</p>
                                 </div>
                             </motion.div>
                         )}

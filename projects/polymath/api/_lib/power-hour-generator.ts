@@ -91,7 +91,13 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         const unfinishedList = unfinishedTasks.length > 0 ? unfinishedTasks.join(', ') : 'None yet'
         const completedList = completedTasks.length > 0 ? completedTasks.slice(-5).join(', ') : 'None yet'
 
+        // Get motivation and end_goal for goal-driven AI
+        const motivation = p.metadata?.motivation || ''
+        const endGoal = p.metadata?.end_goal || ''
+
         return `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
+    Motivation: ${motivation || 'Not specified'}
+    Definition of Done: ${endGoal || 'Not specified - help user define completion'}
     Completed Tasks: ${completedList}
     Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
     Available Slots for New Tasks: ${slotsAvailable}`
@@ -106,7 +112,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         return `- ${item.content}: ${meta.subtitle || ''} ${meta.description ? `(${meta.description})` : ''}`
     }).join('\n') || 'No recent list items.'
 
-    const prompt = `You are the APERTURE ENGINE. Your goal is JOYOUS MOMENTUM.
+    const prompt = `You are the APERTURE ENGINE. Your goal is JOYOUS MOMENTUM toward COMPLETION.
 It is a "Power Hour" - 50 minutes of focused work (with 10 min buffer for planning/wrap-up).
 
 CURRENT PROJECTS:
@@ -121,20 +127,28 @@ Use this as creative cross-pollination - a film about an artist might inspire te
 
 TASK:
 Generate Power Hour session plans for each project above.
-Each plan must be a joyous, motivating blueprint for ~50 minutes of focused work.
+Each plan must be a joyous, motivating blueprint for ~50 minutes of focused work that MOVES THE PROJECT TOWARD COMPLETION.
+
+GOAL-DRIVEN PRINCIPLE:
+Look at each project's "Definition of Done" - this is the finish line. Every task you suggest should be a step TOWARD that finish line. If no Definition of Done is specified, infer what "done" would logically mean and help the user get there.
+
+DO NOT suggest busywork. DO NOT add tasks for the sake of filling time. Every task should either:
+- Move directly toward the Definition of Done, OR
+- Remove a blocker preventing progress, OR
+- Be an essential prerequisite for future work
 
 For each plan:
 1. Select a focus project (use the exact project_id from the list above).
-2. Create a "Task Title" (the core theme of the session).
-3. Create a "Task Description" (the high-level mission).
-4. Create a "Session Summary" - A 2-sentence motivating vision of exactly what will be better in the user's world after this session.
+2. Create a "Task Title" (the core theme of the session - should relate to the Definition of Done).
+3. Create a "Task Description" (the high-level mission - how this session advances toward completion).
+4. Create a "Session Summary" - A 2-sentence motivating vision that explicitly connects to the project's Motivation and Definition of Done. Show the user WHY these tasks matter and HOW they get closer to "done".
 5. Create a "Checklist Hit-List" with 3-5 tasks:
    - Include any relevant existing unfinished tasks from the project (set is_new: false)
    - Add NEW suggested tasks (is_new: true) ONLY if "Available Slots for New Tasks" > 0
    - The number of new tasks MUST NOT exceed the "Available Slots for New Tasks" shown for that project
-   - New tasks should be FORWARD-LOOKING: they should logically follow from what's already done and remaining
-   - New tasks should BREAK DOWN the project into achievable next steps that move toward completion
+   - New tasks should DIRECTLY ADVANCE toward the Definition of Done
    - New tasks should be concrete, actionable steps starting with verbs
+   - PRIORITIZE existing incomplete tasks over adding new ones - focus on FINISHING, not expanding scope
 
 DURATION ESTIMATION (REQUIRED for every checklist item):
 

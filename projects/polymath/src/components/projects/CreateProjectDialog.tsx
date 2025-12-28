@@ -49,6 +49,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
     title: '',
     description: '',
     motivation: '',
+    end_goal: '',
     next_step: '',
     type: 'Creative',
   })
@@ -65,6 +66,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
       title: '',
       description: '',
       motivation: '',
+      end_goal: '',
       next_step: '',
       type: 'Creative',
     })
@@ -107,6 +109,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
           tasks,
           progress: 0,
           motivation: formData.motivation,
+          end_goal: formData.end_goal || undefined,
         },
       })
 
@@ -249,14 +252,28 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     </Label>
                     <Input
                       id="motivation"
-                      placeholder="Why does this matter? What is the goal?"
+                      placeholder="Why does this matter?"
                       value={formData.motivation}
                       onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
                       className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                       autoComplete="off"
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                      Definition of Done
+                    </Label>
+                    <Input
+                      id="end_goal"
+                      placeholder="What does 'complete' look like? e.g., 'App live on App Store'"
+                      value={formData.end_goal}
+                      onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                      className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                      autoComplete="off"
+                    />
                     <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
-                      <strong>AI Tip:</strong> Specific motivation ("To learn React" vs "To build an app") drastically changes the Power Hour tasks generated.
+                      <strong>AI Tip:</strong> Clear goals help the AI suggest tasks that drive toward completion, not busywork.
                     </div>
                   </div>
                 </motion.div>

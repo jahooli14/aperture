@@ -310,9 +310,16 @@ export function PowerHourHero() {
                                     {mainTask.task_title}
                                 </h1>
 
-                                <p className="text-[var(--brand-text-secondary)] mb-4 text-sm leading-relaxed aperture-body line-clamp-2">
+                                <p className="text-[var(--brand-text-secondary)] mb-2 text-sm leading-relaxed aperture-body line-clamp-2">
                                     {mainTask.task_description}
                                 </p>
+
+                                {/* Session Summary - The "Why" */}
+                                {mainTask.session_summary && (
+                                    <p className="text-white/60 mb-4 text-xs leading-relaxed aperture-body italic border-l-2 pl-3 line-clamp-2" style={{ borderColor: theme.text }}>
+                                        {mainTask.session_summary}
+                                    </p>
+                                )}
 
                                 {/* Task Preview with Durations */}
                                 {mainTask.checklist_items && mainTask.checklist_items.length > 0 && (
