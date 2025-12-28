@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
+import { useEffect, useState, lazy, Suspense, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { usePhotoStore } from '../stores/usePhotoStore';
 import { useSettingsStore } from '../stores/useSettingsStore';
@@ -10,6 +10,72 @@ import { PhotoSkeleton } from './PhotoSkeleton';
 import { getPhotoDisplayUrl } from '../lib/photoUtils';
 import type { Database } from '../types/database';
 import type { ToastType } from './Toast';
+
+// Image loading with retry logic
+interface ImageWithRetryProps {
+  src: string;
+  alt: string;
+  className: string;
+  privacyMode: boolean;
+}
+
+function ImageWithRetry({ src, alt, className, privacyMode }: ImageWithRetryProps) {
+  const [retryCount, setRetryCount] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [1000, 2000, 4000];
+
+  // Generate a unique key to force image reload on retry
+  const imageSrc = retryCount > 0 ? `${src}${src.includes('?') ? '&' : '?'}_retry=${retryCount}` : src;
+
+  const handleError = useCallback(() => {
+    if (retryCount < MAX_RETRIES) {
+      logger.warn('Image load failed, retrying', { src, attempt: retryCount + 1 }, 'ImageWithRetry');
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+      }, RETRY_DELAYS[retryCount]);
+    } else {
+      setHasError(true);
+      logger.error('Image load failed after retries', { src }, 'ImageWithRetry');
+    }
+  }, [retryCount, src]);
+
+  const handleLoad = useCallback(() => {
+    setIsLoaded(true);
+    setHasError(false);
+  }, []);
+
+  if (hasError) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+        <div className="text-center text-gray-400 text-xs p-2">
+          <div className="text-2xl mb-1">📷</div>
+          <button
+            onClick={() => {
+              setHasError(false);
+              setRetryCount(0);
+            }}
+            className="text-blue-500 hover:underline"
+          >
+            Tap to retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={alt}
+      className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} ${privacyMode ? 'blur-2xl' : ''}`}
+      loading="lazy"
+      onLoad={handleLoad}
+      onError={handleError}
+    />
+  );
+}
 
 // Lazy load PhotoOverlay since it's only shown on user interaction
 const PhotoOverlay = lazy(() => import('./PhotoOverlay').then(m => ({ default: m.PhotoOverlay })));
@@ -221,15 +287,11 @@ export function PhotoGallery({ showToast }: PhotoGalleryProps = {}) {
               {/* Smooth background placeholder - no more skeleton flash */}
               <div className="absolute inset-0 bg-gray-100" />
 
-              <img
+              <ImageWithRetry
                 src={getPhotoDisplayUrl(photo)}
                 alt={`Photo from ${photo.upload_date}`}
-                className={`relative w-full h-full object-cover opacity-0 transition-opacity duration-500 ${privacyMode ? 'blur-2xl' : ''}`}
-                loading="lazy"
-                onLoad={(e) => {
-                  e.currentTarget.classList.remove('opacity-0');
-                  e.currentTarget.classList.add('opacity-100');
-                }}
+                className="relative w-full h-full object-cover transition-opacity duration-500"
+                privacyMode={privacyMode}
               />
 
               {/* Comment indicator chip - using same logic as PhotoBottomSheet */}

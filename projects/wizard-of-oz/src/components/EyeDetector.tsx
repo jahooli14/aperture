@@ -71,14 +71,32 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
     if (!detector || !imageFile || loading) return;
 
     let mounted = true;
+    const currentFile = imageFile; // Capture file reference to detect if it changed
 
     async function detectEyes() {
       try {
+        logger.info('Starting eye detection', {
+          fileName: currentFile.name,
+          fileSize: currentFile.size,
+          fileType: currentFile.type
+        }, 'EyeDetector');
+
         // Use createImageBitmap to ensure consistent EXIF orientation handling
         // This is critical for camera photos which may have rotation metadata
         // Without this, eye detection coordinates would be for the un-rotated image
         // but the compressed image (which uses createImageBitmap) would be rotated
-        const bitmap = await createImageBitmap(imageFile);
+        const bitmap = await createImageBitmap(currentFile);
+
+        // Check if file changed while we were loading the bitmap
+        if (!mounted) {
+          bitmap.close();
+          return;
+        }
+
+        logger.info('Bitmap created for eye detection', {
+          width: bitmap.width,
+          height: bitmap.height
+        }, 'EyeDetector');
 
         // Create a canvas to draw the bitmap (MediaPipe needs an HTMLImageElement or canvas)
         const canvas = document.createElement('canvas');
@@ -93,6 +111,7 @@ export function EyeDetector({ imageFile, onDetection, onError }: EyeDetectorProp
         }
 
         if (!detector) {
+          logger.warn('Detector not available', {}, 'EyeDetector');
           onDetection(null);
           return;
         }
