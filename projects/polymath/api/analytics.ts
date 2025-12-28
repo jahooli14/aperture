@@ -10,6 +10,7 @@ import { generateMorningBriefing } from './_lib/bedtime-ideas.js'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { getUsageStats } from './_lib/gemini-embeddings.js'
+import { getTokenStats } from './_lib/gemini-chat.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -1248,6 +1249,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('[monitoring] Error:', error)
       return res.status(500).json({
         error: 'Failed to fetch monitoring stats',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+  }
+
+  // LLM COST MONITORING
+  if (resource === 'llm-costs' || resource === 'token-stats') {
+    if (req.method !== 'GET') {
+      return res.status(405).json({ error: 'Method not allowed' })
+    }
+
+    try {
+      const tokenStats = getTokenStats()
+      const embeddingStats = getUsageStats()
+      return res.status(200).json({
+        tokens: tokenStats,
+        embeddings: embeddingStats,
+        summary: {
+          total_estimated_cost: tokenStats.estimated_cost_usd,
+          total_requests: tokenStats.total_requests + embeddingStats.single_embeddings + embeddingStats.batch_embeddings,
+          cost_breakdown: {
+            text_generation: `$${tokenStats.estimated_cost_usd.toFixed(4)}`,
+            embeddings: '$0.00 (free tier)',
+          }
+        }
+      })
+    } catch (error) {
+      console.error('[llm-costs] Error:', error)
+      return res.status(500).json({
+        error: 'Failed to fetch LLM cost stats',
         details: error instanceof Error ? error.message : 'Unknown error'
       })
     }

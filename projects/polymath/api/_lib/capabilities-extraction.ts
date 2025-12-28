@@ -10,19 +10,19 @@ export async function extractCapabilities(userId: string) {
   console.log('[capabilities] Starting extraction for user:', userId)
 
   try {
-    // 1. Fetch recent data (Increased limit for better context)
+    // 1. Fetch recent data (limited to 20 each for cost optimization)
     const { data: projects } = await supabase
       .from('projects')
       .select('title, description')
       .eq('user_id', userId)
-      .limit(50)
+      .limit(20)
       .order('created_at', { ascending: false })
 
     const { data: memories } = await supabase
       .from('memories')
       .select('title, body')
       .eq('user_id', userId)
-      .limit(50)
+      .limit(20)
       .order('created_at', { ascending: false })
 
     if ((!projects || projects.length === 0) && (!memories || memories.length === 0)) {
