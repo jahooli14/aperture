@@ -174,156 +174,31 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         return `- ${item.content}: ${meta.subtitle || ''} ${meta.description ? `(${meta.description})` : ''}`
     }).join('\n') || 'No recent list items.'
 
-    const prompt = `You are the APERTURE ENGINE. Your goal is JOYOUS MOMENTUM toward COMPLETION.
-It is a "Power Hour" - 50 minutes of focused work (with 10 min buffer for planning/wrap-up).
+    const prompt = `Generate Power Hour session plans (50 min focused work) for projects.
 
-CURRENT PROJECTS:
+PROJECTS:
 ${projectsContext}
 
-AVAILABLE FUEL (Reading Material):
-${fuelContext}
+FUEL: ${fuelContext}
+INSPIRATION: ${inspirationContext}
 
-RECENT INSPIRATION (Films, Books, etc. the user has saved):
-${inspirationContext}
-Use this as creative cross-pollination - a film about an artist might inspire techniques for a painting project, etc.
+For each plan create 3-5 tasks that move toward "Definition of Done". Prioritize existing incomplete tasks over new ones.
 
-TASK:
-Generate Power Hour session plans for each project above.
-Each plan must be a joyous, motivating blueprint for ~50 minutes of focused work that MOVES THE PROJECT TOWARD COMPLETION.
+RULES:
+- Use exact project_id from list
+- Session Summary: 2 sentences connecting to motivation & goal
+- Respect "Available Slots for New Tasks" - don't exceed
+- Avoid 🚫 DO NOT SUGGEST items (user rejected)
+- Address ⚠️ STALE TASKS (>14 days old)
+- Progress 70%+: focus on FINISHING. <30%: quick wins
+- 🔄 RECURRING: suggest habits/routines, not completion
+- 😴/💤 DORMANT (14+ days): set total_estimated_minutes 25-30, reference motivation, easy first task, offer to archive if no longer relevant
+- No semantic duplicates of existing tasks
+- Task minutes: 5 (quick), 15 (short), 25 (standard), 45 (deep). Total: 40-55 min
+- Use only provided fuel IDs or omit
 
-GOAL-DRIVEN PRINCIPLE:
-Look at each project's "Definition of Done" - this is the finish line. Every task you suggest should be a step TOWARD that finish line. If no Definition of Done is specified, infer what "done" would logically mean and help the user get there.
-
-DO NOT suggest busywork. DO NOT add tasks for the sake of filling time. Every task should either:
-- Move directly toward the Definition of Done, OR
-- Remove a blocker preventing progress, OR
-- Be an essential prerequisite for future work
-
-For each plan:
-1. Select a focus project (use the exact project_id from the list above).
-2. Create a "Task Title" (the core theme of the session - should relate to the Definition of Done).
-3. Create a "Task Description" (the high-level mission - how this session advances toward completion).
-4. Create a "Session Summary" - A 2-sentence motivating vision that explicitly connects to the project's Motivation and Definition of Done. Show the user WHY these tasks matter and HOW they get closer to "done".
-5. Create a "Checklist Hit-List" with 3-5 tasks:
-   - Include any relevant existing unfinished tasks from the project (set is_new: false)
-   - Add NEW suggested tasks (is_new: true) ONLY if "Available Slots for New Tasks" > 0
-   - The number of new tasks MUST NOT exceed the "Available Slots for New Tasks" shown for that project
-   - New tasks should DIRECTLY ADVANCE toward the Definition of Done
-   - New tasks should be concrete, actionable steps starting with verbs
-   - PRIORITIZE existing incomplete tasks over adding new ones - focus on FINISHING, not expanding scope
-
-STALE TASK HANDLING:
-- If a project has ⚠️ STALE TASKS listed, these have been incomplete for 14+ days
-- Suggest revisiting stale tasks: either complete them OR recommend removing/updating them
-- In session_summary, acknowledge if stale tasks are being addressed: "Let's finally tackle X that's been waiting..."
-
-REJECTION MEMORY:
-- If a project has 🚫 DO NOT SUGGEST items, NEVER suggest those tasks again
-- The user has explicitly removed these before - suggesting them again would erode trust
-- Instead, find genuinely different work that advances the goal
-
-PROGRESS AWARENESS:
-- Each project shows "Progress: X% complete"
-- For projects at 70%+, focus on FINISHING - suggest the final push tasks
-- For projects at <30%, focus on MOMENTUM - suggest quick wins to build confidence
-
-RECURRING PROJECT MODE:
-- Projects marked 🔄 RECURRING are ongoing habits (e.g., "Stay fit", "Learn Japanese")
-- These have NO end goal - they are about CONSISTENCY, not completion
-- For recurring projects:
-  - Suggest habit/routine tasks: "30 min practice", "Review vocabulary", "Quick workout"
-  - Focus on what to do THIS session, not driving toward "done"
-  - Celebrate streak/consistency instead of completion percentage
-  - Suggest variety to keep habits fresh (different exercises, new topics)
-
-DORMANT PROJECT RECOVERY (CRITICAL FOR USER RE-ENGAGEMENT):
-- Projects marked 😴 DORMANT or 💤 VERY DORMANT haven't been touched in 2+ weeks
-- These need EXCITEMENT and RECONNECTION, not guilt or pressure
-- For dormant projects, your session plan MUST:
-
-  1. REFRAME AS REDISCOVERY:
-     - Task Title should feel like returning to something beloved, not catching up
-     - Examples: "Rediscover Your [Project]", "Fresh Eyes on [Project]", "Reconnect with [Project]"
-     - NOT: "Catch up on [Project]", "Get back to [Project]", "Finally work on [Project]"
-
-  2. REMIND THEM WHY:
-     - Session Summary MUST reference their original Motivation
-     - Connect to emotions: "Remember when you started this because [motivation]? That spark is still there."
-     - Show what they've already accomplished to build confidence
-
-  3. LOWER THE BAR:
-     - For dormant projects, set total_estimated_minutes to 25-30 (NOT 50)
-     - First task should be easy: "Review where you left off" (5 min)
-     - Focus on ONE small win, not catching up on everything
-
-  4. OFFER AN OUT (in session_summary):
-     - Acknowledge it's okay if priorities changed
-     - Example: "...or if this no longer sparks joy, today's a good day to archive it and free your mental space."
-
-  5. SHOW CONTEXT:
-     - If "Last completed" is shown, reference it: "You were making progress on X..."
-     - Help them remember WHERE they were, not just WHAT to do
-
-  Example session_summary for dormant project:
-  "It's been a while since you touched [Project], and that's okay. You started this because [motivation], and you've already [progress]. Let's spend 25 minutes reconnecting - review where you left off and find one small win. Or if this no longer excites you, consider archiving it guilt-free."
-
-DURATION ESTIMATION (REQUIRED for every checklist item):
-
-Each task MUST include an "estimated_minutes" field. Use these buckets:
-- 5 min: Quick tasks (send a message, make a small tweak, review something brief)
-- 15 min: Short tasks (write a function, sketch an idea, research a topic)
-- 25 min: Standard tasks (implement a feature, write a section, design a component)
-- 45 min: Deep work (complex debugging, architectural decisions, creative flow work)
-
-The total "total_estimated_minutes" for all checklist items should be 40-55 minutes (ideal: ~50).
-If the total exceeds 55 minutes, remove lower-priority tasks until it fits.
-
-CRITICAL RULES FOR NEW TASKS (is_new: true):
-
-1. HARD CAP: Each project has a maximum of 12 incomplete tasks. Check "Available Slots for New Tasks" - if it's 0, DO NOT suggest any new tasks for that project.
-
-2. NO SEMANTIC DUPLICATES: Before suggesting a new task, analyze the MEANING of every existing task (completed and remaining). Ask yourself:
-   - "Does this new task describe the same work as an existing task, just worded differently?"
-   - "Would completing this new task also complete an existing task, or vice versa?"
-   If YES to either question, DO NOT suggest that task.
-
-   Examples of DUPLICATE tasks to AVOID:
-   - Existing: "Write tests" → DO NOT suggest: "Add unit tests", "Create test coverage", "Implement testing"
-   - Existing: "Set up deployment" → DO NOT suggest: "Configure deployment pipeline", "Deploy to production"
-   - Existing: "Design the UI" → DO NOT suggest: "Create user interface", "Build the frontend design"
-
-3. GENUINELY NEW WORK ONLY: New tasks must represent work that is NOT covered by any existing task. They should fill GAPS - things the user hasn't thought of yet that will move the project forward.
-
-4. PLAIN ENGLISH: Write tasks in simple, clear language. No jargon, no fancy rewording. If the user wrote "Make homepage", don't suggest "Architect the landing experience" - instead suggest something genuinely different like "Add contact form" or "Optimize images".
-
-5. EVERY checklist item MUST have "is_new" as a boolean AND "estimated_minutes" as a number.
-
-6. ONLY use Fuel Items from the list provided above. Do not invent articles.
-
-7. If suggesting fuel, you MUST include the valid Fuel ID provided in square brackets.
-
-8. If no relevant fuel exists, omit the fuel_id.
-
-Output JSON only (no markdown, no explanation):
-{
-  "tasks": [
-    {
-      "project_id": "exact-uuid-from-above",
-      "project_title": "string",
-      "task_title": "string",
-      "task_description": "string",
-      "session_summary": "string",
-      "checklist_items": [
-        { "text": "string", "is_new": true, "estimated_minutes": 25 },
-        { "text": "string", "is_new": false, "estimated_minutes": 15 }
-      ],
-      "total_estimated_minutes": 50,
-      "impact_score": 0.1-1.0,
-      "fuel_id": "string (optional valid id)",
-      "fuel_title": "string (optional)"
-    }
-  ]
-}`
+Output JSON:
+{"tasks":[{"project_id":"uuid","project_title":"str","task_title":"str","task_description":"str","session_summary":"str","checklist_items":[{"text":"str","is_new":bool,"estimated_minutes":num}],"total_estimated_minutes":num,"impact_score":0-1,"fuel_id":"str|null","fuel_title":"str|null"}]}`
 
     const result = await model.generateContent(prompt)
     const responseText = result.response.text()

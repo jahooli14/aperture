@@ -12,7 +12,7 @@ export async function detectGaps(
   userId: string,
   latestMemoryId: string
 ): Promise<GapAnalysisResult> {
-  // Fetch all user memories with prompts
+  // Fetch recent user memories with prompts (limit to 20 for cost optimization)
   const { data: allMemories, error } = await supabase
     .from('memory_responses')
     .select(`
@@ -24,6 +24,7 @@ export async function detectGaps(
     `)
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
+    .limit(20)
 
   if (error) {
     console.error('Error fetching memories:', error)

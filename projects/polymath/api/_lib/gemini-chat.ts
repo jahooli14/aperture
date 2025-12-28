@@ -13,6 +13,61 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy-key-for-initialization')
 
+// Token usage tracking (resets on deployment)
+let tokenStats = {
+  total_requests: 0,
+  total_input_tokens: 0,
+  total_output_tokens: 0,
+  total_tokens: 0,
+  estimated_cost_usd: 0,
+  last_reset: new Date().toISOString(),
+  by_operation: {} as Record<string, { count: number; input_tokens: number; output_tokens: number }>
+}
+
+/**
+ * Get current token usage stats
+ */
+export function getTokenStats() {
+  return { ...tokenStats }
+}
+
+/**
+ * Reset token stats
+ */
+export function resetTokenStats() {
+  tokenStats = {
+    total_requests: 0,
+    total_input_tokens: 0,
+    total_output_tokens: 0,
+    total_tokens: 0,
+    estimated_cost_usd: 0,
+    last_reset: new Date().toISOString(),
+    by_operation: {}
+  }
+}
+
+/**
+ * Track token usage for an operation
+ */
+function trackTokenUsage(operation: string, inputTokens: number, outputTokens: number) {
+  tokenStats.total_requests++
+  tokenStats.total_input_tokens += inputTokens
+  tokenStats.total_output_tokens += outputTokens
+  tokenStats.total_tokens += inputTokens + outputTokens
+
+  // Gemini Flash pricing (as of 2025): $0.075 per 1M input tokens, $0.30 per 1M output tokens
+  const inputCost = (inputTokens / 1_000_000) * 0.075
+  const outputCost = (outputTokens / 1_000_000) * 0.30
+  tokenStats.estimated_cost_usd += inputCost + outputCost
+
+  if (!tokenStats.by_operation[operation]) {
+    tokenStats.by_operation[operation] = { count: 0, input_tokens: 0, output_tokens: 0 }
+  }
+  tokenStats.by_operation[operation].count++
+  tokenStats.by_operation[operation].input_tokens += inputTokens
+  tokenStats.by_operation[operation].output_tokens += outputTokens
+}
+
 /**
  * Generate text using Gemini (fast, cost-effective)
  */
@@ -59,6 +114,14 @@ export async function generateText(
       if (!text || text.trim() === '') {
         throw new Error('Gemini returned empty response')
       }
+
+      // Track token usage
+      const usage = result.response.usageMetadata
+      if (usage) {
+        trackTokenUsage('generateText', usage.promptTokenCount || 0, usage.candidatesTokenCount || 0)
+        console.log(`[Token Stats] Input: ${usage.promptTokenCount}, Output: ${usage.candidatesTokenCount}, Total cost: $${tokenStats.estimated_cost_usd.toFixed(4)}`)
+      }
+
       return text
     } catch (e) {
       // Check for safety blocks

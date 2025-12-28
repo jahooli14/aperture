@@ -147,7 +147,7 @@ async function getRecentArticles(userId: string, days: number) {
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
-    .limit(15)
+    .limit(8)
 
   return data || []
 }
@@ -162,7 +162,7 @@ async function getRecentMemories(userId: string, days: number) {
     .eq('user_id', userId)
     .gte('created_at', cutoff.toISOString())
     .order('created_at', { ascending: false })
-    .limit(10)
+    .limit(6)
 
   if (!recentData || recentData.length === 0) return []
 
@@ -194,7 +194,7 @@ async function getRecentMemories(userId: string, days: number) {
       const unique = Array.from(
         new Map(allMemories.map(m => [m.id, m])).values()
       )
-      return unique.slice(0, 15)
+      return unique.slice(0, 10)
     }
   }
 
@@ -208,7 +208,7 @@ async function getActiveProjects(userId: string) {
     .eq('user_id', userId)
     .in('status', ['active', 'dormant', 'upcoming', 'completed'])
     .order('last_active', { ascending: false })
-    .limit(10)
+    .limit(6)
 
   return data || []
 }
@@ -250,7 +250,7 @@ async function getOldInsights(userId: string, daysAgo: number) {
     .lte('created_at', recent.toISOString()) // Older than 14 days
     .gte('created_at', cutoff.toISOString()) // But within 90 days
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(3)
 
   return data || []
 }
