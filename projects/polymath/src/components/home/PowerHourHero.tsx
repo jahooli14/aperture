@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Play, ArrowRight, BookOpen, Clock, ChevronDown, RefreshCw, Layers } from 'lucide-react'
+import { Zap, Play, ArrowRight, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Target, Pencil } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
@@ -305,6 +305,29 @@ export function PowerHourHero() {
                                         <span className="text-xs font-bold aperture-header text-white">{Math.round(mainTask.impact_score * 100)}%</span>
                                     </div>
                                 </div>
+
+                                {/* Goal Check Pill - surface end_goal so user notices if stale */}
+                                {currentProject && (
+                                    <button
+                                        onClick={() => {
+                                            haptic.light()
+                                            navigate(`/projects/${mainTask.project_id}`, { state: { openEdit: true } })
+                                        }}
+                                        className="flex items-center gap-1.5 mb-3 px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 transition-colors text-[10px] group"
+                                    >
+                                        <Target className="h-3 w-3 text-white/40" />
+                                        {currentProject.metadata?.end_goal ? (
+                                            <span className="text-white/50 truncate max-w-[200px] group-hover:text-white/70">
+                                                {currentProject.metadata.end_goal}
+                                            </span>
+                                        ) : (
+                                            <span className="text-white/30 italic group-hover:text-white/50">
+                                                Set finish line →
+                                            </span>
+                                        )}
+                                        <Pencil className="h-2.5 w-2.5 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                )}
 
                                 <h1 className="text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2">
                                     {mainTask.task_title}
