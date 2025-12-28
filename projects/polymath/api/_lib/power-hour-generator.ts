@@ -20,6 +20,8 @@ interface PowerHourTask {
     impact_score: number
     fuel_id?: string
     fuel_title?: string
+    is_dormant?: boolean      // Project hasn't been touched in 14+ days
+    days_dormant?: number     // How many days since last activity
 }
 
 import { repairAllUserProjects } from './project-repair.js'
@@ -38,7 +40,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     // 1. Fetch active projects
     let query = supabase
         .from('projects')
-        .select('id, title, description, status, metadata')
+        .select('id, title, description, status, metadata, last_active')
         .in('status', ['active', 'upcoming', 'maintaining', 'Active', 'Upcoming', 'Maintaining'])
         .eq('user_id', userId)
 
@@ -81,6 +83,8 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     // 3. Use Gemini 1.5 Flash to synthesize Power Hour suggestions
     const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
+    const now = Date.now()
+
     const projectsContext = projects.map(p => {
         const allTasks = p.metadata?.tasks || []
         const unfinishedTasks = allTasks.filter((t: any) => !t.done)
@@ -92,8 +96,18 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         const totalTasks = allTasks.length
         const progress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
 
+        // Calculate dormancy - days since last_active
+        const lastActiveDate = p.last_active ? new Date(p.last_active).getTime() : now
+        const daysDormant = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24))
+        const isDormant = daysDormant >= 14
+        const isVeryDormant = daysDormant >= 30
+
+        // Find the last completed task for context
+        const lastCompletedTask = completedTasks
+            .filter((t: any) => t.completed_at)
+            .sort((a: any, b: any) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+
         // Identify stale tasks (incomplete for > 14 days)
-        const now = Date.now()
         const staleTasks = unfinishedTasks.filter((t: any) => {
             if (!t.created_at) return false
             const ageInDays = (now - new Date(t.created_at).getTime()) / (1000 * 60 * 60 * 24)
@@ -124,6 +138,19 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     Completed Tasks: ${completedList}
     Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
     Available Slots for New Tasks: ${slotsAvailable}`
+
+        // Add dormancy context - this is key for re-engagement
+        if (isVeryDormant) {
+            context += `\n    💤 VERY DORMANT (${daysDormant} days since last session) - needs gentle re-engagement, not pressure`
+            if (lastCompletedTask) {
+                context += `\n    Last completed: "${lastCompletedTask.text}"`
+            }
+        } else if (isDormant) {
+            context += `\n    😴 DORMANT (${daysDormant} days since last session) - help user reconnect with why this mattered`
+            if (lastCompletedTask) {
+                context += `\n    Last completed: "${lastCompletedTask.text}"`
+            }
+        }
 
         // Add stale task warning if any
         if (staleTasks.length > 0) {
@@ -208,6 +235,37 @@ RECURRING PROJECT MODE:
   - Focus on what to do THIS session, not driving toward "done"
   - Celebrate streak/consistency instead of completion percentage
   - Suggest variety to keep habits fresh (different exercises, new topics)
+
+DORMANT PROJECT RECOVERY (CRITICAL FOR USER RE-ENGAGEMENT):
+- Projects marked 😴 DORMANT or 💤 VERY DORMANT haven't been touched in 2+ weeks
+- These need EXCITEMENT and RECONNECTION, not guilt or pressure
+- For dormant projects, your session plan MUST:
+
+  1. REFRAME AS REDISCOVERY:
+     - Task Title should feel like returning to something beloved, not catching up
+     - Examples: "Rediscover Your [Project]", "Fresh Eyes on [Project]", "Reconnect with [Project]"
+     - NOT: "Catch up on [Project]", "Get back to [Project]", "Finally work on [Project]"
+
+  2. REMIND THEM WHY:
+     - Session Summary MUST reference their original Motivation
+     - Connect to emotions: "Remember when you started this because [motivation]? That spark is still there."
+     - Show what they've already accomplished to build confidence
+
+  3. LOWER THE BAR:
+     - For dormant projects, set total_estimated_minutes to 25-30 (NOT 50)
+     - First task should be easy: "Review where you left off" (5 min)
+     - Focus on ONE small win, not catching up on everything
+
+  4. OFFER AN OUT (in session_summary):
+     - Acknowledge it's okay if priorities changed
+     - Example: "...or if this no longer sparks joy, today's a good day to archive it and free your mental space."
+
+  5. SHOW CONTEXT:
+     - If "Last completed" is shown, reference it: "You were making progress on X..."
+     - Help them remember WHERE they were, not just WHAT to do
+
+  Example session_summary for dormant project:
+  "It's been a while since you touched [Project], and that's okay. You started this because [motivation], and you've already [progress]. Let's spend 25 minutes reconnecting - review where you left off and find one small win. Or if this no longer excites you, consider archiving it guilt-free."
 
 DURATION ESTIMATION (REQUIRED for every checklist item):
 
@@ -310,18 +368,28 @@ Output JSON only (no markdown, no explanation):
             0
         )
 
+        // Look up dormancy info for this project
+        const project = projects.find(p => p.id === task.project_id)
+        const lastActiveDate = project?.last_active ? new Date(project.last_active).getTime() : now
+        const daysDormant = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24))
+        const isDormant = daysDormant >= 14
+
         return {
             ...task,
             checklist_items: validatedItems,
             total_estimated_minutes: totalEstimatedMinutes,
             fuel_id: validFuelId,
-            fuel_title: validFuelTitle
+            fuel_title: validFuelTitle,
+            is_dormant: isDormant,
+            days_dormant: daysDormant
         }
     })
 
     console.log('[PowerHour] Validated tasks with durations:', validatedTasks.map(t => ({
         project: t.project_title,
         total_minutes: t.total_estimated_minutes,
+        is_dormant: t.is_dormant,
+        days_dormant: t.days_dormant,
         items: t.checklist_items.map((i: any) => `${i.text} (${i.estimated_minutes}min)`)
     })))
 

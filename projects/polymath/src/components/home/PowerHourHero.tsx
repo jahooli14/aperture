@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Play, ArrowRight, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Target, Pencil } from 'lucide-react'
+import { Zap, Play, ArrowRight, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Target, Pencil, Archive, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
@@ -20,6 +20,8 @@ interface PowerTask {
     impact_score: number
     fuel_id?: string
     fuel_title?: string
+    is_dormant?: boolean
+    days_dormant?: number
 }
 
 export function PowerHourHero() {
@@ -358,6 +360,16 @@ export function PowerHourHero() {
                                     )
                                 })()}
 
+                                {/* Dormant Project Indicator */}
+                                {mainTask.is_dormant && (
+                                    <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 w-fit">
+                                        <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                                            Rediscovery Mode • {mainTask.days_dormant}d away
+                                        </span>
+                                    </div>
+                                )}
+
                                 <h1 className="text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2">
                                     {mainTask.task_title}
                                 </h1>
@@ -434,6 +446,24 @@ export function PowerHourHero() {
                                         >
                                             <BookOpen className="h-3.5 w-3.5" />
                                             <span>Fuel</span>
+                                        </button>
+                                    )}
+
+                                    {/* Archive option for dormant projects - easy out without guilt */}
+                                    {mainTask.is_dormant && (
+                                        <button
+                                            onClick={async () => {
+                                                haptic.light()
+                                                if (currentProject) {
+                                                    await updateProject(currentProject.id, { status: 'archived' })
+                                                    // Refresh tasks to remove the archived project
+                                                    setTasks(tasks.filter(t => t.project_id !== currentProject.id))
+                                                }
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-3 border border-amber-500/20 rounded-xl hover:bg-amber-500/10 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-amber-400/70 aperture-header"
+                                        >
+                                            <Archive className="h-3.5 w-3.5" />
+                                            <span>Archive</span>
                                         </button>
                                     )}
                                 </div>
