@@ -464,6 +464,10 @@ export interface ProjectMetadata {
   original_points?: number // Points from suggestion
   tasks?: Task[] // Project checklist - first incomplete task is the next step
   progress?: number // 0-100 percentage complete
+  motivation?: string // The "why" - user's purpose/reason for this project
+  end_goal?: string // Definition of Done - what does completion look like?
+  project_mode?: 'completion' | 'recurring' // completion = has end goal, recurring = ongoing habit
+  rejected_suggestions?: string[] // AI suggestions user removed - avoid suggesting again
   [key: string]: any // Allow arbitrary metadata
   // DEPRECATED: next_step field removed - use tasks?.find(t => !t.done)?.text instead
 }
