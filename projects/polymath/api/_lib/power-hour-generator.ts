@@ -113,11 +113,14 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         // Get motivation and end_goal for goal-driven AI
         const motivation = p.metadata?.motivation || ''
         const endGoal = p.metadata?.end_goal || ''
+        const projectMode = p.metadata?.project_mode || 'completion'
+        const isRecurring = projectMode === 'recurring'
 
         let context = `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
     Motivation: ${motivation || 'Not specified'}
-    Definition of Done: ${endGoal || 'Not specified - help user define completion'}
-    Progress: ${progress}% complete (${completedTasks.length}/${totalTasks} tasks done)
+    Project Mode: ${isRecurring ? '🔄 RECURRING (ongoing habit - no end goal)' : 'Completion-based'}
+    ${isRecurring ? 'Focus: Consistency and habit-building, not finishing' : `Definition of Done: ${endGoal || 'Not specified - help user define completion'}`}
+    ${!isRecurring ? `Progress: ${progress}% complete (${completedTasks.length}/${totalTasks} tasks done)` : `Sessions completed: ${completedTasks.length} tasks done historically`}
     Completed Tasks: ${completedList}
     Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
     Available Slots for New Tasks: ${slotsAvailable}`
@@ -196,6 +199,15 @@ PROGRESS AWARENESS:
 - Each project shows "Progress: X% complete"
 - For projects at 70%+, focus on FINISHING - suggest the final push tasks
 - For projects at <30%, focus on MOMENTUM - suggest quick wins to build confidence
+
+RECURRING PROJECT MODE:
+- Projects marked 🔄 RECURRING are ongoing habits (e.g., "Stay fit", "Learn Japanese")
+- These have NO end goal - they are about CONSISTENCY, not completion
+- For recurring projects:
+  - Suggest habit/routine tasks: "30 min practice", "Review vocabulary", "Quick workout"
+  - Focus on what to do THIS session, not driving toward "done"
+  - Celebrate streak/consistency instead of completion percentage
+  - Suggest variety to keep habits fresh (different exercises, new topics)
 
 DURATION ESTIMATION (REQUIRED for every checklist item):
 
