@@ -177,7 +177,8 @@ export function PowerHourHero() {
     // From review modal - adjusted items
     const handleConfirmSession = async (
         adjustedItems: { text: string; is_new: boolean; estimated_minutes: number }[],
-        totalMinutes: number
+        totalMinutes: number,
+        removedAISuggestions: string[] = []
     ) => {
         setShowReview(false)
         haptic.heavy()
@@ -190,6 +191,15 @@ export function PowerHourHero() {
         // 1. Identify new tasks to add (only from adjusted/confirmed items)
         const newTasksFromAI = adjustedItems.filter(item => item.is_new)
 
+        // 2. Track rejected suggestions (avoid suggesting again)
+        const existingRejected = project.metadata?.rejected_suggestions || []
+        const newRejected = [...new Set([...existingRejected, ...removedAISuggestions])]
+            .slice(-20) // Keep only last 20 to avoid bloat
+
+        const metadataUpdate: any = {
+            ...project.metadata,
+        }
+
         if (newTasksFromAI.length > 0) {
             const freshTasks = newTasksFromAI.map((t, idx) => ({
                 id: crypto.randomUUID(),
@@ -201,17 +211,20 @@ export function PowerHourHero() {
             }))
 
             updatedTasks = [...updatedTasks, ...freshTasks]
-
-            // Force immediate update to store and backend
-            await updateProject(project.id, {
-                metadata: {
-                    ...project.metadata,
-                    tasks: updatedTasks
-                }
-            })
+            metadataUpdate.tasks = updatedTasks
         }
 
-        // 2. Navigate with full context including session duration
+        // Save rejected suggestions if any
+        if (removedAISuggestions.length > 0) {
+            metadataUpdate.rejected_suggestions = newRejected
+        }
+
+        // Force immediate update to store and backend
+        if (newTasksFromAI.length > 0 || removedAISuggestions.length > 0) {
+            await updateProject(project.id, { metadata: metadataUpdate })
+        }
+
+        // 3. Navigate with full context including session duration
         navigate(`/projects/${mainTask.project_id}`, {
             state: {
                 powerHourTask: {
@@ -421,14 +434,38 @@ export function PowerHourHero() {
                             maskImage: 'linear-gradient(to bottom, black, transparent)'
                         }} />
 
-                        <div className="text-center relative z-10">
-                            <div className="text-5xl font-bold mb-1 lining-nums text-white aperture-header">
-                                {Math.round(mainTask.impact_score * 100)}<span className="text-xl opacity-50">%</span>
-                            </div>
-                            <div className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-40 text-white aperture-header">
-                                Momentum
-                            </div>
-                        </div>
+                        {/* Project Progress toward Goal */}
+                        {currentProject && (() => {
+                            const tasks = currentProject.metadata?.tasks || []
+                            const done = tasks.filter((t: any) => t.done).length
+                            const total = tasks.length
+                            const progress = total > 0 ? Math.round((done / total) * 100) : 0
+                            const isNearComplete = progress >= 70
+
+                            return (
+                                <div className="text-center relative z-10 w-full">
+                                    <div className="text-4xl font-bold mb-1 lining-nums text-white aperture-header">
+                                        {progress}<span className="text-lg opacity-50">%</span>
+                                    </div>
+                                    <div className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-40 text-white aperture-header mb-2">
+                                        {isNearComplete ? 'Almost Done!' : 'Progress'}
+                                    </div>
+                                    {/* Mini progress bar */}
+                                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full transition-all"
+                                            style={{
+                                                width: `${progress}%`,
+                                                backgroundColor: isNearComplete ? '#22c55e' : theme.text
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="text-[9px] text-white/30 mt-1">
+                                        {done}/{total} tasks
+                                    </div>
+                                </div>
+                            )
+                        })()}
 
                         <div className="mt-4 pt-4 border-t border-white/5 w-full flex justify-center text-white/30">
                             <div className="flex items-center gap-1.5">

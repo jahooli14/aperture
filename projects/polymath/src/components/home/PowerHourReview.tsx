@@ -24,7 +24,7 @@ interface PowerHourReviewProps {
     task: PowerTask
     projectColor: string
     onClose: () => void
-    onStart: (adjustedItems: ChecklistItem[], totalMinutes: number) => void
+    onStart: (adjustedItems: ChecklistItem[], totalMinutes: number, removedAISuggestions: string[]) => void
 }
 
 const DURATION_OPTIONS = [5, 15, 25, 45]
@@ -81,7 +81,11 @@ export function PowerHourReview({ task, projectColor, onClose, onStart }: PowerH
 
     const handleStart = () => {
         haptic.heavy()
-        onStart(activeItems, totalMinutes)
+        // Collect removed AI suggestions to track and avoid suggesting again
+        const removedAISuggestions = items
+            .filter((item, idx) => removedIndices.has(idx) && item.is_new)
+            .map(item => item.text)
+        onStart(activeItems, totalMinutes, removedAISuggestions)
     }
 
     return (
