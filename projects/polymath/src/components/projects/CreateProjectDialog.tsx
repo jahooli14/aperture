@@ -49,6 +49,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
     title: '',
     description: '',
     motivation: '',
+    end_goal: '',
+    project_mode: 'completion' as 'completion' | 'recurring',
     next_step: '',
     type: 'Creative',
   })
@@ -65,6 +67,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
       title: '',
       description: '',
       motivation: '',
+      end_goal: '',
+      project_mode: 'completion',
       next_step: '',
       type: 'Creative',
     })
@@ -107,6 +111,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
           tasks,
           progress: 0,
           motivation: formData.motivation,
+          end_goal: formData.project_mode === 'completion' ? (formData.end_goal || undefined) : undefined,
+          project_mode: formData.project_mode,
         },
       })
 
@@ -249,16 +255,70 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     </Label>
                     <Input
                       id="motivation"
-                      placeholder="Why does this matter? What is the goal?"
+                      placeholder="Why does this matter?"
                       value={formData.motivation}
                       onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
                       className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                       autoComplete="off"
                     />
-                    <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
-                      <strong>AI Tip:</strong> Specific motivation ("To learn React" vs "To build an app") drastically changes the Power Hour tasks generated.
+                  </div>
+
+                  {/* Project Mode Toggle */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                      Project Type
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, project_mode: 'completion' })}
+                        className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'completion'
+                          ? 'bg-white text-black border-white'
+                          : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                          }`}
+                      >
+                        <div className="font-bold">Has End Goal</div>
+                        <div className="text-[10px] opacity-60 mt-0.5">Ship it, complete it</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, project_mode: 'recurring' })}
+                        className={`p-3 rounded-xl text-xs font-bold border transition-all text-left ${formData.project_mode === 'recurring'
+                          ? 'bg-white text-black border-white'
+                          : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
+                          }`}
+                      >
+                        <div className="font-bold">Ongoing Habit</div>
+                        <div className="text-[10px] opacity-60 mt-0.5">Stay fit, keep learning</div>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Definition of Done - only for completion projects */}
+                  {formData.project_mode === 'completion' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
+                        Definition of Done
+                      </Label>
+                      <Input
+                        id="end_goal"
+                        placeholder="What does 'complete' look like? e.g., 'App live on App Store'"
+                        value={formData.end_goal}
+                        onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                        className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                        autoComplete="off"
+                      />
+                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
+                        <strong>AI Tip:</strong> Clear goals help the AI suggest tasks that drive toward completion, not busywork.
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.project_mode === 'recurring' && (
+                    <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-xs text-green-200">
+                      <strong>Habit Mode:</strong> AI will suggest consistent practice sessions rather than driving toward "done".
+                    </div>
+                  )}
                 </motion.div>
               )}
 
