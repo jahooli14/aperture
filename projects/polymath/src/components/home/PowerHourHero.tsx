@@ -573,21 +573,55 @@ export function PowerHourHero() {
 
             {/* Review Modal */}
             <AnimatePresence>
-                {showReview && mainTask && mainTask.checklist_items && (
-                    <PowerHourReview
-                        task={{
-                            ...mainTask,
-                            checklist_items: mainTask.checklist_items.map(item => ({
-                                ...item,
-                                estimated_minutes: item.estimated_minutes || 15
-                            })),
-                            total_estimated_minutes: mainTask.total_estimated_minutes || 50
-                        }}
-                        projectColor={theme.text}
-                        onClose={() => setShowReview(false)}
-                        onStart={handleConfirmSession}
-                    />
-                )}
+                {showReview && mainTask && mainTask.checklist_items && (() => {
+                    // Build project context for the review modal
+                    const projectTasks = currentProject?.metadata?.tasks || []
+                    const completedTasks = projectTasks.filter((t: any) => t.done)
+                    const totalTasks = projectTasks.length
+                    const progress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
+
+                    // Find last completed task
+                    const lastCompletedTask = completedTasks
+                        .filter((t: any) => t.completed_at)
+                        .sort((a: any, b: any) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+
+                    const projectContext = {
+                        motivation: currentProject?.metadata?.motivation,
+                        endGoal: currentProject?.metadata?.end_goal,
+                        progress,
+                        isDormant: mainTask.is_dormant,
+                        daysDormant: mainTask.days_dormant,
+                        lastCompletedTask: lastCompletedTask?.text,
+                        projectMode: currentProject?.metadata?.project_mode as 'completion' | 'recurring' | undefined,
+                        completedCount: completedTasks.length
+                    }
+
+                    return (
+                        <PowerHourReview
+                            task={{
+                                ...mainTask,
+                                checklist_items: mainTask.checklist_items.map(item => ({
+                                    ...item,
+                                    estimated_minutes: item.estimated_minutes || 15
+                                })),
+                                total_estimated_minutes: mainTask.total_estimated_minutes || 50
+                            }}
+                            projectColor={theme.text}
+                            projectTasks={projectTasks}
+                            projectContext={projectContext}
+                            onClose={() => setShowReview(false)}
+                            onStart={handleConfirmSession}
+                            onArchive={mainTask.is_dormant ? async () => {
+                                setShowReview(false)
+                                haptic.light()
+                                if (currentProject) {
+                                    await updateProject(currentProject.id, { status: 'archived' })
+                                    setTasks(tasks.filter(t => t.project_id !== currentProject.id))
+                                }
+                            } : undefined}
+                        />
+                    )
+                })()}
             </AnimatePresence>
         </div>
     )
