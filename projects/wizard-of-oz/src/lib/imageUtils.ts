@@ -35,17 +35,19 @@ export async function compressImage(
 ): Promise<File> {
   // Use createImageBitmap which correctly handles EXIF orientation from camera photos
   // This is essential for photos taken directly with the camera to have correct orientation
+  // Note: This automatically applies EXIF rotation, so the returned bitmap has correct dimensions
   const bitmap = await createImageBitmap(file);
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
 
   // Calculate new dimensions maintaining aspect ratio
+  // bitmap.width/height already reflect EXIF-corrected dimensions
   let width = bitmap.width;
   let height = bitmap.height;
 
   if (width > maxWidth) {
-    height = (height * maxWidth) / width;
+    height = Math.round((height * maxWidth) / width);
     width = maxWidth;
   }
 
@@ -59,10 +61,18 @@ export async function compressImage(
   bitmap.close();
 
   // Convert to blob with compression
-  return new Promise((resolve) => {
+  // Use a consistent filename with .jpg extension to match the MIME type
+  const baseName = file.name.replace(/\.[^/.]+$/, '');
+  const newFileName = `${baseName}.jpg`;
+
+  return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        const compressedFile = new File([blob!], file.name, { type: 'image/jpeg' });
+        if (!blob) {
+          reject(new Error('Failed to compress image'));
+          return;
+        }
+        const compressedFile = new File([blob], newFileName, { type: 'image/jpeg' });
         resolve(compressedFile);
       },
       'image/jpeg',
