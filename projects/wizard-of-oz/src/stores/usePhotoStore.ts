@@ -44,7 +44,7 @@ interface PhotoState {
   uploading: boolean;
   deleting: boolean;
   fetchError: string | null;
-  fetchPhotos: () => Promise<void>;
+  fetchPhotos: (retryCount?: number) => Promise<void>;
   uploadPhoto: (file: File, eyeCoords: EyeCoordinates | null, uploadDate?: string, note?: string, emoji?: string, zoomLevel?: number) => Promise<string>;
   updatePhotoNote: (photoId: string, note: string, emoji?: string) => Promise<void>;
   deletePhoto: (photoId: string) => Promise<void>;
@@ -60,13 +60,16 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   deleting: false,
   fetchError: null,
 
-  fetchPhotos: async () => {
+  fetchPhotos: async (retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS = [1000, 2000, 4000]; // Exponential backoff
+
     set({ loading: true, fetchError: null });
-    console.log('[PhotoStore] Fetching photos...');
+    console.log(`[PhotoStore] Fetching photos... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
 
     // Add timeout to prevent infinite loading
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Fetch timeout after 10 seconds')), 10000);
+      setTimeout(() => reject(new Error('Fetch timeout after 15 seconds')), 15000);
     });
 
     try {
@@ -88,6 +91,14 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       if (error) {
         logger.error('Error fetching photos', { error: error.message }, 'PhotoStore');
         console.error('[PhotoStore] Error fetching photos:', error.message);
+
+        // Retry on database errors
+        if (retryCount < MAX_RETRIES) {
+          console.log(`[PhotoStore] Retrying in ${RETRY_DELAYS[retryCount]}ms...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+          return get().fetchPhotos(retryCount + 1);
+        }
+
         const errorMsg = `Database error: ${error.message}`;
         set({ loading: false, fetchError: errorMsg });
         return;
@@ -129,16 +140,26 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
         }
       });
 
-      // Batch generate signed URLs for uncached paths
+      // Batch generate signed URLs for uncached paths with timeout protection
       if (pathsToGenerate.length > 0) {
         try {
           const paths = pathsToGenerate.map(item => item.path);
-          const { data: signedData, error: signError } = await supabase.storage
+
+          // Add timeout for signed URL generation
+          const signedUrlPromise = supabase.storage
             .from('originals')
-            .createSignedUrls(paths, 3600); // 1 hour
+            .createSignedUrls(paths, 3600);
+
+          const signedUrlTimeout = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Signed URL generation timeout')), 10000);
+          });
+
+          const signedResult = await Promise.race([signedUrlPromise, signedUrlTimeout]);
+          const { data: signedData, error: signError } = signedResult;
 
           if (signError) {
             logger.error('Batch signed URL generation failed', { error: signError.message }, 'PhotoStore');
+            // Continue without signed URLs - photos will still work with public URLs
           } else if (signedData) {
             // Map signed URLs back to photos and cache them
             signedData.forEach((urlData, idx) => {
@@ -162,7 +183,8 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
             });
           }
         } catch (err) {
-          logger.error('Unexpected error in batch signed URL generation', {
+          // Log but don't fail - photos will use public URLs as fallback
+          logger.warn('Signed URL generation failed, using public URLs', {
             error: err instanceof Error ? err.message : String(err)
           }, 'PhotoStore');
         }
@@ -171,6 +193,14 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
       set({ photos: photosWithSignedUrls, loading: false, fetchError: null });
     } catch (err) {
       logger.error('Unexpected error fetching photos', { error: err instanceof Error ? err.message : String(err) }, 'PhotoStore');
+
+      // Retry on network/timeout errors
+      if (retryCount < MAX_RETRIES) {
+        console.log(`[PhotoStore] Retrying in ${RETRY_DELAYS[retryCount]}ms...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[retryCount]));
+        return get().fetchPhotos(retryCount + 1);
+      }
+
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       set({ loading: false, photos: [], fetchError: errorMsg });
     }
