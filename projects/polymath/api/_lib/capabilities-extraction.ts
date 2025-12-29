@@ -1,34 +1,87 @@
 import { getSupabaseClient } from './supabase.js'
-import { generateEmbedding } from './gemini-embeddings.js'
+import { generateEmbedding, cosineSimilarity } from './gemini-embeddings.js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+
+/**
+ * Select diverse items from a set using max-min diversity algorithm
+ * Ensures selected items are maximally dissimilar to each other
+ */
+function selectDiverseItems<T extends { embedding: number[] }>(
+  items: T[],
+  count: number
+): T[] {
+  if (items.length <= count) return items
+  if (items.filter(i => i.embedding).length === 0) return items.slice(0, count)
+
+  const selected: T[] = []
+  const remaining = items.filter(i => i.embedding)
+
+  // Start with first item
+  selected.push(remaining[0])
+
+  // Iteratively select items with max distance to already selected items
+  while (selected.length < count && remaining.length > 0) {
+    let maxMinSimilarity = -1
+    let mostDifferentIdx = -1
+
+    for (let i = 0; i < remaining.length; i++) {
+      if (selected.includes(remaining[i])) continue
+
+      // Calculate minimum similarity to all selected items
+      const minSimilarity = Math.min(
+        ...selected.map(s => cosineSimilarity(remaining[i].embedding, s.embedding))
+      )
+
+      // Select item with lowest maximum similarity (most different)
+      if (minSimilarity > maxMinSimilarity) {
+        maxMinSimilarity = minSimilarity
+        mostDifferentIdx = i
+      }
+    }
+
+    if (mostDifferentIdx !== -1) {
+      selected.push(remaining[mostDifferentIdx])
+    } else {
+      break
+    }
+  }
+
+  return selected
+}
 
 export async function extractCapabilities(userId: string) {
   const supabase = getSupabaseClient()
   console.log('[capabilities] Starting extraction for user:', userId)
 
   try {
-    // 1. Fetch recent data (limited to 20 each for cost optimization)
-    const { data: projects } = await supabase
+    // 1. Fetch candidates with embeddings for diverse sampling
+    const { data: allProjects } = await supabase
       .from('projects')
-      .select('title, description')
+      .select('title, description, embedding')
       .eq('user_id', userId)
-      .limit(20)
+      .limit(40)
       .order('created_at', { ascending: false })
 
-    const { data: memories } = await supabase
+    const { data: allMemories } = await supabase
       .from('memories')
-      .select('title, body')
+      .select('title, body, embedding')
       .eq('user_id', userId)
-      .limit(20)
+      .limit(40)
       .order('created_at', { ascending: false })
 
-    if ((!projects || projects.length === 0) && (!memories || memories.length === 0)) {
+    if ((!allProjects || allProjects.length === 0) && (!allMemories || allMemories.length === 0)) {
       console.log('[capabilities] No data to analyze')
       return []
     }
+
+    // 2. Select diverse representatives (15 each)
+    const projects = selectDiverseItems(allProjects || [], 15)
+    const memories = selectDiverseItems(allMemories || [], 15)
+
+    console.log(`[capabilities] Selected ${projects.length} diverse projects and ${memories.length} diverse memories from ${allProjects?.length || 0} and ${allMemories?.length || 0} candidates`)
 
     const content = [
       "PROJECTS:",

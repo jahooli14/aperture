@@ -58,21 +58,20 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         return []
     }
 
-    // 2. Fetch recent unread articles (Fuel)
+    // 2. Fetch recent unread articles (Fuel) with embeddings
     const { data: fuel, error: fuelError } = await supabase
         .from('reading_queue')
-        .select('id, title, excerpt, content')
+        .select('id, title, excerpt, content, embedding')
         .eq('status', 'unread')
         .eq('user_id', userId)
         .limit(10)
 
     if (fuelError) throw fuelError
 
-    // 2b. Fetch recent list items (Inspiration - films, books, etc.)
-    // Cross-pollination: "Rothko documentary" → inspires "paint pouring project"
+    // 2b. Fetch recent list items (Inspiration) with embeddings
     const { data: listInspiration, error: listError } = await supabase
         .from('list_items')
-        .select('id, content, metadata, list_id')
+        .select('id, content, metadata, list_id, embedding')
         .eq('user_id', userId)
         .eq('enrichment_status', 'complete')
         .order('created_at', { ascending: false })
@@ -85,7 +84,36 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
 
     const now = Date.now()
 
-    const projectsContext = projects.map(p => {
+    // Generate context for each project with semantically matched fuel/inspiration
+    const projectsContext = await Promise.all(projects.map(async p => {
+        // Find relevant fuel and inspiration for this specific project using vector search
+        let relevantFuel: any[] = []
+        let relevantInspiration: any[] = []
+
+        if (p.embedding) {
+            // Match fuel articles to project
+            if (fuel && fuel.length > 0) {
+                const { data: matchedFuel } = await supabase.rpc('match_reading', {
+                    query_embedding: p.embedding,
+                    filter_user_id: userId,
+                    match_threshold: 0.6,
+                    match_count: 3
+                })
+                relevantFuel = matchedFuel || []
+            }
+
+            // Match list items to project
+            if (listInspiration && listInspiration.length > 0) {
+                const { data: matchedList } = await supabase.rpc('match_list_items', {
+                    query_embedding: p.embedding,
+                    filter_user_id: userId,
+                    match_threshold: 0.6,
+                    match_count: 3
+                })
+                relevantInspiration = matchedList || []
+            }
+        }
+
         const allTasks = p.metadata?.tasks || []
         const unfinishedTasks = allTasks.filter((t: any) => !t.done)
         const completedTasks = allTasks.filter((t: any) => t.done)
@@ -162,42 +190,43 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
             context += `\n    🚫 DO NOT SUGGEST (user removed these before): ${rejectedSuggestions.slice(-10).join(', ')}`
         }
 
+        // Add project-specific fuel and inspiration
+        if (relevantFuel.length > 0) {
+            const fuelList = relevantFuel.map(f => `- ${f.title} [ID: ${f.id}]`).join('\n      ')
+            context += `\n    📚 RELEVANT FUEL:\n      ${fuelList}`
+        }
+        if (relevantInspiration.length > 0) {
+            const inspirationList = relevantInspiration.map(i => `- ${i.content}`).join('\n      ')
+            context += `\n    💡 RELEVANT INSPIRATION:\n      ${inspirationList}`
+        }
+
         return context
-    }).join('\n')
+    }))).join('\n')
 
+    // Build valid fuel IDs for validation
     const validFuelIds = new Set(fuel?.map(f => f.id) || [])
-    const fuelContext = fuel?.slice(0, 5).map(f => `- ${f.title} [ID: ${f.id}]: ${f.excerpt}`).join('\n') || 'No new fuel available.'
 
-    // Build inspiration context from list items
-    const inspirationContext = listInspiration?.slice(0, 5).map(item => {
-        const meta = item.metadata || {}
-        return `- ${item.content}: ${meta.subtitle || ''} ${meta.description ? `(${meta.description})` : ''}`
-    }).join('\n') || 'No recent list items.'
+    const prompt = `Generate Power Hour plans (50 min) for projects. Each project has semantically matched fuel/inspiration.
 
-    const prompt = `Generate Power Hour session plans (50 min focused work) for projects.
-
-PROJECTS:
+PROJECTS (with relevant fuel/inspiration):
 ${projectsContext}
 
-FUEL: ${fuelContext}
-INSPIRATION: ${inspirationContext}
-
-For each plan create 3-5 tasks that move toward "Definition of Done". Prioritize existing incomplete tasks over new ones.
+Create 3-5 tasks per project moving toward "Definition of Done". Prioritize existing tasks.
 
 RULES:
-- Use exact project_id from list
-- Session Summary: 2 sentences connecting to motivation & goal
-- Respect "Available Slots for New Tasks" - don't exceed
-- Avoid 🚫 DO NOT SUGGEST items (user rejected)
-- Address ⚠️ STALE TASKS (>14 days old)
-- Progress 70%+: focus on FINISHING. <30%: quick wins
-- 🔄 RECURRING: suggest habits/routines, not completion
-- 😴/💤 DORMANT (14+ days): set total_estimated_minutes 25-30, reference motivation, easy first task, offer to archive if no longer relevant
-- No semantic duplicates of existing tasks
-- Task minutes: 5 (quick), 15 (short), 25 (standard), 45 (deep). Total: 40-55 min
-- Use only provided fuel IDs or omit
+- Use exact project_id
+- Session Summary: 2 sentences on motivation & goal
+- Respect "Available Slots for New Tasks"
+- Avoid 🚫 items (user rejected)
+- Address ⚠️ STALE TASKS
+- 70%+ progress: FINISH. <30%: quick wins
+- 🔄 RECURRING: habits, not completion
+- 😴/💤 DORMANT: 25-30 min, easy start, offer archive option
+- No duplicates
+- Minutes: 5/15/25/45. Total: 40-55
+- Use provided fuel IDs only
 
-Output JSON:
+JSON:
 {"tasks":[{"project_id":"uuid","project_title":"str","task_title":"str","task_description":"str","session_summary":"str","checklist_items":[{"text":"str","is_new":bool,"estimated_minutes":num}],"total_estimated_minutes":num,"impact_score":0-1,"fuel_id":"str|null","fuel_title":"str|null"}]}`
 
     const result = await model.generateContent(prompt)
