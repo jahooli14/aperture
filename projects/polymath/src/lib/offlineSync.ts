@@ -24,8 +24,20 @@ async function downloadImages(articleId: string, content: string): Promise<void>
             if (cached) return
 
             // Download image
-            const response = await fetch(src)
-            if (!response.ok) throw new Error(`Failed to fetch ${src}`)
+            let response
+            try {
+                // Try direct fetch first
+                response = await fetch(src, { mode: 'cors' })
+                if (!response.ok) throw new Error('Network response was not ok')
+            } catch (directError) {
+                // Return if offline/other network error, but retry via proxy if it was potentially CORS
+                console.log(`[OfflineSync] Direct fetch failed for ${src}, trying proxy...`)
+
+                // Fallback to proxy
+                response = await fetch(`/api/reading?resource=proxy&url=${encodeURIComponent(src)}`)
+            }
+
+            if (!response || !response.ok) throw new Error(`Failed to fetch ${src}`)
 
             const blob = await response.blob()
 

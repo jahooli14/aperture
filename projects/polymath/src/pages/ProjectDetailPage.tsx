@@ -822,11 +822,17 @@ export function ProjectDetailPage() {
               )}
 
               <div className="space-y-6">
-                {/* Vision Block: Merges Description and Motivation */}
+                {/* The Vision: Merges Description and Motivation */}
                 {(project.description || project.metadata?.motivation) && (
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                     <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                      <div className="flex items-center gap-3 mb-4 opacity-50">
+                        <div className="h-px bg-white/20 flex-grow" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">The Vision</span>
+                        <div className="h-px bg-white/20 flex-grow" />
+                      </div>
+
                       <div
                         className="cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => {
@@ -859,8 +865,7 @@ export function ProjectDetailPage() {
                       </div>
 
                       {(project.metadata?.motivation || editingMotivation) && (
-                        <div className="pt-4 border-t border-white/5">
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400/70 mb-2 block">The Purpose</span>
+                        <div className="pt-6 relative">
                           <div
                             className="cursor-pointer hover:text-white transition-colors"
                             onClick={() => {
@@ -882,12 +887,12 @@ export function ProjectDetailPage() {
                                   }
                                   if (e.key === 'Escape') cancelEdit()
                                 }}
-                                className="w-full bg-black/40 border-white/10 rounded-xl p-3 text-sm text-white leading-relaxed max-w-2xl outline-none focus:border-blue-500/50"
+                                className="w-full bg-black/40 border-white/10 rounded-xl p-3 text-sm text-white leading-relaxed max-w-2xl mx-auto block outline-none focus:border-blue-500/50 text-center"
                                 autoFocus
                               />
                             ) : (
-                              <p className="text-sm text-white/40 leading-relaxed max-w-2xl">
-                                {project.metadata?.motivation || 'What drives this project?'}
+                              <p className="text-sm text-white/50 leading-relaxed max-w-2xl mx-auto text-center font-serif italic">
+                                — {project.metadata?.motivation || 'What drives this project?'}
                               </p>
                             )}
                           </div>
@@ -896,81 +901,32 @@ export function ProjectDetailPage() {
                     </div>
                   </div>
                 )}
-
-                {/* Definition of Done - The Finish Line */}
               </div>
 
-              {/* Motivation & Definition of Done - Project Context */}
-              <div className="grid gap-3">
-                {/* Motivation - Why this matters */}
+              {/* The Finish Line (Definition of Done) */}
+              <div className="grid gap-3 mt-6">
                 <div
-                  className="premium-card p-4 border-l-4 border-blue-500 cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={!editingMotivation ? startEditMotivation : undefined}
-                  title="Click to edit"
-                >
-                  <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
-                    Motivation
-                  </h3>
-                  {editingMotivation ? (
-                    <div className="space-y-2">
-                      <textarea
-                        ref={motivationInputRef}
-                        value={tempMotivation}
-                        onChange={(e) => setTempMotivation(e.target.value)}
-                        className="w-full bg-zinc-900/50 border border-zinc-700 rounded p-2 text-sm resize-none focus:outline-none focus:border-blue-500"
-                        style={{ color: 'var(--premium-text-primary)' }}
-                        rows={3}
-                        placeholder="Why does this project matter to you?"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault()
-                            saveMotivation()
-                          } else if (e.key === 'Escape') {
-                            cancelEdit()
-                          }
-                        }}
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                          className="px-3 py-1 text-xs rounded bg-zinc-700 hover:bg-zinc-600"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); saveMotivation() }}
-                          className="px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                      {project.metadata?.motivation || <span className="opacity-50 italic">Click to add your motivation...</span>}
-                    </p>
-                  )}
-                </div>
-
-                {/* Definition of Done - The finish line */}
-                <div
-                  className="premium-card p-4 border-l-4 border-green-500 cursor-pointer hover:bg-white/5 transition-colors"
+                  className="group relative p-6 cursor-pointer hover:bg-white/5 transition-all rounded-xl border border-white/5 hover:border-green-500/30 overflow-hidden"
                   onClick={!editingGoal ? startEditGoal : undefined}
                   title="Click to edit"
                 >
-                  <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-green)' }}>
-                    Definition of Done
+                  <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  </div>
+
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-green-500 flex items-center gap-2">
+                    The Finish Line
                   </h3>
+
                   {editingGoal ? (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <textarea
                         ref={goalInputRef}
                         value={tempGoal}
                         onChange={(e) => setTempGoal(e.target.value)}
-                        className="w-full bg-zinc-900/50 border border-zinc-700 rounded p-2 text-sm resize-none focus:outline-none focus:border-green-500"
-                        style={{ color: 'var(--premium-text-primary)' }}
+                        className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-base resize-none focus:outline-none focus:border-green-500/50 text-white leading-relaxed"
                         rows={3}
-                        placeholder="What does 'done' look like for this project?"
+                        placeholder="What does 'done' look like?"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
@@ -983,34 +939,42 @@ export function ProjectDetailPage() {
                       <div className="flex gap-2 justify-end">
                         <button
                           onClick={(e) => { e.stopPropagation(); cancelEdit() }}
-                          className="px-3 py-1 text-xs rounded bg-zinc-700 hover:bg-zinc-600"
+                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); saveGoal() }}
-                          className="px-3 py-1 text-xs rounded bg-green-600 hover:bg-green-500"
+                          className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded bg-green-900/50 text-green-400 border border-green-500/20 hover:bg-green-900/80"
                         >
-                          Save
+                          Set Target
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                      {project.metadata?.end_goal || <span className="opacity-50 italic">Click to define your finish line...</span>}
+                    <p className="text-lg text-white/90 leading-relaxed font-medium">
+                      {project.metadata?.end_goal || <span className="text-white/30 italic">Define the clear target for completion...</span>}
                     </p>
                   )}
                 </div>
               </div>
 
               {/* Task Checklist */}
-              <div data-task-list>
+              <div data-task-list className="mt-8">
+                <div className="flex items-center gap-3 mb-4 opacity-50">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Execution Plan</span>
+                  <div className="h-px bg-white/20 flex-grow" />
+                </div>
                 <TaskList
-                  tasks={project.metadata?.tasks || []}
+                  tasks={project.metadata?.tasks?.filter((task, index, self) =>
+                    index === self.findIndex((t) => (
+                      t.text.trim().toLowerCase() === task.text.trim().toLowerCase()
+                    ))
+                  ) || []}
                   highlightedTasks={location.state?.powerHourTasks || []}
                   onUpdate={async (tasks) => {
                     if (!project) return
-                    console.log('[ProjectDetail] Task update triggered, new tasks:', tasks.map(t => ({ text: t.text, done: t.done, order: t.order })))
+                    console.log('[ProjectDetail] Task update triggered')
 
                     const now = new Date().toISOString()
                     const newMetadata = {
@@ -1019,40 +983,16 @@ export function ProjectDetailPage() {
                       progress: Math.round((tasks.filter(t => t.done).length / tasks.length) * 100) || 0
                     }
 
-                    // Update store - this is the source of truth
-                    // optimistic update is done inside store.updateProject
-                    console.log('[ProjectDetail] Calling updateProject API...')
                     try {
                       await updateProject(project.id, {
                         metadata: newMetadata,
                         last_active: now,
                         updated_at: now
                       })
-                      console.log('[ProjectDetail] Update successful!')
                     } catch (error) {
                       console.error('[ProjectDetail] Update failed:', error)
                     }
                   }}
-                />
-              </div>
-
-              {/* Smart Connections Section */}
-              <div className="mt-8 pt-8 border-t border-white/10">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
-                    <p className="text-xs text-zinc-500">Semantic bridges discovered by the Aperture Engine.</p>
-                  </div>
-                  <div className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-[8px] font-black uppercase tracking-widest text-blue-400">
-                    Neural Bridge
-                  </div>
-                </div>
-
-                <ConnectionsList
-                  itemType="project"
-                  itemId={project.id}
-                  content={`${project.title} ${project.description || ''} ${project.metadata?.motivation || ''}`}
-                  onConnectionCreated={loadProjectDetails}
                 />
               </div>
 
