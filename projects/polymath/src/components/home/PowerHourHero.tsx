@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Play, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Flame, Coffee, Moon } from 'lucide-react'
+import { Zap, Play, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Flame, Coffee, Moon, Archive, Target, Pencil, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { PowerHourReview } from './PowerHourReview'
 
 import { PROJECT_COLORS } from '../projects/ProjectCard'
 
@@ -16,15 +17,17 @@ interface PowerTask {
     session_summary?: string
 
     // The Arc
-    ignition_tasks?: { text: string; is_new: boolean }[]
-    checklist_items?: { text: string; is_new: boolean }[]
-    shutdown_tasks?: { text: string; is_new: boolean }[]
+    ignition_tasks?: { text: string; is_new: boolean; estimated_minutes?: number }[]
+    checklist_items?: { text: string; is_new: boolean; estimated_minutes?: number }[]
+    shutdown_tasks?: { text: string; is_new: boolean; estimated_minutes?: number }[]
 
     impact_score: number
     fuel_id?: string
     fuel_title?: string
     overhead_type?: 'Mental' | 'Physical' | 'Tech' | 'Digital'
     duration_minutes?: number
+    is_dormant?: boolean
+    days_dormant?: number
 }
 
 const DURATION_OPTIONS = [
@@ -41,6 +44,7 @@ export function PowerHourHero() {
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [showProjectPicker, setShowProjectPicker] = useState(false)
     const [duration, setDuration] = useState(60)
+    const [showReview, setShowReview] = useState(false)
 
     const navigate = useNavigate()
 
@@ -201,6 +205,68 @@ export function PowerHourHero() {
         })
     }
 
+    const handleConfirmSession = async (
+        adjustedItems: { text: string; is_new: boolean; estimated_minutes: number }[],
+        totalMinutes: number,
+        removedAISuggestions: string[] = []
+    ) => {
+        setShowReview(false)
+        haptic.heavy()
+
+        const project = allProjects.find(p => p.id === mainTask.project_id)
+        if (!project) return
+
+        let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
+
+        // 1. Identify new tasks to add
+        const newTasksFromAI = adjustedItems.filter(item => item.is_new)
+
+        // 2. Track rejected suggestions
+        const existingRejected = project.metadata?.rejected_suggestions || []
+        const newRejected = [...new Set([...existingRejected, ...removedAISuggestions])]
+            .slice(-20)
+
+        const metadataUpdate: any = {
+            ...project.metadata,
+        }
+
+        if (newTasksFromAI.length > 0) {
+            const freshTasks = newTasksFromAI.map((t, idx) => ({
+                id: crypto.randomUUID(),
+                text: t.text,
+                done: false,
+                created_at: new Date().toISOString(),
+                order: updatedTasks.length + idx,
+                estimated_minutes: t.estimated_minutes
+            }))
+
+            updatedTasks = [...updatedTasks, ...freshTasks]
+            metadataUpdate.tasks = updatedTasks
+        }
+
+        if (removedAISuggestions.length > 0) {
+            metadataUpdate.rejected_suggestions = newRejected
+        }
+
+        if (newTasksFromAI.length > 0 || removedAISuggestions.length > 0) {
+            await updateProject(project.id, { metadata: metadataUpdate })
+        }
+
+        const allHighlights = adjustedItems.map(i => ({ task_title: i.text }))
+
+        navigate(`/projects/${mainTask.project_id}`, {
+            state: {
+                powerHourTask: {
+                    ...mainTask,
+                    checklist_items: adjustedItems,
+                    total_estimated_minutes: totalMinutes
+                },
+                highlightedTasks: allHighlights,
+                sessionDuration: totalMinutes
+            }
+        })
+    }
+
     return (
         <div className="relative mb-2 group/hero">
             <div className="aperture-hero-card p-0 rounded-2xl overflow-hidden relative">
@@ -322,7 +388,15 @@ export function PowerHourHero() {
                                         }}
                                     >
                                         <Play className="h-3.5 w-3.5 fill-current" />
-                                        <span className="text-xs uppercase tracking-widest aperture-header">Start Session</span>
+                                        <span className="text-xs uppercase tracking-widest aperture-header">Start</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowReview(true)}
+                                        className="flex items-center gap-2 px-4 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white/70 aperture-header"
+                                    >
+                                        <Clock className="h-3.5 w-3.5" />
+                                        <span>Adjust</span>
                                     </button>
 
                                     {mainTask.fuel_id && (
@@ -348,8 +422,8 @@ export function PowerHourHero() {
                                     key={opt.value}
                                     onClick={() => handleDurationChange(opt.value)}
                                     className={`flex-1 flex flex-col justify-center items-center gap-2 transition-all border-b border-white/5 last:border-0 ${duration === opt.value
-                                            ? 'bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
-                                            : 'hover:bg-white/5 text-white/30'
+                                        ? 'bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
+                                        : 'hover:bg-white/5 text-white/30'
                                         }`}
                                 >
                                     <opt.icon className={`h-4 w-4 ${duration === opt.value ? 'text-[var(--zebra-accent)]' : ''}`} />
@@ -403,6 +477,51 @@ export function PowerHourHero() {
                     </div>
                 )}
             </div>
+
+            {/* Review Modal */}
+            <AnimatePresence>
+                {showReview && mainTask && (() => {
+                    const projectTasks = currentProject?.metadata?.tasks || []
+                    const completedTasks = projectTasks.filter((t: any) => t.done)
+                    const totalTasks = projectTasks.length
+                    const progress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
+
+                    const lastCompletedTask = completedTasks
+                        .filter((t: any) => t.completed_at)
+                        .sort((a: any, b: any) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())[0]
+
+                    const projectContext = {
+                        motivation: currentProject?.metadata?.motivation,
+                        endGoal: currentProject?.metadata?.end_goal,
+                        progress,
+                        isDormant: mainTask.is_dormant,
+                        daysDormant: mainTask.days_dormant,
+                        lastCompletedTask: lastCompletedTask?.text,
+                        projectMode: currentProject?.metadata?.project_mode as any,
+                        completedCount: completedTasks.length
+                    }
+
+                    return (
+                        <PowerHourReview
+                            task={{
+                                ...mainTask,
+                                checklist_items: (mainTask.checklist_items || []).map(item => ({
+                                    ...item,
+                                    estimated_minutes: item.estimated_minutes || 15
+                                })),
+                                total_estimated_minutes: duration,
+                                impact_score: mainTask.impact_score || 0.5
+                            }}
+                            projectColor={theme.text}
+                            projectTasks={projectTasks}
+                            projectContext={projectContext}
+                            targetMinutes={duration}
+                            onClose={() => setShowReview(false)}
+                            onStart={handleConfirmSession}
+                        />
+                    )
+                })()}
+            </AnimatePresence>
         </div>
     )
 }

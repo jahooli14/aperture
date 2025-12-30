@@ -44,14 +44,13 @@ interface PowerHourReviewProps {
     projectColor: string
     projectTasks?: ProjectTask[]
     projectContext?: ProjectContext
+    targetMinutes: number
     onClose: () => void
     onStart: (adjustedItems: ChecklistItem[], totalMinutes: number, removedAISuggestions: string[]) => void
     onArchive?: () => void
 }
 
 const DURATION_OPTIONS = [5, 15, 25, 45]
-const TARGET_MINUTES = 50
-const MAX_MINUTES = 60
 const STALE_DAYS = 21
 
 export function PowerHourReview({
@@ -59,10 +58,15 @@ export function PowerHourReview({
     projectColor,
     projectTasks = [],
     projectContext,
+    targetMinutes = 50,
     onClose,
     onStart,
     onArchive
 }: PowerHourReviewProps) {
+    const MAX_MINUTES = Math.round(targetMinutes * 1.2)
+    const TARGET_ZONE_MIN = Math.round(targetMinutes * 0.8)
+    const TARGET_ZONE_MAX = Math.round(targetMinutes * 1.1)
+
     // Calculate if tasks are stale (>21 days old)
     const getTaskAge = (item: ChecklistItem): number | null => {
         const matchingTask = projectTasks.find(t => t.text.toLowerCase() === item.text.toLowerCase())
@@ -140,8 +144,8 @@ export function PowerHourReview({
     // Progress toward target (with sweet spot zone)
     const progressPercent = Math.min(100, (totalMinutes / MAX_MINUTES) * 100)
     const isOvertime = totalMinutes > MAX_MINUTES
-    const isIdeal = totalMinutes >= 40 && totalMinutes <= 55
-    const isUnder = totalMinutes < 40
+    const isIdeal = totalMinutes >= TARGET_ZONE_MIN && totalMinutes <= TARGET_ZONE_MAX
+    const isUnder = totalMinutes < TARGET_ZONE_MIN
 
     const setDuration = (index: number, duration: number) => {
         haptic.light()
@@ -390,24 +394,22 @@ export function PowerHourReview({
                                 <motion.div
                                     key={idx}
                                     layout
-                                    className={`rounded-xl transition-all ${
-                                        isPlanningTask
-                                            ? 'bg-blue-500/10 border border-blue-500/20'
-                                            : isRemoved
-                                                ? 'bg-white/5 opacity-60'
-                                                : isStale && !isRemoved
-                                                    ? 'bg-amber-500/5 border-l-2 border-amber-400/40'
-                                                    : 'bg-white/10'
-                                    }`}
+                                    className={`rounded-xl transition-all ${isPlanningTask
+                                        ? 'bg-blue-500/10 border border-blue-500/20'
+                                        : isRemoved
+                                            ? 'bg-white/5 opacity-60'
+                                            : isStale && !isRemoved
+                                                ? 'bg-amber-500/5 border-l-2 border-amber-400/40'
+                                                : 'bg-white/10'
+                                        }`}
                                 >
                                     <div className="flex items-start gap-3 p-3">
                                         {/* Toggle Checkbox */}
                                         <button
                                             onClick={() => toggleRemove(idx)}
                                             disabled={isPlanningTask}
-                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all mt-0.5 ${
-                                                isPlanningTask ? 'cursor-default' : ''
-                                            }`}
+                                            className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all mt-0.5 ${isPlanningTask ? 'cursor-default' : ''
+                                                }`}
                                             style={{
                                                 borderColor: isPlanningTask
                                                     ? 'rgb(59, 130, 246)'
@@ -430,13 +432,12 @@ export function PowerHourReview({
 
                                         {/* Task Content */}
                                         <div className="flex-1 min-w-0">
-                                            <div className={`text-sm font-medium leading-snug ${
-                                                isPlanningTask
-                                                    ? 'text-blue-300'
-                                                    : isRemoved
-                                                        ? 'line-through text-white/30'
-                                                        : 'text-white'
-                                            }`}>
+                                            <div className={`text-sm font-medium leading-snug ${isPlanningTask
+                                                ? 'text-blue-300'
+                                                : isRemoved
+                                                    ? 'line-through text-white/30'
+                                                    : 'text-white'
+                                                }`}>
                                                 {item.text}
                                             </div>
 
@@ -499,11 +500,10 @@ export function PowerHourReview({
                                                                 <button
                                                                     key={d}
                                                                     onClick={() => setDuration(idx, d)}
-                                                                    className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
-                                                                        item.estimated_minutes === d
-                                                                            ? 'bg-white text-black'
-                                                                            : 'text-white/70 hover:bg-white/10'
-                                                                    }`}
+                                                                    className={`px-2 py-1 rounded text-xs font-bold transition-colors ${item.estimated_minutes === d
+                                                                        ? 'bg-white text-black'
+                                                                        : 'text-white/70 hover:bg-white/10'
+                                                                        }`}
                                                                 >
                                                                     {d}
                                                                 </button>
@@ -614,31 +614,29 @@ export function PowerHourReview({
                             <span className="text-sm text-white/70">Session Time</span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <span className={`text-xl font-bold tabular-nums ${
-                                isOvertime ? 'text-red-400' : isIdeal ? 'text-green-400' : 'text-white'
-                            }`}>
+                            <span className={`text-xl font-bold tabular-nums ${isOvertime ? 'text-red-400' : isIdeal ? 'text-green-400' : 'text-white'
+                                }`}>
                                 {totalMinutes}
                             </span>
-                            <span className="text-sm text-white/50">/ {TARGET_MINUTES} min</span>
+                            <span className="text-sm text-white/50">/ {targetMinutes} min</span>
                         </div>
                     </div>
 
                     {/* Progress bar with sweet spot zone */}
                     <div className="relative h-2 bg-white/10 rounded-full overflow-hidden">
-                        {/* Sweet spot zone (40-55 min) */}
+                        {/* Sweet spot zone */}
                         <div
                             className="absolute h-full bg-green-500/20"
                             style={{
-                                left: `${(40/MAX_MINUTES)*100}%`,
-                                width: `${(15/MAX_MINUTES)*100}%`
+                                left: `${(TARGET_ZONE_MIN / MAX_MINUTES) * 100}%`,
+                                width: `${((TARGET_ZONE_MAX - TARGET_ZONE_MIN) / MAX_MINUTES) * 100}%`
                             }}
                         />
 
                         {/* Actual progress */}
                         <motion.div
-                            className={`h-full rounded-full transition-colors ${
-                                isOvertime ? 'bg-red-500' : isIdeal ? 'bg-green-500' : 'bg-white/50'
-                            }`}
+                            className={`h-full rounded-full transition-colors ${isOvertime ? 'bg-red-500' : isIdeal ? 'bg-green-500' : 'bg-white/50'
+                                }`}
                             initial={{ width: 0 }}
                             animate={{ width: `${progressPercent}%` }}
                             transition={{ duration: 0.3 }}
@@ -647,7 +645,7 @@ export function PowerHourReview({
                         {/* Target marker */}
                         <div
                             className="absolute top-0 bottom-0 w-0.5 bg-white/40"
-                            style={{ left: `${(TARGET_MINUTES/MAX_MINUTES)*100}%` }}
+                            style={{ left: `${(targetMinutes / MAX_MINUTES) * 100}%` }}
                         />
                     </div>
 
@@ -666,7 +664,7 @@ export function PowerHourReview({
                         )}
                         {isUnder && !isOvertime && (
                             <span className="text-white/40">
-                                Add {40 - totalMinutes}m for a full session
+                                Add {TARGET_ZONE_MIN - totalMinutes}m for a full session
                             </span>
                         )}
                     </div>
