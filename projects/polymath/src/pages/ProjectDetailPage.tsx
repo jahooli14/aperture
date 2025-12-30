@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Sparkles } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -56,7 +56,9 @@ export function ProjectDetailPage() {
   const [showCreateConnection, setShowCreateConnection] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'studio'>('overview')
+
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [isRefining, setIsRefining] = useState(false)
 
 
   // Listen for custom event from FloatingNav to open AddNote dialog
@@ -961,9 +963,42 @@ export function ProjectDetailPage() {
 
               {/* Task Checklist */}
               <div data-task-list className="mt-8">
-                <div className="flex items-center gap-3 mb-4 opacity-50">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Execution Plan</span>
-                  <div className="h-px bg-white/20 flex-grow" />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3 flex-grow opacity-50">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">Execution Plan</span>
+                    <div className="h-px bg-white/20 flex-grow" />
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!project) return
+                      setIsRefining(true)
+                      try {
+                        const token = (await supabase.auth.getSession()).data.session?.access_token
+                        // Trigger enrichment
+                        await fetch(`${import.meta.env.VITE_API_URL}/api/power-hour?projectId=${project.id}&enrich=true`, {
+                          headers: {
+                            'Authorization': `Bearer ${token}`
+                          }
+                        })
+
+                        // Refresh project data
+                        await loadProjectDetails() // Ensure we get the latest
+
+                        addToast({ title: 'Plan refined by AI', variant: 'default' })
+                      } catch (err) {
+                        console.error(err)
+                        addToast({ title: 'Refinement failed', variant: 'destructive' })
+                      } finally {
+                        setIsRefining(false)
+                      }
+                    }}
+                    disabled={isRefining}
+                    className="ml-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-all disabled:opacity-50"
+                  >
+                    {isRefining ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Refine Plan</span>
+                  </button>
                 </div>
                 <TaskList
                   tasks={project.metadata?.tasks?.filter((task, index, self) =>
