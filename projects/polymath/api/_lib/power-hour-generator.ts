@@ -91,26 +91,38 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         let relevantInspiration: any[] = []
 
         if (p.embedding) {
-            // Match fuel articles to project
+            // Match fuel articles to project (graceful fallback if vector search unavailable)
             if (fuel && fuel.length > 0) {
-                const { data: matchedFuel } = await supabase.rpc('match_reading', {
-                    query_embedding: p.embedding,
-                    filter_user_id: userId,
-                    match_threshold: 0.6,
-                    match_count: 3
-                })
-                relevantFuel = matchedFuel || []
+                try {
+                    const { data: matchedFuel, error } = await supabase.rpc('match_reading', {
+                        query_embedding: p.embedding,
+                        filter_user_id: userId,
+                        match_threshold: 0.6,
+                        match_count: 3
+                    })
+                    if (!error && matchedFuel) {
+                        relevantFuel = matchedFuel
+                    }
+                } catch (err) {
+                    console.warn('[PowerHour] Vector search for fuel unavailable, using general fuel:', err)
+                }
             }
 
-            // Match list items to project
+            // Match list items to project (graceful fallback if vector search unavailable)
             if (listInspiration && listInspiration.length > 0) {
-                const { data: matchedList } = await supabase.rpc('match_list_items', {
-                    query_embedding: p.embedding,
-                    filter_user_id: userId,
-                    match_threshold: 0.6,
-                    match_count: 3
-                })
-                relevantInspiration = matchedList || []
+                try {
+                    const { data: matchedList, error } = await supabase.rpc('match_list_items', {
+                        query_embedding: p.embedding,
+                        filter_user_id: userId,
+                        match_threshold: 0.6,
+                        match_count: 3
+                    })
+                    if (!error && matchedList) {
+                        relevantInspiration = matchedList
+                    }
+                } catch (err) {
+                    console.warn('[PowerHour] Vector search for inspiration unavailable, using general list:', err)
+                }
             }
         }
 
