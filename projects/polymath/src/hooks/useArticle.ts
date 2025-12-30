@@ -76,6 +76,13 @@ export function useArticle(id: string | undefined) {
         throw new Error(`HTTP ${response.status}`)
       }
 
+      // Vercel serverless bug: Sometimes API routes return HTML error pages (500/404)
+      // We must safely check content type before parsing
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('API returned non-JSON response (likely an error page)')
+      }
+
       const result = await response.json()
       const articleData = result.article || result
       const highlightsData = result.highlights || []
