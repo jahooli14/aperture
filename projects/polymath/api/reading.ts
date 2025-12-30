@@ -618,9 +618,9 @@ function cleanMarkdownContent(markdown: string): string {
  * Note: Sanitization happens client-side before rendering
  */
 async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
-  const MAX_RETRIES = 2 // Retry up to 2 times
-  const RETRY_DELAYS = [1000, 3000] // Wait 1s, then 3s
-  const TIMEOUT_MS = 15000 // 15 second timeout - we have 60s total budget
+  const MAX_RETRIES = 1 // Retry up to 1 time (2 attempts total)
+  const RETRY_DELAYS = [2000] // Wait 2s before retry
+  const TIMEOUT_MS = 12000 // 12 second timeout - reduced to prevent exceeding 50s internal budget
 
   try {
     const jinaUrl = `https://r.jina.ai/${url}`
@@ -882,7 +882,7 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
     if (retryCount < MAX_RETRIES && shouldRetry) {
       const delay = RETRY_DELAYS[retryCount]
       const reason = isTimeout ? 'Timeout' : 'Network error'
-      console.log(`[Jina AI] ${reason}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`)
+      console.log(`[Jina AI] ${reason}, retrying in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`)
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay))
@@ -893,10 +893,14 @@ async function fetchArticleWithJina(url: string, retryCount = 0): Promise<any> {
 
     // All retries exhausted
     if (isTimeout) {
-      console.log(`[Jina AI] All retries exhausted after timeout - site or Jina AI may be slow/blocking`)
+      console.log(`[Jina AI] All retries exhausted after timeout (${retryCount + 1} attempts) - site or Jina AI may be slow/blocking`)
+    } else if (shouldRetry) {
+      console.log(`[Jina AI] All retries exhausted after network error (${retryCount + 1} attempts)`)
+    } else {
+      console.log(`[Jina AI] Non-retryable error after ${retryCount + 1} attempt(s): ${errorMessage.substring(0, 100)}`)
     }
 
-    // Throw error to trigger Cheerio fallback
+    // Throw error to trigger next tier fallback
     throw new Error(errorMessage)
   }
 }
@@ -1344,13 +1348,25 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           // Note: Anti-bot protection is no longer a permanent failure since we now handle it with Puppeteer
           const isPermanentFailure = false // Allow retries for all errors (zombie detection will handle it)
 
-          await supabase
-            .from('reading_queue')
-            .update({
-              excerpt: userFriendlyMessage,
-              processed: isPermanentFailure,
-            })
-            .eq('id', savedArticle.id)
+          // Ensure database update always happens - wrap in try/catch
+          try {
+            const { error: updateError } = await supabase
+              .from('reading_queue')
+              .update({
+                excerpt: userFriendlyMessage,
+                processed: isPermanentFailure,
+              })
+              .eq('id', savedArticle.id)
+
+            if (updateError) {
+              console.error(`[reading] Failed to update article status after extraction failure:`, updateError)
+            } else {
+              console.log(`[reading] Article ${savedArticle.id} marked with error status: "${userFriendlyMessage.substring(0, 60)}..."`)
+            }
+          } catch (dbError) {
+            console.error(`[reading] Database update failed critically for ${savedArticle.id}:`, dbError)
+            // Article will remain stuck - zombie detection should catch it
+          }
         })
 
       // Return immediately with placeholder (must return to prevent double response at line 874)
