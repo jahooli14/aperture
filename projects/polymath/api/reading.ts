@@ -1700,21 +1700,22 @@ Return ONLY the JSON, no other text.`
         // Return the latest 20 items
         // Simplified parsing: prioritize content:encoded > content > description > summary
         // We apply minimal cleaning here and let the frontend sanitizer do the heavy lifting safely
-        const rawContent = item['content:encoded'] || item.content || item.description || item.summary || ''
-        const rawDescription = item.contentSnippet || item.description || item.summary || ''
+        const items = feedData.items.slice(0, 20).map((item: any) => {
+          const rawContent = item['content:encoded'] || item.content || item.description || item.summary || ''
+          const rawDescription = item.contentSnippet || item.description || item.summary || ''
 
-        return {
-          guid: item.guid || item.link,
-          feed_id: feed.id,
-          title: decodeHTMLEntities(item.title || 'Untitled'),
-          link: item.link || '',
-          // Ensure we have SOMETHING in the content field
-          content: rawContent ? cleanHtml(rawContent, item.link || '') : '',
-          description: rawDescription ? cleanHtml(rawDescription, item.link || '') : '',
-          published_at: item.pubDate || item.isoDate || null,
-          author: item.creator || item.author || null
-        }
-      }))
+          return {
+            guid: item.guid || item.link,
+            feed_id: feed.id,
+            title: decodeHTMLEntities(item.title || 'Untitled'),
+            link: item.link || '',
+            // Ensure we have SOMETHING in the content field
+            content: rawContent ? cleanHtml(rawContent, item.link || '') : '',
+            description: rawDescription ? cleanHtml(rawDescription, item.link || '') : '',
+            published_at: item.pubDate || item.isoDate || null,
+            author: item.creator || item.author || null
+          }
+        })
 
       return res.status(200).json({
         success: true,
