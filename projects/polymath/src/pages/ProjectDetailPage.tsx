@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -87,13 +87,19 @@ export function ProjectDetailPage() {
   }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
+  const [editingMotivation, setEditingMotivation] = useState(false)
+  const [editingGoal, setEditingGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  const [tempMotivation, setTempMotivation] = useState('')
+  const [tempGoal, setTempGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
+  const motivationInputRef = useRef<HTMLTextAreaElement>(null)
+  const goalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -246,7 +252,6 @@ export function ProjectDetailPage() {
       return
     }
 
-    const oldDescription = project.description
     setEditingDescription(false)
 
     try {
@@ -264,9 +269,67 @@ export function ProjectDetailPage() {
     }
   }
 
+  const saveMotivation = async () => {
+    if (!project) {
+      setEditingMotivation(false)
+      return
+    }
+
+    setEditingMotivation(false)
+
+    try {
+      await updateProject(project.id, {
+        metadata: {
+          ...project.metadata,
+          motivation: tempMotivation.trim()
+        }
+      })
+      addToast({
+        title: 'Purpose updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Failed to update purpose',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const saveGoal = async () => {
+    if (!project) {
+      setEditingGoal(false)
+      return
+    }
+
+    setEditingGoal(false)
+
+    try {
+      await updateProject(project.id, {
+        metadata: {
+          ...project.metadata,
+          end_goal: tempGoal.trim()
+        }
+      })
+      addToast({
+        title: 'Goal updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Failed to update goal',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
   const cancelEdit = () => {
     setEditingTitle(false)
     setEditingDescription(false)
+    setEditingMotivation(false)
+    setEditingGoal(false)
   }
 
   const addPinnedTask = useCallback(async (text: string) => {
@@ -745,61 +808,122 @@ export function ProjectDetailPage() {
                 </div>
               )}
 
-              {/* Description */}
-              <div className="premium-card p-4">
-                {editingDescription ? (
-                  <div className="space-y-2">
-                    <textarea
-                      ref={descriptionInputRef}
-                      value={tempDescription}
-                      onChange={(e) => setTempDescription(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') cancelEdit()
-                      }}
-                      rows={3}
-                      placeholder="Add a description..."
-                      className="w-full bg-transparent rounded-lg p-2 outline-none resize-none"
-                      style={{
-                        color: 'var(--premium-text-primary)'
-                      }}
-                    />
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={cancelEdit} className="px-3 py-1.5 text-sm rounded hover:bg-white/10" style={{ color: 'var(--premium-text-secondary)' }}>
-                        Cancel
-                      </button>
-                      <button onClick={saveDescription} className="px-3 py-1.5 text-sm rounded" style={{ backgroundColor: 'var(--premium-blue)', color: 'white' }}>
-                        Save
-                      </button>
+              <div className="space-y-6">
+                {/* Vision Block: Merges Description and Motivation */}
+                {(project.description || project.metadata?.motivation) && (
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                    <div className="relative p-8 rounded-2xl bg-white/[0.03] border border-white/5 space-y-4">
+                      <div
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => {
+                          setTempDescription(project.description || '')
+                          setEditingDescription(true)
+                          setTimeout(() => descriptionInputRef.current?.focus(), 100)
+                        }}
+                      >
+                        {editingDescription ? (
+                          <textarea
+                            ref={descriptionInputRef}
+                            value={tempDescription}
+                            onChange={(e) => setTempDescription(e.target.value)}
+                            onBlur={saveDescription}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault()
+                                saveDescription()
+                              }
+                              if (e.key === 'Escape') cancelEdit()
+                            }}
+                            className="w-full bg-black/40 border-white/10 rounded-xl p-4 text-xl sm:text-2xl font-medium text-white leading-relaxed italic font-serif text-center outline-none focus:border-blue-500/50"
+                            autoFocus
+                          />
+                        ) : (
+                          <p className="text-xl sm:text-2xl font-medium text-white/90 leading-relaxed italic font-serif text-center">
+                            "{project.description || 'Add a vision for this project...'}"
+                          </p>
+                        )}
+                      </div>
+
+                      {(project.metadata?.motivation || editingMotivation) && (
+                        <div className="pt-4 border-t border-white/5">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400/70 mb-2 block">The Purpose</span>
+                          <div
+                            className="cursor-pointer hover:text-white transition-colors"
+                            onClick={() => {
+                              setTempMotivation(project.metadata?.motivation || '')
+                              setEditingMotivation(true)
+                              setTimeout(() => motivationInputRef.current?.focus(), 100)
+                            }}
+                          >
+                            {editingMotivation ? (
+                              <textarea
+                                ref={motivationInputRef}
+                                value={tempMotivation}
+                                onChange={(e) => setTempMotivation(e.target.value)}
+                                onBlur={saveMotivation}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault()
+                                    saveMotivation()
+                                  }
+                                  if (e.key === 'Escape') cancelEdit()
+                                }}
+                                className="w-full bg-black/40 border-white/10 rounded-xl p-3 text-sm text-white leading-relaxed max-w-2xl outline-none focus:border-blue-500/50"
+                                autoFocus
+                              />
+                            ) : (
+                              <p className="text-sm text-white/40 leading-relaxed max-w-2xl">
+                                {project.metadata?.motivation || 'What drives this project?'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {/* Definition of Done - The Finish Line */}
+                {(project.metadata?.end_goal || editingGoal) && (
                   <div
-                    className="cursor-pointer hover:opacity-70 transition-opacity min-h-[60px] flex items-center"
-                    onClick={startEditDescription}
-                    title="Click to edit"
+                    className="p-6 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-start gap-4 cursor-pointer hover:bg-green-500/[0.08] transition-all group/goal"
+                    onClick={() => {
+                      setTempGoal(project.metadata?.end_goal || '')
+                      setEditingGoal(true)
+                      setTimeout(() => goalInputRef.current?.focus(), 100)
+                    }}
                   >
-                    {project.description ? (
-                      <p className="text-lg italic font-serif text-center leading-relaxed opacity-90" style={{ color: 'var(--premium-text-secondary)' }}>
-                        "{project.description}"
-                      </p>
-                    ) : (
-                      <p style={{ color: 'var(--premium-text-tertiary)' }} className="italic">Click to add a description...</p>
-                    )}
+                    <div className="p-2 rounded-xl bg-green-500/10 text-green-400 group-hover/goal:scale-110 transition-transform">
+                      <Target className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-400/60 block mb-1">Definition of Done</span>
+                      {editingGoal ? (
+                        <textarea
+                          ref={goalInputRef}
+                          value={tempGoal}
+                          onChange={(e) => setTempGoal(e.target.value)}
+                          onBlur={saveGoal}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault()
+                              saveGoal()
+                            }
+                            if (e.key === 'Escape') cancelEdit()
+                          }}
+                          className="w-full bg-black/40 border-green-500/20 rounded-xl p-3 text-lg font-bold text-white tracking-tight outline-none focus:border-green-500/50"
+                          autoFocus
+                        />
+                      ) : (
+                        <p className="text-lg font-bold text-white tracking-tight">
+                          {project.metadata?.end_goal || 'Define what "done" looks like...'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-
-              {/* Motivation - The "So What" */}
-              {project.metadata?.motivation && (
-                <div className="premium-card p-4 border-l-4 border-blue-500">
-                  <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
-                    Motivation
-                  </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                    {project.metadata.motivation}
-                  </p>
-                </div>
-              )}
 
               {/* Task Checklist */}
               <div data-task-list>

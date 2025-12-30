@@ -8,10 +8,11 @@ import DOMPurify from 'dompurify'
 interface RSSFeedItemProps {
   item: RSSItem & { feed_title?: string }
   onSave: () => void
+  onRead: () => void
   onDismiss?: () => void
 }
 
-export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
+export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [showFullDescription, setShowFullDescription] = useState(false)
 
@@ -28,6 +29,7 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
   return (
     <div
       className="group block rounded-2xl backdrop-blur-xl transition-all duration-500 break-inside-avoid border p-5 cursor-pointer relative mb-4 overflow-hidden"
+      onClick={onRead}
       style={{
         borderColor: isHovered ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.08)',
         background: isHovered
@@ -113,17 +115,9 @@ export function RSSFeedItem({ item, onSave, onDismiss }: RSSFeedItemProps) {
       </div>
 
       {/* Title */}
-      <a
-        href={item.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group/link block mb-3"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold leading-tight group-hover/link:text-blue-400 transition-colors" style={{ color: 'var(--premium-text-primary)' }}>
-          {item.title}
-        </h3>
-      </a>
+      <h3 className="text-lg font-bold leading-tight hover:text-blue-400 transition-colors mb-3" style={{ color: 'var(--premium-text-primary)' }}>
+        {item.title}
+      </h3>
 
       {/* Description Content */}
       {sanitizedDescription && (

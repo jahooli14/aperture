@@ -86,11 +86,24 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             updateData.embedding = embedding
         }
 
-        const { error } = await supabase
+        let { error } = await supabase
             .from('list_items')
             .update(updateData)
             .eq('id', itemId)
             .eq('user_id', userId)
+
+        // Graceful fallback if the 'embedding' column is missing from list_items
+        if (error?.code === '42703' && updateData.embedding) {
+            console.warn('[Enrichment] Database missing list_items.embedding column. Retrying without embedding.')
+            const fallbackData = { ...updateData }
+            delete fallbackData.embedding
+            const { error: retryError } = await supabase
+                .from('list_items')
+                .update(fallbackData)
+                .eq('id', itemId)
+                .eq('user_id', userId)
+            error = retryError
+        }
 
         if (error) throw error
 

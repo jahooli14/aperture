@@ -1354,7 +1354,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
               .from('reading_queue')
               .update({
                 excerpt: userFriendlyMessage,
-                processed: isPermanentFailure,
+                processed: true,
               })
               .eq('id', savedArticle.id)
 
@@ -1568,6 +1568,8 @@ Return ONLY the JSON, no other text.`
         for (const feed of feeds) {
           try {
             const feedData = await rssParser.parseURL(feed.feed_url)
+
+            // 1. Process new items
             for (const item of feedData.items.slice(0, 5)) {
               const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
               if (existing.data) continue
@@ -1581,16 +1583,13 @@ Return ONLY the JSON, no other text.`
                 try {
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
-                  // Convert Markdown to HTML after cleaning the markdown
                   const cleanedMarkdown = cleanMarkdownContent(rawContent)
                   content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
                 } catch (e) {
                   console.error('[RSS Sync] Failed to parse Jina response for', item.link)
-                  // Fallback to basic cleaning if Jina fails
                   content = cleanHtml(content, item.link || '')
                 }
               } else {
-                // If Jina not used or fails, clean the existing item content
                 content = cleanHtml(content, item.link || '')
               }
 
@@ -1606,10 +1605,29 @@ Return ONLY the JSON, no other text.`
                 read_time_minutes: Math.ceil(stripHtml(content).split(/\s+/).length / 225),
                 word_count: stripHtml(content).split(/\s+/).length,
                 status: 'unread',
-                tags: ['rss', 'auto-imported']
+                tags: ['rss', 'auto-imported'],
+                processed: !!content
               }])
               totalArticlesAdded++
             }
+
+            // 2. Cleanup: Only keep latest 5 unread items per feed
+            // Items that are 'reading', 'read', or 'archived' are PROTECTED
+            const { data: currentUnread } = await supabase
+              .from('reading_queue')
+              .select('id, created_at')
+              .eq('user_id', userId)
+              .eq('status', 'unread')
+              .contains('tags', ['rss'])
+              .eq('source', new URL(feed.feed_url).hostname.replace('www.', ''))
+              .order('created_at', { ascending: false })
+
+            if (currentUnread && currentUnread.length > 5) {
+              const toDelete = currentUnread.slice(5).map(i => i.id)
+              await supabase.from('reading_queue').delete().in('id', toDelete)
+              console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
+            }
+
             await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', feed.id)
           } catch (err) {
             console.error(`[RSS Sync] Failed to process feed ${feed.feed_url}:`, err)
@@ -1618,6 +1636,39 @@ Return ONLY the JSON, no other text.`
         return res.status(200).json({ success: true, feedsSynced: feeds.length, articlesAdded: totalArticlesAdded })
       } catch (error) {
         return res.status(500).json({ error: 'Failed to sync feeds' })
+      }
+    }
+
+    // Discover RSS feeds
+    if (req.query.action === 'discover' && req.method === 'GET') {
+      try {
+        const { query } = req.query
+        if (!query || typeof query !== 'string') {
+          return res.status(400).json({ error: 'query required' })
+        }
+
+        console.log(`[RSS Discover] Searching for: ${query}`)
+        const response = await fetch(`https://cloud.feedly.com/v3/search/feeds?query=${encodeURIComponent(query)}`)
+
+        if (!response.ok) {
+          throw new Error(`Feedly search failed with status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        const results = (data.results || []).map((f: any) => ({
+          title: f.title,
+          description: f.description,
+          feed_url: f.feedId.startsWith('feed/') ? f.feedId.substring(5) : f.feedId,
+          site_url: f.website,
+          favicon_url: f.iconUrl || f.visualUrl,
+          subscribers: f.subscribers,
+          topics: f.topics || []
+        }))
+
+        return res.status(200).json({ success: true, results })
+      } catch (error) {
+        console.error('[RSS Discover] Error:', error)
+        return res.status(500).json({ error: 'Failed to discover feeds' })
       }
     }
 
@@ -1816,6 +1867,34 @@ Return ONLY the JSON, no other text.`
       } catch (error) {
         return res.status(500).json({ error: 'Failed to delete feed' })
       }
+    }
+  }
+
+  // IMAGE PROXY RESOURCE - To bypass CORS for offline caching
+  if (resource === 'proxy' && req.method === 'GET') {
+    try {
+      const { url: imageUrl } = req.query
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return res.status(400).json({ error: 'url required' })
+      }
+
+      console.log(`[Image Proxy] Fetching: ${imageUrl}`)
+      const imgRes = await fetch(imageUrl)
+
+      if (!imgRes.ok) {
+        throw new Error(`Upstream returned ${imgRes.status}`)
+      }
+
+      const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+      const buffer = await imgRes.arrayBuffer()
+
+      res.setHeader('Content-Type', contentType)
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      return res.status(200).send(Buffer.from(buffer))
+
+    } catch (error) {
+      console.error('[Image Proxy] Failed:', error)
+      return res.status(500).json({ error: 'Proxy failed' })
     }
   }
 
