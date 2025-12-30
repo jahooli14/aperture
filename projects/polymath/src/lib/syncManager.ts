@@ -198,6 +198,47 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      case 'capture_media': {
+        const { captureId } = operation.data
+        const { db } = await import('./db')
+
+        // 1. Get blob from IndexedDB
+        const pending = await db.pendingCaptures.get(captureId)
+        if (!pending || !pending.audio_blob) {
+          console.warn('[SyncManager] Media capture not found or missing blob:', captureId)
+          return true // Nothing to do, remove from queue
+        }
+
+        console.log(`[SyncManager] Syncing media capture ${captureId} (${pending.audio_blob.size} bytes)`)
+
+        // 2. Transcribe
+        const formData = new FormData()
+        formData.append('audio', pending.audio_blob, 'recording.' + (pending.mime_type?.split('/')[1] || 'webm'))
+
+        const transcribeRes = await fetch('/api/memories?action=transcribe', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (!transcribeRes.ok) throw new Error('Transcription failed during sync')
+        const { text } = await transcribeRes.json()
+
+        if (!text) throw new Error('No transcript returned during sync')
+
+        // 3. Create Memory
+        const captureRes = await fetch('/api/memories?capture=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript: text })
+        })
+
+        if (!captureRes.ok) throw new Error('Capture failed during sync')
+
+        // 4. Cleanup
+        await db.deletePendingCapture(captureId)
+        return true
+      }
+
       default:
         console.error('[SyncManager] Unknown operation type:', operation.type)
         return false
@@ -233,33 +274,33 @@ export async function syncPendingOperations(): Promise<{
 
     console.log(`[SyncManager] Starting sync of ${operations.length} operations`)
 
-  for (const operation of operations) {
-    if (!operation.id) continue
+    for (const operation of operations) {
+      if (!operation.id) continue
 
-    // Skip if already retried too many times
-    if (operation.retryCount >= MAX_RETRIES) {
-      console.warn(
-        `[SyncManager] Max retries reached for operation ${operation.id}, removing from queue`
-      )
-      await removeOperation(operation.id)
-      failed++
-      continue
+      // Skip if already retried too many times
+      if (operation.retryCount >= MAX_RETRIES) {
+        console.warn(
+          `[SyncManager] Max retries reached for operation ${operation.id}, removing from queue`
+        )
+        await removeOperation(operation.id)
+        failed++
+        continue
+      }
+
+      const succeeded = await processOperation(operation)
+
+      if (succeeded) {
+        await removeOperation(operation.id)
+        success++
+        console.log(`[SyncManager] Successfully processed operation ${operation.id}`)
+      } else {
+        await updateOperationRetry(
+          operation.id,
+          'Failed to process operation'
+        )
+        failed++
+      }
     }
-
-    const succeeded = await processOperation(operation)
-
-    if (succeeded) {
-      await removeOperation(operation.id)
-      success++
-      console.log(`[SyncManager] Successfully processed operation ${operation.id}`)
-    } else {
-      await updateOperationRetry(
-        operation.id,
-        'Failed to process operation'
-      )
-      failed++
-    }
-  }
 
     console.log(
       `[SyncManager] Sync complete: ${success} succeeded, ${failed} failed, ${operations.length} total`

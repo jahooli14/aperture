@@ -30,13 +30,13 @@ export function OfflineIndicator() {
     return null
   }
 
-  // Show Pulling (Updating) Status
+  // Show Pulling (Updating) Status - Now subtle pulsing dot to stay "Zen"
   if (isPulling && isOnline) {
     return (
-      <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5">
-        <div className="flex items-center gap-2 px-4 py-2 bg-neutral-800/80 backdrop-blur text-white rounded-lg shadow-lg border border-white/10">
-          <RefreshCw className="h-4 w-4 animate-spin text-blue-400" />
-          <span className="font-medium text-sm">Updating...</span>
+      <div className="fixed top-2 right-2 z-50 pointer-events-none">
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 backdrop-blur-sm rounded-full border border-white/5">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60 animate-pulse transition-opacity" />
+          <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest invisible group-hover:visible">Sync</span>
         </div>
       </div>
     )

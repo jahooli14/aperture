@@ -270,6 +270,25 @@ export function useMediaRecorderVoice({
       // Convert to blob
       const audioBlob = base64ToBlob(result.value.recordDataBase64, 'audio/aac')
 
+      // Check online status
+      if (!navigator.onLine) {
+        console.log('[Native] Offline - saving to IndexedDB for later transcription')
+        const { db } = await import('../lib/db')
+        const { queueOperation } = await import('../lib/offlineQueue')
+
+        const captureId = await db.addPendingCapture({
+          blob: audioBlob,
+          mimeType: 'audio/aac'
+        })
+
+        await queueOperation('capture_media', { captureId })
+
+        const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
+        setTranscript(placeholder)
+        onTranscript(placeholder)
+        return
+      }
+
       // Transcribe
       const text = await transcribeAudio(audioBlob)
 
@@ -352,7 +371,28 @@ export function useMediaRecorderVoice({
         throw new Error('Audio blob is empty')
       }
 
-      // Transcribe
+      setIsProcessing(true)
+
+      // Check online status
+      if (!navigator.onLine) {
+        console.log('[Web] Offline - saving to IndexedDB for later transcription')
+        const { db } = await import('../lib/db')
+        const { queueOperation } = await import('../lib/offlineQueue')
+
+        const captureId = await db.addPendingCapture({
+          blob: audioBlob,
+          mimeType: mimeType
+        })
+
+        await queueOperation('capture_media', { captureId })
+
+        const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
+        setTranscript(placeholder)
+        onTranscript(placeholder)
+        return
+      }
+
+      // Transcribe (Online)
       const text = await transcribeAudio(audioBlob)
 
       setTranscript(text)

@@ -51,7 +51,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     if (projectId) {
         query = query.eq('id', projectId)
     } else {
-        query = query.order('last_active', { ascending: false }).limit(5)
+        query = query.order('last_active', { ascending: false }).limit(20)
     }
 
     const { data: projects, error: projectsError } = await query
@@ -71,7 +71,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     // 2b. Fetch recent list items (Inspiration) with embeddings
     const { data: listInspiration, error: listError } = await supabase
         .from('list_items')
-        .select('id, content, metadata, list_id, embedding')
+        .select('id, content, metadata, list_id')
         .eq('user_id', userId)
         .eq('enrichment_status', 'complete')
         .order('created_at', { ascending: false })
@@ -115,11 +115,15 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
                         match_threshold: 0.6,
                         match_count: 3
                     })
-                    if (!error && matchedList) {
+                    if (!error && matchedList && matchedList.length > 0) {
                         relevantInspiration = matchedList
+                    } else {
+                        // Fallback to recent list inspiration if vector search fails or has no hits
+                        relevantInspiration = listInspiration.slice(0, 3)
                     }
                 } catch (err) {
                     console.warn('[PowerHour] Vector search for inspiration unavailable, using general list:', err)
+                    relevantInspiration = listInspiration.slice(0, 3)
                 }
             }
         }
@@ -134,9 +138,9 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const progressPercent = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
         const projectPhase = progressPercent === 0 ? 'Just Started'
             : progressPercent < 30 ? 'Early Stage'
-            : progressPercent < 70 ? 'Making Progress'
-            : progressPercent < 90 ? 'Approaching Completion'
-            : 'Final Stretch'
+                : progressPercent < 70 ? 'Making Progress'
+                    : progressPercent < 90 ? 'Approaching Completion'
+                        : 'Final Stretch'
 
         // Calculate recent momentum (tasks completed in last 7 days)
         const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000)
@@ -278,7 +282,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
 
    OUTPUT: 1-2 checklist items MAX. Quality over quantity.`
         : durationMinutes === 150
-        ? `DEEP DIVE (150m) - IMMERSIVE OUTCOME PHILOSOPHY:
+            ? `DEEP DIVE (150m) - IMMERSIVE OUTCOME PHILOSOPHY:
    This is an extended, focused session for substantial progress.
 
    CRITICAL RULES FOR DEEP DIVES:
@@ -289,7 +293,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
    - This should represent meaningful progress toward the Definition of Done
 
    OUTPUT: 3-5 checklist items representing a coherent work block, not disconnected tasks.`
-        : `POWER HOUR (60m) - FOCUSED OUTCOME PHILOSOPHY:
+            : `POWER HOUR (60m) - FOCUSED OUTCOME PHILOSOPHY:
    This is a focused work session for real progress.
 
    CRITICAL RULES FOR POWER HOURS:
@@ -356,6 +360,22 @@ REQUIRED PATTERNS (specific, completable):
 - "Research and decide on [X vs Y]" - decision made = done
 - "Order [specific item]" - action complete when ordered
 
+=== CLOSING THE LOOP (High Progress) ===
+When a project is > 85% done or has < 3 tasks remaining:
+1. FOCUS ON QUALITY: Instead of breaking down tasks into mechanical batches (e.g., "Do items 1-5"), focus on "Polishing", "Edge-case hunting", or "Cleanup".
+2. CELEBRATION: The session should feel like a 'Victory Lap'.
+3. NO MECHANICAL BATCHING: NEVER generate tasks like "Migrate projects 1-4", "Migrate projects 5-8". This is lazy and demotivating. If a task is big, break it by DEPTH (e.g., "Set up the core schema" vs "Polish the UI transition"), not by COUNT.
+
+=== TASK ANCHORING & INTERSPERSING ===
+CRITICAL: The user's EXISTING tasks (Remaining Tasks listed above) must be the ANCHORS of the session.
+1. DO NOT replace existing tasks with AI alternatives unless they are dangerously vague.
+2. INTERSPERSE AI suggestions around existing tasks to handle:
+   - Setup/Preparation (before the main task)
+   - Breakdown (if the existing task is too big for the duration, split it but KEEP the core phrasing)
+   - Cleanup/Parking (after the main task)
+3. For every "checklist_item", if it matches an existing task, set "is_new": false.
+4. If you create a sub-task or breakdown of an existing task, mention the parent task (e.g., "[Part 1] Copy projects...")
+
 DISCRETE SESSIONS:
 Each session should feel complete on its own. The user should be able to:
 - Start the session
@@ -387,11 +407,10 @@ Check remaining tasks for logical order:
 3. PARKING (3-5m): Clean close and prep for next time
 
 === OUTPUT FORMAT ===
+Generate sessions for up to 12 projects (prioritize by last_active). Ensure a diverse range of work types.
 ${durationMinutes === 25
-    ? `Generate 1 session for the MOST RELEVANT project only.
-   - 25m Spark sessions = single project focus, no context switching
-   - Pick the project that has the clearest quick-win opportunity`
-    : `Generate sessions for up to 3 projects (prioritize by last_active).`}
+            ? `Pick the 8 projects that have the clearest quick-win opportunities.`
+            : `Generate sessions for up to 12 projects (prioritize by last_active).`}
 
 {
   "tasks": [
@@ -412,7 +431,12 @@ ${durationMinutes === 25
   ]
 }
 
-REMEMBER: The user wants to ACCOMPLISH something in ${durationMinutes} minutes, not receive a list of everything that needs doing. Design for achievement, not overwhelm.`
+=== SPRINT (25M) VS DEEP DIVE (150M) RULES ===
+- For 25 minutes: LIMIT progress to the absolute simplest next step. Only 1 core task if it takes 15m, or 2-3 tiny tasks if they take 5m each. 
+- Avoid any "completion tasks" that sum over 20m total for a 25m session (leaving 5m for ignition/shutdown).
+- Be extremely picky. It is better to have "Too Little" work than "Too Much" work for a 25m session.
+
+REMEMBER: The user wants to ACCOMPLISH something in ${durationMinutes} minutes, not receive a list of everything that needs doing. Design for achievement, not overwhelm. Focus on the ONE thing that can be 100% finished.`
 
     const result = await model.generateContent(prompt)
     const responseText = result.response.text()

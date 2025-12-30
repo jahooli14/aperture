@@ -4,7 +4,7 @@ import type { Article } from '../../types/reading'
 export class OfflineContentManager {
   private static instance: OfflineContentManager
 
-  private constructor() {}
+  private constructor() { }
 
   public static getInstance(): OfflineContentManager {
     if (!OfflineContentManager.instance) {
@@ -42,7 +42,7 @@ export class OfflineContentManager {
 
     try {
       console.log('[OfflineContentManager] Starting download for:', article.title)
-      
+
       // 1. Cache the article text/metadata
       await readingDb.cacheArticle(article)
 
@@ -74,7 +74,7 @@ export class OfflineContentManager {
     const parser = new DOMParser()
     const doc = parser.parseFromString(content, 'text/html')
     const images = doc.querySelectorAll('img')
-    
+
     const imageUrlsToDownload = new Set<string>()
 
     images.forEach(img => {
@@ -115,8 +115,23 @@ export class OfflineContentManager {
         const cached = await readingDb.getCachedImage(absoluteUrl)
         if (cached) return true // Already cached, consider it success
 
-        // Download image
-        const response = await fetch(absoluteUrl)
+        // Download image - Using proxy to bypass CORS for external domains
+        let response: Response
+        try {
+          // 1. Try via proxy first for external images (reliable for CORS)
+          const proxyUrl = `/api/reading?resource=proxy&url=${encodeURIComponent(absoluteUrl)}`
+          response = await fetch(proxyUrl)
+
+          if (!response.ok) {
+            // 2. Fallback to direct fetch if proxy fails for some reason
+            console.warn(`[OfflineContentManager] Proxy failed for ${absoluteUrl}, trying direct...`)
+            response = await fetch(absoluteUrl)
+          }
+        } catch (e) {
+          // 3. Fallback to direct fetch if proxy call itself errors
+          response = await fetch(absoluteUrl)
+        }
+
         if (!response.ok) throw new Error(`Failed to fetch ${absoluteUrl}`)
 
         const blob = await response.blob()
@@ -133,7 +148,7 @@ export class OfflineContentManager {
 
     const results = await Promise.allSettled(downloadPromises)
     const allSuccessful = results.every(result => result.status === 'fulfilled' && result.value === true)
-    
+
     if (allSuccessful) {
       console.log(`[OfflineContentManager] ✓ All ${totalImages} images successfully cached for article ${articleId}.`)
     } else {

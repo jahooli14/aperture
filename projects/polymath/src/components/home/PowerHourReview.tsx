@@ -96,16 +96,35 @@ export function PowerHourReview({
         ]
     })
 
-    // Auto-exclude stale tasks on init
+    // Auto-exclude stale tasks on init AND prune to fit target minutes
     const [removedIndices, setRemovedIndices] = useState<Set<number>>(() => {
-        const staleIndices = new Set<number>()
+        const indices = new Set<number>()
+
+        // 1. Mark stale tasks
         task.checklist_items.forEach((item, idx) => {
             const age = getTaskAge(item)
             if (age !== null && age > STALE_DAYS) {
-                staleIndices.add(idx + 1) // +1 because planning task is at index 0
+                indices.add(idx + 1) // +1 because planning task is at index 0
             }
         })
-        return staleIndices
+
+        // 2. Prune if still over capacity (greedy, from bottom up)
+        let currentTotal = items.reduce((sum, item, idx) =>
+            indices.has(idx) ? sum : sum + item.estimated_minutes, 0
+        )
+
+        if (currentTotal > targetMinutes) {
+            // Start from the last item (excluding planning task at 0)
+            for (let i = items.length - 1; i > 0; i--) {
+                if (!indices.has(i)) {
+                    indices.add(i)
+                    currentTotal -= items[i].estimated_minutes
+                    if (currentTotal <= targetMinutes) break
+                }
+            }
+        }
+
+        return indices
     })
 
     const [showBacklog, setShowBacklog] = useState(false)

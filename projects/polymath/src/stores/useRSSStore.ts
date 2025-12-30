@@ -19,6 +19,7 @@ interface RSSState {
   updateFeed: (request: UpdateFeedRequest) => Promise<void>
   unsubscribeFeed: (id: string) => Promise<void>
   syncFeeds: () => Promise<{ feedsSynced: number; articlesAdded: number }>
+  discoverFeeds: (query: string) => Promise<any[]>
 }
 
 export const useRSSStore = create<RSSState>((set, get) => ({
@@ -189,6 +190,18 @@ export const useRSSStore = create<RSSState>((set, get) => ({
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       set({ error: errorMessage, syncing: false })
       throw error
+    }
+  },
+
+  discoverFeeds: async (query: string) => {
+    try {
+      const response = await fetch(`/api/reading?resource=rss&action=discover&query=${encodeURIComponent(query)}`)
+      if (!response.ok) throw new Error('Search failed')
+      const data = await response.json()
+      return data.results || []
+    } catch (error) {
+      console.error('[RSS Store] Discover failed:', error)
+      return []
     }
   },
 

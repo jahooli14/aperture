@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Play, BookOpen, Clock, ChevronDown, RefreshCw, Layers, Flame, Coffee, Moon, Archive, Target, Pencil, Sparkles } from 'lucide-react'
+import { Zap, Play, BookOpen, Clock, RefreshCw, Layers, Flame, Coffee, Moon, Target, Bookmark } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
@@ -74,15 +74,47 @@ export function PowerHourHero() {
     const currentProject = allProjects.find(p => p.id === mainTask?.project_id)
     const theme = getTheme(currentProject?.type || 'other', mainTask?.project_title || '')
 
-    async function fetchPowerHour(refreshProjectId?: string, newDuration?: number) {
+    async function fetchPowerHour(targetProjectId?: string, newDuration?: number) {
         const targetDuration = newDuration || duration
-        if (refreshProjectId) setIsRefreshing(true)
+
+        // 0. Instant Switch Logic: If we already have this project in our task list, just switch to it
+        if (targetProjectId) {
+            const existingIdx = tasks.findIndex(t => t.project_id === targetProjectId)
+            if (existingIdx !== -1) {
+                setSelectedIndex(existingIdx)
+                setShowProjectPicker(false)
+                haptic.medium()
+                return
+            } else {
+                // OPTIMISTIC PLACEHOLDER: Switch immediately to a "Thinking" state
+                const project = allProjects.find(p => p.id === targetProjectId)
+                if (project) {
+                    const placeholder: PowerTask = {
+                        project_id: project.id,
+                        project_title: project.title,
+                        task_title: "Planning session...",
+                        task_description: "Synthesizing the best next move for this project...",
+                        impact_score: 0.5,
+                        duration_minutes: targetDuration,
+                        ignition_tasks: [],
+                        checklist_items: [],
+                        shutdown_tasks: []
+                    }
+                    const newTasks = [...tasks, placeholder]
+                    setTasks(newTasks)
+                    setSelectedIndex(newTasks.length - 1)
+                    setShowProjectPicker(false)
+                    haptic.light()
+                }
+            }
+        }
+
+        if (targetProjectId) setIsRefreshing(true)
         else setLoading(true)
 
         try {
             // 1. Load from client-side cache first (Instant) if not forcing a specific project
-            // We check if cached task matches duration
-            if (!refreshProjectId) {
+            if (!targetProjectId) {
                 const cached = await readingDb.getDashboard('power-hour')
                 if (cached && cached.tasks && cached.tasks.length > 0) {
                     const cachedDuration = cached.tasks[0].duration_minutes || 60
@@ -93,8 +125,8 @@ export function PowerHourHero() {
                 }
             }
 
-            const url = refreshProjectId
-                ? `/api/power-hour?projectId=${refreshProjectId}&duration=${targetDuration}`
+            const url = targetProjectId
+                ? `/api/power-hour?projectId=${targetProjectId}&duration=${targetDuration}`
                 : `/api/power-hour?duration=${targetDuration}`
 
             const res = await fetch(url)
@@ -102,9 +134,20 @@ export function PowerHourHero() {
 
             const data = await res.json()
             if (data.tasks) {
+                if (targetProjectId) {
+                    // Merge new task into list, replacing the placeholder
+                    setTasks(prev => {
+                        const filtered = prev.filter(t => t.project_id !== targetProjectId || t.task_title !== "Planning session...")
+                        return [...filtered, ...data.tasks]
+                    })
+                    // Select the newly added task from the results
+                    const newIdxForTarget = tasks.length // It was recently added to end
+                    // Note: selectedIndex is already pointing to the end due to optimistic update
+                } else {
+                    setTasks(data.tasks)
+                    setSelectedIndex(0)
+                }
                 await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
-                setTasks(data.tasks)
-                setSelectedIndex(0) // Reset to first task when new ones arrive
             }
         } catch (e: any) {
             console.error('[PowerHourHero] Fetch Error:', e)
@@ -123,7 +166,6 @@ export function PowerHourHero() {
     const handleDurationChange = (d: number) => {
         haptic.medium()
         setDuration(d)
-        // Effect will trigger fetch
     }
 
     if (loading) return (
@@ -163,7 +205,6 @@ export function PowerHourHero() {
 
         let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
 
-        // 1. Identify new tasks to add (Ignition + Core + Shutdown)
         const ignition = mainTask.ignition_tasks?.filter(i => i.is_new) || []
         const core = mainTask.checklist_items?.filter(item => item.is_new) || []
         const shutdown = mainTask.shutdown_tasks?.filter(i => i.is_new) || []
@@ -181,7 +222,6 @@ export function PowerHourHero() {
 
             updatedTasks = [...updatedTasks, ...freshTasks]
 
-            // Force immediate update to store and backend
             await updateProject(project.id, {
                 metadata: {
                     ...project.metadata,
@@ -190,13 +230,7 @@ export function PowerHourHero() {
             })
         }
 
-        // 2. Start the Zen Session
         const { startSession } = useFocusStore.getState()
-
-        // We need to pass the tasks with their IDs and text
-        // New tasks we just created have IDs. 
-        // We need to re-gather the full list of tasks (Ignition + Flow + Shutdown) from 'updatedTasks' to get their IDs correctly
-
         const tasksForSession: { id: string, text: string }[] = []
 
         const allPendingItems = [
@@ -205,10 +239,7 @@ export function PowerHourHero() {
             ...(mainTask.shutdown_tasks || [])
         ]
 
-        // Map them to the actual project tasks to get IDs
         allPendingItems.forEach(item => {
-            // Find the task in the updated list (by text, as ID might be new)
-            // We search from end to start to find the most recent one (in case of duplicates)
             const matchedTask = [...updatedTasks].reverse().find((t: any) => t.text === item.text && !t.done)
             if (matchedTask) {
                 tasksForSession.push({ id: matchedTask.id, text: matchedTask.text })
@@ -218,8 +249,6 @@ export function PowerHourHero() {
         if (tasksForSession.length > 0) {
             startSession(project.id, tasksForSession)
         } else {
-            // Fallback if something weird happened, just navigate
-            // But usually we should have tasks
             navigate(`/projects/${mainTask.project_id}`)
         }
     }
@@ -237,15 +266,10 @@ export function PowerHourHero() {
 
         let updatedTasks = [...(project.metadata?.tasks || [])] as any[]
 
-        // 1. Identify new tasks to add
         const newTasksFromAI = adjustedItems.filter(item => item.is_new)
-
-        // 2. Track rejected suggestions
         const existingRejected = project.metadata?.rejected_suggestions || []
-        const newRejected = [...new Set([...existingRejected, ...removedAISuggestions])]
-            .slice(-20)
+        const newRejected = [...new Set([...existingRejected, ...removedAISuggestions])].slice(-20)
 
-        // 3. Store session context for next time (invisible UX improvement)
         const sessionContext = {
             started_at: new Date().toISOString(),
             duration_minutes: totalMinutes,
@@ -268,7 +292,6 @@ export function PowerHourHero() {
                 order: updatedTasks.length + idx,
                 estimated_minutes: t.estimated_minutes
             }))
-
             updatedTasks = [...updatedTasks, ...freshTasks]
             metadataUpdate.tasks = updatedTasks
         }
@@ -279,16 +302,8 @@ export function PowerHourHero() {
 
         await updateProject(project.id, { metadata: metadataUpdate })
 
-        await updateProject(project.id, { metadata: metadataUpdate })
-
-        // Start Zen Session
         const { startSession } = useFocusStore.getState()
         const tasksForSession: { id: string, text: string }[] = []
-
-        // Start with ignition (if any were in original plan but not adjusted? Actually adjustedItems is usually just the core checks)
-        // The Review component usually only allows adjusting checklist_items.
-        // We should probably include ignition/shutdown if they exist in mainTask?
-        // But simply, let's just use the adjusted items as the session.
 
         adjustedItems.forEach(item => {
             const matchedTask = [...updatedTasks].reverse().find((t: any) => t.text === item.text && !t.done)
@@ -326,7 +341,33 @@ export function PowerHourHero() {
                     </button>
                 </div>
 
-                {/* Project Picker (unchanged logic, just ensuring it renders over z-indices) */}
+                {/* Project Selection Tabs (FAST SWITCHING) */}
+                <div className="absolute top-14 left-4 z-20 flex gap-1 items-center max-w-[calc(100%-120px)] overflow-x-auto no-scrollbar py-2">
+                    {tasks.map((task, idx) => {
+                        const tTheme = getTheme(allProjects.find(p => p.id === task.project_id)?.type || 'other', task.project_title)
+                        const isActive = selectedIndex === idx
+                        return (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    haptic.light()
+                                    setSelectedIndex(idx)
+                                }}
+                                className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 border ${isActive
+                                    ? 'bg-white text-black border-white'
+                                    : 'bg-black/40 text-white/40 border-white/10 hover:border-white/20'
+                                    }`}
+                            >
+                                <div
+                                    className="w-1.5 h-1.5 rounded-full"
+                                    style={{ backgroundColor: isActive ? 'black' : tTheme.text }}
+                                />
+                                {task.project_title}
+                            </button>
+                        )
+                    })}
+                </div>
+
                 <AnimatePresence>
                     {showProjectPicker && (
                         <motion.div
@@ -362,8 +403,7 @@ export function PowerHourHero() {
                 </AnimatePresence>
 
                 <div className="flex flex-col md:flex-row relative">
-                    {/* Main Action Area */}
-                    <div className="p-6 md:p-8 flex-1 relative z-10 flex flex-col h-full justify-between">
+                    <div className="p-6 md:p-8 flex-1 relative z-10 flex flex-col h-full justify-between pt-24 md:pt-32">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={mainTask.project_id + mainTask.task_title + duration}
@@ -374,13 +414,13 @@ export function PowerHourHero() {
                             >
                                 <div className="flex items-center justify-between mb-2 mt-8 md:mt-0">
                                     <div className="flex items-center gap-2 font-bold text-[10px] uppercase tracking-widest aperture-header" style={{ color: theme.text }}>
-                                        <Zap className="h-3 w-3 fill-current" />
-                                        <span>{mainTask.project_title}</span>
+                                        <Target className="h-3 w-3 fill-current" />
+                                        <span>Current Objective</span>
                                         {mainTask.overhead_type && <span className="opacity-50">• {mainTask.overhead_type} Flow</span>}
                                     </div>
                                 </div>
 
-                                <h1 className="text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2">
+                                <h1 className={`text-2xl md:text-3xl font-bold mb-3 uppercase leading-none tracking-tight text-white aperture-header line-clamp-2 min-h-[1.5em] ${mainTask.task_title === "Planning session..." ? "animate-pulse opacity-50" : ""}`}>
                                     {mainTask.task_title}
                                 </h1>
 
@@ -388,7 +428,18 @@ export function PowerHourHero() {
                                     {mainTask.task_description}
                                 </p>
 
-                                {/* The Session Arc Visualization */}
+                                {currentProject?.metadata?.next_step && (
+                                    <div className="mb-6 p-3 rounded-lg bg-white/5 border border-white/10 flex items-start gap-3">
+                                        <div className="p-1.5 rounded-md bg-white/10">
+                                            <Bookmark className="h-3 w-3 text-white/50" />
+                                        </div>
+                                        <div>
+                                            <div className="text-[9px] uppercase tracking-widest font-black text-white/30 mb-1 aperture-header">Last Bookmark</div>
+                                            <div className="text-xs text-white/80 leading-relaxed aperture-body line-clamp-2 italic">"{currentProject.metadata.next_step}"</div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-2 mb-6 text-[10px] font-mono uppercase tracking-wide opacity-70">
                                     {(mainTask.ignition_tasks?.length || 0) > 0 && (
                                         <div className="flex items-center gap-1 text-green-400">
@@ -448,9 +499,7 @@ export function PowerHourHero() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Stats Area - Side Panel (Desktop Only) */}
                     <div className="hidden md:flex flex-col p-0 border-l border-white/5 relative w-48 bg-white/[0.02]">
-                        {/* Duration Selectors */}
                         <div className="flex flex-col h-full">
                             {DURATION_OPTIONS.map((opt) => (
                                 <button
@@ -470,7 +519,6 @@ export function PowerHourHero() {
                     </div>
                 </div>
 
-                {/* Mobile Stats/Duration Toggle (Replaces impact score on mobile essentially or adds to it) */}
                 <div className="md:hidden border-t border-white/10 flex divide-x divide-white/10">
                     {DURATION_OPTIONS.map((opt) => (
                         <button
@@ -483,37 +531,8 @@ export function PowerHourHero() {
                         </button>
                     ))}
                 </div>
-
-                {/* Alternative Toggle Bar for Tasks (if multiple suggestions per duration) */}
-                {tasks.length > 1 && (
-                    <div className="border-t border-white/10 bg-black/20 backdrop-blur-xl p-2 flex gap-2">
-                        {tasks.map((task, idx) => {
-                            const tTheme = getTheme(allProjects.find(p => p.id === task.project_id)?.type || 'other', task.project_title)
-                            return (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        haptic.light()
-                                        setSelectedIndex(idx)
-                                    }}
-                                    className={`flex-1 flex items-center gap-3 p-3 rounded-xl transition-all ${selectedIndex === idx
-                                        ? 'bg-white/10 text-white shadow-lg'
-                                        : 'hover:bg-white/5 text-[var(--brand-text-muted)]'
-                                        }`}
-                                >
-                                    <span className={`font-bold text-xs aperture-header ${selectedIndex === idx ? '' : 'opacity-40'}`} style={{ color: selectedIndex === idx ? tTheme.text : 'inherit' }}>0{idx + 1}</span>
-                                    <div className={`text-[10px] font-bold uppercase tracking-tight truncate max-w-[120px] aperture-header ${selectedIndex === idx ? 'text-white' : ''}`}>
-                                        {task.project_title}
-                                    </div>
-                                    {selectedIndex === idx && <div className="ml-auto w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: tTheme.text }} />}
-                                </button>
-                            )
-                        })}
-                    </div>
-                )}
             </div>
 
-            {/* Review Modal */}
             <AnimatePresence>
                 {showReview && mainTask && (() => {
                     const projectTasks = currentProject?.metadata?.tasks || []
