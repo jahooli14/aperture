@@ -232,12 +232,20 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
    - Design ONE small, completable outcome - not a step in a larger task
    - NEVER suggest setup-heavy tasks (getting out paints, setting up equipment)
    - NEVER suggest tasks that "start" something that needs continuation
-   - ONLY suggest: planning, research, digital tasks, quick decisions, ordering supplies, brainstorming
    - Think: "What can be DONE AND DUSTED in 25 minutes?"
-   - Examples of GOOD 25m tasks: "Research 3 brush options and pick one to order", "Outline the next chapter", "Review and comment on draft"
-   - Examples of BAD 25m tasks: "Start painting the background", "Set up studio and begin work", "Continue the illustration"
 
-   OUTPUT: 1-2 checklist items MAX. Quality over quantity. The session should feel achievable, not overwhelming.`
+   PROJECT-TYPE SPECIFIC GUIDANCE FOR 25m:
+   - ART: Reference hunting, buying supplies online, color palette planning, technique research, cleaning/organizing tools
+   - TECH: Code review, bug triage, writing docs, PR reviews, dependency updates, reading/commenting on specs
+   - WRITING: Outlining, research, editing a section, brainstorming, character notes, world-building notes
+   - CREATIVE: Mood boards, inspiration collection, planning, quick sketches (if tools already out)
+
+   NEVER FOR 25m:
+   - "Start painting...", "Begin building...", "Set up and work on..."
+   - Any task requiring physical setup (studio, materials, equipment)
+   - Tasks that will feel incomplete when time runs out
+
+   OUTPUT: 1-2 checklist items MAX. Quality over quantity.`
         : durationMinutes === 150
         ? `DEEP DIVE (150m) - IMMERSIVE OUTCOME PHILOSOPHY:
    This is an extended, focused session for substantial progress.
@@ -280,6 +288,21 @@ For each project, consider:
 3. What's the logical NEXT step to move toward completion?
 4. What can realistically be ACHIEVED (not just started) in ${durationMinutes} minutes?
 
+COMPLETION PROXIMITY RULES:
+- If progress is 0-30% (Early): Focus on momentum-building, quick wins
+- If progress is 30-70% (Middle): Focus on core work, steady progress
+- If progress is 70-90% (Approaching): Focus on clearing blockers, polishing
+- If progress is 90%+ (Final Stretch): FINISH IT. No new tasks, only completion tasks
+  - Do NOT expand scope
+  - Do NOT suggest "nice to haves"
+  - Only suggest what closes the remaining gap to "done"
+
+SETUP TIME ACCOUNTING (for Art/Hardware projects):
+- Setup typically takes 15-20 minutes
+- 60m session with setup = ~40m of actual work
+- Only suggest physical work if duration allows for setup + meaningful work + cleanup
+- For ${durationMinutes}m: ${durationMinutes <= 25 ? 'NO physical setup - not enough time' : durationMinutes <= 60 ? 'Minimal setup only if absolutely necessary' : 'Full setup acceptable'}
+
 DO NOT JUST LIST TASKS:
 - Bad: "Work on painting", "Continue writing", "Make progress on feature"
 - Good: "Complete the sky gradient section", "Write and polish the opening paragraph", "Implement and test the login validation"
@@ -303,7 +326,11 @@ A ${durationMinutes}-minute session should NOT:
 3. PARKING (3-5m): Clean close and prep for next time
 
 === OUTPUT FORMAT ===
-Generate sessions for up to 3 projects (prioritize by last_active).
+${durationMinutes === 25
+    ? `Generate 1 session for the MOST RELEVANT project only.
+   - 25m Spark sessions = single project focus, no context switching
+   - Pick the project that has the clearest quick-win opportunity`
+    : `Generate sessions for up to 3 projects (prioritize by last_active).`}
 
 {
   "tasks": [
