@@ -64,7 +64,7 @@ function cleanHtml(html: string, url: string): string {
   })
 
   // 2. Clean up attributes - only keep essential ones
-  const allowedAttributes = ['src', 'href', 'alt', 'title', 'class']
+  const allowedAttributes = ['src', 'srcset', 'sizes', 'href', 'alt', 'title', 'class', 'width', 'height', 'loading', 'referrerpolicy']
   document.querySelectorAll('*').forEach((el: any) => {
     const attributes = Array.from(el.attributes) as any[]
     attributes.forEach(attr => {
@@ -100,8 +100,9 @@ function cleanHtml(html: string, url: string): string {
         el.setAttribute('src', new URL(src, baseURL.origin).toString())
       } catch (e) { }
     }
-    // High quality display
+    // High quality display & privacy protection
     el.setAttribute('loading', 'lazy')
+    el.setAttribute('referrerpolicy', 'no-referrer') // Crucial for loading images from other domains
     el.style = 'max-width: 100%; height: auto; border-radius: 0.5rem; margin: 2rem auto; display: block;'
   })
 
@@ -1201,7 +1202,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
   // POST - Save new article (only if no resource specified)
   if (req.method === 'POST' && !resource) {
     try {
-      const { url, tags } = req.body
+      const { url, tags, title, content, excerpt } = req.body
 
       if (!url || typeof url !== 'string') {
         return res.status(400).json({ error: 'URL is required' })
@@ -1234,19 +1235,19 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       const placeholderArticle = {
         user_id: userId,
         url,
-        title: url, // Use URL as temporary title
+        title: title || url, // Use provided title if available
         author: null,
-        content: null, // Will be filled by background processing
-        excerpt: 'Extracting article content...',
+        content: content ? cleanHtml(content, url) : null, // Clean and normalize content (fix relative URLs, add referrer policy)
+        excerpt: excerpt || 'Extracting article content...',
         published_date: null,
         thumbnail_url: null,
         favicon_url: null,
         source: extractDomain(url),
-        read_time_minutes: 0,
-        word_count: 0,
+        read_time_minutes: content ? Math.ceil(content.length / 1000) : 0,
+        word_count: content ? content.split(/\s+/).length : 0,
         status: 'unread',
         tags: tags || [],
-        processed: false, // Mark as unprocessed
+        processed: false, // Keep as false to trigger background update/polling, but content will render immediately
         created_at: new Date().toISOString(),
       }
 
@@ -1703,6 +1704,7 @@ Return ONLY the JSON, no other text.`
           title: decodeHTMLEntities(item.title || 'Untitled'),
           link: item.link || '',
           description: cleanHtml(item.contentSnippet || item.description || '', item.link || ''),
+          content: cleanHtml(item.content || item.description || '', item.link || ''), // Pass full content if available
           published_at: item.pubDate || item.isoDate || null,
           author: item.creator || item.author || null
         }))

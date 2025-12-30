@@ -165,29 +165,46 @@ export function ReaderPage() {
   const processedContent = useMemo(() => {
     if (!article?.content) return ''
 
-    let content = article.content
-
-    // Replace cached images
-    if (cachedImageUrls.size > 0) {
-      cachedImageUrls.forEach((blobUrl, originalUrl) => {
-        content = content.replace(
-          new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
-          blobUrl
-        )
-      })
-    }
-
-    // Sanitize with premium allowed tags
-    return DOMPurify.sanitize(content, {
+    // 1. Sanitize first to ensure safety
+    const cleanHtml = DOMPurify.sanitize(article.content, {
       ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'blockquote', 'ul', 'ol', 'li', 'a', 'img', 'figure', 'figcaption',
         'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr',
         'div', 'span'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class'],
+      ALLOWED_ATTR: ['href', 'src', 'srcset', 'sizes', 'alt', 'title', 'class', 'width', 'height', 'loading', 'referrerpolicy'],
       FORBID_ATTR: ['style', 'id']
     })
+
+    // 2. Parse and hydrate images (Proxy or Cache)
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(cleanHtml, 'text/html')
+
+    doc.querySelectorAll('img').forEach((img) => {
+      const originalSrc = img.getAttribute('src')
+      if (!originalSrc) return
+
+      // Force no-referrer for privacy
+      img.setAttribute('referrerpolicy', 'no-referrer')
+
+      // 1. Use cached blob if available (Offline mode)
+      if (cachedImageUrls.has(originalSrc)) {
+        img.setAttribute('src', cachedImageUrls.get(originalSrc)!)
+        // Remove srcset to prevent browser from picking original
+        img.removeAttribute('srcset')
+        img.removeAttribute('sizes')
+      }
+      // 2. Else use Proxy (Online mode - bypass CORS/Hotlinking)
+      else if (originalSrc.startsWith('http')) {
+        const proxyUrl = `/api/reading?resource=proxy&url=${encodeURIComponent(originalSrc)}`
+        img.setAttribute('src', proxyUrl)
+        img.removeAttribute('srcset')
+        img.removeAttribute('sizes')
+      }
+    })
+
+    return doc.body.innerHTML
   }, [article?.content, cachedImageUrls])
 
   const handleTextSelection = (event: React.MouseEvent | React.TouchEvent) => {

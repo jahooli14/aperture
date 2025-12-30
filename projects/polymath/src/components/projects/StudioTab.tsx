@@ -57,13 +57,13 @@ export function StudioTab({ project }: StudioTabProps) {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-white leading-none">The Studio</h3>
-                                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Brainstorming Workspace</p>
+                                <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">The Workbench for Ideas</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
                             {lastSaved && (
                                 <span className="text-[10px] text-zinc-500 font-mono">
-                                    LAST SAVED: {lastSaved.toLocaleTimeString()}
+                                    SAVED: {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             )}
                             {isSaving && (
@@ -81,7 +81,7 @@ export function StudioTab({ project }: StudioTabProps) {
                     <textarea
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
-                        placeholder="Unstructured thoughts, grand visions, or scratchpad notes for this project..."
+                        placeholder="This is your blank canvas. \n\nDrop unstructured thoughts, research links, or grand visions here. \nThere are no rules in the studio."
                         className="w-full h-96 bg-transparent border-0 focus:ring-0 text-zinc-200 placeholder:text-zinc-600 resize-none font-serif text-lg leading-relaxed scroll-minimal"
                     />
 
@@ -89,20 +89,19 @@ export function StudioTab({ project }: StudioTabProps) {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => {
-                                    // Potential AI help trigger
                                     addToast({
-                                        title: 'AI Analysis',
-                                        description: 'Coming soon: Let Aperture refine your vision.',
+                                        title: 'Studio Assistant',
+                                        description: 'AI refinement coming soon to The Studio.',
                                     })
                                 }}
-                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5 flex items-center gap-2"
+                                className="px-3 py-1.5 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white text-[10px] font-bold uppercase tracking-widest transition-all border border-white/5 flex items-center gap-2 group"
                             >
-                                <Sparkles className="h-3 w-3" />
-                                Refine Vision
+                                <Sparkles className="h-3 w-3 group-hover:text-indigo-400 transition-colors" />
+                                Make it Magic
                             </button>
                         </div>
                         <span className="text-[10px] text-zinc-600 font-mono">
-                            {draft.length} CHARACTERS
+                            {draft.length} CHARS
                         </span>
                     </div>
                 </div>
@@ -115,6 +114,9 @@ export function StudioTab({ project }: StudioTabProps) {
                         <Sparkles className="h-4 w-4 text-sky-400" />
                         <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Contextual Sparks</h4>
                     </div>
+                    <div className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                        Automatic connections found by the Aperture Engine based on your Studio notes.
+                    </div>
                     <ConnectionsList
                         itemType="project"
                         itemId={project.id}
@@ -125,12 +127,10 @@ export function StudioTab({ project }: StudioTabProps) {
                 <div className="premium-card p-6 border-zinc-500/10 bg-gradient-to-tr from-sky-500/5 to-transparent">
                     <div className="flex items-center gap-2 mb-3">
                         <Lightbulb className="h-4 w-4 text-amber-400" />
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Project Canvas</h4>
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">About The Studio</h4>
                     </div>
                     <p className="text-xs text-zinc-500 leading-relaxed mb-4">
-                        This workspace is your unstructured scratchpad.
-                        Feel free to dump raw research, links, or messy ideas here.
-                        Aperture uses this context to suggest "Sparks" and refine project tasks.
+                        Separating <strong>Doing</strong> (Overview) from <strong>Thinking</strong> (Studio) keeps your checklist clean. Use this space to get messy before you commit to tasks.
                     </p>
                 </div>
             </div>

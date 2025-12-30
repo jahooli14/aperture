@@ -390,44 +390,23 @@ When a project is > 85% done or has < 3 tasks remaining:
 2. CELEBRATION: The session should feel like a 'Victory Lap'.
 3. NO MECHANICAL BATCHING: NEVER generate tasks like "Migrate projects 1-4", "Migrate projects 5-8". This is lazy and demotivating. If a task is big, break it by DEPTH (e.g., "Set up the core schema" vs "Polish the UI transition"), not by COUNT.
 
-=== TASK ANCHORING & INTERSPERSING ===
-CRITICAL: The user's EXISTING tasks (Remaining Tasks listed above) must be the ANCHORS of the session.
-1. DO NOT replace existing tasks with AI alternatives unless they are dangerously vague.
-2. INTERSPERSE AI suggestions around existing tasks to handle:
-   - Setup/Preparation (before the main task)
-   - Breakdown (if the existing task is too big for the duration, split it but KEEP the core phrasing)
-   - Cleanup/Parking (after the main task)
-3. For every "checklist_item", if it matches an existing task, set "is_new": false.
-4. If you create a sub-task or breakdown of an existing task, mention the parent task (e.g., "[Part 1] Copy projects...")
+=== TASK ANCHORING & REFINEMENT (CRITICAL) ===
+The user's EXISTING tasks (Remaining Tasks listed above) must be the FOUNDATION of the session.
+1. AUDIT EXISTING TASKS:
+   - If a task is VAGUE or a STUB (e.g., "1", "do it", "fix bug", "research"), **REPLACE** it with your clear, actionable version.
+     - Example: User has "1" -> You output: "1. Research competitor pricing models" (matching the *intent* of being the first step).
+   - If a task is GOOD, keep it exactly as is (or with minor polish).
+   
+2. FILL THE GAPS:
+   - If the user has "Step 1" and "Step 3", **INSERT** "Step 2" between them.
+   - Do NOT append a duplicate of "Step 1" at the end.
 
-DISCRETE SESSIONS:
-Each session should feel complete on its own. The user should be able to:
-- Start the session
-- Do the work
-- Finish with something DONE
-- Walk away satisfied
-
-A ${durationMinutes}-minute session should NOT:
-- Leave the user mid-task needing to continue
-- Create anxiety about unfinished work
-- Suggest more than can reasonably be completed
-- Include setup time for physical tasks unless duration allows (60m+)
-
-=== SESSION CONTINUITY ===
-If the project has LAST SESSION context:
-- Check if parked tasks are still relevant - pick up where they left off
-- Build on the previous session's outcome, don't repeat it
-- If they completed something yesterday, suggest the natural next step
-
-=== TASK DEPENDENCIES ===
-Check remaining tasks for logical order:
-- Some tasks can't start until others are done (sketch before paint, plan before build)
-- If a blocker task exists in the list, suggest it first
-- Don't suggest "paint the canvas" if "buy paints" is still incomplete
+3. NO DUPLICATES:
+   - Check the "Remaining Tasks" list. If you generate a task that means the same thing, assume you are REFINING the existing one, not adding a new one.
 
 === SESSION ARC STRUCTURE ===
 1. IGNITION (2-5m): Quick mental/physical warm-up
-2. THE FLOW: The core outcome work
+2. THE FLOW: The core outcome work (Refined existing tasks + new gap-fillers)
 3. PARKING (3-5m): Clean close and prep for next time
 
 === OUTPUT FORMAT ===

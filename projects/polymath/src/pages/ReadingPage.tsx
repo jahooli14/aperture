@@ -125,6 +125,7 @@ export function ReadingPage() {
             if (data.items) {
               allItems.push(...data.items.map((item: any) => ({
                 ...item,
+                content: item.content || item.description || '', // Ensure content is populated
                 feed_id: feed.id,
                 feed_title: feed.title
               })))
@@ -305,7 +306,12 @@ export function ReadingPage() {
         variant: 'default',
       })
 
-      const newArticle = await saveArticle({ url: item.link })
+      const newArticle = await saveArticle({
+        url: item.link,
+        title: item.title,
+        content: item.content || item.description || '', // Try full content first, then description
+        excerpt: (item.description || item.content || '').substring(0, 200) || undefined
+      })
 
       // Navigate immediately - ReaderPage will handle the loading state
       navigate(`/reading/${newArticle.id}`)

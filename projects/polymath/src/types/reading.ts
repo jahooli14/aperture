@@ -47,6 +47,8 @@ export interface SaveArticleRequest {
   url: string
   title?: string
   tags?: string[]
+  content?: string
+  excerpt?: string
 }
 
 export interface UpdateArticleRequest {

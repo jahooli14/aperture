@@ -43,14 +43,20 @@ export function useArticle(id: string | undefined) {
               const articleData = result.article || result
               const highlightsData = result.highlights || []
 
-              if (articleData) {
-                setData({
-                  article: articleData,
-                  highlights: highlightsData
-                })
-                // Update cache silently
-                readingDb.cacheArticle(articleData).catch(console.warn)
+              // Intelligent Merge: Don't overwrite content if network returns null but we have it locally
+              const mergedArticle = {
+                ...articleData,
+                content: articleData.content || cachedArticle.content,
+                excerpt: articleData.excerpt || cachedArticle.excerpt,
+                processed: articleData.processed || (!!cachedArticle.content && !articleData.content)
               }
+
+              setData({
+                article: mergedArticle,
+                highlights: highlightsData
+              })
+              // Update cache silently
+              readingDb.cacheArticle(mergedArticle).catch(console.warn)
             }
           })
           .catch((err) => console.warn('[useArticle] Background refresh failed:', err))

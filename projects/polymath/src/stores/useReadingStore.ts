@@ -165,18 +165,18 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         created_at: new Date().toISOString(),
         tags: request.tags || [],
         user_id: 'current-user', // Placeholder
-        processed: false,
+        processed: !!(request.content),
         author: null,
-        content: null,
-        excerpt: null,
+        content: request.content || null,
+        excerpt: request.excerpt || null,
         published_date: null,
-        read_time_minutes: null,
+        read_time_minutes: request.content ? Math.ceil(request.content.length / 1000) : null,
         thumbnail_url: null,
         favicon_url: null,
         source: null,
         read_at: null,
         archived_at: null,
-        word_count: null,
+        word_count: request.content ? request.content.split(/\s+/).length : null,
         notes: null
       }
 
@@ -193,26 +193,58 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       // Persist pending to localStorage
       try {
         localStorage.setItem('pending-articles', JSON.stringify(newPending))
+
+        // CRITICAL: Cache optimistic article in valid DB format immediately
+        // This allows useArticle() to find it on the ReaderPage instantly
+        const { readingDb } = await import('../lib/db')
+        await readingDb.articles.put({
+          ...optimisticArticle,
+          offline_available: true,
+          images_cached: false,
+          last_synced: new Date().toISOString()
+        })
+        console.log('[ReadingStore] Optimistic article cached:', optimisticArticle.id)
       } catch (e) {
-        console.error('Failed to save pending to localStorage:', e)
+        console.error('Failed to save pending/optimistic:', e)
       }
 
       try {
         const response = await fetch('/api/reading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(request),
+          body: JSON.stringify({
+            url: request.url,
+            title: request.title,
+            tags: request.tags,
+            content: request.content,
+            excerpt: request.excerpt
+          }),
         })
 
         if (!response.ok) {
           throw new Error('Failed to save to API')
         }
 
-        const { article } = await response.json()
+        const { article: rawArticle } = await response.json()
 
-        // Cache the new article
+        // HYDRATION FIX: If running locally against old PROD API, the returned article might have null content.
+        // We MUST inject our local optimistic content into the "real" article before caching/returning it.
+        const article = {
+          ...rawArticle,
+          content: rawArticle.content || request.content || null,
+          excerpt: rawArticle.excerpt || request.excerpt || null,
+          processed: !!(rawArticle.content || request.content) // Treat as processed if we have content
+        }
+
+        // Cache the REAL article (replacing optimistic one)
         try {
           const { readingDb } = await import('../lib/db')
+
+          // Remove optimistic version first if IDs differ
+          if (article.id !== tempId) {
+            await readingDb.articles.delete(tempId)
+          }
+
           await readingDb.articles.put({
             ...article,
             offline_available: true,
@@ -220,7 +252,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             last_synced: new Date().toISOString()
           })
         } catch (cacheError) {
-          console.warn('[ReadingStore] Failed to cache new article:', cacheError)
+          console.warn('[ReadingStore] Failed to cache real article:', cacheError)
         }
 
         // Success! Replace temp article with real one
