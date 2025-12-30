@@ -1,19 +1,19 @@
 import { getSupabaseClient } from './supabase.js'
 import { GapAnalysisResult } from '../../src/types'
-import { MODELS } from './models.js'
+import { generateText } from './gemini-chat.js'
 
 const supabase = getSupabaseClient()
 
 /**
  * Analyzes user's memories and detects gaps for follow-up prompts
- * Uses Gemini 3 Flash Preview with full memory context
+ * Uses semantic vector search to find relevant context instead of chronological
  */
 export async function detectGaps(
   userId: string,
   latestMemoryId: string
 ): Promise<GapAnalysisResult> {
-  // Fetch all user memories with prompts
-  const { data: allMemories, error } = await supabase
+  // 1. Fetch the latest memory response
+  const { data: latestMemory, error: latestError } = await supabase
     .from('memory_responses')
     .select(`
       *,
@@ -22,22 +22,71 @@ export async function detectGaps(
         prompt_description
       )
     `)
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+    .eq('id', latestMemoryId)
+    .single()
 
-  if (error) {
-    console.error('Error fetching memories:', error)
+  if (latestError || !latestMemory) {
+    console.error('Error fetching latest memory:', latestError)
     return { followUpPrompts: [] }
   }
 
-  if (!allMemories || allMemories.length === 0) {
-    return { followUpPrompts: [] }
+  // 2. Find semantically similar memories using vector search (if embedding exists)
+  let relatedMemories: any[] = []
+
+  if (latestMemory.embedding) {
+    try {
+      // Use vector search for semantically relevant context
+      const { data: similarMemories, error: vectorError } = await supabase.rpc('match_memory_responses', {
+        query_embedding: latestMemory.embedding,
+        filter_user_id: userId,
+        match_threshold: 0.6,
+        match_count: 5
+      })
+
+      if (!vectorError && similarMemories) {
+        // Fetch full details for similar memories
+        const similarIds = similarMemories.map((m: any) => m.id).filter((id: string) => id !== latestMemoryId)
+
+        if (similarIds.length > 0) {
+          const { data: fullMemories } = await supabase
+            .from('memory_responses')
+            .select(`
+              *,
+              memory_prompts (
+                prompt_text,
+                prompt_description
+              )
+            `)
+            .in('id', similarIds)
+
+          relatedMemories = fullMemories || []
+        }
+      }
+    } catch (err) {
+      console.warn('[GapDetection] Vector search unavailable, falling back to chronological:', err)
+    }
   }
 
-  const latestMemory = allMemories.find(m => m.id === latestMemoryId)
-  if (!latestMemory) {
-    return { followUpPrompts: [] }
+  // 3. Fallback to recent memories if no vector matches
+  if (relatedMemories.length === 0) {
+    const { data: recentMemories } = await supabase
+      .from('memory_responses')
+      .select(`
+        *,
+        memory_prompts (
+          prompt_text,
+          prompt_description
+        )
+      `)
+      .eq('user_id', userId)
+      .neq('id', latestMemoryId)
+      .order('created_at', { ascending: false })
+      .limit(5)
+
+    relatedMemories = recentMemories || []
   }
+
+  const allMemories = [latestMemory, ...relatedMemories]
 
   // Build context for Gemini
   const memoryContext = allMemories
@@ -48,60 +97,30 @@ export async function detectGaps(
     .join('\n\n---\n\n')
 
   try {
-    // Call Gemini
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODELS.DEFAULT_CHAT}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are analyzing a user's memory responses to detect interesting gaps or unexplored depth.
+    // Generate prompt analysis using Gemini (with token tracking)
+    const prompt = `Analyze user's memory for gaps.
 
-User just answered: "${latestMemory.memory_prompts?.prompt_text || latestMemory.custom_title}"
-Their response:
+Latest: "${latestMemory.memory_prompts?.prompt_text || latestMemory.custom_title}"
 ${latestMemory.bullets.map((b: string, i: number) => `${i + 1}. ${b}`).join('\n')}
 
-All their memories so far (${allMemories.length} total):
-
+Related context (${allMemories.length - 1} semantically similar memories):
 ${memoryContext}
 
-Analyze for interesting gaps or unexplored depth. Generate 0-2 follow-up prompts that:
-1. Dig deeper into interesting details they mentioned
-2. Explore emotional/relational aspects not yet covered
-3. Fill narrative gaps (e.g., "how did X happen?", "tell me about Y")
+Generate 0-2 follow-up prompts that:
+1. Dig deeper into interesting details
+2. Explore emotional/relational aspects
+3. Fill narrative gaps
 
-Be specific and reference what they said. Make prompts feel personal and curious.
+Be specific. Return JSON:
+{"followUpPrompts":[{"promptText":"...","reasoning":"..."}]}
 
-Return ONLY valid JSON (no markdown, no code blocks):
-{
-  "followUpPrompts": [
-    {
-      "promptText": "...",
-      "reasoning": "Why this gap is interesting"
-    }
-  ]
-}
+If no gaps, return empty array.`
 
-If no interesting gaps, return empty array.`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000
-          }
-        })
-      }
-    )
-
-    if (!response.ok) {
-      console.error('Gemini API error:', await response.text())
-      return { followUpPrompts: [] }
-    }
-
-    const result = await response.json() as any // Explicitly cast to avoid 'unknown' error
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text
+    const text = await generateText(prompt, {
+      maxTokens: 1000,
+      temperature: 0.7,
+      responseFormat: 'json'
+    })
 
     if (!text) {
       return { followUpPrompts: [] }

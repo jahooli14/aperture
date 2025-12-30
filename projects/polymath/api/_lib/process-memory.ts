@@ -174,56 +174,28 @@ async function extractMetadata(title: string, body: string, projects: any[]): Pr
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
-  const prompt = `Clean up this voice note into something natural and readable.
-  
-  CURRENT ACTIVE PROJECTS:
-  ${projectList || 'No active projects.'}
+  const prompt = `Clean up voice note. Projects: ${projectList || 'None'}
 
-Raw Voice Transcript:
-Title: ${title}
-Body: ${body}
+Raw: "${title}" - ${body}
 
-Extract the following in JSON format:
+Return JSON:
 {
-  "summary_title": "A clear, specific title (max 80 chars)",
-  "insightful_body": "Rewrite in plain, conversational English. Keep the same ideas and tone, just make it readable. Remove filler words and 'um's but don't make it formal or flowery. Write how a smart person would naturally explain this idea to a friend. First person. No jargon unless it was in the original.",
-  "memory_type": "foundational" | "event" | "insight",
+  "summary_title": "specific title, max 80 chars",
+  "insightful_body": "conversational rewrite, remove filler, keep natural tone, first person",
+  "memory_type": "foundational|event|insight",
   "entities": {
-    "people": ["names of specific people mentioned"],
-    "places": ["names of specific locations"],
-    "topics": ["specific technologies, activities, or concepts - e.g. 'React', 'meditation', 'cooking'],
-    "skills": ["user's abilities, skills, or capabilities mentioned - e.g. 'woodworking', 'Python programming', 'video editing', 'cooking', 'teaching']
+    "people": ["actual names"],
+    "places": ["specific locations"],
+    "topics": ["technologies, activities, concepts"],
+    "skills": ["user abilities"]
   },
-  "themes": ["high-level life themes - max 3"],
-  "tags": ["searchable tags - 3-5 tags"],
-  "emotional_tone": "brief emotional description",
-  "triage": {
-    "category": "task_update" | "new_thought" | "reading_lead",
-    "project_id": "string (uuid of identified project if task_update)",
-    "confidence": 0-1
-  }
+  "themes": ["max 3: career/health/creativity/relationships/learning/family"],
+  "tags": ["3-5 keywords"],
+  "emotional_tone": "short phrase",
+  "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0-1}
 }
 
-Rules:
-- summary_title: What's this about? Be specific, not generic.
-- insightful_body: Clean up the rambling but keep it conversational. Don't use words like "nascent", "formative", "preliminary", "profound", "revelatory". Just write like a normal person who happens to have interesting thoughts. Natural language only.
-- memory_type: "foundational" = core belief/value, "event" = something that happened, "insight" = realization/idea
-- entities.people: Only actual names (e.g., "Sarah", "Alex"), not generic terms
-- entities.places: Only specific locations (e.g., "London", "Central Park")
-- entities.topics: Specific nouns - technologies, tools, activities, subjects (e.g., "TypeScript", "yoga", "parenting")
-- entities.skills: User's abilities, expertise, or things they can do. Extract if user says "I can", "I know how to", "I'm good at", or describes doing something skillfully (e.g., "woodworking", "Python", "cooking", "teaching", "video editing")
-- themes: Broad life categories ONLY (max 3) - e.g., "career", "health", "creativity", "relationships", "learning", "family"
-- tags: Short searchable keywords (3-5) - overlap with topics is OK but keep minimal. Use for: mood, context, or specifics not captured elsewhere
-- emotional_tone: One short phrase (e.g., "excited", "reflective and calm", "frustrated")
-- triage.category: "task_update" (update to existing project), "new_thought" (standalone idea), "reading_lead" (something to read/watch later)
-- triage.project_id: If "task_update", try to match to a known project ID if context allows. If it's a new project, leave null.
-
-**Key difference:**
-- topics = what is this about? (nouns: React, meditation, design)
-- themes = what life area? (categories: career, health, creativity)
-- tags = additional searchable context (e.g., "breakthrough", "side-project", "morning-routine")
-
-Return ONLY the JSON, no other text.`
+Keep natural language. Avoid flowery words. Match project_id if task_update.`
 
   const result = await model.generateContent(prompt)
   const response = result.response.text().trim()
