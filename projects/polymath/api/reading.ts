@@ -1654,7 +1654,7 @@ Return ONLY the JSON, no other text.`
           throw new Error(`Feedly search failed with status: ${response.status}`)
         }
 
-        const data = await response.json()
+        const data = await response.json() as any
         const results = (data.results || []).map((f: any) => ({
           title: f.title,
           description: f.description,
