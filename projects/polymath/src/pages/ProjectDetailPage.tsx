@@ -331,7 +331,6 @@ export function ProjectDetailPage() {
     setEditingDescription(false)
     setEditingMotivation(false)
     setEditingGoal(false)
-    setEditingEndGoal(false)
   }
 
   const startEditMotivation = () => {
@@ -340,58 +339,10 @@ export function ProjectDetailPage() {
     setTimeout(() => motivationInputRef.current?.focus(), 0)
   }
 
-  const saveMotivation = async () => {
-    if (!project) {
-      setEditingMotivation(false)
-      return
-    }
-    setEditingMotivation(false)
-
-    try {
-      await updateProject(project.id, {
-        metadata: { ...project.metadata, motivation: tempMotivation.trim() }
-      })
-      addToast({
-        title: 'Motivation updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update motivation',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const startEditEndGoal = () => {
-    setTempEndGoal(project?.metadata?.end_goal || '')
-    setEditingEndGoal(true)
-    setTimeout(() => endGoalInputRef.current?.focus(), 0)
-  }
-
-  const saveEndGoal = async () => {
-    if (!project) {
-      setEditingEndGoal(false)
-      return
-    }
-    setEditingEndGoal(false)
-
-    try {
-      await updateProject(project.id, {
-        metadata: { ...project.metadata, end_goal: tempEndGoal.trim() }
-      })
-      addToast({
-        title: 'Definition of Done updated',
-        variant: 'success',
-      })
-    } catch (error) {
-      addToast({
-        title: 'Failed to update goal',
-        description: error instanceof Error ? error.message : 'Unknown error',
-        variant: 'destructive',
-      })
-    }
+  const startEditGoal = () => {
+    setTempGoal(project?.metadata?.end_goal || '')
+    setEditingGoal(true)
+    setTimeout(() => goalInputRef.current?.focus(), 0)
   }
 
   const addPinnedTask = useCallback(async (text: string) => {
@@ -947,44 +898,6 @@ export function ProjectDetailPage() {
                 )}
 
                 {/* Definition of Done - The Finish Line */}
-                {(project.metadata?.end_goal || editingGoal) && (
-                  <div
-                    className="p-6 rounded-2xl bg-green-500/5 border border-green-500/10 flex items-start gap-4 cursor-pointer hover:bg-green-500/[0.08] transition-all group/goal"
-                    onClick={() => {
-                      setTempGoal(project.metadata?.end_goal || '')
-                      setEditingGoal(true)
-                      setTimeout(() => goalInputRef.current?.focus(), 100)
-                    }}
-                  >
-                    <div className="p-2 rounded-xl bg-green-500/10 text-green-400 group-hover/goal:scale-110 transition-transform">
-                      <Target className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-400/60 block mb-1">Definition of Done</span>
-                      {editingGoal ? (
-                        <textarea
-                          ref={goalInputRef}
-                          value={tempGoal}
-                          onChange={(e) => setTempGoal(e.target.value)}
-                          onBlur={saveGoal}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault()
-                              saveGoal()
-                            }
-                            if (e.key === 'Escape') cancelEdit()
-                          }}
-                          className="w-full bg-black/40 border-green-500/20 rounded-xl p-3 text-lg font-bold text-white tracking-tight outline-none focus:border-green-500/50"
-                          autoFocus
-                        />
-                      ) : (
-                        <p className="text-lg font-bold text-white tracking-tight">
-                          {project.metadata?.end_goal || 'Define what "done" looks like...'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Motivation & Definition of Done - Project Context */}
@@ -1042,18 +955,18 @@ export function ProjectDetailPage() {
                 {/* Definition of Done - The finish line */}
                 <div
                   className="premium-card p-4 border-l-4 border-green-500 cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={!editingEndGoal ? startEditEndGoal : undefined}
+                  onClick={!editingGoal ? startEditGoal : undefined}
                   title="Click to edit"
                 >
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-green)' }}>
                     Definition of Done
                   </h3>
-                  {editingEndGoal ? (
+                  {editingGoal ? (
                     <div className="space-y-2">
                       <textarea
-                        ref={endGoalInputRef}
-                        value={tempEndGoal}
-                        onChange={(e) => setTempEndGoal(e.target.value)}
+                        ref={goalInputRef}
+                        value={tempGoal}
+                        onChange={(e) => setTempGoal(e.target.value)}
                         className="w-full bg-zinc-900/50 border border-zinc-700 rounded p-2 text-sm resize-none focus:outline-none focus:border-green-500"
                         style={{ color: 'var(--premium-text-primary)' }}
                         rows={3}
@@ -1061,7 +974,7 @@ export function ProjectDetailPage() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault()
-                            saveEndGoal()
+                            saveGoal()
                           } else if (e.key === 'Escape') {
                             cancelEdit()
                           }
@@ -1075,7 +988,7 @@ export function ProjectDetailPage() {
                           Cancel
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); saveEndGoal() }}
+                          onClick={(e) => { e.stopPropagation(); saveGoal() }}
                           className="px-3 py-1 text-xs rounded bg-green-600 hover:bg-green-500"
                         >
                           Save
