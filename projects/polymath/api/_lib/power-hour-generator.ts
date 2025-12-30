@@ -5,42 +5,46 @@ import { MODELS } from './models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-interface PowerHourTask {
+export interface PowerHourTask {
     project_id: string
     project_title: string
     task_title: string
-    task_description: string // High-level objective for the hour
-    session_summary: string   // Joyous, motivating summary of what will be achieved
-    checklist_items: {
-        text: string
-        is_new: boolean
-        estimated_minutes: number // Duration estimate: 5, 15, 25, or 45
-    }[] // The specific "hit list" for the hour
-    total_estimated_minutes: number // Sum of all checklist item durations
+    task_description: string // High-level objective for the session
+    session_summary: string   // Joyous, motivating summary
+
+    // The Session Arc
+    ignition_tasks: { text: string; is_new: boolean }[] // Micro-tasks to break inertia (< 2 mins)
+    checklist_items: { text: string; is_new: boolean }[] // The Core Flow (includes "Setup" if needed)
+    shutdown_tasks: { text: string; is_new: boolean }[] // Parking & Cleanup
+
     impact_score: number
     fuel_id?: string
     fuel_title?: string
-    is_dormant?: boolean      // Project hasn't been touched in 14+ days
-    days_dormant?: number     // How many days since last activity
+    overhead_type?: 'Mental' | 'Physical' | 'Tech' | 'Digital'
+    duration_minutes: number
+
+    // Metadata for UI
+    is_dormant?: boolean
+    days_dormant?: number
 }
 
 import { repairAllUserProjects } from './project-repair.js'
 
-export async function generatePowerHourPlan(userId: string, projectId?: string): Promise<PowerHourTask[]> {
+export async function generatePowerHourPlan(userId: string, projectId?: string, durationMinutes: number = 60): Promise<PowerHourTask[]> {
     const supabase = getSupabaseClient()
-    console.log('[PowerHour] Generating plan for user:', userId, projectId ? `focused on ${projectId}` : '')
+    console.log('[ContextualSession] Generating plan for user:', userId, `Duration: ${durationMinutes}m`, projectId ? `Focused on ${projectId}` : '')
 
     // 0. Ensure existing projects have tasks (Auto-repair/scaffold)
     try {
         await repairAllUserProjects(userId)
     } catch (err) {
-        console.error('[PowerHour] Project repair failed:', err)
+        console.error('[ContextualSession] Project repair failed:', err)
     }
 
     // 1. Fetch active projects
     let query = supabase
         .from('projects')
-        .select('id, title, description, status, metadata, last_active, embedding')
+        .select('id, title, description, status, type, metadata, last_active, embedding')
         .in('status', ['active', 'upcoming', 'maintaining', 'Active', 'Upcoming', 'Maintaining'])
         .eq('user_id', userId)
 
@@ -51,12 +55,8 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     }
 
     const { data: projects, error: projectsError } = await query
-
     if (projectsError) throw projectsError
-
-    if (!projects || projects.length === 0) {
-        return []
-    }
+    if (!projects || projects.length === 0) return []
 
     // 2. Fetch recent unread articles (Fuel) with embeddings
     const { data: fuel, error: fuelError } = await supabase
@@ -79,9 +79,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
 
     if (listError) console.warn('[PowerHour] Failed to fetch list inspiration:', listError)
 
-    // 3. Use Gemini 1.5 Flash to synthesize Power Hour suggestions
-    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
-
+    // 3. Prepare Context for Prompt
     const now = Date.now()
 
     // Generate context for each project with semantically matched fuel/inspiration
@@ -130,11 +128,6 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         const unfinishedTasks = allTasks.filter((t: any) => !t.done)
         const completedTasks = allTasks.filter((t: any) => t.done)
         const totalIncomplete = unfinishedTasks.length
-        const slotsAvailable = Math.max(0, 12 - totalIncomplete)
-
-        // Calculate progress toward goal
-        const totalTasks = allTasks.length
-        const progress = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
 
         // Calculate dormancy - days since last_active
         const lastActiveDate = p.last_active ? new Date(p.last_active).getTime() : now
@@ -170,36 +163,28 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         const projectMode = p.metadata?.project_mode || 'completion'
         const isRecurring = projectMode === 'recurring'
 
-        let context = `- ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
+        let context = `- [${p.type || 'General'}] ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
     Motivation: ${motivation || 'Not specified'}
     Project Mode: ${isRecurring ? '🔄 RECURRING (ongoing habit - no end goal)' : 'Completion-based'}
     ${isRecurring ? 'Focus: Consistency and habit-building, not finishing' : `Definition of Done: ${endGoal || 'Not specified - help user define completion'}`}
-    ${!isRecurring ? `Progress: ${progress}% complete (${completedTasks.length}/${totalTasks} tasks done)` : `Sessions completed: ${completedTasks.length} tasks done historically`}
     Completed Tasks: ${completedList}
-    Remaining Tasks (${totalIncomplete}/12 slots used): ${unfinishedList}
-    Available Slots for New Tasks: ${slotsAvailable}`
+    Remaining Tasks: ${unfinishedList}`
 
-        // Add dormancy context - this is key for re-engagement
+        // Add dormancy context
         if (isVeryDormant) {
-            context += `\n    💤 VERY DORMANT (${daysDormant} days since last session) - needs gentle re-engagement, not pressure`
-            if (lastCompletedTask) {
-                context += `\n    Last completed: "${lastCompletedTask.text}"`
-            }
+            context += `\n    💤 VERY DORMANT (${daysDormant} days since last session) - needs gentle re-engagement`
         } else if (isDormant) {
-            context += `\n    😴 DORMANT (${daysDormant} days since last session) - help user reconnect with why this mattered`
-            if (lastCompletedTask) {
-                context += `\n    Last completed: "${lastCompletedTask.text}"`
-            }
+            context += `\n    😴 DORMANT (${daysDormant} days since last session)`
         }
 
         // Add stale task warning if any
         if (staleTasks.length > 0) {
-            context += `\n    ⚠️ STALE TASKS (>14 days old, may need review): ${staleTasks.join(', ')}`
+            context += `\n    ⚠️ STALE TASKS (>14 days old): ${staleTasks.join(', ')}`
         }
 
         // Add rejected suggestions to avoid repeating
         if (rejectedSuggestions.length > 0) {
-            context += `\n    🚫 DO NOT SUGGEST (user removed these before): ${rejectedSuggestions.slice(-10).join(', ')}`
+            context += `\n    🚫 DO NOT SUGGEST: ${rejectedSuggestions.slice(-10).join(', ')}`
         }
 
         // Add project-specific fuel and inspiration
@@ -215,31 +200,51 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
         return context
     }))).join('\n')
 
-    // Build valid fuel IDs for validation
-    const validFuelIds = new Set(fuel?.map(f => f.id) || [])
+    // 4. Gemini 1.5 Flash - The "Sherpa" Prompt
+    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
-    const prompt = `Generate Power Hour plans (50 min) for projects. Each project has semantically matched fuel/inspiration.
+    const prompt = `You are the APERTURE SHERPA. Your goal is to engineer a JOYOUS, FRICTIONLESS work session.
+    
+SESSION PARAMETERS:
+- Duration: ${durationMinutes} minutes.
+- User Context: Personal Projects (Writing, Art, Tech, etc).
 
-PROJECTS (with relevant fuel/inspiration):
+Available Projects:
 ${projectsContext}
 
-Create 3-5 tasks per project moving toward "Definition of Done". Prioritize existing tasks.
+YOUR MISSION:
+Design 3 distinct Session Arcs. Each must follow this "Flow Engineering" structure:
+1. IGNITION (0-5m): Micro-tasks to break physical/mental inertia. (e.g., "Fill water cup", "Open repo").
+2. THE FLOW (Bulk): The core work.
+   - IMPERATIVE: If the project is "High Friction" (Art, Hardware) and duration is >= 60m, you MUST include explicit "Setup" tasks (e.g. "Get paints out") as the first item in the Checklist.
+   - IMPERATIVE: If duration is 25m ("Spark" mode), ONLY suggest "Dry" tasks (Planning, Digital, Buying). DO NOT suggest "Wet" tasks (Painting, Building) for a 25m slot.
+3. PARKING (Last 5m): Tasks to close the loop and reduce friction for *next time*. (e.g. "Clean brushes", "Leave notebook open").
 
-RULES:
-- Use exact project_id
-- Session Summary: 2 sentences on motivation & goal
-- Respect "Available Slots for New Tasks"
-- Avoid 🚫 items (user rejected)
-- Address ⚠️ STALE TASKS
-- 70%+ progress: FINISH. <30%: quick wins
-- 🔄 RECURRING: habits, not completion
-- 😴/💤 DORMANT: 25-30 min, easy start, offer archive option
-- No duplicates
-- Minutes: 5/15/25/45. Total: 40-55
-- Use provided fuel IDs only
+PROJECT TYPE LOGIC:
+- WRITING: Mental Friction. Ignition = "Mood Prep" (Playlist, clear desk).
+- ART: Physical Friction. Ignition = Micro-habit (Apron on). Checklist MUST include Setup (Paints out). Parking MUST include Cleanup.
+- TECH: Low Friction. Ignition = Context load.
+- GENERAL: Assess friction based on description.
 
-JSON:
-{"tasks":[{"project_id":"uuid","project_title":"str","task_title":"str","task_description":"str","session_summary":"str","checklist_items":[{"text":"str","is_new":bool,"estimated_minutes":num}],"total_estimated_minutes":num,"impact_score":0-1,"fuel_id":"str|null","fuel_title":"str|null"}]}`
+Output JSON only:
+{
+  "tasks": [
+    {
+      "project_id": "string",
+      "project_title": "string",
+      "task_title": "string (The Session Theme)",
+      "task_description": "string (High level mission)",
+      "session_summary": "string (Motivating vision of the result)",
+      "overhead_type": "Mental" | "Physical" | "Tech" | "Digital",
+      "ignition_tasks": [ { "text": "string", "is_new": true } ],
+      "checklist_items": [ { "text": "string", "is_new": boolean } ], 
+      "shutdown_tasks": [ { "text": "string", "is_new": true } ],
+      "impact_score": 0.1-1.0,
+      "fuel_id": "string (optional)",
+      "fuel_title": "string (optional)"
+    }
+  ]
+}`
 
     const result = await model.generateContent(prompt)
     const responseText = result.response.text()
@@ -248,43 +253,9 @@ JSON:
     const tasksData = jsonMatch ? JSON.parse(jsonMatch[0]) : { tasks: [] }
     console.log('[PowerHour] Parsed tasks data:', JSON.stringify(tasksData, null, 2))
 
-    // 4. Validate Fuel IDs, Duration Estimates & Cleanup
-    const validDurations = [5, 15, 25, 45]
-
+    // 5. Validate & Return
     const validatedTasks: PowerHourTask[] = tasksData.tasks.map((task: any) => {
-        let validFuelId = task.fuel_id
-        let validFuelTitle = task.fuel_title
-
-        if (validFuelId && !validFuelIds.has(validFuelId)) {
-            console.warn('[PowerHour] Removing hallucinated fuel_id:', validFuelId)
-            validFuelId = undefined
-            validFuelTitle = undefined
-        }
-
-        // Validate and normalize duration estimates for each checklist item
-        const validatedItems = (task.checklist_items || []).map((item: any) => {
-            let estimatedMinutes = item.estimated_minutes
-
-            // If missing or invalid, assign a reasonable default based on is_new
-            if (typeof estimatedMinutes !== 'number' || !validDurations.includes(estimatedMinutes)) {
-                // Default: 15 min for existing tasks, 25 min for new suggestions
-                estimatedMinutes = item.is_new ? 25 : 15
-                console.warn(`[PowerHour] Fixed invalid duration for "${item.text}": ${estimatedMinutes}min`)
-            }
-
-            return {
-                ...item,
-                estimated_minutes: estimatedMinutes
-            }
-        })
-
-        // Calculate total estimated minutes
-        const totalEstimatedMinutes = validatedItems.reduce(
-            (sum: number, item: any) => sum + (item.estimated_minutes || 15),
-            0
-        )
-
-        // Look up dormancy info for this project
+        // Look up dormancy info for this project to pass through
         const project = projects.find(p => p.id === task.project_id)
         const lastActiveDate = project?.last_active ? new Date(project.last_active).getTime() : now
         const daysDormant = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24))
@@ -292,22 +263,11 @@ JSON:
 
         return {
             ...task,
-            checklist_items: validatedItems,
-            total_estimated_minutes: totalEstimatedMinutes,
-            fuel_id: validFuelId,
-            fuel_title: validFuelTitle,
+            duration_minutes: durationMinutes,
             is_dormant: isDormant,
             days_dormant: daysDormant
         }
     })
-
-    console.log('[PowerHour] Validated tasks with durations:', validatedTasks.map(t => ({
-        project: t.project_title,
-        total_minutes: t.total_estimated_minutes,
-        is_dormant: t.is_dormant,
-        days_dormant: t.days_dormant,
-        items: t.checklist_items.map((i: any) => `${i.text} (${i.estimated_minutes}min)`)
-    })))
 
     return validatedTasks
 }
