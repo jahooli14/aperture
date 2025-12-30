@@ -30,7 +30,7 @@ export interface PowerHourTask {
 
 import { repairAllUserProjects } from './project-repair.js'
 
-export async function generatePowerHourPlan(userId: string, projectId?: string, durationMinutes: number = 60): Promise<PowerHourTask[]> {
+export async function generatePowerHourPlan(userId: string, projectId?: string, durationMinutes: number = 60, deviceContext: 'mobile' | 'desktop' = 'desktop'): Promise<PowerHourTask[]> {
     const supabase = getSupabaseClient()
     console.log('[ContextualSession] Generating plan for user:', userId, `Duration: ${durationMinutes}m`, projectId ? `Focused on ${projectId}` : '')
 
@@ -144,6 +144,20 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
             t.completed_at && new Date(t.completed_at).getTime() > sevenDaysAgo
         ).length
 
+        // Analyze task completion patterns (what works for this user)
+        const completedWithTiming = completedTasks.filter((t: any) => t.created_at && t.completed_at)
+        const quickWins = completedWithTiming.filter((t: any) => {
+            const created = new Date(t.created_at).getTime()
+            const completed = new Date(t.completed_at).getTime()
+            return (completed - created) < (24 * 60 * 60 * 1000) // Completed same day
+        }).slice(-3).map((t: any) => t.text)
+
+        const draggedTasks = completedWithTiming.filter((t: any) => {
+            const created = new Date(t.created_at).getTime()
+            const completed = new Date(t.completed_at).getTime()
+            return (completed - created) > (7 * 24 * 60 * 60 * 1000) // Took over a week
+        }).slice(-3).map((t: any) => t.text)
+
         // Calculate dormancy - days since last_active
         const lastActiveDate = p.last_active ? new Date(p.last_active).getTime() : now
         const daysDormant = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24))
@@ -164,6 +178,9 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
 
         // Get rejected/removed suggestions to avoid repeating
         const rejectedSuggestions = p.metadata?.rejected_suggestions || []
+
+        // Get last session context for continuity
+        const lastSession = p.metadata?.last_session
 
         const unfinishedList = unfinishedTasks.length > 0
             ? unfinishedTasks.map((t: any) => t.text).join(', ')
@@ -187,6 +204,8 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     - Phase: ${projectPhase} (${progressPercent}% complete, ${completedTasks.length}/${totalTasks} tasks done)
     - Recent Momentum: ${recentCompletions} task${recentCompletions === 1 ? '' : 's'} completed in last 7 days
     ${lastCompletedTask ? `- Last Achievement: "${lastCompletedTask.text}"` : ''}
+    ${quickWins.length > 0 ? `- Quick wins (completed same day): ${quickWins.join(', ')}` : ''}
+    ${draggedTasks.length > 0 ? `- Tasks that dragged (>1 week): ${draggedTasks.join(', ')} - suggest smaller alternatives` : ''}
 
     Remaining Tasks: ${unfinishedList}`
 
@@ -205,6 +224,18 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         // Add rejected suggestions to avoid repeating
         if (rejectedSuggestions.length > 0) {
             context += `\n    🚫 DO NOT SUGGEST: ${rejectedSuggestions.slice(-10).join(', ')}`
+        }
+
+        // Add last session context for continuity
+        if (lastSession) {
+            const sessionAge = Math.floor((now - new Date(lastSession.started_at).getTime()) / (1000 * 60 * 60 * 24))
+            if (sessionAge < 7) { // Only show if within last week
+                context += `\n    📍 LAST SESSION (${sessionAge === 0 ? 'today' : sessionAge === 1 ? 'yesterday' : `${sessionAge} days ago`}):`
+                context += `\n       - Outcome: "${lastSession.session_outcome}"`
+                if (lastSession.parking_tasks?.length > 0) {
+                    context += `\n       - Parked for next time: ${lastSession.parking_tasks.join(', ')}`
+                }
+            }
         }
 
         // Add project-specific fuel and inspiration
@@ -274,6 +305,8 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
 
 === SESSION PARAMETERS ===
 Duration: ${durationMinutes} minutes
+Device: ${deviceContext}
+${deviceContext === 'mobile' ? '⚠️ MOBILE USER: Only suggest tasks achievable on a phone (no studio work, no physical materials, no desktop-only software)' : ''}
 ${sessionPhilosophy}
 
 === AVAILABLE PROJECTS ===
@@ -287,6 +320,10 @@ For each project, consider:
 2. Where is the user in the project journey? (just started, middle, near completion)
 3. What's the logical NEXT step to move toward completion?
 4. What can realistically be ACHIEVED (not just started) in ${durationMinutes} minutes?
+
+TASK PATTERN LEARNING:
+If quick wins are shown: suggest similar-sized, actionable tasks
+If dragged tasks are shown: break down similar tasks into smaller pieces - the user struggles with large/vague tasks
 
 COMPLETION PROXIMITY RULES:
 - If progress is 0-30% (Early): Focus on momentum-building, quick wins
@@ -303,9 +340,21 @@ SETUP TIME ACCOUNTING (for Art/Hardware projects):
 - Only suggest physical work if duration allows for setup + meaningful work + cleanup
 - For ${durationMinutes}m: ${durationMinutes <= 25 ? 'NO physical setup - not enough time' : durationMinutes <= 60 ? 'Minimal setup only if absolutely necessary' : 'Full setup acceptable'}
 
-DO NOT JUST LIST TASKS:
-- Bad: "Work on painting", "Continue writing", "Make progress on feature"
-- Good: "Complete the sky gradient section", "Write and polish the opening paragraph", "Implement and test the login validation"
+TASK SPECIFICITY REQUIREMENTS:
+Every task must be SPECIFIC and MEASURABLE. The user should know exactly when it's done.
+
+BANNED PHRASES (vague, unactionable):
+- "Work on...", "Continue...", "Make progress on..."
+- "Start...", "Begin...", "Get started with..."
+- "Think about...", "Consider...", "Look into..."
+- "Improve...", "Enhance...", "Refine..." (without specifics)
+
+REQUIRED PATTERNS (specific, completable):
+- "Complete [specific thing]" - what exactly?
+- "Write [X words/pages/section]" - measurable output
+- "Fix [specific bug/issue]" - clear success criteria
+- "Research and decide on [X vs Y]" - decision made = done
+- "Order [specific item]" - action complete when ordered
 
 DISCRETE SESSIONS:
 Each session should feel complete on its own. The user should be able to:
@@ -319,6 +368,18 @@ A ${durationMinutes}-minute session should NOT:
 - Create anxiety about unfinished work
 - Suggest more than can reasonably be completed
 - Include setup time for physical tasks unless duration allows (60m+)
+
+=== SESSION CONTINUITY ===
+If the project has LAST SESSION context:
+- Check if parked tasks are still relevant - pick up where they left off
+- Build on the previous session's outcome, don't repeat it
+- If they completed something yesterday, suggest the natural next step
+
+=== TASK DEPENDENCIES ===
+Check remaining tasks for logical order:
+- Some tasks can't start until others are done (sketch before paint, plan before build)
+- If a blocker task exists in the list, suggest it first
+- Don't suggest "paint the canvas" if "buy paints" is still incomplete
 
 === SESSION ARC STRUCTURE ===
 1. IGNITION (2-5m): Quick mental/physical warm-up
