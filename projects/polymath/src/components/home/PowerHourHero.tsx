@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { haptic } from '../../utils/haptics'
 import { readingDb } from '../../lib/db'
 import { useProjectStore } from '../../stores/useProjectStore'
+import { useFocusStore } from '../../stores/useFocusStore'
 import { PowerHourReview } from './PowerHourReview'
 
 import { PROJECT_COLORS } from '../projects/ProjectCard'
@@ -189,20 +190,38 @@ export function PowerHourHero() {
             })
         }
 
-        // 2. Navigate with full context
-        // We highlight tasks from all 3 phases
-        const allHighlights = [
+        // 2. Start the Zen Session
+        const { startSession } = useFocusStore.getState()
+
+        // We need to pass the tasks with their IDs and text
+        // New tasks we just created have IDs. 
+        // We need to re-gather the full list of tasks (Ignition + Flow + Shutdown) from 'updatedTasks' to get their IDs correctly
+
+        const tasksForSession: { id: string, text: string }[] = []
+
+        const allPendingItems = [
             ...(mainTask.ignition_tasks || []),
             ...(mainTask.checklist_items || []),
             ...(mainTask.shutdown_tasks || [])
-        ].map(i => ({ task_title: i.text }))
+        ]
 
-        navigate(`/projects/${mainTask.project_id}`, {
-            state: {
-                powerHourTask: mainTask,
-                highlightedTasks: allHighlights
+        // Map them to the actual project tasks to get IDs
+        allPendingItems.forEach(item => {
+            // Find the task in the updated list (by text, as ID might be new)
+            // We search from end to start to find the most recent one (in case of duplicates)
+            const matchedTask = [...updatedTasks].reverse().find((t: any) => t.text === item.text && !t.done)
+            if (matchedTask) {
+                tasksForSession.push({ id: matchedTask.id, text: matchedTask.text })
             }
         })
+
+        if (tasksForSession.length > 0) {
+            startSession(project.id, tasksForSession)
+        } else {
+            // Fallback if something weird happened, just navigate
+            // But usually we should have tasks
+            navigate(`/projects/${mainTask.project_id}`)
+        }
     }
 
     const handleConfirmSession = async (
@@ -260,19 +279,27 @@ export function PowerHourHero() {
 
         await updateProject(project.id, { metadata: metadataUpdate })
 
-        const allHighlights = adjustedItems.map(i => ({ task_title: i.text }))
+        await updateProject(project.id, { metadata: metadataUpdate })
 
-        navigate(`/projects/${mainTask.project_id}`, {
-            state: {
-                powerHourTask: {
-                    ...mainTask,
-                    checklist_items: adjustedItems,
-                    total_estimated_minutes: totalMinutes
-                },
-                highlightedTasks: allHighlights,
-                sessionDuration: totalMinutes
+        // Start Zen Session
+        const { startSession } = useFocusStore.getState()
+        const tasksForSession: { id: string, text: string }[] = []
+
+        // Start with ignition (if any were in original plan but not adjusted? Actually adjustedItems is usually just the core checks)
+        // The Review component usually only allows adjusting checklist_items.
+        // We should probably include ignition/shutdown if they exist in mainTask?
+        // But simply, let's just use the adjusted items as the session.
+
+        adjustedItems.forEach(item => {
+            const matchedTask = [...updatedTasks].reverse().find((t: any) => t.text === item.text && !t.done)
+            if (matchedTask) {
+                tasksForSession.push({ id: matchedTask.id, text: matchedTask.text })
             }
         })
+
+        if (tasksForSession.length > 0) {
+            startSession(project.id, tasksForSession)
+        }
     }
 
     return (
