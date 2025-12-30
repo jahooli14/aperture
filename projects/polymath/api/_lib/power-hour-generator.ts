@@ -40,7 +40,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     // 1. Fetch active projects
     let query = supabase
         .from('projects')
-        .select('id, title, description, status, metadata, last_active')
+        .select('id, title, description, status, metadata, last_active, embedding')
         .in('status', ['active', 'upcoming', 'maintaining', 'Active', 'Upcoming', 'Maintaining'])
         .eq('user_id', userId)
 
@@ -85,7 +85,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string):
     const now = Date.now()
 
     // Generate context for each project with semantically matched fuel/inspiration
-    const projectsContext = await Promise.all(projects.map(async p => {
+    const projectsContext = (await Promise.all(projects.map(async p => {
         // Find relevant fuel and inspiration for this specific project using vector search
         let relevantFuel: any[] = []
         let relevantInspiration: any[] = []
