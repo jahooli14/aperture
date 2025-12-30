@@ -110,8 +110,12 @@ class ArticleProcessor {
       // This happens when backend times out (60s Vercel limit) and never updates the status
       const articleAge = Date.now() - new Date(article.created_at).getTime()
       const articleAgeSeconds = Math.floor(articleAge / 1000)
-      // If still "Extracting" after 90s, backend definitely died (worst case: 3 tiers * 15s + overhead = ~50s)
-      const isZombie = articleAgeSeconds >= 90 && processing.lastLog.includes('Extracting')
+      // If article is old and still not processed, it's stuck - backend likely died
+      // Reduced threshold from 90s to 60s since backend timeout is 50s
+      // Check for ANY processing-related message (case-insensitive) OR just not processed after 60s
+      const isProcessingMessage = /extract|process|progress/i.test(processing.lastLog)
+      const hasFailureMessage = /failed|blocked|timeout|timed out/i.test(processing.lastLog)
+      const isZombie = articleAgeSeconds >= 60 && !article.processed && (isProcessingMessage || hasFailureMessage)
 
       if (isZombie) {
         this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeSeconds}s old but status never updated - backend died!`, 'error')
@@ -126,7 +130,7 @@ class ArticleProcessor {
         processing.currentStage = '❌ Backend: Extraction Failed'
       } else if (processing.lastLog.includes('blocked')) {
         processing.currentStage = '🚫 Backend: Domain Blocked'
-      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('take a moment')) {
+      } else if (processing.lastLog.includes('timeout') || processing.lastLog.includes('timed out') || processing.lastLog.includes('take a moment')) {
         processing.currentStage = '⏱️ Backend: Timed Out'
       } else if (processing.lastLog.includes('JavaScript')) {
         processing.currentStage = '⚠️ Backend: Needs JS Rendering'
@@ -139,6 +143,14 @@ class ArticleProcessor {
       }
 
       this.log(`Stage: ${processing.currentStage} | ${processing.lastLog.slice(0, 40)}`, 'info')
+
+      // Check if article has been retrying for too long with timeout/failure messages
+      // If we've been seeing timeout/failure messages for >30s and still not processed, trigger retry
+      if (articleAgeSeconds >= 30 && !article.processed && (hasFailureMessage || processing.lastLog.includes('timed out'))) {
+        this.log(`Article ${articleId.slice(0, 8)} has timeout/failure message for ${articleAgeSeconds}s - triggering early retry`, 'error')
+        await this.retryExtraction(articleId, processing.url, onProgress)
+        return
+      }
 
       // Check if we've exceeded max attempts
       if (processing.attempts >= this.maxAttempts) {
