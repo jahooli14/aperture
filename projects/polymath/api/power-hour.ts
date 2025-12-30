@@ -12,9 +12,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseClient()
     console.log('[power-hour] Fetching tasks for user:', userId)
 
-    const { refresh, projectId } = req.query
+    const { refresh, projectId, duration } = req.query
     const isRefresh = refresh === 'true' || !!projectId
     const targetProject = projectId as string | undefined
+    const durationMinutes = duration ? parseInt(duration as string, 10) : 60
+
+    // Detect device type from User-Agent (no frontend changes needed)
+    const userAgent = req.headers['user-agent'] || ''
+    const isMobile = /iPhone|iPad|iPod|Android|webOS|BlackBerry|Windows Phone/i.test(userAgent)
+    const deviceContext = isMobile ? 'mobile' : 'desktop'
 
     try {
         // 1. Check for cached plan from today ( < 20 hours old )
@@ -41,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log('[power-hour] No cache found or forced refresh. Generating on-fly...')
         let tasks
         try {
-            tasks = await generatePowerHourPlan(userId, targetProject)
+            tasks = await generatePowerHourPlan(userId, targetProject, durationMinutes, deviceContext)
             console.log(`[power-hour] Generated ${tasks.length} power hour tasks`)
         } catch (error) {
             console.error('[power-hour] Error generating power hour plan:', error)

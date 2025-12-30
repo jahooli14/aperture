@@ -57,7 +57,9 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
   // Data Validation for Steps
   const isStep1Valid = formData.title.length > 2
+  // For completion projects, strongly encourage Definition of Done
   const isStep2Valid = formData.description.length > 10 && formData.motivation.length > 5
+  const hasDefinitionOfDone = formData.project_mode === 'recurring' || formData.end_goal.length > 5
 
 
   // ... (rest of the file as before, replacing return)
@@ -297,20 +299,26 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   {/* Definition of Done - only for completion projects */}
                   {formData.project_mode === 'completion' && (
                     <div className="space-y-2">
-                      <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
-                        Definition of Done
+                      <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-blue-400">
+                        Definition of Done <span className="text-amber-400">*</span>
                       </Label>
                       <Input
                         id="end_goal"
                         placeholder="What does 'complete' look like? e.g., 'App live on App Store'"
                         value={formData.end_goal}
                         onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
-                        className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                        className={`h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10 ${!hasDefinitionOfDone && formData.project_mode === 'completion' ? 'border-amber-500/50' : ''}`}
                         autoComplete="off"
                       />
-                      <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200">
-                        <strong>AI Tip:</strong> Clear goals help the AI suggest tasks that drive toward completion, not busywork.
-                      </div>
+                      {!hasDefinitionOfDone ? (
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
+                          <strong>Important:</strong> Without a clear "done" definition, the AI may suggest scattered tasks instead of driving toward completion. What will you have when this project is finished?
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-xs text-green-200">
+                          <strong>Great!</strong> This helps the AI design sessions that move you toward the finish line, not just busywork.
+                        </div>
+                      )}
                     </div>
                   )}
 
