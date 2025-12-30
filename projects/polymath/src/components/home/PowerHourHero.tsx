@@ -226,8 +226,18 @@ export function PowerHourHero() {
         const newRejected = [...new Set([...existingRejected, ...removedAISuggestions])]
             .slice(-20)
 
+        // 3. Store session context for next time (invisible UX improvement)
+        const sessionContext = {
+            started_at: new Date().toISOString(),
+            duration_minutes: totalMinutes,
+            planned_tasks: adjustedItems.map(i => i.text),
+            parking_tasks: mainTask.shutdown_tasks?.map(t => t.text) || [],
+            session_outcome: mainTask.task_title
+        }
+
         const metadataUpdate: any = {
             ...project.metadata,
+            last_session: sessionContext,
         }
 
         if (newTasksFromAI.length > 0) {
@@ -248,9 +258,7 @@ export function PowerHourHero() {
             metadataUpdate.rejected_suggestions = newRejected
         }
 
-        if (newTasksFromAI.length > 0 || removedAISuggestions.length > 0) {
-            await updateProject(project.id, { metadata: metadataUpdate })
-        }
+        await updateProject(project.id, { metadata: metadataUpdate })
 
         const allHighlights = adjustedItems.map(i => ({ task_title: i.text }))
 
