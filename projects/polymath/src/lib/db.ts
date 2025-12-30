@@ -40,7 +40,9 @@ export interface ReadingProgress {
 
 export interface PendingCapture {
   id?: number
-  transcript: string
+  transcript?: string
+  audio_blob?: Blob
+  mime_type?: string
   timestamp: number
   synced: boolean
   retries?: number
@@ -56,7 +58,6 @@ export interface CachedMemory {
   created_at: string
   cached_at: number
 }
-
 // Cached Project interface
 export interface CachedProject {
   id: string
@@ -121,52 +122,46 @@ export class RosetteDatabase extends Dexie {
   dashboard!: Table<any, string>
 
   constructor() {
-    super('RosetteDB') // New DB name to ensure clean migration
+    super('RosetteDB')
 
     // Define database schema
     this.version(1).stores({
-      // Reading
       articles: 'id, user_id, status, created_at, last_synced, offline_available',
       images: '++id, article_id, url, cached_at',
       highlights: 'id, article_id, created_at',
       progress: '++id, article_id, updated_at',
-
-      // Projects
       projects: 'id, status, is_priority, updated_at, last_active',
-
-      // Captures
       pendingCaptures: '++id, timestamp, synced',
-
-      // Memories Cache
       memories: 'id, cached_at',
-
-      // Connections & Dashboard
       connections: 'id, source_id, target_id, type',
       dashboard: 'id, updated_at'
     })
 
-    // Version 2: Add lists and list items for offline
     this.version(2).stores({
-      // Reading
       articles: 'id, user_id, status, created_at, last_synced, offline_available',
       images: '++id, article_id, url, cached_at',
       highlights: 'id, article_id, created_at',
       progress: '++id, article_id, updated_at',
-
-      // Projects
       projects: 'id, status, is_priority, updated_at, last_active',
-
-      // Lists (NEW)
       lists: 'id, user_id, type, created_at',
       listItems: 'id, list_id, user_id, enrichment_status, created_at',
-
-      // Captures
       pendingCaptures: '++id, timestamp, synced',
-
-      // Memories Cache
       memories: 'id, cached_at',
+      connections: 'id, source_id, target_id, type',
+      dashboard: 'id, updated_at'
+    })
 
-      // Connections & Dashboard
+    // Version 3: Support for audio blobs in pending captures
+    this.version(3).stores({
+      articles: 'id, user_id, status, created_at, last_synced, offline_available',
+      images: '++id, article_id, url, cached_at',
+      highlights: 'id, article_id, created_at',
+      progress: '++id, article_id, updated_at',
+      projects: 'id, status, is_priority, updated_at, last_active',
+      lists: 'id, user_id, type, created_at',
+      listItems: 'id, list_id, user_id, enrichment_status, created_at',
+      pendingCaptures: '++id, timestamp, synced, mime_type',
+      memories: 'id, cached_at',
       connections: 'id, source_id, target_id, type',
       dashboard: 'id, updated_at'
     })
@@ -258,9 +253,11 @@ export class RosetteDatabase extends Dexie {
 
   // --- Pending Capture Methods ---
 
-  async addPendingCapture(transcript: string): Promise<number> {
+  async addPendingCapture(input: { transcript?: string, blob?: Blob, mimeType?: string }): Promise<number> {
     return await this.pendingCaptures.add({
-      transcript,
+      transcript: input.transcript,
+      audio_blob: input.blob,
+      mime_type: input.mimeType,
       timestamp: Date.now(),
       synced: false,
       retries: 0

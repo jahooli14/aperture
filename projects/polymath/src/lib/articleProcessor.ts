@@ -98,6 +98,19 @@ class ArticleProcessor {
       // Check if extraction is complete
       if (article.processed) {
         this.log(`✓ Extraction complete for ${articleId.slice(0, 8)}: "${article.title}"`, 'success')
+
+        // Auto-sync for offline immediately (Independent of UI)
+        try {
+          const { syncArticleForOffline } = await import('./offlineSync')
+          syncArticleForOffline(article).then(() => {
+            this.log(`✓ Article ${articleId.slice(0, 8)} synced for offline`, 'success')
+          }).catch(err => {
+            console.warn('[ArticleProcessor] Offline sync failed:', err)
+          })
+        } catch (e) {
+          console.warn('[ArticleProcessor] Failed to load offlineSync:', e)
+        }
+
         this.processing.delete(articleId)
         onProgress?.('complete', article)
         return

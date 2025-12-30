@@ -14,11 +14,27 @@ import type { RSSFeed } from '../types/rss'
 const EMAIL_ADDRESS = 'read@clandestined.vercel.app'
 
 export function RSSFeedsPage() {
-  const { feeds, loading, syncing, fetchFeeds, subscribeFeed, updateFeed, unsubscribeFeed, syncFeeds } = useRSSStore()
+  const { feeds, loading, syncing, fetchFeeds, subscribeFeed, updateFeed, unsubscribeFeed, syncFeeds, discoverFeeds } = useRSSStore()
   const { addToast } = useToast()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [customFeedUrl, setCustomFeedUrl] = useState('')
   const [subscribing, setSubscribing] = useState(false)
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return
+    setIsSearching(true)
+    try {
+      const results = await discoverFeeds(searchQuery)
+      setSearchResults(results)
+    } finally {
+      setIsSearching(false)
+    }
+  }
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText(EMAIL_ADDRESS)
@@ -327,9 +343,9 @@ export function RSSFeedsPage() {
             </div>
 
             {/* Custom Feed URL */}
-            <div className="mb-8">
+            <div className="mb-8 p-4 rounded-xl border border-white/5 bg-white/[0.02]">
               <label className="block text-sm font-semibold mb-3 premium-text-platinum">
-                Custom Feed URL
+                Add by URL
               </label>
               <div className="flex gap-2">
                 <input
@@ -352,6 +368,78 @@ export function RSSFeedsPage() {
                   {subscribing ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Add'}
                 </button>
               </div>
+            </div>
+
+            {/* Search Feeds */}
+            <div className="mb-8 p-6 rounded-xl border border-blue-500/10 bg-blue-500/[0.03]">
+              <div className="flex items-center gap-2 mb-4">
+                <Rss className="h-5 w-5 text-blue-400" />
+                <h4 className="premium-text-platinum font-bold">Search for Feeds</h4>
+              </div>
+
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="e.g. Technology, Architecture, NYT..."
+                  className="flex-1 px-4 py-3 rounded-lg premium-glass border focus:outline-none focus:ring-2"
+                  style={{
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    color: 'var(--premium-text-primary)'
+                  }}
+                  disabled={isSearching}
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={!searchQuery || isSearching}
+                  className="premium-glass border px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:bg-white/5 transition-all font-medium"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+                >
+                  {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
+                </button>
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && (
+                <div className="space-y-3 mt-4 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
+                  {searchResults.map((result) => (
+                    <div
+                      key={result.feed_url}
+                      className="flex items-center justify-between p-4 rounded-xl premium-glass-subtle border border-white/5 hover:bg-white/5 transition-all group"
+                    >
+                      <div className="flex-1 min-w-0 pr-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          {result.favicon_url && (
+                            <img src={result.favicon_url} className="w-5 h-5 rounded shadow-sm" alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                          )}
+                          <h5 className="premium-text-platinum font-bold text-sm truncate">{result.title}</h5>
+                        </div>
+                        <p className="text-xs text-white/40 line-clamp-2 leading-relaxed">{result.description}</p>
+                        {result.topics && result.topics.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {result.topics.slice(0, 3).map((topic: string) => (
+                              <span key={topic} className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] uppercase tracking-wider text-white/30 font-bold">{topic}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleSubscribe(result.feed_url)}
+                        disabled={subscribing}
+                        className="px-4 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all whitespace-nowrap"
+                      >
+                        {subscribing ? '...' : 'Subscribe'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {searchQuery && !isSearching && searchResults.length === 0 && (
+                <p className="text-center text-sm py-4 text-white/20 italic">No feeds found for "{searchQuery}"</p>
+              )}
             </div>
 
             {/* Preset Feeds */}

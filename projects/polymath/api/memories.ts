@@ -53,7 +53,9 @@ interface Memory {
 
 interface MemoryPrompt {
   id: string
-  text: string
+  prompt_text: string
+  prompt_description?: string
+  text?: string // Legacy fallback
   is_required: boolean
   priority_order: number
   status?: string
@@ -85,7 +87,7 @@ interface UserPromptStatus {
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = getUserId(req)
 
   try {
     const { resurfacing, bridges, themes, prompts, id, capture, submit_response, q, action } = req.query
@@ -821,6 +823,8 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
           response_id: response.id,
           completed_at: new Date().toISOString(),
           created_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,prompt_id'
         })
 
       if (statusError) {

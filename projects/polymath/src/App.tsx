@@ -11,6 +11,7 @@ import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { DebugPanel } from './components/DebugPanel'
 import { ContextSidebar } from './components/context/ContextSidebar'
+import { FocusSession } from './components/power-hour/FocusSession'
 import { Loader2 } from 'lucide-react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -277,6 +278,9 @@ export default function App() {
 
               {/* Pin Overlay - Split Screen */}
               <PinOverlay />
+
+              {/* Focus Session Overlay (Zen Mode) */}
+              <FocusSession />
 
               {/* Debug Panel - Shows console logs on screen */}
               <DebugPanel />
