@@ -187,7 +187,7 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const lastSession = p.metadata?.last_session
 
         const unfinishedList = unfinishedTasks.length > 0
-            ? unfinishedTasks.map((t: any) => t.text).join(', ')
+            ? unfinishedTasks.map((t: any) => `${t.text} ${t.estimated_minutes ? `[${t.estimated_minutes}m]` : ''}`).join(', ')
             : 'None yet'
         const completedList = completedTasks.length > 0
             ? completedTasks.slice(-5).map((t: any) => t.text).join(', ')

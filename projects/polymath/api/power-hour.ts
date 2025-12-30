@@ -159,8 +159,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                                     // If it's a stub, we UPDATE the existing task
                                     console.log(`[power-hour] Refining stub "${stubMatch.text}" -> "${newText}"`)
-                                    stubMatch.text = newText // Update in memory object for local consistency
-                                    tasksToUpdate.push({ id: stubMatch.id, text: newText })
+                                    stubMatch.text = newText
+                                    if (newItem.estimated_minutes) stubMatch.estimated_minutes = newItem.estimated_minutes
+                                    if (newItem.ai_reasoning) stubMatch.ai_reasoning = newItem.ai_reasoning // If generator provides it
+                                    stubMatch.is_ai_suggested = true
+
+                                    tasksToUpdate.push({
+                                        id: stubMatch.id,
+                                        text: newText,
+                                        estimated_minutes: newItem.estimated_minutes
+                                    })
                                 } else {
                                     // It's genuinely new
                                     tasksToCreate.push(newItem)
@@ -170,13 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             // 1. Perform Updates (Refine existing stubs)
                             if (tasksToUpdate.length > 0) {
                                 console.log(`[power-hour] Updating ${tasksToUpdate.length} existing tasks...`)
-                                // We do this one by one or batch if possible. DB call per update is safest for now.
-                                for (const update of tasksToUpdate) {
-                                    // In a real app, might want a bulk update RPC, but loop is fine for 1-3 items
-                                    // Note: We update the project metadata tasks array, not a tasks table (since tasks are JSONB)
-                                    // Actually, we need to update the WHOLE tasks array at the end.
-                                    // We already updated the `existingTasks` objects in memory above (stubMatch.text = newText).
-                                }
+                                // In-memory update is already done on 'existingTasks' via 'stubMatch' reference
                             }
 
                             // 2. Append New Tasks
@@ -190,7 +192,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     done: false,
                                     created_at: new Date().toISOString(),
                                     order: existingTasks.length + idx,
-                                    is_ai_suggested: true
+                                    is_ai_suggested: true,
+                                    estimated_minutes: item.estimated_minutes || 15,
+                                    ai_reasoning: "Suggested by Power Hour AI to fill gaps."
                                 }))
 
                                 // Add to our memory list
