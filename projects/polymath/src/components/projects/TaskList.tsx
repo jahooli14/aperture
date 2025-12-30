@@ -4,8 +4,7 @@
  */
 
 import { useState } from 'react'
-import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight } from 'lucide-react'
-import { Button } from '../ui/button'
+import { Plus, Trash2, Check, GripVertical, ChevronDown, ChevronRight, Zap } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
 
@@ -16,9 +15,12 @@ export interface Task {
   created_at: string
   order: number
   completed_at?: string
+  // New Fields
+  estimated_minutes?: number
+  is_ai_suggested?: boolean
+  ai_reasoning?: string
+  task_type?: 'ignition' | 'core' | 'shutdown'
 }
-
-import { Zap } from 'lucide-react'
 
 // Helper for approximate string matching
 function similar(a: string, b: string) {
@@ -63,7 +65,8 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
       text: newTaskText.trim(),
       done: false,
       created_at: new Date().toISOString(),
-      order: tasks.length
+      order: tasks.length,
+      estimated_minutes: 15 // Default for manual add
     }
 
     onUpdate([...tasks, newTask])
@@ -148,6 +151,18 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
     setEditingText('')
   }
 
+  const handleEstimateChange = (taskId: string, currentEstimate: number = 0) => {
+    // Cycle through 5, 15, 25, 45, 60
+    const options = [5, 15, 25, 45, 60]
+    const nextIndex = options.findIndex(o => o > currentEstimate)
+    const nextEstimate = nextIndex === -1 ? options[0] : options[nextIndex]
+
+    const updatedTasks = tasks.map(task =>
+      task.id === taskId ? { ...task, estimated_minutes: nextEstimate } : task
+    )
+    onUpdate(updatedTasks)
+  }
+
   const completedCount = tasks.filter(t => t.done).length
   const totalCount = tasks.length
 
@@ -202,6 +217,13 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
                 <div className="absolute -left-1 top-0 bottom-0 w-1 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
               )}
 
+              {/* Context Indicator (AI) */}
+              {task.is_ai_suggested && !task.done && (
+                <div className="absolute right-2 top-2">
+                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" title="AI Suggested" />
+                </div>
+              )}
+
               {/* Drag Handle */}
               <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing text-white/20">
                 <GripVertical className="h-4 w-4" />
@@ -218,7 +240,7 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
                 {task.done && <Check className="h-3.5 w-3.5 text-white" />}
               </button>
 
-              {/* Task Text */}
+              {/* Task Text & Metadata */}
               <div className="flex-1 min-w-0">
                 {editingTaskId === task.id ? (
                   <input
@@ -245,11 +267,35 @@ export function TaskList({ tasks, highlightedTasks = [], onUpdate }: TaskListPro
                     >
                       {task.text}
                     </span>
-                    {isHighlighted && (
-                      <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/50 mt-1">
-                        Power Hour Priority
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {/* Time Estimate Pill */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEstimateChange(task.id, task.estimated_minutes)
+                        }}
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded transition-colors",
+                          task.estimated_minutes
+                            ? "bg-white/10 text-white/70 hover:bg-white/20"
+                            : "bg-white/5 text-white/30 hover:bg-white/10"
+                        )}
+                      >
+                        {task.estimated_minutes ? `${task.estimated_minutes}m` : '15m'}
+                      </button>
+
+                      {task.is_ai_suggested && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400 opacity-70">
+                          AI Suggested
+                        </span>
+                      )}
+
+                      {isHighlighted && (
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-500/50">
+                          Power Hour Priority
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

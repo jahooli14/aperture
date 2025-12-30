@@ -127,7 +127,7 @@ export function ReadingPage() {
                 ...item,
                 content: item.content || item.description || '', // Ensure content is populated
                 feed_id: feed.id,
-                feed_title: feed.title
+                feed_title: feed.title || 'Unknown Feed' // Fallback for title
               })))
             }
           }
