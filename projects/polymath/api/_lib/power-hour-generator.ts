@@ -343,6 +343,30 @@ SETUP TIME ACCOUNTING (for Art/Hardware projects):
 TASK SPECIFICITY REQUIREMENTS:
 Every task must be SPECIFIC and MEASURABLE. The user should know exactly when it's done.
 
+PLAIN ENGLISH - CRITICAL:
+Write tasks like a friend texting you a reminder, NOT like a project manager.
+- BAD: "Color Palette Validation: Testing paint density and mixing ratios"
+- GOOD: "Mix 3 test batches of red/gold paint and note which ratio flows best"
+
+- BAD: "The Background Pour: Achieving a marbled aesthetic"
+- GOOD: "Do the first pour on test canvas - aim for marbled effect"
+
+- BAD: "Stencil Precision: Cutting a perfectly symmetrical insignia"
+- GOOD: "Cut out the hammer and sickle from stencil material"
+
+NEVER use "Phase Title: Description" format. Just write the action.
+
+LOGICAL ORDERING FOR NEW PROJECTS (0-30% complete):
+For projects that haven't started yet, suggest tasks in this order:
+1. GATHER - Buy/order/find materials and references
+2. PLAN - Decide dimensions, colors, approach
+3. PREP - Set up workspace, prepare materials
+4. CREATE - Only after the above are done
+
+Example for a new Art project:
+- First session: "Order canvas and pouring medium from Amazon"
+- NOT: "Achieve a marbled aesthetic" (too advanced, no materials yet)
+
 BANNED PHRASES (vague, unactionable):
 - "Work on...", "Continue...", "Make progress on..."
 - "Start...", "Begin...", "Get started with..."
@@ -398,12 +422,12 @@ ${durationMinutes === 25
     {
       "project_id": "string",
       "project_title": "string",
-      "task_title": "string (The discrete OUTCOME, not activity - e.g., 'Complete the hero section' not 'Work on homepage')",
-      "task_description": "string (What will be DONE when this session ends)",
+      "task_title": "string (Plain English outcome - e.g., 'Cut out the stencil' not 'Stencil Precision: Achieving symmetry')",
+      "task_description": "string (What you'll have DONE - e.g., 'Stencil ready to use' not 'A perfectly symmetrical insignia')",
       "session_summary": "string (Joyful vision: 'By the end, you'll have...')",
       "overhead_type": "Mental" | "Physical" | "Tech" | "Digital",
       "ignition_tasks": [ { "text": "string", "is_new": true, "estimated_minutes": number } ],
-      "checklist_items": [ { "text": "string", "is_new": boolean, "estimated_minutes": number } ],
+      "checklist_items": [ { "text": "string (PLAIN ENGLISH - 'Order the canvas' not 'Canvas Acquisition: Procuring materials')", "is_new": boolean, "estimated_minutes": number } ],
       "shutdown_tasks": [ { "text": "string", "is_new": true, "estimated_minutes": number } ],
       "impact_score": 0.1-1.0 (how much this moves the project toward completion),
       "fuel_id": "string (optional - if relevant reading exists)",

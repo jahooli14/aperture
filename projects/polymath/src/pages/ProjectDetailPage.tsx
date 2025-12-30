@@ -87,13 +87,19 @@ export function ProjectDetailPage() {
   }, [id])
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDescription, setEditingDescription] = useState(false)
+  const [editingMotivation, setEditingMotivation] = useState(false)
+  const [editingEndGoal, setEditingEndGoal] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  const [tempMotivation, setTempMotivation] = useState('')
+  const [tempEndGoal, setTempEndGoal] = useState('')
   const [draggedPinnedTaskId, setDraggedPinnedTaskId] = useState<string | null>(null)
   const [showStatusMenu, setShowStatusMenu] = useState(false)
   const [showCategoryMenu, setShowCategoryMenu] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null)
+  const motivationInputRef = useRef<HTMLTextAreaElement>(null)
+  const endGoalInputRef = useRef<HTMLTextAreaElement>(null)
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -267,6 +273,68 @@ export function ProjectDetailPage() {
   const cancelEdit = () => {
     setEditingTitle(false)
     setEditingDescription(false)
+    setEditingMotivation(false)
+    setEditingEndGoal(false)
+  }
+
+  const startEditMotivation = () => {
+    setTempMotivation(project?.metadata?.motivation || '')
+    setEditingMotivation(true)
+    setTimeout(() => motivationInputRef.current?.focus(), 0)
+  }
+
+  const saveMotivation = async () => {
+    if (!project) {
+      setEditingMotivation(false)
+      return
+    }
+    setEditingMotivation(false)
+
+    try {
+      await updateProject(project.id, {
+        metadata: { ...project.metadata, motivation: tempMotivation.trim() }
+      })
+      addToast({
+        title: 'Motivation updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Failed to update motivation',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const startEditEndGoal = () => {
+    setTempEndGoal(project?.metadata?.end_goal || '')
+    setEditingEndGoal(true)
+    setTimeout(() => endGoalInputRef.current?.focus(), 0)
+  }
+
+  const saveEndGoal = async () => {
+    if (!project) {
+      setEditingEndGoal(false)
+      return
+    }
+    setEditingEndGoal(false)
+
+    try {
+      await updateProject(project.id, {
+        metadata: { ...project.metadata, end_goal: tempEndGoal.trim() }
+      })
+      addToast({
+        title: 'Definition of Done updated',
+        variant: 'success',
+      })
+    } catch (error) {
+      addToast({
+        title: 'Failed to update goal',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    }
   }
 
   const addPinnedTask = useCallback(async (text: string) => {
@@ -789,17 +857,108 @@ export function ProjectDetailPage() {
                 )}
               </div>
 
-              {/* Motivation - The "So What" */}
-              {project.metadata?.motivation && (
-                <div className="premium-card p-4 border-l-4 border-blue-500">
+              {/* Motivation & Definition of Done - Project Context */}
+              <div className="grid gap-3">
+                {/* Motivation - Why this matters */}
+                <div
+                  className="premium-card p-4 border-l-4 border-blue-500 cursor-pointer hover:bg-white/5 transition-colors"
+                  onClick={!editingMotivation ? startEditMotivation : undefined}
+                  title="Click to edit"
+                >
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-blue)' }}>
                     Motivation
                   </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
-                    {project.metadata.motivation}
-                  </p>
+                  {editingMotivation ? (
+                    <div className="space-y-2">
+                      <textarea
+                        ref={motivationInputRef}
+                        value={tempMotivation}
+                        onChange={(e) => setTempMotivation(e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-zinc-700 rounded p-2 text-sm resize-none focus:outline-none focus:border-blue-500"
+                        style={{ color: 'var(--premium-text-primary)' }}
+                        rows={3}
+                        placeholder="Why does this project matter to you?"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            saveMotivation()
+                          } else if (e.key === 'Escape') {
+                            cancelEdit()
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelEdit() }}
+                          className="px-3 py-1 text-xs rounded bg-zinc-700 hover:bg-zinc-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); saveMotivation() }}
+                          className="px-3 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                      {project.metadata?.motivation || <span className="opacity-50 italic">Click to add your motivation...</span>}
+                    </p>
+                  )}
                 </div>
-              )}
+
+                {/* Definition of Done - The finish line */}
+                <div
+                  className="premium-card p-4 border-l-4 border-green-500 cursor-pointer hover:bg-white/5 transition-colors"
+                  onClick={!editingEndGoal ? startEditEndGoal : undefined}
+                  title="Click to edit"
+                >
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--premium-green)' }}>
+                    Definition of Done
+                  </h3>
+                  {editingEndGoal ? (
+                    <div className="space-y-2">
+                      <textarea
+                        ref={endGoalInputRef}
+                        value={tempEndGoal}
+                        onChange={(e) => setTempEndGoal(e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-zinc-700 rounded p-2 text-sm resize-none focus:outline-none focus:border-green-500"
+                        style={{ color: 'var(--premium-text-primary)' }}
+                        rows={3}
+                        placeholder="What does 'done' look like for this project?"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault()
+                            saveEndGoal()
+                          } else if (e.key === 'Escape') {
+                            cancelEdit()
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelEdit() }}
+                          className="px-3 py-1 text-xs rounded bg-zinc-700 hover:bg-zinc-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); saveEndGoal() }}
+                          className="px-3 py-1 text-xs rounded bg-green-600 hover:bg-green-500"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm leading-relaxed" style={{ color: 'var(--premium-text-primary)' }}>
+                      {project.metadata?.end_goal || <span className="opacity-50 italic">Click to define your finish line...</span>}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               {/* Task Checklist */}
               <div data-task-list>
