@@ -135,31 +135,43 @@ async function handleShareTarget(request) {
   try {
     // Parse the form data
     const formData = await request.formData()
-    const sharedUrl = formData.get('url')
+    const sharedUrl = formData.get('url') || formData.get('text') // Fallback text to url
     const sharedTitle = formData.get('title')
     const sharedText = formData.get('text')
 
     console.log('[SW] Share data received:', { url: sharedUrl, title: sharedTitle, text: sharedText })
 
-    // Store in cache for the app to retrieve
-    const shareData = {
-      url: sharedUrl,
-      title: sharedTitle,
-      text: sharedText,
-      timestamp: Date.now()
+    if (sharedUrl) {
+      // 1. Notify using BroadcastChannel (reliable across tabs)
+      try {
+        const bc = new BroadcastChannel('pwa-share-channel')
+        bc.postMessage({
+          type: 'web-share-target',
+          shared: sharedUrl,
+          title: sharedTitle,
+          text: sharedText
+        })
+        bc.close()
+      } catch (e) {
+        console.warn('[SW] BroadcastChannel failed:', e)
+      }
+
+      // 2. Notify using postMessage to all controlled clients
+      const clients = await self.clients.matchAll()
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'web-share-target',
+          shared: sharedUrl,
+          title: sharedTitle,
+          text: sharedText
+        })
+      })
     }
 
-    // Store in cache with a specific key
-    const cache = await caches.open(RUNTIME_CACHE)
-    const shareDataResponse = new Response(JSON.stringify(shareData), {
-      headers: { 'Content-Type': 'application/json' }
-    })
-    await cache.put('/share-data', shareDataResponse)
-    console.log('[SW] Share data cached')
-
-    // Redirect to reading page with URL params as fallback
+    // Redirect to reading page
+    // We already notified the app, but we still need to redirect the browser
     const redirectUrl = sharedUrl
-      ? `/reading?url=${encodeURIComponent(sharedUrl)}&title=${encodeURIComponent(sharedTitle || '')}&text=${encodeURIComponent(sharedText || '')}`
+      ? `/reading?shared=${encodeURIComponent(sharedUrl)}`
       : '/reading'
 
     console.log('[SW] Redirecting to:', redirectUrl)
@@ -167,7 +179,6 @@ async function handleShareTarget(request) {
     return Response.redirect(redirectUrl, 303)
   } catch (error) {
     console.error('[SW] Error handling share target:', error)
-    // Redirect to reading page even on error
     return Response.redirect('/reading', 303)
   }
 }
@@ -178,7 +189,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
 
   // Handle Web Share Target POST requests
-  if (request.method === 'POST' && url.pathname === '/share-receiver') {
+  if (request.method === 'POST' && url.pathname === '/share-target') {
     console.log('[SW] Share target POST request received')
     event.respondWith(handleShareTarget(request))
     return

@@ -100,7 +100,13 @@ async function processItem(supabase: any, type: 'project' | 'thought' | 'article
     const table = tableMap[type]
     const { error } = await supabase.from(table).update({ embedding }).eq('id', item.id)
 
-    if (error) throw error
+    if (error) {
+      if (error.code === '42703') {
+        console.warn(`[embeddings] Column 'embedding' missing on table '${table}'. Skipping.`)
+        return
+      }
+      throw error
+    }
 
     stats.embeddings_created++
     stats.processed++

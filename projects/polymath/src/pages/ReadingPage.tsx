@@ -271,11 +271,11 @@ export function ReadingPage() {
         variant: 'default',
       })
 
-      await saveArticle({ url: item.link })
+      const article = await saveArticle({ url: item.link })
 
       addToast({
         title: 'Injecting Knowledge...',
-        description: 'Adding article to your graph queue',
+        description: `Added "${article.title || 'article'}" to your graph`,
         variant: 'success',
       })
       fetchArticles()
@@ -285,6 +285,34 @@ export function ReadingPage() {
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
+    }
+  }
+
+  // Handle reading RSS item in-app
+  const handleReadRSSItem = async (item: RSSItem) => {
+    // 1. Check if already in queue
+    const existing = articles.find(a => a.url === item.link)
+    if (existing) {
+      navigate(`/reading/${existing.id}`)
+      return
+    }
+
+    // 2. Save and navigate
+    try {
+      addToast({
+        title: '📰 Opening in Aperture...',
+        description: 'Extracting content for in-app reading',
+        variant: 'default',
+      })
+
+      const newArticle = await saveArticle({ url: item.link })
+
+      // Navigate immediately - ReaderPage will handle the loading state
+      navigate(`/reading/${newArticle.id}`)
+    } catch (error) {
+      console.error('Failed to open RSS item in-app:', error)
+      // Fallback to external link if saving fails
+      window.open(item.link, '_blank')
     }
   }
 
@@ -795,6 +823,7 @@ export function ReadingPage() {
                           <RSSFeedItem
                             item={item}
                             onSave={() => handleSaveRSSItem(item)}
+                            onRead={() => handleReadRSSItem(item)}
                             onDismiss={() => {
                               // Add to permanent dismissal log
                               addToDismissedLog(item.guid)
