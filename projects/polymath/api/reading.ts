@@ -130,7 +130,7 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
@@ -169,12 +169,12 @@ async function fetchArticleWithReadability(url: string): Promise<any> {
     document.head?.appendChild(base)
 
     // Use Mozilla Readability to extract article content
-    // Settings based on Omnivore's production config
+    // Relaxed settings to match successful debug script
     const reader = new Readability(document, {
       debug: false,
-      maxElemsToParse: 8000, // Limit to prevent hanging on huge pages
+      maxElemsToParse: 50000,
       nbTopCandidates: 5,
-      charThreshold: 500,
+      charThreshold: 0, // Accept even short content
       classesToPreserve: ['caption', 'emoji', 'hashtag', 'mention']
     })
 
@@ -485,7 +485,7 @@ async function fetchArticle(url: string) {
     console.log('[fetchArticle] Tier 1: Mozilla Readability (local)...')
     const result = await fetchArticleWithReadability(url)
 
-    if (result.content && result.content.length > 300) {
+    if (result.content && result.content.length > 100) {
       console.log('[fetchArticle] ✅ Tier 1 succeeded (Readability)')
       return result
     }
