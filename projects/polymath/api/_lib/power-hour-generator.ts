@@ -305,141 +305,64 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
 
    OUTPUT: 2-4 checklist items representing focused progress, not a scattered to-do list.`
 
-    const prompt = `You are the APERTURE SHERPA. Your goal is to design a DISCRETE, ACHIEVABLE work session with ONE clear outcome.
+    const prompt = `You are the APERTURE SHERPA. Your goal is to design a joyfully productive work session.
+    The user wants to "Commit" to a specific plan. Your job is to draft that plan.
 
 === SESSION PARAMETERS ===
 Duration: ${durationMinutes} minutes
 Device: ${deviceContext}
-${deviceContext === 'mobile' ? '⚠️ MOBILE USER: Only suggest tasks achievable on a phone (no studio work, no physical materials, no desktop-only software)' : ''}
+${deviceContext === 'mobile' ? '⚠️ MOBILE USER: Suggest only phone-friendly tasks (Reading, Reviewing, Note-taking, Messaging).' : ''}
 ${sessionPhilosophy}
 
 === AVAILABLE PROJECTS ===
 ${projectsContext}
 
-=== DESIGN PHILOSOPHY ===
+=== SHERPA GUIDELINES (CRITICAL) ===
 
-THINK ABOUT THE PROJECT HOLISTICALLY:
-For each project, consider:
-1. What is the Definition of Done? What does "finished" look like?
-2. Where is the user in the project journey? (just started, middle, near completion)
-3. What's the logical NEXT step to move toward completion?
-4. What can realistically be ACHIEVED (not just started) in ${durationMinutes} minutes?
+1. 🚫 NO "PROJECT MANAGER" SPEAK
+   - BAD: "Acquire materials", "Conduct research", "Execute phase 1", "Validate color palette"
+   - GOOD: "Buy the paints", "Look up 3 comparable apps", "Write the first paragraph", "Check if the red looks good"
+   - Write like a smart friend suggesting a plan. Simple, direct verbs.
 
-TASK PATTERN LEARNING:
-If quick wins are shown: suggest similar-sized, actionable tasks
-If dragged tasks are shown: break down similar tasks into smaller pieces - the user struggles with large/vague tasks
+2. 🎯 VALUE OVER VOLUME
+   - Don't just list "tasks". List "Achievements".
+   - What will the user feel good about having *finished*?
+   - If they have 60 minutes, don't give them 60 minutes of "setup". Give them 15m setup, 45m DOING.
 
-COMPLETION PROXIMITY RULES:
-- If progress is 0-30% (Early): Focus on momentum-building, quick wins
-- If progress is 30-70% (Middle): Focus on core work, steady progress
-- If progress is 70-90% (Approaching): Focus on clearing blockers, polishing
-- If progress is 90%+ (Final Stretch): FINISH IT. No new tasks, only completion tasks
-  - Do NOT expand scope
-  - Do NOT suggest "nice to haves"
-  - Only suggest what closes the remaining gap to "done"
+3. 🧠 FILL THE GAPS
+   - Look at their existing tasks. Are they vague? (e.g. "Work on app") -> BREAK IT DOWN.
+   - Are they missing a step? (e.g. "Buy wood" -> "Build table") -> INSERT "Measure and cut".
+   - Do NOT duplicate good tasks. If a task is good, KEEP IT.
 
-SETUP TIME ACCOUNTING (for Art/Hardware projects):
-- Setup typically takes 15-20 minutes
-- 60m session with setup = ~40m of actual work
-- Only suggest physical work if duration allows for setup + meaningful work + cleanup
-- For ${durationMinutes}m: ${durationMinutes <= 25 ? 'NO physical setup - not enough time' : durationMinutes <= 60 ? 'Minimal setup only if absolutely necessary' : 'Full setup acceptable'}
-
-TASK SPECIFICITY REQUIREMENTS:
-Every task must be SPECIFIC and MEASURABLE. The user should know exactly when it's done.
-
-PLAIN ENGLISH - CRITICAL:
-Write tasks like a friend texting you a reminder, NOT like a project manager.
-- BAD: "Color Palette Validation: Testing paint density and mixing ratios"
-- GOOD: "Mix 3 test batches of red/gold paint and note which ratio flows best"
-
-- BAD: "The Background Pour: Achieving a marbled aesthetic"
-- GOOD: "Do the first pour on test canvas - aim for marbled effect"
-
-- BAD: "Stencil Precision: Cutting a perfectly symmetrical insignia"
-- GOOD: "Cut out the hammer and sickle from stencil material"
-
-NEVER use "Phase Title: Description" format. Just write the action.
-
-LOGICAL ORDERING FOR NEW PROJECTS (0-30% complete):
-For projects that haven't started yet, suggest tasks in this order:
-1. GATHER - Buy/order/find materials and references
-2. PLAN - Decide dimensions, colors, approach
-3. PREP - Set up workspace, prepare materials
-4. CREATE - Only after the above are done
-
-Example for a new Art project:
-- First session: "Order canvas and pouring medium from Amazon"
-- NOT: "Achieve a marbled aesthetic" (too advanced, no materials yet)
-
-BANNED PHRASES (vague, unactionable):
-- "Work on...", "Continue...", "Make progress on..."
-- "Start...", "Begin...", "Get started with..."
-- "Think about...", "Consider...", "Look into..."
-- "Improve...", "Enhance...", "Refine..." (without specifics)
-
-REQUIRED PATTERNS (specific, completable):
-- "Complete [specific thing]" - what exactly?
-- "Write [X words/pages/section]" - measurable output
-- "Fix [specific bug/issue]" - clear success criteria
-- "Research and decide on [X vs Y]" - decision made = done
-- "Order [specific item]" - action complete when ordered
-
-=== CLOSING THE LOOP (High Progress) ===
-When a project is > 85% done or has < 3 tasks remaining:
-1. FOCUS ON QUALITY: Instead of breaking down tasks into mechanical batches (e.g., "Do items 1-5"), focus on "Polishing", "Edge-case hunting", or "Cleanup".
-2. CELEBRATION: The session should feel like a 'Victory Lap'.
-3. NO MECHANICAL BATCHING: NEVER generate tasks like "Migrate projects 1-4", "Migrate projects 5-8". This is lazy and demotivating. If a task is big, break it by DEPTH (e.g., "Set up the core schema" vs "Polish the UI transition"), not by COUNT.
-
-=== TASK ANCHORING & REFINEMENT (CRITICAL) ===
-The user's EXISTING tasks (Remaining Tasks listed above) must be the FOUNDATION of the session.
-1. AUDIT EXISTING TASKS:
-   - If a task is VAGUE or a STUB (e.g., "1", "do it", "fix bug", "research"), **REPLACE** it with your clear, actionable version.
-     - Example: User has "1" -> You output: "1. Research competitor pricing models" (matching the *intent* of being the first step).
-   - If a task is GOOD, keep it exactly as is (or with minor polish).
-   
-2. FILL THE GAPS:
-   - If the user has "Step 1" and "Step 3", **INSERT** "Step 2" between them.
-   - Do NOT append a duplicate of "Step 1" at the end.
-
-3. NO DUPLICATES:
-   - Check the "Remaining Tasks" list. If you generate a task that means the same thing, assume you are REFINING the existing one, not adding a new one.
-
-=== SESSION ARC STRUCTURE ===
-1. IGNITION (2-5m): Quick mental/physical warm-up
-2. THE FLOW: The core outcome work (Refined existing tasks + new gap-fillers)
-3. PARKING (3-5m): Clean close and prep for next time
+4. ⚡️ MOMENTUM IS KING
+   - For 25m sessions: ONE thing done. Not "started". DONE.
+   - For 60m+ sessions: A solid chunk of progress.
+   - If the project is dormant, suggest a "Re-entry" task (e.g., "Read through last notes", "Just open the file").
 
 === OUTPUT FORMAT ===
-Generate sessions for up to 12 projects (prioritize by last_active). Ensure a diverse range of work types.
-${durationMinutes === 25
-            ? `Pick the 8 projects that have the clearest quick-win opportunities.`
-            : `Generate sessions for up to 12 projects (prioritize by last_active).`}
+Generate sessions for up to 12 projects.
+${durationMinutes === 25 ? `Pick 8 projects with clear 'Quick Wins'.` : `Prioritize active projects.`}
 
 {
   "tasks": [
     {
       "project_id": "string",
       "project_title": "string",
-      "task_title": "string (Plain English outcome - e.g., 'Cut out the stencil' not 'Stencil Precision: Achieving symmetry')",
-      "task_description": "string (What you'll have DONE - e.g., 'Stencil ready to use' not 'A perfectly symmetrical insignia')",
-      "session_summary": "string (Joyful vision: 'By the end, you'll have...')",
+      "task_title": "string (The 'Headline' of the session - e.g. 'Fixing the Login Bug' or 'Painting the Sky')",
+      "task_description": "string (One sentence pitch: 'By the end of this hour, users will be able to log in.')",
+      "session_summary": "string (Joyful summary: 'You're going to squash that bug and feel great.')",
       "overhead_type": "Mental" | "Physical" | "Tech" | "Digital",
-      "ignition_tasks": [ { "text": "string", "is_new": true, "estimated_minutes": number } ],
-      "checklist_items": [ { "text": "string (PLAIN ENGLISH - 'Order the canvas' not 'Canvas Acquisition: Procuring materials')", "is_new": boolean, "estimated_minutes": number } ],
-      "shutdown_tasks": [ { "text": "string", "is_new": true, "estimated_minutes": number } ],
-      "impact_score": 0.1-1.0 (how much this moves the project toward completion),
-      "fuel_id": "string (optional - if relevant reading exists)",
+      "ignition_tasks": [ { "text": "string (Quick warm up)", "is_new": true, "estimated_minutes": number } ],
+      "checklist_items": [ { "text": "string (The Core Work - PLAIN ENGLISH)", "is_new": boolean, "estimated_minutes": number } ],
+      "shutdown_tasks": [ { "text": "string (Clean up)", "is_new": true, "estimated_minutes": number } ],
+      "impact_score": 0.1-1.0,
+      "fuel_id": "string (optional)",
       "fuel_title": "string (optional)"
     }
   ]
 }
 
-=== SPRINT (25M) VS DEEP DIVE (150M) RULES ===
-- For 25 minutes: LIMIT progress to the absolute simplest next step. Only 1 core task if it takes 15m, or 2-3 tiny tasks if they take 5m each. 
-- Avoid any "completion tasks" that sum over 20m total for a 25m session (leaving 5m for ignition/shutdown).
-- Be extremely picky. It is better to have "Too Little" work than "Too Much" work for a 25m session.
-
-REMEMBER: The user wants to ACCOMPLISH something in ${durationMinutes} minutes, not receive a list of everything that needs doing. Design for achievement, not overwhelm. Focus on the ONE thing that can be 100% finished.`
+REMEMBER: The user is looking at this list to decide "What do I do?". Make it appealing, clear, and DOABLE.`
 
     const result = await model.generateContent(prompt)
     const responseText = result.response.text()

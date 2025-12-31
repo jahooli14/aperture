@@ -315,20 +315,25 @@ export const useProjectStore = create<ProjectState>()(
           // But strictly we should update with server response to get generated fields.
           // For speed, we'll skip re-fetching the whole list.
 
-          // Schedule AI enrichment if tasks were touched (debounced 1 min)
-          if (data.metadata?.tasks) {
-            const tasks = data.metadata.tasks
+          // Schedule AI enrichment if tasks OR context were touched (debounced 1 min)
+          const hasTaskUpdates = !!data.metadata?.tasks
+          const hasContextUpdates = !!data.description || !!data.title || !!data.metadata?.end_goal || !!data.metadata?.motivation
+
+          if (hasTaskUpdates || hasContextUpdates) {
+            const project = get().allProjects.find(p => p.id === id)
+            const tasks = data.metadata?.tasks || project?.metadata?.tasks || []
             const currentTaskCount = tasks.length
-            const hasCompletedTasks = tasks.some((t: { done?: boolean; completed_at?: string }) =>
-              t.done || t.completed_at
-            )
 
-            // Check if this is a new task or completion
-            const previousProject = get().allProjects.find(p => p.id === id)
-            const previousTaskCount = previousProject?.metadata?.tasks?.length || 0
-            const hasNewOrCompletedTasks = currentTaskCount !== previousTaskCount || hasCompletedTasks
+            let hasNewOrCompletedTasks = false
+            if (hasTaskUpdates) {
+              const hasCompletedTasks = tasks.some((t: { done?: boolean; completed_at?: string }) =>
+                t.done || t.completed_at
+              )
+              const previousTaskCount = project?.metadata?.tasks?.length || 0
+              hasNewOrCompletedTasks = currentTaskCount !== previousTaskCount || hasCompletedTasks
+            }
 
-            scheduleAIEnrichment(id, currentTaskCount, hasNewOrCompletedTasks)
+            scheduleAIEnrichment(id, currentTaskCount, hasNewOrCompletedTasks || hasContextUpdates)
           }
         } catch (error) {
           logger.error('Failed to update project:', error)
