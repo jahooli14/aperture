@@ -39,7 +39,22 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+
+  // Sync processing articles with store deletions
+  useEffect(() => {
+    setProcessingArticles(prev => {
+      const next = new Map(prev)
+      let changed = false
+      for (const id of next.keys()) {
+        if (!articles.some(a => a.id === id)) {
+          next.delete(id)
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [articles])
 
   // Use React Query for data fetching
   const { isLoading: isQueryLoading } = useReadingQueue()
@@ -738,11 +753,26 @@ export function ReadingPage() {
                   </div>
                   <button
                     onClick={() => {
+                      // 1. Cancel local processing
                       articleProcessor.cancelProcessing(articleId)
+
+                      // 2. Mark as processed & failed in DB so it doesn't auto-retry on reload
+                      updateArticle(articleId, {
+                        processed: true,
+                        excerpt: 'Extraction cancelled by user.'
+                      }).catch(console.error)
+
+                      // 3. Remove from UI
                       setProcessingArticles(prev => {
                         const next = new Map(prev)
                         next.delete(articleId)
                         return next
+                      })
+
+                      addToast({
+                        title: 'Cancelled',
+                        description: 'Extraction stopped. You can retry later or view original.',
+                        variant: 'default',
                       })
                     }}
                     className="text-xs px-3 py-1 rounded-lg hover:bg-white/5 transition-colors"

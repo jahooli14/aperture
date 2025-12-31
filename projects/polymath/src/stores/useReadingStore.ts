@@ -21,7 +21,7 @@ interface ReadingState {
   // Actions
   fetchArticles: (status?: ArticleStatus, force?: boolean) => Promise<void>
   saveArticle: (request: SaveArticleRequest) => Promise<Article>
-  updateArticle: (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => Promise<void>
+  updateArticle: (id: string, updates: Partial<Article>) => Promise<void>
   updateArticleStatus: (id: string, status: ArticleStatus) => Promise<void>
   deleteArticle: (id: string) => Promise<void>
   setFilter: (filter: ArticleStatus | 'all') => void
@@ -342,7 +342,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       }
     },
 
-    updateArticle: async (id: string, updates: Partial<Pick<Article, 'title' | 'excerpt' | 'tags' | 'notes'>>) => {
+    updateArticle: async (id: string, updates: Partial<Article>) => {
       // Optimistic update
       const previousArticles = get().articles
       const updatedArticle = previousArticles.find(a => a.id === id)
