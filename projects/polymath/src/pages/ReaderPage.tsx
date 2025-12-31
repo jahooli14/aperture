@@ -565,26 +565,14 @@ export function ReaderPage() {
             </motion.div>
           </header>
 
-          {processedContent ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className={`reader-content ${settings.article}`}
-              onMouseUp={handleTextSelection}
-              dangerouslySetInnerHTML={{ __html: processedContent }}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 gap-6 opacity-40">
-              <div className="relative">
-                <div className="h-16 w-16 rounded-full border-t-2 border-blue-500 animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="h-10 w-10 rounded-full border-b-2 border-indigo-400 animate-spin" style={{ animationDirection: 'reverse' }} />
-                </div>
-              </div>
-              <p className="text-sm font-bold tracking-widest uppercase animate-pulse">Extracting Intelligence...</p>
-            </div>
-          )}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className={`reader-content ${settings.article}`}
+            onMouseUp={handleTextSelection}
+            dangerouslySetInnerHTML={{ __html: processedContent || (article.content ? article.content : '<p class="text-zinc-500 italic">No content available for this article. <a href="' + article.url + '" target="_blank" class="text-blue-500 underline">View Original</a></p>') }}
+          />
 
           {/* Smart Connections Section */}
           <div className="mt-20 pt-12 border-t border-white/5">

@@ -1231,14 +1231,17 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         })
       }
 
-      // Save URL immediately with placeholder - extraction happens in background
+      // Save URL immediately
+      // If content is provided (e.g. from RSS), mark as processed immediately
+      const isPreProcessed = !!content && content.length > 0
+
       const placeholderArticle = {
         user_id: userId,
         url,
         title: title || url, // Use provided title if available
         author: null,
         content: content ? cleanHtml(content, url) : null, // Clean and normalize content (fix relative URLs, add referrer policy)
-        excerpt: excerpt || 'Extracting article content...',
+        excerpt: excerpt || (isPreProcessed ? 'Content loaded from feed.' : 'Extracting article content...'),
         published_date: null,
         thumbnail_url: null,
         favicon_url: null,
@@ -1247,7 +1250,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         word_count: content ? content.split(/\s+/).length : 0,
         status: 'unread',
         tags: tags || [],
-        processed: false, // Keep as false to trigger background update/polling, but content will render immediately
+        processed: isPreProcessed, // Mark as processed if we have content
         created_at: new Date().toISOString(),
       }
 
@@ -1262,9 +1265,23 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         throw new Error(`Database error: ${insertError.message}`)
       }
 
-      console.log(`[reading] Article placeholder saved, ID: ${savedArticle.id}`)
+      console.log(`[reading] Article saved, ID: ${savedArticle.id}, Processed: ${isPreProcessed}`)
 
-      // Process article content in background (start promise chain before returning)
+      // If already processed (RSS), we are done. Return immediately.
+      if (isPreProcessed) {
+        // Trigger async embedding generation/connections in background, but don't block response
+        generateArticleEmbeddingAndConnect(savedArticle.id, savedArticle.title, savedArticle.excerpt, userId)
+          .then(() => console.log(`[reading] ✅ Connections processed for ${savedArticle.id}`))
+          .catch(err => console.error('[reading] Async embedding/connection error:', err))
+
+        return res.status(201).json({
+          success: true,
+          article: savedArticle,
+          message: 'Article saved and ready to read!'
+        })
+      }
+
+      // OTHERWISE: Process article content in background (start promise chain before returning)
       const extractionStartTime = Date.now()
       console.log(`[reading] Starting background extraction for ${savedArticle.id} at ${new Date().toISOString()}`)
 
