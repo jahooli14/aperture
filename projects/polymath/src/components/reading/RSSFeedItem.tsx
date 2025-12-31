@@ -13,8 +13,8 @@ interface RSSFeedItemProps {
 }
 
 export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProps) {
+  const [expanded, setExpanded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
-  const [showFullDescription, setShowFullDescription] = useState(false)
 
   const sanitizedDescription = useMemo(() => {
     if (!item.description) return ''
@@ -24,22 +24,11 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
     })
   }, [item.description])
 
-  const hasLongDescription = sanitizedDescription.length > 300
-
   return (
     <div
-      className="group block rounded-2xl backdrop-blur-xl transition-all duration-500 break-inside-avoid border p-5 cursor-pointer relative mb-4 overflow-hidden"
-      onClick={onRead}
-      style={{
-        borderColor: isHovered ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-        background: isHovered
-          ? 'linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%)'
-          : 'linear-gradient(165deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)',
-        boxShadow: isHovered
-          ? '0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05)'
-          : '0 4px 12px rgba(0, 0, 0, 0.2)',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
-      }}
+      className={`group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border cursor-pointer relative mb-2 overflow-hidden ${expanded ? 'bg-white/5 border-blue-500/30' : 'bg-transparent border-white/5 hover:bg-white/[0.02]'
+        }`}
+      onClick={() => setExpanded(!expanded)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -72,88 +61,90 @@ export function RSSFeedItem({ item, onSave, onRead, onDismiss }: RSSFeedItemProp
         }
       `}</style>
 
-      {/* Header Info */}
-      <div className="flex items-center justify-between gap-3 mb-3 relative z-10">
-        <div className="flex flex-col gap-1 min-w-0">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--premium-blue)' }}>
-            {item.feed_title && <span className="truncate max-w-[150px]">{item.feed_title}</span>}
-            {item.feed_title && item.published_at && <span className="opacity-30">•</span>}
-            {item.published_at && (
-              <span className="flex items-center gap-1 shrink-0">
-                <Clock className="h-2.5 w-2.5" />
-                {format(new Date(item.published_at), 'MMM d')}
-              </span>
-            )}
-          </div>
-        </div>
+      {/* Main Row: Header + Title + Actions */}
+      <div className="p-3">
+        <div className="flex items-start gap-3">
+          {/* Feed Info & Title Container */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--premium-blue)' }}>
+              {item.feed_title && <span className="truncate max-w-[150px]">{item.feed_title}</span>}
+              {item.feed_title && item.published_at && <span className="opacity-30">•</span>}
+              {item.published_at && (
+                <span className="flex items-center gap-1 shrink-0">
+                  <Clock className="h-2.5 w-2.5" />
+                  {format(new Date(item.published_at), 'MMM d')}
+                </span>
+              )}
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onSave()
-            }}
-            className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all duration-300"
-            title="Save to Read Later"
-          >
-            <BookmarkPlus className="h-4 w-4" />
-          </button>
-          {onDismiss && (
+            <h3 className="text-sm font-bold leading-snug group-hover:text-blue-400 transition-colors" style={{ color: 'var(--premium-text-primary)' }}>
+              {item.title}
+            </h3>
+          </div>
+
+          {/* Action Buttons (Always Visible) */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                onDismiss()
+                onSave()
               }}
-              className="p-2 rounded-xl hover:bg-white/10 text-zinc-500 hover:text-red-400 transition-all duration-300"
-              title="Dismiss"
+              className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all duration-300"
+              title="Save to Read Later"
             >
-              <X className="h-4 w-4" />
+              <BookmarkPlus className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Title */}
-      <h3 className="text-lg font-bold leading-tight hover:text-blue-400 transition-colors mb-3" style={{ color: 'var(--premium-text-primary)' }}>
-        {item.title}
-      </h3>
-
-      {/* Description Content */}
-      {sanitizedDescription && (
-        <div className="relative">
-          <div
-            className={`rss-content overflow-hidden transition-all duration-500 ${!showFullDescription && hasLongDescription ? 'max-h-32' : 'max-h-[1000px]'}`}
-            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-          />
-
-          {!showFullDescription && hasLongDescription && (
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#121214] to-transparent flex items-end justify-center pb-1">
+            {onDismiss && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  setShowFullDescription(true)
+                  onDismiss()
                 }}
-                className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors py-1 px-4 mb-1"
+                className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-red-400 transition-all duration-300"
+                title="Dismiss"
               >
-                Show More
+                <X className="h-3.5 w-3.5" />
               </button>
-            </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded Content */}
+      <div className={`grid transition-all duration-300 ease-out px-3 ${expanded ? 'grid-rows-[1fr] pb-3 opacity-100' : 'grid-rows-[0fr] pb-0 opacity-0'}`}>
+        <div className="overflow-hidden">
+          {/* Action to Open */}
+          <div className="flex gap-2 mb-3 mt-1">
+            <Button
+              onClick={(e) => {
+                e.stopPropagation()
+                onRead()
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white h-8 text-xs"
+            >
+              Read Article
+            </Button>
+            <Button
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(item.link, '_blank')
+              }}
+              className="bg-transparent border-white/10 text-zinc-400 hover:text-white h-8 text-xs px-3"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {/* Description Preview */}
+          {sanitizedDescription && (
+            <div
+              className="rss-content text-xs opacity-80 max-h-48 overflow-y-auto pr-2 custom-scrollbar"
+              dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+              onClick={(e) => e.stopPropagation()} // Allow selecting text
+            />
           )}
         </div>
-      )}
-
-      {/* Footer / Link */}
-      <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-        <a
-          href={item.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[11px] font-bold text-zinc-500 hover:text-blue-400 flex items-center gap-1 transition-colors uppercase tracking-wider"
-          onClick={(e) => e.stopPropagation()}
-        >
-          View Original <ExternalLink className="h-3 w-3" />
-        </a>
       </div>
     </div>
   )
