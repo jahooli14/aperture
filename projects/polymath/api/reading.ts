@@ -1428,6 +1428,14 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
         updates.tags = tags
       }
 
+      // Allow updating other fields
+      if (req.body.title !== undefined) updates.title = req.body.title
+      if (req.body.excerpt !== undefined) updates.excerpt = req.body.excerpt
+      if (req.body.content !== undefined) updates.content = req.body.content
+      if (req.body.processed !== undefined) updates.processed = req.body.processed
+      if (req.body.thumbnail_url !== undefined) updates.thumbnail_url = req.body.thumbnail_url
+      if (req.body.favicon_url !== undefined) updates.favicon_url = req.body.favicon_url
+
       const { data, error } = await supabase
         .from('reading_queue')
         .update(updates)
