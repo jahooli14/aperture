@@ -13,9 +13,16 @@ interface VoiceInputProps {
   maxDuration?: number // seconds
   autoSubmit?: boolean
   autoStart?: boolean // Auto-start recording when component mounts
+  shouldStop?: boolean // Externally signal to stop recording
 }
 
-export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false, autoStart = false }: VoiceInputProps) {
+export function VoiceInput({
+  onTranscript,
+  maxDuration = 30,
+  autoSubmit = false,
+  autoStart = false,
+  shouldStop = false
+}: VoiceInputProps) {
   const {
     isRecording,
     transcript,
@@ -23,7 +30,8 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
     isProcessing,
     isSupported,
     toggleRecording,
-    startRecording
+    startRecording,
+    stopRecording
   } = useMediaRecorderVoice({
     onTranscript,
     maxDuration,
@@ -44,6 +52,24 @@ export function VoiceInput({ onTranscript, maxDuration = 30, autoSubmit = false,
       return () => clearTimeout(timer)
     }
   }, [autoStart, isSupported]) // Reduced dependencies to prevent re-triggers
+
+  // Stop recording if externally requested
+  useEffect(() => {
+    if (shouldStop && isRecording) {
+      console.log('[VoiceInput] Stop requested via shouldStop prop')
+      stopRecording()
+    }
+  }, [shouldStop, isRecording, stopRecording])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isRecording) {
+        console.log('[VoiceInput] Unmounting while recording - stopping...')
+        stopRecording()
+      }
+    }
+  }, [isRecording, stopRecording])
 
   if (!isSupported) {
     return (
