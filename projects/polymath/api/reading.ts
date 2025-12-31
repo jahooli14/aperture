@@ -1717,198 +1717,199 @@ Return ONLY the JSON, no other text.`
           }
         })
 
-      return res.status(200).json({
-        success: true,
-        items
-      })
-    } catch (error) {
-      return res.status(500).json({ error: 'Failed to fetch RSS items' })
+        return res.status(200).json({
+          success: true,
+          items
+        })
+      } catch (error) {
+        console.error('[RSS Items] Error:', error)
+        return res.status(500).json({ error: 'Failed to fetch RSS items' })
+      }
     }
-  }
 
-  // GET feeds (no action specified)
-  if (req.method === 'GET' && !req.query.action) {
-    try {
-      if (id) {
-        const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', userId).single()
+    // GET feeds (no action specified)
+    if (req.method === 'GET' && !req.query.action) {
+      try {
+        if (id) {
+          const { data, error } = await supabase.from('rss_feeds').select('*').eq('id', id).eq('user_id', userId).single()
+          if (error) throw error
+          return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
+        }
+        const { data, error } = await supabase.from('rss_feeds').select('*').eq('user_id', userId).order('created_at', { ascending: false })
         if (error) throw error
-        return res.status(data ? 200 : 404).json(data ? { success: true, feed: data } : { error: 'Not found' })
+        return res.status(200).json({ success: true, feeds: data || [] })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to fetch feeds' })
       }
-      const { data, error } = await supabase.from('rss_feeds').select('*').eq('user_id', userId).order('created_at', { ascending: false })
-      if (error) throw error
-      return res.status(200).json({ success: true, feeds: data || [] })
-    } catch (error) {
-      return res.status(500).json({ error: 'Failed to fetch feeds' })
     }
-  }
 
-  // POST - Subscribe (no action specified)
-  if (req.method === 'POST' && !req.query.action) {
-    try {
-      console.log('[RSS Subscribe] Request body:', JSON.stringify(req.body, null, 2))
-      const { feed_url } = req.body
-      if (!feed_url) {
-        console.log('[RSS Subscribe] Missing feed_url in body:', req.body)
-        return res.status(400).json({
-          error: 'feed_url required',
-          received: req.body,
-          details: `Received body keys: ${Object.keys(req.body || {}).join(', ') || 'none'}`
-        })
-      }
-
-      const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
-      if (existingError && existingError.code !== 'PGRST116') throw existingError
-      if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
-
-      console.log('[RSS Subscribe] Fetching RSS feed:', feed_url)
-      let feedData
+    // POST - Subscribe (no action specified)
+    if (req.method === 'POST' && !req.query.action) {
       try {
-        feedData = await rssParser.parseURL(feed_url)
-        console.log('[RSS Subscribe] Feed parsed successfully:', feedData.title)
-      } catch (parseError) {
-        console.error('[RSS Subscribe] Failed to parse RSS feed:', parseError)
-        return res.status(400).json({
-          error: 'Failed to parse RSS feed',
-          details: parseError instanceof Error ? parseError.message : 'Invalid RSS feed URL or feed is unreachable'
-        })
-      }
-
-      const { data, error } = await supabase.from('rss_feeds').insert([{
-        user_id: userId,
-        feed_url,
-        title: feedData.title || 'Untitled',
-        description: feedData.description || null,
-        site_url: feedData.link || null,
-        favicon_url: feedData.image?.url || null,
-        enabled: true
-      }]).select().single()
-
-      if (error) {
-        console.error('[RSS Subscribe] Database insert failed:', error)
-        throw error
-      }
-
-      console.log('[RSS Subscribe] Successfully subscribed to feed:', data.title)
-
-      // Auto-import latest 3 articles immediately (no cron needed!)
-      let articlesAdded = 0
-      try {
-        console.log('[RSS Subscribe] Auto-importing latest articles...')
-        for (const item of feedData.items.slice(0, 3)) {
-          const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
-          if (existing.data) continue
-
-          const jinaUrl = `https://r.jina.ai/${item.link}`
-          const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
-          let content = item.contentSnippet || item.description || ''
-
-          const text = await response.text()
-          if (response.ok && text) {
-            try {
-              const result = JSON.parse(text)
-              const rawContent = result.data?.content || result.content || content
-              const cleanedMarkdown = cleanMarkdownContent(rawContent)
-              content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
-            } catch (e) {
-              console.error('[RSS Subscribe] Failed to parse Jina response for', item.link)
-            }
-          }
-
-          await supabase.from('reading_queue').insert([{
-            user_id: userId,
-            url: item.link || '',
-            title: decodeHTMLEntities(item.title || 'Untitled'),
-            author: item.creator || item.author || null,
-            content,
-            excerpt: content.substring(0, 200),
-            published_date: item.pubDate || item.isoDate || null,
-            source: new URL(item.link || '').hostname.replace('www.', ''),
-            read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
-            word_count: content.split(/\s+/).length,
-            status: 'unread',
-            tags: ['rss', 'auto-imported'],
-            processed: true
-          }])
-          articlesAdded++
+        console.log('[RSS Subscribe] Request body:', JSON.stringify(req.body, null, 2))
+        const { feed_url } = req.body
+        if (!feed_url) {
+          console.log('[RSS Subscribe] Missing feed_url in body:', req.body)
+          return res.status(400).json({
+            error: 'feed_url required',
+            received: req.body,
+            details: `Received body keys: ${Object.keys(req.body || {}).join(', ') || 'none'}`
+          })
         }
 
-        await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', data.id)
-        console.log(`[RSS Subscribe] Auto-imported ${articlesAdded} articles`)
-      } catch (importError) {
-        console.error('[RSS Subscribe] Auto-import failed:', importError)
-        // Don't fail the subscription if import fails
+        const { data: existing, error: existingError } = await supabase.from('rss_feeds').select('id').eq('user_id', userId).eq('feed_url', feed_url).single()
+        if (existingError && existingError.code !== 'PGRST116') throw existingError
+        if (existing) return res.status(200).json({ success: true, feed: existing, message: 'Already subscribed' })
+
+        console.log('[RSS Subscribe] Fetching RSS feed:', feed_url)
+        let feedData
+        try {
+          feedData = await rssParser.parseURL(feed_url)
+          console.log('[RSS Subscribe] Feed parsed successfully:', feedData.title)
+        } catch (parseError) {
+          console.error('[RSS Subscribe] Failed to parse RSS feed:', parseError)
+          return res.status(400).json({
+            error: 'Failed to parse RSS feed',
+            details: parseError instanceof Error ? parseError.message : 'Invalid RSS feed URL or feed is unreachable'
+          })
+        }
+
+        const { data, error } = await supabase.from('rss_feeds').insert([{
+          user_id: userId,
+          feed_url,
+          title: feedData.title || 'Untitled',
+          description: feedData.description || null,
+          site_url: feedData.link || null,
+          favicon_url: feedData.image?.url || null,
+          enabled: true
+        }]).select().single()
+
+        if (error) {
+          console.error('[RSS Subscribe] Database insert failed:', error)
+          throw error
+        }
+
+        console.log('[RSS Subscribe] Successfully subscribed to feed:', data.title)
+
+        // Auto-import latest 3 articles immediately (no cron needed!)
+        let articlesAdded = 0
+        try {
+          console.log('[RSS Subscribe] Auto-importing latest articles...')
+          for (const item of feedData.items.slice(0, 3)) {
+            const existing = await supabase.from('reading_queue').select('id').eq('user_id', userId).eq('url', item.link || '').single()
+            if (existing.data) continue
+
+            const jinaUrl = `https://r.jina.ai/${item.link}`
+            const response = await fetch(jinaUrl, { headers: { 'Accept': 'application/json', 'X-Return-Format': 'json' } })
+            let content = item.contentSnippet || item.description || ''
+
+            const text = await response.text()
+            if (response.ok && text) {
+              try {
+                const result = JSON.parse(text)
+                const rawContent = result.data?.content || result.content || content
+                const cleanedMarkdown = cleanMarkdownContent(rawContent)
+                content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
+              } catch (e) {
+                console.error('[RSS Subscribe] Failed to parse Jina response for', item.link)
+              }
+            }
+
+            await supabase.from('reading_queue').insert([{
+              user_id: userId,
+              url: item.link || '',
+              title: decodeHTMLEntities(item.title || 'Untitled'),
+              author: item.creator || item.author || null,
+              content,
+              excerpt: content.substring(0, 200),
+              published_date: item.pubDate || item.isoDate || null,
+              source: new URL(item.link || '').hostname.replace('www.', ''),
+              read_time_minutes: Math.ceil(content.split(/\s+/).length / 225),
+              word_count: content.split(/\s+/).length,
+              status: 'unread',
+              tags: ['rss', 'auto-imported'],
+              processed: true
+            }])
+            articlesAdded++
+          }
+
+          await supabase.from('rss_feeds').update({ last_fetched_at: new Date().toISOString() }).eq('id', data.id)
+          console.log(`[RSS Subscribe] Auto-imported ${articlesAdded} articles`)
+        } catch (importError) {
+          console.error('[RSS Subscribe] Auto-import failed:', importError)
+          // Don't fail the subscription if import fails
+        }
+
+        return res.status(201).json({
+          success: true,
+          feed: data,
+          articlesAdded,
+          message: `Subscribed! ${articlesAdded} articles added to your reading queue.`
+        })
+      } catch (error) {
+        console.error('[RSS Subscribe] Unexpected error:', error)
+        return res.status(500).json({
+          error: 'Failed to subscribe to feed',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+
+    // PATCH - Update
+    if (req.method === 'PATCH') {
+      try {
+        const { id: feedId, enabled } = req.body
+        if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
+
+        const { data, error } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', userId).select().single()
+        if (error) throw error
+        return res.status(200).json({ success: true, feed: data })
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to update feed' })
+      }
+    }
+
+    // DELETE - Unsubscribe
+    if (req.method === 'DELETE' && id) {
+      try {
+        const { error } = await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', userId)
+        if (error) throw error
+        return res.status(204).send('')
+      } catch (error) {
+        return res.status(500).json({ error: 'Failed to delete feed' })
+      }
+    }
+  }
+
+  // IMAGE PROXY RESOURCE - To bypass CORS for offline caching
+  if (resource === 'proxy' && req.method === 'GET') {
+    try {
+      const { url: imageUrl } = req.query
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return res.status(400).json({ error: 'url required' })
       }
 
-      return res.status(201).json({
-        success: true,
-        feed: data,
-        articlesAdded,
-        message: `Subscribed! ${articlesAdded} articles added to your reading queue.`
-      })
+      console.log(`[Image Proxy] Fetching: ${imageUrl}`)
+      const imgRes = await fetch(imageUrl)
+
+      if (!imgRes.ok) {
+        throw new Error(`Upstream returned ${imgRes.status}`)
+      }
+
+      const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
+      const buffer = await imgRes.arrayBuffer()
+
+      res.setHeader('Content-Type', contentType)
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      return res.status(200).send(Buffer.from(buffer))
+
     } catch (error) {
-      console.error('[RSS Subscribe] Unexpected error:', error)
-      return res.status(500).json({
-        error: 'Failed to subscribe to feed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      })
+      console.error('[Image Proxy] Failed:', error)
+      return res.status(500).json({ error: 'Proxy failed' })
     }
   }
 
-  // PATCH - Update
-  if (req.method === 'PATCH') {
-    try {
-      const { id: feedId, enabled } = req.body
-      if (!feedId) return res.status(400).json({ error: 'Feed ID required' })
-
-      const { data, error } = await supabase.from('rss_feeds').update({ enabled, updated_at: new Date().toISOString() }).eq('id', feedId).eq('user_id', userId).select().single()
-      if (error) throw error
-      return res.status(200).json({ success: true, feed: data })
-    } catch (error) {
-      return res.status(500).json({ error: 'Failed to update feed' })
-    }
-  }
-
-  // DELETE - Unsubscribe
-  if (req.method === 'DELETE' && id) {
-    try {
-      const { error } = await supabase.from('rss_feeds').delete().eq('id', id).eq('user_id', userId)
-      if (error) throw error
-      return res.status(204).send('')
-    } catch (error) {
-      return res.status(500).json({ error: 'Failed to delete feed' })
-    }
-  }
-}
-
-// IMAGE PROXY RESOURCE - To bypass CORS for offline caching
-if (resource === 'proxy' && req.method === 'GET') {
-  try {
-    const { url: imageUrl } = req.query
-    if (!imageUrl || typeof imageUrl !== 'string') {
-      return res.status(400).json({ error: 'url required' })
-    }
-
-    console.log(`[Image Proxy] Fetching: ${imageUrl}`)
-    const imgRes = await fetch(imageUrl)
-
-    if (!imgRes.ok) {
-      throw new Error(`Upstream returned ${imgRes.status}`)
-    }
-
-    const contentType = imgRes.headers.get('content-type') || 'image/jpeg'
-    const buffer = await imgRes.arrayBuffer()
-
-    res.setHeader('Content-Type', contentType)
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-    return res.status(200).send(Buffer.from(buffer))
-
-  } catch (error) {
-    console.error('[Image Proxy] Failed:', error)
-    return res.status(500).json({ error: 'Proxy failed' })
-  }
-}
-
-return res.status(405).json({ error: 'Method not allowed' })
+  return res.status(405).json({ error: 'Method not allowed' })
 }
 
 /**
