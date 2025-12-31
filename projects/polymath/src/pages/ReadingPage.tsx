@@ -301,8 +301,8 @@ export function ReadingPage() {
     // 2. Save and navigate
     try {
       addToast({
-        title: '📰 Opening in Aperture...',
-        description: 'Extracting content for in-app reading',
+        title: 'Opening...',
+        description: 'Loading article',
         variant: 'default',
       })
 
