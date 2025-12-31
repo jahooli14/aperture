@@ -281,6 +281,9 @@ export function PowerHourHero() {
         const metadataUpdate: any = {
             ...project.metadata,
             last_session: sessionContext,
+            // Clear suggestions so we generate fresh ones next time
+            suggested_power_hour_tasks: null,
+            suggested_power_hour_timestamp: null
         }
 
         if (newTasksFromAI.length > 0) {

@@ -25,10 +25,12 @@ const ENRICHMENT_DELAY_MS = 60 * 1000
  * Schedule AI enrichment for a project after task changes
  * Uses a 1-minute debounce to batch multiple edits
  */
+// Schedule AI enrichment for a project after task changes or content updates
+// Uses a 1-minute debounce to batch multiple edits
 export function scheduleAIEnrichment(
   projectId: string,
   currentTaskCount: number,
-  hasNewOrCompletedTasks: boolean
+  hasMeaningfulChange: boolean
 ): void {
   // Skip if project is currently being enriched
   if (enrichingProjects.has(projectId)) {
@@ -43,7 +45,7 @@ export function scheduleAIEnrichment(
   }
 
   // Only schedule if there's a meaningful change
-  const needsEnrichment = hasNewOrCompletedTasks ||
+  const needsEnrichment = hasMeaningfulChange ||
     currentTaskCount === 0 || // New project with no tasks
     (existing && currentTaskCount !== existing.previousTaskCount)
 
@@ -52,7 +54,7 @@ export function scheduleAIEnrichment(
     return
   }
 
-  console.log(`[AIEnrichment] Scheduling enrichment for ${projectId} in ${ENRICHMENT_DELAY_MS / 1000}s`)
+  console.log(`[AIEnrichment] Scheduling enrichment for ${projectId} in ${ENRICHMENT_DELAY_MS / 1000}s (Reason: ${hasMeaningfulChange ? 'Content Change' : 'Task Count'})`)
 
   // Schedule enrichment after delay
   const timeout = setTimeout(() => {
