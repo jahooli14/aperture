@@ -9,7 +9,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, Brain, Layers, BookmarkPlus, Mic } from 'lucide-react'
+import { Plus, X, Brain, Layers, BookmarkPlus, Mic, ListPlus } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -17,6 +17,8 @@ import { haptic } from '../utils/haptics'
 import { CreateMemoryDialog } from './memories/CreateMemoryDialog'
 import { CreateProjectDialog } from './projects/CreateProjectDialog'
 import { SaveArticleDialog } from './reading/SaveArticleDialog'
+import { AddItemToListDialog } from './lists/AddItemToListDialog'
+import { CreateMenuModal } from './CreateMenuModal'
 import { AnimatePresence, motion } from 'framer-motion'
 
 interface VoiceFABProps {
@@ -41,6 +43,7 @@ export function VoiceFAB({
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showArticleDialog, setShowArticleDialog] = useState(false)
+  const [showListDialog, setShowListDialog] = useState(false)
 
   const { isOnline } = useOnlineStatus()
 
@@ -48,6 +51,7 @@ export function VoiceFAB({
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pressStartTimeRef = useRef<number>(0)
   const isLongPressRef = useRef<boolean>(false)
+  const [isHoldRecording, setIsHoldRecording] = useState(false)
 
   // Global trigger listener
   useEffect(() => {
@@ -70,7 +74,7 @@ export function VoiceFAB({
   // --- PRESS HANDLING (Unified Pointer Events) ---
 
   const onStart = useCallback((e: React.PointerEvent) => {
-    // Only handle primary button (left click)
+    // Only handle primary button (left click / touch)
     if (e.pointerType === 'mouse' && e.button !== 0) return
 
     isLongPressRef.current = false
@@ -79,13 +83,15 @@ export function VoiceFAB({
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
 
     pressTimerRef.current = setTimeout(() => {
-      if (enablePressAndHold) {
-        isLongPressRef.current = true
-        haptic.medium()
-        setIsMenuOpen(true)
-      }
+      // Long press detected
+      isLongPressRef.current = true
+      haptic.medium()
+
+      // Start dictation immediately
+      setIsHoldRecording(true)
+      setIsVoiceOpen(true)
     }, 500)
-  }, [enablePressAndHold])
+  }, [])
 
   const onEnd = useCallback((e: React.PointerEvent) => {
     if (pressTimerRef.current) {
@@ -95,28 +101,43 @@ export function VoiceFAB({
 
     const duration = Date.now() - pressStartTimeRef.current
 
-    // Detect if it was a short press/tap
+    // Short press: Open Menu
     if (duration < 500 && !isLongPressRef.current) {
       if (onTap) {
         const handled = onTap()
         if (handled) return
       }
 
-      console.log('[VoiceFAB] Short press detected - Opening voice capture')
+      console.log('[VoiceFAB] Short press - Opening Creation Menu')
       haptic.light()
-      setIsVoiceOpen(true)
+      setIsMenuOpen(true)
+    }
+
+    // Long press ended: Stop recording if we were hold-recording
+    if (isHoldRecording) {
+      console.log('[VoiceFAB] Long press ended - Releasing hold-recording state')
+      // Note: We don't necessarily close the voice modal here, 
+      // but we indicate the hold is done. 
+      // The user might want to see the transcript before closing.
+      // However, the requirement is "for as long as the button is held".
+      // We'll let the VoiceInput stop and then keep the modal open to show result?
+      // Or auto-close if auto-submit is true.
+      setIsHoldRecording(false)
     }
 
     isLongPressRef.current = false
-  }, [onTap])
+  }, [onTap, isHoldRecording])
 
   const onCancel = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
+    if (isHoldRecording) {
+      setIsHoldRecording(false)
+    }
     isLongPressRef.current = false
-  }, [])
+  }, [isHoldRecording])
 
   // --- RENDER ---
 
@@ -126,9 +147,11 @@ export function VoiceFAB({
       key="fab-button"
       initial={{ scale: 0, opacity: 0 }}
       animate={{
-        scale: (hidden || isVoiceOpen || isMenuOpen) ? 0 : 1,
-        opacity: (hidden || isVoiceOpen || isMenuOpen) ? 0 : 1,
-        pointerEvents: (hidden || isVoiceOpen || isMenuOpen) ? 'none' : 'auto'
+        scale: (hidden || isMenuOpen) ? 0 : 1,
+        opacity: (hidden || isMenuOpen) ? 0 : 1,
+        pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
+        backgroundColor: isHoldRecording ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+        borderColor: isHoldRecording ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.1)'
       }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
       onPointerDown={onStart}
@@ -136,25 +159,51 @@ export function VoiceFAB({
       onPointerLeave={onCancel}
       onPointerCancel={onCancel}
       className={cn(
-        "fixed z-[20000]",
+        "fixed z-[25001]", // Higher than menu modal
         "bottom-28 md:bottom-12 right-6 md:right-12",
-        "h-12 w-12 md:h-14 md:w-14 rounded-full",
+        "h-14 w-14 md:h-16 md:w-16 rounded-full",
         "flex items-center justify-center",
         "shadow-[0_12px_40px_rgba(0,0,0,0.4)]",
         "active:scale-95 transition-all duration-300",
-        "group overflow-hidden"
+        "group overflow-hidden touch-none"
       )}
       style={{
-        background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.02)'
+        boxShadow: isHoldRecording
+          ? '0 0 30px rgba(239, 68, 68, 0.4), inset 0 0 10px rgba(239, 68, 68, 0.2)'
+          : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.02)'
       }}
-      aria-label="Create - Tap for Voice, Hold for Menu"
+      aria-label="Create - Tap for Menu, Hold to Record"
     >
-      <Plus className="h-5 w-5 text-zinc-400 transition-transform group-hover:rotate-90 group-hover:text-white" />
+      {isHoldRecording ? (
+        <Mic className="h-6 w-6 text-red-400 animate-pulse" />
+      ) : (
+        <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-white" />
+      )}
       <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      {/* Pulse Rings during hold */}
+      <AnimatePresence>
+        {isHoldRecording && (
+          <>
+            <motion.div
+              initial={{ scale: 1, opacity: 0.5 }}
+              animate={{ scale: 1.8, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="absolute inset-0 rounded-full border-2 border-red-500/30"
+            />
+            <motion.div
+              initial={{ scale: 1, opacity: 0.5 }}
+              animate={{ scale: 2.2, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+              className="absolute inset-0 rounded-full border-2 border-red-500/10"
+            />
+          </>
+        )}
+      </AnimatePresence>
     </motion.button>
   )
 
@@ -162,64 +211,16 @@ export function VoiceFAB({
     <>
       {createPortal(fabButton, document.body)}
 
-      {/* Long Press Menu Overlay */}
-      {createPortal(
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              key="menu-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[21000] bg-black/60 backdrop-blur-md flex items-end justify-end p-6 md:p-8"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <div className="flex flex-col items-end gap-4 mb-20 md:mb-0">
-                {[
-                  { label: 'New Project', icon: Layers, color: 'bg-blue-600', delay: 0.1, action: () => setShowProjectDialog(true) },
-                  { label: 'New Thought', icon: Brain, color: 'bg-purple-600', delay: 0.05, action: () => setShowThoughtDialog(true) },
-                  { label: 'Save Article', icon: BookmarkPlus, color: 'bg-emerald-600', delay: 0, action: () => setShowArticleDialog(true) }
-                ].map((item) => (
-                  <motion.button
-                    key={item.label}
-                    initial={{ opacity: 0, x: 20, y: 10 }}
-                    animate={{ opacity: 1, x: 0, y: 0 }}
-                    exit={{ opacity: 0, x: 20, y: 10 }}
-                    transition={{ delay: item.delay }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      item.action()
-                      setIsMenuOpen(false)
-                    }}
-                    className="flex items-center gap-3 group"
-                  >
-                    <span className="bg-black/90 text-white px-3 py-1.5 rounded-lg text-sm font-semibold border border-white/10 shadow-xl">
-                      {item.label}
-                    </span>
-                    <div className={cn(
-                      "h-12 w-12 rounded-full flex items-center justify-center shadow-2xl border border-white/20 group-hover:scale-110 active:scale-95 transition-all",
-                      item.color
-                    )}>
-                      <item.icon className="h-5 w-5 text-white" />
-                    </div>
-                  </motion.button>
-                ))}
-
-                <motion.button
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="h-14 w-14 md:h-16 md:w-16 rounded-full bg-slate-800 flex items-center justify-center shadow-xl border border-white/10 mt-2 hover:bg-slate-700 transition-colors"
-                >
-                  <X className="h-6 w-6 text-white" />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      <CreateMenuModal
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        onAction={(action) => {
+          if (action === 'thought') setShowThoughtDialog(true)
+          if (action === 'project') setShowProjectDialog(true)
+          if (action === 'article') setShowArticleDialog(true)
+          if (action === 'list') setShowListDialog(true)
+        }}
+      />
 
       {/* Voice Recording Modal */}
       {createPortal(
@@ -231,46 +232,63 @@ export function VoiceFAB({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                onClick={() => setIsVoiceOpen(false)}
+                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                onClick={() => {
+                  if (!isHoldRecording) setIsVoiceOpen(false)
+                }}
               />
 
               <motion.div
                 key="voice-modal"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="relative w-full md:w-[500px] premium-card rounded-t-3xl md:rounded-2xl shadow-2xl z-10 overflow-hidden"
-                style={{ backgroundColor: 'var(--premium-surface-1)' }}
+                className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
+                  {/* Handle for mobile */}
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
-                    <div className="w-12 h-1.5 rounded-full bg-white/20" />
+                    <div className="w-12 h-1.5 rounded-full bg-white/10" />
                   </div>
 
-                  <div className="flex items-center justify-between px-6 py-6">
+                  <div className="flex items-center justify-between px-8 py-8">
                     <div>
-                      <h3 className="text-xl font-bold text-white">Voice Capture</h3>
-                      <p className="text-sm text-slate-400 mt-1">
-                        {isOnline ? 'Transcribing in real-time...' : 'Offline mode - will sync later'}
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-2">
+                        <Mic className={cn("h-6 w-6", isHoldRecording ? "text-red-500 animate-pulse" : "text-sky-400")} />
+                        {isHoldRecording ? 'Recording...' : 'Voice Capture'}
+                      </h3>
+                      <p className="text-sm text-zinc-500 mt-1 font-medium">
+                        {isOnline ? 'Transcribing in real-time' : 'Offline mode - will sync later'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => setIsVoiceOpen(false)}
-                      className="h-10 w-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
-                    >
-                      <X className="h-5 w-5 text-slate-400" />
-                    </button>
+                    {!isHoldRecording && (
+                      <button
+                        onClick={() => setIsVoiceOpen(false)}
+                        className="h-12 w-12 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/5"
+                      >
+                        <X className="h-6 w-6 text-zinc-400" />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="px-6 pb-8">
+                  <div className="px-8 pb-10">
                     <VoiceInput
                       onTranscript={handleTranscript}
                       maxDuration={maxDuration}
                       autoSubmit={true}
                       autoStart={true}
+                      shouldStop={!isHoldRecording} // Custom prop to signal stop
                     />
+
+                    {isHoldRecording && (
+                      <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-full">
+                          <div className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-red-500">Release to Finish</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -284,6 +302,7 @@ export function VoiceFAB({
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
       <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} />
+      <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
     </>
   )
 }

@@ -111,7 +111,7 @@ export function useOfflineSync() {
 
   async function addOfflineCapture(transcript: string) {
     try {
-      await db.addPendingCapture(transcript)
+      await db.addPendingCapture({ transcript })
       await updatePendingCount()
       console.log('✓ Capture queued for offline sync')
 
