@@ -7,8 +7,10 @@ export function useArticle(id: string | undefined) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchArticle = useCallback(async (articleId: string) => {
-    setIsLoading(true)
+  const fetchArticle = useCallback(async (articleId: string, isBackgroundRefresh = false) => {
+    if (!isBackgroundRefresh) {
+      setIsLoading(true)
+    }
     setError(null)
 
     try {
@@ -120,6 +122,6 @@ export function useArticle(id: string | undefined) {
     data,
     isLoading,
     error,
-    refetch: () => id && fetchArticle(id)
+    refetch: () => id && fetchArticle(id, true)
   }
 }
