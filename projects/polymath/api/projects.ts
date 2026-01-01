@@ -14,6 +14,7 @@ import { extractCapabilities } from './_lib/capabilities-extraction.js'
 import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject } from './_lib/project-maintenance.js'
+import { updateItemConnections } from './_lib/connection-logic.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -1321,184 +1322,14 @@ async function generateProjectEmbeddingAndConnect(
       return
     }
 
-    console.log(`[projects] Embedding stored, finding connections...`)
+    console.log(`[projects] Embedding stored.`)
 
-    // Find related items across all types
-    const candidates = await findRelatedItemsForProject(projectId, userId, embedding, content)
-
-    console.log(`[projects] Found ${candidates.length} potential connections`)
-
-    // Auto-link >85%, suggest 55-85% (consistent with memories and articles)
-    const autoLinked = []
-    const suggestions = []
-
-    for (const candidate of candidates) {
-      if (candidate.similarity > 0.85) {
-        // Auto-create connection (with deduplication)
-        const created = await createConnection(
-          'project',
-          projectId,
-          candidate.type,
-          candidate.id,
-          'relates_to',
-          'ai',
-          `${Math.round(candidate.similarity * 100)}% semantic match`
-        )
-        if (created) {
-          autoLinked.push(candidate)
-        }
-      } else if (candidate.similarity > 0.55) {
-        // Store as suggestion
-        suggestions.push(candidate)
-      }
-    }
-
-    console.log(`[projects] Auto-linked ${autoLinked.length}, suggested ${suggestions.length}`)
-
-    // Store suggestions in database
-    if (suggestions.length > 0) {
-      const suggestionInserts = suggestions.map(s => ({
-        from_item_type: 'project',
-        from_item_id: projectId,
-        to_item_type: s.type,
-        to_item_id: s.id,
-        reasoning: `${Math.round(s.similarity * 100)}% semantic similarity`,
-        confidence: s.similarity,
-        user_id: userId,
-        status: 'pending'
-      }))
-
-      await supabase
-        .from('connection_suggestions')
-        .insert(suggestionInserts)
-    }
+    // Use shared connection logic to find and create connections
+    await updateItemConnections(projectId, 'project', embedding, userId)
 
   } catch (error) {
     console.error('[projects] Embedding/connection generation failed:', error)
   }
-}
-
-/**
- * Find related items for a project using vector similarity
- */
-async function findRelatedItemsForProject(
-  projectId: string,
-  userId: string,
-  projectEmbedding: number[],
-  projectContent: string
-): Promise<Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }>> {
-  const supabase = getSupabaseClient()
-  const candidates: Array<{ type: 'project' | 'thought' | 'article'; id: string; title: string; similarity: number }> = []
-
-  // Search other projects
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, title, description, embedding')
-    .eq('user_id', userId)
-    .neq('id', projectId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (projects) {
-    for (const p of projects) {
-      if (p.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, p.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'project', id: p.id, title: p.title, similarity })
-        }
-      }
-    }
-  }
-
-  // Search thoughts/memories
-  const { data: thoughts } = await supabase
-    .from('memories')
-    .select('id, title, body, embedding')
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (thoughts) {
-    for (const t of thoughts) {
-      if (t.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, t.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'thought', id: t.id, title: t.title || t.body?.slice(0, 50) + '...', similarity })
-        }
-      }
-    }
-  }
-
-  // Search articles (stored in reading_queue table)
-  const { data: articles } = await supabase
-    .from('reading_queue')
-    .select('id, title, excerpt, embedding')
-    .eq('user_id', userId)
-    .not('embedding', 'is', null)
-    .limit(50)
-
-  if (articles) {
-    for (const a of articles) {
-      if (a.embedding) {
-        const similarity = cosineSimilarity(projectEmbedding, a.embedding)
-        // Lowered threshold from 0.7 to 0.55 for consistency across all item types
-        if (similarity > 0.55) {
-          candidates.push({ type: 'article', id: a.id, title: a.title, similarity })
-        }
-      }
-    }
-  }
-
-  // Sort by similarity descending
-  return candidates.sort((a, b) => b.similarity - a.similarity).slice(0, 10)
-}
-
-/**
- * Create a connection between two items (with deduplication)
- */
-async function createConnection(
-  sourceType: string,
-  sourceId: string,
-  targetType: string,
-  targetId: string,
-  connectionType: string,
-  createdBy: string,
-  reasoning?: string
-): Promise<boolean> {
-  const supabase = getSupabaseClient()
-
-  // Check if connection already exists (either direction)
-  const { data: existing } = await supabase
-    .from('connections')
-    .select('id')
-    .or(`and(source_type.eq.${sourceType},source_id.eq.${sourceId},target_type.eq.${targetType},target_id.eq.${targetId}),and(source_type.eq.${targetType},source_id.eq.${targetId},target_type.eq.${sourceType},target_id.eq.${sourceId})`)
-    .maybeSingle()
-
-  if (existing) {
-    console.log('[projects] Connection already exists, skipping duplicate')
-    return false
-  }
-
-  const { error } = await supabase
-    .from('connections')
-    .insert({
-      source_type: sourceType,
-      source_id: sourceId,
-      target_type: targetType,
-      target_id: targetId,
-      connection_type: connectionType,
-      created_by: createdBy,
-      ai_reasoning: reasoning
-    })
-
-  if (error) {
-    console.error('[projects] Failed to create connection:', error)
-    return false
-  }
-
-  return true
 }
 
 /**
