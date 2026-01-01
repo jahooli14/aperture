@@ -35,12 +35,37 @@ const ListColor = (type: ListType) => {
 
 export default function ListsPage() {
     const navigate = useNavigate()
-    const { lists, fetchLists, loading } = useListStore()
+    const { lists, fetchLists } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)
+    const [listCovers, setListCovers] = useState<Record<string, string>>({})
 
     useEffect(() => {
         fetchLists()
     }, [])
+
+    // Fetch first item image for each list to use as cover
+    useEffect(() => {
+        const fetchCovers = async () => {
+            const covers: Record<string, string> = {}
+            for (const list of lists) {
+                try {
+                    const response = await fetch(`/api/lists/${list.id}/items?limit=20`)
+                    const items = await response.json()
+                    // Find first item with an image
+                    const itemWithImage = items.find((item: any) => item.metadata?.image)
+                    if (itemWithImage?.metadata?.image) {
+                        covers[list.id] = itemWithImage.metadata.image
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch cover for list ${list.id}:`, error)
+                }
+            }
+            setListCovers(covers)
+        }
+        if (lists.length > 0) {
+            fetchCovers()
+        }
+    }, [lists])
 
     return (
         <div className="min-h-screen pb-20 pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf">
@@ -60,68 +85,99 @@ export default function ListsPage() {
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Masonry Layout */}
+            <div
+                className="masonry-grid"
+                style={{
+                    columnCount: 'auto',
+                    columnFill: 'balance',
+                    columnGap: '1rem',
+                    columnWidth: '280px'
+                }}
+            >
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
+                    const coverImage = listCovers[list.id]
+
                     return (
                         <motion.div
                             key={list.id}
                             layoutId={list.id}
                             onClick={() => navigate(`/lists/${list.id}`)}
-                            whileHover={{ y: -4 }}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer h-56 flex flex-col justify-between aperture-card backdrop-blur-xl transition-all duration-300"
+                            className="group relative overflow-hidden rounded-xl cursor-pointer mb-4 break-inside-avoid transition-all duration-300"
                             style={{
-                                borderColor: `rgba(${rgb}, 0.25)`,
-                                background: `rgba(${rgb}, 0.08)`,
-                                boxShadow: `0 8px 32px rgba(${rgb}, 0.1)`
+                                display: 'inline-block',
+                                width: '100%',
+                                border: `1px solid rgba(${rgb}, 0.25)`,
+                                boxShadow: `0 4px 20px rgba(${rgb}, 0.15)`
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `rgba(${rgb}, 0.15)`
-                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.4)`
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = `rgba(${rgb}, 0.08)`
-                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.25)`
-                            }}
+                            whileHover={{ y: -4, scale: 1.02 }}
                         >
-                            {/* Aesthetic Grid Mask */}
-                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
-                                backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-                                backgroundSize: '16px 16px',
-                                maskImage: 'linear-gradient(to bottom, black, transparent)'
-                            }} />
-
-                            <div className="relative z-10 p-6 flex-1 flex flex-col">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-2 rounded-lg" style={{ background: `rgba(${rgb}, 0.1)` }}>
-                                        <ListIcon type={list.type} className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
+                            {/* Cover Image or Gradient Background */}
+                            {coverImage ? (
+                                <div className="relative aspect-[4/3] overflow-hidden">
+                                    <img
+                                        src={coverImage}
+                                        alt={list.title}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    />
+                                    {/* Gradient Overlay for Text Readability */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                                </div>
+                            ) : (
+                                <div
+                                    className="relative aspect-[4/3]"
+                                    style={{
+                                        background: `linear-gradient(135deg, rgba(${rgb}, 0.3) 0%, rgba(${rgb}, 0.1) 100%)`
+                                    }}
+                                >
+                                    {/* Icon for lists without images */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                        <ListIcon type={list.type} className="h-16 w-16" style={{ color: `rgb(${rgb})` }} />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-50 aperture-header" style={{ color: `rgb(${rgb})` }}>
-                                        {list.type}
-                                    </span>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                                </div>
+                            )}
+
+                            {/* Content Overlay */}
+                            <div className="absolute inset-0 p-4 flex flex-col justify-between pointer-events-none">
+                                {/* Top Badge */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md backdrop-blur-md bg-black/40 border border-white/10">
+                                        <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
+                                        <span className="text-[9px] font-black uppercase tracking-wider aperture-header" style={{ color: `rgb(${rgb})` }}>
+                                            {list.type}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (confirm(`Delete collection "${list.title}" and all its items?`)) {
+                                                const { deleteList } = useListStore.getState()
+                                                deleteList(list.id)
+                                            }
+                                        }}
+                                        className="pointer-events-auto p-1.5 rounded-lg backdrop-blur-md bg-black/40 border border-white/10 hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                        title="Delete Collection"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
 
-                                <h3 className="text-xl font-bold text-white mb-2 aperture-header leading-tight">{list.title}</h3>
-                                <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">{list.item_count || 0} items</p>
-                            </div>
-
-                            <div className="relative z-10 p-4 pt-0 flex justify-between items-center">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        if (confirm(`Delete collection "${list.title}" and all its items?`)) {
-                                            const { deleteList } = useListStore.getState()
-                                            deleteList(list.id)
-                                        }
-                                    }}
-                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/20 hover:text-red-400 transition-all"
-                                    title="Delete Collection"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white transition-colors aperture-header flex items-center gap-1">
-                                    View Collection <span className="group-hover:translate-x-1 transition-transform">→</span>
-                                </span>
+                                {/* Bottom Title & Info */}
+                                <div>
+                                    <h3 className="text-lg font-bold text-white mb-1 aperture-header leading-tight drop-shadow-lg">
+                                        {list.title}
+                                    </h3>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs aperture-body text-white/80 font-medium">
+                                            {list.item_count || 0} items
+                                        </p>
+                                        <span className="text-[9px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white transition-colors aperture-header flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                                            View <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     )
