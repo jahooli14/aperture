@@ -572,9 +572,18 @@ export function ReadingPage() {
   // Memoize safe articles to prevent useMemo dependency issues
   const safeArticles = React.useMemo(() => {
     // Combine real articles with pending articles
-    // Filter out duplicates (if any pending article is now in real articles)
+    // FILTER DUPLICATES AGGRESSIVELY:
+    // Don't show a pending article if it matches a real article by ID, URL, or Title
     const realIds = new Set(articles.map(a => a.id))
-    const uniquePending = pendingArticles.filter(a => !realIds.has(a.id))
+    const realUrls = new Set(articles.map(a => a.url))
+    const realTitles = new Set(articles.map(a => a.title).filter(t => t && t.length > 20)) // Filter only significant titles
+
+    const uniquePending = pendingArticles.filter(a => {
+      if (realIds.has(a.id)) return false
+      if (a.url && realUrls.has(a.url)) return false
+      if (a.title && realTitles.has(a.title)) return false
+      return true
+    })
 
     const allArticles = [...uniquePending, ...articles]
     return Array.isArray(allArticles) ? allArticles : []
