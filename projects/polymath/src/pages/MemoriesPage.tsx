@@ -359,84 +359,71 @@ export function MemoriesPage() {
     setNewlyCreatedMemoryId(null)
 
     try {
-      if (isOnline) {
-        console.log('[handleVoiceCapture] Online - sending to API')
+      // Always attempt API call first - don't trust navigator.onLine
+      // Only save offline if API actually fails with a network error
+      console.log('[handleVoiceCapture] Attempting to send to API')
 
-        // Show reassuring toast that data is saved
-        addToast({
-          title: '✓ Voice note saved',
-          description: 'AI is processing your transcript (may take up to 30s)...',
-          variant: 'success',
-        })
+      // Show reassuring toast that data is saved
+      addToast({
+        title: '✓ Voice note saved',
+        description: 'AI is processing your transcript (may take up to 30s)...',
+        variant: 'success',
+      })
 
-        // Online: send to memories API for parsing
-        const response = await fetch('/api/memories?capture=true', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript })
-        })
+      // Send to memories API for parsing
+      const response = await fetch('/api/memories?capture=true', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript })
+      })
 
-        console.log('[handleVoiceCapture] API response status:', response.status, response.statusText)
+      console.log('[handleVoiceCapture] API response status:', response.status, response.statusText)
 
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type')
-          let errorDetails = `Status: ${response.status}`
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        let errorDetails = `Status: ${response.status}`
 
-          try {
-            const errorText = await response.text()
-            errorDetails += `, Response: ${errorText.substring(0, 200)}`
-          } catch (e) {
-            errorDetails += ', Could not read error response'
-          }
-
-          console.error('[handleVoiceCapture] API error:', errorDetails)
-
-          if (contentType?.includes('text/html')) {
-            throw new Error('Memories API not available. Queuing for offline sync.')
-          }
-          throw new Error(`Failed to save memory: ${response.statusText}. ${errorDetails}`)
+        try {
+          const errorText = await response.text()
+          errorDetails += `, Response: ${errorText.substring(0, 200)}`
+        } catch (e) {
+          errorDetails += ', Could not read error response'
         }
 
-        const data = await response.json()
-        const createdMemory = data.memory
-        console.log('[handleVoiceCapture] ✓ Memory created:', createdMemory)
+        console.error('[handleVoiceCapture] API error:', errorDetails)
 
-        // Store the ID of the newly created memory
-        if (createdMemory?.id) {
-          setNewlyCreatedMemoryId(createdMemory.id)
+        if (contentType?.includes('text/html')) {
+          throw new Error('Memories API not available. Queuing for offline sync.')
         }
-
-        console.log('[handleVoiceCapture] Fetching memories list')
-        // Refresh memories list (user can navigate away, this just updates the data)
-        await loadMemories(true) // Force refresh to get the new memory
-        console.log('[handleVoiceCapture] Memories fetched successfully')
-
-        // Show success toast with the title - they can click to go to memories if they want
-        addToast({
-          title: '✓ Thought captured!',
-          description: createdMemory?.title || 'Your voice note is ready',
-          variant: 'success',
-        })
-
-        // Store the ID for highlighting (will only show if user is on memories page)
-        // Clear the highlight after 8 seconds
-        setTimeout(() => {
-          setNewlyCreatedMemoryId(null)
-        }, 8000)
-
-      } else {
-        console.log('[handleVoiceCapture] Offline - queueing for sync')
-        // Offline: queue for later
-        await addOfflineCapture(transcript)
-        addToast({
-          title: 'Queued for sync',
-          description: 'Will process when back online',
-          variant: 'default',
-        })
-
-        // Still refresh to show queued items
-        await loadMemories(true)
+        throw new Error(`Failed to save memory: ${response.statusText}. ${errorDetails}`)
       }
+
+      const data = await response.json()
+      const createdMemory = data.memory
+      console.log('[handleVoiceCapture] ✓ Memory created:', createdMemory)
+
+      // Store the ID of the newly created memory
+      if (createdMemory?.id) {
+        setNewlyCreatedMemoryId(createdMemory.id)
+      }
+
+      console.log('[handleVoiceCapture] Fetching memories list')
+      // Refresh memories list (user can navigate away, this just updates the data)
+      await loadMemories(true) // Force refresh to get the new memory
+      console.log('[handleVoiceCapture] Memories fetched successfully')
+
+      // Show success toast with the title - they can click to go to memories if they want
+      addToast({
+        title: '✓ Thought captured!',
+        description: createdMemory?.title || 'Your voice note is ready',
+        variant: 'success',
+      })
+
+      // Store the ID for highlighting (will only show if user is on memories page)
+      // Clear the highlight after 8 seconds
+      setTimeout(() => {
+        setNewlyCreatedMemoryId(null)
+      }, 8000)
 
     } catch (error) {
       console.error('[handleVoiceCapture] ❌ ERROR:', error)
