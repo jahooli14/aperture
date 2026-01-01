@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Reorder, motion, AnimatePresence } from 'framer-motion'
+import { Reorder, motion } from 'framer-motion'
 import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Trash2, GripVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
@@ -38,7 +38,6 @@ export default function ListsPage() {
     const { lists, fetchLists, reorderLists, loading } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)
     const [listCovers, setListCovers] = useState<Record<string, string>>({})
-    const [expandedListId, setExpandedListId] = useState<string | null>(null)
 
     useEffect(() => {
         fetchLists()
@@ -90,7 +89,7 @@ export default function ListsPage() {
                 </Button>
             </div>
 
-            {/* Stable 2-column Grid - Max 8 visible to satisfy "4 rows without scroll" if desired, or let them scroll nicely */}
+            {/* Stable 2-column Grid */}
             <Reorder.Group
                 axis="y"
                 values={lists}
@@ -100,22 +99,18 @@ export default function ListsPage() {
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
-                    const isExpanded = expandedListId === list.id
 
                     return (
                         <Reorder.Item
                             key={list.id}
                             value={list}
                             layoutId={list.id}
-                            onClick={() => setExpandedListId(isExpanded ? null : list.id)}
+                            onClick={() => navigate(`/lists/${list.id}`)}
                             className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border border-white/5 bg-zinc-900/40"
-                            style={{
-                                boxShadow: isExpanded ? `0 0 30px rgba(${rgb}, 0.2)` : 'none'
-                            }}
                             whileHover={{ y: -2 }}
                         >
                             {/* Poster / Cover Image */}
-                            <div className="aspect-[3/4] relative overflow-hidden bg-zinc-900">
+                            <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950">
                                 {coverImage ? (
                                     <img
                                         src={coverImage}
@@ -123,15 +118,39 @@ export default function ListsPage() {
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center opacity-10" style={{ background: `linear-gradient(135deg, rgba(${rgb}, 0.2), transparent)` }}>
-                                        <ListIcon type={list.type} className="h-16 w-16" style={{ color: `rgb(${rgb})` }} />
+                                    <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
+                                        {/* Background Glow */}
+                                        <div
+                                            className="absolute inset-0 opacity-20 blur-3xl animate-pulse"
+                                            style={{ background: `radial-gradient(circle at center, rgba(${rgb}, 0.8), transparent)` }}
+                                        />
+
+                                        {/* Subtle Tiled Pattern or Large Background Icon */}
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] scale-[2] rotate-12">
+                                            <ListIcon type={list.type} className="h-64 w-64" style={{ color: `rgb(${rgb})` }} />
+                                        </div>
+
+                                        {/* Main Icon with Glow */}
+                                        <div className="relative z-10 flex flex-col items-center gap-4">
+                                            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm relative group-hover:scale-110 transition-transform duration-500">
+                                                <div
+                                                    className="absolute inset-0 blur-xl opacity-20"
+                                                    style={{ background: `rgb(${rgb})` }}
+                                                />
+                                                <ListIcon type={list.type} className="h-12 w-12 relative z-10" style={{ color: `rgb(${rgb})` }} />
+                                            </div>
+                                            <div className="flex flex-col items-center">
+                                                <div className="h-px w-8 bg-gradient-to-r from-transparent via-white/20 to-transparent mb-2" />
+                                                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-white/20">Empty Space</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60" />
                             </div>
 
                             {/* Overlay Content */}
-                            <div className="absolute inset-0 p-3 flex flex-col justify-between pointer-events-none">
+                            <div className="absolute inset-0 p-3 flex flex-col justify-between">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg backdrop-blur-md bg-black/40 border border-white/10">
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
@@ -139,8 +158,21 @@ export default function ListsPage() {
                                             {list.type}
                                         </span>
                                     </div>
-                                    <div className="opacity-0 group-hover:opacity-40 transition-opacity">
-                                        <GripVertical className="h-3 w-3 text-white" />
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                if (confirm(`Delete collection "${list.title}"?`)) {
+                                                    useListStore.getState().deleteList(list.id)
+                                                }
+                                            }}
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 border border-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </button>
+                                        <div className="opacity-0 group-hover:opacity-40 transition-opacity">
+                                            <GripVertical className="h-3 w-3 text-white" />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -148,53 +180,11 @@ export default function ListsPage() {
                                     <h3 className="text-xs font-black text-white uppercase tracking-tight drop-shadow-md leading-tight group-hover:text-sky-400 transition-colors">
                                         {list.title}
                                     </h3>
-
-                                    <AnimatePresence mode="wait">
-                                        {isExpanded ? (
-                                            <motion.div
-                                                key="expanded"
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: 'auto', opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden"
-                                            >
-                                                <p className="text-[9px] text-zinc-400 line-clamp-2 mt-1 lowercase font-mono leading-relaxed">
-                                                    {list.description || `${list.item_count || 0} items gathered.`}
-                                                </p>
-                                                <div className="mt-3 flex gap-2 pointer-events-auto">
-                                                    <Button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            navigate(`/lists/${list.id}`)
-                                                        }}
-                                                        className="flex-1 h-7 rounded-lg bg-white text-black hover:bg-zinc-200 text-[9px] font-black uppercase tracking-widest transition-all"
-                                                    >
-                                                        Open
-                                                    </Button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            if (confirm(`Delete collection "${list.title}"?`)) {
-                                                                useListStore.getState().deleteList(list.id)
-                                                            }
-                                                        }}
-                                                        className="h-7 w-7 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 border border-red-500/10 transition-all"
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                        ) : (
-                                            <div key="collapsed" className="flex items-center justify-between">
-                                                <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
-                                                    {list.item_count || 0} ITEMS
-                                                </p>
-                                                <span className="text-[8px] font-bold text-sky-500/60 opacity-0 group-hover:opacity-100 transition-all">
-                                                    EXPAND
-                                                </span>
-                                            </div>
-                                        )}
-                                    </AnimatePresence>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                                            {list.item_count || 0} ITEMS
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </Reorder.Item>

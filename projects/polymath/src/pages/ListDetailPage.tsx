@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
+import { Reorder } from 'framer-motion'
 import type { ListItem } from '../types'
 
 // Masonry Grid Component for List Items
@@ -82,8 +83,28 @@ function MasonryListGrid({
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
                                     </div>
                                 ) : (
-                                    <div className="relative aspect-square bg-zinc-900/80 border border-white/5">
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                                    <div className="relative aspect-square bg-zinc-900 border border-white/5 overflow-hidden flex items-center justify-center">
+                                        <div
+                                            className="absolute inset-0 opacity-10"
+                                            style={{
+                                                background: `linear-gradient(135deg, ${listType === 'music' ? '#ec4899' :
+                                                    listType === 'film' ? '#ef4444' :
+                                                        listType === 'book' ? '#f59e0b' :
+                                                            listType === 'place' ? '#10b981' :
+                                                                listType === 'tech' ? '#3b82f6' : '#6366f1'
+                                                    }, transparent)`
+                                            }}
+                                        />
+                                        <div className="relative z-10 flex flex-col items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
+                                            <div className="h-8 w-8 rounded-full border border-white/20 flex items-center justify-center">
+                                                {listType === 'music' ? <Music className="h-4 w-4" /> :
+                                                    listType === 'film' ? <Film className="h-4 w-4" /> :
+                                                        listType === 'book' ? <Book className="h-4 w-4" /> :
+                                                            listType === 'place' ? <MapPin className="h-4 w-4" /> :
+                                                                <Box className="h-4 w-4" />}
+                                            </div>
+                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                                     </div>
                                 )}
 
@@ -148,22 +169,21 @@ function MasonryListGrid({
                                     {!isExpanded && item.enrichment_status === 'pending' && (
                                         <div className="flex items-center gap-1 text-[9px] text-sky-400 font-bold animate-pulse">
                                             <div className="h-1 w-1 rounded-full bg-sky-400" />
-                                            <span>Analyzing...</span>
+                                            Enriching...
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Delete Button - Hover Only */}
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                {/* Quick Actions */}
+                                <div className="absolute top-2 right-2 flex gap-1 transform translate-y-[-120%] group-hover:translate-y-0 transition-transform duration-300">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            if (item.list_id && item.id) {
+                                            if (confirm(`Remove "${item.content}"?`)) {
                                                 onDelete(item.id, item.list_id)
                                             }
                                         }}
-                                        className="p-1.5 bg-black/80 hover:bg-red-500/20 backdrop-blur-md rounded-lg text-zinc-500 hover:text-red-400 border border-white/10 transition-all shadow-xl"
-                                        title="Delete Item"
+                                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500/50 hover:text-white backdrop-blur-md border border-red-500/20 transition-all"
                                     >
                                         <Trash2 className="h-3 w-3" />
                                     </button>
@@ -180,7 +200,7 @@ function MasonryListGrid({
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, fetchListItems, addListItem, fetchLists, deleteListItem } = useListStore()
+    const { lists, currentListItems, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
 
     // Find list locally first, or wait for fetch
     const list = lists.find(l => l.id === id)
@@ -190,6 +210,7 @@ export default function ListDetailPage() {
     const [connectionCount, setConnectionCount] = useState(0)
     const [isLoadingConnections, setIsLoadingConnections] = useState(true)
     const [isVoiceMode, setIsVoiceMode] = useState(false)
+    const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
@@ -232,6 +253,11 @@ export default function ListDetailPage() {
         })
     }
 
+    const handleReorder = async (newItems: ListItem[]) => {
+        if (!id) return
+        await reorderItems(id, newItems.map(item => item.id))
+    }
+
     if (!list) return <div className="pt-24 text-center text-white">Loading...</div>
 
     return (
@@ -244,7 +270,16 @@ export default function ListDetailPage() {
                 </Button>
 
                 <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-white mb-1 uppercase tracking-tight italic">{list.title}</h1>
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-3xl font-bold text-white mb-1 uppercase tracking-tight italic">{list.title}</h1>
+                        <button
+                            onClick={() => setIsReordering(!isReordering)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${isReordering ? 'bg-sky-500 border-sky-400 text-white' : 'border-white/10 text-zinc-500 hover:text-white hover:border-white/20'}`}
+                        >
+                            {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">{isReordering ? 'Done' : 'Order'}</span>
+                        </button>
+                    </div>
                     <div className="bg-zinc-800/50 px-3 py-1 rounded-full text-xs font-mono text-zinc-400">
                         {currentListItems.length} ITEMS
                     </div>
@@ -252,88 +287,134 @@ export default function ListDetailPage() {
                 {list.description && <p className="text-zinc-500 max-w-xl mb-6">{list.description}</p>}
 
                 {/* Addition Box - Front & Centre */}
-                <div className="mt-8 mb-12 max-w-2xl">
-                    <AnimatePresence mode="wait">
-                        {isVoiceMode ? (
-                            <motion.div
-                                key="voice-mode"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-2xl"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
-                                    <button
-                                        onClick={() => setIsVoiceMode(false)}
-                                        className="text-zinc-500 hover:text-white transition-colors"
-                                    >
-                                        <MicOff className="h-4 w-4" />
-                                    </button>
-                                </div>
-                                <VoiceInput
-                                    onTranscript={handleVoiceTranscript}
-                                    autoSubmit={true}
-                                    autoStart={true}
-                                />
-                            </motion.div>
-                        ) : (
-                            <motion.div
-                                key="text-mode"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="backdrop-blur-2xl bg-zinc-900/60 border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl focus-within:border-white/20 transition-all font-mono"
-                            >
-                                <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-white items-center gap-2">
-                                    <Input
-                                        ref={inputRef}
-                                        value={inputText}
-                                        onChange={e => setInputText(e.target.value)}
-                                        placeholder={`Add to ${list.title.toLowerCase()}...`}
-                                        className="border-0 bg-transparent focus-visible:ring-0 text-lg text-white placeholder:text-zinc-600 h-12 uppercase tracking-tight"
-                                        autoFocus
-                                    />
-                                    <div className="flex items-center gap-2 px-1">
-                                        <Button
-                                            type="button"
-                                            onClick={() => setIsVoiceMode(true)}
-                                            className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all border border-white/5"
+                {!isReordering && (
+                    <div className="mt-8 mb-12 max-w-2xl">
+                        <AnimatePresence mode="wait">
+                            {isVoiceMode ? (
+                                <motion.div
+                                    key="voice-mode"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-2xl"
+                                >
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
+                                        <button
+                                            onClick={() => setIsVoiceMode(false)}
+                                            className="text-zinc-500 hover:text-white transition-colors"
                                         >
-                                            <Mic className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            disabled={!inputText.trim()}
-                                            className="rounded-xl bg-white text-black hover:bg-zinc-200 h-10 px-4 gap-2 font-bold shrink-0 transition-all uppercase text-xs tracking-widest"
-                                        >
-                                            <span>Add</span>
-                                            <Send className="h-3 w-3" />
-                                        </Button>
+                                            <MicOff className="h-4 w-4" />
+                                        </button>
                                     </div>
-                                </form>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
+                                    <VoiceInput
+                                        onTranscript={handleVoiceTranscript}
+                                        autoSubmit={true}
+                                        autoStart={true}
+                                    />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="text-mode"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="backdrop-blur-2xl bg-zinc-900/60 border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl focus-within:border-white/20 transition-all font-mono"
+                                >
+                                    <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-white items-center gap-2">
+                                        <Input
+                                            ref={inputRef}
+                                            value={inputText}
+                                            onChange={e => setInputText(e.target.value)}
+                                            placeholder={`Add to ${list.title.toLowerCase()}...`}
+                                            className="border-0 bg-transparent focus-visible:ring-0 text-lg text-white placeholder:text-zinc-600 h-12 uppercase tracking-tight"
+                                            autoFocus
+                                        />
+                                        <div className="flex items-center gap-2 px-1">
+                                            <Button
+                                                type="button"
+                                                onClick={() => setIsVoiceMode(true)}
+                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all border border-white/5"
+                                            >
+                                                <Mic className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                disabled={!inputText.trim()}
+                                                className="rounded-xl bg-white text-black hover:bg-zinc-200 h-10 px-4 gap-2 font-bold shrink-0 transition-all uppercase text-xs tracking-widest"
+                                            >
+                                                <span>Add</span>
+                                                <Send className="h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
             </div>
 
             {/* Items Grid (Scrollable Area) */}
-            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48">
-                <AnimatePresence initial={false}>
-                    {currentListItems.length > 0 ? (
-                        <MasonryListGrid
-                            items={currentListItems}
-                            listType={list.type}
-                            expandedItemId={expandedItemId}
-                            onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
-                            onDelete={(itemId, listId) => deleteListItem(itemId, listId)}
-                        />
+            <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48 max-w-5xl">
+                <AnimatePresence mode="wait">
+                    {isReordering ? (
+                        <motion.div
+                            key="reorder-view"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        >
+                            <Reorder.Group
+                                axis="y"
+                                values={currentListItems}
+                                onReorder={handleReorder}
+                                className="space-y-2"
+                            >
+                                {currentListItems.map((item) => (
+                                    <Reorder.Item
+                                        key={item.id}
+                                        value={item}
+                                        className="flex items-center gap-4 bg-zinc-900/40 border border-white/5 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:bg-zinc-900/60 transition-all"
+                                    >
+                                        <GripVertical className="h-4 w-4 text-zinc-600" />
+                                        {item.metadata?.image && (
+                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                                                <img src={item.metadata.image} className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-bold uppercase tracking-tight truncate">{item.content}</p>
+                                            {item.metadata?.subtitle && (
+                                                <p className="text-[10px] text-zinc-500 italic truncate">{item.metadata.subtitle}</p>
+                                            )}
+                                        </div>
+                                    </Reorder.Item>
+                                ))}
+                            </Reorder.Group>
+                        </motion.div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
-                            <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
-                            <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
-                        </div>
+                        <motion.div
+                            key="masonry-view"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        >
+                            {currentListItems.length > 0 ? (
+                                <MasonryListGrid
+                                    items={currentListItems}
+                                    listType={list.type}
+                                    expandedItemId={expandedItemId}
+                                    onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
+                                    onDelete={(itemId, listId) => deleteListItem(itemId, listId)}
+                                />
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
+                                    <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
+                                    <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
+                                </div>
+                            )}
+                        </motion.div>
                     )}
                 </AnimatePresence>
             </div>
