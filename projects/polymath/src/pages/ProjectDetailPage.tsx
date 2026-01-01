@@ -34,6 +34,7 @@ interface ProjectNote {
   bullets: string[]
   created_at: string
   note_type?: 'voice' | 'text'
+  image_urls?: string[]
 }
 
 export function ProjectDetailPage() {
@@ -1071,7 +1072,8 @@ export function ProjectDetailPage() {
                     user_id: '',
                     bullets: m.body.split('\n').filter(l => l.trim().length > 0).map(l => l.replace(/^[•-]\s*/, '')),
                     created_at: m.created_at,
-                    note_type: (m.memory_type === 'quick-note' ? 'text' : 'voice') as 'text' | 'voice'
+                    note_type: (m.memory_type === 'quick-note' ? 'text' : 'voice') as 'text' | 'voice',
+                    image_urls: m.image_urls || undefined
                   }))].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())}
                   onRefresh={loadProjectDetails}
                 />

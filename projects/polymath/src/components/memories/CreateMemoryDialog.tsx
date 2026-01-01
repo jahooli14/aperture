@@ -85,10 +85,13 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
     try {
       for (const file of selectedFiles) {
+        console.log('[CreateMemoryDialog] Uploading:', file.name, file.type, `${(file.size / 1024).toFixed(2)}KB`)
+
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
         // 1. Get Signed URL from backend
+        console.log('[CreateMemoryDialog] Requesting signed URL for:', fileName)
         const authResponse = await fetch('/api/upload-image', {
           method: 'POST',
           headers: {
@@ -98,33 +101,52 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
             fileName,
             fileType: file.type
           })
+        }).catch(err => {
+          console.error('[CreateMemoryDialog] Network error requesting upload URL:', err)
+          throw new Error('Network error - check your internet connection')
         })
 
         if (!authResponse.ok) {
           const errorData = await authResponse.json().catch(() => ({}))
-          throw new Error(errorData.details || errorData.error || 'Failed to get upload URL')
+          console.error('[CreateMemoryDialog] Failed to get upload URL:', authResponse.status, errorData)
+          throw new Error(errorData.details || errorData.error || `Server error (${authResponse.status})`)
         }
 
         const { signedUrl, publicUrl } = await authResponse.json()
 
+        if (!signedUrl || !publicUrl) {
+          console.error('[CreateMemoryDialog] Missing URLs in response')
+          throw new Error('Invalid response from upload server')
+        }
+
         // 2. Upload directly to Supabase Storage via Signed URL
+        console.log('[CreateMemoryDialog] Uploading to storage:', fileName)
         const uploadResponse = await fetch(signedUrl, {
           method: 'PUT',
           headers: {
             'Content-Type': file.type,
+            'x-upsert': 'true', // Allow overwriting if exists
           },
           body: file
+        }).catch(err => {
+          console.error('[CreateMemoryDialog] Network error uploading file:', err)
+          throw new Error('Upload failed - check your internet connection')
         })
 
         if (!uploadResponse.ok) {
-          throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+          const errorText = await uploadResponse.text().catch(() => 'Unknown error')
+          console.error('[CreateMemoryDialog] Upload failed:', uploadResponse.status, errorText)
+          throw new Error(`Upload failed (${uploadResponse.status}): ${uploadResponse.statusText}`)
         }
 
+        console.log('[CreateMemoryDialog] Successfully uploaded:', fileName)
         urls.push(publicUrl)
       }
+
+      console.log('[CreateMemoryDialog] All images uploaded successfully:', urls.length)
       return urls
     } catch (error) {
-      console.error('Upload failed:', error)
+      console.error('[CreateMemoryDialog] Upload process failed:', error)
       const message = error instanceof Error ? error.message : 'Unknown upload error'
       throw new Error(`Failed to upload images: ${message}`)
     } finally {
@@ -427,7 +449,12 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 disabled={loading || !formData.title || !body.trim() || uploading}
                 className="btn-primary w-full h-12 touch-manipulation"
               >
-                {loading ? (
+                {uploading ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                    Uploading images...
+                  </>
+                ) : loading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
                     Saving...
