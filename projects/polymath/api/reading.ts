@@ -113,13 +113,18 @@ function cleanHtml(html: string, url: string): string {
     }
   })
 
-  // Defensive check: Ensure body exists before accessing innerHTML
-  if (!document.body) {
-    console.warn('[cleanHtml] Document body is null after parsing. Returning original content.')
+  // Defensive check: Ensure we can safely access the body and its content.
+  // In some environments, linkedom's 'body' getter crashes if the document is malformed.
+  try {
+    if (!document || !document.documentElement || !document.body) {
+      console.warn('[cleanHtml] Document or body is missing after parsing. Returning original content.')
+      return html
+    }
+    return document.body.innerHTML
+  } catch (e) {
+    console.error('[cleanHtml] Crash while accessing document body:', e)
     return html
   }
-
-  return document.body.innerHTML
 }
 
 /**
