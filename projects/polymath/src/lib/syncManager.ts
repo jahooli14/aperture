@@ -176,6 +176,18 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
         return true
       }
 
+      case 'reorder_lists': {
+        const { listIds } = operation.data
+        for (let i = 0; i < listIds.length; i++) {
+          const { error } = await supabase
+            .from('lists')
+            .update({ sort_order: i })
+            .eq('id', listIds[i])
+          if (error) throw error
+        }
+        return true
+      }
+
       // Article/Reading operations
       case 'update_article': {
         const { id, ...updateData } = operation.data

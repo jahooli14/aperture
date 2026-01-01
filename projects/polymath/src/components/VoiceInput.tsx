@@ -48,7 +48,7 @@ export function VoiceInput({
         startRecording().catch(err => {
           console.error('[VoiceInput] Auto-start failed:', err)
         })
-      }, 200) // Increased from 100ms for animation buffer
+      }, 50) // Reduced from 200ms to minimize "start cutoff"
       return () => clearTimeout(timer)
     }
   }, [autoStart, isSupported]) // Reduced dependencies to prevent re-triggers

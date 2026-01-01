@@ -90,7 +90,7 @@ export function VoiceFAB({
       // Start dictation immediately
       setIsHoldRecording(true)
       setIsVoiceOpen(true)
-    }, 500)
+    }, 400)
   }, [])
 
   const onEnd = useCallback((e: React.PointerEvent) => {
@@ -102,7 +102,7 @@ export function VoiceFAB({
     const duration = Date.now() - pressStartTimeRef.current
 
     // Short press: Open Menu
-    if (duration < 500 && !isLongPressRef.current) {
+    if (duration < 400 && !isLongPressRef.current) {
       if (onTap) {
         const handled = onTap()
         if (handled) return

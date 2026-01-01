@@ -58,7 +58,7 @@ interface ProjectIdea {
 
 async function loadSynthesisContext(userId: string) {
   logger.info({ userId }, 'Loading synthesis context in parallel')
-  
+
   const [memoryInterests, articleInterests, capabilities] = await Promise.all([
     extractInterestsFromMemories(userId),
     extractInterestsFromArticles(userId),
@@ -159,7 +159,7 @@ async function generateSuggestionsBatch(
   count: number,
   previousSuggestions: string[] = []
 ): Promise<any[]> {
-  const capabilityList = capabilities.slice(0, 15).map(c => `- ${c.name}: ${c.description}`).join('\n')
+  const capabilityList = capabilities.slice(0, 15).map(c => `- [${c.id}] ${c.name}: ${c.description}`).join('\n')
   const interestList = interests.slice(0, 15).map(i => `- ${i.name} (${i.type})`).join('\n')
 
   // Include previous suggestions to avoid repetition
@@ -178,7 +178,7 @@ ${interestList}
 ${avoidSection}
 TASK:
 Create ${count} COMPLETELY NEW and unique project ideas.${previousSuggestions.length > 0 ? ' Do NOT repeat or closely resemble any ideas from the AVOID list above.' : ''}
-For each idea, assign 1-3 relevant capabilities from the list above.
+For each idea, assign 1-3 relevant capabilities from the list above. USE THE EXACT UUIDs PROVIDED in brackets (e.g., "550e8400-e29b-41d4-a716-446655440000").
 Diversity requirements:
 - 1 idea must be a "Wildcard" (high novelty, unexpected combo).
 - 1 idea must be "Creative" (focus on artistic/writing output over tech).
@@ -247,8 +247,8 @@ async function filterAndScoreSuggestions(
 
     const noveltyScore = 0.7 + (Math.random() * 0.3)
     const feasibilityScore = idea.isCreative ? 0.9 : 0.6
-    const interestScore = (history || []).length > 0 
-      ? Math.max(...(history || []).map(h => h.embedding ? cosineSimilarity(emb, h.embedding) : 0)) 
+    const interestScore = (history || []).length > 0
+      ? Math.max(...(history || []).map(h => h.embedding ? cosineSimilarity(emb, h.embedding) : 0))
       : 0.7
 
     const totalPoints = Math.round((noveltyScore * 0.3 + feasibilityScore * 0.4 + interestScore * 0.3) * 100)
@@ -257,7 +257,9 @@ async function filterAndScoreSuggestions(
       title: idea.title,
       description: idea.description,
       reasoning: idea.reasoning,
-      capabilityIds: idea.capabilityIds || [],
+      capabilityIds: (idea.capabilityIds || []).filter((id: string) =>
+        capabilities.some(c => c.id === id)
+      ),
       memoryIds: [],
       noveltyScore,
       feasibilityScore,
