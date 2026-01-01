@@ -123,8 +123,10 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             .eq('user_id', userId)
 
         // Graceful fallback if the 'embedding' column is missing from list_items
-        if (error?.code === '42703' && updateData.embedding) {
-            console.warn('[Enrichment] Database missing list_items.embedding column. Retrying without embedding.')
+        // 42703 = PostgreSQL undefined_column error
+        // PGRST204 = PostgREST schema cache error (column not found in cache)
+        if ((error?.code === '42703' || error?.code === 'PGRST204') && updateData.embedding) {
+            console.warn('[Enrichment] Database missing list_items.embedding column or schema cache outdated. Retrying without embedding.')
             const fallbackData = { ...updateData }
             delete fallbackData.embedding
             const { error: retryError } = await supabase
