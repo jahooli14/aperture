@@ -39,7 +39,6 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
     const [formData, setFormData] = useState({
         title: project.title,
         description: project.description || '',
-        motivation: project.metadata?.motivation || '',
         end_goal: project.metadata?.end_goal || '',
         type: project.type || 'Creative',
     })
@@ -49,14 +48,13 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
         setFormData({
             title: project.title,
             description: project.description || '',
-            motivation: project.metadata?.motivation || '',
             end_goal: project.metadata?.end_goal || '',
             type: project.type || 'Creative',
         })
     }, [project])
 
     const isStep1Valid = formData.title.length > 2
-    const isStep2Valid = formData.description.length > 10 && formData.motivation.length > 5
+    const isStep2Valid = formData.description.length > 10
 
     const handleSubmit = async () => {
         setLoading(true)
@@ -68,7 +66,6 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                 type: formData.type,
                 metadata: {
                     ...project.metadata,
-                    motivation: formData.motivation,
                     end_goal: formData.end_goal || undefined,
                 },
             })
@@ -196,21 +193,8 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="motivation" className="font-bold text-xs uppercase tracking-widest text-blue-400">
-                                        The "Why" <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="motivation"
-                                        value={formData.motivation}
-                                        onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
-                                        className="h-14 bg-white/5 border-white/10 focus:border-blue-400"
-                                        autoComplete="off"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
                                     <Label htmlFor="end_goal" className="font-bold text-xs uppercase tracking-widest text-gray-500">
-                                        Definition of Done
+                                        Definition of Done (Optional)
                                     </Label>
                                     <Input
                                         id="end_goal"

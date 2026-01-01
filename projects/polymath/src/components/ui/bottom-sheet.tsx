@@ -70,7 +70,7 @@ const BottomSheetOverlay = React.forwardRef<
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
       className={cn(
-        'fixed inset-0 z-50',
+        'fixed inset-0 z-[10000]',
         'bg-black/70 backdrop-blur-md',
         className
       )}
@@ -127,7 +127,7 @@ const BottomSheetContent = React.forwardRef<
           borderColor: 'rgba(255, 255, 255, 0.1)'
         }}
         className={cn(
-          'fixed inset-x-0 bottom-0 z-50',
+          'fixed inset-x-0 bottom-0 z-[10001]',
           'max-h-[90vh]',
           'rounded-t-3xl',
           'backdrop-blur-xl',
