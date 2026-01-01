@@ -115,9 +115,30 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           }))
 
           await readingDb.articles.bulkPut(cachedArticles)
-          // Optional: Prune deleted items if needed, but bulkPut updates existing
         } catch (cacheError) {
           console.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
+        }
+
+        // INTELLIGENT DEDUPLICATION & PENDING CLEANUP
+        // 1. Identify which pending articles are now in the server response
+        const serverUrls = new Set(articles.map((a: any) => a.url))
+        const serverTitles = new Set(articles.map((a: any) => a.title))
+
+        const currentPending = get().pendingArticles
+        const remainingPending = currentPending.filter(pending => {
+          // If server has this URL, it's saved. Remove from pending.
+          if (serverUrls.has(pending.url)) return false
+          // If server has this Title (and it's not a generic URL title), it's saved.
+          if (pending.title && pending.title !== pending.url && serverTitles.has(pending.title)) return false
+
+          return true
+        })
+
+        // 2. Update local storage if pending list changed
+        if (remainingPending.length !== currentPending.length) {
+          console.log(`[ReadingStore] cleaned up ${currentPending.length - remainingPending.length} pending articles`)
+          localStorage.setItem('pending-articles', JSON.stringify(remainingPending))
+          set({ pendingArticles: remainingPending })
         }
 
         // Check against current state to avoid unnecessary renders

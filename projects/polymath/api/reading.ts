@@ -1650,10 +1650,19 @@ Return ONLY the JSON, no other text.`
                   content = cleanHtml(htmlString, item.link || '')
                 } catch (e) {
                   console.error('[RSS Sync] Failed to parse Jina response for', item.link)
-                  content = cleanHtml(content, item.link || '')
+                  // Fallback to basic cleaning if Jina fails
+                  content = '' // Reset to trigger fallback below
                 }
               } else {
                 content = cleanHtml(content, item.link || '')
+              }
+
+              // FALLBACK: If Jina failed or returned empty content, use feed content
+              if (!content || content.length < 50) {
+                const feedContent = item['content:encoded'] || item.content || item.description || item.summary || ''
+                if (feedContent) {
+                  content = cleanHtml(feedContent, item.link || '')
+                }
               }
 
               await supabase.from('reading_queue').insert([{
