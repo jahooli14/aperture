@@ -84,6 +84,9 @@ export function useOfflineSync() {
 
       if (failCount > 0) {
         setLastSyncError(`${failCount} captures failed to sync`)
+      } else if (successCount > 0) {
+        // Notify system to refresh UI
+        window.dispatchEvent(new CustomEvent('memories-synced'))
       }
 
       await updatePendingCount()

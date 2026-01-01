@@ -167,9 +167,19 @@ export default function App() {
       updateQueueSize()
     })
 
+    // Listen for custom sync events (e.g. from SyncManager or useOfflineSync)
+    const handleMemoriesSynced = () => {
+      console.log('[App] Memories synced event received, refreshing store...')
+      import('./stores/useMemoryStore').then(({ useMemoryStore }) => {
+        useMemoryStore.getState().fetchMemories(true)
+      })
+    }
+    window.addEventListener('memories-synced', handleMemoriesSynced)
+
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('memories-synced', handleMemoriesSynced)
       dataSynchronizer.stopPeriodicSync()
     }
   }, [])

@@ -405,43 +405,24 @@ Return valid JSON.`
     console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
 
     try {
-      // Process memory inline with Gemini (tags, summary, linking, etc.)
+      // Process memory in background (tags, summary, linking, etc.)
+      // We don't await this to keep the API response rapid as requested
+      console.log(`[handleCapture] 🔄 Triggering background AI processing for memory ${memory.id}`)
+      processMemory(memory.id).catch(err => {
+        console.error(`[handleCapture] 🚨 Background processing failed for ${memory.id}:`, err)
+      })
 
-      // Process the memory (extract entities, generate embeddings, etc.)
-      console.log(`[handleCapture] 🔄 Calling processMemory(${memory.id})...`)
-      await processMemory(memory.id)
-      console.log(`[handleCapture] ✅ processMemory completed successfully`)
-
-      console.log(`[handleCapture] ✅ AI processing complete for ${memory.id}`)
-
-      // Fetch the updated memory to return to client
-      const { data: updatedMemory, error: fetchError } = await supabase
-        .from('memories')
-        .select('*')
-        .eq('id', memory.id)
-        .single()
-
-      if (!fetchError && updatedMemory) {
-        console.log(`[handleCapture] Response sent with processed memory, total time: ${Date.now() - startTime}ms`)
-
-        return res.status(201).json({
-          success: true,
-          memory: updatedMemory,
-          message: 'Voice note saved and AI analysis complete!'
-        })
-      }
+      return res.status(201).json({
+        success: true,
+        memory,
+        message: 'Voice note saved! AI analysis is running in the background.'
+      })
     } catch (processingError) {
       // Log error but still return the memory - it will be picked up by cron later
-      console.error(`[handleCapture] 🚨 AI PROCESSING FAILED for memory ${memory.id}`)
-      console.error(`[handleCapture] Error type: ${processingError instanceof Error ? processingError.constructor.name : typeof processingError}`)
-      console.error(`[handleCapture] Error message: ${processingError instanceof Error ? processingError.message : String(processingError)}`)
-      console.error(`[handleCapture] Full error:`, processingError)
-      if (processingError instanceof Error && processingError.stack) {
-        console.error(`[handleCapture] Stack trace:`, processingError.stack)
-      }
+      console.error(`[handleCapture] 🚨 Failed to trigger background processing:`, processingError)
     }
 
-    // Fallback: return the unprocessed memory if processing failed
+    // Fallback: return the initial memory
     console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
     return res.status(201).json({
       success: true,
