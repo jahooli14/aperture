@@ -210,6 +210,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ memories })
     }
 
+    // DELETE: Delete memory
+    if (req.method === 'DELETE') {
+      const memoryId = req.body?.id || id
+      return await handleDelete(memoryId as string, res, supabase)
+    }
+
     return res.status(405).json({ error: 'Method not allowed' })
 
   } catch (error) {
@@ -489,6 +495,55 @@ async function handleReview(memoryId: string, res: VercelResponse, supabase: any
     })
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
+ * Delete memory and its related data
+ */
+async function handleDelete(memoryId: string, res: VercelResponse, supabase: any) {
+  if (!memoryId) {
+    return res.status(400).json({ error: 'Memory ID required' })
+  }
+
+  try {
+    console.log('[memories] Deleting memory:', memoryId)
+
+    // 1. Delete bridges
+    const { error: bridgeError } = await supabase
+      .from('bridges')
+      .delete()
+      .or(`memory_a.eq.${memoryId},memory_b.eq.${memoryId}`)
+
+    if (bridgeError) console.warn('[memories] Bridge delete warning:', bridgeError)
+
+    // 2. Clear references in user_prompt_status
+    const { error: promptError } = await supabase
+      .from('user_prompt_status')
+      .update({ response_id: null, status: 'pending' })
+      .eq('response_id', memoryId)
+
+    if (promptError) console.warn('[memories] Prompt status update warning:', promptError)
+
+    // 3. Delete memory
+    const { error, count } = await supabase
+      .from('memories')
+      .delete({ count: 'exact' })
+      .eq('id', memoryId)
+
+    if (error) throw error
+
+    return res.status(200).json({
+      success: true,
+      message: 'Memory deleted successfully',
+      deleted_count: count
+    })
+  } catch (error) {
+    console.error('[memories] Delete failed:', error)
+    return res.status(500).json({
+      error: 'Failed to delete memory',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 

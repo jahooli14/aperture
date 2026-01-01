@@ -21,6 +21,7 @@ interface MemoryStore {
   lastFetched: number | null
 
   fetchMemories: (force?: boolean) => Promise<void>
+  loadFromOfflineDB: () => Promise<boolean>
   setMemories: (memories: Memory[]) => void
   clearError: () => void
   fetchBridgesForMemory: (memoryId: string) => Promise<BridgeWithMemories[]>
@@ -52,62 +53,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
     set({ loading: true, error: null })
 
-    // Helper to load from offline DB
-    const loadFromOfflineDB = async () => {
-      console.log('[MemoryStore] Loading memories from offline DB...')
-      try {
-        const { readingDb } = await import('../lib/db')
-        const cached = await readingDb.getCachedMemories()
-
-        // Map cached memories (Dexie) to Memory type (Supabase)
-        // Note: CachedMemory has 'created_at' which maps to 'audiopen_created_at'
-        const mappedMemories: Memory[] = cached.map(c => ({
-          id: c.id,
-          title: c.title,
-          body: c.body,
-          tags: c.tags,
-          themes: c.themes,
-          created_at: c.created_at, // Required by Memory type
-          audiopen_created_at: c.created_at, // Mapping back
-          audiopen_id: c.id,
-          orig_transcript: c.body,
-          processed: true, // Assume processed if cached
-          // Default optional fields
-          memory_type: null,
-          image_urls: c.image_urls || null,
-          entities: null,
-          emotional_tone: null,
-          embedding: null,
-          processed_at: null,
-          error: null,
-          last_reviewed_at: null,
-          review_count: 0,
-          source_reference: null,
-          triage: null
-        }))
-
-        // Sort by date desc
-        const sorted = mappedMemories.sort((a, b) =>
-          new Date(b.audiopen_created_at).getTime() - new Date(a.audiopen_created_at).getTime()
-        )
-
-        set({
-          memories: sorted,
-          loading: false,
-          lastFetched: Date.now(),
-          error: null
-        })
-        return true
-      } catch (err) {
-        console.error('[MemoryStore] Failed to load offline memories:', err)
-        return false
-      }
-    }
-
     // Check offline status first
     const { isOnline } = useOfflineStore.getState()
     if (!isOnline) {
-      await loadFromOfflineDB()
+      await get().loadFromOfflineDB()
       return
     }
 
@@ -138,21 +87,62 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         })
       }
 
-      // Preserve optimistic memories
+      // Proactively fetch local pending items to ensure they don't "disappear" while online
+      // but not yet synced to the server.
+      const { db } = await import('../lib/db')
+      const { getPendingOperations } = await import('../lib/offlineQueue')
+      const pendingCaptures = await db.getPendingCaptures()
+      const pendingOps = await getPendingOperations()
+
+      const queuedMemories: Memory[] = pendingOps
+        .filter(op => op.type === 'create_memory')
+        .map(op => ({
+          id: `offline_op_${op.timestamp}`,
+          title: op.data.title || '⏳ Saving thought...',
+          body: op.data.body || '',
+          tags: op.data.tags || [],
+          created_at: new Date(op.timestamp).toISOString(),
+          audiopen_created_at: new Date(op.timestamp).toISOString(),
+          processed: false,
+          memory_type: op.data.memory_type || null,
+          image_urls: op.data.image_urls || null,
+          review_count: 0
+        } as any))
+
+      const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
+        id: `offline_cap_${pc.timestamp}`,
+        title: '⏳ Processing Voice (Offline)',
+        body: pc.transcript || 'Audio note captured while offline.',
+        tags: ['offline-pending'],
+        created_at: new Date(pc.timestamp).toISOString(),
+        audiopen_created_at: new Date(pc.timestamp).toISOString(),
+        processed: false,
+        memory_type: null,
+        review_count: 0
+      } as any))
+
+      // Preserve optimistic memories from current session
       const currentMemories = get().memories
-      const optimisticMemories = currentMemories.filter(m =>
-        m.id.startsWith('temp_') || m.id.startsWith('offline_')
+      const sessionOptimistic = currentMemories.filter(m =>
+        m.id.startsWith('temp_') &&
+        !queuedMemories.some(q => q.body === m.body) &&
+        !queuedCaptures.some(q => q.body === m.body)
       )
 
-      const newMemories = [...optimisticMemories, ...(data || [])].sort((a, b) =>
+      const mergedMemories = [
+        ...sessionOptimistic,
+        ...queuedMemories,
+        ...queuedCaptures,
+        ...(data || [])
+      ].sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
-      set({ memories: newMemories, loading: false, lastFetched: now })
+      set({ memories: mergedMemories, loading: false, lastFetched: now })
     } catch (error) {
       console.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
 
-      const loadedOffline = await loadFromOfflineDB()
+      const loadedOffline = await get().loadFromOfflineDB()
       if (!loadedOffline) {
         set({
           error: error instanceof Error ? error.message : 'Failed to fetch memories',
@@ -404,6 +394,98 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
     }
   },
 
+  // Helper to load from offline DB
+  loadFromOfflineDB: async () => {
+    console.log('[MemoryStore] Loading memories from offline DB...')
+    try {
+      const { db } = await import('../lib/db')
+      const { getPendingOperations } = await import('../lib/offlineQueue')
+
+      const cached = await db.getCachedMemories()
+      const pendingOps = await getPendingOperations()
+      const pendingCaptures = await db.getPendingCaptures()
+
+      // Map cached memories (Dexie) to Memory type (Supabase)
+      const mappedMemories: Memory[] = cached.map(c => ({
+        id: c.id,
+        title: c.title,
+        body: c.body,
+        tags: c.tags,
+        themes: c.themes,
+        created_at: c.created_at,
+        audiopen_created_at: c.created_at,
+        audiopen_id: c.id,
+        orig_transcript: c.body,
+        processed: true,
+        memory_type: null,
+        image_urls: c.image_urls || null,
+        entities: null,
+        emotional_tone: null,
+        embedding: null,
+        processed_at: null,
+        error: null,
+        last_reviewed_at: null,
+        review_count: 0,
+        source_reference: null,
+        triage: null
+      }))
+
+      // Map pending operations (create_memory)
+      const queuedMemories: Memory[] = pendingOps
+        .filter(op => op.type === 'create_memory')
+        .map(op => ({
+          id: `offline_op_${op.timestamp}`,
+          title: op.data.title || '⏳ Saving thought...',
+          body: op.data.body || '',
+          tags: op.data.tags || [],
+          created_at: new Date(op.timestamp).toISOString(),
+          audiopen_created_at: new Date(op.timestamp).toISOString(),
+          processed: false,
+          memory_type: op.data.memory_type || null,
+          image_urls: op.data.image_urls || null,
+          review_count: 0,
+          id_in_queue: op.id
+        } as any))
+
+      // Map pending voice captures
+      const queuedCaptures: Memory[] = pendingCaptures.map(pc => ({
+        id: `offline_cap_${pc.timestamp}`,
+        title: '⏳ Processing Voice (Offline)',
+        body: pc.transcript || 'Audio note captured while offline.',
+        tags: ['offline-pending'],
+        created_at: new Date(pc.timestamp).toISOString(),
+        audiopen_created_at: new Date(pc.timestamp).toISOString(),
+        processed: false,
+        memory_type: null,
+        review_count: 0,
+        id_in_queue: pc.id
+      } as any))
+
+      // Preserve optimistic memories from current session (if any)
+      const currentMemories = get().memories
+      const sessionOptimistic = currentMemories.filter(m =>
+        m.id.startsWith('temp_') && !queuedMemories.some(q => q.body === m.body) && !queuedCaptures.some(q => q.body === m.body)
+      )
+
+      const allMemories = [...sessionOptimistic, ...queuedMemories, ...queuedCaptures, ...mappedMemories]
+
+      const sorted = allMemories.sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+
+      set({
+        memories: sorted,
+        loading: false,
+        lastFetched: Date.now(),
+        error: null
+      })
+      return true
+    } catch (err) {
+      console.error('[MemoryStore] Failed to load offline memories:', err)
+      return false
+    }
+  },
+
   deleteMemory: async (id: string) => {
     // Optimistic delete - remove from UI immediately
     const previousMemories = useMemoryStore.getState().memories
@@ -414,59 +496,62 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         : [],
     }))
 
+    // If it's a local/offline ID, we must remove it from the local queue as well
+    // otherwise it will reappear in the UI on the next refresh/sync
+    try {
+      if (id.startsWith('offline_cap_')) {
+        const { db } = await import('../lib/db')
+        const timestamp = parseInt(id.replace('offline_cap_', ''))
+        const pending = await db.getPendingCaptures()
+        const match = pending.find(p => p.timestamp === timestamp)
+        if (match?.id) {
+          await db.deletePendingCapture(match.id)
+          console.log('[MemoryStore] Removed voice capture from local DB')
+        }
+      } else if (id.startsWith('offline_op_')) {
+        const { removeOperation, getPendingOperations } = await import('../lib/offlineQueue')
+        const timestamp = parseInt(id.replace('offline_op_', ''))
+        const pending = await getPendingOperations()
+        const match = pending.find(p => p.timestamp === timestamp)
+        if (match?.id) {
+          await removeOperation(match.id)
+          console.log('[MemoryStore] Removed operation from local queue')
+        }
+      }
+    } catch (localError) {
+      console.warn('[MemoryStore] Failed to cleanup local queue during delete:', localError)
+    }
+
     const { isOnline } = useOfflineStore.getState()
 
-    // If offline, queue operation
-    if (!isOnline) {
-      await queueOperation('delete_memory', { id })
-      await useOfflineStore.getState().updateQueueSize()
-
-      console.log('[MemoryStore] Memory deletion queued for offline sync')
+    // If offline or it's a completely local ID, we're done (optimistic UI already updated)
+    if (!isOnline || id.startsWith('offline_') || id.startsWith('temp_')) {
+      if (!isOnline && !id.startsWith('temp_')) {
+        await queueOperation('delete_memory', { id })
+        await useOfflineStore.getState().updateQueueSize()
+        console.log('[MemoryStore] Memory deletion queued for offline sync')
+      }
       return
     }
 
     // Online flow
     try {
-      console.log('[MemoryStore] Deleting memory:', id)
+      console.log('[MemoryStore] Deleting memory via API:', id)
 
-      // 1. Manually cascade delete to bridges
-      const { error: bridgeError } = await supabase
-        .from('bridges')
-        .delete()
-        .or(`memory_a.eq.${id},memory_b.eq.${id}`)
+      const response = await fetch(`/api/memories?id=${id}`, {
+        method: 'DELETE',
+      })
 
-      if (bridgeError) console.warn('[MemoryStore] Bridge delete warning:', bridgeError)
-
-      // 2. Clear references in user_prompt_status (if this memory was a prompt response)
-      // We don't know the user_id here easily, but RLS should handle it or we just update by response_id
-      const { error: promptError } = await supabase
-        .from('user_prompt_status')
-        .update({ response_id: null, status: 'pending' }) // Reset prompt to pending? Or just clear link?
-        .eq('response_id', id)
-
-      if (promptError) console.warn('[MemoryStore] Prompt status update warning:', promptError)
-
-      // 3. Delete the memory
-      const { error, count } = await supabase
-        .from('memories')
-        .delete({ count: 'exact' })
-        .eq('id', id)
-
-      if (error) throw error
-
-      if (count === 0) {
-        console.warn('[MemoryStore] Memory not found in DB (already deleted?), keeping UI consistent')
-        // Do NOT throw error here. If it's not in the DB, we want it gone from UI too.
-        // The optimistic update at the start of this function already removed it.
-      } else {
-        console.log('[MemoryStore] Memory deleted successfully')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to delete memory (${response.status})`)
       }
+
+      console.log('[MemoryStore] Memory deleted successfully via API')
 
     } catch (error) {
       console.error('[MemoryStore] Delete failed:', error)
-
-      // Only rollback if it's a genuine API error, not a "not found" (count 0) situation
-      // Since we removed the count check above, this catch block handles network/permission errors
+      // Rollback on error
       set({ memories: previousMemories })
       throw error instanceof Error ? error : new Error('Failed to delete memory')
     }
