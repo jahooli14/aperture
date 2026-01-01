@@ -70,6 +70,8 @@ export function ReaderPage() {
   const [suggestions, setSuggestions] = useState<any[]>([])
 
   const [isHighlighterMode, setIsHighlighterMode] = useState(false)
+  const [connectionCount, setConnectionCount] = useState(0)
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true)
 
   // Automatic offline caching
   useEffect(() => {
@@ -575,23 +577,27 @@ export function ReaderPage() {
           />
 
           {/* Smart Connections Section */}
-          <div className="mt-20 pt-12 border-t border-white/5">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
-                <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
+          {(connectionCount > 0 || isLoadingConnections) && (
+            <div className="mt-20 pt-12 border-t border-white/5">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                  <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
+                </div>
+                <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
+                  AI Connected
+                </div>
               </div>
-              <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
-                AI Connected
-              </div>
-            </div>
 
-            <ConnectionsList
-              itemType="article"
-              itemId={article.id}
-              content={article.title + ' ' + (article.excerpt || '')}
-            />
-          </div>
+              <ConnectionsList
+                itemType="article"
+                itemId={article.id}
+                content={article.title + ' ' + (article.excerpt || '')}
+                onCountChange={setConnectionCount}
+                onLoadingChange={setIsLoadingConnections}
+              />
+            </div>
+          )}
         </main>
 
         {/* Highlight Menu */}

@@ -186,6 +186,9 @@ export default function ListDetailPage() {
     const list = lists.find(l => l.id === id)
 
     const [inputText, setInputText] = useState('')
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [connectionCount, setConnectionCount] = useState(0)
+    const [isLoadingConnections, setIsLoadingConnections] = useState(true)
     const [isVoiceMode, setIsVoiceMode] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
@@ -337,23 +340,28 @@ export default function ListDetailPage() {
 
             {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
-                <div className="p-8 rounded-2xl border border-white/5 bg-zinc-900/30 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
-                            <p className="text-sm text-zinc-500">Connections discovered by the Aperture Neural Bridge.</p>
+                {/* Synthesized Insights Section */}
+                {(connectionCount > 0 || isLoadingConnections) && (
+                    <div className="mt-12 pt-12 border-t border-white/5 pb-20">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Synthesized Insights</h3>
+                                <p className="text-sm text-zinc-500">Connections discovered by the Aperture Engine.</p>
+                            </div>
+                            <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
+                                AI Connected
+                            </div>
                         </div>
-                        <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-400">
-                            Neural Sync
-                        </div>
-                    </div>
 
-                    <ConnectionsList
-                        itemType="list"
-                        itemId={list.id}
-                        content={`${list.title} ${list.description || ''} ${currentListItems.map(i => i.content).join(', ')}`}
-                    />
-                </div>
+                        <ConnectionsList
+                            itemType="list"
+                            itemId={list.id}
+                            content={`${list.title} ${list.description || ''} ${currentListItems.map(i => i.content).join(', ')}`}
+                            onCountChange={setConnectionCount}
+                            onLoadingChange={setIsLoadingConnections}
+                        />
+                    </div>
+                )}
             </div>
 
         </div>
