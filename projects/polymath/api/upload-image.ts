@@ -48,8 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error) {
             console.error('[upload-image] Supabase error creating signed URL:', {
                 message: error.message,
-                name: error.name,
-                cause: error.cause
+                name: error.name
             })
             return res.status(500).json({
                 error: 'Failed to create upload URL',
