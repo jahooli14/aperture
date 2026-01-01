@@ -55,13 +55,34 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
 
         // Final fallback to Gemini if all APIs failed
         if (!metadata) {
-            console.log(`[Enrichment] All APIs failed, using Gemini for: ${content}`)
-            metadata = await enrichWithGemini(content, category)
+            console.log(`[Enrichment] All APIs failed, trying Gemini for: ${content}`)
+            try {
+                metadata = await enrichWithGemini(content, category)
+            } catch (geminiError) {
+                console.error(`[Enrichment] Gemini fallback failed:`, geminiError)
+                // Ultimate fallback: create basic metadata from content
+                metadata = {
+                    subtitle: `${category || 'Item'}`,
+                    description: content,
+                    tags: [],
+                    specs: {},
+                    source: 'gemini'
+                }
+                console.log(`[Enrichment] Using basic metadata for: ${content}`)
+            }
         }
 
         // Ensure metadata has required fields
         if (!metadata || !metadata.subtitle) {
-            throw new Error('Enrichment produced no valid metadata')
+            // Create minimal valid metadata as final fallback
+            metadata = {
+                subtitle: category || 'Item',
+                description: content,
+                tags: [],
+                specs: {},
+                source: 'gemini'
+            }
+            console.log(`[Enrichment] Created minimal metadata for: ${content}`)
         }
 
         // 3. Generate embedding for semantic connections
@@ -156,7 +177,12 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
  * Gemini fallback - for when APIs don't have data
  */
 async function enrichWithGemini(content: string, category: string) {
-    const prompt = `Provide enrichment metadata for this ${category}:
+    // Validate API key exists
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY not configured')
+    }
+
+    const prompt = `Provide enrichment metadata for this ${category || 'item'}:
 
 "${content}"
 
@@ -171,31 +197,47 @@ Return ONLY valid JSON, no markdown, no explanation.
 Example format:
 {"subtitle": "Director: Christopher Nolan", "description": "A thief who enters dreams to steal secrets faces his toughest job: planting an idea in someone's mind.", "tags": ["Sci-Fi", "Thriller", "Complex"], "specs": {"Year": "2010", "Runtime": "148min"}}`
 
-    const response = await generateText(prompt, {
-        responseFormat: 'json',
-        temperature: 0.0,
-        maxTokens: 1500
-    })
+    try {
+        const response = await generateText(prompt, {
+            responseFormat: 'json',
+            temperature: 0.0,
+            maxTokens: 1500
+        })
 
-    // Robust JSON extraction
-    let jsonStr = response.trim()
-    jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
+        // Robust JSON extraction
+        let jsonStr = response.trim()
+        jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
 
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-        throw new Error(`No valid JSON found in Gemini response: ${response.slice(0, 200)}`)
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+            console.error(`[Gemini] Invalid response format: ${response.slice(0, 200)}`)
+            throw new Error(`No valid JSON found in Gemini response`)
+        }
+        jsonStr = jsonMatch[0]
+
+        const metadata = JSON.parse(jsonStr)
+
+        // Validate required fields
+        if (!metadata.subtitle) {
+            metadata.subtitle = category || 'Item'
+        }
+
+        // Ensure tags is an array
+        if (!Array.isArray(metadata.tags)) {
+            metadata.tags = []
+        }
+
+        // Ensure specs is an object
+        if (!metadata.specs || typeof metadata.specs !== 'object') {
+            metadata.specs = {}
+        }
+
+        // Add source
+        metadata.source = 'gemini'
+
+        return metadata
+    } catch (error) {
+        console.error(`[Gemini] Enrichment error:`, error)
+        throw error
     }
-    jsonStr = jsonMatch[0]
-
-    const metadata = JSON.parse(jsonStr)
-
-    // Ensure tags is an array
-    if (!Array.isArray(metadata.tags)) {
-        metadata.tags = []
-    }
-
-    // Add source
-    metadata.source = 'gemini'
-
-    return metadata
 }
