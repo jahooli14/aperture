@@ -156,6 +156,9 @@ export const useListStore = create<ListStore>()(
     fetchListItems: async (listId) => {
         const { isOnline } = useOfflineStore.getState()
 
+        // Clear current items immediately to prevent showing wrong list's items
+        set({ currentListItems: [], loading: true })
+
         // Helper to load from Dexie
         const loadFromDexie = async () => {
             try {
@@ -163,7 +166,7 @@ export const useListStore = create<ListStore>()(
                 const cachedItems = await readingDb.getCachedListItems(listId)
                 if (cachedItems.length > 0) {
                     console.log(`[ListStore] Loaded ${cachedItems.length} items from Dexie cache`)
-                    set({ currentListItems: cachedItems as any })
+                    set({ currentListItems: cachedItems as any, loading: false })
                     return true
                 }
             } catch (e) {
@@ -182,7 +185,7 @@ export const useListStore = create<ListStore>()(
             const response = await fetch(`/api/list-items?listId=${listId}`)
             if (!response.ok) throw new Error('Failed to fetch items')
             const data = await response.json()
-            set({ currentListItems: data })
+            set({ currentListItems: data, loading: false })
 
             // Cache to Dexie for offline viewing
             try {
@@ -194,8 +197,10 @@ export const useListStore = create<ListStore>()(
             }
         } catch (error: any) {
             console.error('[ListStore] Fetch failed, loading from cache:', error)
-            await loadFromDexie()
-            set({ error: error.message })
+            const loaded = await loadFromDexie()
+            if (!loaded) {
+                set({ error: error.message, loading: false })
+            }
         }
     },
 
