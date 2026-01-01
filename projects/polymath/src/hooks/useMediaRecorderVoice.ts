@@ -270,42 +270,43 @@ export function useMediaRecorderVoice({
       // Convert to blob
       const audioBlob = base64ToBlob(result.value.recordDataBase64, 'audio/aac')
 
-      // Check online status via store
-      const { isOnline } = (await import('../stores/useOfflineStore')).useOfflineStore.getState()
-
-      if (!isOnline) {
-        console.log('[Native] Offline - saving to IndexedDB for later transcription')
-        const { db } = await import('../lib/db')
-        const { queueOperation } = await import('../lib/offlineQueue')
-
-        const captureId = await db.addPendingCapture({
-          blob: audioBlob,
-          mimeType: 'audio/aac'
-        })
-
-        await queueOperation('capture_media', { captureId })
-
-        const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
-        setTranscript(placeholder)
-        onTranscript(placeholder)
-        return
-      }
-
-      // Transcribe (Online) with a timeout to prevent getting "stuck"
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
-
+      // Always attempt transcription first - don't trust navigator.onLine
+      // Only save offline if transcription actually fails with a network error
       try {
         const text = await transcribeAudio(audioBlob)
-        clearTimeout(timeoutId)
         setTranscript(text)
         onTranscript(text)
       } catch (transcribeError: any) {
-        clearTimeout(timeoutId)
-        if (transcribeError.name === 'AbortError') {
-          throw new Error('Transcription timed out. It will be retried in the background.')
+        console.error('[Native] Transcription failed:', transcribeError.message)
+
+        // Check if this is a network error (actual offline state)
+        const isNetworkError =
+          transcribeError.message?.includes('fetch') ||
+          transcribeError.message?.includes('Failed to fetch') ||
+          transcribeError.message?.includes('NetworkError') ||
+          transcribeError.message?.includes('not available') ||
+          transcribeError instanceof TypeError
+
+        if (isNetworkError) {
+          console.log('[Native] Network error detected - saving to IndexedDB for later transcription')
+          const { db } = await import('../lib/db')
+          const { queueOperation } = await import('../lib/offlineQueue')
+
+          const captureId = await db.addPendingCapture({
+            blob: audioBlob,
+            mimeType: 'audio/aac'
+          })
+
+          await queueOperation('capture_media', { captureId })
+
+          const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
+          setTranscript(placeholder)
+          onTranscript(placeholder)
+          return
+        } else {
+          // Non-network error - rethrow to show user
+          throw transcribeError
         }
-        throw transcribeError
       }
 
       if (autoSubmit) {
@@ -389,42 +390,43 @@ export function useMediaRecorderVoice({
 
       setIsProcessing(true)
 
-      // Check online status via store for more reliability
-      const { isOnline } = (await import('../stores/useOfflineStore')).useOfflineStore.getState()
-
-      if (!isOnline) {
-        console.log('[Web] Offline - saving to IndexedDB for later transcription')
-        const { db } = await import('../lib/db')
-        const { queueOperation } = await import('../lib/offlineQueue')
-
-        const captureId = await db.addPendingCapture({
-          blob: audioBlob,
-          mimeType: mimeType
-        })
-
-        await queueOperation('capture_media', { captureId })
-
-        const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
-        setTranscript(placeholder)
-        onTranscript(placeholder)
-        return
-      }
-
-      // Transcribe (Online) with a timeout to prevent getting "stuck"
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
-
+      // Always attempt transcription first - don't trust navigator.onLine
+      // Only save offline if transcription actually fails with a network error
       try {
         const text = await transcribeAudio(audioBlob)
-        clearTimeout(timeoutId)
         setTranscript(text)
         onTranscript(text)
       } catch (transcribeError: any) {
-        clearTimeout(timeoutId)
-        if (transcribeError.name === 'AbortError') {
-          throw new Error('Transcription timed out. It will be retried in the background.')
+        console.error('[Web] Transcription failed:', transcribeError.message)
+
+        // Check if this is a network error (actual offline state)
+        const isNetworkError =
+          transcribeError.message?.includes('fetch') ||
+          transcribeError.message?.includes('Failed to fetch') ||
+          transcribeError.message?.includes('NetworkError') ||
+          transcribeError.message?.includes('not available') ||
+          transcribeError instanceof TypeError
+
+        if (isNetworkError) {
+          console.log('[Web] Network error detected - saving to IndexedDB for later transcription')
+          const { db } = await import('../lib/db')
+          const { queueOperation } = await import('../lib/offlineQueue')
+
+          const captureId = await db.addPendingCapture({
+            blob: audioBlob,
+            mimeType: mimeType
+          })
+
+          await queueOperation('capture_media', { captureId })
+
+          const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
+          setTranscript(placeholder)
+          onTranscript(placeholder)
+          return
+        } else {
+          // Non-network error - rethrow to show user
+          throw transcribeError
         }
-        throw transcribeError
       }
 
       if (autoSubmit) {
