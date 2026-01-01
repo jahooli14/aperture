@@ -57,6 +57,21 @@ function cleanHtml(html: string, url: string): string {
 
   if (!document) return html
 
+  // Fix for Linkedom handling of HTML fragments (e.g. from Readability)
+  // If the input is just "<div>...</div>", Linkedom might not put it in document.body
+  if (!document.body || document.body.innerHTML.trim().length === 0) {
+    // If body is empty but we have content, try wrapping it
+    try {
+      const wrapped = `<!DOCTYPE html><html><body>${html}</body></html>`
+      const parsedWrapped = parseHTML(wrapped) as any
+      if (parsedWrapped.document && parsedWrapped.document.body) {
+        document = parsedWrapped.document
+      }
+    } catch (e) {
+      // Fallback to original document if wrapping fails
+    }
+  }
+
   // 1. Remove obvious junk
   const selectorsToRemove = [
     'nav', 'header', 'footer', 'aside', '.sidebar', '.ad', '.ads', '.advertisement',
