@@ -304,38 +304,11 @@ export function ReadingPage() {
     }
   }
 
-  // Handle reading RSS item in-app
+  // Handle reading RSS item - just open original link
   const handleReadRSSItem = async (item: RSSItem) => {
-    // 1. Check if already in queue
-    const existing = articles.find(a => a.url === item.link)
-    if (existing) {
-      navigate(`/reading/${existing.id}`)
-      return
-    }
-
-    // 2. Save and navigate
-    try {
-      addToast({
-        title: 'Opening...',
-        description: 'Extracting full article content...',
-        variant: 'default',
-      })
-
-      // Don't pass content - let backend extract full article from URL
-      // RSS descriptions are usually just summaries, not full content
-      const newArticle = await saveArticle({
-        url: item.link,
-        title: item.title,
-        excerpt: (item.description || item.content || '').substring(0, 200) || undefined
-      })
-
-      // Navigate immediately - ReaderPage will handle the loading state
-      navigate(`/reading/${newArticle.id}`)
-    } catch (error) {
-      console.error('Failed to open RSS item in-app:', error)
-      // Fallback to external link if saving fails
-      window.open(item.link, '_blank')
-    }
+    // Simply open the original RSS article in a new tab
+    // No need to extract/save - user can use "Save to Read Later" if they want offline access
+    window.open(item.link, '_blank')
   }
 
   // Handle shared URLs from Web Share Target API with robust processing
