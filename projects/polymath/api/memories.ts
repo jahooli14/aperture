@@ -99,28 +99,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST: Background processing (merged from process.ts)
     if (req.method === 'POST' && action === 'process') {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
       return await handleProcess(req, res)
     }
 
     // POST: Submit foundational thought response
     if (req.method === 'POST' && submit_response === 'true') {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
       return await handleSubmitResponse(req, res, supabase, userId)
     }
 
     // POST: Voice capture (supports both capture=true and action=capture)
     if (req.method === 'POST' && (capture === 'true' || action === 'capture')) {
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
       return await handleCapture(req, res, supabase, userId)
     }
 
     // POST: Mark memory as reviewed
     if (req.method === 'POST') {
-      const memoryId = req.body.id || id
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+      const memoryId = req.body?.id || id
       return await handleReview(memoryId as string, res, supabase)
     }
 
     // PATCH: Update memory (content/metadata)
     if (req.method === 'PATCH') {
-      const memoryId = req.body.id || id
+      // Since bodyParser: false is set for formidable, we must parse JSON manually if it's a JSON request
+      if (!req.body && req.headers['content-type']?.includes('application/json')) {
+        const chunks = []
+        for await (const chunk of req) chunks.push(chunk)
+        req.body = JSON.parse(Buffer.concat(chunks).toString())
+      }
+
+      const memoryId = req.body?.id || id
       return await handleUpdate(memoryId as string, req, res, supabase)
     }
 

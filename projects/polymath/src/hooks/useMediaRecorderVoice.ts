@@ -314,9 +314,12 @@ export function useMediaRecorderVoice({
     setIsRecording(false)
     stopTimer()
 
-    if (mediaRecorderRef.current?.state !== 'recording') {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
       console.warn('[Web] MediaRecorder not in recording state:', mediaRecorderRef.current?.state)
-      alert('Recording was not active')
+      // If we're already starting or inactive, just reset states and return
+      // This often happens if the user releases the button before the mic fully initialized
+      setIsRecording(false)
+      stopTimer()
       return
     }
 
@@ -337,7 +340,7 @@ export function useMediaRecorderVoice({
           originalOnStop.call(mediaRecorderRef.current, event)
         }
         // Give extra time for final ondataavailable event
-        setTimeout(resolve, 300)
+        setTimeout(resolve, 100) // 100ms is safe for final buffers
       }
 
       console.log('[Web] Calling stop() on MediaRecorder')

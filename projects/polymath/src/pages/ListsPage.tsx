@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Trash2 } from 'lucide-react'
+import { Reorder } from 'framer-motion'
+import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Trash2, GripVertical } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -35,77 +35,90 @@ const ListColor = (type: ListType) => {
 
 export default function ListsPage() {
     const navigate = useNavigate()
-    const { lists, fetchLists, loading } = useListStore()
+    const { lists, fetchLists, reorderLists, loading } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)
 
     useEffect(() => {
         fetchLists()
     }, [])
 
+    const handleReorder = (newOrder: any[]) => {
+        reorderLists(newOrder.map(l => l.id))
+    }
+
     return (
-        <div className="min-h-screen pb-20 pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf">
-            <div className="flex items-center justify-between mb-8">
+        <div className="min-h-screen pb-20 pt-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto aperture-shelf">
+            <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="section-header">
+                    <h1 className="section-header !text-2xl">
                         your <span>collections</span>
                     </h1>
-                    <p className="aperture-body text-[var(--brand-text-secondary)] mt-1">Curate your existence.</p>
+                    <p className="aperture-body text-[var(--brand-text-secondary)] mt-0.5 text-xs">Curate your existence.</p>
                 </div>
                 <Button
                     onClick={() => setCreateOpen(true)}
-                    className="flex items-center gap-2 px-5 py-3 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[10px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header bg-transparent"
+                    className="flex items-center gap-2 px-4 py-2 border border-white/10 rounded-xl hover:bg-white/5 transition-all uppercase text-[8px] font-bold tracking-widest backdrop-blur-sm text-white aperture-header bg-transparent"
                 >
-                    <Plus className="h-4 w-4" />
-                    New List
+                    <Plus className="h-3 w-3" />
+                    New
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <Reorder.Group
+                axis="y"
+                values={lists}
+                onReorder={handleReorder}
+                className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+            >
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     return (
-                        <motion.div
+                        <Reorder.Item
                             key={list.id}
-                            layoutId={list.id}
-                            onClick={() => navigate(`/lists/${list.id}`)}
-                            whileHover={{ y: -4 }}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer h-56 flex flex-col justify-between aperture-card backdrop-blur-xl transition-all duration-300"
+                            value={list}
+                            className="group relative overflow-hidden rounded-xl cursor-pointer h-32 flex flex-col justify-between aperture-card backdrop-blur-xl transition-all duration-300"
                             style={{
-                                borderColor: `rgba(${rgb}, 0.25)`,
-                                background: `rgba(${rgb}, 0.08)`,
-                                boxShadow: `0 8px 32px rgba(${rgb}, 0.1)`
+                                borderColor: `rgba(${rgb}, 0.2)`,
+                                background: `rgba(${rgb}, 0.05)`,
+                                boxShadow: `0 4px 20px rgba(${rgb}, 0.05)`
                             }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = `rgba(${rgb}, 0.15)`
-                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.4)`
+                            onMouseEnter={(e: any) => {
+                                e.currentTarget.style.background = `rgba(${rgb}, 0.12)`
+                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.35)`
                             }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = `rgba(${rgb}, 0.08)`
-                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.25)`
+                            onMouseLeave={(e: any) => {
+                                e.currentTarget.style.background = `rgba(${rgb}, 0.05)`
+                                e.currentTarget.style.borderColor = `rgba(${rgb}, 0.2)`
                             }}
+                            onClick={() => navigate(`/lists/${list.id}`)}
                         >
+                            {/* Drag Handle Overlay */}
+                            <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-30 transition-opacity z-20">
+                                <GripVertical className="h-3 w-3 text-white" />
+                            </div>
+
                             {/* Aesthetic Grid Mask */}
-                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+                            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{
                                 backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
-                                backgroundSize: '16px 16px',
+                                backgroundSize: '12px 12px',
                                 maskImage: 'linear-gradient(to bottom, black, transparent)'
                             }} />
 
-                            <div className="relative z-10 p-6 flex-1 flex flex-col">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="p-2 rounded-lg" style={{ background: `rgba(${rgb}, 0.1)` }}>
-                                        <ListIcon type={list.type} className="h-5 w-5" style={{ color: `rgb(${rgb})` }} />
+                            <div className="relative z-10 p-3 flex-1 flex flex-col justify-center">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="p-1.5 rounded-md" style={{ background: `rgba(${rgb}, 0.1)` }}>
+                                        <ListIcon type={list.type} className="h-4 w-4" style={{ color: `rgb(${rgb})` }} />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-50 aperture-header" style={{ color: `rgb(${rgb})` }}>
+                                    <span className="text-[8px] font-black uppercase tracking-widest opacity-40 aperture-header" style={{ color: `rgb(${rgb})` }}>
                                         {list.type}
                                     </span>
                                 </div>
 
-                                <h3 className="text-xl font-bold text-white mb-2 aperture-header leading-tight">{list.title}</h3>
-                                <p className="text-sm aperture-body text-[var(--brand-text-secondary)]">{list.item_count || 0} items</p>
+                                <h3 className="text-sm font-bold text-white aperture-header leading-tight line-clamp-2">{list.title}</h3>
+                                <p className="text-[10px] aperture-body text-[var(--brand-text-secondary)] mt-0.5">{list.item_count || 0} items</p>
                             </div>
 
-                            <div className="relative z-10 p-4 pt-0 flex justify-between items-center">
+                            <div className="relative z-10 p-2 pt-0 flex justify-between items-center bg-black/10">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
@@ -114,19 +127,17 @@ export default function ListsPage() {
                                             deleteList(list.id)
                                         }
                                     }}
-                                    className="p-1.5 rounded-lg hover:bg-red-500/20 text-white/20 hover:text-red-400 transition-all"
+                                    className="p-1 rounded-md hover:bg-red-500/20 text-white/10 hover:text-red-400 transition-all"
                                     title="Delete Collection"
                                 >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3 w-3" />
                                 </button>
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50 group-hover:text-white transition-colors aperture-header flex items-center gap-1">
-                                    View Collection <span className="group-hover:translate-x-1 transition-transform">→</span>
-                                </span>
+                                <div className="h-0.5 w-4 bg-white/10 rounded-full group-hover:w-8 group-hover:bg-white/30 transition-all duration-500" />
                             </div>
-                        </motion.div>
+                        </Reorder.Item>
                     )
                 })}
-            </div>
+            </Reorder.Group>
 
             <CreateListDialog open={createOpen} onOpenChange={setCreateOpen} />
         </div>

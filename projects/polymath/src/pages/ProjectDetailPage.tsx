@@ -50,7 +50,10 @@ export function ProjectDetailPage() {
 
   const [notes, setNotes] = useState<ProjectNote[]>([])
   const [projectMemories, setProjectMemories] = useState<Memory[]>([])
-  const [loading, setLoading] = useState(true)
+
+  // Local-first: Only show blocking loader if we don't have the project in cache/store
+  const [loading, setLoading] = useState(!project)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [showAddNote, setShowAddNote] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showCreateConnection, setShowCreateConnection] = useState(false)
@@ -139,8 +142,13 @@ export function ProjectDetailPage() {
   const loadProjectDetails = async () => {
     if (!id) return
 
-    // If we don't have the project yet, show loading
-    if (!project) setLoading(true)
+    // If we don't have the project yet, show blocking loader
+    if (!project) {
+      setLoading(true)
+    } else {
+      // If we have it, we're just checking for updates in background
+      setIsUpdating(true)
+    }
 
     try {
       // Fetch fresh data from API
@@ -171,7 +179,8 @@ export function ProjectDetailPage() {
     } catch (error) {
       console.warn('[ProjectDetail] Fetch failed:', error)
 
-      if (!project) {
+      // Only show "Offline" toast if we actually have data to show
+      if (project) {
         addToast({
           title: 'Offline',
           description: 'Showing cached project content',
@@ -180,6 +189,7 @@ export function ProjectDetailPage() {
       }
     } finally {
       setLoading(false)
+      setIsUpdating(false)
     }
   }
 
@@ -551,6 +561,24 @@ export function ProjectDetailPage() {
     <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--premium-surface-base)' }}>
       {/* Sticky Header */}
       <div className="premium-glass-strong sticky top-0 z-40">
+        {/* Sync Progress Indicator */}
+        <AnimatePresence>
+          {isUpdating && (
+            <motion.div
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 via-sky-400 to-blue-500 origin-left z-50 overflow-hidden"
+            >
+              <motion.div
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                className="w-full h-full bg-white/20"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
             <button

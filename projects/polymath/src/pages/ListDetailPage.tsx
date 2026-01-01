@@ -1,17 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Trash2, Mic, MicOff } from 'lucide-react'
+import { Reorder, AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, GripVertical } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { motion, AnimatePresence } from 'framer-motion'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
 
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, fetchListItems, addListItem, fetchLists } = useListStore()
+    const { lists, currentListItems, fetchListItems, addListItem, fetchLists, reorderItems } = useListStore()
 
     // Find list locally first, or wait for fetch
     const list = lists.find(l => l.id === id)
@@ -25,7 +25,10 @@ export default function ListDetailPage() {
     }, [])
 
     useEffect(() => {
-        if (id) fetchListItems(id)
+        if (id) {
+            fetchListItems(id)
+            window.scrollTo(0, 0)
+        }
     }, [id])
 
     const handleAddItem = async (e?: React.FormEvent) => {
@@ -45,7 +48,6 @@ export default function ListDetailPage() {
         })
     }
 
-    // Voice transcript handler - instant add on voice completion
     const handleVoiceTranscript = async (text: string) => {
         if (!text.trim() || !id) return
         setIsVoiceMode(false)
@@ -55,6 +57,12 @@ export default function ListDetailPage() {
             content: text.trim(),
             status: 'pending'
         })
+    }
+
+    const handleReorder = (newOrder: any[]) => {
+        if (id) {
+            reorderItems(id, newOrder.map(item => item.id))
+        }
     }
 
     if (!list) return <div className="pt-24 text-center text-white">Loading...</div>
@@ -74,24 +82,106 @@ export default function ListDetailPage() {
                         {currentListItems.length} ITEMS
                     </div>
                 </div>
-                {list.description && <p className="text-zinc-500 max-w-xl">{list.description}</p>}
+                {list.description && <p className="text-zinc-500 max-w-xl mb-6">{list.description}</p>}
+
+                {/* Addition Box - Front & Centre */}
+                <div className="mt-8 mb-12 max-w-2xl">
+                    <AnimatePresence mode="wait">
+                        {isVoiceMode ? (
+                            <motion.div
+                                key="voice-mode"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-2xl"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
+                                    <button
+                                        onClick={() => setIsVoiceMode(false)}
+                                        className="text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        <MicOff className="h-4 w-4" />
+                                    </button>
+                                </div>
+                                <VoiceInput
+                                    onTranscript={handleVoiceTranscript}
+                                    autoSubmit={true}
+                                    autoStart={true}
+                                />
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="text-mode"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
+                                className="backdrop-blur-2xl bg-zinc-900/60 border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl focus-within:border-white/20 transition-all"
+                            >
+                                <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-white items-center gap-2">
+                                    <Input
+                                        ref={inputRef}
+                                        value={inputText}
+                                        onChange={e => setInputText(e.target.value)}
+                                        placeholder={`Add something to your ${list.title.toLowerCase()} collection...`}
+                                        className="border-0 bg-transparent focus-visible:ring-0 text-lg text-white placeholder:text-zinc-600 h-12"
+                                        autoFocus
+                                    />
+                                    <div className="flex items-center gap-2 px-1">
+                                        <Button
+                                            type="button"
+                                            onClick={() => setIsVoiceMode(true)}
+                                            className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all border border-white/5"
+                                        >
+                                            <Mic className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={!inputText.trim()}
+                                            className="rounded-xl bg-white text-black hover:bg-zinc-200 h-10 px-4 gap-2 font-bold shrink-0 transition-all"
+                                        >
+                                            <span>Add</span>
+                                            <Send className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Items Grid (Scrollable Area) */}
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-48">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <AnimatePresence initial={false}>
+                {currentListItems.length === 0 && !list ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-pulse">
+                        {[1, 2, 3, 4].map(i => (
+                            <div key={i} className="h-40 bg-zinc-900/50 rounded-xl" />
+                        ))}
+                    </div>
+                ) : (
+                    <Reorder.Group
+                        axis="y"
+                        values={currentListItems}
+                        onReorder={handleReorder}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                    >
                         {currentListItems.map((item) => {
                             const isBook = list.type === 'book';
                             return (
-                                <motion.div
+                                <Reorder.Item
                                     key={item.id}
-                                    layout
+                                    value={item}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    className="bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col"
+                                    className="bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col cursor-pointer"
                                 >
+                                    {/* Drag Handle */}
+                                    <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-30 transition-opacity z-20">
+                                        <GripVertical className="h-3 w-3 text-white" />
+                                    </div>
+
                                     {/* Item Image / Cover */}
                                     {(() => {
                                         const isPosterType = isBook || list.type === 'film' || list.type === 'movie' || list.type === 'show' || list.type === 'tv';
@@ -201,18 +291,18 @@ export default function ListDetailPage() {
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
-                                </motion.div>
+                                </Reorder.Item>
                             );
                         })}
-                    </AnimatePresence>
-                </div >
-                {currentListItems.length === 0 && (
+                    </Reorder.Group>
+                )}
+                {currentListItems.length === 0 && list && (
                     <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
                         <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
                         <p className="text-sm text-zinc-500 opacity-60">Begin typing below to curate your list.</p>
                     </div>
                 )}
-            </div >
+            </div>
 
             {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">
@@ -235,70 +325,6 @@ export default function ListDetailPage() {
                 </div>
             </div>
 
-            {/* Fixed Bottom Input Bar - Lifted to clear Nav */}
-            <div className="fixed bottom-[100px] left-0 right-0 p-4 z-[100] pr-20 md:pr-4">
-                <AnimatePresence mode="wait">
-                    {isVoiceMode ? (
-                        <motion.div
-                            key="voice-mode"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
-                                <button
-                                    onClick={() => setIsVoiceMode(false)}
-                                    className="text-zinc-500 hover:text-white transition-colors"
-                                >
-                                    <MicOff className="h-4 w-4" />
-                                </button>
-                            </div>
-                            <VoiceInput
-                                onTranscript={handleVoiceTranscript}
-                                autoSubmit={true}
-                                autoStart={true}
-                            />
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="text-mode"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="max-w-2xl mx-auto backdrop-blur-2xl bg-zinc-900/80 border border-white/10 rounded-full p-1.5 flex items-center gap-2 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
-                        >
-                            <form onSubmit={handleAddItem} className="flex-1 flex px-2 text-white items-center gap-2">
-                                <Input
-                                    ref={inputRef}
-                                    value={inputText}
-                                    onChange={e => setInputText(e.target.value)}
-                                    placeholder={`Add to ${list.title}...`}
-                                    className="border-0 bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10 text-base"
-                                    autoFocus
-                                />
-                                <Button
-                                    type="button"
-                                    onClick={() => setIsVoiceMode(true)}
-                                    className="rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-sky-400 h-9 w-9 p-0 shrink-0 transition-all duration-300"
-                                >
-                                    <Mic className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={!inputText.trim()}
-                                    className="rounded-full bg-white text-black hover:bg-zinc-200 h-9 w-9 p-0 shrink-0 transition-all duration-300"
-                                >
-                                    <Send className="h-4 w-4" />
-                                </Button>
-                            </form>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                {/* Visual anchor for the bar */}
-                <div className="absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black to-transparent pointer-events-none -z-10" />
-            </div>
-        </div >
+        </div>
     )
 }
