@@ -42,13 +42,12 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
   const setOpen = onOpenChange || setInternalOpen
 
   // Wizard State
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2>(1)
   const [direction, setDirection] = useState(0)
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    motivation: '',
     end_goal: '',
     project_mode: 'completion' as 'completion' | 'recurring',
     next_step: '',
@@ -56,9 +55,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
   })
 
   // Data Validation for Steps
-  const isStep1Valid = formData.title.length > 2
+  const isStep1Valid = formData.title.length > 2 && formData.description.length > 10
   // For completion projects, strongly encourage Definition of Done
-  const isStep2Valid = formData.description.length > 10 && formData.motivation.length > 5
   const hasDefinitionOfDone = formData.project_mode === 'recurring' || formData.end_goal.length > 5
 
 
@@ -68,7 +66,6 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
     setFormData({
       title: '',
       description: '',
-      motivation: '',
       end_goal: '',
       project_mode: 'completion',
       next_step: '',
@@ -80,12 +77,12 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
 
   const nextStep = () => {
     setDirection(1)
-    setStep((prev) => (prev < 3 ? (prev + 1 as 1 | 2 | 3) : prev))
+    setStep((prev) => (prev < 2 ? (prev + 1 as 1 | 2) : prev))
   }
 
   const prevStep = () => {
     setDirection(-1)
-    setStep((prev) => (prev > 1 ? (prev - 1 as 1 | 2 | 3) : prev))
+    setStep((prev) => (prev > 1 ? (prev - 1 as 1 | 2) : prev))
   }
 
 
@@ -112,7 +109,6 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
         metadata: {
           tasks,
           progress: 0,
-          motivation: formData.motivation,
           end_goal: formData.project_mode === 'completion' ? (formData.end_goal || undefined) : undefined,
           project_mode: formData.project_mode,
         },
@@ -162,7 +158,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
               <BottomSheetTitle>Start a New Project</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
-              Quick start - name it, describe it, and define the first step
+              Name it, describe it, and you're ready to go
             </BottomSheetDescription>
           </BottomSheetHeader>
 
@@ -180,12 +176,12 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 >
                   <div className="space-y-4">
                     <div className="text-center mb-6">
-                      <h3 className="text-2xl font-black italic uppercase tracking-tighter">The Identity</h3>
+                      <h3 className="text-2xl font-black italic uppercase tracking-tighter">The Basics</h3>
                       <p className="text-sm text-gray-400">What are we building?</p>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Project Name</Label>
+                      <Label htmlFor="title" className="font-bold text-xs uppercase tracking-widest text-blue-400">Project Name <span className="text-red-500">*</span></Label>
                       <Input
                         id="title"
                         placeholder="Project Aperture"
@@ -195,6 +191,21 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                         autoComplete="off"
                         autoFocus
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-blue-400">
+                        Description <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="description"
+                        placeholder="A short sentence explaining the project..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                        autoComplete="off"
+                      />
+                      <p className="text-[10px] text-gray-500 text-right">{formData.description.length}/10 chars min</p>
                     </div>
 
                     <div className="space-y-2">
@@ -231,38 +242,8 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   className="space-y-6"
                 >
                   <div className="text-center mb-6">
-                    <h3 className="text-2xl font-black italic uppercase tracking-tighter">The Vision</h3>
-                    <p className="text-sm text-gray-400">Context is fuel for the Engine.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description" className="font-bold text-xs uppercase tracking-widest text-blue-400">
-                      Description <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="description"
-                      placeholder="A short sentence explaining the project..."
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
-                      autoComplete="off"
-                      autoFocus
-                    />
-                    <p className="text-[10px] text-gray-500 text-right">{formData.description.length}/10 chars min</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="motivation" className="font-bold text-xs uppercase tracking-widest text-blue-400">
-                      The "Why" <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="motivation"
-                      placeholder="Why does this matter?"
-                      value={formData.motivation}
-                      onChange={(e) => setFormData({ ...formData, motivation: e.target.value })}
-                      className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
-                      autoComplete="off"
-                    />
+                    <h3 className="text-2xl font-black italic uppercase tracking-tighter">Finish Line</h3>
+                    <p className="text-sm text-gray-400">How will you know you're done?</p>
                   </div>
 
                   {/* Project Mode Toggle */}
@@ -309,14 +290,15 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                         onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
                         className={`h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10 ${!hasDefinitionOfDone && formData.project_mode === 'completion' ? 'border-amber-500/50' : ''}`}
                         autoComplete="off"
+                        autoFocus
                       />
                       {!hasDefinitionOfDone ? (
                         <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200">
-                          <strong>Important:</strong> Without a clear "done" definition, the AI may suggest scattered tasks instead of driving toward completion. What will you have when this project is finished?
+                          <strong>Important:</strong> Without a clear "done" definition, the AI may suggest scattered tasks. What will you have when this project is finished?
                         </div>
                       ) : (
                         <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-xs text-green-200">
-                          <strong>Great!</strong> This helps the AI design sessions that move you toward the finish line, not just busywork.
+                          <strong>Great!</strong> This helps the AI design sessions that move you toward the finish line.
                         </div>
                       )}
                     </div>
@@ -327,23 +309,6 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                       <strong>Habit Mode:</strong> AI will suggest consistent practice sessions rather than driving toward "done".
                     </div>
                   )}
-                </motion.div>
-              )}
-
-              {step === 3 && (
-                <motion.div
-                  key="step3"
-                  custom={direction}
-                  initial={{ opacity: 0, x: direction > 0 ? 50 : -50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: direction > 0 ? -50 : 50 }}
-                  transition={{ duration: 0.2 }}
-                  className="space-y-6"
-                >
-                  <div className="text-center mb-6">
-                    <h3 className="text-2xl font-black italic uppercase tracking-tighter">Ignition</h3>
-                    <p className="text-sm text-gray-400">Ready to launch.</p>
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="next_step" className="font-bold text-xs uppercase tracking-widest text-gray-500">
@@ -356,26 +321,11 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                       onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
                       className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
                       autoComplete="off"
-                      autoFocus
                     />
-                  </div>
-
-                  <div className="p-6 rounded-2xl bg-zebra border border-white/10 text-center relative overflow-hidden group">
-                    <div className="relative z-10">
-                      <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Analyzing Context</div>
-                      <div className="text-white font-black italic text-lg">{formData.title}</div>
-                      <div className="text-sm text-gray-400 mt-1 line-clamp-1">{formData.description}</div>
-
-                      <div className="mt-4 flex justify-center gap-2">
-                        <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-mono text-zebra-accent">Scaffolding Ready</span>
-                        <span className="px-2 py-1 bg-white/10 rounded text-[10px] font-mono text-zebra-accent">AI Context Loaded</span>
-                      </div>
-                    </div>
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                   </div>
                 </motion.div>
               )}
+
             </AnimatePresence>
 
             <div className="flex gap-3 mt-8">
@@ -390,11 +340,11 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 </Button>
               )}
 
-              {step < 3 ? (
+              {step < 2 ? (
                 <Button
                   type="button"
                   onClick={nextStep}
-                  disabled={step === 1 ? !isStep1Valid : !isStep2Valid}
+                  disabled={!isStep1Valid}
                   className="flex-[2] h-14 btn-primary font-bold uppercase tracking-widest"
                 >
                   Next Step
@@ -406,14 +356,14 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   disabled={loading}
                   className="flex-[2] h-14 bg-white text-black hover:bg-zebra-accent font-black uppercase tracking-widest"
                 >
-                  {loading ? 'Launching...' : 'Initialize Project'}
+                  {loading ? 'Launching...' : 'Create Project'}
                 </Button>
               )}
             </div>
 
             {/* Stepper Dots */}
             <div className="flex justify-center gap-2 mt-6">
-              {[1, 2, 3].map(i => (
+              {[1, 2].map(i => (
                 <div
                   key={i}
                   className={`w-2 h-2 rounded-full transition-all ${step === i ? 'bg-white w-4' : 'bg-white/20'}`}
