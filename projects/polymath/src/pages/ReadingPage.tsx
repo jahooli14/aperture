@@ -317,14 +317,15 @@ export function ReadingPage() {
     try {
       addToast({
         title: 'Opening...',
-        description: 'Loading article',
+        description: 'Extracting full article content...',
         variant: 'default',
       })
 
+      // Don't pass content - let backend extract full article from URL
+      // RSS descriptions are usually just summaries, not full content
       const newArticle = await saveArticle({
         url: item.link,
         title: item.title,
-        content: item.content || item.description || '', // Try full content first, then description
         excerpt: (item.description || item.content || '').substring(0, 200) || undefined
       })
 
