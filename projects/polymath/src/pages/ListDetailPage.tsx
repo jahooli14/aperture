@@ -18,6 +18,7 @@ export default function ListDetailPage() {
 
     const [inputText, setInputText] = useState('')
     const [isVoiceMode, setIsVoiceMode] = useState(false)
+    const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
     const inputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
@@ -83,6 +84,7 @@ export default function ListDetailPage() {
                     <AnimatePresence initial={false}>
                         {currentListItems.map((item) => {
                             const isBook = list.type === 'book';
+                            const isExpanded = expandedItemId === item.id;
                             return (
                                 <motion.div
                                     key={item.id}
@@ -90,7 +92,8 @@ export default function ListDetailPage() {
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    className="bg-zinc-900 border border-white/5 rounded-xl p-4 group relative overflow-hidden flex flex-col"
+                                    onClick={() => setExpandedItemId(isExpanded ? null : item.id)}
+                                    className="bg-zinc-900 border border-white/5 rounded-xl p-3 group relative overflow-hidden flex flex-col cursor-pointer hover:border-white/20 transition-all"
                                 >
                                     {/* Item Image / Cover */}
                                     {(() => {
@@ -99,7 +102,7 @@ export default function ListDetailPage() {
 
                                         if (hasImage) {
                                             return (
-                                                <div className={`${isPosterType ? 'aspect-[2/3]' : 'aspect-video'} mb-3 rounded-lg overflow-hidden bg-zinc-800/50 shadow-xl ring-1 ring-white/10 flex items-center justify-center`}>
+                                                <div className={`${isPosterType ? 'aspect-[2/3]' : 'aspect-video'} ${isExpanded ? 'mb-3' : 'mb-2'} rounded-lg overflow-hidden bg-zinc-800/50 shadow-xl ring-1 ring-white/10 flex items-center justify-center`}>
                                                     <img
                                                         src={item.metadata.image}
                                                         alt={item.content}
@@ -108,7 +111,7 @@ export default function ListDetailPage() {
                                                     />
                                                 </div>
                                             );
-                                        } else if (isPosterType) {
+                                        } else if (isPosterType && isExpanded) {
                                             return (
                                                 <div className="aspect-[2/3] mb-3 rounded-lg bg-zinc-800/50 flex items-center justify-center border border-white/5 border-dashed">
                                                     <span className="text-zinc-600 text-xs font-mono">NO COVER</span>
@@ -120,70 +123,76 @@ export default function ListDetailPage() {
 
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between gap-2 mb-1">
-                                            <span className="text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight">
+                                            <span className={`text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight ${isExpanded ? 'text-sm' : 'text-xs'}`}>
                                                 {item.content}
                                             </span>
                                         </div>
 
-                                        {/* Metadata Rendering */}
-                                        {item.metadata?.subtitle && (
-                                            <p className="text-zinc-400 text-xs mb-3 line-clamp-2 leading-relaxed italic">{item.metadata.subtitle}</p>
-                                        )}
+                                        {/* Metadata Rendering - Only show when expanded */}
+                                        {isExpanded && (
+                                            <>
+                                                {item.metadata?.subtitle && (
+                                                    <p className="text-zinc-400 text-xs mb-3 line-clamp-2 leading-relaxed italic">{item.metadata.subtitle}</p>
+                                                )}
 
-                                        {item.metadata?.description && (
-                                            <p className="text-zinc-300 text-xs mb-3 line-clamp-2 leading-relaxed">{item.metadata.description}</p>
-                                        )}
+                                                {item.metadata?.description && (
+                                                    <p className="text-zinc-300 text-xs mb-3 line-clamp-3 leading-relaxed">{item.metadata.description}</p>
+                                                )}
 
-                                        {item.metadata?.specs && (
-                                            <div className="flex flex-wrap gap-2 mb-3">
-                                                {Object.entries(item.metadata.specs).map(([key, value]) => (
-                                                    <div key={key} className="flex flex-col">
-                                                        <span className="text-[8px] uppercase font-bold text-zinc-600 tracking-tighter">{key}</span>
-                                                        <span className="text-[10px] font-mono text-zinc-300">
-                                                            {value as string}
-                                                        </span>
+                                                {item.metadata?.specs && (
+                                                    <div className="flex flex-wrap gap-2 mb-3">
+                                                        {Object.entries(item.metadata.specs).map(([key, value]) => (
+                                                            <div key={key} className="flex flex-col">
+                                                                <span className="text-[8px] uppercase font-bold text-zinc-600 tracking-tighter">{key}</span>
+                                                                <span className="text-[10px] font-mono text-zinc-300">
+                                                                    {value as string}
+                                                                </span>
+                                                            </div>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                )}
 
-                                        {item.metadata?.tags && item.metadata.tags.length > 0 && (
-                                            <div className="flex flex-wrap gap-1.5 mb-3">
-                                                {item.metadata.tags.map((tag: string) => (
-                                                    <span key={tag} className="text-[10px] bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded text-sky-300 font-medium">
-                                                        {tag}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="mt-auto flex items-center justify-between">
-                                        {item.metadata?.link ? (
-                                            <a
-                                                href={item.metadata.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                Details &rarr;
-                                            </a>
-                                        ) : <div />}
-
-                                        {item.enrichment_status === 'pending' && (
-                                            <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-bold animate-pulse uppercase tracking-widest">
-                                                <div className="h-1 w-1 rounded-full bg-sky-400" />
-                                                <span>Analyzing</span>
-                                            </div>
-                                        )}
-
-                                        {item.enrichment_status === 'failed' && (
-                                            <div className="text-[10px] text-red-500/50 font-medium uppercase tracking-widest">
-                                                <span>Analysis Failed</span>
-                                            </div>
+                                                {item.metadata?.tags && item.metadata.tags.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1.5 mb-3">
+                                                        {item.metadata.tags.map((tag: string) => (
+                                                            <span key={tag} className="text-[10px] bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded text-sky-300 font-medium">
+                                                                {tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
+
+                                    {isExpanded && (
+                                        <div className="mt-auto flex items-center justify-between">
+                                            {item.metadata?.link ? (
+                                                <a
+                                                    href={item.metadata.link}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest flex items-center gap-1"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    Details &rarr;
+                                                </a>
+                                            ) : <div />}
+
+                                            {item.enrichment_status === 'pending' && (
+                                                <div className="flex items-center gap-1.5 text-[10px] text-sky-400 font-bold animate-pulse uppercase tracking-widest">
+                                                    <div className="h-1 w-1 rounded-full bg-sky-400" />
+                                                    <span>Analyzing</span>
+                                                </div>
+                                            )}
+
+                                            {item.enrichment_status === 'failed' && (
+                                                <div className="text-[10px] text-red-500/50 font-medium uppercase tracking-widest">
+                                                    <span>Analysis Failed</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     {/* Hover Actions */}
                                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
