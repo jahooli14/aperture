@@ -149,6 +149,9 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
     },
   ], [editIcon, copyIcon, shareIcon, deleteIcon, handleCopyText, handleShare, handleDelete])
 
+  // Detect if this is an offline/pending memory
+  const isOfflinePending = memory.id.startsWith('offline_') || memory.tags?.includes('offline-pending')
+
   return (
     <>
       <ContextMenu
@@ -162,15 +165,18 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
         onClick={() => setShowDetailModal(true)}
         whileHover={{
           y: -2,
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: isOfflinePending ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.1)',
+          borderColor: isOfflinePending ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.2)',
           boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)'
         }}
         className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative"
         style={{
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+          borderColor: isOfflinePending ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+          background: isOfflinePending
+            ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.005) 100%)'
+            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+          opacity: isOfflinePending ? 0.6 : 1
         }}
       >
         <CardHeader className="relative z-10 flex flex-row items-start justify-between p-0 pb-2">
