@@ -23,12 +23,19 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         // 1. Resolve List Type if not provided
         let category = listType
         if (!category) {
-            const { data: list } = await supabase
+            console.log(`[Enrichment] Fetching list type for listId: ${listId}`)
+            const { data: list, error: listError } = await supabase
                 .from('lists')
                 .select('type')
                 .eq('id', listId)
+                .eq('user_id', userId)
                 .single()
+
+            if (listError) {
+                console.error(`[Enrichment] Failed to fetch list type:`, listError)
+            }
             category = list?.type || 'generic'
+            console.log(`[Enrichment] List category resolved to: ${category}`)
         }
 
         // 2. Try external APIs first, then fallback chain
@@ -107,6 +114,8 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             updateData.embedding = embedding
         }
 
+        console.log(`[Enrichment] Updating database for item ${itemId} with metadata from ${metadata.source}`)
+
         let { error } = await supabase
             .from('list_items')
             .update(updateData)
@@ -126,7 +135,17 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             error = retryError
         }
 
-        if (error) throw error
+        if (error) {
+            console.error(`[Enrichment] Database update failed for item ${itemId}:`, {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            })
+            throw error
+        }
+
+        console.log(`[Enrichment] Database updated successfully for: ${content}`)
 
         // 5. Create semantic connections to projects/thoughts/articles
         // This is where "film you saved" can inspire "your paint pouring project"
