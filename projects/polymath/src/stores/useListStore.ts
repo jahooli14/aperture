@@ -157,8 +157,8 @@ export const useListStore = create<ListStore>()(
             fetchListItems: async (listId) => {
                 const { isOnline } = useOfflineStore.getState()
 
-                // Clear current items before fetching new ones to avoid "stale data flash"
-                set({ currentListItems: [] })
+                // Clear current items or set loading to prevent stale flash
+                set({ currentListItems: [], loading: true })
 
                 // Helper to load from Dexie
                 const loadFromDexie = async () => {
@@ -167,7 +167,7 @@ export const useListStore = create<ListStore>()(
                         const cachedItems = await readingDb.getCachedListItems(listId)
                         if (cachedItems.length > 0) {
                             console.log(`[ListStore] Loaded ${cachedItems.length} items from Dexie cache`)
-                            set({ currentListItems: cachedItems as any })
+                            set({ currentListItems: cachedItems as any, loading: false })
                             return true
                         }
                     } catch (e) {
@@ -186,7 +186,7 @@ export const useListStore = create<ListStore>()(
                     const response = await fetch(`/api/list-items?listId=${listId}`)
                     if (!response.ok) throw new Error('Failed to fetch items')
                     const data = await response.json()
-                    set({ currentListItems: data })
+                    set({ currentListItems: data, loading: false })
 
                     // Cache to Dexie for offline viewing
                     try {
@@ -198,8 +198,10 @@ export const useListStore = create<ListStore>()(
                     }
                 } catch (error: any) {
                     console.error('[ListStore] Fetch failed, loading from cache:', error)
-                    await loadFromDexie()
-                    set({ error: error.message })
+                    const loaded = await loadFromDexie()
+                    if (!loaded) {
+                        set({ error: error.message, loading: false })
+                    }
                 }
             },
 
@@ -290,7 +292,7 @@ export const useListStore = create<ListStore>()(
                         // Revert count
                         lists: state.lists.map(l =>
                             l.id === input.list_id
-                                ? { ...l, item_count: (l.item_count || 1) - 1 }
+                                ? { ...l, item_count: Math.max(0, (l.item_count || 1) - 1) }
                                 : l
                         )
                     }))
@@ -316,7 +318,6 @@ export const useListStore = create<ListStore>()(
                 }
 
                 // TODO: Implement API call for update when online
-                // For now the optimistic update handles the UI
             },
 
             deleteListItem: async (itemId, listId) => {
@@ -484,7 +485,7 @@ export const useListStore = create<ListStore>()(
             }
         }),
         {
-            name: 'rosette-lists-store',
+            name: 'aperture-lists-store',
             partialize: (state) => ({ lists: state.lists })
         }
     )
