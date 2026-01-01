@@ -123,7 +123,8 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             .eq('user_id', userId)
 
         // Graceful fallback if the 'embedding' column is missing from list_items
-        if (error?.code === '42703' && updateData.embedding) {
+        // Error codes: 42703 (PostgreSQL), PGRST204 (PostgREST schema cache)
+        if ((error?.code === '42703' || error?.code === 'PGRST204') && updateData.embedding) {
             console.warn('[Enrichment] Database missing list_items.embedding column. Retrying without embedding.')
             const fallbackData = { ...updateData }
             delete fallbackData.embedding
