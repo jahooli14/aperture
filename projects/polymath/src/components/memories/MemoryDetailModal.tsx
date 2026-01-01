@@ -30,7 +30,9 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 
   const [bridges, setBridges] = useState<BridgeWithMemories[]>([])
   const [bridgesFetched, setBridgesFetched] = useState(false)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [connectionCount, setConnectionCount] = useState(0);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(true);
 
   // Module-level cache to prevent refetching bridges
   const bridgesCache = useMemo(() => new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>(), []);
@@ -254,25 +256,23 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
               )}
 
               {/* Connections Section */}
-              <div className="mt-8 pt-6 border-t border-white/10">
-                <h3 className="text-lg font-bold premium-text-platinum mb-4">
-                  Connections
-                </h3>
-                {bridgesFetched && bridges.length === 0 ? (
-                  <div className="text-sm text-gray-400">
-                    No connections found yet.
-                  </div>
-                ) : (
+              {(connectionCount > 0 || isLoadingConnections) && (
+                <div className="mt-8 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-bold premium-text-platinum mb-4">
+                    Connections
+                  </h3>
                   <MemoryLinks currentMemoryId={memory.id} bridges={bridges} />
-                )}
-                <ConnectionsList
-                  itemType="thought"
-                  itemId={memory.id}
-                  content={memoryContent}
-                  onConnectionCreated={loadMemoryBridges}
-                  onConnectionDeleted={loadMemoryBridges}
-                />
-              </div>
+                  <ConnectionsList
+                    itemType="thought"
+                    itemId={memory.id}
+                    content={memoryContent}
+                    onConnectionCreated={loadMemoryBridges}
+                    onConnectionDeleted={loadMemoryBridges}
+                    onCountChange={setConnectionCount}
+                    onLoadingChange={setIsLoadingConnections}
+                  />
+                </div>
+              )}
 
               {/* Timestamp */}
               <div className="flex items-center gap-2 text-xs pt-6 mt-6 border-t border-white/10" style={{ color: 'var(--premium-text-tertiary)' }}>

@@ -16,6 +16,8 @@ export function StudioTab({ project }: StudioTabProps) {
     const [draft, setDraft] = useState(project.metadata?.studio_draft || '')
     const [isSaving, setIsSaving] = useState(false)
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
+    const [connectionCount, setConnectionCount] = useState(0)
+    const [isLoadingConnections, setIsLoadingConnections] = useState(true)
 
     // Auto-save logic
     useEffect(() => {
@@ -109,20 +111,24 @@ export function StudioTab({ project }: StudioTabProps) {
 
             {/* Sidebar: Connections & Inspiration */}
             <div className="space-y-6">
-                <div className="premium-card p-6 border-zinc-500/10">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Sparkles className="h-4 w-4 text-sky-400" />
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Contextual Sparks</h4>
+                {(connectionCount > 0 || isLoadingConnections) && (
+                    <div className="premium-card p-6 border-zinc-500/10">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Sparkles className="h-4 w-4 text-sky-400" />
+                            <h4 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Contextual Sparks</h4>
+                        </div>
+                        <div className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                            Automatic connections found by the Aperture Engine based on your Studio notes.
+                        </div>
+                        <ConnectionsList
+                            itemType="project"
+                            itemId={project.id}
+                            content={`${project.title}\n${project.description || ''}\n${draft}`}
+                            onCountChange={setConnectionCount}
+                            onLoadingChange={setIsLoadingConnections}
+                        />
                     </div>
-                    <div className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                        Automatic connections found by the Aperture Engine based on your Studio notes.
-                    </div>
-                    <ConnectionsList
-                        itemType="project"
-                        itemId={project.id}
-                        content={`${project.title}\n${project.description || ''}\n${draft}`}
-                    />
-                </div>
+                )}
 
                 <div className="premium-card p-6 border-zinc-500/10 bg-gradient-to-tr from-sky-500/5 to-transparent">
                     <div className="flex items-center gap-2 mb-3">

@@ -19,6 +19,8 @@ interface ConnectionsListProps {
   content?: string // For AI suggestions
   onConnectionDeleted?: () => void
   onConnectionCreated?: () => void
+  onCountChange?: (count: number) => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
 interface DisplayItem {
@@ -58,12 +60,17 @@ const SCHEMA_COLORS = {
   }
 }
 
-export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted, onConnectionCreated }: ConnectionsListProps) {
+export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted, onConnectionCreated, onCountChange, onLoadingChange }: ConnectionsListProps) {
   const { getConnections, setConnections: cacheConnections, invalidateConnections } = useConnectionStore()
   const [connections, setConnections] = useState<ItemConnection[]>([])
   const [suggestions, setSuggestions] = useState<DisplayItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+
+  // Notify parent of loading state
+  useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
 
   useEffect(() => {
     loadData()
@@ -166,6 +173,11 @@ export function ConnectionsList({ itemType, itemId, content, onConnectionDeleted
 
     return items.slice(0, 5)
   }, [connections, suggestions])
+
+  // Notify parent of connection count
+  useEffect(() => {
+    onCountChange?.(displayItems.length)
+  }, [displayItems.length, onCountChange])
 
   const handleManualConnectionCreated = async () => {
     // Called after a new manual connection is created
