@@ -53,11 +53,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // 2. Enrich (Await to ensure it runs in serverless environment)
             // This might add 1-3s latency but ensures data quality
             try {
+                console.log(`[list-items] Starting enrichment for: "${content}" in list: ${targetListId}`)
                 const metadata = await enrichListItem(userId, targetListId, item.id, content)
+                console.log(`[list-items] Enrichment successful for: "${content}"`)
                 // Return enriched item
                 return res.status(201).json({ ...item, metadata, enrichment_status: 'complete' })
             } catch (enrichError) {
-                console.error('Enrichment failed (non-fatal):', enrichError)
+                console.error('[list-items] Enrichment failed:', {
+                    error: enrichError instanceof Error ? enrichError.message : enrichError,
+                    stack: enrichError instanceof Error ? enrichError.stack : undefined,
+                    content,
+                    listId: targetListId
+                })
                 // Return unenriched item
                 return res.status(201).json(item)
             }
