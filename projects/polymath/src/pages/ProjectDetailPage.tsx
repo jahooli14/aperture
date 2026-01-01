@@ -1034,9 +1034,22 @@ export function ProjectDetailPage() {
 
               {/* Activity */}
               <div className="mt-12">
-                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--premium-text-primary)' }}>
-                  Activity
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--premium-text-primary)' }}>
+                    Activity
+                  </h3>
+                  <Button
+                    onClick={() => setShowAddNote(true)}
+                    className="h-9 px-4 text-sm font-medium"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
+                      color: 'white'
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Add Update
+                  </Button>
+                </div>
                 <ProjectActivityStream
                   notes={[...notes, ...projectMemories.map(m => ({
                     id: m.id,
