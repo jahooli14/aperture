@@ -92,6 +92,7 @@ async function extractInterestsFromMemories(userId: string): Promise<Interest[]>
   const { data: entities, error } = await supabase
     .from('entities')
     .select('id, name, type')
+    .eq('user_id', userId)
     .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
 
   if (error) return []
@@ -199,8 +200,16 @@ Return ONLY a JSON array of objects:
   const text = result.response.text()
 
   try {
-    const jsonMatch = text.match(/[\[\s\S]*\]/)
-    return JSON.parse(jsonMatch ? jsonMatch[0] : text)
+    // Strip markdown code fences if present
+    let cleanedText = text.trim()
+    const markdownMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    if (markdownMatch) {
+      cleanedText = markdownMatch[1].trim()
+    }
+
+    // Extract JSON array
+    const jsonMatch = cleanedText.match(/\[[\s\S]*\]/)
+    return JSON.parse(jsonMatch ? jsonMatch[0] : cleanedText)
   } catch (e) {
     logger.error({ text }, 'Failed to parse batch JSON')
     return []

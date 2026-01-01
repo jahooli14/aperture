@@ -113,6 +113,12 @@ function cleanHtml(html: string, url: string): string {
     }
   })
 
+  // Defensive check: Ensure body exists before accessing innerHTML
+  if (!document.body) {
+    console.warn('[cleanHtml] Document body is null after parsing. Returning original content.')
+    return html
+  }
+
   return document.body.innerHTML
 }
 
