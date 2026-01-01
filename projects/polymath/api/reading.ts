@@ -44,9 +44,18 @@ function stripHtml(html: string): string {
  * Removes boilerplate, ads, navigation, and problematic styling.
  */
 function cleanHtml(html: string, url: string): string {
-  if (!html) return ''
+  if (!html || typeof html !== 'string') return ''
 
-  const { document } = parseHTML(html) as any
+  let document: any
+  try {
+    const parsed = parseHTML(html) as any
+    document = parsed.document
+  } catch (e) {
+    console.error('[cleanHtml] Fatal parse error:', e)
+    return html
+  }
+
+  if (!document) return html
 
   // 1. Remove obvious junk
   const selectorsToRemove = [
@@ -66,9 +75,9 @@ function cleanHtml(html: string, url: string): string {
   // 2. Clean up attributes - only keep essential ones
   const allowedAttributes = ['src', 'srcset', 'sizes', 'href', 'alt', 'title', 'class', 'width', 'height', 'loading', 'referrerpolicy']
   document.querySelectorAll('*').forEach((el: any) => {
-    const attributes = Array.from(el.attributes) as any[]
+    const attributes = el.attributes ? Array.from(el.attributes) as any[] : []
     attributes.forEach(attr => {
-      if (!allowedAttributes.includes(attr.name)) {
+      if (attr && attr.name && !allowedAttributes.includes(attr.name)) {
         el.removeAttribute(attr.name)
       }
     })
@@ -1005,7 +1014,7 @@ function countWords(content: string): number {
 
 async function internalHandler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
-  const userId = getUserId()
+  const userId = getUserId(req)
   const { resource, id } = req.query
 
   // HIGHLIGHTS RESOURCE
@@ -1147,7 +1156,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           await supabase
             .from('reading_queue')
             .update({ status: 'reading', read_at: new Date().toISOString() })
-            .eq('id', id)
+            .eq('id', article.id)
             .eq('user_id', userId)
 
           article.status = 'reading'
@@ -1621,7 +1630,9 @@ Return ONLY the JSON, no other text.`
                   const result = JSON.parse(text)
                   const rawContent = result.data?.content || result.content || content
                   const cleanedMarkdown = cleanMarkdownContent(rawContent)
-                  content = cleanHtml(marked.parse(cleanedMarkdown).toString(), item.link || '')
+                  const parsedHtml = marked.parse(cleanedMarkdown)
+                  const htmlString = typeof parsedHtml === 'string' ? parsedHtml : await (parsedHtml as any)
+                  content = cleanHtml(htmlString, item.link || '')
                 } catch (e) {
                   console.error('[RSS Sync] Failed to parse Jina response for', item.link)
                   content = cleanHtml(content, item.link || '')
