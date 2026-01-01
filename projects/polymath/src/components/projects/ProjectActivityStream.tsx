@@ -5,14 +5,16 @@
 
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { Mic, FileText, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { Mic, FileText, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import { Card, CardContent } from '../ui/card'
+import { motion } from 'framer-motion'
 
 interface ProjectNote {
   id: string
   bullets: string[]
   created_at: string
   note_type?: 'voice' | 'text'
+  image_urls?: string[]
 }
 
 interface ProjectActivityStreamProps {
@@ -137,7 +139,7 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
 
                     {/* Content */}
                     {showPreview && (
-                      <div className="ml-11">
+                      <div className="ml-11 space-y-3">
                         {isExpanded ? (
                           <ul className="space-y-1.5 text-sm" style={{ color: 'var(--premium-text-secondary)' }}>
                             {note.bullets.map((bullet, index) => (
@@ -171,6 +173,51 @@ export function ProjectActivityStream({ notes, onRefresh }: ProjectActivityStrea
                               </>
                             )}
                           </button>
+                        )}
+
+                        {/* Images */}
+                        {note.image_urls && note.image_urls.length > 0 && (
+                          <div className="mt-3">
+                            <div className={`grid gap-2 ${note.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                              {note.image_urls.slice(0, isExpanded ? undefined : 2).map((url, index) => (
+                                <motion.div
+                                  key={url}
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: index * 0.05 }}
+                                  className="relative rounded-xl overflow-hidden border group cursor-pointer"
+                                  style={{
+                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                    aspectRatio: note.image_urls.length === 1 ? '16/9' : '1/1'
+                                  }}
+                                  onClick={() => window.open(url, '_blank')}
+                                >
+                                  <img
+                                    src={url}
+                                    alt={`Attachment ${index + 1}`}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="p-1.5 rounded-full bg-black/40 backdrop-blur-sm">
+                                      <ImageIcon className="h-3 w-3 text-white" />
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                            </div>
+                            {!isExpanded && note.image_urls.length > 2 && (
+                              <button
+                                onClick={() => toggleExpanded(note.id)}
+                                className="mt-2 flex items-center gap-1 text-xs font-medium transition-colors"
+                                style={{ color: 'var(--premium-blue)' }}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                                Show {note.image_urls.length - 2} more {note.image_urls.length - 2 === 1 ? 'image' : 'images'}
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
