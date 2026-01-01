@@ -200,8 +200,16 @@ Return ONLY a JSON array of objects:
   const text = result.response.text()
 
   try {
-    const jsonMatch = text.match(/[\[\s\S]*\]/)
-    return JSON.parse(jsonMatch ? jsonMatch[0] : text)
+    // Strip markdown code fences if present
+    let cleanedText = text.trim()
+    const markdownMatch = cleanedText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    if (markdownMatch) {
+      cleanedText = markdownMatch[1].trim()
+    }
+
+    // Extract JSON array
+    const jsonMatch = cleanedText.match(/\[[\s\S]*\]/)
+    return JSON.parse(jsonMatch ? jsonMatch[0] : cleanedText)
   } catch (e) {
     logger.error({ text }, 'Failed to parse batch JSON')
     return []
