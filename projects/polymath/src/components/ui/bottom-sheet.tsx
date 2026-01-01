@@ -68,10 +68,10 @@ const BottomSheetOverlay = React.forwardRef<
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
       className={cn(
         'fixed inset-0 z-50',
-        'bg-black/60 backdrop-blur-sm',
+        'bg-black/70 backdrop-blur-md',
         className
       )}
       onClick={() => {
@@ -89,11 +89,12 @@ const BottomSheetContent = React.forwardRef<
 >(({ className, children }, ref) => {
   const { onOpenChange } = React.useContext(BottomSheetContext)
   const y = useMotionValue(0)
-  const opacity = useTransform(y, [0, 300], [1, 0.5], { clamp: true })
+  const opacity = useTransform(y, [0, 300], [1, 0.7], { clamp: true })
+  const scale = useTransform(y, [0, 300], [1, 0.95], { clamp: true })
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    // Dismiss if dragged down more than 100px or with fast velocity
-    if (info.offset.y > 100 || info.velocity.y > 500) {
+    // Dismiss if dragged down more than 80px or with fast velocity
+    if (info.offset.y > 80 || info.velocity.y > 400) {
       haptic.light()
       onOpenChange(false)
     }
@@ -104,17 +105,24 @@ const BottomSheetContent = React.forwardRef<
       <BottomSheetOverlay />
       <motion.div
         ref={ref}
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        initial={{ y: '100%', opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: '100%', opacity: 0 }}
+        transition={{
+          type: 'spring',
+          damping: 35,
+          stiffness: 400,
+          mass: 0.8,
+        }}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0, bottom: 0.5 }}
+        dragElastic={{ top: 0, bottom: 0.3 }}
+        dragMomentum={false}
         onDragEnd={handleDragEnd}
         style={{
           y,
           opacity,
+          scale,
           backgroundColor: 'var(--premium-surface-card)',
           borderColor: 'rgba(255, 255, 255, 0.1)'
         }}
@@ -126,22 +134,28 @@ const BottomSheetContent = React.forwardRef<
           'shadow-2xl border-t-2',
           'overflow-hidden',
           'flex flex-col',
+          'will-change-transform',
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle */}
-        <div className="flex items-center justify-center pt-3 pb-2 flex-shrink-0">
-          <div
+        <div className="flex items-center justify-center pt-4 pb-3 flex-shrink-0 cursor-grab active:cursor-grabbing">
+          <motion.div
             className="w-12 h-1.5 rounded-full"
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              backgroundColor: 'rgba(255, 255, 255, 0.3)',
             }}
+            whileHover={{
+              backgroundColor: 'rgba(255, 255, 255, 0.4)',
+              width: 56
+            }}
+            transition={{ duration: 0.2 }}
           />
         </div>
 
         {/* Close Button */}
-        <button
+        <motion.button
           onClick={() => {
             haptic.light()
             onOpenChange(false)
@@ -151,10 +165,8 @@ const BottomSheetContent = React.forwardRef<
             'h-10 w-10',
             'flex items-center justify-center',
             'rounded-full',
-            'backdrop-blur-xl border-2 shadow-md hover:shadow-lg',
-            'transition-all duration-200',
-            'focus:outline-none focus:ring-2',
-            'active:scale-95',
+            'backdrop-blur-xl border-2',
+            'focus:outline-none focus:ring-2 focus:ring-blue-500',
             'z-10',
             'touch-manipulation'
           )}
@@ -163,10 +175,16 @@ const BottomSheetContent = React.forwardRef<
             borderColor: 'rgba(255, 255, 255, 0.2)',
             color: 'var(--premium-text-primary)'
           }}
+          whileHover={{
+            scale: 1.05,
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+          }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.15 }}
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
-        </button>
+        </motion.button>
 
         {/* Content Area (Scrollable) */}
         <div className="flex-1 overflow-y-auto px-6 pb-8">
