@@ -92,6 +92,7 @@ async function extractInterestsFromMemories(userId: string): Promise<Interest[]>
   const { data: entities, error } = await supabase
     .from('entities')
     .select('id, name, type')
+    .eq('user_id', userId)
     .gte('created_at', new Date(Date.now() - CONFIG.RECENT_DAYS * 24 * 60 * 60 * 1000).toISOString())
 
   if (error) return []
@@ -147,6 +148,7 @@ async function getCapabilities(userId: string): Promise<Capability[]> {
   const { data, error } = await supabase
     .from('capabilities')
     .select('id, name, description, strength, source_project')
+    .eq('user_id', userId)
     .order('strength', { ascending: false })
 
   if (error) throw error
