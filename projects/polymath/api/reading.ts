@@ -58,18 +58,28 @@ function cleanHtml(html: string, url: string): string {
   if (!document) return html
 
   // Fix for Linkedom handling of HTML fragments (e.g. from Readability)
+  // If documentElement is null, linkedom can't access body/head without crashing
   // If the input is just "<div>...</div>", Linkedom might not put it in document.body
-  if (!document.body || document.body.innerHTML.trim().length === 0) {
+  const hasValidDocumentElement = document.documentElement !== null
+  const bodyContent = hasValidDocumentElement ? document.body?.innerHTML?.trim() : ''
+
+  if (!hasValidDocumentElement || !document.body || bodyContent.length === 0) {
     // If body is empty but we have content, try wrapping it
     try {
       const wrapped = `<!DOCTYPE html><html><body>${html}</body></html>`
       const parsedWrapped = parseHTML(wrapped) as any
-      if (parsedWrapped.document && parsedWrapped.document.body) {
+      // Check documentElement first to avoid linkedom crash when accessing body
+      if (parsedWrapped.document && parsedWrapped.document.documentElement && parsedWrapped.document.body) {
         document = parsedWrapped.document
       }
     } catch (e) {
       // Fallback to original document if wrapping fails
     }
+  }
+
+  // Final safety check - if we still don't have a valid document structure, return original HTML
+  if (!document.documentElement || !document.body) {
+    return html
   }
 
   // 1. Remove obvious junk
