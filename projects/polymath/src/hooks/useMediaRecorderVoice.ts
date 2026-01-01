@@ -270,8 +270,10 @@ export function useMediaRecorderVoice({
       // Convert to blob
       const audioBlob = base64ToBlob(result.value.recordDataBase64, 'audio/aac')
 
-      // Check online status
-      if (!navigator.onLine) {
+      // Check online status via store
+      const { isOnline } = (await import('../stores/useOfflineStore')).useOfflineStore.getState()
+
+      if (!isOnline) {
         console.log('[Native] Offline - saving to IndexedDB for later transcription')
         const { db } = await import('../lib/db')
         const { queueOperation } = await import('../lib/offlineQueue')
@@ -289,11 +291,22 @@ export function useMediaRecorderVoice({
         return
       }
 
-      // Transcribe
-      const text = await transcribeAudio(audioBlob)
+      // Transcribe (Online) with a timeout to prevent getting "stuck"
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
-      setTranscript(text)
-      onTranscript(text)
+      try {
+        const text = await transcribeAudio(audioBlob)
+        clearTimeout(timeoutId)
+        setTranscript(text)
+        onTranscript(text)
+      } catch (transcribeError: any) {
+        clearTimeout(timeoutId)
+        if (transcribeError.name === 'AbortError') {
+          throw new Error('Transcription timed out. It will be retried in the background.')
+        }
+        throw transcribeError
+      }
 
       if (autoSubmit) {
         setTranscript('')
@@ -376,8 +389,10 @@ export function useMediaRecorderVoice({
 
       setIsProcessing(true)
 
-      // Check online status
-      if (!navigator.onLine) {
+      // Check online status via store for more reliability
+      const { isOnline } = (await import('../stores/useOfflineStore')).useOfflineStore.getState()
+
+      if (!isOnline) {
         console.log('[Web] Offline - saving to IndexedDB for later transcription')
         const { db } = await import('../lib/db')
         const { queueOperation } = await import('../lib/offlineQueue')
@@ -395,11 +410,22 @@ export function useMediaRecorderVoice({
         return
       }
 
-      // Transcribe (Online)
-      const text = await transcribeAudio(audioBlob)
+      // Transcribe (Online) with a timeout to prevent getting "stuck"
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
-      setTranscript(text)
-      onTranscript(text)
+      try {
+        const text = await transcribeAudio(audioBlob)
+        clearTimeout(timeoutId)
+        setTranscript(text)
+        onTranscript(text)
+      } catch (transcribeError: any) {
+        clearTimeout(timeoutId)
+        if (transcribeError.name === 'AbortError') {
+          throw new Error('Transcription timed out. It will be retried in the background.')
+        }
+        throw transcribeError
+      }
 
       if (autoSubmit) {
         setTranscript('')

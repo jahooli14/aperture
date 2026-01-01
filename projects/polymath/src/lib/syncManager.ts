@@ -225,29 +225,38 @@ async function processOperation(operation: QueuedOperation): Promise<boolean> {
 
         // 2. Transcribe
         const formData = new FormData()
-        formData.append('audio', pending.audio_blob, 'recording.' + (pending.mime_type?.split('/')[1] || 'webm'))
+        formData.append('audio', pending.audio_blob, 'recording.webm')
 
         const transcribeRes = await fetch('/api/memories?action=transcribe', {
           method: 'POST',
           body: formData
         })
 
-        if (!transcribeRes.ok) throw new Error('Transcription failed during sync')
+        if (!transcribeRes.ok) throw new Error(`Transcription failed during sync: ${transcribeRes.status}`)
         const { text } = await transcribeRes.json()
 
         if (!text) throw new Error('No transcript returned during sync')
 
-        // 3. Create Memory
+        // 3. Create Memory - this is now rapid as we fixed the API to be non-blocking
         const captureRes = await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: text })
+          body: JSON.stringify({
+            transcript: text,
+            // Preserve source project if available
+            source_reference: pending.transcript?.startsWith('project:') ? pending.transcript : null
+          })
         })
 
-        if (!captureRes.ok) throw new Error('Capture failed during sync')
+        if (!captureRes.ok) throw new Error(`Capture failed during sync: ${captureRes.status}`)
 
         // 4. Cleanup
         await db.deletePendingCapture(captureId)
+        console.log('[SyncManager] Successfully synced media capture')
+
+        // Trigger a generic memory refresh event for the UI
+        window.dispatchEvent(new CustomEvent('memories-synced'))
+
         return true
       }
 

@@ -103,7 +103,7 @@ function cleanHtml(html: string, url: string): string {
     // High quality display & privacy protection
     el.setAttribute('loading', 'lazy')
     el.setAttribute('referrerpolicy', 'no-referrer') // Crucial for loading images from other domains
-    el.style = 'max-width: 100%; height: auto; border-radius: 0.5rem; margin: 2rem auto; display: block;'
+    el.setAttribute('style', 'max-width: 100%; height: auto; border-radius: 0.5rem; margin: 2rem auto; display: block;')
   })
 
   // 5. Remove empty paragraphs or segments
@@ -1347,7 +1347,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
           const errorMessage = extractError instanceof Error ? extractError.message : 'Unknown error'
           let userFriendlyMessage = 'Extraction in progress. '
 
-          // Check for Jina AI domain blocks (451 error)
+          // Check for Jina AI domain blocks (451 error) - updated for more clarity to USER
           if (errorMessage.includes('451') || errorMessage.includes('blocked') || errorMessage.includes('SecurityCompromiseError')) {
             // Try to extract the blocked-until timestamp
             const blockedUntilMatch = errorMessage.match(/blocked until ([^)]+)/i)
@@ -1355,20 +1355,20 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
               try {
                 const blockedUntil = new Date(blockedUntilMatch[1])
                 const blockedUntilStr = blockedUntil.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' })
-                userFriendlyMessage = `This domain is temporarily blocked until ${blockedUntilStr} due to abuse prevention. Try again after that time or view the original article.`
+                userFriendlyMessage = `The extraction service (Jina AI) is restricted from this domain until ${blockedUntilStr} to prevent abuse. Retrying with other methods...`
               } catch {
-                userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+                userFriendlyMessage = 'The extraction service (Jina AI) is temporarily restricted from this domain. Retrying with other methods...'
               }
             } else {
-              userFriendlyMessage = 'This domain is temporarily blocked by the content extraction service due to abuse prevention. Try again later or view the original article.'
+              userFriendlyMessage = 'The extraction service (Jina AI) is temporarily restricted from this domain. Retrying with other methods...'
             }
           } else if (errorMessage.includes('JavaScript-heavy site')) {
             userFriendlyMessage = 'This site requires JavaScript rendering. Content extraction may be incomplete.'
           } else if (errorMessage.includes('timeout') || errorMessage.includes('aborted') || errorMessage.includes('AbortError')) {
             // Backend extraction timed out - client will auto-retry via zombie detection
-            userFriendlyMessage = 'Extraction timed out - will auto-retry. Page may be slow to load.'
-          } else if (errorMessage.includes('Failed to extract article after trying all methods')) {
-            userFriendlyMessage = 'All extraction methods failed. Site may require JavaScript or have anti-bot protection.'
+            userFriendlyMessage = 'Extraction timed out - auto-retry initiated. Page may be slow to load.'
+          } else if (errorMessage.includes('All extraction methods failed')) {
+            userFriendlyMessage = 'All extraction methods failed. Site may have heavy anti-bot protection or requires login. Try the original article.'
           } else {
             userFriendlyMessage = 'Content extraction failed. You can still view the original URL.'
           }
