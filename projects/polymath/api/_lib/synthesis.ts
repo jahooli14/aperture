@@ -148,7 +148,6 @@ async function getCapabilities(userId: string): Promise<Capability[]> {
   const { data, error } = await supabase
     .from('capabilities')
     .select('id, name, description, strength, source_project')
-    .eq('user_id', userId)
     .order('strength', { ascending: false })
 
   if (error) throw error
