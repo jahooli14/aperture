@@ -134,12 +134,31 @@ export function FloatingNav() {
           })
         })
 
+        console.log('[FloatingNav] API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          contentType: response.headers.get('content-type')
+        })
+
         if (!response.ok) {
           const contentType = response.headers.get('content-type')
-          if (contentType?.includes('text/html')) {
-            throw new Error('Thoughts API not available')
+          let errorDetails = `HTTP ${response.status}: ${response.statusText}`
+
+          if (contentType?.includes('application/json')) {
+            try {
+              const errorData = await response.json()
+              errorDetails = errorData.details || errorData.error || errorDetails
+              console.error('[FloatingNav] API Error Details:', errorData)
+            } catch (parseError) {
+              console.error('[FloatingNav] Failed to parse error response')
+            }
+          } else if (contentType?.includes('text/html')) {
+            console.error('[FloatingNav] Received HTML instead of JSON - API deployment issue')
+            errorDetails = 'Thoughts API not available (deployment issue)'
           }
-          throw new Error(`Failed to save thought: ${response.statusText}`)
+
+          throw new Error(errorDetails)
         }
 
         const data = await response.json()
