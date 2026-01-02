@@ -51,7 +51,8 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
     if (projectId) {
         query = query.eq('id', projectId)
     } else {
-        query = query.order('last_active', { ascending: false }).limit(20)
+        // COST OPTIMIZATION: Reduced from 20 to 12 projects (saves ~40% tokens)
+        query = query.order('last_active', { ascending: false }).limit(12)
     }
 
     const { data: projects, error: projectsError } = await query
@@ -134,6 +135,11 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const totalIncomplete = unfinishedTasks.length
         const totalTasks = allTasks.length
 
+        // COST OPTIMIZATION: Only send top 10 incomplete + last 3 completed to AI
+        // (instead of ALL tasks - saves ~60% of task-related tokens)
+        const unfinishedForPrompt = unfinishedTasks.slice(0, 10)
+        const completedForPrompt = completedTasks.slice(-3)
+
         // Calculate project progress and phase
         const progressPercent = totalTasks > 0 ? Math.round((completedTasks.length / totalTasks) * 100) : 0
         const projectPhase = progressPercent === 0 ? 'Just Started'
@@ -180,17 +186,18 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
             return ageInDays > 14
         }).map((t: any) => t.text)
 
-        // Get rejected/removed suggestions to avoid repeating
-        const rejectedSuggestions = p.metadata?.rejected_suggestions || []
+        // COST OPTIMIZATION: Limit rejected suggestions to last 5 (instead of all)
+        const rejectedSuggestions = (p.metadata?.rejected_suggestions || []).slice(-5)
 
         // Get last session context for continuity
         const lastSession = p.metadata?.last_session
 
-        const unfinishedList = unfinishedTasks.length > 0
-            ? unfinishedTasks.map((t: any) => `${t.text} ${t.estimated_minutes ? `[${t.estimated_minutes}m]` : ''}`).join(', ')
+        // COST OPTIMIZATION: Use filtered task lists for prompt (top 10 incomplete, last 3 completed)
+        const unfinishedList = unfinishedForPrompt.length > 0
+            ? unfinishedForPrompt.map((t: any) => `${t.text} ${t.estimated_minutes ? `[${t.estimated_minutes}m]` : ''}`).join(', ')
             : 'None yet'
-        const completedList = completedTasks.length > 0
-            ? completedTasks.slice(-5).map((t: any) => t.text).join(', ')
+        const completedList = completedForPrompt.length > 0
+            ? completedForPrompt.map((t: any) => t.text).join(', ')
             : 'None yet'
 
         // Get motivation and end_goal for goal-driven AI
@@ -199,7 +206,11 @@ export async function generatePowerHourPlan(userId: string, projectId?: string, 
         const projectMode = p.metadata?.project_mode || 'completion'
         const isRecurring = projectMode === 'recurring'
 
-        let context = `- [${p.type || 'General'}] ${p.title} (${p.status}) [ID: ${p.id}]: ${p.description || 'No description'}
+        // COST OPTIMIZATION: Truncate long descriptions to 150 chars
+        const description = p.description || 'No description'
+        const truncatedDesc = description.length > 150 ? description.substring(0, 150) + '...' : description
+
+        let context = `- [${p.type || 'General'}] ${p.title} (${p.status}) [ID: ${p.id}]: ${truncatedDesc}
     Motivation: ${motivation || 'Not specified'}
     Project Mode: ${isRecurring ? '🔄 RECURRING (ongoing habit - no end goal)' : 'Completion-based'}
     ${isRecurring ? 'Focus: Consistency and habit-building, not finishing' : `Definition of Done: ${endGoal || 'Not specified - help user define completion'}`}
