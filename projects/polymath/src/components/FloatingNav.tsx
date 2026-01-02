@@ -190,22 +190,42 @@ export function FloatingNav() {
       }
     } catch (error) {
       console.error('Failed to capture:', error)
-      // Fallback to offline queue if API fails
-      try {
-        await addOfflineCapture(text)
-        addToast({
-          title: 'Queued for sync',
-          description: 'Will process when API is available.',
-          variant: 'default',
-        })
-        // Keep the optimistic memory visible
-      } catch (offlineError) {
-        console.error('Failed to queue offline:', offlineError)
-        // Remove optimistic memory if complete failure
+
+      // Only queue for offline if it's truly a network error, not an API error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isNetworkError =
+        errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('NetworkError') ||
+        error instanceof TypeError
+
+      if (isNetworkError) {
+        // True network error - queue for offline sync
+        try {
+          await addOfflineCapture(text)
+          addToast({
+            title: 'Queued for sync',
+            description: 'Will process when back online.',
+            variant: 'default',
+          })
+          // Keep the optimistic memory visible
+        } catch (offlineError) {
+          console.error('Failed to queue offline:', offlineError)
+          // Remove optimistic memory if complete failure
+          removeOptimisticMemory(tempId)
+          addToast({
+            title: 'Failed to save',
+            description: 'Could not queue for offline. Please try again.',
+            variant: 'destructive',
+          })
+        }
+      } else {
+        // API error while online - show the error to user, don't queue
         removeOptimisticMemory(tempId)
         addToast({
           title: 'Failed to save',
-          description: 'Please try again.',
+          description: errorMessage.includes('not available')
+            ? 'API temporarily unavailable. Please try again.'
+            : 'Error saving thought. Please try again.',
           variant: 'destructive',
         })
       }
