@@ -190,7 +190,7 @@ Return JSON:
     "skills": ["user abilities"]
   },
   "themes": ["max 3: career/health/creativity/relationships/learning/family"],
-  "tags": ["3-5 keywords"],
+  "tags": ["3-5 specific, contextual tags. Focus on: technologies mentioned, activities, specific topics, domains. Avoid generic words like 'note', 'thought', 'voice-note', 'idea'. Examples: 'react', 'parenting', 'meditation', 'typescript', 'career-planning'"],
   "emotional_tone": "short phrase",
   "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0-1}
 }
