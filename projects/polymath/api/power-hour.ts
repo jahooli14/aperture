@@ -2,6 +2,12 @@ import { VercelRequest, VercelResponse } from '@vercel/node'
 import { getSupabaseClient } from './_lib/supabase.js'
 import { getUserId } from './_lib/auth.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
+import {
+    shouldUseCachedPowerHour,
+    savePowerHourCache,
+    canRegenerateProject,
+    markProjectRegenerated
+} from './_lib/power-hour-cache.js'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -23,45 +29,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const deviceContext = isMobile ? 'mobile' : 'desktop'
 
     try {
-        // 1. Check for cached plan
-        // A. Project-Specific Cache (from separate suggestions field)
-        if (targetProject && !isRefresh) {
-            const { data: project } = await supabase
-                .from('projects')
-                .select('metadata')
-                .eq('id', targetProject)
-                .single()
+        // 1. Check for cached plan using smart cache manager
+        const { useCache, cachedTasks, source } = await shouldUseCachedPowerHour(
+            userId,
+            targetProject,
+            isRefresh
+        )
 
-            const suggested = project?.metadata?.suggested_power_hour_tasks
-            const timestamp = project?.metadata?.suggested_power_hour_timestamp
-
-            if (suggested && timestamp) {
-                const age = Date.now() - new Date(timestamp).getTime()
-                // Valid if < 20 hours old
-                if (age < 20 * 60 * 60 * 1000) {
-                    console.log('[power-hour] Returning project-specific suggestions from metadata')
-                    return res.status(200).json({ tasks: suggested, cached: true })
-                }
-            }
+        if (useCache && cachedTasks) {
+            console.log(`[power-hour] Returning cached plan (source: ${source})`)
+            return res.status(200).json({ tasks: cachedTasks, cached: true })
         }
 
-        // B. Daily Global Cache (if not targeting a specific project)
-        if (!isRefresh && !targetProject) {
-            const cutoff = new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString()
-
-            const { data: cached, error: cacheError } = await supabase
-                .from('daily_power_hour')
-                .select('*')
-                .eq('user_id', userId)
-                .gt('created_at', cutoff)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single()
-
-            if (cached && cached.tasks) {
-                console.log('[power-hour] Returning cached plan from:', cached.created_at)
-                return res.status(200).json({ tasks: cached.tasks, cached: true })
-            }
+        // 1b. Rate limiting: Check if we can regenerate this project
+        if (targetProject && !canRegenerateProject(targetProject)) {
+            console.log('[power-hour] Rate limited - regenerated too recently')
+            // Return empty or old cache with warning
+            return res.status(429).json({
+                error: 'Power Hour for this project was regenerated recently. Please wait before refreshing again.',
+                cached: false
+            })
         }
 
         // 2. No cache? Generate on the fly (and cache it)
@@ -124,18 +111,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        // Cache it for next time (Global cache only if not specific project refresh? Or always?)
-        // If we generated a general plan, cache it.
-        // If we generated a specific project plan, we already saved it to metadata.
-        if (!targetProject && tasks.length > 0) {
-            await supabase.from('daily_power_hour').insert({
-                user_id: userId,
-                tasks: tasks,
-                created_at: new Date().toISOString()
-            })
+        // 4. Cache the generated plan using smart cache manager
+        if (tasks.length > 0) {
+            await savePowerHourCache(userId, tasks, targetProject)
+
+            // Mark project as regenerated for rate limiting
+            if (targetProject) {
+                markProjectRegenerated(targetProject)
+            }
         }
 
-        return res.status(200).json({ tasks })
+        return res.status(200).json({ tasks, cached: false })
 
     } catch (error) {
         console.error('Power Hour Error:', error)

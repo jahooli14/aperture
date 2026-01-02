@@ -200,15 +200,12 @@ class DataSynchronizer {
           }
         }),
 
-        // Power Hour tasks
-        fetch('/api/power-hour').then(async (res) => {
-          if (res.ok) {
-            const data = await res.json()
-            if (data.tasks) {
-              await readingDb.cacheDashboard('power-hour', { tasks: data.tasks })
-            }
-          }
-        }),
+        // COST OPTIMIZATION: Removed Power Hour from auto-sync
+        // Power Hour is expensive (~18K tokens/call) and already has:
+        // - 20-hour cache
+        // - Daily cron pre-generation
+        // - On-demand refresh when user opens the page
+        // Syncing it every 5 minutes was costing £13-15/month!
 
         // RSS Feeds
         fetch('/api/reading?resource=rss').then(async (res) => {
@@ -221,7 +218,7 @@ class DataSynchronizer {
         })
       ])
 
-      console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, power-hour, rss)')
+      console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, rss)')
     } catch (error) {
       console.error('[DataSynchronizer] Dashboard sync failed:', error)
     }
