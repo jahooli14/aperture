@@ -95,13 +95,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // }
       results.tasks.strengthen = { success: true, nodes_strengthened: 0, message: 'Feature archived' }
 
-      // 2. Process stuck memories
+      // 2. Process stuck memories (including retrying failed ones)
       try {
         const { data: stuckMemories, error: fetchError } = await supabase
           .from('memories')
           .select('id, title, created_at')
           .eq('processed', false)
-          .is('error', null)
+          // Removed .is('error', null) to allow retrying failed memories
           .lt('created_at', new Date(Date.now() - 5 * 60 * 1000).toISOString())
           .order('created_at', { ascending: true })
           .limit(10)
@@ -302,7 +302,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })
 
     } else if (job === 'process_stuck' || job === 'process-memories') {
-      // Process any memories stuck in processing
+      // Process any memories stuck in processing (including retrying failed ones)
       // process_stuck: >5 min old (backward compat)
       // process-memories: >30 seconds old (runs every 5 min)
       const ageThreshold = job === 'process-memories'
@@ -313,7 +313,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .from('memories')
         .select('id, title, created_at')
         .eq('processed', false)
-        .is('error', null)
+        // Removed .is('error', null) to allow retrying failed memories
         .lt('created_at', new Date(Date.now() - ageThreshold).toISOString())
         .order('created_at', { ascending: true })
         .limit(10)
