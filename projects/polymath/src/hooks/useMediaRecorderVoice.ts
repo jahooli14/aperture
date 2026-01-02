@@ -280,11 +280,10 @@ export function useMediaRecorderVoice({
         console.error('[Native] Transcription failed:', transcribeError.message)
 
         // Check if this is a network error (actual offline state)
+        // Only treat as offline if it's a real network failure, not an API error
         const isNetworkError =
-          transcribeError.message?.includes('fetch') ||
           transcribeError.message?.includes('Failed to fetch') ||
           transcribeError.message?.includes('NetworkError') ||
-          transcribeError.message?.includes('not available') ||
           transcribeError instanceof TypeError
 
         if (isNetworkError) {
@@ -400,11 +399,10 @@ export function useMediaRecorderVoice({
         console.error('[Web] Transcription failed:', transcribeError.message)
 
         // Check if this is a network error (actual offline state)
+        // Only treat as offline if it's a real network failure, not an API error
         const isNetworkError =
-          transcribeError.message?.includes('fetch') ||
           transcribeError.message?.includes('Failed to fetch') ||
           transcribeError.message?.includes('NetworkError') ||
-          transcribeError.message?.includes('not available') ||
           transcribeError instanceof TypeError
 
         if (isNetworkError) {
