@@ -134,12 +134,31 @@ export function FloatingNav() {
           })
         })
 
+        console.log('[FloatingNav] API Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          contentType: response.headers.get('content-type')
+        })
+
         if (!response.ok) {
           const contentType = response.headers.get('content-type')
-          if (contentType?.includes('text/html')) {
-            throw new Error('Thoughts API not available')
+          let errorDetails = `HTTP ${response.status}: ${response.statusText}`
+
+          if (contentType?.includes('application/json')) {
+            try {
+              const errorData = await response.json()
+              errorDetails = errorData.details || errorData.error || errorDetails
+              console.error('[FloatingNav] API Error Details:', errorData)
+            } catch (parseError) {
+              console.error('[FloatingNav] Failed to parse error response')
+            }
+          } else if (contentType?.includes('text/html')) {
+            console.error('[FloatingNav] Received HTML instead of JSON - API deployment issue')
+            errorDetails = 'Thoughts API not available (deployment issue)'
           }
-          throw new Error(`Failed to save thought: ${response.statusText}`)
+
+          throw new Error(errorDetails)
         }
 
         const data = await response.json()
@@ -190,22 +209,42 @@ export function FloatingNav() {
       }
     } catch (error) {
       console.error('Failed to capture:', error)
-      // Fallback to offline queue if API fails
-      try {
-        await addOfflineCapture(text)
-        addToast({
-          title: 'Queued for sync',
-          description: 'Will process when API is available.',
-          variant: 'default',
-        })
-        // Keep the optimistic memory visible
-      } catch (offlineError) {
-        console.error('Failed to queue offline:', offlineError)
-        // Remove optimistic memory if complete failure
+
+      // Only queue for offline if it's truly a network error, not an API error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const isNetworkError =
+        errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('NetworkError') ||
+        error instanceof TypeError
+
+      if (isNetworkError) {
+        // True network error - queue for offline sync
+        try {
+          await addOfflineCapture(text)
+          addToast({
+            title: 'Queued for sync',
+            description: 'Will process when back online.',
+            variant: 'default',
+          })
+          // Keep the optimistic memory visible
+        } catch (offlineError) {
+          console.error('Failed to queue offline:', offlineError)
+          // Remove optimistic memory if complete failure
+          removeOptimisticMemory(tempId)
+          addToast({
+            title: 'Failed to save',
+            description: 'Could not queue for offline. Please try again.',
+            variant: 'destructive',
+          })
+        }
+      } else {
+        // API error while online - show the error to user, don't queue
         removeOptimisticMemory(tempId)
         addToast({
           title: 'Failed to save',
-          description: 'Please try again.',
+          description: errorMessage.includes('not available')
+            ? 'API temporarily unavailable. Please try again.'
+            : 'Error saving thought. Please try again.',
           variant: 'destructive',
         })
       }
