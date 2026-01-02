@@ -18,6 +18,12 @@ async function downloadImages(articleId: string, content: string): Promise<void>
         const src = img.getAttribute('src')
         if (!src) return
 
+        // Skip blob URLs - they're browser-specific and already in memory
+        if (src.startsWith('blob:')) {
+            console.log(`[OfflineSync] Skipping blob URL: ${src}`)
+            return
+        }
+
         try {
             // Check if already cached
             const cached = await readingDb.getCachedImage(src)

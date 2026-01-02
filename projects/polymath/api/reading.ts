@@ -1970,6 +1970,12 @@ Return ONLY the JSON, no other text.`
         return res.status(400).json({ error: 'url required' })
       }
 
+      // Reject blob URLs - they're browser-specific and can't be fetched from server
+      if (imageUrl.startsWith('blob:')) {
+        console.warn(`[Image Proxy] Rejected blob URL: ${imageUrl}`)
+        return res.status(400).json({ error: 'Blob URLs cannot be proxied. They are browser-specific and only exist in client memory.' })
+      }
+
       console.log(`[Image Proxy] Fetching: ${imageUrl}`)
       const imgRes = await fetch(imageUrl)
 

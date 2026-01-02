@@ -80,7 +80,8 @@ export class OfflineContentManager {
     images.forEach(img => {
       // Get src
       const src = img.getAttribute('src')
-      if (src) imageUrlsToDownload.add(src)
+      // Skip blob URLs - they're browser-specific and can't be fetched from server
+      if (src && !src.startsWith('blob:')) imageUrlsToDownload.add(src)
 
       // Get srcset
       const srcset = img.getAttribute('srcset')
@@ -91,7 +92,8 @@ export class OfflineContentManager {
         const matches = srcset.matchAll(/(?:^|\s)(\S+?)(?:\s+\d+[wx])?(?:$|,)/g)
         for (const match of matches) {
           const url = match[1]?.trim()
-          if (url) imageUrlsToDownload.add(url)
+          // Skip blob URLs - they're browser-specific and can't be fetched from server
+          if (url && !url.startsWith('blob:')) imageUrlsToDownload.add(url)
         }
       }
     })

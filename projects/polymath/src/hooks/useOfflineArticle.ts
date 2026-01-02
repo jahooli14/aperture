@@ -30,6 +30,12 @@ export function useOfflineArticle(): UseOfflineArticleResult {
       const src = img.getAttribute('src')
       if (!src) return
 
+      // Skip blob URLs - they're browser-specific and already in memory
+      if (src.startsWith('blob:')) {
+        console.log(`[Offline] Skipping blob URL: ${src}`)
+        return
+      }
+
       try {
         // Check if already cached
         const cached = await readingDb.getCachedImage(src)
