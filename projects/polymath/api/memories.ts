@@ -358,10 +358,10 @@ Return valid JSON.`
       ? `manual_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
       : `voice_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
 
-    // Use provided tags or default to voice-note tag
+    // Use provided tags, otherwise empty array (AI will generate contextual tags during processing)
     const memoryTags = tags && Array.isArray(tags) && tags.length > 0
       ? tags
-      : (isManualEntry ? [] : ['voice-note'])
+      : []
 
     const newMemory = {
       audiopen_id: uniqueId,
