@@ -401,34 +401,42 @@ Return valid JSON.`
 
     console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
 
-    // Process memory inline with Gemini (tags, summary, linking, etc.)
-    console.log(`[handleCapture] Starting inline AI processing for memory ${memory.id}`)
+    // Process memory synchronously to ensure reliable completion
+    console.log(`[handleCapture] Starting AI processing for memory ${memory.id}`)
 
     try {
-      // Process memory in background (tags, summary, linking, etc.)
-      // We don't await this to keep the API response rapid as requested
-      console.log(`[handleCapture] 🔄 Triggering background AI processing for memory ${memory.id}`)
-      processMemory(memory.id).catch(err => {
-        console.error(`[handleCapture] 🚨 Background processing failed for ${memory.id}:`, err)
-      })
+      // Process memory immediately (tags, summary, linking, etc.)
+      // Awaiting ensures processing completes reliably before response
+      console.log(`[handleCapture] 🔄 Processing memory ${memory.id}...`)
+      await processMemory(memory.id)
 
+      // Fetch the fully processed memory
+      const { data: processedMemory, error: fetchError } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('id', memory.id)
+        .single()
+
+      if (fetchError) {
+        console.error(`[handleCapture] Failed to fetch processed memory:`, fetchError)
+      }
+
+      console.log(`[handleCapture] ✅ Memory processed successfully, total time: ${Date.now() - startTime}ms`)
+      return res.status(201).json({
+        success: true,
+        memory: processedMemory || memory,
+        message: 'Voice note saved and processed successfully!'
+      })
+    } catch (processingError) {
+      // Processing failed - return memory anyway, cron will retry
+      console.error(`[handleCapture] 🚨 Processing failed for ${memory.id}:`, processingError)
       return res.status(201).json({
         success: true,
         memory,
-        message: 'Voice note saved! AI analysis is running in the background.'
+        message: 'Voice note saved! Processing will complete shortly.',
+        warning: 'Initial processing failed, will retry automatically'
       })
-    } catch (processingError) {
-      // Log error but still return the memory - it will be picked up by cron later
-      console.error(`[handleCapture] 🚨 Failed to trigger background processing:`, processingError)
     }
-
-    // Fallback: return the initial memory
-    console.log(`[handleCapture] Response sent, total time: ${Date.now() - startTime}ms`)
-    return res.status(201).json({
-      success: true,
-      memory,
-      message: 'Voice note saved! AI processing in progress...'
-    })
 
   } catch (error) {
     console.error('[handleCapture] Error:', error)
