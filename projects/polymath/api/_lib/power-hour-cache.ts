@@ -86,16 +86,19 @@ export async function savePowerHourCache(
 export async function invalidateProjectCache(projectId: string): Promise<void> {
   console.log('[PowerHourCache] Invalidating cache for project:', projectId)
 
+  const { data: project } = await supabase
+    .from('projects')
+    .select('metadata')
+    .eq('id', projectId)
+    .single()
+
   const { error } = await supabase
     .from('projects')
     .update({
-      metadata: supabase.sql`
-        jsonb_set(
-          COALESCE(metadata, '{}'::jsonb),
-          '{power_hour_cache_invalidated}',
-          'true'::jsonb
-        )
-      `
+      metadata: {
+        ...project?.metadata,
+        power_hour_cache_invalidated: true
+      }
     })
     .eq('id', projectId)
 
