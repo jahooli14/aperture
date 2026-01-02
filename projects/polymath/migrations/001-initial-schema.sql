@@ -197,6 +197,7 @@ COMMENT ON COLUMN entities.interest_strength IS 'Calculated from frequency * 0.5
 
 CREATE TABLE IF NOT EXISTS memories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
 
   -- Raw Audiopen data
@@ -227,6 +228,7 @@ CREATE TABLE IF NOT EXISTS memories (
 );
 
 CREATE INDEX idx_memories_audiopen_id ON memories(audiopen_id);
+CREATE INDEX idx_memories_user_id ON memories(user_id);
 CREATE INDEX idx_memories_created_at ON memories(created_at DESC);
 CREATE INDEX idx_memories_processed ON memories(processed);
 CREATE INDEX idx_memories_embedding ON memories USING ivfflat(embedding vector_cosine_ops) WITH (lists = 100);
