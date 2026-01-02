@@ -15,6 +15,7 @@ import { analyzeTaskEnergy } from './_lib/task-energy-analyzer.js'
 import { generatePowerHourPlan } from './_lib/power-hour-generator.js'
 import { identifyRottingProjects, generateZebraReport, buryProject, resurrectProject } from './_lib/project-maintenance.js'
 import { updateItemConnections } from './_lib/connection-logic.js'
+import { invalidateProjectCache } from './_lib/power-hour-cache.js'
 
 // Daily Queue Scoring Logic
 interface UserContext {
@@ -963,18 +964,13 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
       console.log('[PATCH] Successfully updated project')
 
-      // Trigger Power Hour refresh in background if tasks changed
+      // COST OPTIMIZATION: Invalidate Power Hour cache instead of regenerating
+      // This saves ~18K tokens per update. Cache will regenerate on-demand when user requests it.
       if (updates.metadata?.tasks) {
-        console.log('[PATCH] Tasks changed, refreshing Power Hour plan in background...')
-        generatePowerHourPlan(userId).then(tasks => {
-          if (tasks.length > 0) {
-            supabase.from('daily_power_hour').insert({
-              user_id: userId,
-              tasks: tasks,
-              created_at: new Date().toISOString()
-            }).then(() => console.log('[PATCH] Power Hour refreshed and cached.'))
-          }
-        }).catch(err => console.error('[PATCH] Failed to background refresh Power Hour:', err))
+        console.log('[PATCH] Tasks changed, invalidating Power Hour cache for this project')
+        invalidateProjectCache(projectId).catch(err =>
+          console.error('[PATCH] Failed to invalidate Power Hour cache:', err)
+        )
       }
 
       return res.status(200).json(data)
