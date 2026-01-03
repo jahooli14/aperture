@@ -211,7 +211,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                     <div className="space-y-2">
                       <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Classification</Label>
                       <div className="grid grid-cols-2 gap-3">
-                        {['Creative', 'Tech', 'Learning', 'Business'].map((cat) => (
+                        {['Writing', 'Tech', 'Art', 'Music', 'Business', 'Creative'].map((cat) => (
                           <button
                             key={cat}
                             type="button"

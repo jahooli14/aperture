@@ -215,10 +215,13 @@ export function VoiceFAB({
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onAction={(action) => {
-          if (action === 'thought') setShowThoughtDialog(true)
-          if (action === 'project') setShowProjectDialog(true)
-          if (action === 'article') setShowArticleDialog(true)
-          if (action === 'list') setShowListDialog(true)
+          // Small delay to ensure menu modal has closed before opening the next dialog
+          setTimeout(() => {
+            if (action === 'thought') setShowThoughtDialog(true)
+            if (action === 'project') setShowProjectDialog(true)
+            if (action === 'article') setShowArticleDialog(true)
+            if (action === 'list') setShowListDialog(true)
+          }, 100)
         }}
       />
 
