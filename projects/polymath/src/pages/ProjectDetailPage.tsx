@@ -659,7 +659,7 @@ export function ProjectDetailPage() {
                         border: '1px solid rgba(59, 130, 246, 0.3)'
                       }}
                     >
-                      {['Tech', 'Art', 'Writing', 'Music', 'Business', 'Life'].map((cat) => (
+                      {['Creative', 'Tech', 'Learning', 'Business', 'Life', 'Health'].map((cat) => (
                         <button
                           key={cat}
                           onClick={() => handleCategoryChange(cat)}

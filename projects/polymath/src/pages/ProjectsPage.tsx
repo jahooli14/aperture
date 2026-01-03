@@ -35,6 +35,8 @@ export function ProjectsPage() {
 
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [debouncedSelectedTags, setDebouncedSelectedTags] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const { addToast } = useToast()
   const { confirm, dialog: confirmDialog } = useConfirmDialog()
 
@@ -65,6 +67,15 @@ export function ProjectsPage() {
     return () => clearTimeout(timeoutId)
   }, [selectedTags])
 
+  // Debounce search query
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 150) // 150ms debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [searchQuery])
+
   // Extract all unique tags from projects
   const allTags = React.useMemo(() => {
     const safeProjects = Array.isArray(allProjects) ? allProjects : []
@@ -78,19 +89,33 @@ export function ProjectsPage() {
     return Array.from(tagSet).sort()
   }, [allProjects])
 
-  // Filter projects by selected tags (using debounced tags)
+  // Filter projects by selected tags and search query (using debounced values)
   const projects = React.useMemo(() => {
     // Ensure allProjects is always an array
     const safeProjects = Array.isArray(allProjects) ? allProjects : []
     if (safeProjects.length === 0) return []
 
-    if (debouncedSelectedTags.length === 0) return safeProjects
+    let filtered = safeProjects
 
-    return safeProjects.filter(project => {
-      const projectTags = project.metadata?.tags || []
-      return debouncedSelectedTags.every(tag => projectTags.includes(tag))
-    })
-  }, [allProjects, debouncedSelectedTags])
+    // Filter by tags
+    if (debouncedSelectedTags.length > 0) {
+      filtered = filtered.filter(project => {
+        const projectTags = project.metadata?.tags || []
+        return debouncedSelectedTags.every(tag => projectTags.includes(tag))
+      })
+    }
+
+    // Filter by search query
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase()
+      filtered = filtered.filter(project =>
+        project.title.toLowerCase().includes(query) ||
+        (project.description && project.description.toLowerCase().includes(query))
+      )
+    }
+
+    return filtered
+  }, [allProjects, debouncedSelectedTags, debouncedSearchQuery])
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -218,6 +243,30 @@ export function ProjectsPage() {
 
               {/* Inner Content */}
               <div>
+                {/* Search Box */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--premium-text-tertiary)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search projects..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all focus:outline-none"
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        borderColor: searchQuery ? 'var(--premium-blue)' : 'rgba(255, 255, 255, 0.1)',
+                        color: 'var(--premium-text-primary)'
+                      }}
+                    />
+                  </div>
+                  {debouncedSearchQuery && (
+                    <div className="mt-2 text-xs" style={{ color: 'var(--premium-text-secondary)' }}>
+                      Found {projects.length} project{projects.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+
                 {/* Tag Filters */}
                 {allTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3 mb-6">
