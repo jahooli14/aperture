@@ -301,6 +301,7 @@ export const useListStore = create<ListStore>()(
 
             updateListItemStatus: async (itemId, status) => {
                 const { isOnline } = useOfflineStore.getState()
+                const previousItems = get().currentListItems
 
                 // Optimistic
                 set(state => ({
@@ -317,7 +318,28 @@ export const useListStore = create<ListStore>()(
                     return
                 }
 
-                // TODO: Implement API call for update when online
+                try {
+                    const response = await fetch(`/api/list-items?id=${itemId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status })
+                    })
+
+                    if (!response.ok) throw new Error('Failed to update item status')
+                } catch (error: any) {
+                    // If network error, queue for later
+                    if (!navigator.onLine) {
+                        await queueOperation('update_list_item', { id: itemId, status })
+                        await useOfflineStore.getState().updateQueueSize()
+                        console.log('[ListStore] Queued update_list_item after failed attempt')
+                        return
+                    }
+                    // Revert on failure
+                    set({
+                        currentListItems: previousItems,
+                        error: error.message
+                    })
+                }
             },
 
             deleteListItem: async (itemId, listId) => {

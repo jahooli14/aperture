@@ -84,6 +84,7 @@ interface UserPromptStatus {
  * POST /api/memories?capture=true - Voice capture with transcript parsing (requires transcript in body)
  * POST /api/memories?action=transcribe - Transcribe audio file (merged from transcribe.ts)
  * POST /api/memories?action=process - Background memory processing (merged from process.ts)
+ * POST /api/memories?action=retry-failed - Retry processing for failed memories
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient()
@@ -105,6 +106,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         req.body = JSON.parse(Buffer.concat(chunks).toString())
       }
       return await handleProcess(req, res)
+    }
+
+    // POST: Retry failed memories
+    if (req.method === 'POST' && action === 'retry-failed') {
+      return await handleRetryFailed(res, supabase)
     }
 
     // POST: Submit foundational thought response
@@ -408,8 +414,21 @@ Return valid JSON.`
       // Process memory in background (tags, summary, linking, etc.)
       // We don't await this to keep the API response rapid as requested
       console.log(`[handleCapture] 🔄 Triggering background AI processing for memory ${memory.id}`)
-      processMemory(memory.id).catch(err => {
+      processMemory(memory.id).catch(async (err) => {
         console.error(`[handleCapture] 🚨 Background processing failed for ${memory.id}:`, err)
+        // Save the error to the memory so it can be identified and retried later
+        try {
+          await supabase
+            .from('memories')
+            .update({
+              error: err instanceof Error ? err.message : 'Processing failed',
+              processed: false
+            })
+            .eq('id', memory.id)
+          console.log(`[handleCapture] Saved processing error for memory ${memory.id}`)
+        } catch (saveErr) {
+          console.error(`[handleCapture] Failed to save error state for ${memory.id}:`, saveErr)
+        }
       })
 
       return res.status(201).json({
@@ -1200,6 +1219,82 @@ async function handleProcess(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
+ * Retry processing for failed memories
+ * Finds memories with errors and attempts to reprocess them
+ */
+async function handleRetryFailed(res: VercelResponse, supabase: any) {
+  try {
+    // Find memories that failed processing (have error field set, not processed)
+    const { data: failedMemories, error: fetchError } = await supabase
+      .from('memories')
+      .select('id, title, error')
+      .eq('processed', false)
+      .not('error', 'is', null)
+      .limit(10) // Process up to 10 at a time to avoid timeout
+
+    if (fetchError) {
+      console.error('[handleRetryFailed] Failed to fetch failed memories:', fetchError)
+      return res.status(500).json({ error: 'Failed to fetch failed memories' })
+    }
+
+    if (!failedMemories || failedMemories.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: 'No failed memories to retry',
+        retried: 0
+      })
+    }
+
+    console.log(`[handleRetryFailed] Found ${failedMemories.length} failed memories to retry`)
+
+    const results: { id: string; success: boolean; error?: string }[] = []
+
+    // Process each failed memory
+    for (const memory of failedMemories) {
+      try {
+        // Clear the error before retrying
+        await supabase
+          .from('memories')
+          .update({ error: null })
+          .eq('id', memory.id)
+
+        // Attempt to process
+        await processMemory(memory.id)
+        results.push({ id: memory.id, success: true })
+        console.log(`[handleRetryFailed] Successfully reprocessed memory ${memory.id}`)
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+        results.push({ id: memory.id, success: false, error: errorMsg })
+        console.error(`[handleRetryFailed] Failed to reprocess memory ${memory.id}:`, err)
+
+        // Save the new error
+        await supabase
+          .from('memories')
+          .update({ error: errorMsg })
+          .eq('id', memory.id)
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    return res.status(200).json({
+      success: true,
+      message: `Retried ${failedMemories.length} memories: ${successCount} succeeded, ${failCount} failed`,
+      retried: failedMemories.length,
+      results
+    })
+
+  } catch (error) {
+    console.error('[handleRetryFailed] Error:', error)
+    return res.status(500).json({
+      error: 'Failed to retry memories',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}
+
+/**
  * Update memory content and metadata
  */
 async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelResponse, supabase: any) {
@@ -1234,12 +1329,22 @@ async function handleUpdate(memoryId: string, req: VercelRequest, res: VercelRes
     }
 
     // Trigger background processing to regenerate embeddings/entities
-    // We import dynamically to avoid circular dependencies if any, but static import is available at top
     try {
-      // Fire and forget processing
-      processMemory(memoryId).catch(err =>
+      // Fire and forget processing, but save errors for retry
+      processMemory(memoryId).catch(async (err) => {
         console.error('[handleUpdate] Background processing failed:', err)
-      )
+        try {
+          await supabase
+            .from('memories')
+            .update({
+              error: err instanceof Error ? err.message : 'Processing failed',
+              processed: false
+            })
+            .eq('id', memoryId)
+        } catch (saveErr) {
+          console.error('[handleUpdate] Failed to save error state:', saveErr)
+        }
+      })
     } catch (e) {
       console.error('[handleUpdate] Failed to trigger processing:', e)
     }
