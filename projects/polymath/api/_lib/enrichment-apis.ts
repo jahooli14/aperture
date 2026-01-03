@@ -125,43 +125,72 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
 
     const cleanTitle = title.trim().substring(0, 300)
 
+    // Helper to fetch and parse OMDb response
+    async function fetchOmdb(url: string): Promise<any> {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000)
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeout)
+        if (!res.ok) throw new Error(`OMDb API error: ${res.status}`)
+        return res.json()
+    }
+
     try {
         console.log(`[OMDb] Fetching data for: ${cleanTitle}`)
 
-        const url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 10000) // 10s timeout
+        // Try exact title match first (most common case)
+        let url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
+        let data = await fetchOmdb(url)
 
-        const res = await fetch(url, { signal: controller.signal })
-        clearTimeout(timeout)
-
-        if (!res.ok) {
-            throw new Error(`OMDb API error: ${res.status}`)
+        // If not found, try searching for TV series specifically
+        if (data.Response === 'False') {
+            console.log(`[OMDb] Exact match not found, trying series search: ${title}`)
+            url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&type=series&apikey=${apiKey}`
+            data = await fetchOmdb(url)
         }
 
-        const data: any = await res.json()
+        // If still not found, try a broader search and take the first result
+        if (data.Response === 'False') {
+            console.log(`[OMDb] Series not found, trying search: ${title}`)
+            url = `https://www.omdbapi.com/?s=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
+            const searchData = await fetchOmdb(url)
+
+            if (searchData.Response === 'True' && searchData.Search?.[0]) {
+                // Get full details for the first search result
+                const imdbId = searchData.Search[0].imdbID
+                url = `https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`
+                data = await fetchOmdb(url)
+            }
+        }
 
         if (data.Response === 'False') {
-            console.log(`[OMDb] Not found: ${title}`)
+            console.log(`[OMDb] Not found after all attempts: ${title}`)
             return null
         }
+
+        // Use appropriate subtitle based on content type
+        const isSeries = data.Type === 'series'
+        const subtitle = isSeries
+            ? (data.Writer && data.Writer !== 'N/A' ? `Creator: ${data.Writer.split(',')[0]}` : `${data.Year}`)
+            : (data.Director && data.Director !== 'N/A' ? `Director: ${data.Director}` : `${data.Year}`)
 
         const metadata: EnrichmentMetadata = {
             image: data.Poster !== 'N/A' ? data.Poster : undefined,
             thumbnail: data.Poster !== 'N/A' ? data.Poster : undefined,
-            subtitle: `Director: ${data.Director}`,
+            subtitle,
             description: data.Plot && data.Plot !== 'N/A' ? extractBriefDescription(data.Plot) : undefined,
             tags: data.Genre ? data.Genre.split(', ').slice(0, 3) : [],
             link: `https://www.imdb.com/title/${data.imdbID}/`,
             specs: {
                 year: data.Year,
-                runtime: data.Runtime,
-                rating: data.imdbRating
+                runtime: data.Runtime !== 'N/A' ? data.Runtime : undefined,
+                rating: data.imdbRating !== 'N/A' ? data.imdbRating : undefined,
+                type: data.Type
             },
             source: 'omdb'
         }
 
-        console.log(`[OMDb] Successfully enriched: ${title}`)
+        console.log(`[OMDb] Successfully enriched: ${title} (${data.Type})`)
         return metadata
 
     } catch (error: any) {
