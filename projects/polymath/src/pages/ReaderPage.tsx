@@ -56,7 +56,7 @@ export function ReaderPage() {
 
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
-  const { progress } = useReadingProgress(id || '')
+  const { progress, restoreProgress } = useReadingProgress(id || '')
   const { setContext, clearContext } = useContextEngineStore()
 
   const [selectedText, setSelectedText] = useState('')
@@ -152,6 +152,17 @@ export function ReaderPage() {
       return () => clearInterval(interval)
     }
   }, [article?.processed, refetch])
+
+  // Restore reading progress when article content is ready
+  useEffect(() => {
+    if (article?.content && processedContent) {
+      // Small delay to ensure DOM is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        restoreProgress()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [article?.id, processedContent, restoreProgress])
 
   const checkOfflineStatus = async () => {
     if (!id) return
@@ -309,24 +320,51 @@ export function ReaderPage() {
     }
   }
 
+  // Minimal keyboard support (Escape to go back)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
-        const target = e.target as HTMLElement
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-          e.preventDefault()
-          handleArchive()
-        }
-      }
       if (e.key === 'Escape') {
         e.preventDefault()
         navigate('/reading')
       }
     }
-
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [article, navigate])
+  }, [navigate])
+
+  // Mobile: Swipe right from left edge to go back
+  useEffect(() => {
+    let touchStartX = 0
+    let touchStartY = 0
+    let touchStartTime = 0
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      touchStartX = touch.clientX
+      touchStartY = touch.clientY
+      touchStartTime = Date.now()
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touch = e.changedTouches[0]
+      const deltaX = touch.clientX - touchStartX
+      const deltaY = Math.abs(touch.clientY - touchStartY)
+      const deltaTime = Date.now() - touchStartTime
+
+      // Swipe right from left edge (within 50px of left edge, fast swipe, mostly horizontal)
+      if (touchStartX < 50 && deltaX > 100 && deltaY < 100 && deltaTime < 300) {
+        navigate('/reading')
+      }
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [navigate])
 
   if (loading) {
     return (
