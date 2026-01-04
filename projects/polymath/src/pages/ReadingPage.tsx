@@ -236,9 +236,15 @@ export function ReadingPage() {
   }, [articles, fetchArticles, addToast])
 
   // React Query handles fetching now
+  // Use a ref to track if this is a back navigation vs initial mount
+  const hasInitializedRef = useRef(false)
+
   useEffect(() => {
     const loadData = async () => {
-      await fetchArticles()
+      // On back navigation, force refresh to ensure articles are up-to-date
+      // but only if we already have articles (prevents flash of empty state)
+      const shouldForce = hasInitializedRef.current && articles.length > 0
+      await fetchArticles(undefined, shouldForce)
       await fetchFeeds()
 
       // Auto-sync RSS feeds in background (throttled to 2 hours)
@@ -247,6 +253,8 @@ export function ReadingPage() {
           // Silently fail - it's a background operation
         })
       }
+
+      hasInitializedRef.current = true
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
