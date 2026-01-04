@@ -17,7 +17,7 @@ const fetchArticles = async () => {
 
 export function useReadingQueue() {
     const queryClient = useQueryClient()
-    const { setArticles, setLoading } = useReadingStore()
+    const { setArticles, setLoading, articles: storeArticles } = useReadingStore()
 
     const query = useQuery({
         queryKey: ['articles'],
@@ -25,17 +25,21 @@ export function useReadingQueue() {
     })
 
     // Sync React Query state to Zustand store
+    // IMPORTANT: Only sync if we have actual data, never overwrite with empty/undefined
     useEffect(() => {
-        if (query.data && query.data !== useReadingStore.getState().articles) {
+        if (query.data && query.data.length > 0 && query.data !== useReadingStore.getState().articles) {
             setArticles(query.data)
         }
     }, [query.data, setArticles])
 
     useEffect(() => {
-        if (query.isLoading !== useReadingStore.getState().loading) {
-            setLoading(query.isLoading)
+        // Only set loading if store has no articles (prevents flash during navigation)
+        if (query.isLoading && storeArticles.length === 0) {
+            setLoading(true)
+        } else if (!query.isLoading) {
+            setLoading(false)
         }
-    }, [query.isLoading, setLoading])
+    }, [query.isLoading, setLoading, storeArticles.length])
 
     return query
 }
