@@ -56,7 +56,7 @@ export function ReaderPage() {
 
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
-  const { progress, restoreProgress, isRestoring } = useReadingProgress(id || '')
+  const { progress, restoreProgress } = useReadingProgress(id || '')
   const { setContext, clearContext } = useContextEngineStore()
 
   const [selectedText, setSelectedText] = useState('')
@@ -320,75 +320,51 @@ export function ReaderPage() {
     }
   }
 
+  // Minimal keyboard support (Escape to go back)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
-      const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
-
-      if (isEditable) return
-
-      // Archive shortcut
-      if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault()
-        handleArchive()
-        return
-      }
-
-      // Exit to reading list
       if (e.key === 'Escape') {
         e.preventDefault()
         navigate('/reading')
-        return
       }
+    }
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [navigate])
 
-      // Vim-style navigation
-      const scrollAmount = window.innerHeight * 0.3
-      if (e.key === 'j' || e.key === 'ArrowDown') {
-        e.preventDefault()
-        window.scrollBy({ top: scrollAmount, behavior: 'smooth' })
-        return
-      }
-      if (e.key === 'k' || e.key === 'ArrowUp') {
-        e.preventDefault()
-        window.scrollBy({ top: -scrollAmount, behavior: 'smooth' })
-        return
-      }
+  // Mobile: Swipe right from left edge to go back
+  useEffect(() => {
+    let touchStartX = 0
+    let touchStartY = 0
+    let touchStartTime = 0
 
-      // Page navigation
-      if (e.key === ' ' || e.key === 'PageDown') {
-        e.preventDefault()
-        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
-        return
-      }
-      if (e.key === 'PageUp' || (e.shiftKey && e.key === ' ')) {
-        e.preventDefault()
-        window.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
-        return
-      }
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0]
+      touchStartX = touch.clientX
+      touchStartY = touch.clientY
+      touchStartTime = Date.now()
+    }
 
-      // Jump to top/bottom
-      if (e.key === 'g' && !e.shiftKey) {
-        e.preventDefault()
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        return
-      }
-      if (e.key === 'G' || (e.shiftKey && e.key === 'g')) {
-        e.preventDefault()
-        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
-        return
-      }
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touch = e.changedTouches[0]
+      const deltaX = touch.clientX - touchStartX
+      const deltaY = Math.abs(touch.clientY - touchStartY)
+      const deltaTime = Date.now() - touchStartTime
 
-      // Toggle highlighter mode
-      if (e.key === 'h') {
-        e.preventDefault()
-        setIsHighlighterMode(prev => !prev)
-        return
+      // Swipe right from left edge (within 50px of left edge, fast swipe, mostly horizontal)
+      if (touchStartX < 50 && deltaX > 100 && deltaY < 100 && deltaTime < 300) {
+        navigate('/reading')
       }
     }
 
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [article, navigate])
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [navigate])
 
   if (loading) {
     return (
