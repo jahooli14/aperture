@@ -122,12 +122,14 @@ async function savePushSubscription(subscription: PushSubscription): Promise<voi
 
     const subscriptionData = subscription.toJSON();
 
-    // Upsert subscription to user_settings
+    // Upsert subscription to user_settings with push_enabled = true
+    // CRITICAL: We must set push_enabled = true for the cron job to find this user
     const { error } = await supabase
       .from('user_settings')
       .upsert({
         user_id: user.id,
         push_subscription: subscriptionData as any,
+        push_enabled: true,
         updated_at: new Date().toISOString()
       } as any, {
         onConflict: 'user_id'
@@ -137,7 +139,7 @@ async function savePushSubscription(subscription: PushSubscription): Promise<voi
       throw error;
     }
 
-    logger.info('Saved push subscription to database', {}, 'Notifications');
+    logger.info('Saved push subscription to database with push_enabled=true', {}, 'Notifications');
   } catch (error) {
     logger.error('Failed to save push subscription', {
       error: error instanceof Error ? error.message : String(error)
@@ -158,13 +160,24 @@ export async function unsubscribeFromPushNotifications(): Promise<void> {
       await subscription.unsubscribe();
       logger.info('Unsubscribed from push notifications', {}, 'Notifications');
 
-      // Remove from database
+      // Remove from database - set push_enabled = false and clear subscription
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        (supabase
+        const { error } = await (supabase
           .from('user_settings') as any)
-          .update({ push_subscription: null })
+          .update({
+            push_subscription: null,
+            push_enabled: false
+          })
           .eq('user_id', user.id);
+
+        if (error) {
+          logger.error('Failed to clear push subscription in database', {
+            error: error.message
+          }, 'Notifications');
+        } else {
+          logger.info('Cleared push subscription from database', {}, 'Notifications');
+        }
       }
     }
   } catch (error) {
