@@ -76,9 +76,23 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         if (filtered.length > 0) {
           console.log(`[ReadingStore] Loaded ${filtered.length} articles from local DB (SWR)`)
+          // Merge with pending articles to ensure they stay visible
+          const currentPending = get().pendingArticles
+          const cachedIds = new Set(filtered.map(a => a.id))
+          const cachedUrls = new Set(filtered.map(a => a.url))
+          const pendingNotInCache = currentPending.filter(
+            p => !cachedIds.has(p.id) && !cachedUrls.has(p.url)
+          )
           set({
-            articles: filtered,
+            articles: [...pendingNotInCache, ...filtered],
             loading: false, // Show data immediately
+            error: null
+          })
+        } else if (get().pendingArticles.length > 0) {
+          // No cached articles but we have pending - show those
+          set({
+            articles: [...get().pendingArticles],
+            loading: false,
             error: null
           })
         }
@@ -143,16 +157,32 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
         // Check against current state to avoid unnecessary renders
         const currentArticles = get().articles
+        const currentPendingAfterCleanup = get().pendingArticles
 
-        // Simple length check + id check optimization
+        // Use Set-based comparison to catch reorderings and any differences
+        const currentIds = new Set(currentArticles.map(a => a.id))
+        const serverIds = new Set(articles.map((a: Article) => a.id))
         const hasChanges =
           articles.length !== currentArticles.length ||
-          !articles.every((a: any, i: number) => a.id === currentArticles[i]?.id)
+          ![...serverIds].every(id => currentIds.has(id)) ||
+          ![...currentIds].every(id => serverIds.has(id) || id.startsWith('temp-'))
+
+        // Merge server articles with any remaining pending articles that haven't synced yet
+        // This prevents optimistic articles from disappearing
+        const pendingNotInServer = currentPendingAfterCleanup.filter(
+          p => !serverIds.has(p.id) && !serverUrls.has(p.url)
+        )
+        const mergedArticles = [...pendingNotInServer, ...articles]
 
         if (hasChanges || force || currentArticles.length === 0) {
-          set({ articles, loading: false, lastFetched: now, offlineMode: false })
+          set({ articles: mergedArticles, loading: false, lastFetched: now, offlineMode: false })
         } else {
-          set({ loading: false, lastFetched: now, offlineMode: false })
+          // Even if no major changes, ensure pending articles are visible
+          if (pendingNotInServer.length > 0) {
+            set({ articles: mergedArticles, loading: false, lastFetched: now, offlineMode: false })
+          } else {
+            set({ loading: false, lastFetched: now, offlineMode: false })
+          }
         }
 
         // 5. Trigger offline sync in background

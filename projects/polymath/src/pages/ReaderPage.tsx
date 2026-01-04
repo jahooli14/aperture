@@ -56,7 +56,7 @@ export function ReaderPage() {
 
   const { addToast } = useToast()
   const { caching, downloadForOffline, isCached, getCachedImages } = useOfflineArticle()
-  const { progress } = useReadingProgress(id || '')
+  const { progress, restoreProgress, isRestoring } = useReadingProgress(id || '')
   const { setContext, clearContext } = useContextEngineStore()
 
   const [selectedText, setSelectedText] = useState('')
@@ -152,6 +152,17 @@ export function ReaderPage() {
       return () => clearInterval(interval)
     }
   }, [article?.processed, refetch])
+
+  // Restore reading progress when article content is ready
+  useEffect(() => {
+    if (article?.content && processedContent) {
+      // Small delay to ensure DOM is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        restoreProgress()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [article?.id, processedContent, restoreProgress])
 
   const checkOfflineStatus = async () => {
     if (!id) return
@@ -311,16 +322,67 @@ export function ReaderPage() {
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+
+      if (isEditable) return
+
+      // Archive shortcut
       if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
-        const target = e.target as HTMLElement
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
-          e.preventDefault()
-          handleArchive()
-        }
+        e.preventDefault()
+        handleArchive()
+        return
       }
+
+      // Exit to reading list
       if (e.key === 'Escape') {
         e.preventDefault()
         navigate('/reading')
+        return
+      }
+
+      // Vim-style navigation
+      const scrollAmount = window.innerHeight * 0.3
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        window.scrollBy({ top: scrollAmount, behavior: 'smooth' })
+        return
+      }
+      if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        window.scrollBy({ top: -scrollAmount, behavior: 'smooth' })
+        return
+      }
+
+      // Page navigation
+      if (e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault()
+        window.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' })
+        return
+      }
+      if (e.key === 'PageUp' || (e.shiftKey && e.key === ' ')) {
+        e.preventDefault()
+        window.scrollBy({ top: -window.innerHeight * 0.8, behavior: 'smooth' })
+        return
+      }
+
+      // Jump to top/bottom
+      if (e.key === 'g' && !e.shiftKey) {
+        e.preventDefault()
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+      if (e.key === 'G' || (e.shiftKey && e.key === 'g')) {
+        e.preventDefault()
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
+        return
+      }
+
+      // Toggle highlighter mode
+      if (e.key === 'h') {
+        e.preventDefault()
+        setIsHighlighterMode(prev => !prev)
+        return
       }
     }
 
