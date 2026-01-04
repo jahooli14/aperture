@@ -59,8 +59,9 @@ export interface Database {
           timezone: string;
           baby_birthdate: string | null; // YYYY-MM-DD format
           reminder_email: string | null;
-          reminders_enabled: boolean;
+          reminders_enabled: boolean; // For email reminders
           push_subscription: Record<string, unknown> | null;
+          push_enabled: boolean; // For push notifications
           invite_code: string | null;
           onboarding_completed: boolean;
           join_code_prompted: boolean;
@@ -76,6 +77,7 @@ export interface Database {
           reminder_email?: string | null;
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
+          push_enabled?: boolean;
           invite_code?: string | null;
           onboarding_completed?: boolean;
           join_code_prompted?: boolean;
@@ -91,6 +93,7 @@ export interface Database {
           reminder_email?: string | null;
           reminders_enabled?: boolean;
           push_subscription?: Record<string, unknown> | null;
+          push_enabled?: boolean;
           invite_code?: string | null;
           onboarding_completed?: boolean;
           join_code_prompted?: boolean;

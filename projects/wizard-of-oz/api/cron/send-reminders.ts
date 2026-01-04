@@ -64,11 +64,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const today = getTodayDate()
 
-    // 1. Get all users who have reminders enabled and have a push subscription
+    // 1. Get all users who have push notifications enabled and have a valid subscription
+    // NOTE: We now use push_enabled (not reminders_enabled) for push notifications
+    // reminders_enabled is only for email reminders
     const { data: usersWithReminders, error: fetchError } = await supabase
       .from('user_settings')
       .select('user_id, push_subscription, reminder_time, timezone')
-      .eq('reminders_enabled', true)
+      .eq('push_enabled', true)
       .not('push_subscription', 'is', null)
 
     if (fetchError) {
@@ -77,11 +79,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!usersWithReminders || usersWithReminders.length === 0) {
-      logger.info('No users with reminders enabled')
+      logger.info('No users with push notifications enabled')
       return res.status(200).json({ message: 'No users to notify', sent: 0 })
     }
 
-    logger.info('Found users with reminders enabled', { count: usersWithReminders.length })
+    logger.info('Found users with push notifications enabled', { count: usersWithReminders.length })
 
     // 2. Get all photos uploaded today to check who has already uploaded
     const { data: todaysPhotos, error: photosError } = await supabase
@@ -143,26 +145,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // 5. Clean up expired subscriptions
+    // 5. Clean up expired subscriptions - set push_enabled = false and clear subscription
     if (expiredSubscriptions.length > 0) {
       logger.info('Cleaning up expired subscriptions', { count: expiredSubscriptions.length })
 
       for (const userId of expiredSubscriptions) {
         await supabase
           .from('user_settings')
-          .update({ push_subscription: null } as never)
+          .update({
+            push_subscription: null,
+            push_enabled: false
+          } as never)
           .eq('user_id', userId)
       }
     }
 
     const result = {
-      message: 'Daily reminders processed',
+      message: 'Daily push notification reminders processed',
       date: today,
       stats: {
-        usersWithReminders: usersWithReminders.length,
+        usersWithPushEnabled: usersWithReminders.length,
         usersAlreadyUploaded: usersWithPhotosToday.size,
-        notificationsSent: successCount,
-        notificationsFailed: failureCount,
+        pushNotificationsSent: successCount,
+        pushNotificationsFailed: failureCount,
         expiredSubscriptionsRemoved: expiredSubscriptions.length
       }
     }
