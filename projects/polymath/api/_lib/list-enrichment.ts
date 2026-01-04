@@ -53,11 +53,26 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         // Fallback to Wikipedia if category API didn't work or no category API
         if (!metadata) {
             console.log(`[Enrichment] Trying Wikipedia for: ${content}`)
-            // For films, try searching with "(film)" suffix to avoid disambiguation pages
-            const searchTerm = (category === 'film' || category === 'tv' || category === 'movie')
-                ? `${content} (film)`
-                : content
-            metadata = await enrichFromWikipedia(searchTerm)
+
+            // For film/TV, try multiple search strategies in order of likelihood
+            if (category === 'film' || category === 'tv' || category === 'movie') {
+                // Try exact title first (works for most content)
+                metadata = await enrichFromWikipedia(content)
+
+                // If no result, try with "(TV series)" suffix (for shows/miniseries)
+                if (!metadata) {
+                    console.log(`[Enrichment] Trying Wikipedia with TV series suffix for: ${content}`)
+                    metadata = await enrichFromWikipedia(`${content} (TV series)`)
+                }
+
+                // If still no result, try with "(film)" suffix
+                if (!metadata) {
+                    console.log(`[Enrichment] Trying Wikipedia with film suffix for: ${content}`)
+                    metadata = await enrichFromWikipedia(`${content} (film)`)
+                }
+            } else {
+                metadata = await enrichFromWikipedia(content)
+            }
         }
 
         // Final fallback to Gemini if all APIs failed
