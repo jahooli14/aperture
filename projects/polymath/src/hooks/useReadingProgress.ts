@@ -11,33 +11,13 @@ interface UseReadingProgressResult {
   progress: number // Percentage 0-100
   saveProgress: () => void
   restoreProgress: () => Promise<void>
-  isRestoring: boolean
 }
 
 export function useReadingProgress(articleId: string): UseReadingProgressResult {
   const [progress, setProgress] = useState(0)
-  const [isRestoring, setIsRestoring] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const hasRestoredRef = useRef(false)
-
-  /**
-   * Get a snippet of text visible in the current viewport
-   */
-  const getVisibleTextSnippet = useCallback((): string | undefined => {
-    try {
-      const element = document.elementFromPoint(
-        window.innerWidth / 2,
-        window.innerHeight / 3
-      )
-      if (element) {
-        const text = element.textContent?.trim().substring(0, 100)
-        return text || undefined
-      }
-    } catch {
-      // Ignore errors in text extraction
-    }
-    return undefined
-  }, [])
+  const isRestoringRef = useRef(false)
 
   /**
    * Calculate and save current reading progress immediately
@@ -47,28 +27,22 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
     const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
     const percentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0
 
-    // Get visible text at current viewport for context
-    const viewportText = getVisibleTextSnippet()
-
     await readingDb.saveProgress(
       articleId,
       scrollPosition,
-      Math.min(100, Math.round(percentage)),
-      viewportText
+      Math.min(100, Math.round(percentage))
     )
 
     setProgress(Math.min(100, Math.round(percentage)))
-  }, [articleId, getVisibleTextSnippet])
+  }, [articleId])
 
   /**
    * Debounced save progress
    */
   const saveProgress = useCallback(() => {
-    // Debounce saves to avoid too many IndexedDB writes
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
-
     saveTimeoutRef.current = setTimeout(saveProgressImmediate, 1000)
   }, [saveProgressImmediate])
 
@@ -76,30 +50,27 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
    * Restore saved reading progress with retry logic
    */
   const restoreProgress = useCallback(async () => {
-    // Prevent multiple restoration attempts
-    if (hasRestoredRef.current || isRestoring) return
+    // Prevent multiple restoration attempts using refs (avoids hook dep issues)
+    if (hasRestoredRef.current || isRestoringRef.current) return
 
     const savedProgress = await readingDb.getProgress(articleId)
     if (!savedProgress || savedProgress.scroll_percentage < 3) {
-      // Don't restore if near the top anyway
       return
     }
 
-    setIsRestoring(true)
+    isRestoringRef.current = true
     hasRestoredRef.current = true
 
     // Retry restoration with increasing delays to handle dynamic content
     const attemptRestore = async (attempt: number = 0): Promise<boolean> => {
       const maxScrollHeight = document.documentElement.scrollHeight - window.innerHeight
 
-      // Check if the saved position is reachable
       if (savedProgress.scroll_position <= maxScrollHeight) {
         window.scrollTo({
           top: savedProgress.scroll_position,
           behavior: attempt === 0 ? 'instant' : 'smooth'
         })
 
-        // Verify scroll happened
         await new Promise(r => setTimeout(r, 50))
         const actualPosition = window.scrollY
         const tolerance = 50
@@ -111,7 +82,6 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
         }
       }
 
-      // Retry if we haven't exhausted attempts
       if (attempt < 3) {
         await new Promise(r => setTimeout(r, 200 * (attempt + 1)))
         return attemptRestore(attempt + 1)
@@ -123,9 +93,9 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
     try {
       await attemptRestore()
     } finally {
-      setIsRestoring(false)
+      isRestoringRef.current = false
     }
-  }, [articleId, isRestoring])
+  }, [articleId])
 
   /**
    * Auto-save progress on scroll
@@ -133,7 +103,7 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
   useEffect(() => {
     const handleScroll = () => {
       // Don't update progress while restoring
-      if (isRestoring) return
+      if (isRestoringRef.current) return
 
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const scrollPosition = window.scrollY
@@ -150,7 +120,7 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [saveProgress, isRestoring])
+  }, [saveProgress])
 
   /**
    * Save progress on visibility change (switching tabs)
@@ -158,7 +128,6 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        // Save immediately when tab becomes hidden
         saveProgressImmediate()
       }
     }
@@ -172,7 +141,6 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
    */
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Save immediately without debounce
       const scrollPosition = window.scrollY
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight
       const percentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0
@@ -193,13 +161,13 @@ export function useReadingProgress(articleId: string): UseReadingProgressResult 
    */
   useEffect(() => {
     hasRestoredRef.current = false
+    isRestoringRef.current = false
     setProgress(0)
   }, [articleId])
 
   return {
     progress,
     saveProgress,
-    restoreProgress,
-    isRestoring
+    restoreProgress
   }
 }
