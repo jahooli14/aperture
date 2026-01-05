@@ -301,11 +301,11 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
           responseSchema: {
             type: SchemaType.OBJECT,
             properties: {
-              title: { type: SchemaType.STRING, description: "A concise, first-person title (5-10 words)" },
+              title: { type: SchemaType.STRING, description: "A SHORT summary of the core idea (3-8 words). NOT the first sentence truncated - summarize the insight." },
               bullets: {
                 type: SchemaType.ARRAY,
                 items: { type: SchemaType.STRING },
-                description: "2-4 bullet points capturing key ideas in first person"
+                description: "2-4 key points with filler words removed (um, uh, like, so, you know)"
               }
             },
             required: ["title", "bullets"]
@@ -313,10 +313,12 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
         }
       })
 
-      const prompt = `Transform this text into a clear, first-person thought.
-Text: ${text}
+      const prompt = `Summarize this voice note transcription.
 
-Return valid JSON.`
+TRANSCRIPTION: ${text}
+
+Create a title that captures the CORE IDEA in 3-8 words (not the first sentence truncated).
+Extract 2-4 bullet points with filler words removed.`
 
       console.log('[handleCapture] Calling Gemini with Structured Outputs...')
 

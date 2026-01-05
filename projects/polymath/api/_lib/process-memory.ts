@@ -174,28 +174,41 @@ async function extractMetadata(title: string, body: string, projects: any[]): Pr
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
-  const prompt = `Clean up voice note. Projects: ${projectList || 'None'}
+  const prompt = `Process this voice note transcription into a clean thought.
 
-Raw: "${title}" - ${body}
+TRANSCRIPTION: "${title}" - ${body}
+
+INSTRUCTIONS:
+1. summary_title: Distill the CORE IDEA into a short, punchy title (3-8 words). NOT the first sentence truncated. Summarize the insight.
+   - Bad: "There's definite crossover between the thought of..."
+   - Good: "Babies as ideas machines"
+
+2. insightful_body: Clean up the transcription:
+   - Remove filler words (um, uh, like, you know, so, I mean)
+   - Remove false starts and repetition
+   - Fix grammar while keeping natural, first-person voice
+   - Keep it concise but preserve the full meaning
+
+3. Extract entities, themes, and tags from the content.
+
+Projects for triage: ${projectList || 'None'}
 
 Return JSON:
 {
-  "summary_title": "specific title, max 80 chars",
-  "insightful_body": "conversational rewrite, remove filler, keep natural tone, first person",
+  "summary_title": "short punchy title capturing the core idea",
+  "insightful_body": "cleaned up version with filler removed, natural first-person voice",
   "memory_type": "foundational|event|insight",
   "entities": {
-    "people": ["actual names"],
+    "people": ["actual names mentioned"],
     "places": ["specific locations"],
     "topics": ["technologies, activities, concepts"],
-    "skills": ["user abilities"]
+    "skills": ["abilities demonstrated or discussed"]
   },
-  "themes": ["max 3: career/health/creativity/relationships/learning/family"],
-  "tags": ["3-5 specific, contextual tags. Focus on: technologies mentioned, activities, specific topics, domains. Avoid generic words like 'note', 'thought', 'voice-note', 'idea'. Examples: 'react', 'parenting', 'meditation', 'typescript', 'career-planning'"],
+  "themes": ["max 3 from: career/health/creativity/relationships/learning/family"],
+  "tags": ["3-5 specific tags - technologies, activities, domains. NOT generic words like 'note', 'thought', 'idea'"],
   "emotional_tone": "short phrase",
   "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0-1}
-}
-
-Keep natural language. Avoid flowery words. Match project_id if task_update.`
+}`
 
   const result = await model.generateContent(prompt)
   const response = result.response.text().trim()
