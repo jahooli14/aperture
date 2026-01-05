@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Sparkles } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Plus, Check, X, GripVertical, ChevronDown, Zap, Target, Sparkles, Star } from 'lucide-react'
 import { StudioTab } from '../components/projects/StudioTab'
 import { useProjectStore } from '../stores/useProjectStore'
 import { NextActionCard } from '../components/projects/NextActionCard'
@@ -43,7 +43,7 @@ export function ProjectDetailPage() {
   const location = useLocation()
   const powerHourTask = location.state?.powerHourTask
 
-  const { projects, fetchProjects, deleteProject, updateProject, syncProject } = useProjectStore()
+  const { projects, fetchProjects, deleteProject, updateProject, syncProject, setPriority } = useProjectStore()
   const { setContext, clearContext } = useContextEngineStore()
 
   // Reactive selection from store
@@ -695,6 +695,26 @@ export function ProjectDetailPage() {
                 ) : (
                   <span>Mark Done</span>
                 )}
+              </button>
+
+              {/* Priority Toggle */}
+              <button
+                onClick={() => setPriority(project.id)}
+                className={`h-10 w-10 flex items-center justify-center rounded-full transition-all touch-manipulation ${
+                  project.is_priority
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30'
+                    : 'hover:bg-white/10'
+                }`}
+                title={project.is_priority ? 'Remove from priority' : 'Set as priority'}
+                aria-label={project.is_priority ? 'Remove from priority' : 'Set as priority'}
+              >
+                <Star
+                  className="h-5 w-5 transition-colors"
+                  style={{
+                    color: project.is_priority ? '#f59e0b' : 'var(--premium-text-secondary)',
+                    fill: project.is_priority ? '#f59e0b' : 'none'
+                  }}
+                />
               </button>
 
               {/* Pin Button */}
