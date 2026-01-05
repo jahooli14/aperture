@@ -153,17 +153,6 @@ export function ReaderPage() {
     }
   }, [article?.processed, refetch])
 
-  // Restore reading progress when article content is ready
-  useEffect(() => {
-    if (article?.content && processedContent) {
-      // Small delay to ensure DOM is fully rendered before scrolling
-      const timer = setTimeout(() => {
-        restoreProgress()
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [article?.id, processedContent, restoreProgress])
-
   const checkOfflineStatus = async () => {
     if (!id) return
     const cached = await isCached(id)
@@ -219,6 +208,18 @@ export function ReaderPage() {
 
     return doc.body.innerHTML
   }, [article?.content, cachedImageUrls])
+
+  // Restore reading progress when article content is ready
+  // NOTE: This effect must be defined AFTER processedContent useMemo to avoid TDZ error
+  useEffect(() => {
+    if (article?.content && processedContent) {
+      // Small delay to ensure DOM is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        restoreProgress()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [article?.id, processedContent, restoreProgress])
 
   const handleTextSelection = (event: React.MouseEvent | React.TouchEvent) => {
     if (!isHighlighterMode) return
