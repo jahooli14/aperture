@@ -2,7 +2,7 @@
 
 ## Quick Start
 
-1. Read `NEXT_SESSION.md` for current status
+1. Check `NEXT_SESSION.md` for current status (if present)
 2. Start working
 
 ## Projects

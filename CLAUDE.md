@@ -31,4 +31,4 @@ Use `/skill` for complex workflows:
 
 ## Session Start
 
-Read `NEXT_SESSION.md` for current status and tasks.
+Check `NEXT_SESSION.md` for current status and tasks (if present).
