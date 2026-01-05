@@ -2,7 +2,7 @@
 
 ## Start Every Session
 
-1. Read `NEXT_SESSION.md` for current status and tasks
+1. Check `NEXT_SESSION.md` for current status (if present)
 2. Begin work
 
 ## Style
@@ -27,7 +27,7 @@
 
 ## End of Session
 
-Update `NEXT_SESSION.md` with:
+Optionally update `NEXT_SESSION.md` with:
 - What was completed
 - What's next
 - Any blockers
