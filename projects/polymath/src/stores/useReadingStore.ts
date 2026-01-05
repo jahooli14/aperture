@@ -7,6 +7,7 @@ import { create } from 'zustand'
 import type { Article, ArticleStatus, SaveArticleRequest } from '../types/reading'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
+import { queryClient } from '../lib/queryClient'
 
 interface ReadingState {
   articles: Article[]
@@ -160,8 +161,8 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         const currentPendingAfterCleanup = get().pendingArticles
 
         // Use Set-based comparison to catch reorderings and any differences
-        const currentIds = new Set(currentArticles.map(a => a.id))
-        const serverIds = new Set(articles.map((a: Article) => a.id))
+        const currentIds = new Set<string>(currentArticles.map(a => a.id))
+        const serverIds = new Set<string>(articles.map((a: Article) => a.id))
         const hasChanges =
           articles.length !== currentArticles.length ||
           ![...serverIds].every(id => currentIds.has(id)) ||
@@ -184,6 +185,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             set({ loading: false, lastFetched: now, offlineMode: false })
           }
         }
+
+        // Invalidate React Query cache to prevent stale data race conditions
+        // This ensures useReadingQueue doesn't overwrite with old data
+        queryClient.setQueryData(['articles'], mergedArticles)
 
         // 5. Trigger offline sync in background
         const { syncAllArticlesForOffline } = await import('../lib/offlineSync')
