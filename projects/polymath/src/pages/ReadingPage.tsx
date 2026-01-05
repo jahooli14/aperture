@@ -29,6 +29,8 @@ import {
   clearShareData
 } from '../lib/shareHandler'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
+import { PullToRefresh } from '../components/PullToRefresh'
+import { queryClient } from '../lib/queryClient'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
@@ -243,8 +245,15 @@ export function ReadingPage() {
     const loadData = async () => {
       // On back navigation, force refresh to ensure articles are up-to-date
       // but only if we already have articles (prevents flash of empty state)
-      const shouldForce = hasInitializedRef.current && articles.length > 0
-      await fetchArticles(undefined, shouldForce)
+      const isBackNavigation = hasInitializedRef.current && articles.length > 0
+
+      if (isBackNavigation) {
+        // Invalidate React Query cache immediately to prevent stale data race condition
+        // This ensures useReadingQueue won't overwrite with old cached data
+        await queryClient.invalidateQueries({ queryKey: ['articles'] })
+      }
+
+      await fetchArticles(undefined, isBackNavigation)
       await fetchFeeds()
 
       // Auto-sync RSS feeds in background (throttled to 2 hours)
@@ -551,6 +560,18 @@ export function ReadingPage() {
     }
   }
 
+  // Pull-to-refresh handler - forces a fresh fetch from API
+  const handlePullToRefresh = useCallback(async () => {
+    // Invalidate React Query cache first
+    await queryClient.invalidateQueries({ queryKey: ['articles'] })
+    // Force fetch fresh data from API
+    await fetchArticles(undefined, true)
+    // Also refresh RSS items if on updates tab
+    if (activeTab === 'updates') {
+      await fetchRSSItems()
+    }
+  }, [fetchArticles, activeTab, fetchRSSItems])
+
   // Memoize safe articles to prevent useMemo dependency issues
   const safeArticles = React.useMemo(() => {
     // Combine real articles with pending articles
@@ -712,7 +733,7 @@ export function ReadingPage() {
         </div>
       </div>
 
-      <div className="min-h-screen pb-24 relative z-10" style={{ paddingTop: '5.5rem' }}>
+      <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen pb-24 relative z-10 pt-[5.5rem]">
 
         {/* Processing Indicator */}
         {processingArticles.size > 0 && (
@@ -1065,7 +1086,7 @@ export function ReadingPage() {
             }
           }}
         />
-      </div >
+      </PullToRefresh>
     </>
   )
 }
