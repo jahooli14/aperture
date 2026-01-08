@@ -22,11 +22,12 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
 
         // 1. Resolve List Type if not provided
         let category = listType
+        let listTitle = ''
         if (!category) {
             console.log(`[Enrichment] Fetching list type for listId: ${listId}`)
             const { data: list, error: listError } = await supabase
                 .from('lists')
-                .select('type')
+                .select('type, title')
                 .eq('id', listId)
                 .eq('user_id', userId)
                 .single()
@@ -35,7 +36,19 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
                 console.error(`[Enrichment] Failed to fetch list type:`, listError)
             }
             category = list?.type || 'generic'
-            console.log(`[Enrichment] List category resolved to: ${category}`)
+            listTitle = list?.title || ''
+            console.log(`[Enrichment] List category resolved to: ${category}, title: "${listTitle}"`)
+
+            // Smart fallback: if category is generic but title suggests films/movies, treat as film
+            if (category === 'generic' && listTitle) {
+                const lowerTitle = listTitle.toLowerCase()
+                if (lowerTitle.includes('watch') || lowerTitle.includes('movie') ||
+                    lowerTitle.includes('film') || lowerTitle.includes('show') ||
+                    lowerTitle.includes('tv') || lowerTitle.includes('series')) {
+                    console.log(`[Enrichment] Title "${listTitle}" suggests film/TV content - treating as film type`)
+                    category = 'film'
+                }
+            }
         }
 
         // 2. Try external APIs first, then fallback chain
