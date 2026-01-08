@@ -105,17 +105,99 @@ export async function enrichFromWikipedia(title: string): Promise<EnrichmentMeta
 }
 
 /**
+ * TMDB API - Requires TMDB_API_KEY env var (better posters than OMDb)
+ * Free tier: 1,000 calls/day
+ * Get key: https://www.themoviedb.org/settings/api
+ */
+async function enrichFromTMDB(title: string): Promise<EnrichmentMetadata | null> {
+    const apiKey = process.env.TMDB_API_KEY
+
+    if (!apiKey) {
+        console.log('[TMDB] API key not configured, skipping')
+        return null
+    }
+
+    const cleanTitle = title.trim().substring(0, 300)
+
+    async function fetchTMDB(url: string): Promise<any> {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 10000)
+        const res = await fetch(url, { signal: controller.signal })
+        clearTimeout(timeout)
+        if (!res.ok) throw new Error(`TMDB API error: ${res.status}`)
+        return res.json()
+    }
+
+    try {
+        console.log(`[TMDB] Searching for: ${cleanTitle}`)
+
+        // Search for movies first
+        const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&query=${encodeURIComponent(cleanTitle)}`
+        const searchData = await fetchTMDB(searchUrl)
+
+        if (!searchData.results?.length) {
+            console.log(`[TMDB] No movie results for: ${cleanTitle}`)
+            return null
+        }
+
+        // Find exact title match (case-insensitive)
+        const normalizedQuery = cleanTitle.toLowerCase().trim()
+        let bestMatch = searchData.results.find((r: any) =>
+            r.title?.toLowerCase().trim() === normalizedQuery
+        )
+
+        // If no exact match, take the first result (usually most relevant)
+        if (!bestMatch) {
+            console.log(`[TMDB] No exact match, using top result for: ${cleanTitle}`)
+            bestMatch = searchData.results[0]
+        } else {
+            console.log(`[TMDB] Found exact title match for: ${cleanTitle}`)
+        }
+
+        // Get full details
+        const detailsUrl = `https://api.themoviedb.org/3/movie/${bestMatch.id}?api_key=${apiKey}&append_to_response=credits`
+        const details = await fetchTMDB(detailsUrl)
+
+        const director = details.credits?.crew?.find((c: any) => c.job === 'Director')?.name
+        const posterPath = details.poster_path
+        const backdropPath = details.backdrop_path
+
+        const metadata: EnrichmentMetadata = {
+            image: posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined,
+            thumbnail: posterPath ? `https://image.tmdb.org/t/p/w200${posterPath}` : undefined,
+            subtitle: director ? `Director: ${director}` : `${details.release_date?.split('-')[0] || ''}`,
+            description: details.overview ? extractBriefDescription(details.overview) : undefined,
+            tags: details.genres?.slice(0, 3).map((g: any) => g.name) || [],
+            link: `https://www.themoviedb.org/movie/${details.id}`,
+            specs: {
+                year: details.release_date?.split('-')[0],
+                runtime: details.runtime ? `${details.runtime}min` : undefined,
+                rating: details.vote_average?.toFixed(1),
+                type: 'movie'
+            },
+            source: 'omdb' // Keep as 'omdb' for consistency with existing data
+        }
+
+        console.log(`[TMDB] Successfully enriched: ${title} → ${details.title}`)
+        return metadata
+
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.error(`[TMDB] Request timeout for ${cleanTitle}`)
+        } else {
+            console.error(`[TMDB] Failed for ${cleanTitle}:`, error.message)
+        }
+        return null
+    }
+}
+
+/**
  * OMDb API - Requires OMDB_API_KEY env var
  * Free tier: 1,000 calls/day
  * Get key: https://www.omdbapi.com/apikey.aspx
  */
 export async function enrichFilm(title: string): Promise<EnrichmentMetadata | null> {
     const apiKey = process.env.OMDB_API_KEY
-
-    if (!apiKey) {
-        console.log('[OMDb] API key not configured, skipping')
-        return null
-    }
 
     // Input validation
     if (!title || title.trim().length === 0) {
@@ -124,6 +206,17 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
     }
 
     const cleanTitle = title.trim().substring(0, 300)
+
+    // Try TMDB first if available (better posters and exact matching)
+    const tmdbResult = await enrichFromTMDB(cleanTitle)
+    if (tmdbResult && tmdbResult.image) {
+        return tmdbResult
+    }
+
+    if (!apiKey) {
+        console.log('[OMDb] API key not configured, skipping')
+        return tmdbResult // Return TMDB result even without poster if available
+    }
 
     // Helper to fetch and parse OMDb response
     async function fetchOmdb(url: string): Promise<any> {
@@ -135,37 +228,103 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
         return res.json()
     }
 
+    // Helper to normalize titles for comparison
+    function normalizeTitle(t: string): string {
+        return t.toLowerCase()
+            .replace(/[^\w\s]/g, '') // Remove punctuation
+            .replace(/\s+/g, ' ')    // Normalize spaces
+            .trim()
+    }
+
     try {
         console.log(`[OMDb] Fetching data for: ${cleanTitle}`)
+        const normalizedQuery = normalizeTitle(cleanTitle)
 
-        // Try exact title match first (most common case)
-        let url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
+        // Try exact title match first (most common case) - prioritize movies for ambiguous titles
+        let url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&type=movie&apikey=${apiKey}`
         let data = await fetchOmdb(url)
 
-        // If not found, try searching for TV series specifically
-        if (data.Response === 'False') {
-            console.log(`[OMDb] Exact match not found, trying series search: ${title}`)
-            url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&type=series&apikey=${apiKey}`
-            data = await fetchOmdb(url)
+        // Verify the returned title actually matches what we searched for
+        if (data.Response === 'True') {
+            const normalizedResult = normalizeTitle(data.Title)
+            if (normalizedResult !== normalizedQuery) {
+                console.log(`[OMDb] Title mismatch: searched "${cleanTitle}" got "${data.Title}", continuing search...`)
+                data = { Response: 'False' }
+            }
         }
 
-        // If still not found, try a broader search and take the first result
+        // If movie not found, try without type restriction
         if (data.Response === 'False') {
-            console.log(`[OMDb] Series not found, trying search: ${title}`)
+            console.log(`[OMDb] Movie not found, trying without type restriction: ${cleanTitle}`)
+            url = `https://www.omdbapi.com/?t=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
+            data = await fetchOmdb(url)
+
+            // Verify title match
+            if (data.Response === 'True') {
+                const normalizedResult = normalizeTitle(data.Title)
+                if (normalizedResult !== normalizedQuery) {
+                    console.log(`[OMDb] Title mismatch: searched "${cleanTitle}" got "${data.Title}", continuing search...`)
+                    data = { Response: 'False' }
+                }
+            }
+        }
+
+        // If still not found, try a broader search and find exact match
+        if (data.Response === 'False') {
+            console.log(`[OMDb] Exact lookup failed, trying search with exact match filtering: ${cleanTitle}`)
             url = `https://www.omdbapi.com/?s=${encodeURIComponent(cleanTitle)}&apikey=${apiKey}`
             const searchData = await fetchOmdb(url)
 
-            if (searchData.Response === 'True' && searchData.Search?.[0]) {
-                // Get full details for the first search result
-                const imdbId = searchData.Search[0].imdbID
-                url = `https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`
-                data = await fetchOmdb(url)
+            if (searchData.Response === 'True' && searchData.Search?.length) {
+                // Find an EXACT title match first (case-insensitive)
+                let exactMatch = searchData.Search.find((item: any) =>
+                    normalizeTitle(item.Title) === normalizedQuery
+                )
+
+                // If no exact match, try matching just the main title (without year suffixes etc)
+                if (!exactMatch) {
+                    exactMatch = searchData.Search.find((item: any) => {
+                        const itemTitle = normalizeTitle(item.Title)
+                        return itemTitle === normalizedQuery ||
+                               itemTitle.startsWith(normalizedQuery + ' ') ||
+                               normalizedQuery.startsWith(itemTitle + ' ')
+                    })
+                }
+
+                // If we found a match, prefer movies over series for ambiguous single-word titles
+                if (!exactMatch && cleanTitle.split(' ').length === 1) {
+                    // For single-word queries like "Drive", prefer movie
+                    const movieMatch = searchData.Search.find((item: any) =>
+                        normalizeTitle(item.Title) === normalizedQuery && item.Type === 'movie'
+                    )
+                    if (movieMatch) exactMatch = movieMatch
+                }
+
+                // Only use first result if it's reasonably close to what we searched
+                if (!exactMatch) {
+                    const firstResult = searchData.Search[0]
+                    const firstTitle = normalizeTitle(firstResult.Title)
+                    // Check if the first result contains our query or vice versa
+                    if (firstTitle.includes(normalizedQuery) || normalizedQuery.includes(firstTitle)) {
+                        console.log(`[OMDb] No exact match, but "${firstResult.Title}" contains query "${cleanTitle}"`)
+                        exactMatch = firstResult
+                    } else {
+                        console.log(`[OMDb] No matching results - "${firstResult.Title}" doesn't match "${cleanTitle}"`)
+                    }
+                }
+
+                if (exactMatch) {
+                    console.log(`[OMDb] Found match in search results: "${exactMatch.Title}" (${exactMatch.Year})`)
+                    const imdbId = exactMatch.imdbID
+                    url = `https://www.omdbapi.com/?i=${imdbId}&apikey=${apiKey}`
+                    data = await fetchOmdb(url)
+                }
             }
         }
 
         if (data.Response === 'False') {
-            console.log(`[OMDb] Not found after all attempts: ${title}`)
-            return null
+            console.log(`[OMDb] Not found after all attempts: ${cleanTitle}`)
+            return tmdbResult // Return TMDB result if available
         }
 
         // Use appropriate subtitle based on content type
@@ -190,7 +349,14 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
             source: 'omdb'
         }
 
-        console.log(`[OMDb] Successfully enriched: ${title} (${data.Type})`)
+        // If OMDb doesn't have a poster but TMDB did, use TMDB's poster
+        if (!metadata.image && tmdbResult?.image) {
+            metadata.image = tmdbResult.image
+            metadata.thumbnail = tmdbResult.thumbnail
+            console.log(`[OMDb] Using TMDB poster for: ${cleanTitle}`)
+        }
+
+        console.log(`[OMDb] Successfully enriched: ${cleanTitle} → ${data.Title} (${data.Type})`)
         return metadata
 
     } catch (error: any) {
@@ -199,7 +365,7 @@ export async function enrichFilm(title: string): Promise<EnrichmentMetadata | nu
         } else {
             console.error(`[OMDb] Failed for ${cleanTitle}:`, error.message)
         }
-        return null
+        return tmdbResult // Return TMDB result on error if available
     }
 }
 
