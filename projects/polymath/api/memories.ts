@@ -313,10 +313,20 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
         }
       })
 
-      const prompt = `Transform this text into a clear, first-person thought.
-Text: ${text}
+      const prompt = `You are processing a voice transcription. Create a concise summary.
 
-Return valid JSON.`
+Voice transcription: "${text}"
+
+Create:
+1. title: A SHORT summary title (5-10 words) that captures the main idea. Do NOT copy the text verbatim - summarize it.
+2. bullets: 2-4 bullet points capturing the key ideas in first person.
+
+Example:
+- Input: "still musing on when a snake's body becomes its tail"
+- Good title: "Pondering snake anatomy boundaries"
+- Bad title: "Still musing on when a snake's body becomes its tail"
+
+Return valid JSON with "title" and "bullets" fields.`
 
       console.log('[handleCapture] Calling Gemini with Structured Outputs...')
 
