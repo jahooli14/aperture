@@ -174,28 +174,41 @@ async function extractMetadata(title: string, body: string, projects: any[]): Pr
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
-  const prompt = `Clean up voice note. Projects: ${projectList || 'None'}
+  const prompt = `You are processing a voice note transcription. Transform the raw spoken text into polished written content.
 
-Raw: "${title}" - ${body}
+ACTIVE PROJECTS (for triage):
+${projectList || 'None'}
+
+RAW VOICE NOTE:
+"${title}" - ${body}
+
+TASK: Create a polished, summarized version of this voice note. The user spoke this aloud, so:
+- summary_title: Create a SHORT, DESCRIPTIVE title (5-10 words max) that captures the main idea. Do NOT just copy the first sentence. Summarize the core thought.
+- insightful_body: Rewrite the content in clean, natural first-person prose. Remove verbal fillers ("um", "like", "you know"), false starts, and repetition. Keep the meaning intact but make it read well.
 
 Return JSON:
 {
-  "summary_title": "specific title, max 80 chars",
-  "insightful_body": "conversational rewrite, remove filler, keep natural tone, first person",
+  "summary_title": "A short, specific title summarizing the main idea (NOT the verbatim text)",
+  "insightful_body": "The cleaned-up content in first person, natural prose",
   "memory_type": "foundational|event|insight",
   "entities": {
-    "people": ["actual names"],
-    "places": ["specific locations"],
-    "topics": ["technologies, activities, concepts"],
-    "skills": ["user abilities"]
+    "people": ["actual names mentioned"],
+    "places": ["specific locations mentioned"],
+    "topics": ["technologies, activities, concepts discussed"],
+    "skills": ["abilities the user has or is developing"]
   },
-  "themes": ["max 3: career/health/creativity/relationships/learning/family"],
-  "tags": ["3-5 specific, contextual tags. Focus on: technologies mentioned, activities, specific topics, domains. Avoid generic words like 'note', 'thought', 'voice-note', 'idea'. Examples: 'react', 'parenting', 'meditation', 'typescript', 'career-planning'"],
-  "emotional_tone": "short phrase",
-  "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0-1}
+  "themes": ["1-3 from: career/health/creativity/relationships/learning/family"],
+  "tags": ["3-5 specific tags like 'philosophy', 'biology', 'curiosity', 'nature'. Avoid generic words like 'thought', 'note', 'voice'"],
+  "emotional_tone": "brief phrase describing the mood",
+  "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0.0-1.0}
 }
 
-Keep natural language. Avoid flowery words. Match project_id if task_update.`
+IMPORTANT: The summary_title should be a SUMMARY, not the verbatim beginning of the text. For example:
+- Raw: "still musing on when a snake's body becomes its tail"
+- Good title: "Philosophical musing on snake anatomy"
+- Bad title: "Still musing on when a snake's body becomes its tail"
+
+Return only valid JSON.`
 
   const result = await model.generateContent(prompt)
   const response = result.response.text().trim()
