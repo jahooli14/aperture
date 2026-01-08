@@ -42,7 +42,7 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         let metadata = null
 
         // Try category-specific API first
-        if (category === 'film' || category === 'tv' || category === 'movie') {
+        if (category === 'film' || category === 'tv' || category === 'movie' || category === 'show') {
             console.log(`[Enrichment] Trying OMDb for film: ${content}`)
             metadata = await enrichFilm(content)
         } else if (category === 'book') {
@@ -55,7 +55,7 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             console.log(`[Enrichment] Trying Wikipedia for: ${content}`)
 
             // For film/TV, try multiple search strategies in order of likelihood
-            if (category === 'film' || category === 'tv' || category === 'movie') {
+            if (category === 'film' || category === 'tv' || category === 'movie' || category === 'show') {
                 // Try exact title first (works for most content)
                 metadata = await enrichFromWikipedia(content)
 
