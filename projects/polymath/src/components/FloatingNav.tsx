@@ -84,6 +84,19 @@ export function FloatingNav() {
     setIsHidden(false)
   }, [location.pathname])
 
+  // Listen for voice captures queued offline (from useMediaRecorderVoice)
+  React.useEffect(() => {
+    const handleOfflineQueued = () => {
+      addToast({
+        title: 'Voice note saved offline',
+        description: 'Will be transcribed and saved when back online.',
+        variant: 'default',
+      })
+    }
+    window.addEventListener('voice-capture-queued-offline', handleOfflineQueued)
+    return () => window.removeEventListener('voice-capture-queued-offline', handleOfflineQueued)
+  }, [addToast])
+
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
       navigate(option.path)
