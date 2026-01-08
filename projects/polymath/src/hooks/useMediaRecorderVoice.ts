@@ -298,9 +298,11 @@ export function useMediaRecorderVoice({
 
           await queueOperation('capture_media', { captureId })
 
-          const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
-          setTranscript(placeholder)
-          onTranscript(placeholder)
+          // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
+          // The sync manager will transcribe and create the note when back online.
+          // Dispatch event so UI can show feedback without creating a note
+          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline'))
+          setTranscript('')
           return
         } else {
           // Non-network error - rethrow to show user
@@ -417,9 +419,11 @@ export function useMediaRecorderVoice({
 
           await queueOperation('capture_media', { captureId })
 
-          const placeholder = "Voice note saved offline. It will be transcribed once you're back online."
-          setTranscript(placeholder)
-          onTranscript(placeholder)
+          // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
+          // The sync manager will transcribe and create the note when back online.
+          // Dispatch event so UI can show feedback without creating a note
+          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline'))
+          setTranscript('')
           return
         } else {
           // Non-network error - rethrow to show user
