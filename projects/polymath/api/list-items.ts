@@ -14,13 +14,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         // GET /api/list-items - Fetch items for a list
         if (req.method === 'GET' && listId) {
-            const { data, error } = await supabase
+            const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined
+
+            let query = supabase
                 .from('list_items')
                 .select('*')
                 .eq('list_id', listId)
                 .eq('user_id', userId)
                 .order('sort_order', { ascending: true })
                 .order('created_at', { ascending: false })
+
+            if (limit) {
+                query = query.limit(limit)
+            }
+
+            const { data, error } = await query
 
             if (error) throw error
             return res.status(200).json(data)
