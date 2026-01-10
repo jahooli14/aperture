@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { useListStore } from '../../stores/useListStore'
-import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar } from 'lucide-react'
+import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote } from 'lucide-react'
 import type { ListType } from '../../types'
 
 const TYPES: { id: ListType, label: string, icon: any }[] = [
@@ -14,6 +14,7 @@ const TYPES: { id: ListType, label: string, icon: any }[] = [
     { id: 'place', label: 'Travel', icon: MapPin },
     { id: 'game', label: 'Games', icon: Gamepad2 },
     { id: 'event', label: 'Events', icon: Calendar },
+    { id: 'quote', label: 'Phrases', icon: Quote },
     { id: 'generic', label: 'General', icon: Box },
 ]
 

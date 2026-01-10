@@ -947,7 +947,7 @@ export interface ReadingQueueItem {
 // LISTS PILLAR
 // ============================================================================
 
-export type ListType = 'film' | 'movie' | 'show' | 'tv' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'generic'
+export type ListType = 'film' | 'movie' | 'show' | 'tv' | 'music' | 'tech' | 'book' | 'place' | 'game' | 'software' | 'event' | 'quote' | 'generic'
 export type ListItemStatus = 'pending' | 'active' | 'completed' | 'abandoned'
 
 export interface List {
