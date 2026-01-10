@@ -37,6 +37,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'POST') {
             const { title, type, description, icon } = req.body
 
+            // Get min sort_order to insert at the beginning
+            const { data: minSortData } = await supabase
+                .from('lists')
+                .select('sort_order')
+                .eq('user_id', userId)
+                .order('sort_order', { ascending: true })
+                .limit(1)
+
+            const minSort = minSortData && minSortData[0]?.sort_order !== undefined
+                ? minSortData[0].sort_order
+                : 1
+
             const { data, error } = await supabase
                 .from('lists')
                 .insert({
@@ -44,7 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     title,
                     type: type || 'generic',
                     description,
-                    icon
+                    icon,
+                    sort_order: minSort - 1
                 })
                 .select()
                 .single()
@@ -89,6 +102,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (error) throw error
             return res.status(200).json(data)
+        }
+
+        // DELETE /api/lists - Delete a list
+        if (req.method === 'DELETE') {
+            const { id } = req.query
+            if (!id || typeof id !== 'string') return res.status(400).json({ error: 'List ID required' })
+
+            const { error } = await supabase
+                .from('lists')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', userId)
+
+            if (error) throw error
+            return res.status(200).json({ success: true })
         }
 
         return res.status(405).json({ error: 'Method not allowed' })
