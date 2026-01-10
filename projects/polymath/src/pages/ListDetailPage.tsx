@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -48,7 +48,106 @@ function MasonryListGrid({
 
     const isBook = listType === 'book'
     const isPosterType = isBook || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
+    const isQuoteType = listType === 'quote'
 
+    // Special layout for quotes/phrases - single column, elegant typography
+    if (isQuoteType) {
+        return (
+            <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+                {items.map((item) => {
+                    const isExpanded = expandedItemId === item.id
+                    const hasSource = item.metadata?.subtitle || item.metadata?.specs?.Source || item.metadata?.specs?.Author
+
+                    return (
+                        <motion.div
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            onClick={() => onItemClick(item.id)}
+                            className="group relative cursor-pointer"
+                        >
+                            {/* Quote Card */}
+                            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 border border-white/5 p-6 sm:p-8 hover:border-white/10 transition-all duration-300">
+                                {/* Decorative gradient accent */}
+                                <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-violet-500/10 via-fuchsia-500/5 to-transparent rounded-full blur-2xl" />
+                                <div className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-tl from-sky-500/10 via-cyan-500/5 to-transparent rounded-full blur-2xl" />
+
+                                {/* Opening Quote Mark */}
+                                <div className="absolute top-4 left-4 text-6xl sm:text-7xl font-serif text-white/5 select-none leading-none">
+                                    "
+                                </div>
+
+                                {/* The Phrase */}
+                                <div className="relative z-10 pt-8 sm:pt-10">
+                                    <p className="text-xl sm:text-2xl md:text-3xl text-white leading-relaxed font-light italic tracking-wide">
+                                        {item.content}
+                                    </p>
+
+                                    {/* Source/Attribution */}
+                                    {hasSource && (
+                                        <p className="mt-4 text-sm text-zinc-500 font-medium">
+                                            — {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle}
+                                        </p>
+                                    )}
+
+                                    {/* Expanded Details */}
+                                    {isExpanded && item.metadata && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="mt-6 pt-6 border-t border-white/5 space-y-3"
+                                        >
+                                            {item.metadata.description && (
+                                                <p className="text-sm text-zinc-400 leading-relaxed">
+                                                    {item.metadata.description}
+                                                </p>
+                                            )}
+
+                                            {item.metadata.tags && item.metadata.tags.length > 0 && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {item.metadata.tags.map((tag: string) => (
+                                                        <span key={tag} className="text-xs bg-white/5 border border-white/10 px-3 py-1 rounded-full text-zinc-400">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </div>
+
+                                {/* Enriching indicator */}
+                                {item.enrichment_status === 'pending' && (
+                                    <div className="absolute bottom-4 right-4 flex items-center gap-2 text-xs text-violet-400 animate-pulse">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                                        Enriching...
+                                    </div>
+                                )}
+
+                                {/* Delete Action */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (confirm(`Remove this phrase?`)) {
+                                            onDelete(item.id, item.list_id)
+                                        }
+                                    }}
+                                    className="absolute top-4 right-4 p-2 rounded-lg bg-red-500/0 hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-300"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )
+                })}
+            </div>
+        )
+    }
+
+    // Standard masonry grid for other list types
     return (
         <div className="flex gap-3 items-start w-full">
             {distributedColumns.map((colItems, colIndex) => (
