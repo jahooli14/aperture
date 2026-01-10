@@ -108,12 +108,12 @@ export default function ListsPage() {
                 </Button>
             </div>
 
-            {/* Stable 2-column Grid */}
+            {/* Stable 2-column Grid - using flex for better reordering */}
             <Reorder.Group
                 axis="y"
                 values={lists}
                 onReorder={handleReorder}
-                className="grid grid-cols-2 gap-3 pb-20"
+                className="flex flex-wrap gap-3 pb-20"
             >
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
@@ -125,8 +125,12 @@ export default function ListsPage() {
                             value={list}
                             layoutId={list.id}
                             onClick={() => navigate(`/lists/${list.id}`)}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border border-white/5 bg-zinc-900/40"
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border border-white/5 bg-zinc-900/40 flex-shrink-0"
+                            style={{ width: 'calc(50% - 6px)' }}
                             whileHover={{ y: -2 }}
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={0.1}
                         >
                             {/* Poster / Cover Image */}
                             <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950">
@@ -137,40 +141,128 @@ export default function ListsPage() {
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center relative overflow-hidden">
-                                        {/* Enhanced gradient background */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-40 blur-2xl`} />
+                                    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-black">
+                                        {/* Layered animated gradients */}
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-50 blur-3xl`} />
                                         <div
-                                            className="absolute inset-0 opacity-20 blur-3xl animate-pulse"
+                                            className="absolute inset-0 opacity-30 blur-3xl animate-pulse"
                                             style={{
-                                                background: `radial-gradient(circle at 30% 40%, rgba(${rgb}, 0.6), transparent 70%)`,
+                                                background: `radial-gradient(circle at 30% 40%, rgba(${rgb}, 0.7), transparent 60%)`,
                                                 animationDuration: '4s'
                                             }}
                                         />
+                                        <div
+                                            className="absolute inset-0 opacity-20 blur-2xl animate-pulse"
+                                            style={{
+                                                background: `radial-gradient(circle at 70% 60%, rgba(${rgb}, 0.5), transparent 50%)`,
+                                                animationDuration: '6s',
+                                                animationDelay: '2s'
+                                            }}
+                                        />
 
-                                        {/* Subtle mesh pattern */}
-                                        <div className="absolute inset-0 opacity-[0.02]" style={{
-                                            backgroundImage: `radial-gradient(circle at 1px 1px, rgb(${rgb}) 1px, transparent 0)`,
-                                            backgroundSize: '40px 40px'
+                                        {/* Sophisticated geometric pattern */}
+                                        <div className="absolute inset-0 opacity-[0.03]" style={{
+                                            backgroundImage: `
+                                                linear-gradient(rgba(${rgb}, 0.5) 1px, transparent 1px),
+                                                linear-gradient(90deg, rgba(${rgb}, 0.5) 1px, transparent 1px)
+                                            `,
+                                            backgroundSize: '30px 30px'
                                         }} />
 
-                                        {/* Large Background Icon */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] scale-150 rotate-12">
-                                            <ListIcon type={list.type} className="h-64 w-64" style={{ color: `rgb(${rgb})` }} />
+                                        {/* Radial dots pattern overlay */}
+                                        <div className="absolute inset-0 opacity-[0.04]" style={{
+                                            backgroundImage: `radial-gradient(circle at 2px 2px, rgb(${rgb}) 2px, transparent 0)`,
+                                            backgroundSize: '50px 50px'
+                                        }} />
+
+                                        {/* Large Background Icon - multiple layers */}
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] scale-150 rotate-12 animate-pulse" style={{ animationDuration: '8s' }}>
+                                            <ListIcon type={list.type} className="h-72 w-72" style={{ color: `rgb(${rgb})` }} />
+                                        </div>
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] scale-125 -rotate-6">
+                                            <ListIcon type={list.type} className="h-56 w-56" style={{ color: `rgb(${rgb})` }} />
                                         </div>
 
-                                        {/* Main Icon with enhanced glow */}
-                                        <div className="relative z-10 flex flex-col items-center gap-4">
-                                            <div className="p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm relative group-hover:scale-110 transition-transform duration-500 shadow-2xl">
+                                        {/* Glowing corner accents */}
+                                        <div
+                                            className="absolute top-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-700"
+                                            style={{ background: `radial-gradient(circle, rgb(${rgb}), transparent)` }}
+                                        />
+                                        <div
+                                            className="absolute bottom-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-15 group-hover:opacity-25 transition-opacity duration-700"
+                                            style={{ background: `radial-gradient(circle, rgb(${rgb}), transparent)` }}
+                                        />
+
+                                        {/* Main Icon with premium styling */}
+                                        <div className="relative z-10 flex flex-col items-center gap-6">
+                                            <div className="relative">
+                                                {/* Outer glow ring */}
                                                 <div
-                                                    className="absolute inset-0 blur-2xl opacity-30 group-hover:opacity-50 transition-opacity"
+                                                    className="absolute inset-0 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-700 scale-150"
                                                     style={{ background: `rgb(${rgb})` }}
                                                 />
-                                                <ListIcon type={list.type} className="h-12 w-12 relative z-10" style={{ color: `rgb(${rgb})` }} />
+                                                {/* Icon container */}
+                                                <div className="relative p-8 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:border-white/30 transition-all duration-700 shadow-2xl">
+                                                    <div
+                                                        className="absolute inset-0 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-700"
+                                                        style={{ background: `linear-gradient(135deg, rgba(${rgb}, 0.6), transparent)` }}
+                                                    />
+                                                    <ListIcon type={list.type} className="h-14 w-14 relative z-10 drop-shadow-2xl" style={{ color: `rgb(${rgb})`, filter: 'drop-shadow(0 0 20px currentColor)' }} />
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col items-center">
-                                                <div className="h-px w-12 bg-gradient-to-r from-transparent via-white/20 to-transparent mb-2" />
-                                                <span className="text-[8px] font-black uppercase tracking-[0.25em] text-white/30 group-hover:text-white/40 transition-colors">Empty</span>
+
+                                            {/* Elegant divider and text */}
+                                            <div className="flex flex-col items-center gap-3">
+                                                {/* Animated divider */}
+                                                <div className="relative h-px w-20 overflow-hidden">
+                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                                                    <div
+                                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-pulse"
+                                                        style={{
+                                                            background: `linear-gradient(90deg, transparent, rgba(${rgb}, 0.8), transparent)`,
+                                                            animationDuration: '3s'
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                {/* Status text with glow */}
+                                                <div className="relative">
+                                                    <span
+                                                        className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 group-hover:text-white/60 transition-colors duration-500"
+                                                        style={{
+                                                            textShadow: `0 0 20px rgba(${rgb}, 0.3)`
+                                                        }}
+                                                    >
+                                                        Awaiting
+                                                    </span>
+                                                </div>
+
+                                                {/* Subtle pulse indicator */}
+                                                <div className="flex gap-1.5 mt-1">
+                                                    <div
+                                                        className="w-1 h-1 rounded-full animate-pulse"
+                                                        style={{
+                                                            background: `rgb(${rgb})`,
+                                                            animationDuration: '2s'
+                                                        }}
+                                                    />
+                                                    <div
+                                                        className="w-1 h-1 rounded-full animate-pulse"
+                                                        style={{
+                                                            background: `rgb(${rgb})`,
+                                                            animationDuration: '2s',
+                                                            animationDelay: '0.5s'
+                                                        }}
+                                                    />
+                                                    <div
+                                                        className="w-1 h-1 rounded-full animate-pulse"
+                                                        style={{
+                                                            background: `rgb(${rgb})`,
+                                                            animationDuration: '2s',
+                                                            animationDelay: '1s'
+                                                        }}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
