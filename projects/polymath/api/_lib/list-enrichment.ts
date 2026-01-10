@@ -38,24 +38,18 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
             category = list?.type || 'generic'
             listTitle = list?.title || ''
             console.log(`[Enrichment] List category resolved to: ${category}, title: "${listTitle}"`)
-
-            // Smart fallback: if category is generic but title suggests films/movies, treat as film
-            if (category === 'generic' && listTitle) {
-                const lowerTitle = listTitle.toLowerCase()
-                if (lowerTitle.includes('watch') || lowerTitle.includes('movie') ||
-                    lowerTitle.includes('film') || lowerTitle.includes('show') ||
-                    lowerTitle.includes('tv') || lowerTitle.includes('series')) {
-                    console.log(`[Enrichment] Title "${listTitle}" suggests film/TV content - treating as film type`)
-                    category = 'film'
-                }
-            }
         }
 
         // 2. Try external APIs first, then fallback chain
         let metadata = null
 
+        // Quotes/phrases go directly to Gemini with specialized prompt
+        if (category === 'quote') {
+            console.log(`[Enrichment] Using quote-specific enrichment for: ${content}`)
+            metadata = await enrichQuote(content)
+        }
         // Try category-specific API first
-        if (category === 'film' || category === 'tv' || category === 'movie' || category === 'show') {
+        else if (category === 'film' || category === 'tv' || category === 'movie' || category === 'show') {
             console.log(`[Enrichment] Trying OMDb for film: ${content}`)
             metadata = await enrichFilm(content)
         } else if (category === 'book') {
@@ -287,5 +281,83 @@ Example format:
     } catch (error) {
         console.error(`[Gemini] Enrichment error:`, error)
         throw error
+    }
+}
+
+/**
+ * Quote/Phrase enrichment - tries to identify source and generate mood tags
+ */
+async function enrichQuote(content: string) {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY not configured')
+    }
+
+    const prompt = `Analyze this phrase or text snippet:
+
+"${content}"
+
+Your task:
+1. If this is a known quote, identify the author/source
+2. If it's not a known quote, that's fine - leave author/source empty
+3. Generate evocative tags that capture the mood, theme, or feeling of the phrase
+4. Write a brief poetic interpretation or reflection on why someone might find this phrase beautiful
+
+Return JSON with these exact fields:
+- subtitle: If it's a known quote, the author name (e.g., "Virginia Woolf"). If unknown, leave as empty string ""
+- description: A brief (1-2 sentence) reflection on the beauty or meaning of this phrase
+- tags: Array of 3-4 evocative tags capturing mood/theme (e.g., ["Melancholy", "Longing", "Time", "Memory"])
+- specs: Object with optional details. Include {"Author": "Name"} if known, {"Source": "Book/Work"} if known, or leave empty {}
+
+Return ONLY valid JSON, no markdown, no explanation.
+
+Example for a known quote:
+{"subtitle": "F. Scott Fitzgerald", "description": "A meditation on the impossible pursuit of the past, and how we're forever reaching toward what we've lost.", "tags": ["Longing", "Time", "Memory", "Hope"], "specs": {"Author": "F. Scott Fitzgerald", "Source": "The Great Gatsby"}}
+
+Example for an unknown phrase:
+{"subtitle": "", "description": "There's something quietly devastating about this image - the way it captures a moment of loss without melodrama.", "tags": ["Stillness", "Loss", "Observation", "Quiet"], "specs": {}}`
+
+    try {
+        const response = await generateText(prompt, {
+            responseFormat: 'json',
+            temperature: 0.3,
+            maxTokens: 1500
+        })
+
+        let jsonStr = response.trim()
+        jsonStr = jsonStr.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
+
+        const jsonMatch = jsonStr.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) {
+            console.error(`[Quote Enrichment] Invalid response format: ${response.slice(0, 200)}`)
+            throw new Error(`No valid JSON found in quote enrichment response`)
+        }
+        jsonStr = jsonMatch[0]
+
+        const metadata = JSON.parse(jsonStr)
+
+        // Ensure tags is an array
+        if (!Array.isArray(metadata.tags)) {
+            metadata.tags = []
+        }
+
+        // Ensure specs is an object
+        if (!metadata.specs || typeof metadata.specs !== 'object') {
+            metadata.specs = {}
+        }
+
+        metadata.source = 'gemini'
+        console.log(`[Quote Enrichment] Successfully enriched phrase`)
+        return metadata
+
+    } catch (error) {
+        console.error(`[Quote Enrichment] Error:`, error)
+        // Return minimal metadata for quotes
+        return {
+            subtitle: '',
+            description: '',
+            tags: ['Phrase', 'Collected'],
+            specs: {},
+            source: 'gemini'
+        }
     }
 }
