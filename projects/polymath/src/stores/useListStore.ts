@@ -8,6 +8,7 @@ import { useOfflineStore } from './useOfflineStore'
 interface ListStore {
     lists: List[]
     currentListItems: ListItem[]
+    currentListId: string | null
     loading: boolean
     error: string | null
     offlineMode: boolean
@@ -28,6 +29,7 @@ export const useListStore = create<ListStore>()(
         (set, get) => ({
             lists: [],
             currentListItems: [],
+            currentListId: null,
             loading: false,
             error: null,
             offlineMode: false,
@@ -157,8 +159,9 @@ export const useListStore = create<ListStore>()(
             fetchListItems: async (listId) => {
                 const { isOnline } = useOfflineStore.getState()
 
-                // Clear current items or set loading to prevent stale flash
-                set({ currentListItems: [], loading: true })
+                // Track current fetch to prevent race conditions
+                const currentFetchId = listId
+                set({ currentListId: currentFetchId, currentListItems: [], loading: true })
 
                 // Helper to load from Dexie
                 const loadFromDexie = async () => {
@@ -167,7 +170,11 @@ export const useListStore = create<ListStore>()(
                         const cachedItems = await readingDb.getCachedListItems(listId)
                         if (cachedItems.length > 0) {
                             console.log(`[ListStore] Loaded ${cachedItems.length} items from Dexie cache`)
-                            set({ currentListItems: cachedItems as any, loading: false })
+                            // Only update if this is still the current list
+                            const state = get()
+                            if (state.currentListId === currentFetchId) {
+                                set({ currentListItems: cachedItems as any, loading: false })
+                            }
                             return true
                         }
                     } catch (e) {
@@ -186,21 +193,32 @@ export const useListStore = create<ListStore>()(
                     const response = await fetch(`/api/list-items?listId=${listId}`)
                     if (!response.ok) throw new Error('Failed to fetch items')
                     const data = await response.json()
-                    set({ currentListItems: data, loading: false })
 
-                    // Cache to Dexie for offline viewing
-                    try {
-                        const { readingDb } = await import('../lib/db')
-                        await readingDb.cacheListItems(data)
-                        console.log(`[ListStore] Cached ${data.length} items to Dexie`)
-                    } catch (cacheError) {
-                        console.warn('[ListStore] Failed to cache items:', cacheError)
+                    // Only update if this is still the current list
+                    const state = get()
+                    if (state.currentListId === currentFetchId) {
+                        set({ currentListItems: data, loading: false })
+
+                        // Cache to Dexie for offline viewing
+                        try {
+                            const { readingDb } = await import('../lib/db')
+                            await readingDb.cacheListItems(data)
+                            console.log(`[ListStore] Cached ${data.length} items to Dexie`)
+                        } catch (cacheError) {
+                            console.warn('[ListStore] Failed to cache items:', cacheError)
+                        }
+                    } else {
+                        console.log(`[ListStore] Discarding stale response for list ${listId}`)
                     }
                 } catch (error: any) {
                     console.error('[ListStore] Fetch failed, loading from cache:', error)
                     const loaded = await loadFromDexie()
                     if (!loaded) {
-                        set({ error: error.message, loading: false })
+                        // Only update error if this is still the current list
+                        const state = get()
+                        if (state.currentListId === currentFetchId) {
+                            set({ error: error.message, loading: false })
+                        }
                     }
                 }
             },
