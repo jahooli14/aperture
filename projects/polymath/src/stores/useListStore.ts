@@ -466,13 +466,18 @@ export const useListStore = create<ListStore>()(
             reorderLists: async (listIds) => {
                 const { isOnline } = useOfflineStore.getState()
 
-                // Optimistic reorder
+                // Optimistic reorder - update both order AND sort_order property
                 const currentLists = get().lists
-                const newLists = [...currentLists].sort((a, b) => {
-                    const indexA = listIds.indexOf(a.id)
-                    const indexB = listIds.indexOf(b.id)
-                    return indexA - indexB
-                })
+                const newLists = [...currentLists]
+                    .sort((a, b) => {
+                        const indexA = listIds.indexOf(a.id)
+                        const indexB = listIds.indexOf(b.id)
+                        return indexA - indexB
+                    })
+                    .map((list, index) => ({
+                        ...list,
+                        sort_order: index
+                    }))
                 set({ lists: newLists })
 
                 // If offline, queue operation

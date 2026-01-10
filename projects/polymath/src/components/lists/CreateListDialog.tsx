@@ -28,14 +28,22 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
     const [type, setType] = useState<ListType>('generic')
     const { createList } = useListStore()
     const [loading, setLoading] = useState(false)
+    const [error, setError] = useState('')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!title.trim()) return
 
         setLoading(true)
-        await createList({ title, type })
+        setError('')
+        const listId = await createList({ title, type })
         setLoading(false)
+
+        if (!listId) {
+            setError('Failed to create list. Please try again.')
+            return
+        }
+
         onOpenChange(false)
         setTitle('')
         setType('generic')
@@ -49,6 +57,11 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-lg text-sm">
+                            {error}
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-zinc-400">List Title</label>
