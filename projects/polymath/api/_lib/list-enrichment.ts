@@ -286,39 +286,40 @@ Example format:
 
 /**
  * Quote/Phrase enrichment - tries to identify source and generate mood tags
+ * CONSERVATIVE: Assumes user wrote it unless it's an extremely famous quote
  */
 async function enrichQuote(content: string) {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error('GEMINI_API_KEY not configured')
     }
 
-    const prompt = `Analyze this phrase or text snippet that someone found beautiful enough to save:
+    const prompt = `Analyze this phrase that someone saved to their personal collection:
 
 "${content}"
 
-This could be:
-- A phrase the person wrote themselves
-- A snippet they overheard or read somewhere
-- A famous quote (but don't assume this)
+IMPORTANT ASSUMPTIONS:
+- This phrase was most likely written BY THE USER themselves
+- Only attribute to an author if it's an EXTREMELY famous, widely-known quote (like Shakespeare, Einstein, etc.)
+- When in doubt, assume it's the user's own words
 
 Your task:
 1. Generate evocative tags that capture the mood, theme, or feeling of the phrase
 2. Write a brief poetic reflection on why this phrase might resonate - what makes it beautiful or memorable
-3. ONLY if you're highly confident this is a well-known quote, include the author. If uncertain, leave it empty.
+3. ONLY include author if it's an EXTREMELY FAMOUS quote that everyone would recognize. Otherwise, leave empty.
 
 Return JSON with these exact fields:
-- subtitle: Author name ONLY if you're certain it's a known quote. Otherwise empty string ""
+- subtitle: Author name ONLY if it's an extremely famous quote (Shakespeare, Bible, Einstein level). Otherwise ""
 - description: A brief (1-2 sentence) reflection on the beauty or resonance of this phrase
-- tags: Array of 3-4 evocative tags capturing mood/theme (e.g., ["Melancholy", "Longing", "Time", "Memory"])
-- specs: If known quote, include {"Author": "Name", "Source": "Work"}. Otherwise empty {}
+- tags: Array of 3-4 evocative tags capturing mood/theme (e.g., ["Melancholy", "Longing", "Connection"])
+- specs: Empty object {} (we assume user's own words unless proven otherwise)
 
 Return ONLY valid JSON, no markdown, no explanation.
 
-Example for a clearly famous quote:
-{"subtitle": "Virginia Woolf", "description": "A meditation on how we carry the sea within us, even far from shore.", "tags": ["Memory", "Longing", "Nature", "Self"], "specs": {"Author": "Virginia Woolf", "Source": "The Waves"}}
+Example for an extremely famous quote:
+{"subtitle": "William Shakespeare", "description": "A timeless meditation on existence and choice.", "tags": ["Existential", "Choice", "Philosophy"], "specs": {}}
 
-Example for a personal or unknown phrase:
-{"subtitle": "", "description": "There's an intimacy here - the way it captures something small and makes it feel significant.", "tags": ["Observation", "Tenderness", "Stillness"], "specs": {}}`
+Example for most phrases (default):
+{"subtitle": "", "description": "There's a quiet intimacy in the repetition - the way 'you know' becomes both question and answer.", "tags": ["Intimacy", "Uncertainty", "Connection"], "specs": {}}`
 
     try {
         const response = await generateText(prompt, {
