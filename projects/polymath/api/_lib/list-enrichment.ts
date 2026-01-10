@@ -292,29 +292,33 @@ async function enrichQuote(content: string) {
         throw new Error('GEMINI_API_KEY not configured')
     }
 
-    const prompt = `Analyze this phrase or text snippet:
+    const prompt = `Analyze this phrase or text snippet that someone found beautiful enough to save:
 
 "${content}"
 
+This could be:
+- A phrase the person wrote themselves
+- A snippet they overheard or read somewhere
+- A famous quote (but don't assume this)
+
 Your task:
-1. If this is a known quote, identify the author/source
-2. If it's not a known quote, that's fine - leave author/source empty
-3. Generate evocative tags that capture the mood, theme, or feeling of the phrase
-4. Write a brief poetic interpretation or reflection on why someone might find this phrase beautiful
+1. Generate evocative tags that capture the mood, theme, or feeling of the phrase
+2. Write a brief poetic reflection on why this phrase might resonate - what makes it beautiful or memorable
+3. ONLY if you're highly confident this is a well-known quote, include the author. If uncertain, leave it empty.
 
 Return JSON with these exact fields:
-- subtitle: If it's a known quote, the author name (e.g., "Virginia Woolf"). If unknown, leave as empty string ""
-- description: A brief (1-2 sentence) reflection on the beauty or meaning of this phrase
+- subtitle: Author name ONLY if you're certain it's a known quote. Otherwise empty string ""
+- description: A brief (1-2 sentence) reflection on the beauty or resonance of this phrase
 - tags: Array of 3-4 evocative tags capturing mood/theme (e.g., ["Melancholy", "Longing", "Time", "Memory"])
-- specs: Object with optional details. Include {"Author": "Name"} if known, {"Source": "Book/Work"} if known, or leave empty {}
+- specs: If known quote, include {"Author": "Name", "Source": "Work"}. Otherwise empty {}
 
 Return ONLY valid JSON, no markdown, no explanation.
 
-Example for a known quote:
-{"subtitle": "F. Scott Fitzgerald", "description": "A meditation on the impossible pursuit of the past, and how we're forever reaching toward what we've lost.", "tags": ["Longing", "Time", "Memory", "Hope"], "specs": {"Author": "F. Scott Fitzgerald", "Source": "The Great Gatsby"}}
+Example for a clearly famous quote:
+{"subtitle": "Virginia Woolf", "description": "A meditation on how we carry the sea within us, even far from shore.", "tags": ["Memory", "Longing", "Nature", "Self"], "specs": {"Author": "Virginia Woolf", "Source": "The Waves"}}
 
-Example for an unknown phrase:
-{"subtitle": "", "description": "There's something quietly devastating about this image - the way it captures a moment of loss without melodrama.", "tags": ["Stillness", "Loss", "Observation", "Quiet"], "specs": {}}`
+Example for a personal or unknown phrase:
+{"subtitle": "", "description": "There's an intimacy here - the way it captures something small and makes it feel significant.", "tags": ["Observation", "Tenderness", "Stillness"], "specs": {}}`
 
     try {
         const response = await generateText(prompt, {
