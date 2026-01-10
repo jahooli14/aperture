@@ -50,13 +50,32 @@ function MasonryListGrid({
     const isPosterType = isBook || listType === 'film' || listType === 'movie' || listType === 'show' || listType === 'tv'
     const isQuoteType = listType === 'quote'
 
-    // Special layout for quotes/phrases - single column, elegant typography
+    // Special layout for quotes/phrases - single column, elegant typography with variety
     if (isQuoteType) {
+        // Helper to get variant based on item ID (deterministic variety)
+        const getVariant = (id: string) => {
+            const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+            return hash % 5 // 5 different variants
+        }
+
         return (
             <div className="flex flex-col gap-8 max-w-3xl mx-auto">
-                {items.map((item) => {
+                {items.map((item, index) => {
                     const isExpanded = expandedItemId === item.id
                     const hasSource = item.metadata?.subtitle || item.metadata?.specs?.Source || item.metadata?.specs?.Author
+                    const variant = getVariant(item.id)
+                    const isShort = item.content.length < 80
+                    const isMedium = item.content.length >= 80 && item.content.length < 150
+
+                    // Variant color schemes
+                    const colorSchemes = [
+                        { primary: 'violet', accent: 'fuchsia', gradient: 'from-violet-500/20 via-fuchsia-500/10 to-purple-500/20', glow: 'violet-500', border: 'violet-500/20' },
+                        { primary: 'cyan', accent: 'blue', gradient: 'from-cyan-500/20 via-blue-500/10 to-sky-500/20', glow: 'cyan-500', border: 'cyan-500/20' },
+                        { primary: 'rose', accent: 'pink', gradient: 'from-rose-500/20 via-pink-500/10 to-red-500/20', glow: 'rose-500', border: 'rose-500/20' },
+                        { primary: 'amber', accent: 'orange', gradient: 'from-amber-500/20 via-orange-500/10 to-yellow-500/20', glow: 'amber-500', border: 'amber-500/20' },
+                        { primary: 'emerald', accent: 'teal', gradient: 'from-emerald-500/20 via-teal-500/10 to-green-500/20', glow: 'emerald-500', border: 'emerald-500/20' }
+                    ]
+                    const colors = colorSchemes[variant]
 
                     return (
                         <motion.div
@@ -68,31 +87,67 @@ function MasonryListGrid({
                             onClick={() => onItemClick(item.id)}
                             className="group relative cursor-pointer"
                         >
-                            {/* Quote Card */}
-                            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-900/95 to-zinc-800/90 backdrop-blur-xl border border-white/10 p-8 sm:p-12 hover:border-white/20 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-500">
-                                {/* Animated gradient accents */}
-                                <div className="absolute top-0 left-0 w-48 h-48 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-                                <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-sky-500/20 via-cyan-500/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-                                <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-gradient-to-br from-pink-500/10 to-transparent rounded-full blur-2xl" />
+                            {/* Quote Card - with variant styling */}
+                            <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${variant === 0 ? 'from-zinc-900/90 via-purple-950/30 to-zinc-900/90' : variant === 1 ? 'from-zinc-900/90 via-cyan-950/30 to-zinc-900/90' : variant === 2 ? 'from-zinc-900/90 via-rose-950/30 to-zinc-900/90' : variant === 3 ? 'from-zinc-900/90 via-amber-950/30 to-zinc-900/90' : 'from-zinc-900/90 via-emerald-950/30 to-zinc-900/90'} backdrop-blur-xl border-2 p-8 sm:p-12 hover:border-white/30 transition-all duration-500`}
+                            style={{
+                                borderColor: `rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.2)`,
+                                boxShadow: `0 20px 40px rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.05), 0 0 80px rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.03)`
+                            }}>
+                                {/* Animated gradient accents - variant specific */}
+                                <div className={`absolute top-0 left-0 w-48 h-48 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl animate-pulse`} style={{ animationDuration: '4s' }} />
+                                <div className={`absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl ${colors.gradient} rounded-full blur-3xl animate-pulse`} style={{ animationDuration: '6s' }} />
+                                <div className={`absolute top-1/3 right-1/4 w-32 h-32 bg-gradient-to-br ${colors.gradient} rounded-full blur-3xl animate-pulse`} style={{ animationDuration: '8s', animationDelay: '2s' }} />
 
                                 {/* Subtle texture overlay */}
                                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIj48cGF0aCBkPSJNMCAwaDQwdjQwSDB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAyKSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg==')] opacity-30" />
 
-                                {/* Opening Quote Mark - more refined */}
-                                <div className="absolute top-6 left-6 text-7xl sm:text-8xl font-serif text-white/[0.03] select-none leading-none">
-                                    "
-                                </div>
+                                {/* Decorative elements - varied by variant */}
+                                {variant === 0 && (
+                                    <div className="absolute top-6 left-6 text-8xl sm:text-9xl font-serif text-violet-500/[0.05] select-none leading-none">
+                                        "
+                                    </div>
+                                )}
+                                {variant === 1 && (
+                                    <>
+                                        <div className="absolute top-6 right-6 w-16 h-16 border-t-2 border-r-2 border-cyan-500/20 rounded-tr-3xl" />
+                                        <div className="absolute bottom-6 left-6 w-16 h-16 border-b-2 border-l-2 border-cyan-500/20 rounded-bl-3xl" />
+                                    </>
+                                )}
+                                {variant === 2 && (
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.02] scale-150 rotate-12">
+                                        <Quote className="h-96 w-96 text-rose-500" />
+                                    </div>
+                                )}
+                                {variant === 3 && (
+                                    <>
+                                        <div className="absolute top-8 left-1/2 -translate-x-1/2 h-px w-24 bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+                                        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 h-px w-24 bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+                                    </>
+                                )}
+                                {variant === 4 && (
+                                    <div className="absolute top-6 left-6 text-6xl font-serif text-emerald-500/[0.08] select-none leading-none italic">
+                                        ✦
+                                    </div>
+                                )}
 
-                                {/* The Phrase */}
+                                {/* The Phrase - varied typography */}
                                 <div className="relative z-10 pt-4 sm:pt-6">
-                                    <p className="text-2xl sm:text-3xl md:text-4xl text-white/95 leading-relaxed font-light tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>
+                                    <p className={`${isShort ? 'text-3xl sm:text-4xl md:text-5xl' : isMedium ? 'text-2xl sm:text-3xl md:text-4xl' : 'text-xl sm:text-2xl md:text-3xl'} text-white/95 leading-relaxed tracking-wide ${variant === 0 ? 'font-light' : variant === 1 ? 'font-normal' : variant === 2 ? 'font-light italic' : variant === 3 ? 'font-medium' : 'font-light'}`}
+                                    style={{
+                                        fontFamily: variant === 0 ? 'Georgia, serif' : variant === 1 ? 'Palatino, serif' : variant === 2 ? 'Garamond, serif' : variant === 3 ? 'Times New Roman, serif' : 'Georgia, serif',
+                                        textShadow: `0 2px 20px rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.1)`
+                                    }}>
                                         {item.content}
                                     </p>
 
-                                    {/* Source/Attribution - more elegant */}
+                                    {/* Source/Attribution - variant styled */}
                                     {hasSource && (
-                                        <p className="mt-6 text-sm text-zinc-400 font-medium tracking-wider">
-                                            — {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle}
+                                        <p className={`mt-6 text-sm font-medium tracking-wider ${variant === 2 ? 'italic' : ''}`}
+                                        style={{
+                                            color: `rgba(${variant === 0 ? '167, 139, 250' : variant === 1 ? '103, 232, 249' : variant === 2 ? '251, 113, 133' : variant === 3 ? '251, 191, 36' : '52, 211, 153'}, 0.7)`,
+                                            textShadow: `0 0 10px rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.15)`
+                                        }}>
+                                            {variant === 3 ? '~' : '—'} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle}
                                         </p>
                                     )}
 
@@ -123,15 +178,22 @@ function MasonryListGrid({
                                     )}
                                 </div>
 
-                                {/* Enriching indicator - more subtle */}
+                                {/* Enriching indicator - variant styled */}
                                 {item.enrichment_status === 'pending' && (
-                                    <div className="absolute bottom-6 right-6 flex items-center gap-2 text-xs text-violet-300/80 animate-pulse">
-                                        <div className="h-2 w-2 rounded-full bg-violet-400/60" />
+                                    <div className="absolute bottom-6 right-6 flex items-center gap-2 text-xs animate-pulse"
+                                    style={{
+                                        color: `rgba(${variant === 0 ? '167, 139, 250' : variant === 1 ? '103, 232, 249' : variant === 2 ? '251, 113, 133' : variant === 3 ? '251, 191, 36' : '52, 211, 153'}, 0.8)`
+                                    }}>
+                                        <div className="h-2 w-2 rounded-full"
+                                        style={{
+                                            background: `rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.6)`,
+                                            boxShadow: `0 0 10px rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.4)`
+                                        }} />
                                         <span className="font-medium">Enriching</span>
                                     </div>
                                 )}
 
-                                {/* Delete Action - improved visibility */}
+                                {/* Delete Action - variant styled */}
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation()
@@ -139,7 +201,10 @@ function MasonryListGrid({
                                             onDelete(item.id, item.list_id)
                                         }
                                     }}
-                                    className="absolute top-6 right-6 p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/40 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                                    className="absolute top-6 right-6 p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-red-500/20 hover:border-red-500/40 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg"
+                                    style={{
+                                        borderColor: `rgba(${variant === 0 ? '139, 92, 246' : variant === 1 ? '6, 182, 212' : variant === 2 ? '244, 63, 94' : variant === 3 ? '245, 158, 11' : '16, 185, 129'}, 0.2)`
+                                    }}
                                     aria-label="Delete phrase"
                                 >
                                     <Trash2 className="h-4 w-4" />
