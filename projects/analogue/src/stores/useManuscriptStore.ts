@@ -27,6 +27,7 @@ interface ManuscriptStore {
 
   // Scene actions
   createScene: (section: NarrativeSection, title: string) => Promise<SceneNode>
+  importScenes: (scenes: { title: string; section: NarrativeSection; prose: string }[]) => Promise<void>
   updateScene: (sceneId: string, updates: Partial<SceneNode>) => Promise<void>
   deleteScene: (sceneId: string) => Promise<void>
   reorderScenes: (sceneIds: string[]) => Promise<void>
@@ -167,6 +168,54 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         })
 
         return scene
+      },
+
+      importScenes: async (scenes) => {
+        const { manuscript } = get()
+        if (!manuscript) throw new Error('No manuscript loaded')
+
+        const now = new Date().toISOString()
+        const newScenes: SceneNode[] = []
+
+        for (let i = 0; i < scenes.length; i++) {
+          const imported = scenes[i]
+          const scene: SceneNode = {
+            id: generateId(),
+            order: i,
+            title: imported.title,
+            section: imported.section,
+            prose: imported.prose,
+            footnotes: '',
+            wordCount: imported.prose.trim().split(/\s+/).filter(Boolean).length,
+            identityType: null,
+            sensoryFocus: null,
+            awarenessLevel: null,
+            footnoteTone: null,
+            status: 'draft',
+            validationStatus: 'yellow',
+            checklist: [],
+            sensesActivated: [],
+            glassesmentions: [],
+            reverberations: [],
+            createdAt: now,
+            updatedAt: now,
+            pulseCheckCompletedAt: null
+          }
+
+          await db.sceneNodes.put({ ...scene, manuscriptId: manuscript.id })
+          newScenes.push(scene)
+        }
+
+        const totalWordCount = newScenes.reduce((sum, s) => sum + s.wordCount, 0)
+
+        set({
+          manuscript: {
+            ...manuscript,
+            scenes: newScenes,
+            totalWordCount,
+            updatedAt: now
+          }
+        })
       },
 
       updateScene: async (sceneId, updates) => {
