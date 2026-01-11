@@ -57,23 +57,37 @@ export default function ListsPage() {
     const { lists, fetchLists, reorderLists, loading } = useListStore()
     const [createOpen, setCreateOpen] = useState(false)
     const [listCovers, setListCovers] = useState<Record<string, string>>({})
+    const [quoteCovers, setQuoteCovers] = useState<Record<string, string>>({})
 
     useEffect(() => {
         fetchLists()
     }, [])
 
-    // Fetch first item image for each list to use as cover
+    // Fetch first item image for each list to use as cover, or shortest phrase for quote lists
     useEffect(() => {
         const fetchCovers = async () => {
             const covers: Record<string, string> = {}
+            const quotes: Record<string, string> = {}
             for (const list of lists) {
                 try {
-                    const response = await fetch(`/api/list-items?listId=${list.id}&limit=10`)
+                    const response = await fetch(`/api/list-items?listId=${list.id}&limit=50`)
                     if (response.ok) {
                         const items = await response.json()
-                        const itemWithImage = items.find((item: any) => item.metadata?.image)
-                        if (itemWithImage?.metadata?.image) {
-                            covers[list.id] = itemWithImage.metadata.image
+
+                        if (list.type === 'quote' && items.length > 0) {
+                            // For quote lists, find the shortest phrase
+                            const shortestPhrase = items.reduce((shortest: any, item: any) =>
+                                !shortest || item.content.length < shortest.content.length ? item : shortest
+                            , null)
+                            if (shortestPhrase) {
+                                quotes[list.id] = shortestPhrase.content
+                            }
+                        } else {
+                            // For other lists, find first item with image
+                            const itemWithImage = items.find((item: any) => item.metadata?.image)
+                            if (itemWithImage?.metadata?.image) {
+                                covers[list.id] = itemWithImage.metadata.image
+                            }
                         }
                     }
                 } catch (error) {
@@ -81,6 +95,7 @@ export default function ListsPage() {
                 }
             }
             setListCovers(covers)
+            setQuoteCovers(quotes)
         }
         if (lists.length > 0) {
             fetchCovers()
@@ -118,6 +133,7 @@ export default function ListsPage() {
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
+                    const quoteCover = quoteCovers[list.id]
 
                     return (
                         <Reorder.Item
@@ -132,7 +148,7 @@ export default function ListsPage() {
                             dragConstraints={{ top: 0, bottom: 0 }}
                             dragElastic={0.1}
                         >
-                            {/* Poster / Cover Image */}
+                            {/* Poster / Cover Image / Quote Cover */}
                             <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950">
                                 {coverImage ? (
                                     <img
@@ -140,129 +156,56 @@ export default function ListsPage() {
                                         alt=""
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                     />
+                                ) : quoteCover ? (
+                                    // Beautiful quote cover with shortest phrase
+                                    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-6">
+                                        {/* Simple gradient background */}
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-40`} />
+
+                                        {/* Minimal decorative elements */}
+                                        <div className="absolute top-4 right-4 text-6xl font-serif text-white/[0.03] select-none leading-none">"</div>
+                                        <div className="absolute bottom-4 left-4 text-6xl font-serif text-white/[0.03] select-none leading-none">"</div>
+
+                                        {/* The phrase - centered and beautiful */}
+                                        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+                                            <p className="text-white/90 font-light text-lg sm:text-xl leading-relaxed tracking-wide px-2"
+                                                style={{
+                                                    fontFamily: 'Georgia, serif',
+                                                    textShadow: `0 2px 20px rgba(${rgb}, 0.3)`,
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 6,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                {quoteCover}
+                                            </p>
+                                        </div>
+                                    </div>
                                 ) : (
+                                    // Empty list fallback - simplified for performance
                                     <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-black">
-                                        {/* Layered animated gradients */}
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-50 blur-3xl`} />
-                                        <div
-                                            className="absolute inset-0 opacity-30 blur-3xl animate-pulse"
-                                            style={{
-                                                background: `radial-gradient(circle at 30% 40%, rgba(${rgb}, 0.7), transparent 60%)`,
-                                                animationDuration: '4s'
-                                            }}
-                                        />
-                                        <div
-                                            className="absolute inset-0 opacity-20 blur-2xl animate-pulse"
-                                            style={{
-                                                background: `radial-gradient(circle at 70% 60%, rgba(${rgb}, 0.5), transparent 50%)`,
-                                                animationDuration: '6s',
-                                                animationDelay: '2s'
-                                            }}
-                                        />
+                                        {/* Single gradient background */}
+                                        <div className={`absolute inset-0 bg-gradient-to-br ${ListGradient(list.type)} opacity-30`} />
 
-                                        {/* Sophisticated geometric pattern */}
-                                        <div className="absolute inset-0 opacity-[0.03]" style={{
-                                            backgroundImage: `
-                                                linear-gradient(rgba(${rgb}, 0.5) 1px, transparent 1px),
-                                                linear-gradient(90deg, rgba(${rgb}, 0.5) 1px, transparent 1px)
-                                            `,
-                                            backgroundSize: '30px 30px'
+                                        {/* Simple geometric pattern */}
+                                        <div className="absolute inset-0 opacity-[0.02]" style={{
+                                            backgroundImage: `linear-gradient(rgba(${rgb}, 0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(${rgb}, 0.5) 1px, transparent 1px)`,
+                                            backgroundSize: '40px 40px'
                                         }} />
 
-                                        {/* Radial dots pattern overlay */}
-                                        <div className="absolute inset-0 opacity-[0.04]" style={{
-                                            backgroundImage: `radial-gradient(circle at 2px 2px, rgb(${rgb}) 2px, transparent 0)`,
-                                            backgroundSize: '50px 50px'
-                                        }} />
-
-                                        {/* Large Background Icon - multiple layers */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.08] scale-150 rotate-12 animate-pulse" style={{ animationDuration: '8s' }}>
-                                            <ListIcon type={list.type} className="h-72 w-72" style={{ color: `rgb(${rgb})` }} />
-                                        </div>
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] scale-125 -rotate-6">
-                                            <ListIcon type={list.type} className="h-56 w-56" style={{ color: `rgb(${rgb})` }} />
+                                        {/* Single background icon */}
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] scale-150">
+                                            <ListIcon type={list.type} className="h-64 w-64" style={{ color: `rgb(${rgb})` }} />
                                         </div>
 
-                                        {/* Glowing corner accents */}
-                                        <div
-                                            className="absolute top-0 left-0 w-32 h-32 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-700"
-                                            style={{ background: `radial-gradient(circle, rgb(${rgb}), transparent)` }}
-                                        />
-                                        <div
-                                            className="absolute bottom-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-15 group-hover:opacity-25 transition-opacity duration-700"
-                                            style={{ background: `radial-gradient(circle, rgb(${rgb}), transparent)` }}
-                                        />
-
-                                        {/* Main Icon with premium styling */}
-                                        <div className="relative z-10 flex flex-col items-center gap-6">
-                                            <div className="relative">
-                                                {/* Outer glow ring */}
-                                                <div
-                                                    className="absolute inset-0 rounded-full blur-2xl opacity-40 group-hover:opacity-60 transition-opacity duration-700 scale-150"
-                                                    style={{ background: `rgb(${rgb})` }}
-                                                />
-                                                {/* Icon container */}
-                                                <div className="relative p-8 rounded-full bg-gradient-to-br from-white/10 to-white/5 border border-white/20 backdrop-blur-md group-hover:scale-110 group-hover:border-white/30 transition-all duration-700 shadow-2xl">
-                                                    <div
-                                                        className="absolute inset-0 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-700"
-                                                        style={{ background: `linear-gradient(135deg, rgba(${rgb}, 0.6), transparent)` }}
-                                                    />
-                                                    <ListIcon type={list.type} className="h-14 w-14 relative z-10 drop-shadow-2xl" style={{ color: `rgb(${rgb})`, filter: 'drop-shadow(0 0 20px currentColor)' }} />
-                                                </div>
+                                        {/* Main Icon */}
+                                        <div className="relative z-10 flex flex-col items-center gap-4">
+                                            <div className="relative p-8 rounded-full bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-300">
+                                                <ListIcon type={list.type} className="h-12 w-12" style={{ color: `rgb(${rgb})` }} />
                                             </div>
 
-                                            {/* Elegant divider and text */}
-                                            <div className="flex flex-col items-center gap-3">
-                                                {/* Animated divider */}
-                                                <div className="relative h-px w-20 overflow-hidden">
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                                                    <div
-                                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-pulse"
-                                                        style={{
-                                                            background: `linear-gradient(90deg, transparent, rgba(${rgb}, 0.8), transparent)`,
-                                                            animationDuration: '3s'
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                {/* Status text with glow */}
-                                                <div className="relative">
-                                                    <span
-                                                        className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 group-hover:text-white/60 transition-colors duration-500"
-                                                        style={{
-                                                            textShadow: `0 0 20px rgba(${rgb}, 0.3)`
-                                                        }}
-                                                    >
-                                                        Awaiting
-                                                    </span>
-                                                </div>
-
-                                                {/* Subtle pulse indicator */}
-                                                <div className="flex gap-1.5 mt-1">
-                                                    <div
-                                                        className="w-1 h-1 rounded-full animate-pulse"
-                                                        style={{
-                                                            background: `rgb(${rgb})`,
-                                                            animationDuration: '2s'
-                                                        }}
-                                                    />
-                                                    <div
-                                                        className="w-1 h-1 rounded-full animate-pulse"
-                                                        style={{
-                                                            background: `rgb(${rgb})`,
-                                                            animationDuration: '2s',
-                                                            animationDelay: '0.5s'
-                                                        }}
-                                                    />
-                                                    <div
-                                                        className="w-1 h-1 rounded-full animate-pulse"
-                                                        style={{
-                                                            background: `rgb(${rgb})`,
-                                                            animationDuration: '2s',
-                                                            animationDelay: '1s'
-                                                        }}
-                                                    />
-                                                </div>
+                                            <div className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">
+                                                Empty
                                             </div>
                                         </div>
                                     </div>
