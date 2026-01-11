@@ -43,6 +43,18 @@ export default function EditorPage() {
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
 
+  // Redirect if no manuscript after a brief delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!manuscript) {
+        navigate('/', { replace: true })
+      } else if (!scene) {
+        navigate('/toc', { replace: true })
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [manuscript, scene, navigate])
+
   // Check for first-time opening (needs Pulse Check)
   useEffect(() => {
     if (scene && !scene.pulseCheckCompletedAt) {
@@ -117,7 +129,7 @@ export default function EditorPage() {
   if (!scene || !manuscript) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-ink-500">Scene not found</p>
+        <div className="w-6 h-6 border-2 border-ink-600 border-t-ink-300 rounded-full animate-spin" />
       </div>
     )
   }
