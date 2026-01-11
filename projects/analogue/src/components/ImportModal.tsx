@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { X, Upload, ClipboardPaste, FileText, Scissors, Loader2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X, Upload, FileText, Scissors, Loader2, ChevronDown, ChevronUp, Edit3, Check, RotateCcw } from 'lucide-react'
 import mammoth from 'mammoth'
 import type { NarrativeSection } from '../types/manuscript'
 
@@ -15,6 +15,18 @@ export interface ImportedScene {
   prose: string
 }
 
+type SplitMethod = 'chapters' | 'wordcount' | 'breaks'
+
+const SECTIONS: NarrativeSection[] = ['departure', 'escape', 'rupture', 'alignment', 'reveal']
+
+const SECTION_COLORS: Record<NarrativeSection, string> = {
+  departure: 'bg-section-departure',
+  escape: 'bg-section-escape',
+  rupture: 'bg-section-rupture',
+  alignment: 'bg-section-alignment',
+  reveal: 'bg-section-reveal',
+}
+
 // Common chapter/section markers
 const CHAPTER_PATTERNS = [
   /^#{1,3}\s+(.+)$/gm,                    // Markdown headers
@@ -25,9 +37,8 @@ const CHAPTER_PATTERNS = [
   /^~{3,}$/gm,                             // ~~~ scene breaks
 ]
 
-function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | 'breaks'): ImportedScene[] {
+function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[] {
   const scenes: ImportedScene[] = []
-  const sections: NarrativeSection[] = ['departure', 'escape', 'rupture', 'alignment', 'reveal']
 
   if (splitMethod === 'wordcount') {
     // Split by approximate word count (~800 words per scene)
@@ -46,7 +57,7 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
           // Split at paragraph break
           scenes.push({
             title: `Scene ${sceneIndex + 1}`,
-            section: sections[Math.min(Math.floor(sceneIndex / (Math.ceil(words.length / wordsPerScene / 5))), 4)],
+            section: SECTIONS[Math.min(Math.floor(sceneIndex / (Math.ceil(words.length / wordsPerScene / 5))), 4)],
             prose: currentScene.slice(0, paragraphEnd).trim()
           })
           currentScene = currentScene.slice(paragraphEnd).trim() + ' '
@@ -59,15 +70,12 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
     if (currentScene.trim()) {
       scenes.push({
         title: `Scene ${sceneIndex + 1}`,
-        section: sections[Math.min(4, Math.floor(sceneIndex / Math.max(1, scenes.length / 5)))],
+        section: SECTIONS[Math.min(4, Math.floor(sceneIndex / Math.max(1, scenes.length / 5)))],
         prose: currentScene.trim()
       })
     }
   } else if (splitMethod === 'chapters') {
     // Split by chapter markers
-    let sceneIndex = 0
-
-    // Find all chapter markers
     const markers: { index: number; title: string }[] = []
 
     for (const pattern of CHAPTER_PATTERNS) {
@@ -83,7 +91,7 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
     markers.sort((a, b) => a.index - b.index)
 
     if (markers.length === 0) {
-      // No markers found, treat as single scene or fall back to word count
+      // No markers found, fall back to word count
       return parseManuscript(text, 'wordcount')
     }
 
@@ -93,13 +101,12 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
       const end = i < markers.length - 1 ? markers[i + 1].index : text.length
       const content = text.slice(start, end).replace(CHAPTER_PATTERNS[0], '').trim()
 
-      if (content.length > 50) { // Only add if has substantial content
+      if (content.length > 50) {
         scenes.push({
           title: markers[i].title,
-          section: sections[Math.min(Math.floor(i / Math.max(1, markers.length / 5)), 4)],
+          section: SECTIONS[Math.min(Math.floor(i / Math.max(1, markers.length / 5)), 4)],
           prose: content
         })
-        sceneIndex++
       }
     }
 
@@ -120,7 +127,7 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
       if (trimmed.length > 50) {
         scenes.push({
           title: `Scene ${i + 1}`,
-          section: sections[Math.min(Math.floor(i / Math.max(1, parts.length / 5)), 4)],
+          section: SECTIONS[Math.min(Math.floor(i / Math.max(1, parts.length / 5)), 4)],
           prose: trimmed
         })
       }
@@ -136,38 +143,51 @@ function parseManuscript(text: string, splitMethod: 'chapters' | 'wordcount' | '
 }
 
 export default function ImportModal({ onImport, onClose }: ImportModalProps) {
-  const [text, setText] = useState('')
-  const [splitMethod, setSplitMethod] = useState<'chapters' | 'wordcount' | 'breaks'>('chapters')
-  const [preview, setPreview] = useState<ImportedScene[] | null>(null)
+  const [rawText, setRawText] = useState('')
+  const [splitMethod, setSplitMethod] = useState<SplitMethod>('chapters')
+  const [scenes, setScenes] = useState<ImportedScene[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('')
+  const [expandedScene, setExpandedScene] = useState<number | null>(null)
+  const [editingTitle, setEditingTitle] = useState<number | null>(null)
+  const [fileName, setFileName] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
 
-  const handlePaste = async () => {
-    try {
-      const clipboardText = await navigator.clipboard.readText()
-      setText(clipboardText)
-    } catch {
-      // Clipboard API might not be available
-      alert('Please paste your text into the text area below')
+  // Auto-parse when text or split method changes
+  useEffect(() => {
+    if (rawText.trim()) {
+      const parsed = parseManuscript(rawText, splitMethod)
+      setScenes(parsed)
+    } else {
+      setScenes([])
     }
-  }
+  }, [rawText, splitMethod])
+
+  // Focus title input when editing
+  useEffect(() => {
+    if (editingTitle !== null && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [editingTitle])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const fileName = file.name.toLowerCase()
+    setFileName(file.name)
+    const fileNameLower = file.name.toLowerCase()
 
     // Handle .docx files
-    if (fileName.endsWith('.docx')) {
+    if (fileNameLower.endsWith('.docx')) {
       setIsLoading(true)
       setLoadingMessage('Extracting text from Word document...')
 
       try {
         const arrayBuffer = await file.arrayBuffer()
         const result = await mammoth.extractRawText({ arrayBuffer })
-        setText(result.value)
+        setRawText(result.value)
       } catch (error) {
         console.error('Failed to parse docx:', error)
         alert('Failed to read Word document. Please try copying and pasting the text instead.')
@@ -179,32 +199,49 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
     }
 
     // Handle .doc files (legacy format - limited support)
-    if (fileName.endsWith('.doc')) {
-      alert('Legacy .doc format has limited support. For best results, please save as .docx or copy/paste your text.')
+    if (fileNameLower.endsWith('.doc')) {
+      alert('Legacy .doc format is not supported. Please save as .docx or copy/paste your text.')
+      setFileName(null)
       return
     }
 
     // Handle text files (.txt, .md)
+    setIsLoading(true)
+    setLoadingMessage('Reading file...')
     const reader = new FileReader()
     reader.onload = (event) => {
       const content = event.target?.result as string
-      setText(content)
+      setRawText(content)
+      setIsLoading(false)
+      setLoadingMessage('')
     }
     reader.readAsText(file)
   }
 
-  const handlePreview = () => {
-    if (!text.trim()) return
-    const scenes = parseManuscript(text, splitMethod)
-    setPreview(scenes)
-  }
-
   const handleImport = () => {
-    if (!preview || preview.length === 0) return
-    onImport(preview)
+    if (scenes.length === 0) return
+    onImport(scenes)
   }
 
-  const wordCount = text.trim().split(/\s+/).filter(Boolean).length
+  const updateSceneTitle = (index: number, title: string) => {
+    setScenes(prev => prev.map((s, i) => i === index ? { ...s, title } : s))
+  }
+
+  const updateSceneSection = (index: number, section: NarrativeSection) => {
+    setScenes(prev => prev.map((s, i) => i === index ? { ...s, section } : s))
+  }
+
+  const distributesSections = () => {
+    // Auto-distribute sections evenly across scenes
+    const scenesPerSection = Math.ceil(scenes.length / 5)
+    setScenes(prev => prev.map((s, i) => ({
+      ...s,
+      section: SECTIONS[Math.min(Math.floor(i / scenesPerSection), 4)]
+    })))
+  }
+
+  const wordCount = rawText.trim().split(/\s+/).filter(Boolean).length
+  const hasContent = rawText.trim().length > 0
 
   return (
     <motion.div
@@ -224,8 +261,8 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-ink-800">
           <div className="flex items-center gap-2">
-            <Upload className="w-5 h-5 text-section-departure" />
-            <h2 className="text-lg font-medium text-ink-100">Import Manuscript</h2>
+            <Scissors className="w-5 h-5 text-section-departure" />
+            <h2 className="text-lg font-medium text-ink-100">Import & Split</h2>
           </div>
           <button onClick={onClose} className="p-2 text-ink-400">
             <X className="w-5 h-5" />
@@ -237,150 +274,172 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             <Loader2 className="w-8 h-8 text-section-departure animate-spin" />
             <p className="text-sm text-ink-400">{loadingMessage}</p>
           </div>
-        ) : !preview ? (
-          <>
-            {/* Import options */}
-            <div className="flex gap-2 p-4 border-b border-ink-800">
-              <button
-                onClick={handlePaste}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-ink-800 rounded-lg text-ink-200"
-              >
-                <ClipboardPaste className="w-4 h-4" />
-                <span className="text-sm">Paste</span>
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-ink-800 rounded-lg text-ink-200"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="text-sm">File</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt,.md,.text,.docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </div>
-
-            {/* File type hint */}
-            <div className="px-4 py-2 bg-ink-950/50">
-              <p className="text-xs text-ink-500 text-center">
-                Supports .txt, .md, and .docx files
-              </p>
-            </div>
-
-            {/* Text area */}
-            <div className="flex-1 p-4 overflow-hidden">
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="Paste or type your manuscript here..."
-                className="w-full h-full p-3 bg-ink-950 border border-ink-800 rounded-lg text-ink-100 text-sm leading-relaxed placeholder:text-ink-600 resize-none"
-              />
-            </div>
-
-            {/* Split method selection */}
-            {text && (
-              <div className="p-4 border-t border-ink-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-ink-400">{wordCount.toLocaleString()} words</span>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-ink-500 mb-2">Split method</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => setSplitMethod('chapters')}
-                      className={`p-2 rounded text-xs ${
-                        splitMethod === 'chapters'
-                          ? 'bg-section-departure text-white'
-                          : 'bg-ink-800 text-ink-300'
-                      }`}
-                    >
-                      Chapters
-                    </button>
-                    <button
-                      onClick={() => setSplitMethod('breaks')}
-                      className={`p-2 rounded text-xs ${
-                        splitMethod === 'breaks'
-                          ? 'bg-section-departure text-white'
-                          : 'bg-ink-800 text-ink-300'
-                      }`}
-                    >
-                      Scene breaks
-                    </button>
-                    <button
-                      onClick={() => setSplitMethod('wordcount')}
-                      className={`p-2 rounded text-xs ${
-                        splitMethod === 'wordcount'
-                          ? 'bg-section-departure text-white'
-                          : 'bg-ink-800 text-ink-300'
-                      }`}
-                    >
-                      ~800 words
-                    </button>
-                  </div>
-                </div>
+        ) : !hasContent ? (
+          /* Upload prompt */
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full max-w-sm p-8 border-2 border-dashed border-ink-700 rounded-2xl flex flex-col items-center gap-4 cursor-pointer hover:border-section-departure/50 transition-colors"
+            >
+              <div className="w-16 h-16 rounded-full bg-ink-800 flex items-center justify-center">
+                <Upload className="w-8 h-8 text-section-departure" />
               </div>
-            )}
-
-            {/* Preview button */}
-            <div className="p-4 border-t border-ink-800 pb-safe">
-              <button
-                onClick={handlePreview}
-                disabled={!text.trim()}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-section-departure rounded-lg text-white font-medium disabled:opacity-50"
-              >
-                <Scissors className="w-4 h-4" />
-                Preview Split
-              </button>
+              <div className="text-center">
+                <p className="text-ink-100 font-medium mb-1">Upload your manuscript</p>
+                <p className="text-sm text-ink-500">One document, split into scenes</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-ink-500">
+                <FileText className="w-3 h-3" />
+                <span>.docx, .txt, or .md</span>
+              </div>
             </div>
-          </>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.text,.docx"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
         ) : (
           <>
-            {/* Preview list */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              <p className="text-sm text-ink-400 mb-3">
-                {preview.length} scenes detected
-              </p>
-              {preview.map((scene, i) => (
-                <div
-                  key={i}
-                  className="p-3 bg-ink-950 border border-ink-800 rounded-lg"
+            {/* Stats bar */}
+            <div className="flex items-center justify-between px-4 py-3 bg-ink-950/50 border-b border-ink-800">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-ink-300">{fileName || 'Pasted text'}</span>
+                <span className="text-xs text-ink-500">{wordCount.toLocaleString()} words</span>
+              </div>
+              <button
+                onClick={() => { setRawText(''); setFileName(null); setScenes([]) }}
+                className="text-xs text-ink-500 hover:text-ink-300"
+              >
+                Clear
+              </button>
+            </div>
+
+            {/* Split method tabs */}
+            <div className="flex border-b border-ink-800">
+              {[
+                { key: 'chapters' as SplitMethod, label: 'By Chapters', desc: 'Chapter/Part headers' },
+                { key: 'breaks' as SplitMethod, label: 'By Breaks', desc: '*** or --- markers' },
+                { key: 'wordcount' as SplitMethod, label: 'By Length', desc: '~800 words each' },
+              ].map(method => (
+                <button
+                  key={method.key}
+                  onClick={() => setSplitMethod(method.key)}
+                  className={`flex-1 py-3 text-center border-b-2 transition-colors ${
+                    splitMethod === method.key
+                      ? 'border-section-departure text-ink-100'
+                      : 'border-transparent text-ink-500'
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-ink-100">
-                      {scene.title}
-                    </span>
-                    <span className="text-xs text-ink-500">
-                      {scene.prose.split(/\s+/).length} words
-                    </span>
+                  <div className="text-sm font-medium">{method.label}</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Scene count and actions */}
+            <div className="flex items-center justify-between px-4 py-2 bg-ink-900">
+              <span className="text-sm text-ink-400">{scenes.length} scenes</span>
+              <button
+                onClick={distributesSections}
+                className="flex items-center gap-1 text-xs text-section-departure"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Auto-assign sections
+              </button>
+            </div>
+
+            {/* Scene list */}
+            <div className="flex-1 overflow-y-auto">
+              {scenes.map((scene, i) => (
+                <div key={i} className="border-b border-ink-800">
+                  {/* Scene header - always visible */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ink-800/30"
+                    onClick={() => setExpandedScene(expandedScene === i ? null : i)}
+                  >
+                    {/* Section indicator */}
+                    <div className={`w-1 h-8 rounded-full ${SECTION_COLORS[scene.section]}`} />
+
+                    {/* Title */}
+                    <div className="flex-1 min-w-0">
+                      {editingTitle === i ? (
+                        <input
+                          ref={titleInputRef}
+                          value={scene.title}
+                          onChange={(e) => updateSceneTitle(i, e.target.value)}
+                          onBlur={() => setEditingTitle(null)}
+                          onKeyDown={(e) => e.key === 'Enter' && setEditingTitle(null)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full bg-ink-800 border border-ink-600 rounded px-2 py-1 text-sm text-ink-100"
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-ink-100 truncate">{scene.title}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditingTitle(i) }}
+                            className="text-ink-500 hover:text-ink-300"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="text-xs text-ink-500">
+                        {scene.prose.split(/\s+/).length} words
+                      </div>
+                    </div>
+
+                    {/* Section selector */}
+                    <select
+                      value={scene.section}
+                      onChange={(e) => { e.stopPropagation(); updateSceneSection(i, e.target.value as NarrativeSection) }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-ink-800 border border-ink-700 rounded px-2 py-1 text-xs text-ink-300"
+                    >
+                      {SECTIONS.map(s => (
+                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                      ))}
+                    </select>
+
+                    {/* Expand toggle */}
+                    {expandedScene === i ? (
+                      <ChevronUp className="w-4 h-4 text-ink-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-ink-500" />
+                    )}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded bg-section-${scene.section}/20 text-section-${scene.section}`}>
-                    {scene.section}
-                  </span>
-                  <p className="mt-2 text-xs text-ink-400 line-clamp-2">
-                    {scene.prose.slice(0, 150)}...
-                  </p>
+
+                  {/* Scene preview - expanded */}
+                  <AnimatePresence>
+                    {expandedScene === i && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-3 pl-8">
+                          <p className="text-xs text-ink-400 leading-relaxed line-clamp-6">
+                            {scene.prose.slice(0, 500)}...
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ))}
             </div>
 
-            {/* Actions */}
-            <div className="p-4 border-t border-ink-800 pb-safe flex gap-2">
-              <button
-                onClick={() => setPreview(null)}
-                className="flex-1 py-3 border border-ink-700 rounded-lg text-ink-300"
-              >
-                Back
-              </button>
+            {/* Import button */}
+            <div className="p-4 border-t border-ink-800 pb-safe">
               <button
                 onClick={handleImport}
-                className="flex-1 py-3 bg-section-departure rounded-lg text-white font-medium"
+                disabled={scenes.length === 0}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-section-departure rounded-lg text-white font-medium disabled:opacity-50"
               >
-                Import {preview.length} Scenes
+                <Check className="w-4 h-4" />
+                Import {scenes.length} Scenes
               </button>
             </div>
           </>
