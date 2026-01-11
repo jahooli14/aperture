@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { X, Upload, ClipboardPaste, FileText, Scissors } from 'lucide-react'
+import { X, Upload, ClipboardPaste, FileText, Scissors, Loader2 } from 'lucide-react'
+import mammoth from 'mammoth'
 import type { NarrativeSection } from '../types/manuscript'
 
 interface ImportModalProps {
@@ -138,6 +139,8 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
   const [text, setText] = useState('')
   const [splitMethod, setSplitMethod] = useState<'chapters' | 'wordcount' | 'breaks'>('chapters')
   const [preview, setPreview] = useState<ImportedScene[] | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handlePaste = async () => {
@@ -150,10 +153,38 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
     }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const fileName = file.name.toLowerCase()
+
+    // Handle .docx files
+    if (fileName.endsWith('.docx')) {
+      setIsLoading(true)
+      setLoadingMessage('Extracting text from Word document...')
+
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        setText(result.value)
+      } catch (error) {
+        console.error('Failed to parse docx:', error)
+        alert('Failed to read Word document. Please try copying and pasting the text instead.')
+      } finally {
+        setIsLoading(false)
+        setLoadingMessage('')
+      }
+      return
+    }
+
+    // Handle .doc files (legacy format - limited support)
+    if (fileName.endsWith('.doc')) {
+      alert('Legacy .doc format has limited support. For best results, please save as .docx or copy/paste your text.')
+      return
+    }
+
+    // Handle text files (.txt, .md)
     const reader = new FileReader()
     reader.onload = (event) => {
       const content = event.target?.result as string
@@ -201,7 +232,12 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
           </button>
         </div>
 
-        {!preview ? (
+        {isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-4">
+            <Loader2 className="w-8 h-8 text-section-departure animate-spin" />
+            <p className="text-sm text-ink-400">{loadingMessage}</p>
+          </div>
+        ) : !preview ? (
           <>
             {/* Import options */}
             <div className="flex gap-2 p-4 border-b border-ink-800">
@@ -222,10 +258,17 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.md,.text"
+                accept=".txt,.md,.text,.docx"
                 onChange={handleFileUpload}
                 className="hidden"
               />
+            </div>
+
+            {/* File type hint */}
+            <div className="px-4 py-2 bg-ink-950/50">
+              <p className="text-xs text-ink-500 text-center">
+                Supports .txt, .md, and .docx files
+              </p>
             </div>
 
             {/* Text area */}
