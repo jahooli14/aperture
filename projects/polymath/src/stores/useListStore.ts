@@ -19,6 +19,7 @@ interface ListStore {
     addListItem: (input: CreateListItemInput) => Promise<void>
     deleteListItem: (itemId: string, listId: string) => Promise<void>
     updateListItemStatus: (itemId: string, status: ListItem['status']) => Promise<void>
+    updateListItemMetadata: (itemId: string, metadata: any) => Promise<void>
     deleteList: (listId: string) => Promise<void>
     reorderItems: (listId: string, itemIds: string[]) => Promise<void>
     reorderLists: (listIds: string[]) => Promise<void>
@@ -336,6 +337,50 @@ export const useListStore = create<ListStore>()(
                 }
 
                 // TODO: Implement API call for update when online
+            },
+
+            updateListItemMetadata: async (itemId, metadata) => {
+                const { isOnline } = useOfflineStore.getState()
+
+                // Optimistic update
+                set(state => ({
+                    currentListItems: state.currentListItems.map(i =>
+                        i.id === itemId ? { ...i, metadata } : i
+                    )
+                }))
+
+                // If offline, queue operation
+                if (!isOnline) {
+                    await queueOperation('update_list_item', { id: itemId, metadata })
+                    await useOfflineStore.getState().updateQueueSize()
+                    console.log('[ListStore] Queued metadata update for offline sync')
+                    return
+                }
+
+                // Update via API when online
+                try {
+                    const response = await fetch(`/api/list-items?id=${itemId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ metadata })
+                    })
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update item metadata')
+                    }
+
+                    const updatedItem = await response.json()
+
+                    // Update with server response
+                    set(state => ({
+                        currentListItems: state.currentListItems.map(i =>
+                            i.id === itemId ? updatedItem : i
+                        )
+                    }))
+                } catch (error) {
+                    console.error('[ListStore] Failed to update metadata:', error)
+                    throw error
+                }
             },
 
             deleteListItem: async (itemId, listId) => {

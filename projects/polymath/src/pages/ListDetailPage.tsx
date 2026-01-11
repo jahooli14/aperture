@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo, memo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote } from 'lucide-react'
+import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -37,11 +37,30 @@ const PhraseCard = memo(({
     onItemClick: (id: string) => void
     onDelete: (id: string, listId: string) => void
 }) => {
+    const [isEditingAuthor, setIsEditingAuthor] = useState(false)
+    const [authorValue, setAuthorValue] = useState(item.metadata?.specs?.Author || 'Me')
+    const updateListItemMetadata = useListStore(state => state.updateListItemMetadata)
+
     const hasSource = item.metadata?.subtitle || item.metadata?.specs?.Source || item.metadata?.specs?.Author
     const variant = useMemo(() => getVariant(item.id), [item.id])
     const isShort = item.content.length < 80
     const isMedium = item.content.length >= 80 && item.content.length < 150
     const colors = COLOR_SCHEMES[variant]
+
+    const handleSaveAuthor = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (authorValue.trim()) {
+            const updatedMetadata = {
+                ...item.metadata,
+                specs: {
+                    ...item.metadata?.specs,
+                    Author: authorValue.trim()
+                }
+            }
+            await updateListItemMetadata(item.id, updatedMetadata)
+        }
+        setIsEditingAuthor(false)
+    }
 
     return (
         <motion.div
@@ -82,15 +101,53 @@ const PhraseCard = memo(({
                         {item.content}
                     </p>
 
-                    {/* Source/Attribution */}
-                    {hasSource && (
-                        <p className={`mt-6 text-sm font-medium tracking-wider ${variant === 2 ? 'italic' : ''}`}
-                        style={{
-                            color: `rgba(${variant === 0 ? '167, 139, 250' : variant === 1 ? '103, 232, 249' : variant === 2 ? '251, 113, 133' : variant === 3 ? '251, 191, 36' : '52, 211, 153'}, 0.7)`
-                        }}>
-                            {variant === 3 ? '~' : '—'} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle}
-                        </p>
-                    )}
+                    {/* Source/Attribution - Editable */}
+                    <div className="mt-6 flex items-center gap-2 group/author">
+                        {isEditingAuthor ? (
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                    type="text"
+                                    value={authorValue}
+                                    onChange={(e) => setAuthorValue(e.target.value)}
+                                    className="bg-white/10 border border-white/20 rounded px-3 py-1 text-sm text-white/90 focus:outline-none focus:border-white/40"
+                                    placeholder="Author name"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleSaveAuthor(e as any)
+                                        } else if (e.key === 'Escape') {
+                                            setIsEditingAuthor(false)
+                                            setAuthorValue(item.metadata?.specs?.Author || 'Me')
+                                        }
+                                    }}
+                                />
+                                <button
+                                    onClick={handleSaveAuthor}
+                                    className="p-1.5 rounded bg-white/10 hover:bg-white/20 transition-colors"
+                                >
+                                    <Check className="h-3.5 w-3.5 text-white/70" />
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <p className={`text-sm font-medium tracking-wider ${variant === 2 ? 'italic' : ''}`}
+                                style={{
+                                    color: `rgba(${variant === 0 ? '167, 139, 250' : variant === 1 ? '103, 232, 249' : variant === 2 ? '251, 113, 133' : variant === 3 ? '251, 191, 36' : '52, 211, 153'}, 0.7)`
+                                }}>
+                                    {variant === 3 ? '~' : '—'} {item.metadata?.specs?.Author || item.metadata?.specs?.Source || item.metadata?.subtitle || 'Me'}
+                                </p>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setIsEditingAuthor(true)
+                                    }}
+                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 opacity-0 group-hover/author:opacity-100 transition-all"
+                                >
+                                    <Pencil className="h-3 w-3 text-white/50" />
+                                </button>
+                            </>
+                        )}
+                    </div>
 
                     {/* Expanded Details */}
                     {isExpanded && item.metadata && (
