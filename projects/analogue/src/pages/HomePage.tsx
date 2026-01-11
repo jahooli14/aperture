@@ -1,19 +1,31 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Plus, BookOpen, Feather } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, BookOpen, Feather, Upload } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
+import ImportModal, { type ImportedScene } from '../components/ImportModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const { manuscript, createManuscript } = useManuscriptStore()
+  const { manuscript, createManuscript, importScenes } = useManuscriptStore()
   const [showCreate, setShowCreate] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [title, setTitle] = useState('')
   const [protagonistName, setProtagonistName] = useState('')
 
   const handleCreate = async () => {
     if (!title.trim()) return
     await createManuscript(title.trim(), protagonistName.trim())
+    navigate('/toc')
+  }
+
+  const handleImport = async (scenes: ImportedScene[]) => {
+    if (!title.trim()) {
+      setTitle('Imported Manuscript')
+    }
+    await createManuscript(title.trim() || 'Imported Manuscript', protagonistName.trim())
+    await importScenes(scenes)
+    setShowImport(false)
     navigate('/toc')
   }
 
@@ -110,8 +122,27 @@ export default function HomePage() {
               Create
             </button>
           </div>
+
+          {/* Import option */}
+          <button
+            onClick={() => setShowImport(true)}
+            className="w-full flex items-center justify-center gap-2 p-3 bg-ink-800 rounded-lg text-ink-300 hover:text-ink-100 transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-sm">Import existing manuscript</span>
+          </button>
         </motion.div>
       )}
+
+      {/* Import Modal */}
+      <AnimatePresence>
+        {showImport && (
+          <ImportModal
+            onImport={handleImport}
+            onClose={() => setShowImport(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
