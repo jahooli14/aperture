@@ -112,3 +112,23 @@ textarea {
 .section-rupture { border-color: var(--color-section-rupture); }
 .section-alignment { border-color: var(--color-section-alignment); }
 .section-reveal { border-color: var(--color-section-reveal); }
+
+/* Prose container - reader mode */
+.prose-container {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.01em;
+}
+
+.prose-container p {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
