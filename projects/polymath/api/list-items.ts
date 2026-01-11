@@ -105,6 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const updates: any = {}
             if (req.body.status) updates.status = req.body.status
             if (req.body.content) updates.content = req.body.content
+            if (req.body.metadata) updates.metadata = req.body.metadata
 
             const { data, error } = await supabase
                 .from('list_items')
