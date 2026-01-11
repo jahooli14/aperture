@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* Mobile-first base styles */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Section colors */
+  --section-departure: #8b5cf6;
+  --section-escape: #3b82f6;
+  --section-rupture: #f97316;
+  --section-alignment: #10b981;
+  --section-reveal: #ec4899;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+/* Text areas - no resize, full control */
+textarea {
+  resize: none;
+  -webkit-appearance: none;
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(139, 92, 246, 0.4);
+  color: inherit;
+}
+
+/* Focus states - minimal */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 1px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Safe area padding utility */
+.pt-safe {
+  padding-top: var(--safe-area-top);
+}
+
+.pb-safe {
+  padding-bottom: var(--safe-area-bottom);
+}
+
+/* Footnote drawer animation */
+.footnote-drawer {
+  transition: transform 0.2s ease-out;
+}
+
+/* Section indicator colors */
+.section-departure { border-color: var(--section-departure); }
+.section-escape { border-color: var(--section-escape); }
+.section-rupture { border-color: var(--section-rupture); }
+.section-alignment { border-color: var(--section-alignment); }
+.section-reveal { border-color: var(--section-reveal); }
+
+.section-bg-departure { background-color: var(--section-departure); }
+.section-bg-escape { background-color: var(--section-escape); }
+.section-bg-rupture { background-color: var(--section-rupture); }
+.section-bg-alignment { background-color: var(--section-alignment); }
+.section-bg-reveal { background-color: var(--section-reveal); }
