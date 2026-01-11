@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Upload, FileText, Scissors, Loader2, ChevronDown, ChevronUp, Edit3, Check, RotateCcw } from 'lucide-react'
 import mammoth from 'mammoth'
@@ -13,6 +13,7 @@ export interface ImportedScene {
   title: string
   section: NarrativeSection
   prose: string
+  wordCount: number // Pre-computed
 }
 
 type SplitMethod = 'chapters' | 'wordcount' | 'breaks'
@@ -27,117 +28,207 @@ const SECTION_COLORS: Record<NarrativeSection, string> = {
   reveal: 'bg-section-reveal',
 }
 
-// Common chapter/section markers
-const CHAPTER_PATTERNS = [
-  /^#{1,3}\s+(.+)$/gm,                    // Markdown headers
-  /^Chapter\s+(\d+|[IVXLC]+)[:\s]*(.*)$/gim,  // Chapter 1, Chapter IV
-  /^Part\s+(\d+|[IVXLC]+)[:\s]*(.*)$/gim,     // Part 1, Part II
-  /^\*{3,}$/gm,                            // *** scene breaks
-  /^-{3,}$/gm,                             // --- scene breaks
-  /^~{3,}$/gm,                             // ~~~ scene breaks
-]
+// Fast word count - O(n) single pass
+function countWords(text: string): number {
+  let count = 0
+  let inWord = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    const isSpace = c === 32 || c === 10 || c === 13 || c === 9
+    if (isSpace) {
+      inWord = false
+    } else if (!inWord) {
+      inWord = true
+      count++
+    }
+  }
+  return count
+}
+
+// Find all paragraph breaks in text - O(n)
+function findParagraphBreaks(text: string): number[] {
+  const breaks: number[] = []
+  for (let i = 0; i < text.length - 1; i++) {
+    if (text[i] === '\n' && text[i + 1] === '\n') {
+      breaks.push(i)
+    }
+  }
+  return breaks
+}
 
 function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[] {
   const scenes: ImportedScene[] = []
+  const totalWords = countWords(text)
+
+  // Estimate scenes for section distribution
+  const estimatedScenes = splitMethod === 'wordcount'
+    ? Math.ceil(totalWords / 800)
+    : 20 // Will be refined
+  const scenesPerSection = Math.max(1, Math.ceil(estimatedScenes / 5))
 
   if (splitMethod === 'wordcount') {
-    // Split by approximate word count (~800 words per scene)
-    const words = text.split(/\s+/)
-    const wordsPerScene = 800
-    let currentScene = ''
-    let sceneIndex = 0
+    // Efficient word-count based splitting
+    const targetWordsPerScene = 800
+    const paragraphBreaks = findParagraphBreaks(text)
 
-    for (let i = 0; i < words.length; i++) {
-      currentScene += words[i] + ' '
+    if (paragraphBreaks.length === 0) {
+      // No paragraph breaks - split by sentences or just chunk it
+      const chunkSize = Math.floor(text.length / Math.ceil(totalWords / targetWordsPerScene))
+      let start = 0
+      let sceneIndex = 0
 
-      // Check if we've hit the word limit and found a paragraph break
-      if (currentScene.split(/\s+/).length >= wordsPerScene) {
-        const paragraphEnd = currentScene.lastIndexOf('\n\n')
-        if (paragraphEnd > currentScene.length * 0.5) {
-          // Split at paragraph break
+      while (start < text.length) {
+        let end = Math.min(start + chunkSize, text.length)
+        // Try to end at a period or newline
+        if (end < text.length) {
+          const periodIdx = text.lastIndexOf('. ', end)
+          if (periodIdx > start + chunkSize * 0.5) {
+            end = periodIdx + 1
+          }
+        }
+
+        const chunk = text.slice(start, end).trim()
+        if (chunk) {
           scenes.push({
             title: `Scene ${sceneIndex + 1}`,
-            section: SECTIONS[Math.min(Math.floor(sceneIndex / (Math.ceil(words.length / wordsPerScene / 5))), 4)],
-            prose: currentScene.slice(0, paragraphEnd).trim()
+            section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
+            prose: chunk,
+            wordCount: countWords(chunk)
           })
-          currentScene = currentScene.slice(paragraphEnd).trim() + ' '
           sceneIndex++
         }
+        start = end
       }
-    }
+    } else {
+      // Split at paragraph breaks near word count targets
+      let currentStart = 0
+      let currentWordCount = 0
+      let sceneIndex = 0
+      let lastBreakIdx = 0
 
-    // Add remaining text
-    if (currentScene.trim()) {
-      scenes.push({
-        title: `Scene ${sceneIndex + 1}`,
-        section: SECTIONS[Math.min(4, Math.floor(sceneIndex / Math.max(1, scenes.length / 5)))],
-        prose: currentScene.trim()
-      })
+      // Count words up to each paragraph break
+      for (let i = 0; i <= paragraphBreaks.length; i++) {
+        const breakPos = i < paragraphBreaks.length ? paragraphBreaks[i] : text.length
+        const chunk = text.slice(currentStart, breakPos)
+        const chunkWords = countWords(chunk)
+
+        if (currentWordCount + chunkWords >= targetWordsPerScene && currentWordCount > 0) {
+          // Use the previous break point
+          const sceneText = text.slice(currentStart, paragraphBreaks[lastBreakIdx] || breakPos).trim()
+          if (sceneText) {
+            scenes.push({
+              title: `Scene ${sceneIndex + 1}`,
+              section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
+              prose: sceneText,
+              wordCount: currentWordCount
+            })
+            sceneIndex++
+          }
+          currentStart = (paragraphBreaks[lastBreakIdx] || breakPos) + 2
+          currentWordCount = countWords(text.slice(currentStart, breakPos))
+        } else {
+          currentWordCount += chunkWords
+        }
+        lastBreakIdx = i
+      }
+
+      // Add remaining text
+      const remaining = text.slice(currentStart).trim()
+      if (remaining) {
+        scenes.push({
+          title: `Scene ${sceneIndex + 1}`,
+          section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
+          prose: remaining,
+          wordCount: countWords(remaining)
+        })
+      }
     }
   } else if (splitMethod === 'chapters') {
-    // Split by chapter markers
-    const markers: { index: number; title: string }[] = []
+    // Chapter-based splitting
+    const chapterRegex = /^(#{1,3}\s+.+|Chapter\s+(?:\d+|[IVXLC]+)[:\s]*.*|Part\s+(?:\d+|[IVXLC]+)[:\s]*.*)$/gim
+    const markers: { index: number; title: string; end: number }[] = []
 
-    for (const pattern of CHAPTER_PATTERNS) {
-      let match
-      const regex = new RegExp(pattern.source, pattern.flags)
-      while ((match = regex.exec(text)) !== null) {
-        const title = match[2] || match[1] || `Chapter ${markers.length + 1}`
-        markers.push({ index: match.index, title: title.trim() || `Scene ${markers.length + 1}` })
-      }
+    let match
+    while ((match = chapterRegex.exec(text)) !== null) {
+      const title = match[1].replace(/^#{1,3}\s+/, '').replace(/^(Chapter|Part)\s+(\d+|[IVXLC]+)[:\s]*/i, 'Chapter $2: ').trim()
+      markers.push({
+        index: match.index,
+        title: title || `Scene ${markers.length + 1}`,
+        end: match.index + match[0].length
+      })
     }
 
-    // Sort markers by position
-    markers.sort((a, b) => a.index - b.index)
-
     if (markers.length === 0) {
-      // No markers found, fall back to word count
+      // No chapters found, fall back to word count
       return parseManuscript(text, 'wordcount')
     }
 
-    // Extract scenes between markers
+    // Add content before first marker
+    if (markers[0].index > 100) {
+      const opening = text.slice(0, markers[0].index).trim()
+      if (opening) {
+        scenes.push({
+          title: 'Opening',
+          section: 'departure',
+          prose: opening,
+          wordCount: countWords(opening)
+        })
+      }
+    }
+
+    // Extract content between markers
+    const actualScenesPerSection = Math.max(1, Math.ceil(markers.length / 5))
     for (let i = 0; i < markers.length; i++) {
-      const start = markers[i].index
+      const start = markers[i].end
       const end = i < markers.length - 1 ? markers[i + 1].index : text.length
-      const content = text.slice(start, end).replace(CHAPTER_PATTERNS[0], '').trim()
+      const content = text.slice(start, end).trim()
 
       if (content.length > 50) {
         scenes.push({
           title: markers[i].title,
-          section: SECTIONS[Math.min(Math.floor(i / Math.max(1, markers.length / 5)), 4)],
-          prose: content
+          section: SECTIONS[Math.min(Math.floor(i / actualScenesPerSection), 4)],
+          prose: content,
+          wordCount: countWords(content)
         })
       }
     }
-
-    // Add any content before first marker
-    if (markers.length > 0 && markers[0].index > 100) {
-      scenes.unshift({
-        title: 'Opening',
-        section: 'departure',
-        prose: text.slice(0, markers[0].index).trim()
-      })
-    }
   } else {
-    // Split by scene breaks (*** or ---)
+    // Scene break splitting (*** or ---)
     const parts = text.split(/\n\s*(?:\*{3,}|-{3,}|~{3,})\s*\n/)
 
+    if (parts.length <= 1) {
+      // No breaks found, fall back to word count
+      return parseManuscript(text, 'wordcount')
+    }
+
+    const actualScenesPerSection = Math.max(1, Math.ceil(parts.length / 5))
     parts.forEach((part, i) => {
       const trimmed = part.trim()
       if (trimmed.length > 50) {
         scenes.push({
-          title: `Scene ${i + 1}`,
-          section: SECTIONS[Math.min(Math.floor(i / Math.max(1, parts.length / 5)), 4)],
-          prose: trimmed
+          title: `Scene ${scenes.length + 1}`,
+          section: SECTIONS[Math.min(Math.floor(i / actualScenesPerSection), 4)],
+          prose: trimmed,
+          wordCount: countWords(trimmed)
         })
       }
     })
-
-    // If no breaks found, fall back to word count
-    if (scenes.length <= 1) {
-      return parseManuscript(text, 'wordcount')
-    }
   }
+
+  return scenes
+}
+
+// Parse in chunks to not block UI
+async function parseManuscriptAsync(text: string, splitMethod: SplitMethod, onProgress?: (msg: string) => void): Promise<ImportedScene[]> {
+  onProgress?.('Analyzing document structure...')
+
+  // Give UI a chance to update
+  await new Promise(resolve => setTimeout(resolve, 10))
+
+  const scenes = parseManuscript(text, splitMethod)
+
+  onProgress?.(`Found ${scenes.length} scenes`)
+  await new Promise(resolve => setTimeout(resolve, 10))
 
   return scenes
 }
@@ -147,6 +238,7 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('chapters')
   const [scenes, setScenes] = useState<ImportedScene[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isParsing, setIsParsing] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('')
   const [expandedScene, setExpandedScene] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState<number | null>(null)
@@ -154,14 +246,35 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-parse when text or split method changes
+  // Memoized word count - only compute once when text changes
+  const wordCount = useMemo(() => {
+    if (!rawText) return 0
+    return countWords(rawText)
+  }, [rawText])
+
+  const hasContent = rawText.length > 0
+
+  // Parse when text or split method changes
   useEffect(() => {
-    if (rawText.trim()) {
-      const parsed = parseManuscript(rawText, splitMethod)
-      setScenes(parsed)
-    } else {
+    if (!rawText.trim()) {
       setScenes([])
+      return
     }
+
+    let cancelled = false
+    setIsParsing(true)
+    setLoadingMessage('Splitting into scenes...')
+
+    parseManuscriptAsync(rawText, splitMethod, setLoadingMessage)
+      .then(parsed => {
+        if (!cancelled) {
+          setScenes(parsed)
+          setIsParsing(false)
+          setLoadingMessage('')
+        }
+      })
+
+    return () => { cancelled = true }
   }, [rawText, splitMethod])
 
   // Focus title input when editing
@@ -172,76 +285,115 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
     }
   }, [editingTitle])
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setFileName(file.name)
     const fileNameLower = file.name.toLowerCase()
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
 
-    // Handle .docx files
-    if (fileNameLower.endsWith('.docx')) {
-      setIsLoading(true)
-      setLoadingMessage('Extracting text from Word document...')
+    // Validate file type
+    const validExtensions = ['.txt', '.md', '.text', '.docx']
+    const hasValidExtension = validExtensions.some(ext => fileNameLower.endsWith(ext))
 
-      try {
-        const arrayBuffer = await file.arrayBuffer()
-        const result = await mammoth.extractRawText({ arrayBuffer })
-        setRawText(result.value)
-      } catch (error) {
-        console.error('Failed to parse docx:', error)
-        alert('Failed to read Word document. Please try copying and pasting the text instead.')
-      } finally {
-        setIsLoading(false)
-        setLoadingMessage('')
+    if (!hasValidExtension) {
+      if (fileNameLower.endsWith('.doc')) {
+        alert('Legacy .doc format is not supported. Please save as .docx or copy/paste your text.')
+      } else {
+        alert('Please select a .txt, .md, or .docx file.')
       }
       return
     }
 
-    // Handle .doc files (legacy format - limited support)
-    if (fileNameLower.endsWith('.doc')) {
-      alert('Legacy .doc format is not supported. Please save as .docx or copy/paste your text.')
-      setFileName(null)
+    setFileName(file.name)
+    setIsLoading(true)
+
+    // Handle .docx files
+    if (fileNameLower.endsWith('.docx')) {
+      setLoadingMessage(`Reading Word document (${fileSizeMB}MB)...`)
+
+      try {
+        // Give UI time to show loading state
+        await new Promise(resolve => setTimeout(resolve, 50))
+
+        const arrayBuffer = await file.arrayBuffer()
+        setLoadingMessage('Extracting text from Word document...')
+        await new Promise(resolve => setTimeout(resolve, 50))
+
+        const result = await mammoth.extractRawText({ arrayBuffer })
+
+        if (!result.value || result.value.trim().length === 0) {
+          throw new Error('No text content found in document')
+        }
+
+        setRawText(result.value)
+      } catch (error) {
+        console.error('Failed to parse docx:', error)
+        alert('Failed to read Word document. Please try copying and pasting the text instead.')
+        setFileName(null)
+      } finally {
+        setIsLoading(false)
+      }
       return
     }
 
     // Handle text files (.txt, .md)
-    setIsLoading(true)
-    setLoadingMessage('Reading file...')
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const content = event.target?.result as string
-      setRawText(content)
-      setIsLoading(false)
-      setLoadingMessage('')
-    }
-    reader.readAsText(file)
-  }
+    setLoadingMessage(`Reading file (${fileSizeMB}MB)...`)
 
-  const handleImport = () => {
+    try {
+      // Use async/await pattern for FileReader
+      const content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          const text = event.target?.result as string
+          if (!text || text.trim().length === 0) {
+            reject(new Error('File appears to be empty'))
+          } else {
+            resolve(text)
+          }
+        }
+        reader.onerror = () => reject(new Error('Failed to read file'))
+        reader.readAsText(file)
+      })
+
+      setRawText(content)
+    } catch (error) {
+      console.error('Failed to read file:', error)
+      alert(error instanceof Error ? error.message : 'Failed to read file')
+      setFileName(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  const handleImport = useCallback(() => {
     if (scenes.length === 0) return
     onImport(scenes)
-  }
+  }, [scenes, onImport])
 
-  const updateSceneTitle = (index: number, title: string) => {
+  const updateSceneTitle = useCallback((index: number, title: string) => {
     setScenes(prev => prev.map((s, i) => i === index ? { ...s, title } : s))
-  }
+  }, [])
 
-  const updateSceneSection = (index: number, section: NarrativeSection) => {
+  const updateSceneSection = useCallback((index: number, section: NarrativeSection) => {
     setScenes(prev => prev.map((s, i) => i === index ? { ...s, section } : s))
-  }
+  }, [])
 
-  const distributesSections = () => {
-    // Auto-distribute sections evenly across scenes
+  const distributeSections = useCallback(() => {
     const scenesPerSection = Math.ceil(scenes.length / 5)
     setScenes(prev => prev.map((s, i) => ({
       ...s,
       section: SECTIONS[Math.min(Math.floor(i / scenesPerSection), 4)]
     })))
-  }
+  }, [scenes.length])
 
-  const wordCount = rawText.trim().split(/\s+/).filter(Boolean).length
-  const hasContent = rawText.trim().length > 0
+  const clearImport = useCallback(() => {
+    setRawText('')
+    setFileName(null)
+    setScenes([])
+  }, [])
+
+  const showLoading = isLoading || isParsing
 
   return (
     <motion.div
@@ -269,10 +421,13 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
           </button>
         </div>
 
-        {isLoading ? (
+        {showLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-4">
             <Loader2 className="w-8 h-8 text-section-departure animate-spin" />
             <p className="text-sm text-ink-400">{loadingMessage}</p>
+            {wordCount > 0 && (
+              <p className="text-xs text-ink-600">{wordCount.toLocaleString()} words</p>
+            )}
           </div>
         ) : !hasContent ? (
           /* Upload prompt */
@@ -296,7 +451,6 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.text,.docx"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -306,11 +460,11 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             {/* Stats bar */}
             <div className="flex items-center justify-between px-4 py-3 bg-ink-950/50 border-b border-ink-800">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-ink-300">{fileName || 'Pasted text'}</span>
+                <span className="text-sm text-ink-300 truncate max-w-[150px]">{fileName || 'Pasted text'}</span>
                 <span className="text-xs text-ink-500">{wordCount.toLocaleString()} words</span>
               </div>
               <button
-                onClick={() => { setRawText(''); setFileName(null); setScenes([]) }}
+                onClick={clearImport}
                 className="text-xs text-ink-500 hover:text-ink-300"
               >
                 Clear
@@ -320,9 +474,9 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             {/* Split method tabs */}
             <div className="flex border-b border-ink-800">
               {[
-                { key: 'chapters' as SplitMethod, label: 'By Chapters', desc: 'Chapter/Part headers' },
-                { key: 'breaks' as SplitMethod, label: 'By Breaks', desc: '*** or --- markers' },
-                { key: 'wordcount' as SplitMethod, label: 'By Length', desc: '~800 words each' },
+                { key: 'chapters' as SplitMethod, label: 'Chapters' },
+                { key: 'breaks' as SplitMethod, label: 'Breaks' },
+                { key: 'wordcount' as SplitMethod, label: '~800w' },
               ].map(method => (
                 <button
                   key={method.key}
@@ -342,7 +496,7 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             <div className="flex items-center justify-between px-4 py-2 bg-ink-900">
               <span className="text-sm text-ink-400">{scenes.length} scenes</span>
               <button
-                onClick={distributesSections}
+                onClick={distributeSections}
                 className="flex items-center gap-1 text-xs text-section-departure"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -353,81 +507,18 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             {/* Scene list */}
             <div className="flex-1 overflow-y-auto">
               {scenes.map((scene, i) => (
-                <div key={i} className="border-b border-ink-800">
-                  {/* Scene header - always visible */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ink-800/30"
-                    onClick={() => setExpandedScene(expandedScene === i ? null : i)}
-                  >
-                    {/* Section indicator */}
-                    <div className={`w-1 h-8 rounded-full ${SECTION_COLORS[scene.section]}`} />
-
-                    {/* Title */}
-                    <div className="flex-1 min-w-0">
-                      {editingTitle === i ? (
-                        <input
-                          ref={titleInputRef}
-                          value={scene.title}
-                          onChange={(e) => updateSceneTitle(i, e.target.value)}
-                          onBlur={() => setEditingTitle(null)}
-                          onKeyDown={(e) => e.key === 'Enter' && setEditingTitle(null)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full bg-ink-800 border border-ink-600 rounded px-2 py-1 text-sm text-ink-100"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-ink-100 truncate">{scene.title}</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEditingTitle(i) }}
-                            className="text-ink-500 hover:text-ink-300"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
-                      <div className="text-xs text-ink-500">
-                        {scene.prose.split(/\s+/).length} words
-                      </div>
-                    </div>
-
-                    {/* Section selector */}
-                    <select
-                      value={scene.section}
-                      onChange={(e) => { e.stopPropagation(); updateSceneSection(i, e.target.value as NarrativeSection) }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-ink-800 border border-ink-700 rounded px-2 py-1 text-xs text-ink-300"
-                    >
-                      {SECTIONS.map(s => (
-                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                      ))}
-                    </select>
-
-                    {/* Expand toggle */}
-                    {expandedScene === i ? (
-                      <ChevronUp className="w-4 h-4 text-ink-500" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-ink-500" />
-                    )}
-                  </div>
-
-                  {/* Scene preview - expanded */}
-                  <AnimatePresence>
-                    {expandedScene === i && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-4 pb-3 pl-8">
-                          <p className="text-xs text-ink-400 leading-relaxed line-clamp-6">
-                            {scene.prose.slice(0, 500)}...
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <SceneRow
+                  key={i}
+                  scene={scene}
+                  isExpanded={expandedScene === i}
+                  isEditing={editingTitle === i}
+                  onToggleExpand={() => setExpandedScene(expandedScene === i ? null : i)}
+                  onStartEdit={() => setEditingTitle(i)}
+                  onEndEdit={() => setEditingTitle(null)}
+                  onUpdateTitle={(title) => updateSceneTitle(i, title)}
+                  onUpdateSection={(section) => updateSceneSection(i, section)}
+                  titleInputRef={editingTitle === i ? titleInputRef : undefined}
+                />
               ))}
             </div>
 
@@ -446,5 +537,107 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
         )}
       </motion.div>
     </motion.div>
+  )
+}
+
+// Separate component to avoid re-renders
+interface SceneRowProps {
+  scene: ImportedScene
+  isExpanded: boolean
+  isEditing: boolean
+  onToggleExpand: () => void
+  onStartEdit: () => void
+  onEndEdit: () => void
+  onUpdateTitle: (title: string) => void
+  onUpdateSection: (section: NarrativeSection) => void
+  titleInputRef?: React.RefObject<HTMLInputElement | null>
+}
+
+function SceneRow({
+  scene,
+  isExpanded,
+  isEditing,
+  onToggleExpand,
+  onStartEdit,
+  onEndEdit,
+  onUpdateTitle,
+  onUpdateSection,
+  titleInputRef
+}: SceneRowProps) {
+  return (
+    <div className="border-b border-ink-800">
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-ink-800/30"
+        onClick={onToggleExpand}
+      >
+        {/* Section indicator */}
+        <div className={`w-1 h-8 rounded-full ${SECTION_COLORS[scene.section]}`} />
+
+        {/* Title */}
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <input
+              ref={titleInputRef}
+              value={scene.title}
+              onChange={(e) => onUpdateTitle(e.target.value)}
+              onBlur={onEndEdit}
+              onKeyDown={(e) => e.key === 'Enter' && onEndEdit()}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-ink-800 border border-ink-600 rounded px-2 py-1 text-sm text-ink-100"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-ink-100 truncate">{scene.title}</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); onStartEdit() }}
+                className="text-ink-500 hover:text-ink-300 flex-shrink-0"
+              >
+                <Edit3 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+          <div className="text-xs text-ink-500">
+            {scene.wordCount.toLocaleString()} words
+          </div>
+        </div>
+
+        {/* Section selector */}
+        <select
+          value={scene.section}
+          onChange={(e) => { e.stopPropagation(); onUpdateSection(e.target.value as NarrativeSection) }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-ink-800 border border-ink-700 rounded px-2 py-1 text-xs text-ink-300"
+        >
+          {SECTIONS.map(s => (
+            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+          ))}
+        </select>
+
+        {/* Expand toggle */}
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-ink-500 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-ink-500 flex-shrink-0" />
+        )}
+      </div>
+
+      {/* Scene preview - expanded */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-3 pl-8">
+              <p className="text-xs text-ink-400 leading-relaxed line-clamp-6">
+                {scene.prose.slice(0, 500)}...
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
