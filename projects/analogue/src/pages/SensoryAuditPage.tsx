@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Ear, Wind, Cookie, Hand, CheckCircle2, Circle } from 'lucide-react'
@@ -23,7 +24,22 @@ export default function SensoryAuditPage() {
   const navigate = useNavigate()
   const { manuscript } = useManuscriptStore()
 
-  if (!manuscript) return null
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!manuscript) {
+        navigate('/', { replace: true })
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [manuscript, navigate])
+
+  if (!manuscript) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-ink-600 border-t-ink-300 rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const { sensoryAudit } = manuscript
   const ruptureCheck = canEnterRupture(sensoryAudit)

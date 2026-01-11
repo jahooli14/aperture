@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -42,7 +42,23 @@ export default function TableOfContents() {
   const [showAddScene, setShowAddScene] = useState<NarrativeSection | null>(null)
   const [newSceneTitle, setNewSceneTitle] = useState('')
 
-  if (!manuscript) return null
+  // Redirect if no manuscript after a brief delay (allows for store hydration)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!manuscript) {
+        navigate('/', { replace: true })
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [manuscript, navigate])
+
+  if (!manuscript) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-ink-600 border-t-ink-300 rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   const scenesBySection = SECTIONS.map(section => ({
     ...section,
