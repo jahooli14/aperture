@@ -297,29 +297,18 @@ async function enrichQuote(content: string) {
 
 "${content}"
 
-IMPORTANT ASSUMPTIONS:
-- This phrase was most likely written BY THE USER themselves
-- Only attribute to an author if it's an EXTREMELY famous, widely-known quote (like Shakespeare, Einstein, etc.)
-- When in doubt, assume it's the user's own words
-
 Your task:
 1. Generate evocative tags that capture the mood, theme, or feeling of the phrase
 2. Write a brief poetic reflection on why this phrase might resonate - what makes it beautiful or memorable
-3. ONLY include author if it's an EXTREMELY FAMOUS quote that everyone would recognize. Otherwise, leave empty.
 
 Return JSON with these exact fields:
-- subtitle: Author name ONLY if it's an extremely famous quote (Shakespeare, Bible, Einstein level). Otherwise ""
 - description: A brief (1-2 sentence) reflection on the beauty or resonance of this phrase
 - tags: Array of 3-4 evocative tags capturing mood/theme (e.g., ["Melancholy", "Longing", "Connection"])
-- specs: Empty object {} (we assume user's own words unless proven otherwise)
 
 Return ONLY valid JSON, no markdown, no explanation.
 
-Example for an extremely famous quote:
-{"subtitle": "William Shakespeare", "description": "A timeless meditation on existence and choice.", "tags": ["Existential", "Choice", "Philosophy"], "specs": {}}
-
-Example for most phrases (default):
-{"subtitle": "", "description": "There's a quiet intimacy in the repetition - the way 'you know' becomes both question and answer.", "tags": ["Intimacy", "Uncertainty", "Connection"], "specs": {}}`
+Example:
+{"description": "There's a quiet intimacy in the repetition - the way 'you know' becomes both question and answer.", "tags": ["Intimacy", "Uncertainty", "Connection"]}`
 
     try {
         const response = await generateText(prompt, {
@@ -345,10 +334,13 @@ Example for most phrases (default):
             metadata.tags = []
         }
 
-        // Ensure specs is an object
-        if (!metadata.specs || typeof metadata.specs !== 'object') {
-            metadata.specs = {}
+        // Set default author to "Me" and put it in specs
+        metadata.specs = {
+            Author: 'Me'
         }
+
+        // Clear subtitle (we use specs.Author instead)
+        metadata.subtitle = ''
 
         metadata.source = 'gemini'
         console.log(`[Quote Enrichment] Successfully enriched phrase`)
@@ -356,12 +348,14 @@ Example for most phrases (default):
 
     } catch (error) {
         console.error(`[Quote Enrichment] Error:`, error)
-        // Return minimal metadata for quotes
+        // Return minimal metadata for quotes with default author
         return {
             subtitle: '',
             description: '',
             tags: ['Phrase', 'Collected'],
-            specs: {},
+            specs: {
+                Author: 'Me'
+            },
             source: 'gemini'
         }
     }
