@@ -1,16 +1,37 @@
 @import "tailwindcss";
 
+/* Tailwind v4 theme configuration */
+@theme {
+  /* Ink palette - dark writing focused */
+  --color-ink-50: #f7f7f7;
+  --color-ink-100: #e3e3e3;
+  --color-ink-200: #c8c8c8;
+  --color-ink-300: #a4a4a4;
+  --color-ink-400: #818181;
+  --color-ink-500: #666666;
+  --color-ink-600: #515151;
+  --color-ink-700: #434343;
+  --color-ink-800: #383838;
+  --color-ink-900: #1a1a1a;
+  --color-ink-950: #0a0a0a;
+
+  /* Status colors */
+  --color-status-green: #22c55e;
+  --color-status-yellow: #eab308;
+  --color-status-red: #ef4444;
+
+  /* Narrative section colors */
+  --color-section-departure: #8b5cf6;
+  --color-section-escape: #3b82f6;
+  --color-section-rupture: #f97316;
+  --color-section-alignment: #10b981;
+  --color-section-reveal: #ec4899;
+}
+
 /* Mobile-first base styles */
 :root {
   --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
-
-  /* Section colors */
-  --section-departure: #8b5cf6;
-  --section-escape: #3b82f6;
-  --section-rupture: #f97316;
-  --section-alignment: #10b981;
-  --section-reveal: #ec4899;
 }
 
 * {
@@ -85,15 +106,29 @@ textarea {
   transition: transform 0.2s ease-out;
 }
 
-/* Section indicator colors */
-.section-departure { border-color: var(--section-departure); }
-.section-escape { border-color: var(--section-escape); }
-.section-rupture { border-color: var(--section-rupture); }
-.section-alignment { border-color: var(--section-alignment); }
-.section-reveal { border-color: var(--section-reveal); }
+/* Section indicator border colors */
+.section-departure { border-color: var(--color-section-departure); }
+.section-escape { border-color: var(--color-section-escape); }
+.section-rupture { border-color: var(--color-section-rupture); }
+.section-alignment { border-color: var(--color-section-alignment); }
+.section-reveal { border-color: var(--color-section-reveal); }
 
-.section-bg-departure { background-color: var(--section-departure); }
-.section-bg-escape { background-color: var(--section-escape); }
-.section-bg-rupture { background-color: var(--section-rupture); }
-.section-bg-alignment { background-color: var(--section-alignment); }
-.section-bg-reveal { background-color: var(--section-reveal); }
+/* Prose container - reader mode */
+.prose-container {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: 0.01em;
+}
+
+.prose-container p {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+/* Line clamp utility */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

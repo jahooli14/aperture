@@ -8,7 +8,9 @@ import {
   MessageSquare,
   Tag,
   Glasses,
-  MoreVertical
+  MoreVertical,
+  Eye,
+  Edit3
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -40,6 +42,7 @@ export default function EditorPage() {
   const footnoteRef = useRef<HTMLTextAreaElement>(null)
   const dragControls = useDragControls()
   const [showMenu, setShowMenu] = useState(false)
+  const [isReadMode, setIsReadMode] = useState(false)
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
 
@@ -187,23 +190,87 @@ export default function EditorPage() {
         </div>
       </header>
 
-      {/* Prose Pane (70%) */}
+      {/* Mode toggle */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-ink-800 bg-ink-900/50">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsReadMode(false)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
+              !isReadMode
+                ? 'bg-section-departure text-white'
+                : 'text-ink-400 hover:text-ink-200'
+            }`}
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+            Edit
+          </button>
+          <button
+            onClick={() => setIsReadMode(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
+              isReadMode
+                ? 'bg-section-departure text-white'
+                : 'text-ink-400 hover:text-ink-200'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Read
+          </button>
+        </div>
+        <span className="text-xs text-ink-500">
+          {scene.section}
+        </span>
+      </div>
+
+      {/* Prose Pane */}
       <div
-        className="flex-1 flex flex-col"
+        className="flex-1 flex flex-col overflow-hidden"
         style={{ height: footnoteDrawerOpen ? `${100 - footnoteDrawerHeight}%` : '100%' }}
       >
-        <textarea
-          ref={proseRef}
-          value={displayProse}
-          onChange={handleProseChange}
-          onSelect={handleTextSelect}
-          placeholder="Begin writing..."
-          className="flex-1 w-full p-4 bg-transparent text-ink-100 text-base leading-relaxed placeholder:text-ink-600 resize-none"
-        />
+        {isReadMode ? (
+          /* Read mode - formatted paragraphs */
+          <div className="flex-1 overflow-y-auto p-4 pb-safe">
+            <div className="prose-container max-w-none">
+              {displayProse.split(/\n\n+/).map((paragraph, i) => (
+                paragraph.trim() && (
+                  <p
+                    key={i}
+                    className="text-ink-100 text-base leading-loose mb-6 first:mt-0"
+                    style={{ textIndent: i > 0 ? '2em' : '0' }}
+                  >
+                    {paragraph.split('\n').map((line, j) => (
+                      <span key={j}>
+                        {line}
+                        {j < paragraph.split('\n').length - 1 && <br />}
+                      </span>
+                    ))}
+                  </p>
+                )
+              ))}
+              {!displayProse && (
+                <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Edit mode - textarea */
+          <textarea
+            ref={proseRef}
+            value={displayProse}
+            onChange={handleProseChange}
+            onSelect={handleTextSelect}
+            placeholder="Begin writing...
+
+Start a new paragraph by pressing Enter twice.
+
+The Read mode will show your text with proper paragraph formatting."
+            className="flex-1 w-full p-4 bg-transparent text-ink-100 text-base leading-loose placeholder:text-ink-600 resize-none font-mono"
+            style={{ tabSize: 4 }}
+          />
+        )}
 
         {/* Selection toolbar */}
         <AnimatePresence>
-          {selectedText && (
+          {selectedText && !isReadMode && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
