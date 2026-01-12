@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, BookOpen, Feather, Upload, Trash2, AlertTriangle } from 'lucide-react'
+import { Plus, BookOpen, Feather, Upload, Trash2, AlertTriangle, Cloud, CloudOff, RefreshCw, User, LogOut } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
+import { useAuthStore } from '../stores/useAuthStore'
+import { fullSync } from '../lib/sync'
 import type { ManuscriptState } from '../types/manuscript'
 import ImportModal, { type ImportedScene } from '../components/ImportModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
   const { manuscript, createManuscript, importScenes, loadManuscript, deleteManuscript, getAllManuscripts, clearCurrentManuscript } = useManuscriptStore()
+  const { user, isConfigured, signOut } = useAuthStore()
+
   const [showCreate, setShowCreate] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [title, setTitle] = useState('')
@@ -16,6 +20,8 @@ export default function HomePage() {
   const [allManuscripts, setAllManuscripts] = useState<ManuscriptState[]>([])
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   // Load all manuscripts on mount
   useEffect(() => {
@@ -66,6 +72,34 @@ export default function HomePage() {
     setShowCreate(true)
   }
 
+  const handleSync = async () => {
+    if (!user) return
+
+    setIsSyncing(true)
+    setSyncMessage(null)
+
+    try {
+      const result = await fullSync(user.id)
+
+      if (result.success) {
+        setSyncMessage(`Synced: ${result.downloaded} downloaded, ${result.uploaded} uploaded`)
+        await loadAllManuscripts()
+      } else {
+        setSyncMessage(result.error || 'Sync failed')
+      }
+    } catch (error) {
+      setSyncMessage('Sync failed')
+    } finally {
+      setIsSyncing(false)
+      // Clear message after 3 seconds
+      setTimeout(() => setSyncMessage(null), 3000)
+    }
+  }
+
+  const handleSignOut = async () => {
+    await signOut()
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     const now = new Date()
@@ -85,6 +119,50 @@ export default function HomePage() {
 
   return (
     <div className="flex-1 flex flex-col p-6 pt-safe pb-safe overflow-y-auto">
+      {/* Auth status bar */}
+      <div className="flex items-center justify-between mb-4">
+        {user ? (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 px-2 py-1 bg-ink-900 rounded text-xs text-ink-400">
+              <Cloud className="w-3 h-3 text-status-green" />
+              <span className="truncate max-w-[120px]">{user.email}</span>
+            </div>
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="p-2 text-ink-500 hover:text-ink-300"
+              title="Sync with cloud"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="p-2 text-ink-500 hover:text-ink-300"
+              title="Sign out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : isConfigured ? (
+          <button
+            onClick={() => navigate('/login')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-ink-900 rounded text-xs text-ink-400 hover:text-ink-200"
+          >
+            <User className="w-3 h-3" />
+            Sign in to sync
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 px-2 py-1 bg-ink-900 rounded text-xs text-ink-500">
+            <CloudOff className="w-3 h-3" />
+            Offline mode
+          </div>
+        )}
+
+        {syncMessage && (
+          <span className="text-xs text-ink-400">{syncMessage}</span>
+        )}
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
