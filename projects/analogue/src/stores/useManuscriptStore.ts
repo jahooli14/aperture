@@ -24,6 +24,9 @@ interface ManuscriptStore {
   createManuscript: (title: string, protagonistName?: string) => Promise<void>
   loadManuscript: (id: string) => Promise<void>
   updateManuscript: (updates: Partial<ManuscriptState>) => Promise<void>
+  deleteManuscript: (id: string) => Promise<void>
+  getAllManuscripts: () => Promise<ManuscriptState[]>
+  clearCurrentManuscript: () => void
 
   // Scene actions
   createScene: (section: NarrativeSection, title: string) => Promise<SceneNode>
@@ -129,6 +132,33 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await db.manuscripts.put(updated)
         await queueForSync({ type: 'update', table: 'manuscripts', data: updated as unknown as Record<string, unknown> })
         set({ manuscript: updated })
+      },
+
+      deleteManuscript: async (id) => {
+        const { manuscript } = get()
+
+        // Delete all related data
+        await db.sceneNodes.where('manuscriptId').equals(id).delete()
+        await db.reverberations.where('manuscriptId').equals(id).delete()
+        await db.glassesMentions.where('manuscriptId').equals(id).delete()
+        await db.speechPatterns.where('manuscriptId').equals(id).delete()
+        await db.manuscripts.delete(id)
+
+        await queueForSync({ type: 'delete', table: 'manuscripts', data: { id } })
+
+        // Clear current manuscript if it was the deleted one
+        if (manuscript?.id === id) {
+          set({ manuscript: null, activeSceneId: null })
+        }
+      },
+
+      getAllManuscripts: async () => {
+        const manuscripts = await db.manuscripts.orderBy('updatedAt').reverse().toArray()
+        return manuscripts
+      },
+
+      clearCurrentManuscript: () => {
+        set({ manuscript: null, activeSceneId: null })
       },
 
       createScene: async (section, title) => {
