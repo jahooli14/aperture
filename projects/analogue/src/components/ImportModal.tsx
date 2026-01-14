@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Upload, FileText, Scissors, Loader2, ChevronDown, ChevronUp, Edit3, Check, RotateCcw } from 'lucide-react'
+import { X, Upload, Scissors, Loader2, ChevronDown, ChevronUp, Edit3, Check, RotateCcw, ClipboardPaste } from 'lucide-react'
 import mammoth from 'mammoth'
 import type { NarrativeSection } from '../types/manuscript'
 
@@ -233,6 +233,8 @@ async function parseManuscriptAsync(text: string, splitMethod: SplitMethod, onPr
   return scenes
 }
 
+type InputMode = 'file' | 'paste'
+
 export default function ImportModal({ onImport, onClose }: ImportModalProps) {
   const [rawText, setRawText] = useState('')
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('chapters')
@@ -243,6 +245,8 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
   const [expandedScene, setExpandedScene] = useState<number | null>(null)
   const [editingTitle, setEditingTitle] = useState<number | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [inputMode, setInputMode] = useState<InputMode>('file')
+  const [pasteText, setPasteText] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -391,7 +395,14 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
     setRawText('')
     setFileName(null)
     setScenes([])
+    setPasteText('')
   }, [])
+
+  const handlePasteSubmit = useCallback(() => {
+    if (!pasteText.trim()) return
+    setRawText(pasteText)
+    setFileName(null)
+  }, [pasteText])
 
   const showLoading = isLoading || isParsing
 
@@ -430,30 +441,86 @@ export default function ImportModal({ onImport, onClose }: ImportModalProps) {
             )}
           </div>
         ) : !hasContent ? (
-          /* Upload prompt */
-          <div className="flex-1 flex flex-col items-center justify-center p-8">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full max-w-sm p-8 border-2 border-dashed border-ink-700 rounded-2xl flex flex-col items-center gap-4 cursor-pointer hover:border-section-departure/50 transition-colors"
-            >
-              <div className="w-16 h-16 rounded-full bg-ink-800 flex items-center justify-center">
-                <Upload className="w-8 h-8 text-section-departure" />
-              </div>
-              <div className="text-center">
-                <p className="text-ink-100 font-medium mb-1">Upload your manuscript</p>
-                <p className="text-sm text-ink-500">One document, split into scenes</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-ink-500">
-                <FileText className="w-3 h-3" />
-                <span>.docx, .txt, or .md</span>
-              </div>
+          /* Input mode selection */
+          <div className="flex-1 flex flex-col">
+            {/* Input mode tabs */}
+            <div className="flex border-b border-ink-800">
+              <button
+                onClick={() => setInputMode('file')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+                  inputMode === 'file'
+                    ? 'border-section-departure text-ink-100'
+                    : 'border-transparent text-ink-500'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                <span className="text-sm">Upload File</span>
+              </button>
+              <button
+                onClick={() => setInputMode('paste')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 border-b-2 transition-colors ${
+                  inputMode === 'paste'
+                    ? 'border-section-departure text-ink-100'
+                    : 'border-transparent text-ink-500'
+                }`}
+              >
+                <ClipboardPaste className="w-4 h-4" />
+                <span className="text-sm">Paste Text</span>
+              </button>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+
+            {inputMode === 'file' ? (
+              /* File upload */
+              <div className="flex-1 flex flex-col items-center justify-center p-8">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full max-w-sm p-8 border-2 border-dashed border-ink-700 rounded-2xl flex flex-col items-center gap-4 cursor-pointer hover:border-section-departure/50 transition-colors"
+                >
+                  <div className="w-16 h-16 rounded-full bg-ink-800 flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-section-departure" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-ink-100 font-medium mb-1">Tap to select file</p>
+                    <p className="text-sm text-ink-500">.docx, .txt, or .md</p>
+                  </div>
+                </div>
+                <p className="mt-4 text-xs text-ink-600 text-center">
+                  File picker not working? Use the Paste Text tab instead.
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              /* Paste text */
+              <div className="flex-1 flex flex-col p-4">
+                <p className="text-xs text-ink-500 mb-2">
+                  Paste your entire manuscript below. Copy from Word, Google Docs, or any text editor.
+                </p>
+                <textarea
+                  value={pasteText}
+                  onChange={(e) => setPasteText(e.target.value)}
+                  placeholder="Paste your manuscript text here..."
+                  className="flex-1 w-full p-3 bg-ink-950 border border-ink-800 rounded-lg text-ink-100 text-sm leading-relaxed placeholder:text-ink-600 resize-none"
+                  autoFocus
+                />
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-xs text-ink-500">
+                    {pasteText ? `${countWords(pasteText).toLocaleString()} words` : 'No text yet'}
+                  </span>
+                  <button
+                    onClick={handlePasteSubmit}
+                    disabled={!pasteText.trim()}
+                    className="px-4 py-2 bg-section-departure rounded-lg text-white text-sm font-medium disabled:opacity-50"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <>
