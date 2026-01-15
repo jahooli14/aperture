@@ -24,9 +24,13 @@ interface ManuscriptStore {
   createManuscript: (title: string, protagonistName?: string) => Promise<void>
   loadManuscript: (id: string) => Promise<void>
   updateManuscript: (updates: Partial<ManuscriptState>) => Promise<void>
+  deleteManuscript: (id: string) => Promise<void>
+  getAllManuscripts: () => Promise<ManuscriptState[]>
+  clearCurrentManuscript: () => void
 
   // Scene actions
   createScene: (section: NarrativeSection, title: string) => Promise<SceneNode>
+  importScenes: (scenes: { title: string; section: NarrativeSection; prose: string }[]) => Promise<void>
   updateScene: (sceneId: string, updates: Partial<SceneNode>) => Promise<void>
   deleteScene: (sceneId: string) => Promise<void>
   reorderScenes: (sceneIds: string[]) => Promise<void>
@@ -130,6 +134,33 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         set({ manuscript: updated })
       },
 
+      deleteManuscript: async (id) => {
+        const { manuscript } = get()
+
+        // Delete all related data
+        await db.sceneNodes.where('manuscriptId').equals(id).delete()
+        await db.reverberations.where('manuscriptId').equals(id).delete()
+        await db.glassesMentions.where('manuscriptId').equals(id).delete()
+        await db.speechPatterns.where('manuscriptId').equals(id).delete()
+        await db.manuscripts.delete(id)
+
+        await queueForSync({ type: 'delete', table: 'manuscripts', data: { id } })
+
+        // Clear current manuscript if it was the deleted one
+        if (manuscript?.id === id) {
+          set({ manuscript: null, activeSceneId: null })
+        }
+      },
+
+      getAllManuscripts: async () => {
+        const manuscripts = await db.manuscripts.orderBy('updatedAt').reverse().toArray()
+        return manuscripts
+      },
+
+      clearCurrentManuscript: () => {
+        set({ manuscript: null, activeSceneId: null })
+      },
+
       createScene: async (section, title) => {
         const { manuscript } = get()
         if (!manuscript) throw new Error('No manuscript loaded')
@@ -140,11 +171,15 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           order: manuscript.scenes.length,
           title,
           section,
+          chapterId: null,
+          chapterTitle: null,
+          sceneNumber: null,
           prose: '',
           footnotes: '',
           wordCount: 0,
           identityType: null,
           sensoryFocus: null,
+          senseNotes: null,
           awarenessLevel: null,
           footnoteTone: null,
           status: 'draft',
@@ -167,6 +202,58 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         })
 
         return scene
+      },
+
+      importScenes: async (scenes) => {
+        const { manuscript } = get()
+        if (!manuscript) throw new Error('No manuscript loaded')
+
+        const now = new Date().toISOString()
+        const newScenes: SceneNode[] = []
+
+        for (let i = 0; i < scenes.length; i++) {
+          const imported = scenes[i]
+          const scene: SceneNode = {
+            id: generateId(),
+            order: i,
+            title: imported.title,
+            section: imported.section,
+            chapterId: null,
+            chapterTitle: null,
+            sceneNumber: null,
+            prose: imported.prose,
+            footnotes: '',
+            wordCount: imported.prose.trim().split(/\s+/).filter(Boolean).length,
+            identityType: null,
+            sensoryFocus: null,
+            senseNotes: null,
+            awarenessLevel: null,
+            footnoteTone: null,
+            status: 'draft',
+            validationStatus: 'yellow',
+            checklist: [],
+            sensesActivated: [],
+            glassesmentions: [],
+            reverberations: [],
+            createdAt: now,
+            updatedAt: now,
+            pulseCheckCompletedAt: null
+          }
+
+          await db.sceneNodes.put({ ...scene, manuscriptId: manuscript.id })
+          newScenes.push(scene)
+        }
+
+        const totalWordCount = newScenes.reduce((sum, s) => sum + s.wordCount, 0)
+
+        set({
+          manuscript: {
+            ...manuscript,
+            scenes: newScenes,
+            totalWordCount,
+            updatedAt: now
+          }
+        })
       },
 
       updateScene: async (sceneId, updates) => {
