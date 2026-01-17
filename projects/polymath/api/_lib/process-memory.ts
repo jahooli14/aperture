@@ -174,7 +174,7 @@ async function extractMetadata(title: string, body: string, projects: any[]): Pr
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 
-  const prompt = `You are processing a voice note transcription. Transform the raw spoken text into polished written content.
+  const prompt = `You are a title summarization and content polishing expert.
 
 ACTIVE PROJECTS (for triage):
 ${projectList || 'None'}
@@ -182,13 +182,30 @@ ${projectList || 'None'}
 RAW VOICE NOTE:
 "${title}" - ${body}
 
-TASK: Create a polished, summarized version of this voice note. The user spoke this aloud, so:
-- summary_title: Create a SHORT, DESCRIPTIVE title (5-10 words max) that captures the main idea. Do NOT just copy the first sentence. Summarize the core thought.
-- insightful_body: Rewrite the content in clean, natural first-person prose. Remove verbal fillers ("um", "like", "you know"), false starts, and repetition. Keep the meaning intact but make it read well.
+CRITICAL TITLE RULES:
+1. summary_title MUST be a SUMMARY - NEVER copy the input verbatim
+2. Transform casual speech into a polished, descriptive title (5-10 words max)
+3. Remove filler words like "still", "just", "I was thinking", "you know"
+4. Capture the ESSENCE of the thought, not the exact words
+5. NEVER start with "I", "still", "just", "maybe", "thinking about"
+
+TITLE EXAMPLES:
+- Raw: "still musing on when a snake's body becomes its tail" → "Snake anatomy boundary question"
+- Raw: "I need to fix the login bug tomorrow" → "Login bug fix reminder"
+- Raw: "that book about habits was really interesting" → "Habits book insights"
+- Raw: "thinking I should learn more about kubernetes" → "Kubernetes learning goal"
+
+WRONG (verbatim copying):
+- "Still musing on when a snake's body becomes its tail" ❌
+- "I need to fix the login bug tomorrow" ❌
+
+TASK:
+- summary_title: A SHORT, SUMMARIZED title (5-10 words). NEVER copy the input text.
+- insightful_body: Clean up the content - remove fillers, fix grammar, keep meaning intact.
 
 Return JSON:
 {
-  "summary_title": "A short, specific title summarizing the main idea (NOT the verbatim text)",
+  "summary_title": "SHORT SUMMARIZED title - NOT verbatim",
   "insightful_body": "The cleaned-up content in first person, natural prose",
   "memory_type": "foundational|event|insight",
   "entities": {
@@ -202,11 +219,6 @@ Return JSON:
   "emotional_tone": "brief phrase describing the mood",
   "triage": {"category": "task_update|new_thought|reading_lead", "project_id": "uuid or null", "confidence": 0.0-1.0}
 }
-
-IMPORTANT: The summary_title should be a SUMMARY, not the verbatim beginning of the text. For example:
-- Raw: "still musing on when a snake's body becomes its tail"
-- Good title: "Philosophical musing on snake anatomy"
-- Bad title: "Still musing on when a snake's body becomes its tail"
 
 Return only valid JSON.`
 
