@@ -31,10 +31,16 @@ export interface SceneNode {
   title: string
   section: NarrativeSection
 
-  // Chapter grouping (NEW)
+  // Chapter grouping
   chapterId: string | null      // Groups scenes into chapters
   chapterTitle: string | null   // e.g. "Chapter 1"
   sceneNumber: number | null    // 1, 2, 3... within chapter
+
+  // Summary/Planning fields
+  sceneBeat: string | null           // One sentence: what happens in this scene
+  chapterTheme: string | null        // Chapter-level: arc, purpose, emotional trajectory
+  charactersPresent: string[]        // Characters appearing in this scene
+  motifTags: string[]                // Motifs/threads: "glasses", "door", "drift", etc.
 
   // Content
   prose: string
