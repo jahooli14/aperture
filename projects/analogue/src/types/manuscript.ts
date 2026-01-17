@@ -31,16 +31,24 @@ export interface SceneNode {
   title: string
   section: NarrativeSection
 
+  // Chapter grouping (NEW)
+  chapterId: string | null      // Groups scenes into chapters
+  chapterTitle: string | null   // e.g. "Chapter 1"
+  sceneNumber: number | null    // 1, 2, 3... within chapter
+
   // Content
   prose: string
   footnotes: string
   wordCount: number
 
-  // Pulse Check results
+  // Chapter-level Pulse Check (applies to first scene, inherited by others)
   identityType: IdentityType | null
-  sensoryFocus: Sense | null
   awarenessLevel: AwarenessLevel | null
   footnoteTone: FootnoteTone | null
+
+  // Scene-level sense check (each scene can have its own)
+  sensoryFocus: Sense | null
+  senseNotes: string | null     // Quick note about this sense in this scene
 
   // Validation
   status: NodeStatus

@@ -127,7 +127,7 @@ export default function TableOfContents() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-ink-950 pt-safe">
+    <div className="flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-ink-800">
         <button onClick={() => navigate('/')} className="p-2 -ml-2">
@@ -182,7 +182,7 @@ export default function TableOfContents() {
       </div>
 
       {/* Sections */}
-      <div className="flex-1 overflow-y-auto pb-safe">
+      <div className="flex-1 min-h-0 overflow-y-auto pb-safe">
         {scenesBySection.map(section => (
           <div key={section.id} className="border-b border-ink-800">
             <div

@@ -15,6 +15,9 @@ interface EditorStore {
   showReverbTagging: boolean
   showSensoryAudit: boolean
   showRevealAudit: boolean
+  focusMode: boolean
+  lastSavedAt: number | null
+  isSaving: boolean
 
   // Actions
   openFootnoteDrawer: () => void
@@ -28,6 +31,9 @@ interface EditorStore {
   setShowReverbTagging: (show: boolean) => void
   setShowSensoryAudit: (show: boolean) => void
   setShowRevealAudit: (show: boolean) => void
+  toggleFocusMode: () => void
+  setSaving: (saving: boolean) => void
+  markSaved: () => void
 }
 
 export const useEditorStore = create<EditorStore>((set) => ({
@@ -41,6 +47,9 @@ export const useEditorStore = create<EditorStore>((set) => ({
   showReverbTagging: false,
   showSensoryAudit: false,
   showRevealAudit: false,
+  focusMode: false,
+  lastSavedAt: null,
+  isSaving: false,
 
   // Actions
   openFootnoteDrawer: () => set({ footnoteDrawerOpen: true }),
@@ -61,5 +70,8 @@ export const useEditorStore = create<EditorStore>((set) => ({
   setShowPulseCheck: (show) => set({ showPulseCheck: show }),
   setShowReverbTagging: (show) => set({ showReverbTagging: show }),
   setShowSensoryAudit: (show) => set({ showSensoryAudit: show }),
-  setShowRevealAudit: (show) => set({ showRevealAudit: show })
+  setShowRevealAudit: (show) => set({ showRevealAudit: show }),
+  toggleFocusMode: () => set((state) => ({ focusMode: !state.focusMode })),
+  setSaving: (saving) => set({ isSaving: saving }),
+  markSaved: () => set({ lastSavedAt: Date.now(), isSaving: false })
 }))

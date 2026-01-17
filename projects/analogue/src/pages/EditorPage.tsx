@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import {
@@ -10,7 +10,11 @@ import {
   Glasses,
   MoreVertical,
   Eye,
-  Edit3
+  Edit3,
+  Focus,
+  ChevronLeft,
+  ChevronRight,
+  Save
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -35,7 +39,12 @@ export default function EditorPage() {
     setShowReverbTagging,
     selectedText,
     setSelection,
-    clearSelection
+    clearSelection,
+    focusMode,
+    toggleFocusMode,
+    lastSavedAt,
+    isSaving,
+    markSaved
   } = useEditorStore()
 
   const proseRef = useRef<HTMLTextAreaElement>(null)
@@ -43,8 +52,46 @@ export default function EditorPage() {
   const dragControls = useDragControls()
   const [showMenu, setShowMenu] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
+
+  // Get adjacent scenes for navigation
+  const sortedScenes = useMemo(() => {
+    if (!manuscript) return []
+    return [...manuscript.scenes].sort((a, b) => a.order - b.order)
+  }, [manuscript])
+
+  const currentIndex = sortedScenes.findIndex(s => s.id === sceneId)
+  const prevScene = currentIndex > 0 ? sortedScenes[currentIndex - 1] : null
+  const nextScene = currentIndex < sortedScenes.length - 1 ? sortedScenes[currentIndex + 1] : null
+
+  // Swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return
+    const touchEnd = e.changedTouches[0].clientX
+    const diff = touchStart - touchEnd
+    const threshold = 100
+
+    if (diff > threshold && nextScene) {
+      navigate(`/edit/${nextScene.id}`)
+    } else if (diff < -threshold && prevScene) {
+      navigate(`/edit/${prevScene.id}`)
+    }
+    setTouchStart(null)
+  }
+
+  // Auto-save indicator - mark as saved after update
+  useEffect(() => {
+    if (scene) {
+      const timer = setTimeout(() => markSaved(), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [scene?.prose, scene?.footnotes, markSaved])
 
   // Redirect if no manuscript after a brief delay
   useEffect(() => {
@@ -143,13 +190,29 @@ export default function EditorPage() {
     manuscript.maskModeEnabled
   )
 
+  // Format time since last save
+  const getSaveStatus = () => {
+    if (isSaving) return 'Saving...'
+    if (!lastSavedAt) return ''
+    const secs = Math.floor((Date.now() - lastSavedAt) / 1000)
+    if (secs < 5) return 'Saved'
+    if (secs < 60) return `${secs}s ago`
+    return `${Math.floor(secs / 60)}m ago`
+  }
+
   return (
-    <div className="flex-1 flex flex-col bg-ink-950 pt-safe">
+    <div
+      className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe ${focusMode ? 'focus-mode-active' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Pinned Header Checklist */}
-      <ChecklistHeader scene={scene} />
+      <div className="focus-fade">
+        <ChecklistHeader scene={scene} />
+      </div>
 
       {/* Editor Header */}
-      <header className="flex items-center justify-between p-3 border-b border-ink-800">
+      <header className="focus-fade flex items-center justify-between p-3 border-b border-ink-800">
         <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
           <ArrowLeft className="w-5 h-5 text-ink-400" />
         </button>
@@ -158,7 +221,18 @@ export default function EditorPage() {
           <h1 className="text-sm font-medium text-ink-100 truncate px-4">
             {scene.title}
           </h1>
-          <p className="text-xs text-ink-500">{scene.wordCount} words</p>
+          <div className="flex items-center justify-center gap-2 text-xs text-ink-500">
+            <span>{scene.wordCount} words</span>
+            {lastSavedAt && (
+              <>
+                <span>·</span>
+                <span className={isSaving ? 'save-indicator' : ''}>
+                  <Save className="w-3 h-3 inline mr-1" />
+                  {getSaveStatus()}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="relative">
@@ -184,6 +258,16 @@ export default function EditorPage() {
                   <Check className="w-4 h-4" />
                   Redo Pulse Check
                 </button>
+                <button
+                  onClick={() => {
+                    toggleFocusMode()
+                    setShowMenu(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  <Focus className="w-4 h-4" />
+                  {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -191,7 +275,7 @@ export default function EditorPage() {
       </header>
 
       {/* Mode toggle */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-ink-800 bg-ink-900/50">
+      <div className="focus-fade flex items-center justify-between px-4 py-2 border-b border-ink-800 bg-ink-900/50">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsReadMode(false)}
@@ -252,7 +336,7 @@ export default function EditorPage() {
             </div>
           </div>
         ) : (
-          /* Edit mode - textarea */
+          /* Edit mode - textarea with serif font */
           <textarea
             ref={proseRef}
             value={displayProse}
@@ -263,8 +347,7 @@ export default function EditorPage() {
 Start a new paragraph by pressing Enter twice.
 
 The Read mode will show your text with proper paragraph formatting."
-            className="flex-1 w-full p-4 bg-transparent text-ink-100 text-base leading-loose placeholder:text-ink-600 resize-none font-mono"
-            style={{ tabSize: 4 }}
+            className="flex-1 w-full p-4 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit"
           />
         )}
 
@@ -336,7 +419,7 @@ The Read mode will show your text with proper paragraph formatting."
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={openFootnoteDrawer}
-            className="fixed bottom-20 right-4 w-12 h-12 bg-ink-800 border border-ink-700 rounded-full flex items-center justify-center shadow-lg pb-safe"
+            className="focus-fade fixed bottom-20 right-4 w-12 h-12 bg-ink-800 border border-ink-700 rounded-full flex items-center justify-center shadow-lg pb-safe"
           >
             <Plus className="w-5 h-5 text-ink-400" />
           </motion.button>
@@ -345,13 +428,36 @@ The Read mode will show your text with proper paragraph formatting."
 
       {/* Glasses indicator */}
       {scene.glassesmentions.some(m => m.flagged) && (
-        <div className="absolute bottom-20 left-4 px-3 py-2 bg-status-yellow/20 border border-status-yellow/50 rounded-lg flex items-center gap-2">
+        <div className="focus-fade absolute bottom-20 left-4 px-3 py-2 bg-status-yellow/20 border border-status-yellow/50 rounded-lg flex items-center gap-2">
           <Glasses className="w-4 h-4 text-status-yellow" />
           <span className="text-xs text-status-yellow">
             {scene.glassesmentions.filter(m => m.flagged).length} glasses mention(s) flagged
           </span>
         </div>
       )}
+
+      {/* Scene Navigation */}
+      <div className="focus-fade fixed bottom-4 left-0 right-0 flex items-center justify-center gap-4 px-4 pb-safe">
+        <button
+          onClick={() => prevScene && navigate(`/edit/${prevScene.id}`)}
+          disabled={!prevScene}
+          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-700 rounded-lg text-xs text-ink-300 disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Prev
+        </button>
+        <span className="text-xs text-ink-500">
+          {currentIndex + 1} / {sortedScenes.length}
+        </span>
+        <button
+          onClick={() => nextScene && navigate(`/edit/${nextScene.id}`)}
+          disabled={!nextScene}
+          className="flex items-center gap-1 px-3 py-2 bg-ink-900/90 border border-ink-700 rounded-lg text-xs text-ink-300 disabled:opacity-30 disabled:cursor-not-allowed backdrop-blur-sm"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Pulse Check Modal */}
       <AnimatePresence>
