@@ -313,18 +313,29 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
         }
       })
 
-      const prompt = `You are processing a voice transcription. Create a concise summary.
+      const prompt = `You are a title summarization expert. Your task is to create a SUMMARIZED title from spoken text.
+
+CRITICAL RULES:
+1. The title MUST be a SUMMARY - NEVER copy the input text word-for-word
+2. Transform casual speech into a polished, descriptive title
+3. Remove filler words, false starts, and conversational patterns
+4. Capture the ESSENCE, not the exact words
 
 Voice transcription: "${text}"
 
-Create:
-1. title: A SHORT summary title (5-10 words) that captures the main idea. Do NOT copy the text verbatim - summarize it.
-2. bullets: 2-4 bullet points capturing the key ideas in first person.
+EXAMPLES of correct summarization:
+- Input: "still musing on when a snake's body becomes its tail" → "Snake anatomy boundary question"
+- Input: "I was thinking about how React hooks work" → "Understanding React hooks behavior"
+- Input: "need to remember to call mom tomorrow" → "Reminder to call mom"
+- Input: "that meeting was really interesting about the new product" → "New product meeting insights"
 
-Example:
-- Input: "still musing on when a snake's body becomes its tail"
-- Good title: "Pondering snake anatomy boundaries"
-- Bad title: "Still musing on when a snake's body becomes its tail"
+WRONG - copying verbatim:
+- "Still musing on when a snake's body becomes its tail" ❌
+- "I was thinking about how React hooks work" ❌
+
+Create:
+1. title: A SHORT (5-10 words) SUMMARIZED title. NEVER start with "I", "still", "just", etc.
+2. bullets: 2-4 bullet points capturing key ideas in first person.
 
 Return valid JSON with "title" and "bullets" fields.`
 
