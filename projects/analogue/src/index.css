@@ -139,9 +139,37 @@ textarea {
 /* Edit mode - comfortable serif writing */
 .prose-edit {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.125rem;
   line-height: 1.9;
   letter-spacing: 0.01em;
+}
+
+/* Text size variants */
+.text-size-small .prose-edit {
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+
+.text-size-medium .prose-edit {
+  font-size: 1.125rem;
+  line-height: 1.9;
+}
+
+.text-size-large .prose-edit {
+  font-size: 1.375rem;
+  line-height: 2;
+}
+
+/* Read mode text sizes */
+.text-size-small .prose-container {
+  font-size: 0.875rem;
+}
+
+.text-size-medium .prose-container {
+  font-size: 1rem;
+}
+
+.text-size-large .prose-container {
+  font-size: 1.25rem;
 }
 
 /* Focus mode - fade out distractions */

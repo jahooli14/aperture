@@ -14,7 +14,8 @@ import {
   Focus,
   ChevronLeft,
   ChevronRight,
-  Save
+  Save,
+  Type
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -44,7 +45,9 @@ export default function EditorPage() {
     toggleFocusMode,
     lastSavedAt,
     isSaving,
-    markSaved
+    markSaved,
+    textSize,
+    cycleTextSize
   } = useEditorStore()
 
   const proseRef = useRef<HTMLTextAreaElement>(null)
@@ -202,7 +205,7 @@ export default function EditorPage() {
 
   return (
     <div
-      className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe ${focusMode ? 'focus-mode-active' : ''}`}
+      className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe text-size-${textSize} ${focusMode ? 'focus-mode-active' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -267,6 +270,16 @@ export default function EditorPage() {
                 >
                   <Focus className="w-4 h-4" />
                   {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
+                </button>
+                <button
+                  onClick={() => {
+                    cycleTextSize()
+                    setShowMenu(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800"
+                >
+                  <Type className="w-4 h-4" />
+                  Text Size: {textSize.charAt(0).toUpperCase() + textSize.slice(1)}
                 </button>
               </motion.div>
             )}
