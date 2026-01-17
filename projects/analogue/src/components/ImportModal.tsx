@@ -13,7 +13,11 @@ export interface ImportedScene {
   title: string
   section: NarrativeSection
   prose: string
+  footnotes: string
   wordCount: number // Pre-computed
+  chapterId: string | null
+  chapterTitle: string | null
+  sceneNumber: number | null
 }
 
 type SplitMethod = 'chapters' | 'wordcount' | 'breaks'
@@ -56,6 +60,50 @@ function findParagraphBreaks(text: string): number[] {
   return breaks
 }
 
+// Extract footnotes from text
+function extractFootnotes(text: string): { prose: string; footnotes: string } {
+  // Common footnote patterns:
+  // [^1], [1], ^1 for inline markers
+  // Look for footnote section at the end (often after "---" or multiple blank lines)
+
+  const footnoteTexts: string[] = []
+
+  // Split text to find footnotes section (usually at end after separator)
+  const footnoteSectionMatch = text.match(/\n\s*(?:---|footnotes?:)\s*\n([\s\S]+)$/i)
+
+  if (footnoteSectionMatch) {
+    // Found explicit footnotes section
+    const footnoteSection = footnoteSectionMatch[1]
+    const proseOnly = text.slice(0, footnoteSectionMatch.index || text.length).trim()
+
+    // Extract individual footnotes from section
+    // Match patterns like: [1] text, [^1] text, 1. text, etc.
+    const footnotePattern = /^\s*(?:\[(?:\^)?(\d+)\]|(\d+)\.)\s+(.+?)(?=^\s*(?:\[(?:\^)?\d+\]|\d+\.)|$)/gms
+    let match
+
+    while ((match = footnotePattern.exec(footnoteSection)) !== null) {
+      const num = match[1] || match[2]
+      const text = match[3].trim()
+      footnoteTexts.push(`[^${num}] ${text}`)
+    }
+
+    return {
+      prose: proseOnly,
+      footnotes: footnoteTexts.join('\n\n')
+    }
+  }
+
+  // No explicit section - check for inline footnotes that might be scattered
+  // Pattern: [^1] text immediately following in parentheses or brackets
+  // For now, return text as-is if no footnote section found
+  // User can manually separate if needed
+
+  return {
+    prose: text,
+    footnotes: ''
+  }
+}
+
 function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[] {
   const scenes: ImportedScene[] = []
   const totalWords = countWords(text)
@@ -89,11 +137,16 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
 
         const chunk = text.slice(start, end).trim()
         if (chunk) {
+          const { prose, footnotes } = extractFootnotes(chunk)
           scenes.push({
             title: `Scene ${sceneIndex + 1}`,
             section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
-            prose: chunk,
-            wordCount: countWords(chunk)
+            prose,
+            footnotes,
+            wordCount: countWords(prose),
+            chapterId: null,
+            chapterTitle: null,
+            sceneNumber: null
           })
           sceneIndex++
         }
@@ -116,11 +169,16 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
           // Use the previous break point
           const sceneText = text.slice(currentStart, paragraphBreaks[lastBreakIdx] || breakPos).trim()
           if (sceneText) {
+            const { prose, footnotes } = extractFootnotes(sceneText)
             scenes.push({
               title: `Scene ${sceneIndex + 1}`,
               section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
-              prose: sceneText,
-              wordCount: currentWordCount
+              prose,
+              footnotes,
+              wordCount: countWords(prose),
+              chapterId: null,
+              chapterTitle: null,
+              sceneNumber: null
             })
             sceneIndex++
           }
@@ -135,61 +193,110 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
       // Add remaining text
       const remaining = text.slice(currentStart).trim()
       if (remaining) {
+        const { prose, footnotes } = extractFootnotes(remaining)
         scenes.push({
           title: `Scene ${sceneIndex + 1}`,
           section: SECTIONS[Math.min(Math.floor(sceneIndex / scenesPerSection), 4)],
-          prose: remaining,
-          wordCount: countWords(remaining)
+          prose,
+          footnotes,
+          wordCount: countWords(prose),
+          chapterId: null,
+          chapterTitle: null,
+          sceneNumber: null
         })
       }
     }
   } else if (splitMethod === 'chapters') {
-    // Chapter-based splitting
-    const chapterRegex = /^(#{1,3}\s+.+|Chapter\s+(?:\d+|[IVXLC]+)[:\s]*.*|Part\s+(?:\d+|[IVXLC]+)[:\s]*.*)$/gim
-    const markers: { index: number; title: string; end: number }[] = []
+    // Chapter-based splitting with proper chapter/scene distinction
+    // First, find all chapter markers (e.g., "Chapter 1", "Chapter One", "CHAPTER 1")
+    const chapterRegex = /^(?:Chapter|Part)\s+(?:\d+|[IVXLC]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten)[:\s]*(.*)$/gim
+    const chapterMarkers: { index: number; title: string; end: number; number: string }[] = []
 
-    let match
-    while ((match = chapterRegex.exec(text)) !== null) {
-      const title = match[1].replace(/^#{1,3}\s+/, '').replace(/^(Chapter|Part)\s+(\d+|[IVXLC]+)[:\s]*/i, 'Chapter $2: ').trim()
-      markers.push({
-        index: match.index,
-        title: title || `Scene ${markers.length + 1}`,
-        end: match.index + match[0].length
+    let chMatch
+    while ((chMatch = chapterRegex.exec(text)) !== null) {
+      const fullMatch = chMatch[0]
+      const chapterNum = fullMatch.match(/(?:Chapter|Part)\s+((?:\d+|[IVXLC]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))/i)?.[1] || String(chapterMarkers.length + 1)
+      const subtitle = chMatch[1]?.trim() || ''
+      const title = subtitle ? `Chapter ${chapterNum}: ${subtitle}` : `Chapter ${chapterNum}`
+
+      chapterMarkers.push({
+        index: chMatch.index,
+        title,
+        number: chapterNum,
+        end: chMatch.index + fullMatch.length
       })
     }
 
-    if (markers.length === 0) {
+    if (chapterMarkers.length === 0) {
       // No chapters found, fall back to word count
       return parseManuscript(text, 'wordcount')
     }
 
-    // Add content before first marker
-    if (markers[0].index > 100) {
-      const opening = text.slice(0, markers[0].index).trim()
-      if (opening) {
-        scenes.push({
-          title: 'Opening',
-          section: 'departure',
-          prose: opening,
-          wordCount: countWords(opening)
+    // Process each chapter
+    let sceneGlobalIndex = 0
+    const actualScenesPerSection = Math.max(1, Math.ceil(chapterMarkers.length * 2 / 5)) // Estimate scenes per section
+
+    for (let chIdx = 0; chIdx < chapterMarkers.length; chIdx++) {
+      const chapterStart = chapterMarkers[chIdx].end
+      const chapterEnd = chIdx < chapterMarkers.length - 1 ? chapterMarkers[chIdx + 1].index : text.length
+      const chapterContent = text.slice(chapterStart, chapterEnd).trim()
+      const chapterId = `chapter-${chapterMarkers[chIdx].number}`
+
+      if (chapterContent.length < 50) continue
+
+      // Within this chapter, look for scene markers
+      // Patterns: standalone numbers (1, 2, 3), markdown headers with numbers (# 1, ## 2)
+      // Scene breaks (*** or ---)
+      const sceneRegex = /^(?:#{1,3}\s+)?(\d+)\s*$/gm
+      const sceneMarkers: { index: number; number: number; end: number }[] = []
+
+      let scMatch
+      while ((scMatch = sceneRegex.exec(chapterContent)) !== null) {
+        sceneMarkers.push({
+          index: scMatch.index,
+          number: parseInt(scMatch[1]),
+          end: scMatch.index + scMatch[0].length
         })
       }
-    }
 
-    // Extract content between markers
-    const actualScenesPerSection = Math.max(1, Math.ceil(markers.length / 5))
-    for (let i = 0; i < markers.length; i++) {
-      const start = markers[i].end
-      const end = i < markers.length - 1 ? markers[i + 1].index : text.length
-      const content = text.slice(start, end).trim()
-
-      if (content.length > 50) {
+      // If no scene markers found, treat entire chapter as one scene
+      if (sceneMarkers.length === 0) {
+        const { prose, footnotes } = extractFootnotes(chapterContent)
         scenes.push({
-          title: markers[i].title,
-          section: SECTIONS[Math.min(Math.floor(i / actualScenesPerSection), 4)],
-          prose: content,
-          wordCount: countWords(content)
+          title: chapterMarkers[chIdx].title,
+          section: SECTIONS[Math.min(Math.floor(sceneGlobalIndex / actualScenesPerSection), 4)],
+          prose,
+          footnotes,
+          wordCount: countWords(prose),
+          chapterId,
+          chapterTitle: chapterMarkers[chIdx].title,
+          sceneNumber: 1
         })
+        sceneGlobalIndex++
+      } else {
+        // Process each scene within the chapter
+        for (let scIdx = 0; scIdx < sceneMarkers.length; scIdx++) {
+          const sceneStart = sceneMarkers[scIdx].end
+          const sceneEnd = scIdx < sceneMarkers.length - 1 ? sceneMarkers[scIdx].index : chapterContent.length
+          const sceneContent = text.slice(chapterStart + sceneStart, chapterStart + sceneEnd).trim()
+
+          if (sceneContent.length > 50) {
+            const { prose, footnotes } = extractFootnotes(sceneContent)
+            const sceneNumber = sceneMarkers[scIdx].number
+
+            scenes.push({
+              title: `${chapterMarkers[chIdx].title} - Scene ${sceneNumber}`,
+              section: SECTIONS[Math.min(Math.floor(sceneGlobalIndex / actualScenesPerSection), 4)],
+              prose,
+              footnotes,
+              wordCount: countWords(prose),
+              chapterId,
+              chapterTitle: chapterMarkers[chIdx].title,
+              sceneNumber
+            })
+            sceneGlobalIndex++
+          }
+        }
       }
     }
   } else {
@@ -205,11 +312,16 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
     parts.forEach((part, i) => {
       const trimmed = part.trim()
       if (trimmed.length > 50) {
+        const { prose, footnotes } = extractFootnotes(trimmed)
         scenes.push({
           title: `Scene ${scenes.length + 1}`,
           section: SECTIONS[Math.min(Math.floor(i / actualScenesPerSection), 4)],
-          prose: trimmed,
-          wordCount: countWords(trimmed)
+          prose,
+          footnotes,
+          wordCount: countWords(prose),
+          chapterId: null,
+          chapterTitle: null,
+          sceneNumber: null
         })
       }
     })
