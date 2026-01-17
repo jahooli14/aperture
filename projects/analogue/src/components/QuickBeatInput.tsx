@@ -48,7 +48,7 @@ export default function QuickBeatInput({ scene }: QuickBeatInputProps) {
 
   return (
     <div
-      className="px-4 py-2 border-b border-ink-800 bg-ink-900/30"
+      className="px-3 py-1.5 border-b border-ink-800 bg-ink-900/30"
       onTouchStart={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
