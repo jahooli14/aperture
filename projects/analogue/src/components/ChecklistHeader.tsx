@@ -52,8 +52,13 @@ export default function ChecklistHeader({ scene }: ChecklistHeaderProps) {
         />
       </div>
 
-      {/* Two-row scrollable checklist */}
-      <div className="overflow-x-auto scrollbar-hide">
+      {/* Two-row scrollable checklist - stop propagation to prevent scene navigation */}
+      <div
+        className="overflow-x-auto scrollbar-hide"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
         <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-1 px-2 py-1.5">
           {sortedChecklist.map(item => (
             <ChecklistItemButton

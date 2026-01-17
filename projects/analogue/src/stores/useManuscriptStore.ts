@@ -174,6 +174,10 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           chapterId: null,
           chapterTitle: null,
           sceneNumber: null,
+          sceneBeat: null,
+          chapterTheme: null,
+          charactersPresent: [],
+          motifTags: [],
           prose: '',
           footnotes: '',
           wordCount: 0,
@@ -221,6 +225,10 @@ export const useManuscriptStore = create<ManuscriptStore>()(
             chapterId: null,
             chapterTitle: null,
             sceneNumber: null,
+            sceneBeat: null,
+            chapterTheme: null,
+            charactersPresent: [],
+            motifTags: [],
             prose: imported.prose,
             footnotes: '',
             wordCount: imported.prose.trim().split(/\s+/).filter(Boolean).length,
@@ -299,16 +307,16 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         })
       },
 
-      deleteScene: async (sceneId) => {
+      deleteScene: async (sceneId: string) => {
         const { manuscript } = get()
         if (!manuscript) return
 
-        const updatedScenes = manuscript.scenes.filter(s => s.id !== sceneId)
+        const updatedScenes = manuscript.scenes.filter((s: SceneNode) => s.id !== sceneId)
 
         await db.sceneNodes.delete(sceneId)
         await queueForSync({ type: 'delete', table: 'sceneNodes', data: { id: sceneId } })
 
-        const totalWordCount = updatedScenes.reduce((sum, s) => sum + s.wordCount, 0)
+        const totalWordCount = updatedScenes.reduce((sum: number, s: SceneNode) => sum + s.wordCount, 0)
 
         set({
           manuscript: { ...manuscript, scenes: updatedScenes, totalWordCount },
@@ -316,12 +324,12 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         })
       },
 
-      reorderScenes: async (sceneIds) => {
+      reorderScenes: async (sceneIds: string[]) => {
         const { manuscript } = get()
         if (!manuscript) return
 
-        const reorderedScenes = sceneIds.map((id, index) => {
-          const scene = manuscript.scenes.find(s => s.id === id)!
+        const reorderedScenes = sceneIds.map((id: string, index: number) => {
+          const scene = manuscript.scenes.find((s: SceneNode) => s.id === id)!
           return { ...scene, order: index }
         })
 
@@ -332,7 +340,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         set({ manuscript: { ...manuscript, scenes: reorderedScenes } })
       },
 
-      setActiveScene: (sceneId) => {
+      setActiveScene: (sceneId: string | null) => {
         set({ activeSceneId: sceneId })
       },
 
@@ -342,7 +350,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await updateManuscript({ maskModeEnabled: !manuscript.maskModeEnabled })
       },
 
-      activateSense: async (sense, sceneId) => {
+      activateSense: async (sense: Sense, sceneId: string) => {
         const { manuscript, updateManuscript } = get()
         if (!manuscript) return
 
@@ -364,7 +372,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await updateManuscript({ sensoryAudit: updatedAudit })
       },
 
-      addReverberation: async (reverberation) => {
+      addReverberation: async (reverberation: Omit<Reverberation, 'id' | 'createdAt'>) => {
         const { manuscript, updateManuscript } = get()
         if (!manuscript) return
 
@@ -382,18 +390,18 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         })
       },
 
-      linkReverberation: async (revId, revealSceneId) => {
+      linkReverberation: async (revId: string, revealSceneId: string) => {
         const { manuscript, updateManuscript } = get()
         if (!manuscript) return
 
-        const updatedLibrary = manuscript.reverberationLibrary.map(r =>
+        const updatedLibrary = manuscript.reverberationLibrary.map((r: Reverberation) =>
           r.id === revId ? { ...r, linkedRevealSceneId: revealSceneId } : r
         )
 
         await updateManuscript({ reverberationLibrary: updatedLibrary })
       },
 
-      addGlassesMention: async (mention) => {
+      addGlassesMention: async (mention: Omit<GlassesMention, 'id' | 'createdAt'>) => {
         const { manuscript, updateScene } = get()
         if (!manuscript) return
 
@@ -406,7 +414,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await db.glassesMentions.put({ ...newMention, manuscriptId: manuscript.id })
         await queueForSync({ type: 'create', table: 'glassesMentions', data: { ...newMention, manuscriptId: manuscript.id } as unknown as Record<string, unknown> })
 
-        const scene = manuscript.scenes.find(s => s.id === mention.sceneId)
+        const scene = manuscript.scenes.find((s: SceneNode) => s.id === mention.sceneId)
         if (scene) {
           await updateScene(scene.id, {
             glassesmentions: [...scene.glassesmentions, newMention]
@@ -414,7 +422,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         }
       },
 
-      updateGlassesMention: async (mentionId, updates) => {
+      updateGlassesMention: async (mentionId: string, updates: Partial<GlassesMention>) => {
         const { manuscript } = get()
         if (!manuscript) return
 
@@ -439,7 +447,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
     }),
     {
       name: 'analogue-manuscript',
-      partialize: (state) => ({
+      partialize: (state: ManuscriptStore) => ({
         manuscript: state.manuscript,
         activeSceneId: state.activeSceneId
       })
