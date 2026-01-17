@@ -23,6 +23,7 @@ import { applyMask, getStorageText } from '../lib/mask'
 import { flagGlassesMention } from '../lib/validation'
 import PulseCheck from '../components/PulseCheck'
 import ChecklistHeader from '../components/ChecklistHeader'
+import SceneTimeline from '../components/SceneTimeline'
 import ReverbTagModal from '../components/ReverbTagModal'
 
 export default function EditorPage() {
@@ -212,6 +213,15 @@ export default function EditorPage() {
       {/* Pinned Header Checklist */}
       <div className="focus-fade">
         <ChecklistHeader scene={scene} />
+      </div>
+
+      {/* Scene Timeline */}
+      <div className="focus-fade">
+        <SceneTimeline
+          scenes={sortedScenes}
+          currentSceneId={scene.id}
+          currentChapterId={scene.chapterId}
+        />
       </div>
 
       {/* Editor Header */}
