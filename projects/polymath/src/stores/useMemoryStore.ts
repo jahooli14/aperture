@@ -70,9 +70,10 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
 
       const { memories: data } = await response.json()
 
-      // Cache the fetched data for offline use
+      // Cache the fetched data for offline use - MUST await to ensure cache is populated
       if (data && data.length > 0) {
-        import('../lib/db').then(({ readingDb }) => {
+        try {
+          const { readingDb } = await import('../lib/db')
           const memoriesToCache = data.map((m: Memory) => ({
             id: m.id,
             title: m.title || 'Untitled',
@@ -82,9 +83,11 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
             image_urls: m.image_urls || undefined,
             created_at: m.audiopen_created_at || new Date().toISOString()
           }))
-          readingDb.bulkCacheMemories(memoriesToCache)
-            .catch(e => console.warn('[MemoryStore] Failed to cache memories:', e))
-        })
+          await readingDb.bulkCacheMemories(memoriesToCache)
+          console.log(`[MemoryStore] Cached ${memoriesToCache.length} memories for offline use`)
+        } catch (cacheError) {
+          console.warn('[MemoryStore] Failed to cache memories:', cacheError)
+        }
       }
 
       // Proactively fetch local pending items to ensure they don't "disappear" while online
