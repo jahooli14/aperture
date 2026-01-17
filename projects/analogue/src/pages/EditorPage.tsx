@@ -73,13 +73,27 @@ export default function EditorPage() {
   const prevScene = currentIndex > 0 ? sortedScenes[currentIndex - 1] : null
   const nextScene = currentIndex < sortedScenes.length - 1 ? sortedScenes[currentIndex + 1] : null
 
-  // Swipe handlers
+  // Swipe handlers - only trigger if not interacting with textarea
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Don't trigger swipe if user is interacting with a textarea or input
+    const target = e.target as HTMLElement
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
+      setTouchStart(null)
+      return
+    }
     setTouchStart(e.touches[0].clientX)
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return
+
+    // Don't trigger swipe if user is interacting with a textarea or input
+    const target = e.target as HTMLElement
+    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
+      setTouchStart(null)
+      return
+    }
+
     const touchEnd = e.changedTouches[0].clientX
     const diff = touchStart - touchEnd
     const threshold = 100
@@ -118,6 +132,36 @@ export default function EditorPage() {
       setShowPulseCheck(true)
     }
   }, [scene, setShowPulseCheck])
+
+  // Auto-focus textarea when switching to edit mode
+  useEffect(() => {
+    if (!isReadMode && proseRef.current) {
+      // Small delay to ensure the textarea is rendered
+      const timer = setTimeout(() => {
+        proseRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isReadMode])
+
+  // Handle safe area for keyboard on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (proseRef.current && document.activeElement === proseRef.current) {
+        // Scroll cursor into view when keyboard appears
+        const cursorPosition = proseRef.current.selectionStart
+        const lines = proseRef.current.value.substring(0, cursorPosition).split('\n')
+        const lineHeight = 24 // approximate line height in pixels
+        const scrollTop = (lines.length - 1) * lineHeight
+
+        // Smooth scroll to cursor position
+        proseRef.current.scrollTop = Math.max(0, scrollTop - 100)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Check for glasses mentions on prose change
   const checkForGlasses = useCallback((text: string) => {
@@ -169,12 +213,30 @@ export default function EditorPage() {
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    if (start !== end) {
+
+    // Only show selection toolbar if there's actual selected text (more than a few characters)
+    // and the user has finished selecting (not just placing cursor)
+    if (start !== end && end - start > 3) {
       const text = textarea.value.slice(start, end)
-      setSelection(text, start, end)
+
+      // Debounce to avoid interference while user is still selecting
+      setTimeout(() => {
+        // Check selection is still valid after delay
+        if (textarea.selectionStart === start && textarea.selectionEnd === end) {
+          setSelection(text, start, end)
+        }
+      }, 300)
     } else {
       clearSelection()
     }
+  }
+
+  const handleMouseDown = () => {
+    clearSelection()
+  }
+
+  const handleMouseUp = () => {
+    // Text selection will be handled by onSelect event
   }
 
   const handleTagWisdom = () => {
@@ -304,7 +366,11 @@ export default function EditorPage() {
       <div className="focus-fade flex items-center justify-between px-4 py-2 border-b border-ink-800 bg-ink-900/50">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsReadMode(false)}
+            onClick={() => {
+              setIsReadMode(false)
+              // Focus the textarea after a brief delay to ensure it's rendered
+              setTimeout(() => proseRef.current?.focus(), 150)
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
               !isReadMode
                 ? 'bg-section-departure text-white'
@@ -375,12 +441,17 @@ export default function EditorPage() {
             value={displayProse}
             onChange={handleProseChange}
             onSelect={handleTextSelect}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleMouseDown}
+            onTouchEnd={handleMouseUp}
             placeholder="Begin writing...
 
 Start a new paragraph by pressing Enter twice.
 
 The Read mode will show your text with proper paragraph formatting."
-            className="flex-1 w-full p-4 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit"
+            className="flex-1 w-full p-4 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           />
         )}
 
