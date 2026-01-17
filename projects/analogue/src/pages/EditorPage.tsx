@@ -259,6 +259,21 @@ export default function EditorPage() {
     manuscript.maskModeEnabled
   )
 
+  // Parse footnotes into numbered array
+  const parseFootnotes = (footnotesText: string): string[] => {
+    if (!footnotesText.trim()) return []
+
+    // Split by double newlines to get individual footnotes
+    const footnotes = footnotesText
+      .split(/\n\n+/)
+      .map(note => note.trim())
+      .filter(note => note.length > 0)
+
+    return footnotes
+  }
+
+  const footnotes = parseFootnotes(scene.footnotes)
+
   // Format time since last save
   const getSaveStatus = () => {
     if (isSaving) return 'Saving...'
@@ -290,7 +305,7 @@ export default function EditorPage() {
       </div>
 
       {/* Editor Header */}
-      <header className="focus-fade flex items-center justify-between p-3 border-b border-ink-800">
+      <header className="focus-fade flex items-center justify-between px-3 py-2 border-b border-ink-800">
         <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
           <ArrowLeft className="w-5 h-5 text-ink-400" />
         </button>
@@ -363,7 +378,7 @@ export default function EditorPage() {
       </header>
 
       {/* Mode toggle */}
-      <div className="focus-fade flex items-center justify-between px-4 py-2 border-b border-ink-800 bg-ink-900/50">
+      <div className="focus-fade flex items-center justify-between px-3 py-1.5 border-b border-ink-800 bg-ink-900/50">
         <div className="flex items-center gap-2">
           <button
             onClick={() => {
@@ -411,13 +426,13 @@ export default function EditorPage() {
       >
         {isReadMode ? (
           /* Read mode - formatted paragraphs */
-          <div className="flex-1 overflow-y-auto p-4 pb-safe">
+          <div className="flex-1 overflow-y-auto p-3 pb-safe">
             <div className="prose-container max-w-none">
               {displayProse.split(/\n\n+/).map((paragraph, i) => (
                 paragraph.trim() && (
                   <p
                     key={i}
-                    className="text-ink-100 text-base leading-loose mb-6 first:mt-0"
+                    className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
                     style={{ textIndent: i > 0 ? '2em' : '0' }}
                   >
                     {paragraph.split('\n').map((line, j) => (
@@ -432,27 +447,57 @@ export default function EditorPage() {
               {!displayProse && (
                 <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
               )}
+
+              {/* Footnotes section */}
+              {footnotes.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-ink-700">
+                  <div className="space-y-2">
+                    {footnotes.map((footnote, i) => (
+                      <p key={i} className="text-ink-400 text-sm leading-relaxed">
+                        <span className="text-ink-500">[{i + 1}]</span> {footnote}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          /* Edit mode - textarea with serif font */
-          <textarea
-            ref={proseRef}
-            value={displayProse}
-            onChange={handleProseChange}
-            onSelect={handleTextSelect}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchEnd={handleMouseUp}
-            placeholder="Begin writing...
+          /* Edit mode - textarea with serif font and footnotes display */
+          <div className="flex-1 overflow-y-auto">
+            <textarea
+              ref={proseRef}
+              value={displayProse}
+              onChange={handleProseChange}
+              onSelect={handleTextSelect}
+              onMouseDown={handleMouseDown}
+              onMouseUp={handleMouseUp}
+              onTouchStart={handleMouseDown}
+              onTouchEnd={handleMouseUp}
+              placeholder="Begin writing...
 
 Start a new paragraph by pressing Enter twice.
 
 The Read mode will show your text with proper paragraph formatting."
-            className="flex-1 w-full p-4 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none"
-            style={{ WebkitTapHighlightColor: 'transparent' }}
-          />
+              className="w-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none min-h-[300px]"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+            />
+
+            {/* Footnotes section in edit mode */}
+            {footnotes.length > 0 && (
+              <div className="px-3 pb-3">
+                <div className="mt-6 pt-4 border-t border-ink-700">
+                  <div className="space-y-2">
+                    {footnotes.map((footnote, i) => (
+                      <p key={i} className="text-ink-400 text-sm leading-relaxed">
+                        <span className="text-ink-500">[{i + 1}]</span> {footnote}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Selection toolbar */}

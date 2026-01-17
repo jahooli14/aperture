@@ -20,7 +20,7 @@ export default function ChecklistHeader({ scene }: ChecklistHeaderProps) {
   // If no checklist or pulse check not done, show minimal header
   if (!scene.checklist || scene.checklist.length === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-ink-900/50 border-b border-ink-800">
+      <div className="flex items-center gap-2 px-3 py-1 bg-ink-900/50 border-b border-ink-800">
         <span className="text-[10px] text-ink-500">
           Complete Pulse Check to generate checklist
         </span>
@@ -59,7 +59,7 @@ export default function ChecklistHeader({ scene }: ChecklistHeaderProps) {
         onTouchMove={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
       >
-        <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-1 px-2 py-1.5">
+        <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-1 px-2 py-1">
           {sortedChecklist.map(item => (
             <ChecklistItemButton
               key={item.id}

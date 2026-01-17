@@ -78,12 +78,12 @@ export default function MotifTagSelector({ scene, allScenes }: MotifTagSelectorP
 
   return (
     <div
-      className="px-4 py-2 border-b border-ink-800 bg-ink-900/30"
+      className="px-3 py-1.5 border-b border-ink-800 bg-ink-900/30"
       onTouchStart={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-center gap-2 mb-1">
         <Hash className="w-3 h-3 text-ink-500" />
         <span className="text-[10px] text-ink-500 uppercase tracking-wider">Motifs & Threads</span>
       </div>

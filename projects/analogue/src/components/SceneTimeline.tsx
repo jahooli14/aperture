@@ -73,13 +73,13 @@ export default function SceneTimeline({
 
   return (
     <div
-      className="px-4 py-2 bg-ink-900/50 border-b border-ink-800"
+      className="px-3 py-1.5 bg-ink-900/50 border-b border-ink-800"
       onTouchStart={(e) => e.stopPropagation()}
       onTouchMove={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
     >
       {/* Chapter title and progress */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] text-ink-500 uppercase tracking-wider">
           {currentScene?.chapterTitle || 'Scenes'}
         </span>
@@ -112,41 +112,12 @@ export default function SceneTimeline({
               <div
                 className={`
                   rounded-full transition-all
-                  ${isCurrent ? 'w-4 h-4' : 'w-2.5 h-2.5'}
+                  ${isCurrent ? 'w-3.5 h-3.5' : 'w-2 h-2'}
                   ${getStatusColor(scene, isCurrent)}
                   ${getStatusRing(scene, isCurrent)}
                   ${!hasContent && !isCurrent ? 'opacity-50' : ''}
                 `}
               />
-
-              {/* Character presence indicators */}
-              {characters.length > 0 && (
-                <div className="flex items-center gap-px mt-1">
-                  {characters.slice(0, 3).map(char => (
-                    <div
-                      key={char}
-                      className={`w-1.5 h-1.5 rounded-full ${getCharacterColor(char)} ${isCurrent ? 'opacity-100' : 'opacity-60'}`}
-                      title={char}
-                    />
-                  ))}
-                  {characters.length > 3 && (
-                    <span className="text-[7px] text-ink-500 ml-0.5">+{characters.length - 3}</span>
-                  )}
-                </div>
-              )}
-
-              {/* Current scene indicator - small number below */}
-              {isCurrent && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-3 whitespace-nowrap"
-                >
-                  <span className="text-[9px] text-ink-400 max-w-[60px] truncate block text-center">
-                    {scene.sceneNumber || index + 1}
-                  </span>
-                </motion.div>
-              )}
             </motion.button>
           )
         })}
@@ -154,41 +125,6 @@ export default function SceneTimeline({
         {/* Spacer for overflow scrolling */}
         <div className="w-2 flex-shrink-0" />
       </div>
-
-      {/* Word count bar (proportional) */}
-      <div className="flex items-end gap-px mt-4 h-2">
-        {displayScenes.map((scene) => {
-          const maxWords = Math.max(...displayScenes.map(s => s.wordCount || 1))
-          const height = Math.max(2, (scene.wordCount / maxWords) * 8)
-          const isCurrent = scene.id === currentSceneId
-
-          return (
-            <div
-              key={scene.id}
-              className={`flex-1 rounded-t transition-all ${
-                isCurrent ? 'bg-ink-400' : 'bg-ink-800'
-              }`}
-              style={{ height: `${height}px` }}
-              title={`${scene.wordCount} words`}
-            />
-          )
-        })}
-      </div>
-
-      {/* Character legend (if any characters tracked) */}
-      {chapterCharacters.length > 0 && (
-        <div className="flex items-center gap-2 mt-2 overflow-x-auto scrollbar-hide">
-          {chapterCharacters.slice(0, 5).map(char => (
-            <div key={char} className="flex items-center gap-1 flex-shrink-0">
-              <div className={`w-2 h-2 rounded-full ${getCharacterColor(char)}`} />
-              <span className="text-[9px] text-ink-500">{char}</span>
-            </div>
-          ))}
-          {chapterCharacters.length > 5 && (
-            <span className="text-[9px] text-ink-600">+{chapterCharacters.length - 5} more</span>
-          )}
-        </div>
-      )}
     </div>
   )
 }
