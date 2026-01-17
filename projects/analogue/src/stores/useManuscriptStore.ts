@@ -30,7 +30,7 @@ interface ManuscriptStore {
 
   // Scene actions
   createScene: (section: NarrativeSection, title: string) => Promise<SceneNode>
-  importScenes: (scenes: { title: string; section: NarrativeSection; prose: string }[]) => Promise<void>
+  importScenes: (scenes: { title: string; section: NarrativeSection; prose: string; footnotes: string; wordCount: number; chapterId: string | null; chapterTitle: string | null; sceneNumber: number | null }[]) => Promise<void>
   updateScene: (sceneId: string, updates: Partial<SceneNode>) => Promise<void>
   deleteScene: (sceneId: string) => Promise<void>
   reorderScenes: (sceneIds: string[]) => Promise<void>
@@ -222,16 +222,16 @@ export const useManuscriptStore = create<ManuscriptStore>()(
             order: i,
             title: imported.title,
             section: imported.section,
-            chapterId: null,
-            chapterTitle: null,
-            sceneNumber: null,
+            chapterId: imported.chapterId,
+            chapterTitle: imported.chapterTitle,
+            sceneNumber: imported.sceneNumber,
             sceneBeat: null,
             chapterTheme: null,
             charactersPresent: [],
             motifTags: [],
             prose: imported.prose,
-            footnotes: '',
-            wordCount: imported.prose.trim().split(/\s+/).filter(Boolean).length,
+            footnotes: imported.footnotes,
+            wordCount: imported.wordCount,
             identityType: null,
             sensoryFocus: null,
             senseNotes: null,

@@ -15,6 +15,7 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   MoreVertical,
   X
 } from 'lucide-react'
@@ -48,6 +49,9 @@ export default function TableOfContents() {
   const [newSceneTitle, setNewSceneTitle] = useState('')
   const [editingScene, setEditingScene] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
+  const [editingChapterTheme, setEditingChapterTheme] = useState<string | null>(null)
+  const [chapterThemeText, setChapterThemeText] = useState('')
 
   // Redirect if no manuscript after a brief delay (allows for store hydration)
   useEffect(() => {
@@ -67,10 +71,44 @@ export default function TableOfContents() {
     )
   }
 
-  const scenesBySection = SECTIONS.map(section => ({
-    ...section,
-    scenes: manuscript.scenes.filter(s => s.section === section.id).sort((a, b) => a.order - b.order)
-  }))
+  // Group scenes by section, then by chapter
+  const scenesBySection = SECTIONS.map(section => {
+    const sectionScenes = manuscript.scenes
+      .filter(s => s.section === section.id)
+      .sort((a, b) => a.order - b.order)
+
+    // Group by chapter if any scenes have chapter info
+    const hasChapters = sectionScenes.some(s => s.chapterId !== null)
+
+    if (!hasChapters) {
+      return { ...section, scenes: sectionScenes, chapters: [] }
+    }
+
+    // Group scenes by chapter
+    const chapterMap = new Map<string, SceneNode[]>()
+    const unchapteredScenes: SceneNode[] = []
+
+    sectionScenes.forEach(scene => {
+      if (scene.chapterId && scene.chapterTitle) {
+        if (!chapterMap.has(scene.chapterId)) {
+          chapterMap.set(scene.chapterId, [])
+        }
+        chapterMap.get(scene.chapterId)!.push(scene)
+      } else {
+        unchapteredScenes.push(scene)
+      }
+    })
+
+    const chapters = Array.from(chapterMap.entries()).map(([id, scenes]) => ({
+      id,
+      title: scenes[0]?.chapterTitle || 'Untitled Chapter',
+      theme: scenes[0]?.chapterTheme || null,
+      scenes: scenes.sort((a, b) => (a.sceneNumber || 0) - (b.sceneNumber || 0)),
+      wordCount: scenes.reduce((sum, s) => sum + s.wordCount, 0)
+    }))
+
+    return { ...section, scenes: unchapteredScenes, chapters }
+  })
 
   const handleAddScene = async () => {
     if (!showAddScene || !newSceneTitle.trim()) return
@@ -124,6 +162,38 @@ export default function TableOfContents() {
       isFirst: index === 0,
       isLast: index === sectionScenes.length - 1
     }
+  }
+
+  const toggleChapter = (chapterId: string) => {
+    setExpandedChapters(prev => {
+      const next = new Set(prev)
+      if (next.has(chapterId)) {
+        next.delete(chapterId)
+      } else {
+        next.add(chapterId)
+      }
+      return next
+    })
+  }
+
+  const handleEditChapterTheme = (chapterId: string, currentTheme: string | null) => {
+    setEditingChapterTheme(chapterId)
+    setChapterThemeText(currentTheme || '')
+  }
+
+  const handleSaveChapterTheme = async (chapterId: string) => {
+    if (!manuscript) return
+
+    // Update all scenes in this chapter with the new theme
+    const chapterScenes = manuscript.scenes.filter(s => s.chapterId === chapterId)
+    for (const scene of chapterScenes) {
+      await useManuscriptStore.getState().updateScene(scene.id, {
+        chapterTheme: chapterThemeText.trim() || null
+      })
+    }
+
+    setEditingChapterTheme(null)
+    setChapterThemeText('')
   }
 
   return (
@@ -193,11 +263,179 @@ export default function TableOfContents() {
                 {section.label}
               </span>
               <span className="text-xs text-ink-500">
-                {section.scenes.length} scene{section.scenes.length !== 1 ? 's' : ''}
+                {section.chapters.length > 0
+                  ? `${section.chapters.length} chapter${section.chapters.length !== 1 ? 's' : ''}`
+                  : `${section.scenes.length} scene${section.scenes.length !== 1 ? 's' : ''}`
+                }
               </span>
             </div>
 
-            {/* Scenes in section */}
+            {/* Chapters in section */}
+            {section.chapters.map(chapter => {
+              const isExpanded = expandedChapters.has(chapter.id)
+              const isEditingTheme = editingChapterTheme === chapter.id
+
+              return (
+                <div key={chapter.id} className="border-t border-ink-800/50">
+                  {/* Chapter header */}
+                  <div className="bg-ink-900/30">
+                    <button
+                      onClick={() => toggleChapter(chapter.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 pl-8 text-left hover:bg-ink-900/50 transition-colors"
+                    >
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-ink-500" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-ink-500" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-ink-100">
+                          {chapter.title}
+                        </div>
+                        <div className="text-xs text-ink-500">
+                          {chapter.scenes.length} scene{chapter.scenes.length !== 1 ? 's' : ''} · {chapter.wordCount.toLocaleString()} words
+                        </div>
+                      </div>
+                      <BookOpen className="w-4 h-4 text-ink-600" />
+                    </button>
+
+                    {/* Chapter theme */}
+                    {isExpanded && (
+                      <div className="px-4 pb-2 pl-16">
+                        {isEditingTheme ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={chapterThemeText}
+                              onChange={(e) => setChapterThemeText(e.target.value)}
+                              placeholder="Chapter theme/arc (e.g., 'Introduction to protagonist's world')"
+                              className="flex-1 px-2 py-1 bg-ink-800 border border-ink-700 rounded text-xs text-ink-100 placeholder:text-ink-600"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveChapterTheme(chapter.id)
+                                if (e.key === 'Escape') setEditingChapterTheme(null)
+                              }}
+                            />
+                            <button
+                              onClick={() => handleSaveChapterTheme(chapter.id)}
+                              className="px-2 py-1 bg-section-alignment rounded text-xs text-white"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleEditChapterTheme(chapter.id, chapter.theme)}
+                            className="w-full text-left text-xs text-ink-400 italic hover:text-ink-300"
+                          >
+                            {chapter.theme || '+ Add chapter theme/arc'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Scenes in chapter */}
+                  <AnimatePresence>
+                    {isExpanded && chapter.scenes.map(scene => {
+                      const StatusIcon = STATUS_ICONS[scene.validationStatus]
+                      const isEditing = editingScene === scene.id
+                      const { isFirst, isLast } = getScenePosition(scene)
+
+                      return (
+                        <motion.div
+                          key={scene.id}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="relative"
+                        >
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => navigate(`/edit/${scene.id}`)}
+                              className="flex-1 flex items-center gap-3 px-4 py-3 pl-16 text-left hover:bg-ink-900/50 transition-colors"
+                            >
+                              <StatusIcon
+                                className={`w-4 h-4 ${STATUS_COLORS[scene.validationStatus]}`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm text-ink-100 truncate">
+                                  {scene.sceneNumber ? `${scene.sceneNumber}. ` : ''}{scene.title}
+                                </div>
+                                <div className="text-xs text-ink-500">
+                                  {scene.wordCount} words
+                                  {scene.sensoryFocus && ` · ${scene.sensoryFocus}`}
+                                  {scene.sceneBeat && ` · ${scene.sceneBeat.slice(0, 40)}${scene.sceneBeat.length > 40 ? '...' : ''}`}
+                                </div>
+                              </div>
+                            </button>
+
+                            {/* Scene actions toggle */}
+                            <button
+                              onClick={() => setEditingScene(isEditing ? null : scene.id)}
+                              className="p-3 text-ink-500 hover:text-ink-300"
+                            >
+                              {isEditing ? (
+                                <X className="w-4 h-4" />
+                              ) : (
+                                <MoreVertical className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Scene actions panel */}
+                          <AnimatePresence>
+                            {isEditing && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="flex items-center gap-2 px-4 py-2 pl-16 bg-ink-900/50">
+                                  {/* Move up */}
+                                  <button
+                                    onClick={() => handleMoveScene(scene, 'up')}
+                                    disabled={isFirst}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  >
+                                    <ChevronUp className="w-3 h-3" />
+                                    Up
+                                  </button>
+
+                                  {/* Move down */}
+                                  <button
+                                    onClick={() => handleMoveScene(scene, 'down')}
+                                    disabled={isLast}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  >
+                                    <ChevronDown className="w-3 h-3" />
+                                    Down
+                                  </button>
+
+                                  <div className="flex-1" />
+
+                                  {/* Delete */}
+                                  <button
+                                    onClick={() => setDeleteConfirm(scene.id)}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+                </div>
+              )
+            })}
+
+            {/* Unchaptered scenes in section */}
             <AnimatePresence>
               {section.scenes.map(scene => {
                 const StatusIcon = STATUS_ICONS[scene.validationStatus]

@@ -85,6 +85,8 @@ body {
 textarea {
   resize: none;
   -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Selection styling */
@@ -141,6 +143,9 @@ textarea {
   font-family: Georgia, 'Times New Roman', serif;
   line-height: 1.9;
   letter-spacing: 0.01em;
+  scroll-padding-bottom: 150px; /* Keep cursor visible above keyboard */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Text size variants */
