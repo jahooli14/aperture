@@ -24,6 +24,9 @@ import { flagGlassesMention } from '../lib/validation'
 import PulseCheck from '../components/PulseCheck'
 import ChecklistHeader from '../components/ChecklistHeader'
 import SceneTimeline from '../components/SceneTimeline'
+import QuickBeatInput from '../components/QuickBeatInput'
+import CharacterChips from '../components/CharacterChips'
+import MotifTagSelector from '../components/MotifTagSelector'
 import ReverbTagModal from '../components/ReverbTagModal'
 
 export default function EditorPage() {
@@ -326,6 +329,13 @@ export default function EditorPage() {
         <span className="text-xs text-ink-500">
           {scene.section}
         </span>
+      </div>
+
+      {/* Scene Context: Beat, Characters, Motifs */}
+      <div className="focus-fade">
+        <QuickBeatInput scene={scene} />
+        <CharacterChips scene={scene} allScenes={sortedScenes} />
+        <MotifTagSelector scene={scene} allScenes={sortedScenes} />
       </div>
 
       {/* Prose Pane */}
