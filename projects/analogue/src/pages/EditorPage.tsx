@@ -23,6 +23,10 @@ import { applyMask, getStorageText } from '../lib/mask'
 import { flagGlassesMention } from '../lib/validation'
 import PulseCheck from '../components/PulseCheck'
 import ChecklistHeader from '../components/ChecklistHeader'
+import SceneTimeline from '../components/SceneTimeline'
+import QuickBeatInput from '../components/QuickBeatInput'
+import CharacterChips from '../components/CharacterChips'
+import MotifTagSelector from '../components/MotifTagSelector'
 import ReverbTagModal from '../components/ReverbTagModal'
 
 export default function EditorPage() {
@@ -214,6 +218,15 @@ export default function EditorPage() {
         <ChecklistHeader scene={scene} />
       </div>
 
+      {/* Scene Timeline */}
+      <div className="focus-fade">
+        <SceneTimeline
+          scenes={sortedScenes}
+          currentSceneId={scene.id}
+          currentChapterId={scene.chapterId}
+        />
+      </div>
+
       {/* Editor Header */}
       <header className="focus-fade flex items-center justify-between p-3 border-b border-ink-800">
         <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
@@ -316,6 +329,13 @@ export default function EditorPage() {
         <span className="text-xs text-ink-500">
           {scene.section}
         </span>
+      </div>
+
+      {/* Scene Context: Beat, Characters, Motifs */}
+      <div className="focus-fade">
+        <QuickBeatInput scene={scene} />
+        <CharacterChips scene={scene} allScenes={sortedScenes} />
+        <MotifTagSelector scene={scene} allScenes={sortedScenes} />
       </div>
 
       {/* Prose Pane */}
