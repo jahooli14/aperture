@@ -47,13 +47,24 @@ body {
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
-  touch-action: manipulation;
 }
 
 #root {
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+/* Fix for flex scroll containers */
+.flex-1 {
+  min-height: 0;
+}
+
+/* Enable smooth touch scrolling */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 /* Scrollbar styling */
@@ -123,6 +134,37 @@ textarea {
   text-align: justify;
   hyphens: auto;
   -webkit-hyphens: auto;
+}
+
+/* Edit mode - comfortable serif writing */
+.prose-edit {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.125rem;
+  line-height: 1.9;
+  letter-spacing: 0.01em;
+}
+
+/* Focus mode - fade out distractions */
+.focus-mode-active .focus-fade {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.focus-mode-active:focus-within .focus-fade,
+.focus-mode-active:hover .focus-fade {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Auto-save indicator pulse */
+@keyframes save-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.save-indicator {
+  animation: save-pulse 1.5s ease-in-out infinite;
 }
 
 /* Line clamp utility */
