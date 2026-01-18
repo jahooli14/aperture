@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import {
@@ -63,7 +63,12 @@ export default function EditorPage() {
   const [showExport, setShowExport] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
-  const cursorPositionRef = useRef<number>(0) // Track cursor position across renders
+
+  // Local state for immediate UI updates (prevents cursor jumping)
+  const [localProse, setLocalProse] = useState<string>('')
+  const [isComposing, setIsComposing] = useState(false)
+  const cursorPositionRef = useRef<number>(0)
+  const debounceTimerRef = useRef<number | null>(null)
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
 
@@ -110,6 +115,18 @@ export default function EditorPage() {
     setTouchStart(null)
   }
 
+  // Sync local state with scene changes
+  useEffect(() => {
+    if (scene && manuscript) {
+      const displayProse = applyMask(
+        scene.prose,
+        manuscript.protagonistRealName,
+        manuscript.maskModeEnabled
+      )
+      setLocalProse(displayProse)
+    }
+  }, [scene?.id, manuscript?.protagonistRealName, manuscript?.maskModeEnabled])
+
   // Auto-save indicator - mark as saved after update
   useEffect(() => {
     if (scene) {
@@ -137,62 +154,66 @@ export default function EditorPage() {
     }
   }, [scene, setShowPulseCheck])
 
-  // Restore cursor position after renders
+  // Track cursor position with selectionchange event (more reliable than onChange)
   useEffect(() => {
+    const textarea = proseRef.current
+    if (!textarea) return
+
+    const handleSelectionChange = () => {
+      if (document.activeElement === textarea && !isComposing) {
+        cursorPositionRef.current = textarea.selectionStart
+      }
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+  }, [isComposing])
+
+  // Restore cursor position using useLayoutEffect (before paint, prevents visible jumps)
+  useLayoutEffect(() => {
     if (!isReadMode && proseRef.current && cursorPositionRef.current > 0) {
       const textarea = proseRef.current
-      // Restore cursor position
-      textarea.setSelectionRange(cursorPositionRef.current, cursorPositionRef.current)
-
-      // Scroll cursor into view smoothly
-      const scrollToLine = () => {
-        const { selectionStart, value } = textarea
-        const before = value.substring(0, selectionStart)
-        const lines = before.split('\n').length
-        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 24
-        const targetScroll = (lines - 1) * lineHeight - (textarea.clientHeight / 3)
-
-        textarea.scrollTop = Math.max(0, targetScroll)
-      }
-
-      requestAnimationFrame(scrollToLine)
+      const pos = Math.min(cursorPositionRef.current, textarea.value.length)
+      textarea.setSelectionRange(pos, pos)
     }
-  }, [scene?.prose, isReadMode])
+  }, [localProse, isReadMode])
 
-  // Handle keyboard appearing/disappearing on mobile
+  // Handle mobile keyboard viewport changes
   useEffect(() => {
-    let previousHeight = window.visualViewport?.height || window.innerHeight
+    if (!window.visualViewport) return
 
-    const handleViewportChange = () => {
-      const currentHeight = window.visualViewport?.height || window.innerHeight
-      const heightDiff = previousHeight - currentHeight
+    let keyboardVisible = false
 
-      // Keyboard appeared (viewport shrunk significantly)
-      if (heightDiff > 150 && proseRef.current && document.activeElement === proseRef.current) {
-        // Small delay to let the keyboard settle
-        setTimeout(() => {
-          if (proseRef.current) {
-            const { selectionStart, value } = proseRef.current
-            const before = value.substring(0, selectionStart)
-            const lines = before.split('\n').length
+    const handleViewportResize = () => {
+      const viewport = window.visualViewport
+      if (!viewport || !proseRef.current) return
+
+      const viewportHeight = viewport.height
+      const windowHeight = window.innerHeight
+      const heightDiff = windowHeight - viewportHeight
+
+      // Keyboard appeared
+      if (heightDiff > 150 && document.activeElement === proseRef.current) {
+        keyboardVisible = true
+
+        // Scroll cursor into view after keyboard settles
+        requestAnimationFrame(() => {
+          if (proseRef.current && keyboardVisible) {
+            const { selectionStart } = proseRef.current
+            const lines = proseRef.current.value.substring(0, selectionStart).split('\n').length
             const lineHeight = parseInt(getComputedStyle(proseRef.current).lineHeight) || 24
-            const targetScroll = (lines - 1) * lineHeight - 100
 
-            proseRef.current.scrollTop = Math.max(0, targetScroll)
+            // Scroll to show cursor with padding
+            proseRef.current.scrollTop = Math.max(0, (lines - 2) * lineHeight)
           }
-        }, 100)
+        })
+      } else if (heightDiff < 50) {
+        keyboardVisible = false
       }
-
-      previousHeight = currentHeight
     }
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportChange)
-      return () => window.visualViewport?.removeEventListener('resize', handleViewportChange)
-    } else {
-      window.addEventListener('resize', handleViewportChange)
-      return () => window.removeEventListener('resize', handleViewportChange)
-    }
+    window.visualViewport.addEventListener('resize', handleViewportResize)
+    return () => window.visualViewport?.removeEventListener('resize', handleViewportResize)
   }, [])
 
   // Check for glasses mentions on prose change
@@ -226,16 +247,52 @@ export default function EditorPage() {
   const handleProseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!scene || !manuscript) return
 
-    // Save cursor position BEFORE updating state
+    // Don't update during IME composition
+    if (isComposing) return
+
+    const newValue = e.target.value
     cursorPositionRef.current = e.target.selectionStart
 
-    const rawText = getStorageText(
-      e.target.value,
-      manuscript.protagonistRealName,
-      manuscript.maskModeEnabled
-    )
-    updateScene(scene.id, { prose: rawText })
-    checkForGlasses(rawText)
+    // Update local state immediately for responsive UI
+    setLocalProse(newValue)
+
+    // Clear previous debounce timer
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    // Debounce store update to reduce re-renders and improve performance
+    debounceTimerRef.current = window.setTimeout(() => {
+      const rawText = getStorageText(
+        newValue,
+        manuscript.protagonistRealName,
+        manuscript.maskModeEnabled
+      )
+      updateScene(scene.id, { prose: rawText })
+      checkForGlasses(rawText)
+    }, 200)
+  }
+
+  const handleCompositionStart = () => {
+    setIsComposing(true)
+  }
+
+  const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
+    setIsComposing(false)
+    // Process the final composed text
+    if (scene && manuscript) {
+      const newValue = e.currentTarget.value
+      cursorPositionRef.current = e.currentTarget.selectionStart
+      setLocalProse(newValue)
+
+      const rawText = getStorageText(
+        newValue,
+        manuscript.protagonistRealName,
+        manuscript.maskModeEnabled
+      )
+      updateScene(scene.id, { prose: rawText })
+      checkForGlasses(rawText)
+    }
   }
 
   const handleFootnoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -289,11 +346,10 @@ export default function EditorPage() {
     )
   }
 
-  const displayProse = applyMask(
-    scene.prose,
-    manuscript.protagonistRealName,
-    manuscript.maskModeEnabled
-  )
+  // Use localProse for edit mode (immediate updates), applyMask for read mode
+  const displayProse = isReadMode
+    ? applyMask(scene.prose, manuscript.protagonistRealName, manuscript.maskModeEnabled)
+    : localProse
 
   // Parse footnotes into numbered array
   const parseFootnotes = (footnotesText: string): string[] => {
@@ -506,11 +562,13 @@ export default function EditorPage() {
           </div>
         ) : (
           /* Edit mode - textarea with serif font and footnotes display */
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
             <textarea
               ref={proseRef}
               value={displayProse}
               onChange={handleProseChange}
+              onCompositionStart={handleCompositionStart}
+              onCompositionEnd={handleCompositionEnd}
               onSelect={handleTextSelect}
               onMouseDown={handleMouseDown}
               onMouseUp={handleMouseUp}
@@ -524,11 +582,16 @@ The Read mode will show your text with proper paragraph formatting."
               className="w-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none min-h-[300px]"
               style={{
                 WebkitTapHighlightColor: 'transparent',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
+                fontSize: '16px',
+                scrollPaddingBottom: '150px',
+                scrollPaddingTop: '100px'
               }}
               autoCapitalize="sentences"
               autoCorrect="on"
+              autoComplete="off"
               spellCheck="true"
+              inputMode="text"
               enterKeyHint="enter"
             />
 
