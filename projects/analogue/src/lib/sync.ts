@@ -109,6 +109,53 @@ export async function syncToCloud(userId: string): Promise<SyncResult> {
         }
       }
 
+      // Get local glasses mentions
+      const localGlasses = await db.glassesMentions
+        .where('manuscriptId')
+        .equals(manuscript.id)
+        .toArray()
+
+      for (const glasses of localGlasses) {
+        const { error: gError } = await supabase
+          .from('glasses_mentions')
+          .upsert({
+            id: glasses.id,
+            manuscript_id: manuscript.id,
+            scene_id: glasses.sceneId,
+            text: glasses.text,
+            is_valid_draw: glasses.isValidDraw,
+            flagged: glasses.flagged,
+            created_at: glasses.createdAt
+          } as AnyRow, { onConflict: 'id' })
+
+        if (gError) {
+          console.error('Failed to sync glasses mention:', gError)
+        }
+      }
+
+      // Get local speech patterns
+      const localPatterns = await db.speechPatterns
+        .where('manuscriptId')
+        .equals(manuscript.id)
+        .toArray()
+
+      for (const pattern of localPatterns) {
+        const { error: pError } = await supabase
+          .from('speech_patterns')
+          .upsert({
+            id: pattern.id,
+            manuscript_id: manuscript.id,
+            phrase: pattern.phrase,
+            character_source: pattern.characterSource,
+            occurrences: JSON.stringify(pattern.occurrences),
+            created_at: pattern.createdAt
+          } as AnyRow, { onConflict: 'id' })
+
+        if (pError) {
+          console.error('Failed to sync speech pattern:', pError)
+        }
+      }
+
       uploaded++
     }
 
@@ -236,6 +283,18 @@ export async function syncFromCloud(userId: string): Promise<SyncResult> {
           createdAt: r.created_at
         }))
 
+        // Get cloud glasses mentions
+        const { data: cloudGlasses } = await supabase
+          .from('glasses_mentions')
+          .select('*')
+          .eq('manuscript_id', localMs.id)
+
+        // Get cloud speech patterns
+        const { data: cloudPatterns } = await supabase
+          .from('speech_patterns')
+          .select('*')
+          .eq('manuscript_id', localMs.id)
+
         // Save to local DB
         await db.manuscripts.put(localMs)
 
@@ -247,6 +306,31 @@ export async function syncFromCloud(userId: string): Promise<SyncResult> {
         // Save reverberations to local DB
         for (const reverb of localMs.reverberationLibrary) {
           await db.reverberations.put({ ...reverb, manuscriptId: localMs.id })
+        }
+
+        // Save glasses mentions to local DB
+        for (const glasses of ((cloudGlasses || []) as AnyRow[])) {
+          await db.glassesMentions.put({
+            id: glasses.id,
+            manuscriptId: localMs.id,
+            sceneId: glasses.scene_id,
+            text: glasses.text,
+            isValidDraw: glasses.is_valid_draw,
+            flagged: glasses.flagged,
+            createdAt: glasses.created_at
+          })
+        }
+
+        // Save speech patterns to local DB
+        for (const pattern of ((cloudPatterns || []) as AnyRow[])) {
+          await db.speechPatterns.put({
+            id: pattern.id,
+            manuscriptId: localMs.id,
+            phrase: pattern.phrase,
+            characterSource: pattern.character_source,
+            occurrences: JSON.parse(pattern.occurrences || '[]'),
+            createdAt: pattern.created_at
+          })
         }
 
         downloaded++
