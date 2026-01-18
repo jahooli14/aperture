@@ -56,7 +56,8 @@ export const useIdentityStore = create<IdentityStore>()(
             id: generateId(),
             phrase,
             characterSource: 'al',
-            occurrences: [{ sceneId, position, context }]
+            occurrences: [{ sceneId, position, context }],
+            createdAt: new Date().toISOString()
           }
           set({ alPatterns: [...alPatterns, newPattern] })
         }
@@ -84,7 +85,8 @@ export const useIdentityStore = create<IdentityStore>()(
             id: generateId(),
             phrase,
             characterSource: 'lexi',
-            occurrences: [{ sceneId, position, context }]
+            occurrences: [{ sceneId, position, context }],
+            createdAt: new Date().toISOString()
           }
           set({ lexiPatterns: [...lexiPatterns, newPattern] })
         }

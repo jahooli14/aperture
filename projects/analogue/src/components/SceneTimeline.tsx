@@ -8,23 +8,6 @@ interface SceneTimelineProps {
   currentChapterId: string | null
 }
 
-// Character colors for consistent visual tracking
-const characterColors = [
-  'bg-section-departure',
-  'bg-section-escape',
-  'bg-section-rupture',
-  'bg-section-alignment',
-  'bg-section-reveal',
-  'bg-purple-500',
-  'bg-pink-500',
-  'bg-cyan-500',
-]
-
-const getCharacterColor = (name: string) => {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return characterColors[hash % characterColors.length]
-}
-
 export default function SceneTimeline({
   scenes,
   currentSceneId,
@@ -42,11 +25,6 @@ export default function SceneTimeline({
 
   const currentIndex = displayScenes.findIndex(s => s.id === currentSceneId)
   const currentScene = displayScenes[currentIndex]
-
-  // Get all unique characters in the chapter for the legend
-  const chapterCharacters = Array.from(
-    new Set(displayScenes.flatMap(s => s.charactersPresent || []))
-  ).sort()
 
   const getStatusColor = (scene: SceneNode, isCurrent: boolean) => {
     if (isCurrent) return 'bg-white'
@@ -93,10 +71,9 @@ export default function SceneTimeline({
         {/* Connecting line */}
         <div className="absolute left-0 right-0 h-0.5 bg-ink-800 top-1/2 -translate-y-1/2 -z-10" />
 
-        {displayScenes.map((scene, index) => {
+        {displayScenes.map((scene) => {
           const isCurrent = scene.id === currentSceneId
           const hasContent = scene.prose && scene.prose.trim().length > 0
-          const characters = scene.charactersPresent || []
 
           return (
             <motion.button
