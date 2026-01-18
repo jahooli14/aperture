@@ -63,6 +63,7 @@ export default function EditorPage() {
   const [showExport, setShowExport] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
+  const cursorPositionRef = useRef<number>(0) // Track cursor position across renders
 
   const scene = manuscript?.scenes.find(s => s.id === sceneId)
 
@@ -136,34 +137,62 @@ export default function EditorPage() {
     }
   }, [scene, setShowPulseCheck])
 
-  // Auto-focus textarea when switching to edit mode
+  // Restore cursor position after renders
   useEffect(() => {
-    if (!isReadMode && proseRef.current) {
-      // Small delay to ensure the textarea is rendered
-      const timer = setTimeout(() => {
-        proseRef.current?.focus()
-      }, 100)
-      return () => clearTimeout(timer)
-    }
-  }, [isReadMode])
+    if (!isReadMode && proseRef.current && cursorPositionRef.current > 0) {
+      const textarea = proseRef.current
+      // Restore cursor position
+      textarea.setSelectionRange(cursorPositionRef.current, cursorPositionRef.current)
 
-  // Handle safe area for keyboard on mobile
-  useEffect(() => {
-    const handleResize = () => {
-      if (proseRef.current && document.activeElement === proseRef.current) {
-        // Scroll cursor into view when keyboard appears
-        const cursorPosition = proseRef.current.selectionStart
-        const lines = proseRef.current.value.substring(0, cursorPosition).split('\n')
-        const lineHeight = 24 // approximate line height in pixels
-        const scrollTop = (lines.length - 1) * lineHeight
+      // Scroll cursor into view smoothly
+      const scrollToLine = () => {
+        const { selectionStart, value } = textarea
+        const before = value.substring(0, selectionStart)
+        const lines = before.split('\n').length
+        const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 24
+        const targetScroll = (lines - 1) * lineHeight - (textarea.clientHeight / 3)
 
-        // Smooth scroll to cursor position
-        proseRef.current.scrollTop = Math.max(0, scrollTop - 100)
+        textarea.scrollTop = Math.max(0, targetScroll)
       }
+
+      requestAnimationFrame(scrollToLine)
+    }
+  }, [scene?.prose, isReadMode])
+
+  // Handle keyboard appearing/disappearing on mobile
+  useEffect(() => {
+    let previousHeight = window.visualViewport?.height || window.innerHeight
+
+    const handleViewportChange = () => {
+      const currentHeight = window.visualViewport?.height || window.innerHeight
+      const heightDiff = previousHeight - currentHeight
+
+      // Keyboard appeared (viewport shrunk significantly)
+      if (heightDiff > 150 && proseRef.current && document.activeElement === proseRef.current) {
+        // Small delay to let the keyboard settle
+        setTimeout(() => {
+          if (proseRef.current) {
+            const { selectionStart, value } = proseRef.current
+            const before = value.substring(0, selectionStart)
+            const lines = before.split('\n').length
+            const lineHeight = parseInt(getComputedStyle(proseRef.current).lineHeight) || 24
+            const targetScroll = (lines - 1) * lineHeight - 100
+
+            proseRef.current.scrollTop = Math.max(0, targetScroll)
+          }
+        }, 100)
+      }
+
+      previousHeight = currentHeight
     }
 
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange)
+      return () => window.visualViewport?.removeEventListener('resize', handleViewportChange)
+    } else {
+      window.addEventListener('resize', handleViewportChange)
+      return () => window.removeEventListener('resize', handleViewportChange)
+    }
   }, [])
 
   // Check for glasses mentions on prose change
@@ -196,6 +225,10 @@ export default function EditorPage() {
 
   const handleProseChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!scene || !manuscript) return
+
+    // Save cursor position BEFORE updating state
+    cursorPositionRef.current = e.target.selectionStart
+
     const rawText = getStorageText(
       e.target.value,
       manuscript.protagonistRealName,
@@ -394,11 +427,7 @@ export default function EditorPage() {
       <div className="focus-fade flex items-center justify-between px-3 py-1.5 border-b border-ink-800 bg-ink-900/50">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              setIsReadMode(false)
-              // Focus the textarea after a brief delay to ensure it's rendered
-              setTimeout(() => proseRef.current?.focus(), 150)
-            }}
+            onClick={() => setIsReadMode(false)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
               !isReadMode
                 ? 'bg-section-departure text-white'
@@ -493,7 +522,14 @@ Start a new paragraph by pressing Enter twice.
 
 The Read mode will show your text with proper paragraph formatting."
               className="w-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none min-h-[300px]"
-              style={{ WebkitTapHighlightColor: 'transparent' }}
+              style={{
+                WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation'
+              }}
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              spellCheck="true"
+              enterKeyHint="enter"
             />
 
             {/* Footnotes section in edit mode */}
