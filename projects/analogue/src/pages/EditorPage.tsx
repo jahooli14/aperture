@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Save,
-  Type
+  Type,
+  Download
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
@@ -28,6 +29,7 @@ import QuickBeatInput from '../components/QuickBeatInput'
 import CharacterChips from '../components/CharacterChips'
 import MotifTagSelector from '../components/MotifTagSelector'
 import ReverbTagModal from '../components/ReverbTagModal'
+import ExportModal from '../components/ExportModal'
 
 export default function EditorPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
@@ -58,6 +60,7 @@ export default function EditorPage() {
   const footnoteRef = useRef<HTMLTextAreaElement>(null)
   const dragControls = useDragControls()
   const [showMenu, setShowMenu] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
 
@@ -371,6 +374,16 @@ export default function EditorPage() {
                   <Type className="w-4 h-4" />
                   Text Size: {textSize.charAt(0).toUpperCase() + textSize.slice(1)}
                 </button>
+                <button
+                  onClick={() => {
+                    setShowExport(true)
+                    setShowMenu(false)
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800 border-t border-ink-800"
+                >
+                  <Download className="w-4 h-4" />
+                  Export Manuscript
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -625,6 +638,16 @@ The Read mode will show your text with proper paragraph formatting."
               setShowReverbTagging(false)
               clearSelection()
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Export Modal */}
+      <AnimatePresence>
+        {showExport && manuscript && (
+          <ExportModal
+            manuscript={manuscript}
+            onClose={() => setShowExport(false)}
           />
         )}
       </AnimatePresence>
