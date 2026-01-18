@@ -115,6 +115,7 @@ export interface SpeechPattern {
   phrase: string
   characterSource: 'al' | 'lexi'
   occurrences: PatternOccurrence[]
+  createdAt: string
 }
 
 export interface PatternOccurrence {
