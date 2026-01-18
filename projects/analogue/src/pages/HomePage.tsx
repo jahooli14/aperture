@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, BookOpen, Feather, Upload, Trash2, AlertTriangle, Cloud, CloudOff, RefreshCw, User, LogOut } from 'lucide-react'
+import { Plus, BookOpen, Feather, Upload, Trash2, AlertTriangle, Cloud, CloudOff, RefreshCw, User, LogOut, Download } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useAuthStore } from '../stores/useAuthStore'
 import { fullSync } from '../lib/sync'
 import type { ManuscriptState } from '../types/manuscript'
 import ImportModal, { type ImportedScene } from '../components/ImportModal'
+import ExportModal from '../components/ExportModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -15,6 +16,7 @@ export default function HomePage() {
 
   const [showCreate, setShowCreate] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [exportingManuscript, setExportingManuscript] = useState<ManuscriptState | null>(null)
   const [title, setTitle] = useState('')
   const [protagonistName, setProtagonistName] = useState('')
   const [allManuscripts, setAllManuscripts] = useState<ManuscriptState[]>([])
@@ -207,6 +209,13 @@ export default function HomePage() {
                     </div>
                   </button>
                   <button
+                    onClick={() => setExportingManuscript(ms)}
+                    className="p-2 text-ink-600 hover:text-ink-300 transition-colors"
+                    aria-label="Export manuscript"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => setDeleteConfirm(ms.id)}
                     className="p-2 text-ink-600 hover:text-red-400 transition-colors"
                     aria-label="Delete manuscript"
@@ -340,6 +349,16 @@ export default function HomePage() {
           <ImportModal
             onImport={handleImport}
             onClose={() => setShowImport(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Export Modal */}
+      <AnimatePresence>
+        {exportingManuscript && (
+          <ExportModal
+            manuscript={exportingManuscript}
+            onClose={() => setExportingManuscript(null)}
           />
         )}
       </AnimatePresence>
