@@ -41,6 +41,7 @@ export default function MetadataDrawer({
   allScenes,
 }: MetadataDrawerProps) {
   const [activeTab, setActiveTab] = useState<'scene' | 'review' | 'settings'>('scene')
+  const [timelineExpanded, setTimelineExpanded] = useState(false)
 
   const flaggedGlasses = scene.glassesmentions?.filter(m => m.flagged) || []
 
@@ -111,78 +112,39 @@ export default function MetadataDrawer({
         {/* Content */}
         <div className="overflow-y-auto" style={{ height: 'calc(100vh - 120px)' }}>
           {activeTab === 'scene' && (
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-3">
               {/* What happens */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  What happens in this scene?
-                </label>
-                <QuickBeatInput
-                  scene={scene}
-                />
-              </div>
+              <QuickBeatInput scene={scene} />
 
               {/* Characters */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  Characters
-                </label>
-                <CharacterChips
-                  scene={scene}
-                  allScenes={allScenes}
-                />
-              </div>
+              <CharacterChips
+                scene={scene}
+                allScenes={allScenes}
+              />
 
               {/* Motifs */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  Motif Tags
-                </label>
-                <MotifTagSelector
-                  scene={scene}
-                  allScenes={allScenes}
-                />
-              </div>
+              <MotifTagSelector
+                scene={scene}
+                allScenes={allScenes}
+              />
 
-              {/* Mode Toggle */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  Editing Mode
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onModeChange('edit')}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
-                      mode === 'edit'
-                        ? 'bg-ink-700 text-ink-50'
-                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => onModeChange('read')}
-                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
-                      mode === 'read'
-                        ? 'bg-ink-700 text-ink-50'
-                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
-                    }`}
-                  >
-                    Read
-                  </button>
-                </div>
-              </div>
-
-              {/* Scene Timeline */}
-              <div>
-                <label className="block text-sm font-medium text-ink-300 mb-2">
-                  Scene Timeline
-                </label>
-                <SceneTimeline
-                  scenes={allScenes}
-                  currentSceneId={scene.id}
-                  currentChapterId={scene.chapterId || null}
-                />
+              {/* Scene Timeline - Collapsible */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setTimelineExpanded(!timelineExpanded)}
+                  className="text-xs text-ink-400 hover:text-ink-200 transition-colors"
+                >
+                  {timelineExpanded ? '▼' : '▶'} Scene Timeline
+                </button>
+                {timelineExpanded && (
+                  <div className="mt-2">
+                    <SceneTimeline
+                      scenes={allScenes}
+                      currentSceneId={scene.id}
+                      currentChapterId={scene.chapterId || null}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -256,6 +218,35 @@ export default function MetadataDrawer({
 
           {activeTab === 'settings' && (
             <div className="p-4 space-y-4">
+              {/* Mode Toggle */}
+              <div>
+                <label className="block text-sm font-medium text-ink-300 mb-2">
+                  Editing Mode
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onModeChange('edit')}
+                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
+                      mode === 'edit'
+                        ? 'bg-ink-700 text-ink-50'
+                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => onModeChange('read')}
+                    className={`flex-1 px-4 py-2 rounded font-medium transition-colors ${
+                      mode === 'read'
+                        ? 'bg-ink-700 text-ink-50'
+                        : 'bg-ink-800 text-ink-400 hover:text-ink-200'
+                    }`}
+                  >
+                    Read
+                  </button>
+                </div>
+              </div>
+
               {/* Text Size */}
               <div>
                 <label className="block text-sm font-medium text-ink-300 mb-2">
