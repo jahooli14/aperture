@@ -3,33 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import {
   ArrowLeft,
-  Check,
   Plus,
   MessageSquare,
   Tag,
-  Glasses,
-  MoreVertical,
-  Eye,
-  Edit3,
-  Focus,
+  Menu,
   ChevronLeft,
   ChevronRight,
-  Save,
-  Type,
-  Download
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import { useEditorStore } from '../stores/useEditorStore'
 import { applyMask, getStorageText } from '../lib/mask'
 import { flagGlassesMention } from '../lib/validation'
 import PulseCheck from '../components/PulseCheck'
-import ChecklistHeader from '../components/ChecklistHeader'
-import SceneTimeline from '../components/SceneTimeline'
-import QuickBeatInput from '../components/QuickBeatInput'
-import CharacterChips from '../components/CharacterChips'
-import MotifTagSelector from '../components/MotifTagSelector'
 import ReverbTagModal from '../components/ReverbTagModal'
 import ExportModal from '../components/ExportModal'
+import MetadataDrawer from '../components/MetadataDrawer'
 
 export default function EditorPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
@@ -49,8 +37,6 @@ export default function EditorPage() {
     clearSelection,
     focusMode,
     toggleFocusMode,
-    lastSavedAt,
-    isSaving,
     markSaved,
     textSize,
     cycleTextSize
@@ -59,7 +45,7 @@ export default function EditorPage() {
   const proseRef = useRef<HTMLTextAreaElement>(null)
   const footnoteRef = useRef<HTMLTextAreaElement>(null)
   const dragControls = useDragControls()
-  const [showMenu, setShowMenu] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
   const [showExport, setShowExport] = useState(false)
   const [isReadMode, setIsReadMode] = useState(false)
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -366,156 +352,26 @@ export default function EditorPage() {
 
   const footnotes = parseFootnotes(scene.footnotes)
 
-  // Format time since last save
-  const getSaveStatus = () => {
-    if (isSaving) return 'Saving...'
-    if (!lastSavedAt) return ''
-    const secs = Math.floor((Date.now() - lastSavedAt) / 1000)
-    if (secs < 5) return 'Saved'
-    if (secs < 60) return `${secs}s ago`
-    return `${Math.floor(secs / 60)}m ago`
-  }
-
   return (
     <div
-      className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe text-size-${textSize} ${focusMode ? 'focus-mode-active' : ''}`}
+      className={`flex-1 flex flex-col min-h-0 bg-ink-950 pt-safe text-size-${textSize}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Pinned Header Checklist */}
-      <div className="focus-fade">
-        <ChecklistHeader scene={scene} />
-      </div>
-
-      {/* Scene Timeline */}
-      <div className="focus-fade">
-        <SceneTimeline
-          scenes={sortedScenes}
-          currentSceneId={scene.id}
-          currentChapterId={scene.chapterId}
-        />
-      </div>
-
-      {/* Editor Header */}
-      <header className="focus-fade flex items-center justify-between px-3 py-2 border-b border-ink-800">
+      {/* Minimal Header */}
+      <header className="flex items-center justify-between px-3 py-3 border-b border-ink-800">
         <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
           <ArrowLeft className="w-5 h-5 text-ink-400" />
         </button>
 
-        <div className="text-center flex-1 min-w-0">
-          <h1 className="text-sm font-medium text-ink-100 truncate px-4">
-            {scene.title}
-          </h1>
-          <div className="flex items-center justify-center gap-2 text-xs text-ink-500">
-            <span>{scene.wordCount} words</span>
-            {lastSavedAt && (
-              <>
-                <span>·</span>
-                <span className={isSaving ? 'save-indicator' : ''}>
-                  <Save className="w-3 h-3 inline mr-1" />
-                  {getSaveStatus()}
-                </span>
-              </>
-            )}
-          </div>
-        </div>
+        <h1 className="text-base font-medium text-ink-100 truncate flex-1 text-center px-4">
+          {scene.title}
+        </h1>
 
-        <div className="relative">
-          <button onClick={() => setShowMenu(!showMenu)} className="p-2 -mr-2">
-            <MoreVertical className="w-5 h-5 text-ink-400" />
-          </button>
-
-          <AnimatePresence>
-            {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="absolute right-0 top-full mt-1 w-48 bg-ink-900 border border-ink-700 rounded-lg shadow-xl z-50"
-              >
-                <button
-                  onClick={() => {
-                    setShowPulseCheck(true)
-                    setShowMenu(false)
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800"
-                >
-                  <Check className="w-4 h-4" />
-                  Redo Pulse Check
-                </button>
-                <button
-                  onClick={() => {
-                    toggleFocusMode()
-                    setShowMenu(false)
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800"
-                >
-                  <Focus className="w-4 h-4" />
-                  {focusMode ? 'Exit Focus Mode' : 'Focus Mode'}
-                </button>
-                <button
-                  onClick={() => {
-                    cycleTextSize()
-                    setShowMenu(false)
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800"
-                >
-                  <Type className="w-4 h-4" />
-                  Text Size: {textSize.charAt(0).toUpperCase() + textSize.slice(1)}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowExport(true)
-                    setShowMenu(false)
-                  }}
-                  className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm text-ink-200 hover:bg-ink-800 border-t border-ink-800"
-                >
-                  <Download className="w-4 h-4" />
-                  Export Manuscript
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <button onClick={() => setShowDrawer(true)} className="p-2 -mr-2">
+          <Menu className="w-5 h-5 text-ink-400" />
+        </button>
       </header>
-
-      {/* Mode toggle */}
-      <div className="focus-fade flex items-center justify-between px-3 py-1.5 border-b border-ink-800 bg-ink-900/50">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsReadMode(false)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
-              !isReadMode
-                ? 'bg-section-departure text-white'
-                : 'text-ink-400 hover:text-ink-200'
-            }`}
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            Edit
-          </button>
-          <button
-            onClick={() => setIsReadMode(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs transition-colors ${
-              isReadMode
-                ? 'bg-section-departure text-white'
-                : 'text-ink-400 hover:text-ink-200'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            Read
-          </button>
-        </div>
-        <span className="text-xs text-ink-500">
-          {scene.section}
-        </span>
-      </div>
-
-      {/* Scene Context: Beat, Characters, Motifs */}
-      <div className="focus-fade">
-        <QuickBeatInput scene={scene} />
-        <CharacterChips scene={scene} allScenes={sortedScenes} />
-        <MotifTagSelector scene={scene} allScenes={sortedScenes} />
-      </div>
 
       {/* Prose Pane */}
       <div
@@ -687,16 +543,6 @@ The Read mode will show your text with proper paragraph formatting."
         )}
       </AnimatePresence>
 
-      {/* Glasses indicator */}
-      {scene.glassesmentions.some(m => m.flagged) && (
-        <div className="focus-fade absolute bottom-20 left-4 px-3 py-2 bg-status-yellow/20 border border-status-yellow/50 rounded-lg flex items-center gap-2">
-          <Glasses className="w-4 h-4 text-status-yellow" />
-          <span className="text-xs text-status-yellow">
-            {scene.glassesmentions.filter(m => m.flagged).length} glasses mention(s) flagged
-          </span>
-        </div>
-      )}
-
       {/* Scene Navigation */}
       <div className="focus-fade fixed bottom-4 left-0 right-0 flex items-center justify-center gap-4 px-4 pb-safe">
         <button
@@ -750,6 +596,33 @@ The Read mode will show your text with proper paragraph formatting."
           />
         )}
       </AnimatePresence>
+
+      {/* Metadata Drawer */}
+      <MetadataDrawer
+        isOpen={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        scene={scene}
+        mode={isReadMode ? 'read' : 'edit'}
+        onModeChange={(mode) => setIsReadMode(mode === 'read')}
+        textSize={textSize}
+        onTextSizeChange={(size) => {
+          // Manually set text size - we'll need to add this to the store
+          const sizes = ['small', 'medium', 'large'] as const
+          const currentIndex = sizes.indexOf(textSize)
+          const targetIndex = sizes.indexOf(size)
+          const clicks = (targetIndex - currentIndex + 3) % 3
+          for (let i = 0; i < clicks; i++) {
+            cycleTextSize()
+          }
+        }}
+        focusMode={focusMode}
+        onFocusMode={toggleFocusMode}
+        onExport={() => setShowExport(true)}
+        onRedoPulseCheck={() => setShowPulseCheck(true)}
+        currentSceneIndex={currentIndex}
+        totalScenes={sortedScenes.length}
+        allScenes={sortedScenes}
+      />
     </div>
   )
 }
