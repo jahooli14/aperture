@@ -1693,7 +1693,7 @@ Return ONLY the JSON, no other text.`
               totalArticlesAdded++
             }
 
-            // 2. Cleanup: Only keep latest 5 unread items per feed
+            // 2. Cleanup: Only keep latest 50 unread items per feed
             // Items that are 'reading', 'read', or 'archived' are PROTECTED
             const { data: currentUnread } = await supabase
               .from('reading_queue')
@@ -1704,8 +1704,8 @@ Return ONLY the JSON, no other text.`
               .eq('source', new URL(feed.feed_url).hostname.replace('www.', ''))
               .order('created_at', { ascending: false })
 
-            if (currentUnread && currentUnread.length > 5) {
-              const toDelete = currentUnread.slice(5).map(i => i.id)
+            if (currentUnread && currentUnread.length > 50) {
+              const toDelete = currentUnread.slice(50).map(i => i.id)
               await supabase.from('reading_queue').delete().in('id', toDelete)
               console.log(`[RSS Sync] Purged ${toDelete.length} old unread RSS items for ${feed.title}`)
             }
