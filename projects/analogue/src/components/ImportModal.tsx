@@ -245,9 +245,9 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
       if (chapterContent.length < 50) continue
 
       // Within this chapter, look for scene markers
-      // Patterns: standalone numbers (1, 2, 3), markdown headers with numbers (# 1, ## 2)
+      // Patterns: standalone numbers (1, 2, 3), markdown headers with numbers (#1, # 1, ##2, ## 2)
       // Scene breaks (*** or ---)
-      const sceneRegex = /^(?:#{1,3}\s+)?(\d+)\s*$/gm
+      const sceneRegex = /^(?:#{1,3}\s*)?(\d+)\s*$/gm
       const sceneMarkers: { index: number; number: number; end: number }[] = []
 
       let scMatch
