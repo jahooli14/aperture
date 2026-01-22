@@ -277,7 +277,7 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
         // Process each scene within the chapter
         for (let scIdx = 0; scIdx < sceneMarkers.length; scIdx++) {
           const sceneStart = sceneMarkers[scIdx].end
-          const sceneEnd = scIdx < sceneMarkers.length - 1 ? sceneMarkers[scIdx].index : chapterContent.length
+          const sceneEnd = scIdx < sceneMarkers.length - 1 ? sceneMarkers[scIdx + 1].index : chapterContent.length
           const sceneContent = text.slice(chapterStart + sceneStart, chapterStart + sceneEnd).trim()
 
           if (sceneContent.length > 50) {
