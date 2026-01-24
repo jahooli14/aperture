@@ -288,6 +288,30 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   let parsedBullets = [text]
   const isManualEntry = !!providedTitle
 
+  // Helper function to check if title is too similar to original text (verbatim)
+  const isVerbatimTitle = (title: string, originalText: string): boolean => {
+    const normalizeText = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim()
+    const normalizedTitle = normalizeText(title)
+    const normalizedOriginal = normalizeText(originalText)
+
+    // Check if title is just the first N words of the original
+    const firstWords = normalizedOriginal.split(/\s+/).slice(0, 15).join(' ')
+    const titleWords = normalizedTitle.split(/\s+/).join(' ')
+
+    // If 80% or more of the title words appear in sequence at the start, it's verbatim
+    if (firstWords.includes(titleWords) && titleWords.length > 10) {
+      return true
+    }
+
+    // Check for high word overlap (>70% of words are same)
+    const titleWordSet = new Set(normalizedTitle.split(/\s+/))
+    const originalWordSet = new Set(normalizedOriginal.split(/\s+/).slice(0, 15))
+    const overlap = [...titleWordSet].filter(w => originalWordSet.has(w)).length
+    const overlapRatio = overlap / titleWordSet.size
+
+    return overlapRatio > 0.7
+  }
+
   // Only run AI title parsing for voice captures (not manual entries with provided title)
   if (!isManualEntry) {
     try {
@@ -295,13 +319,13 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
       const model = genAI.getGenerativeModel({
         model: 'gemini-flash-latest',
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0.9, // Higher temperature for more creative summarization
           maxOutputTokens: 500,
           responseMimeType: 'application/json',
           responseSchema: {
             type: SchemaType.OBJECT,
             properties: {
-              title: { type: SchemaType.STRING, description: "A concise, first-person title (5-10 words)" },
+              title: { type: SchemaType.STRING, description: "A concise, descriptive summary title (4-8 words max)" },
               bullets: {
                 type: SchemaType.ARRAY,
                 items: { type: SchemaType.STRING },
@@ -313,39 +337,56 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
         }
       })
 
-      const prompt = `You are a title summarization expert. Your task is to create a SUMMARIZED title from spoken text.
+      const prompt = `You are an expert at creating concise, descriptive titles from voice transcriptions. Your task is to SUMMARIZE the content, NOT copy it verbatim.
 
-CRITICAL RULES:
-1. The title MUST be a SUMMARY - NEVER copy the input text word-for-word
-2. Transform casual speech into a polished, descriptive title
-3. Remove filler words, false starts, and conversational patterns
-4. Capture the ESSENCE, not the exact words
+🚨 CRITICAL RULE: The title MUST be a creative SUMMARY that captures the ESSENCE. NEVER use the exact words from the beginning of the transcript.
 
-Voice transcription: "${text}"
+Voice transcription to summarize:
+"${text}"
 
-EXAMPLES of correct summarization:
-- Input: "still musing on when a snake's body becomes its tail" → "Snake anatomy boundary question"
-- Input: "I was thinking about how React hooks work" → "Understanding React hooks behavior"
-- Input: "need to remember to call mom tomorrow" → "Reminder to call mom"
-- Input: "that meeting was really interesting about the new product" → "New product meeting insights"
+📋 INSTRUCTIONS:
+1. Read the ENTIRE transcription to understand the main point
+2. Identify the core concept, question, or insight
+3. Create a NEW descriptive title using DIFFERENT words
+4. Keep it brief (4-8 words maximum)
+5. Make it informative and specific
 
-WRONG - copying verbatim:
-- "Still musing on when a snake's body becomes its tail" ❌
-- "I was thinking about how React hooks work" ❌
+✅ GOOD EXAMPLES (creative summaries):
+- Input: "I was just thinking about how when you look at a snake it's really hard to tell where the body ends and the tail begins, like is there even a clear boundary"
+  Output: "Snake body-tail boundary question"
 
-Create:
-1. title: A SHORT (5-10 words) SUMMARIZED title. NEVER start with "I", "still", "just", etc.
-2. bullets: 2-4 bullet points capturing key ideas in first person.
+- Input: "So I've been trying to understand React hooks and I think the key thing is that they let you use state in functional components which is really cool"
+  Output: "React hooks enable functional component state"
 
-Return valid JSON with "title" and "bullets" fields.`
+- Input: "Need to remember to call mom tomorrow about the family reunion next month"
+  Output: "Call mom about family reunion"
 
-      console.log('[handleCapture] Calling Gemini with Structured Outputs...')
+- Input: "That presentation on the new marketing strategy was really insightful, especially the part about customer segmentation"
+  Output: "Marketing strategy customer segmentation insights"
+
+- Input: "Been wondering if we should refactor the authentication system to use JWT tokens instead of sessions"
+  Output: "Authentication refactor JWT vs sessions"
+
+❌ WRONG (verbatim copying - DO NOT DO THIS):
+- "I was just thinking about how when you look at a snake"
+- "So I've been trying to understand React hooks"
+- "Need to remember to call mom tomorrow"
+- "That presentation on the new marketing strategy"
+
+🎯 YOUR TASK:
+Create a JSON response with:
+1. "title": A creative 4-8 word summary (NOT the first words of the input!)
+2. "bullets": 2-4 key points in first-person voice
+
+Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
+
+      console.log('[handleCapture] Calling Gemini for title summarization...')
 
       const result = await model.generateContent(prompt)
       const response = result.response
       const jsonText = response.text()
 
-      console.log('[handleCapture] Gemini response:', jsonText)
+      console.log('[handleCapture] Gemini raw response:', jsonText)
 
       try {
         // Robust JSON extraction
@@ -353,16 +394,26 @@ Return valid JSON with "title" and "bullets" fields.`
         const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(jsonText)
 
         if (parsed.title && parsed.bullets) {
-          parsedTitle = parsed.title
-          parsedBullets = parsed.bullets
-          console.log('[handleCapture] Successfully parsed structured response')
+          // Validate that the title is not verbatim
+          if (isVerbatimTitle(parsed.title, text)) {
+            console.warn('[handleCapture] ⚠️ Gemini returned verbatim title, rejecting:', parsed.title)
+            console.log('[handleCapture] Will use smart fallback instead')
+            // Create a better fallback: take first meaningful sentence or phrase
+            const firstSentence = text.split(/[.!?]/)[0].trim()
+            parsedTitle = firstSentence.substring(0, 60) + (firstSentence.length > 60 ? '...' : '')
+          } else {
+            parsedTitle = parsed.title
+            parsedBullets = parsed.bullets
+            console.log('[handleCapture] ✅ Successfully generated summary title:', parsedTitle)
+          }
         }
       } catch (parseError) {
-        console.warn('[handleCapture] Failed to parse Gemini JSON, using raw text fallback:', parseError)
+        console.warn('[handleCapture] Failed to parse Gemini JSON response:', parseError)
+        console.log('[handleCapture] Raw response was:', jsonText)
       }
 
     } catch (geminiError) {
-      console.error('[handleCapture] Gemini generation error, using fallback:', geminiError)
+      console.error('[handleCapture] Gemini API error:', geminiError)
     }
   } else {
     console.log('[handleCapture] Manual entry - skipping AI title parsing')
