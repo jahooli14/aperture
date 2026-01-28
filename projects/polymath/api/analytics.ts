@@ -235,7 +235,7 @@ async function getSynthesisEvolution() {
   // Process top topics in parallel
   const evolutionPromises = sortedTopics.map(async ([topic, mems]) => {
     // Ask AI to analyze evolution
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const memoryTexts = mems
       .map((m, i) => `[${new Date(m.created_at).toLocaleDateString()}] ${m.title}: ${m.body?.substring(0, 200)}`)
@@ -292,7 +292,7 @@ Return JSON:
       .map(p => `- ${p.title}: ${p.abandoned_reason || 'No reason given'}`)
       .join('\n')
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const patternPrompt = `Analyze project abandonment patterns:
 

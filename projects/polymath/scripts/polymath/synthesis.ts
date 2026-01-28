@@ -237,7 +237,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }`
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-flash-latest',
+    model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 1.0, // Higher temp for more creative ideas
       maxOutputTokens: 1024,
@@ -289,7 +289,7 @@ Return ONLY valid JSON (no markdown, no code blocks):
 }`
 
   const model = genAI.getGenerativeModel({
-    model: 'gemini-flash-latest',
+    model: 'gemini-2.5-flash',
     generationConfig: {
       temperature: 0.9,
       maxOutputTokens: 1024,

@@ -252,7 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
         // Truncate content to prevent token overflow/timeouts
         const truncatedSource = sourceContent.slice(0, 1000)
@@ -378,7 +378,7 @@ Keep it brief and high-impact. No fluff.`
           }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
         // Truncate content
         const truncatedSource = sourceContent.slice(0, 1000)
