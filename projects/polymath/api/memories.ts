@@ -284,7 +284,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   console.log('[handleCapture] Starting capture processing', { hasProvidedTitle: !!providedTitle })
 
   // If title is provided (manual entry), use it directly
-  let parsedTitle = providedTitle || text.substring(0, 100) + (text.length > 100 ? '...' : '')
+  let parsedTitle = providedTitle || '' // Start empty, will populate below
   let parsedBullets = [text]
   const isManualEntry = !!providedTitle
 
@@ -312,14 +312,38 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     return overlapRatio > 0.7
   }
 
+  // Smart fallback function that creates a readable title without "..."
+  const createFallbackTitle = (text: string): string => {
+    // Try to extract key noun phrases or create a simple summary
+    const words = text.split(/\s+/)
+    if (words.length <= 8) {
+      return text.trim()
+    }
+    // Take first sentence or first 8 meaningful words
+    const firstSentence = text.split(/[.!?]/)[0].trim()
+    const sentenceWords = firstSentence.split(/\s+/)
+    if (sentenceWords.length <= 10) {
+      return firstSentence
+    }
+    // Take first 8 words with no ellipsis
+    return sentenceWords.slice(0, 8).join(' ')
+  }
+
   // Only run AI title parsing for voice captures (not manual entries with provided title)
   if (!isManualEntry) {
     try {
+      console.log('[handleCapture] Starting Gemini title generation...')
+
+      // Validate API key
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY not configured')
+      }
+
       // Configure Gemini with Structured Outputs (JSON Schema)
       const model = genAI.getGenerativeModel({
-        model: 'gemini-flash-latest',
+        model: 'gemini-1.5-flash', // Fixed: was 'gemini-flash-latest'
         generationConfig: {
-          temperature: 0.9, // Higher temperature for more creative summarization
+          temperature: 0.7, // Reduced for more consistent results
           maxOutputTokens: 500,
           responseMimeType: 'application/json',
           responseSchema: {
@@ -397,27 +421,39 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
           // Validate that the title is not verbatim
           if (isVerbatimTitle(parsed.title, text)) {
             console.warn('[handleCapture] ⚠️ Gemini returned verbatim title, rejecting:', parsed.title)
-            console.log('[handleCapture] Will use smart fallback instead')
-            // Create a better fallback: take first meaningful sentence or phrase
-            const firstSentence = text.split(/[.!?]/)[0].trim()
-            parsedTitle = firstSentence.substring(0, 60) + (firstSentence.length > 60 ? '...' : '')
+            console.log('[handleCapture] Using smart fallback instead')
+            parsedTitle = createFallbackTitle(text)
           } else {
             parsedTitle = parsed.title
             parsedBullets = parsed.bullets
             console.log('[handleCapture] ✅ Successfully generated summary title:', parsedTitle)
           }
+        } else {
+          console.warn('[handleCapture] Gemini response missing title or bullets')
+          parsedTitle = createFallbackTitle(text)
         }
       } catch (parseError) {
-        console.warn('[handleCapture] Failed to parse Gemini JSON response:', parseError)
-        console.log('[handleCapture] Raw response was:', jsonText)
+        console.error('[handleCapture] Failed to parse Gemini JSON response:', parseError)
+        console.error('[handleCapture] Raw response was:', jsonText)
+        parsedTitle = createFallbackTitle(text)
       }
 
     } catch (geminiError) {
       console.error('[handleCapture] Gemini API error:', geminiError)
+      console.error('[handleCapture] Error details:', geminiError instanceof Error ? geminiError.message : String(geminiError))
+      parsedTitle = createFallbackTitle(text)
     }
   } else {
     console.log('[handleCapture] Manual entry - skipping AI title parsing')
   }
+
+  // Final safety check: ensure we have a title
+  if (!parsedTitle || parsedTitle.trim() === '') {
+    console.warn('[handleCapture] No title generated, using fallback')
+    parsedTitle = createFallbackTitle(text)
+  }
+
+  console.log('[handleCapture] Final title:', parsedTitle)
 
   // Always create memory with raw transcript
   try {
