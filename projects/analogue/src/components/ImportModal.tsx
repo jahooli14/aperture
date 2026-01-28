@@ -209,15 +209,15 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
   } else if (splitMethod === 'chapters') {
     // Chapter-based splitting with proper chapter/scene distinction
     // First, find all chapter markers (e.g., "Chapter 1", "Chapter One", "CHAPTER 1")
-    const chapterRegex = /^(?:Chapter|Part)\s+(?:\d+|[IVXLC]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten)[:\s]*(.*)$/gim
+    // Don't capture subtitle - we'll just use the chapter number
+    const chapterRegex = /^(?:Chapter|Part)\s+(\d+|[IVXLC]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten)/gim
     const chapterMarkers: { index: number; title: string; end: number; number: string }[] = []
 
     let chMatch
     while ((chMatch = chapterRegex.exec(text)) !== null) {
       const fullMatch = chMatch[0]
-      const chapterNum = fullMatch.match(/(?:Chapter|Part)\s+((?:\d+|[IVXLC]+|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten))/i)?.[1] || String(chapterMarkers.length + 1)
-      const subtitle = chMatch[1]?.trim() || ''
-      const title = subtitle ? `Chapter ${chapterNum}: ${subtitle}` : `Chapter ${chapterNum}`
+      const chapterNum = chMatch[1] || String(chapterMarkers.length + 1)
+      const title = `Chapter ${chapterNum}`
 
       chapterMarkers.push({
         index: chMatch.index,
@@ -283,10 +283,11 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
     for (let chIdx = 0; chIdx < chapterMarkers.length; chIdx++) {
       const chapterStart = chapterMarkers[chIdx].end
       const chapterEnd = chIdx < chapterMarkers.length - 1 ? chapterMarkers[chIdx + 1].index : text.length
-      const chapterContent = text.slice(chapterStart, chapterEnd).trim()
+      // Don't trim - we need accurate indices for scene marker positions
+      const chapterContent = text.slice(chapterStart, chapterEnd)
       const chapterId = `chapter-${chapterMarkers[chIdx].number}`
 
-      if (chapterContent.length < 50) continue
+      if (chapterContent.trim().length < 50) continue
 
       // Within this chapter, look for scene markers (#N anywhere in text)
       const chapterSceneRegex = /#(\d+)/g
