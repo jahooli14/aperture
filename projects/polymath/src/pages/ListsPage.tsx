@@ -58,9 +58,10 @@ export default function ListsPage() {
     const [createOpen, setCreateOpen] = useState(false)
     const [listCovers, setListCovers] = useState<Record<string, string>>({})
     const [quoteCovers, setQuoteCovers] = useState<Record<string, string>>({})
+    const [initialLoad, setInitialLoad] = useState(true)
 
     useEffect(() => {
-        fetchLists()
+        fetchLists().finally(() => setInitialLoad(false))
     }, [])
 
     // Fetch first item image for each list to use as cover, or shortest phrase for quote lists
@@ -123,13 +124,49 @@ export default function ListsPage() {
                 </Button>
             </div>
 
+            {/* Loading State - Show skeleton cards while loading */}
+            {initialLoad && loading && lists.length === 0 && (
+                <div className="flex flex-wrap gap-3 pb-20">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div
+                            key={`skeleton-${i}`}
+                            className="overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/40"
+                            style={{ width: 'calc(50% - 6px)' }}
+                        >
+                            <div className="aspect-[3/4] shimmer" />
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Empty State - Show helpful message when no lists */}
+            {!loading && lists.length === 0 && !initialLoad && (
+                <div className="text-center py-16 px-4">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-400/10 mb-6">
+                        <Box className="h-8 w-8 text-sky-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2">No collections yet</h3>
+                    <p className="text-zinc-400 mb-6 max-w-md mx-auto">
+                        Create your first collection to start organizing movies, books, places, or anything you want to track.
+                    </p>
+                    <Button
+                        onClick={() => setCreateOpen(true)}
+                        className="h-10 px-6 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Collection
+                    </Button>
+                </div>
+            )}
+
             {/* Stable 2-column Grid - using flex for better reordering */}
-            <Reorder.Group
-                axis="y"
-                values={lists}
-                onReorder={handleReorder}
-                className="flex flex-wrap gap-3 pb-20"
-            >
+            {lists.length > 0 && (
+                <Reorder.Group
+                    axis="y"
+                    values={lists}
+                    onReorder={handleReorder}
+                    className="flex flex-wrap gap-3 pb-20"
+                >
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
                     const coverImage = listCovers[list.id]
@@ -254,7 +291,8 @@ export default function ListsPage() {
                         </Reorder.Item>
                     )
                 })}
-            </Reorder.Group>
+                </Reorder.Group>
+            )}
 
             <CreateListDialog open={createOpen} onOpenChange={setCreateOpen} />
         </div>
