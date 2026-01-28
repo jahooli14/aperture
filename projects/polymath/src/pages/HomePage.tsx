@@ -608,7 +608,6 @@ export function HomePage() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showDebugPanel, setShowDebugPanel] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
 
@@ -630,8 +629,6 @@ export function HomePage() {
         fetchMemories()
         fetchCardOfTheDay()
         fetchPrompts()
-
-        setRefreshKey(k => k + 1)
       } catch (err) {
         console.error('Failed to load data on mount:', err)
       }
