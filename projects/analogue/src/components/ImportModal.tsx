@@ -227,12 +227,54 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
       })
     }
 
-    if (chapterMarkers.length === 0) {
-      // No chapters found, fall back to word count
-      return parseManuscript(text, 'wordcount')
+    // Scene marker regex: any line starting with # (scene break marker)
+    // Captures the text after the # as the scene title
+    const sceneRegex = /^#{1,3}\s*(.*)$/gm
+
+    // Check for scene markers in the full text
+    const allSceneMarkers: { index: number; title: string; end: number }[] = []
+    let scMatch
+    while ((scMatch = sceneRegex.exec(text)) !== null) {
+      allSceneMarkers.push({
+        index: scMatch.index,
+        title: scMatch[1].trim() || `Scene ${allSceneMarkers.length + 1}`,
+        end: scMatch.index + scMatch[0].length
+      })
     }
 
-    // Process each chapter
+    // If no chapters but we have scene markers, use scene markers directly
+    if (chapterMarkers.length === 0) {
+      if (allSceneMarkers.length === 0) {
+        // No chapters and no scene markers, fall back to word count
+        return parseManuscript(text, 'wordcount')
+      }
+
+      // Use scene markers as the primary split points
+      const actualScenesPerSection = Math.max(1, Math.ceil(allSceneMarkers.length / 5))
+
+      for (let scIdx = 0; scIdx < allSceneMarkers.length; scIdx++) {
+        const sceneStart = allSceneMarkers[scIdx].end
+        const sceneEnd = scIdx < allSceneMarkers.length - 1 ? allSceneMarkers[scIdx + 1].index : text.length
+        const sceneContent = text.slice(sceneStart, sceneEnd).trim()
+
+        if (sceneContent.length > 20) {
+          const { prose, footnotes } = extractFootnotes(sceneContent)
+          scenes.push({
+            title: allSceneMarkers[scIdx].title,
+            section: SECTIONS[Math.min(Math.floor(scIdx / actualScenesPerSection), 4)],
+            prose,
+            footnotes,
+            wordCount: countWords(prose),
+            chapterId: null,
+            chapterTitle: null,
+            sceneNumber: scIdx + 1
+          })
+        }
+      }
+      return scenes
+    }
+
+    // Process each chapter with scene markers within
     let sceneGlobalIndex = 0
     const actualScenesPerSection = Math.max(1, Math.ceil(chapterMarkers.length * 2 / 5)) // Estimate scenes per section
 
@@ -244,18 +286,16 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
 
       if (chapterContent.length < 50) continue
 
-      // Within this chapter, look for scene markers
-      // Patterns: standalone numbers (1, 2, 3), markdown headers with numbers (#1, # 1, ##2, ## 2)
-      // Scene breaks (*** or ---)
-      const sceneRegex = /^(?:#{1,3}\s*)?(\d+)\s*$/gm
-      const sceneMarkers: { index: number; number: number; end: number }[] = []
+      // Within this chapter, look for scene markers (lines starting with #)
+      const chapterSceneRegex = /^#{1,3}\s*(.*)$/gm
+      const sceneMarkers: { index: number; title: string; end: number }[] = []
 
-      let scMatch
-      while ((scMatch = sceneRegex.exec(chapterContent)) !== null) {
+      let chScMatch
+      while ((chScMatch = chapterSceneRegex.exec(chapterContent)) !== null) {
         sceneMarkers.push({
-          index: scMatch.index,
-          number: parseInt(scMatch[1]),
-          end: scMatch.index + scMatch[0].length
+          index: chScMatch.index,
+          title: chScMatch[1].trim() || `Scene ${sceneMarkers.length + 1}`,
+          end: chScMatch.index + chScMatch[0].length
         })
       }
 
@@ -280,19 +320,21 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
           const sceneEnd = scIdx < sceneMarkers.length - 1 ? sceneMarkers[scIdx + 1].index : chapterContent.length
           const sceneContent = text.slice(chapterStart + sceneStart, chapterStart + sceneEnd).trim()
 
-          if (sceneContent.length > 50) {
+          if (sceneContent.length > 20) {
             const { prose, footnotes } = extractFootnotes(sceneContent)
-            const sceneNumber = sceneMarkers[scIdx].number
+            const sceneTitle = sceneMarkers[scIdx].title
 
             scenes.push({
-              title: `${chapterMarkers[chIdx].title} - Scene ${sceneNumber}`,
+              title: sceneTitle.match(/^\d+$/)
+                ? `${chapterMarkers[chIdx].title} - Scene ${sceneTitle}`
+                : sceneTitle,
               section: SECTIONS[Math.min(Math.floor(sceneGlobalIndex / actualScenesPerSection), 4)],
               prose,
               footnotes,
               wordCount: countWords(prose),
               chapterId,
               chapterTitle: chapterMarkers[chIdx].title,
-              sceneNumber
+              sceneNumber: scIdx + 1
             })
             sceneGlobalIndex++
           }
