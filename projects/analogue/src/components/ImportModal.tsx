@@ -227,18 +227,19 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
       })
     }
 
-    // Scene marker regex: any line starting with # (scene break marker)
-    // Captures the text after the # as the scene title
-    const sceneRegex = /^#{1,3}\s*(.*)$/gm
+    // Scene marker regex: # followed by a number anywhere in the text (e.g., #1, #2, #42)
+    // This is the ONLY place # is used in scripts, so any #N is a scene break
+    const sceneRegex = /#(\d+)/g
 
     // Check for scene markers in the full text
-    const allSceneMarkers: { index: number; title: string; end: number }[] = []
+    const allSceneMarkers: { index: number; title: string; end: number; number: number }[] = []
     let scMatch
     while ((scMatch = sceneRegex.exec(text)) !== null) {
       allSceneMarkers.push({
         index: scMatch.index,
-        title: scMatch[1].trim() || `Scene ${allSceneMarkers.length + 1}`,
-        end: scMatch.index + scMatch[0].length
+        title: `Scene ${scMatch[1]}`,
+        end: scMatch.index + scMatch[0].length,
+        number: parseInt(scMatch[1])
       })
     }
 
@@ -259,15 +260,16 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
 
         if (sceneContent.length > 20) {
           const { prose, footnotes } = extractFootnotes(sceneContent)
+          const sceneNumber = allSceneMarkers[scIdx].number
           scenes.push({
-            title: allSceneMarkers[scIdx].title,
+            title: `Scene ${sceneNumber}`,
             section: SECTIONS[Math.min(Math.floor(scIdx / actualScenesPerSection), 4)],
             prose,
             footnotes,
             wordCount: countWords(prose),
             chapterId: null,
             chapterTitle: null,
-            sceneNumber: scIdx + 1
+            sceneNumber
           })
         }
       }
@@ -286,16 +288,17 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
 
       if (chapterContent.length < 50) continue
 
-      // Within this chapter, look for scene markers (lines starting with #)
-      const chapterSceneRegex = /^#{1,3}\s*(.*)$/gm
-      const sceneMarkers: { index: number; title: string; end: number }[] = []
+      // Within this chapter, look for scene markers (#N anywhere in text)
+      const chapterSceneRegex = /#(\d+)/g
+      const sceneMarkers: { index: number; title: string; end: number; number: number }[] = []
 
       let chScMatch
       while ((chScMatch = chapterSceneRegex.exec(chapterContent)) !== null) {
         sceneMarkers.push({
           index: chScMatch.index,
-          title: chScMatch[1].trim() || `Scene ${sceneMarkers.length + 1}`,
-          end: chScMatch.index + chScMatch[0].length
+          title: `Scene ${chScMatch[1]}`,
+          end: chScMatch.index + chScMatch[0].length,
+          number: parseInt(chScMatch[1])
         })
       }
 
@@ -322,19 +325,17 @@ function parseManuscript(text: string, splitMethod: SplitMethod): ImportedScene[
 
           if (sceneContent.length > 20) {
             const { prose, footnotes } = extractFootnotes(sceneContent)
-            const sceneTitle = sceneMarkers[scIdx].title
+            const sceneNumber = sceneMarkers[scIdx].number
 
             scenes.push({
-              title: sceneTitle.match(/^\d+$/)
-                ? `${chapterMarkers[chIdx].title} - Scene ${sceneTitle}`
-                : sceneTitle,
+              title: `${chapterMarkers[chIdx].title} - Scene ${sceneNumber}`,
               section: SECTIONS[Math.min(Math.floor(sceneGlobalIndex / actualScenesPerSection), 4)],
               prose,
               footnotes,
               wordCount: countWords(prose),
               chapterId,
               chapterTitle: chapterMarkers[chIdx].title,
-              sceneNumber: scIdx + 1
+              sceneNumber
             })
             sceneGlobalIndex++
           }
