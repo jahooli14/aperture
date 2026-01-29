@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { CreateListDialog } from '../components/lists/CreateListDialog'
+import { OptimizedImage } from '../components/ui/optimized-image'
 import type { ListType } from '../types'
 
 const ListIcon = ({ type, className, style }: { type: ListType, className?: string, style?: React.CSSProperties }) => {
@@ -64,44 +65,117 @@ export default function ListsPage() {
         fetchLists().finally(() => setInitialLoad(false))
     }, [])
 
-    // Fetch first item image for each list to use as cover, or shortest phrase for quote lists
+    // Optimized cover fetching with backend, IndexedDB caching and parallelization
     useEffect(() => {
         const fetchCovers = async () => {
-            const covers: Record<string, string> = {}
-            const quotes: Record<string, string> = {}
-            for (const list of lists) {
-                try {
-                    const response = await fetch(`/api/list-items?listId=${list.id}&limit=50`)
-                    if (response.ok) {
-                        const items = await response.json()
+            const { readingDb } = await import('../lib/db')
 
-                        if (list.type === 'quote' && items.length > 0) {
-                            // For quote lists, find the shortest phrase
-                            const shortestPhrase = items.reduce((shortest: any, item: any) =>
-                                !shortest || item.content.length < shortest.content.length ? item : shortest
-                            , null)
-                            if (shortestPhrase) {
-                                quotes[list.id] = shortestPhrase.content
-                            }
-                        } else {
-                            // For other lists, find first item with image
-                            const itemWithImage = items.find((item: any) => item.metadata?.image)
-                            if (itemWithImage?.metadata?.image) {
-                                covers[list.id] = itemWithImage.metadata.image
-                            }
+            // Step 0: Extract covers from backend response (fastest path)
+            const backendCovers: Record<string, string> = {}
+            const backendQuotes: Record<string, string> = {}
+
+            lists.forEach(list => {
+                if (list.cover_image) {
+                    if (list.type === 'quote') {
+                        backendQuotes[list.id] = list.cover_image
+                    } else {
+                        backendCovers[list.id] = list.cover_image
+                    }
+                }
+            })
+
+            // Step 1: Load all covers from cache for lists without backend covers
+            const cachedCovers: Record<string, string> = { ...backendCovers }
+            const cachedQuotes: Record<string, string> = { ...backendQuotes }
+
+            const allCachedCovers = await readingDb.getAllCachedListCoverImages()
+            allCachedCovers.forEach(cover => {
+                if (cover.image_type === 'quote' && !cachedQuotes[cover.list_id]) {
+                    cachedQuotes[cover.list_id] = cover.image_url
+                } else if (!cachedCovers[cover.list_id]) {
+                    cachedCovers[cover.list_id] = cover.image_url
+                }
+            })
+
+            // Set covers immediately for instant load
+            setListCovers(cachedCovers)
+            setQuoteCovers(cachedQuotes)
+
+            // Step 2: Identify lists that need cover fetching (no backend, no cache)
+            const missingLists = lists.filter(list =>
+                !cachedCovers[list.id] && !cachedQuotes[list.id]
+            )
+
+            if (missingLists.length === 0) return
+
+            // Step 3: Fetch missing covers in parallel (not sequential!)
+            const coverPromises = missingLists.map(async (list) => {
+                try {
+                    // First try to extract from cached list items (zero network cost)
+                    const cachedItems = await readingDb.getCachedListItems(list.id)
+
+                    if (list.type === 'quote' && cachedItems.length > 0) {
+                        const shortestPhrase = cachedItems.reduce((shortest, item) =>
+                            !shortest || item.content.length < shortest.content.length ? item : shortest
+                        )
+                        await readingDb.cacheListCoverImage(list.id, shortestPhrase.content, 'quote')
+                        return { listId: list.id, quote: shortestPhrase.content }
+                    } else if (cachedItems.length > 0) {
+                        const itemWithImage = cachedItems.find((item) => item.metadata?.image)
+                        if (itemWithImage?.metadata?.image) {
+                            await readingDb.cacheListCoverImage(list.id, itemWithImage.metadata.image, 'image')
+                            return { listId: list.id, image: itemWithImage.metadata.image }
+                        }
+                    }
+
+                    // Only fetch from API if not in cache (fallback)
+                    const response = await fetch(`/api/list-items?listId=${list.id}&limit=50`)
+                    if (!response.ok) return null
+
+                    const items = await response.json()
+
+                    if (list.type === 'quote' && items.length > 0) {
+                        const shortestPhrase = items.reduce((shortest: any, item: any) =>
+                            !shortest || item.content.length < shortest.content.length ? item : shortest
+                        , null)
+                        if (shortestPhrase) {
+                            await readingDb.cacheListCoverImage(list.id, shortestPhrase.content, 'quote')
+                            return { listId: list.id, quote: shortestPhrase.content }
+                        }
+                    } else {
+                        const itemWithImage = items.find((item: any) => item.metadata?.image)
+                        if (itemWithImage?.metadata?.image) {
+                            await readingDb.cacheListCoverImage(list.id, itemWithImage.metadata.image, 'image')
+                            return { listId: list.id, image: itemWithImage.metadata.image }
                         }
                     }
                 } catch (error) {
                     console.error(`Failed to fetch cover for list ${list.id}:`, error)
+                    return null
                 }
-            }
-            setListCovers(covers)
-            setQuoteCovers(quotes)
+            })
+
+            // Wait for all fetches to complete in parallel
+            const results = await Promise.all(coverPromises)
+
+            // Step 4: Update state with newly fetched covers
+            const newCovers: Record<string, string> = { ...cachedCovers }
+            const newQuotes: Record<string, string> = { ...cachedQuotes }
+
+            results.forEach(result => {
+                if (!result) return
+                if (result.image) newCovers[result.listId] = result.image
+                if (result.quote) newQuotes[result.listId] = result.quote
+            })
+
+            setListCovers(newCovers)
+            setQuoteCovers(newQuotes)
         }
+
         if (lists.length > 0) {
             fetchCovers()
         }
-    }, [lists])
+    }, [lists.map(l => l.id).join(',')]) // Only re-run when list IDs change, not on reorder/title changes
 
     const handleReorder = (newOrder: any[]) => {
         reorderLists(newOrder.map(l => l.id))
@@ -188,10 +262,12 @@ export default function ListsPage() {
                             {/* Poster / Cover Image / Quote Cover */}
                             <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950">
                                 {coverImage ? (
-                                    <img
+                                    <OptimizedImage
                                         src={coverImage}
-                                        alt=""
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        alt={list.title}
+                                        className="w-full h-full"
+                                        priority={false}
+                                        sizes="(max-width: 768px) 50vw, 25vw"
                                     />
                                 ) : quoteCover ? (
                                     // Beautiful quote cover with shortest phrase
