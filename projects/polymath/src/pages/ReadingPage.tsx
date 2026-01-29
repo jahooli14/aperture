@@ -3,7 +3,7 @@
  * Displays saved articles with filtering and save functionality
  */
 
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
@@ -11,9 +11,7 @@ import { useReadingStore } from '../stores/useReadingStore'
 import { useReadingQueue } from '../hooks/useReadingQueue'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
-import { SaveArticleDialog } from '../components/reading/SaveArticleDialog'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
-import { ProcessingDebugPanel } from '../components/reading/ProcessingDebugPanel'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -35,6 +33,10 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
 import type { Article } from '../types/reading'
+
+// Lazy load heavy dialog components to reduce initial bundle size
+const SaveArticleDialog = lazy(() => import('../components/reading/SaveArticleDialog').then(m => ({ default: m.SaveArticleDialog })))
+const ProcessingDebugPanel = lazy(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel })))
 
 type FilterTab = 'queue' | 'updates' | ArticleStatus
 
@@ -972,11 +974,13 @@ export function ReadingPage() {
         </div >
 
         {/* Save Article Dialog */}
-        < SaveArticleDialog
-          open={showSaveDialog}
-          onClose={() => setShowSaveDialog(false)
-          }
-        />
+        <Suspense fallback={null}>
+          <SaveArticleDialog
+            open={showSaveDialog}
+            onClose={() => setShowSaveDialog(false)
+            }
+          />
+        </Suspense>
 
         {/* Connection Suggestions */}
         {
@@ -1019,9 +1023,10 @@ export function ReadingPage() {
         />
 
         {/* Processing Debug Panel */}
-        <ProcessingDebugPanel
-          articles={safeArticles}
-          onRetry={(articleId, url) => {
+        <Suspense fallback={null}>
+          <ProcessingDebugPanel
+            articles={safeArticles}
+            onRetry={(articleId, url) => {
             setProcessingArticles(prev => new Map(prev).set(articleId, { status: 'extracting', url }))
 
             articleProcessor.startProcessing(articleId, url, (status, updatedArticle) => {
@@ -1085,7 +1090,8 @@ export function ReadingPage() {
               })
             }
           }}
-        />
+          />
+        </Suspense>
       </PullToRefresh>
     </>
   )
