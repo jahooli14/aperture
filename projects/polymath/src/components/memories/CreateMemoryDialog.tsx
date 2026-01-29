@@ -3,7 +3,7 @@
  * Mobile-optimized bottom sheet for capturing thoughts manually
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -39,10 +39,21 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const [loading, setLoading] = useState(false)
   const [lastCreatedId, setLastCreatedId] = useState<string | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
+
+  // Create and cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    const urls = selectedFiles.map(file => URL.createObjectURL(file))
+    setPreviewUrls(urls)
+
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [selectedFiles])
 
   // Use controlled or uncontrolled state
   const open = isOpen !== undefined ? isOpen : internalOpen
@@ -372,7 +383,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                           }`}
                       >
                         <img
-                          src={URL.createObjectURL(file)}
+                          src={previewUrls[index]}
                           alt="Preview"
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />

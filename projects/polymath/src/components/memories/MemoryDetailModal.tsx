@@ -12,6 +12,7 @@ import { ConnectionsList } from '../connections/ConnectionsList'
 import { EditMemoryDialog } from './EditMemoryDialog'
 import { GlassCard } from '../ui/GlassCard'
 import { SmartActionDot } from '../SmartActionDot'
+import { CACHE_TTL } from '../../lib/cacheConfig'
 
 import { useContextEngineStore } from '../../stores/useContextEngineStore'
 
@@ -36,7 +37,6 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
 
   // Module-level cache to prevent refetching bridges
   const bridgesCache = useMemo(() => new Map<string, { bridges: BridgeWithMemories[]; timestamp: number }>(), []);
-  const BRIDGE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   useEffect(() => {
     if (!memory || !isOpen) return
@@ -51,7 +51,7 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
       const cached = bridgesCache.get(memory.id)
       const now = Date.now()
 
-      if (cached && (now - cached.timestamp) < BRIDGE_CACHE_TTL) {
+      if (cached && (now - cached.timestamp) < CACHE_TTL) {
         setBridges(cached.bridges)
         setBridgesFetched(true)
         return
