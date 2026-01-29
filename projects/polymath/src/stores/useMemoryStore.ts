@@ -142,8 +142,6 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       )
 
       // Use smart update logic to prevent flickering from polling
-      const currentMemories = get().memories
-
       // Skip update if data hasn't changed (prevent unnecessary re-renders during polling)
       if (currentMemories.length === mergedMemories.length && mergedMemories.length > 0) {
         const currentById = new Map(currentMemories.map(m => [m.id, m]))
