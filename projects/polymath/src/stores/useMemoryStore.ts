@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { Memory, Bridge, BridgeWithMemories, SourceReference } from '../types'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
+import { CACHE_TTL } from '../lib/cacheConfig'
 
 interface CreateMemoryInput {
   title: string
@@ -43,10 +44,9 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
   fetchMemories: async (force = false) => {
     const state = get()
     const now = Date.now()
-    const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
     // Skip if we have recent data and not forcing refresh
-    if (!force && state.memories.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
+    if (!force && state.memories.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_TTL)) {
       console.log('[MemoryStore] Using cached memories (Zustand)')
       return
     }
