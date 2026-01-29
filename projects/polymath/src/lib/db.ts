@@ -99,6 +99,14 @@ export interface CachedListItem {
   cached_at: string
 }
 
+// Cached List Cover Image interface
+export interface CachedListCoverImage {
+  list_id: string
+  image_url: string
+  image_type: 'image' | 'quote'
+  cached_at: string
+}
+
 export class RosetteDatabase extends Dexie {
   // Reading Tables
   articles!: Table<CachedArticle, string>
@@ -112,6 +120,7 @@ export class RosetteDatabase extends Dexie {
   // List Tables
   lists!: Table<CachedList, string>
   listItems!: Table<CachedListItem, string>
+  listCoverImages!: Table<CachedListCoverImage, string>
 
   // Capture & Memory Tables
   pendingCaptures!: Table<PendingCapture, number>
@@ -160,6 +169,22 @@ export class RosetteDatabase extends Dexie {
       projects: 'id, status, is_priority, updated_at, last_active',
       lists: 'id, user_id, type, created_at',
       listItems: 'id, list_id, user_id, enrichment_status, created_at',
+      pendingCaptures: '++id, timestamp, synced, mime_type',
+      memories: 'id, cached_at',
+      connections: 'id, source_id, target_id, type',
+      dashboard: 'id, updated_at'
+    })
+
+    // Version 4: Add listCoverImages table for performance optimization
+    this.version(4).stores({
+      articles: 'id, user_id, status, created_at, last_synced, offline_available',
+      images: '++id, article_id, url, cached_at',
+      highlights: 'id, article_id, created_at',
+      progress: '++id, article_id, updated_at',
+      projects: 'id, status, is_priority, updated_at, last_active',
+      lists: 'id, user_id, type, created_at',
+      listItems: 'id, list_id, user_id, enrichment_status, created_at',
+      listCoverImages: 'list_id, cached_at, image_type',
       pendingCaptures: '++id, timestamp, synced, mime_type',
       memories: 'id, cached_at',
       connections: 'id, source_id, target_id, type',
@@ -392,6 +417,41 @@ export class RosetteDatabase extends Dexie {
     await this.lists.delete(id)
     // Also delete associated items
     await this.listItems.where('list_id').equals(id).delete()
+    // Also delete cover image cache
+    await this.listCoverImages.delete(id)
+  }
+
+  // --- List Cover Image Cache Methods ---
+
+  async cacheListCoverImage(listId: string, imageUrl: string, imageType: 'image' | 'quote'): Promise<void> {
+    await this.listCoverImages.put({
+      list_id: listId,
+      image_url: imageUrl,
+      image_type: imageType,
+      cached_at: new Date().toISOString()
+    })
+  }
+
+  async getCachedListCoverImage(listId: string): Promise<CachedListCoverImage | undefined> {
+    return await this.listCoverImages.get(listId)
+  }
+
+  async getAllCachedListCoverImages(): Promise<CachedListCoverImage[]> {
+    return await this.listCoverImages.toArray()
+  }
+
+  async deleteListCoverImageCache(listId: string): Promise<void> {
+    await this.listCoverImages.delete(listId)
+  }
+
+  async bulkCacheListCoverImages(covers: Array<{ listId: string, imageUrl: string, imageType: 'image' | 'quote' }>): Promise<void> {
+    const cachedCovers: CachedListCoverImage[] = covers.map(c => ({
+      list_id: c.listId,
+      image_url: c.imageUrl,
+      image_type: c.imageType,
+      cached_at: new Date().toISOString()
+    }))
+    await this.listCoverImages.bulkPut(cachedCovers)
   }
 }
 
