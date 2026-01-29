@@ -10,6 +10,25 @@ import { useOfflineStore } from './useOfflineStore'
 import { queryClient } from '../lib/queryClient'
 import { CACHE_TTL } from '../lib/cacheConfig'
 
+/**
+ * Debounced localStorage write to reduce I/O operations
+ * Batches multiple rapid writes into a single delayed write
+ */
+let pendingArticlesWriteTimer: ReturnType<typeof setTimeout> | null = null
+const debouncedSavePendingArticles = (articles: Article[]) => {
+  if (pendingArticlesWriteTimer) {
+    clearTimeout(pendingArticlesWriteTimer)
+  }
+  pendingArticlesWriteTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('pending-articles', JSON.stringify(articles))
+      pendingArticlesWriteTimer = null
+    } catch (e) {
+      console.error('Failed to save pending articles to localStorage:', e)
+    }
+  }, 300) // 300ms debounce
+}
+
 interface ReadingState {
   articles: Article[]
   loading: boolean
@@ -152,7 +171,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         // 2. Update local storage if pending list changed
         if (remainingPending.length !== currentPending.length) {
           console.log(`[ReadingStore] cleaned up ${currentPending.length - remainingPending.length} pending articles`)
-          localStorage.setItem('pending-articles', JSON.stringify(remainingPending))
+          debouncedSavePendingArticles(remainingPending)
           set({ pendingArticles: remainingPending })
         }
 
@@ -248,7 +267,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
       // Persist pending to localStorage
       try {
-        localStorage.setItem('pending-articles', JSON.stringify(newPending))
+        debouncedSavePendingArticles(newPending)
 
         // CRITICAL: Cache optimistic article in valid DB format immediately
         // This allows useArticle() to find it on the ReaderPage instantly
@@ -314,7 +333,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         // Success! Replace temp article with real one
         set((state) => {
           const filteredPending = state.pendingArticles.filter(a => a.id !== tempId)
-          localStorage.setItem('pending-articles', JSON.stringify(filteredPending))
+          debouncedSavePendingArticles(filteredPending)
 
           return {
             pendingArticles: filteredPending,
@@ -389,7 +408,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
       if (hasChanges || remainingPending.length !== state.pendingArticles.length) {
         set({ pendingArticles: remainingPending })
-        localStorage.setItem('pending-articles', JSON.stringify(remainingPending))
+        debouncedSavePendingArticles(remainingPending)
 
         // Refresh list if we synced everything
         if (remainingPending.length === 0) {
@@ -555,7 +574,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
       if (id.startsWith('temp-')) {
         set((state) => {
           const newPending = state.pendingArticles.filter((a) => a.id !== id)
-          localStorage.setItem('pending-articles', JSON.stringify(newPending))
+          debouncedSavePendingArticles(newPending)
           return { pendingArticles: newPending }
         })
         return

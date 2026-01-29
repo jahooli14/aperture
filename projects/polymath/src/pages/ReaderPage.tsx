@@ -122,6 +122,16 @@ export function ReaderPage() {
     }
   }, [id])
 
+  // Clean up blob URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Revoke all blob URLs when component unmounts or cachedImageUrls changes
+      cachedImageUrls.forEach((blobUrl) => {
+        URL.revokeObjectURL(blobUrl)
+      })
+    }
+  }, [cachedImageUrls])
+
   const fetchSuggestions = async () => {
     if (!id) return
     try {
@@ -175,7 +185,7 @@ export function ReaderPage() {
         'pre', 'code', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr',
         'div', 'span'
       ],
-      ALLOWED_ATTR: ['href', 'src', 'srcset', 'sizes', 'alt', 'title', 'class', 'width', 'height', 'loading', 'referrerpolicy'],
+      ALLOWED_ATTR: ['href', 'src', 'srcset', 'sizes', 'alt', 'title', 'class', 'width', 'height', 'loading', 'decoding', 'referrerpolicy'],
       FORBID_ATTR: ['style', 'id']
     })
 
@@ -187,8 +197,10 @@ export function ReaderPage() {
       const originalSrc = img.getAttribute('src')
       if (!originalSrc) return
 
-      // Force no-referrer for privacy
+      // Force no-referrer for privacy and enable lazy loading
       img.setAttribute('referrerpolicy', 'no-referrer')
+      img.setAttribute('loading', 'lazy')
+      img.setAttribute('decoding', 'async')
 
       // 1. Use cached blob if available (Offline mode)
       if (cachedImageUrls.has(originalSrc)) {
