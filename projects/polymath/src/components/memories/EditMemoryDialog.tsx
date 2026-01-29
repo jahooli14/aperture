@@ -1,5 +1,5 @@
 /**
- * EditMemoryDialog - Edit existing memories with bullet-point input (Bottom Sheet)
+ * EditMemoryDialog - Edit existing memories (Bottom Sheet)
  */
 
 import { useState, useEffect } from 'react'
@@ -40,6 +40,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
 
   // Image state
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [existingImages, setExistingImages] = useState<string[]>([])
 
   const [body, setBody] = useState('')
@@ -48,6 +49,16 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
     tags: '',
     memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
+
+  // Create and cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    const urls = selectedFiles.map(file => URL.createObjectURL(file))
+    setPreviewUrls(urls)
+
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url))
+    }
+  }, [selectedFiles])
 
   useEffect(() => {
     if (memory && open) {
@@ -343,7 +354,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       className="relative rounded-2xl overflow-hidden group border border-dashed border-white/20 shadow-lg aspect-square"
                     >
                       <img
-                        src={URL.createObjectURL(file)}
+                        src={previewUrls[index]}
                         alt="New upload preview"
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500"
                       />

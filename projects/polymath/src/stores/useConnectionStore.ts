@@ -5,6 +5,7 @@
 
 import { create } from 'zustand'
 import type { ItemConnection } from '../types'
+import { CACHE_TTL } from '../lib/cacheConfig'
 
 export interface ConnectionSuggestion {
   targetId: string
@@ -90,8 +91,8 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     const key = `${itemType}-${itemId}`
     const cached = cache.get(key)
 
-    // Cache valid for 5 minutes
-    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+    // Check if cache is still valid
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.connections
     }
 
