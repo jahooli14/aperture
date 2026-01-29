@@ -375,8 +375,8 @@ export default function EditorPage() {
 
       {/* Prose Pane */}
       <div
-        className="flex-1 flex flex-col overflow-hidden"
-        style={{ height: footnoteDrawerOpen ? `${100 - footnoteDrawerHeight}%` : '100%' }}
+        className="flex-1 flex flex-col min-h-0 overflow-hidden"
+        style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
       >
         {isReadMode ? (
           /* Read mode - formatted paragraphs */
