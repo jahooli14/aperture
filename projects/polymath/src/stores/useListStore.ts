@@ -66,6 +66,34 @@ export const useListStore = create<ListStore>()(
                     const response = await fetch('/api/lists')
                     if (!response.ok) throw new Error('Failed to fetch lists')
                     const data = await response.json()
+
+                    // Smart update: Skip if data hasn't changed to prevent flickering during background sync
+                    const currentLists = get().lists
+                    if (currentLists.length === data.length && data.length > 0) {
+                        // Quick check: compare IDs and updated_at
+                        const hasChanged = data.some((newL: any, idx: number) => {
+                            const oldL = currentLists[idx]
+                            return !oldL ||
+                                   newL.id !== oldL.id ||
+                                   newL.updated_at !== oldL.updated_at ||
+                                   newL.title !== oldL.title ||
+                                   newL.item_count !== oldL.item_count
+                        })
+
+                        if (!hasChanged) {
+                            console.log('[ListStore] Skipping state update - data unchanged')
+                            set({ loading: false, offlineMode: false })
+                            // Still cache the data even if unchanged
+                            try {
+                                const { readingDb } = await import('../lib/db')
+                                await readingDb.cacheLists(data)
+                            } catch (cacheError) {
+                                console.warn('[ListStore] Failed to cache lists:', cacheError)
+                            }
+                            return
+                        }
+                    }
+
                     set({ lists: data, loading: false, offlineMode: false })
 
                     // Cache to Dexie for offline viewing
@@ -198,6 +226,31 @@ export const useListStore = create<ListStore>()(
                     // Only update if this is still the current list
                     const state = get()
                     if (state.currentListId === currentFetchId) {
+                        // Smart update: Skip if data hasn't changed to prevent flickering
+                        const currentItems = state.currentListItems
+                        if (currentItems.length === data.length && data.length > 0) {
+                            const hasChanged = data.some((newItem: any, idx: number) => {
+                                const oldItem = currentItems[idx]
+                                return !oldItem ||
+                                       newItem.id !== oldItem.id ||
+                                       newItem.status !== oldItem.status ||
+                                       newItem.enrichment_status !== oldItem.enrichment_status
+                            })
+
+                            if (!hasChanged) {
+                                console.log('[ListStore] Skipping items state update - data unchanged')
+                                set({ loading: false })
+                                // Still cache the data even if unchanged
+                                try {
+                                    const { readingDb } = await import('../lib/db')
+                                    await readingDb.cacheListItems(data)
+                                } catch (cacheError) {
+                                    console.warn('[ListStore] Failed to cache items:', cacheError)
+                                }
+                                return
+                            }
+                        }
+
                         set({ currentListItems: data, loading: false })
 
                         // Cache to Dexie for offline viewing

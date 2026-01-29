@@ -141,6 +141,29 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       )
 
+      // Use smart update logic to prevent flickering from polling
+      const currentMemories = get().memories
+
+      // Skip update if data hasn't changed (prevent unnecessary re-renders during polling)
+      if (currentMemories.length === mergedMemories.length && mergedMemories.length > 0) {
+        const currentById = new Map(currentMemories.map(m => [m.id, m]))
+        const sameIds = mergedMemories.every(m => currentById.has(m.id))
+
+        if (sameIds) {
+          // Check if processed status changed for any memory
+          const hasProcessedChange = mergedMemories.some(m => {
+            const current = currentById.get(m.id)
+            return current && current.processed !== m.processed
+          })
+
+          if (!hasProcessedChange) {
+            console.log('[MemoryStore] Skipping fetchMemories state update - data unchanged')
+            set({ loading: false, lastFetched: now })
+            return
+          }
+        }
+      }
+
       set({ memories: mergedMemories, loading: false, lastFetched: now })
     } catch (error) {
       console.error('[MemoryStore] Fetch failed, attempting offline fallback:', error)
