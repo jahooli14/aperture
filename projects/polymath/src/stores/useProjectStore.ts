@@ -175,6 +175,26 @@ export const useProjectStore = create<ProjectState>()(
           // Sort once
           fetchedProjects = smartSortProjects(fetchedProjects)
 
+          // Smart update: Skip if data hasn't changed to prevent flickering during background sync
+          const currentProjects = get().allProjects
+          if (currentProjects.length === fetchedProjects.length && fetchedProjects.length > 0) {
+            // Quick check: compare IDs and updated_at timestamps
+            const hasChanged = fetchedProjects.some((newP, idx) => {
+              const oldP = currentProjects[idx]
+              return !oldP ||
+                     newP.id !== oldP.id ||
+                     newP.updated_at !== oldP.updated_at ||
+                     newP.status !== oldP.status ||
+                     newP.is_priority !== oldP.is_priority
+            })
+
+            if (!hasChanged) {
+              console.log('[ProjectStore] Skipping state update - data unchanged')
+              set({ loading: false, initialized: true, offlineMode: false, error: null })
+              return
+            }
+          }
+
           set(state => ({
             allProjects: fetchedProjects,
             projects: filterProjects(fetchedProjects, state.filter),

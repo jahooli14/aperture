@@ -478,7 +478,21 @@ export default function ListDetailPage() {
         await reorderItems(id, newItems.map(item => item.id))
     }
 
-    if (!list) return <div className="pt-24 text-center text-white">Loading...</div>
+    if (!list) {
+        return (
+            <div className="min-h-screen bg-black pt-24 px-4">
+                <div className="max-w-4xl mx-auto">
+                    <div className="shimmer h-8 w-32 rounded mb-8" />
+                    <div className="shimmer h-12 w-64 rounded-lg mb-6" />
+                    <div className="flex flex-wrap gap-3">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="shimmer h-48 rounded-2xl" style={{ width: 'calc(50% - 6px)' }} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen bg-black flex flex-col">

@@ -301,7 +301,9 @@ export function useMediaRecorderVoice({
           // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
           // The sync manager will transcribe and create the note when back online.
           // Dispatch event so UI can show feedback without creating a note
-          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline'))
+          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
+            detail: { message: 'Voice note saved offline and will be transcribed when back online' }
+          }))
           setTranscript('')
           return
         } else {
@@ -422,7 +424,9 @@ export function useMediaRecorderVoice({
           // DON'T call onTranscript with placeholder - this would create a note with placeholder text!
           // The sync manager will transcribe and create the note when back online.
           // Dispatch event so UI can show feedback without creating a note
-          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline'))
+          window.dispatchEvent(new CustomEvent('voice-capture-queued-offline', {
+            detail: { message: 'Voice note saved offline and will be transcribed when back online' }
+          }))
           setTranscript('')
           return
         } else {
