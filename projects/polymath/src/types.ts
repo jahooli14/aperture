@@ -963,6 +963,7 @@ export interface List {
   // Virtual field for frontend convenience
   items?: ListItem[]
   item_count?: number
+  cover_image?: string | null // Cover image URL (from first item with image or backend)
 }
 
 export interface ListItem {
