@@ -341,7 +341,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
       // Configure Gemini with Structured Outputs (JSON Schema)
       const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash', // Stable Flash model
+        model: 'gemini-flash-latest', // Auto-updates to latest Flash version
         generationConfig: {
           temperature: 0.7, // Reduced for more consistent results
           maxOutputTokens: 500,
