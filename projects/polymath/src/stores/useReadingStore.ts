@@ -8,6 +8,7 @@ import type { Article, ArticleStatus, SaveArticleRequest } from '../types/readin
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
 import { queryClient } from '../lib/queryClient'
+import { CACHE_TTL } from '../lib/cacheConfig'
 
 interface ReadingState {
   articles: Article[]
@@ -56,10 +57,9 @@ export const useReadingStore = create<ReadingState>((set, get) => {
     fetchArticles: async (status?: ArticleStatus, force = false) => {
       const state = get()
       const now = Date.now()
-      const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
       // 1. In-memory cache check (fastest)
-      if (!force && state.articles.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_DURATION)) {
+      if (!force && state.articles.length > 0 && state.lastFetched && (now - state.lastFetched < CACHE_TTL)) {
         console.log('[ReadingStore] Using in-memory cache')
         return
       }

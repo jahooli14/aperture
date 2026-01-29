@@ -5,6 +5,7 @@ import { useListStore } from '../../stores/useListStore'
 import { useOfflineStore } from '../../stores/useOfflineStore'
 import { offlineContentManager } from '../offline/OfflineContentManager'
 import { readingDb } from '../db'
+import { SYNC_INTERVAL } from '../cacheConfig'
 
 class DataSynchronizer {
   private static instance: DataSynchronizer
@@ -227,7 +228,7 @@ class DataSynchronizer {
   /**
    * Starts an interval to sync data periodically (default: 5 mins)
    */
-  public startPeriodicSync(intervalMs: number = 5 * 60 * 1000) {
+  public startPeriodicSync(intervalMs: number = SYNC_INTERVAL) {
     if (this.syncInterval) return
 
     console.log(`[DataSynchronizer] Starting periodic sync every ${intervalMs}ms`)

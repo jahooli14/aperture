@@ -33,6 +33,8 @@ import { SubtleBackground } from '../components/SubtleBackground'
 import type { Memory, ThemeCluster, ThemeClustersResponse } from '../types'
 import { MemoryDetailModal } from '../components/memories/MemoryDetailModal' // Import MemoryDetailModal
 import { GlassCard } from '../components/ui/GlassCard' // For consistency with other cards
+import { debounce } from '../lib/utils'
+import { CACHE_TTL } from '../lib/cacheConfig'
 
 const getIconComponent = (name: string) => {
   const lowerName = name.toLowerCase()
@@ -71,8 +73,9 @@ function MasonryGrid({
     }
 
     updateColumns()
-    window.addEventListener('resize', updateColumns)
-    return () => window.removeEventListener('resize', updateColumns)
+    const debouncedResize = debounce(updateColumns, 150)
+    window.addEventListener('resize', debouncedResize)
+    return () => window.removeEventListener('resize', debouncedResize)
   }, [])
 
   // Distribute memories into columns:
@@ -196,9 +199,8 @@ export function MemoriesPage() {
   }, [fetchMemories])
 
   const fetchThemeClusters = useCallback(async (force = false) => {
-    // Check if clusters are still fresh (5 minutes = 300000ms)
+    // Check if clusters are still fresh
     const now = Date.now()
-    const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
     if (!force && clusters.length > 0 && (now - clustersLastFetched) < CACHE_TTL) {
       console.log('[MemoriesPage] Using cached clusters')
