@@ -380,7 +380,7 @@ export default function EditorPage() {
       >
         {isReadMode ? (
           /* Read mode - formatted paragraphs */
-          <div className="flex-1 overflow-y-auto p-3 pb-safe">
+          <div className="flex-1 h-0 overflow-y-auto p-3 pb-24">
             <div className="prose-container max-w-none">
               {displayProse.split(/\n\n+/).map((paragraph, i) => (
                 paragraph.trim() && (
@@ -418,7 +418,7 @@ export default function EditorPage() {
           </div>
         ) : (
           /* Edit mode - textarea with serif font and footnotes display */
-          <div className="flex-1 overflow-y-auto" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
+          <div className="flex-1 h-0 overflow-y-auto pb-24" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
             <textarea
               ref={proseRef}
               value={displayProse}
