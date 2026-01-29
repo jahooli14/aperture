@@ -124,11 +124,11 @@ class ArticleProcessor {
       const articleAge = Date.now() - new Date(article.created_at).getTime()
       const articleAgeSeconds = Math.floor(articleAge / 1000)
       // If article is old and still not processed, it's stuck - backend likely died
-      // Reduced threshold from 90s to 60s since backend timeout is 50s
-      // Check for ANY processing-related message (case-insensitive) OR just not processed after 60s
+      // Threshold set to 90s to allow complex extractions time to complete before declaring zombie
+      // Check for ANY processing-related message (case-insensitive) OR just not processed after 90s
       const isProcessingMessage = /extract|process|progress/i.test(processing.lastLog)
       const hasFailureMessage = /failed|blocked|timeout|timed out/i.test(processing.lastLog)
-      const isZombie = articleAgeSeconds >= 60 && !article.processed && (isProcessingMessage || hasFailureMessage)
+      const isZombie = articleAgeSeconds >= 90 && !article.processed && (isProcessingMessage || hasFailureMessage)
 
       if (isZombie) {
         this.log(`🧟 ZOMBIE DETECTED: Article ${articleId.slice(0, 8)} is ${articleAgeSeconds}s old but status never updated - backend died!`, 'error')
