@@ -10,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = getSupabaseClient()
 
     try {
-        // GET /api/lists - Fetch all lists
+        // GET /api/lists - Fetch all lists with cover images
         if (req.method === 'GET') {
             const { data: lists, error } = await supabase
                 .from('lists')
@@ -24,13 +24,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (error) throw error
 
-            const transformedLists = lists.map(list => ({
-                ...list,
-                item_count: list.items ? list.items[0]?.count : 0,
-                items: undefined
+            // Fetch cover images for all lists in parallel
+            const listsWithCovers = await Promise.all(lists.map(async (list) => {
+                let coverImage = null
+
+                // For quote lists, get shortest phrase
+                if (list.type === 'quote') {
+                    const { data: items } = await supabase
+                        .from('list_items')
+                        .select('content')
+                        .eq('list_id', list.id)
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false })
+                        .limit(50)
+
+                    if (items && items.length > 0) {
+                        const shortestPhrase = items.reduce((shortest, item) =>
+                            !shortest || item.content.length < shortest.content.length ? item : shortest
+                        )
+                        coverImage = shortestPhrase.content
+                    }
+                } else {
+                    // For other lists, get first item with an image
+                    const { data: items } = await supabase
+                        .from('list_items')
+                        .select('metadata')
+                        .eq('list_id', list.id)
+                        .eq('user_id', userId)
+                        .not('metadata->image', 'is', null)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+
+                    if (items && items.length > 0 && items[0].metadata?.image) {
+                        coverImage = items[0].metadata.image
+                    }
+                }
+
+                return {
+                    ...list,
+                    item_count: list.items ? list.items[0]?.count : 0,
+                    cover_image: coverImage,
+                    items: undefined
+                }
             }))
 
-            return res.status(200).json(transformedLists)
+            return res.status(200).json(listsWithCovers)
         }
 
         // POST /api/lists - Create a new list

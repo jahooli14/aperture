@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
+import { OptimizedImage } from '../components/ui/optimized-image'
 import { Reorder } from 'framer-motion'
 import type { ListItem } from '../types'
 
@@ -293,11 +294,13 @@ function MasonryListGrid({
                                 {/* Image Background or Gradient */}
                                 {hasImage ? (
                                     <div className={`relative ${isPosterType ? 'aspect-[2/3]' : 'aspect-square'} overflow-hidden`}>
-                                        <img
+                                        <OptimizedImage
                                             src={item.metadata.image}
                                             alt={item.content}
-                                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                            loading="lazy"
+                                            className="w-full h-full"
+                                            aspectRatio={isPosterType ? '2/3' : '1/1'}
+                                            priority={false}
+                                            sizes="(max-width: 768px) 50vw, 33vw"
                                         />
                                         {/* Gradient Overlay for Text Readability */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
@@ -614,7 +617,13 @@ export default function ListDetailPage() {
                                         <GripVertical className="h-4 w-4 text-zinc-600" />
                                         {item.metadata?.image && (
                                             <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10">
-                                                <img src={item.metadata.image} className="w-full h-full object-cover" />
+                                                <OptimizedImage
+                                                    src={item.metadata.image}
+                                                    alt={item.content}
+                                                    className="w-full h-full"
+                                                    aspectRatio="1/1"
+                                                    priority={false}
+                                                />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
