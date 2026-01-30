@@ -375,12 +375,12 @@ export default function EditorPage() {
 
       {/* Prose Pane */}
       <div
-        className="flex-1 flex flex-col min-h-0 overflow-hidden"
+        className="flex-1 relative min-h-0"
         style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
       >
         {isReadMode ? (
           /* Read mode - formatted paragraphs */
-          <div className="flex-1 h-0 overflow-y-auto p-3 pb-24">
+          <div className="absolute inset-0 overflow-y-auto p-3 pb-24">
             <div className="prose-container max-w-none">
               {displayProse.split(/\n\n+/).map((paragraph, i) => (
                 paragraph.trim() && (
@@ -418,7 +418,7 @@ export default function EditorPage() {
           </div>
         ) : (
           /* Edit mode - textarea with serif font and footnotes display */
-          <div className="flex-1 h-0 overflow-y-auto pb-24" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
+          <div className="absolute inset-0 overflow-y-auto pb-24" style={{ scrollPaddingBottom: '150px', scrollPaddingTop: '100px' }}>
             <textarea
               ref={proseRef}
               value={displayProse}
