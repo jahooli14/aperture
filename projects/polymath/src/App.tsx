@@ -141,7 +141,9 @@ export default function App() {
     // This ensures all content is fresh and available for offline use
     if (navigator.onLine) {
       console.log('[App] Triggering initial sync...')
-      dataSynchronizer.sync()
+      dataSynchronizer.sync().catch(err => {
+        console.warn('[App] Initial sync failed, app will use cached data:', err)
+      })
     }
 
     // Track online/offline status
@@ -149,7 +151,9 @@ export default function App() {
       console.log('[App] Connection restored')
       setOnlineStatus(true)
       // Trigger immediate pull sync
-      dataSynchronizer.sync()
+      dataSynchronizer.sync().catch(err => {
+        console.warn('[App] Sync after reconnection failed:', err)
+      })
     }
 
     const handleOffline = () => {

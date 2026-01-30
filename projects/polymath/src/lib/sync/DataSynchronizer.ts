@@ -151,6 +151,12 @@ class DataSynchronizer {
   private async syncConnections() {
     console.log('[DataSynchronizer] Syncing connections...')
     try {
+      // Double-check online status before making network request
+      if (!navigator.onLine) {
+        console.log('[DataSynchronizer] Skipping connections sync - offline')
+        return
+      }
+
       const response = await fetch('/api/connections?action=list-all')
       if (response.ok) {
         const { connections } = await response.json()
@@ -161,13 +167,21 @@ class DataSynchronizer {
       }
     } catch (error) {
       console.error('[DataSynchronizer] Connection sync failed:', error)
+      // Silently fail - this is a background sync operation
     }
   }
   
   private async syncDashboard() {
     console.log('[DataSynchronizer] Syncing dashboard data...')
     try {
+      // Double-check online status before making network requests
+      if (!navigator.onLine) {
+        console.log('[DataSynchronizer] Skipping dashboard sync - offline')
+        return
+      }
+
       // Sync all dashboard resources in parallel
+      // Wrap each fetch in try-catch to prevent one failure from blocking others
       await Promise.allSettled([
         // Inspiration
         fetch('/api/analytics?resource=inspiration').then(async (res) => {
@@ -175,7 +189,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('inspiration', data)
           }
-        }),
+        }).catch(err => console.warn('[DataSynchronizer] Inspiration fetch failed:', err)),
 
         // Evolution (Insights)
         fetch('/api/analytics?resource=evolution').then(async (res) => {
@@ -183,7 +197,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('evolution', data)
           }
-        }),
+        }).catch(err => console.warn('[DataSynchronizer] Evolution fetch failed:', err)),
 
         // Patterns (Timeline)
         fetch('/api/analytics?resource=patterns').then(async (res) => {
@@ -191,7 +205,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('patterns', data)
           }
-        }),
+        }).catch(err => console.warn('[DataSynchronizer] Patterns fetch failed:', err)),
 
         // Bedtime prompts
         fetch('/api/projects?resource=bedtime').then(async (res) => {
@@ -199,7 +213,7 @@ class DataSynchronizer {
             const data = await res.json()
             await readingDb.cacheDashboard('bedtime', data)
           }
-        }),
+        }).catch(err => console.warn('[DataSynchronizer] Bedtime fetch failed:', err)),
 
         // COST OPTIMIZATION: Removed Power Hour from auto-sync
         // Power Hour is expensive (~18K tokens/call) and already has:
@@ -216,12 +230,13 @@ class DataSynchronizer {
               await readingDb.cacheDashboard('rss-feeds', data.feeds)
             }
           }
-        })
+        }).catch(err => console.warn('[DataSynchronizer] RSS fetch failed:', err))
       ])
 
       console.log('[DataSynchronizer] Dashboard data cached (inspiration, evolution, patterns, bedtime, rss)')
     } catch (error) {
       console.error('[DataSynchronizer] Dashboard sync failed:', error)
+      // Silently fail - this is a background sync operation
     }
   }
 
