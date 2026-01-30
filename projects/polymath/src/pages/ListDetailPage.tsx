@@ -423,10 +423,15 @@ function MasonryListGrid({
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
+    const { lists, currentListItems, currentListId, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
 
     // Find list locally first, or wait for fetch
     const list = lists.find(l => l.id === id)
+
+    // CRITICAL: Only use currentListItems if they belong to the current list
+    // This prevents showing wrong list's content during navigation
+    const isCorrectList = currentListId === id
+    const displayItems = isCorrectList ? currentListItems : []
 
     const [inputText, setInputText] = useState('')
     const [isDeleting, setIsDeleting] = useState(false)
@@ -518,7 +523,7 @@ export default function ListDetailPage() {
                         </button>
                     </div>
                     <div className="bg-zinc-800/50 px-3 py-1 rounded-full text-xs font-mono text-zinc-400">
-                        {currentListItems.length} ITEMS
+                        {displayItems.length} ITEMS
                     </div>
                 </div>
                 {list.description && <p className="text-zinc-500 max-w-xl mb-6">{list.description}</p>}
@@ -604,11 +609,11 @@ export default function ListDetailPage() {
                         >
                             <Reorder.Group
                                 axis="y"
-                                values={currentListItems}
+                                values={displayItems}
                                 onReorder={handleReorder}
                                 className="space-y-2"
                             >
-                                {currentListItems.map((item) => (
+                                {displayItems.map((item) => (
                                     <Reorder.Item
                                         key={item.id}
                                         value={item}
@@ -643,9 +648,9 @@ export default function ListDetailPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                         >
-                            {currentListItems.length > 0 ? (
+                            {displayItems.length > 0 ? (
                                 <MasonryListGrid
-                                    items={currentListItems}
+                                    items={displayItems}
                                     listType={list.type}
                                     expandedItemId={expandedItemId}
                                     onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
@@ -680,7 +685,7 @@ export default function ListDetailPage() {
                         <ConnectionsList
                             itemType="list"
                             itemId={list.id}
-                            content={`${list.title} ${list.description || ''} ${currentListItems.map(i => i.content).join(', ')}`}
+                            content={`${list.title} ${list.description || ''} ${displayItems.map(i => i.content).join(', ')}`}
                             onCountChange={setConnectionCount}
                             onLoadingChange={setIsLoadingConnections}
                         />
