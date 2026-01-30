@@ -29,9 +29,12 @@ export function OptimizedImage({
   onLoad,
   onError,
 }: OptimizedImageProps) {
+  // Validate src upfront - return null for empty/invalid src
+  const isValidSrc = src && src.trim() !== ''
+
   const [isLoaded, setIsLoaded] = useState(false)
   const [isInView, setIsInView] = useState(priority)
-  const [hasError, setHasError] = useState(false)
+  const [hasError, setHasError] = useState(!isValidSrc)
   const imgRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
