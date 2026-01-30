@@ -43,7 +43,7 @@ type FilterTab = 'queue' | 'updates' | ArticleStatus
 export function ReadingPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { articles, pendingArticles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
+  const { articles, loading, fetchArticles, currentFilter, setFilter, saveArticle, updateArticle, updateArticleStatus, deleteArticle } = useReadingStore()
 
   // Sync processing articles with store deletions
   useEffect(() => {
@@ -74,16 +74,6 @@ export function ReadingPage() {
   const [processingArticles, setProcessingArticles] = useState<Map<string, { status: string; url: string }>>(new Map())
   const processingRef = useRef<Set<string>>(new Set()) // Track processed URLs to prevent duplicates
   const autoRecoveryDone = useRef(false) // Track if we've done auto-recovery
-
-  // Load lastKnownUpdatesCount from localStorage on mount
-  const [lastKnownUpdatesCount, setLastKnownUpdatesCount] = useState<number>(() => {
-    try {
-      const stored = localStorage.getItem('rss-last-known-count')
-      return stored ? parseInt(stored, 10) : 0
-    } catch {
-      return 0
-    }
-  })
 
   const { addToast } = useToast()
 
@@ -167,14 +157,6 @@ export function ReadingPage() {
       const filteredItems = allItems.filter(item => !dismissed.has(item.guid))
 
       setRssItems(filteredItems)
-
-      // Track the last known count based on total items (before filtering dismissals)
-      // This persists even when all items are dismissed
-      if (allItems.length > 0) {
-        setLastKnownUpdatesCount(allItems.length)
-        // Persist to localStorage so it survives navigation
-        localStorage.setItem('rss-last-known-count', allItems.length.toString())
-      }
     } catch (error) {
       console.error('Failed to fetch RSS items:', error)
       addToast({
@@ -575,24 +557,12 @@ export function ReadingPage() {
   }, [fetchArticles, activeTab, fetchRSSItems])
 
   // Memoize safe articles to prevent useMemo dependency issues
+  // NOTE: The store already merges pendingArticles with server articles,
+  // so we don't need to merge them again here. Doing so causes duplicates
+  // and flickering counts.
   const safeArticles = React.useMemo(() => {
-    // Combine real articles with pending articles
-    // FILTER DUPLICATES AGGRESSIVELY:
-    // Don't show a pending article if it matches a real article by ID, URL, or Title
-    const realIds = new Set(articles.map(a => a.id))
-    const realUrls = new Set(articles.map(a => a.url))
-    const realTitles = new Set(articles.map(a => a.title).filter(t => t && t.length > 20)) // Filter only significant titles
-
-    const uniquePending = pendingArticles.filter(a => {
-      if (realIds.has(a.id)) return false
-      if (a.url && realUrls.has(a.url)) return false
-      if (a.title && realTitles.has(a.title)) return false
-      return true
-    })
-
-    const allArticles = [...uniquePending, ...articles]
-    return Array.isArray(allArticles) ? allArticles : []
-  }, [articles, pendingArticles])
+    return Array.isArray(articles) ? articles : []
+  }, [articles])
 
   const filteredArticles = React.useMemo(() => {
     if (!Array.isArray(safeArticles) || safeArticles.length === 0) return []
@@ -612,13 +582,10 @@ export function ReadingPage() {
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
     if (tab === 'updates') {
       const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
-      // Show current count if we have items
-      // Show last known count with + if all items dismissed but we had items before
-      // Always show with + to indicate there may be more on next reload
+      // Show current count with + to indicate there may be more on next reload
+      // Only show a count if there are actually visible items
       if (currentCount > 0) {
         return `${currentCount}+`
-      } else if (lastKnownUpdatesCount > 0) {
-        return `${lastKnownUpdatesCount}+`
       }
       return 0
     }
