@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Reorder, motion } from 'framer-motion'
-import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, Trash2, GripVertical } from 'lucide-react'
+import { Plus, Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, Trash2, GripVertical, ListOrdered, Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
@@ -60,6 +60,7 @@ export default function ListsPage() {
     const [listCovers, setListCovers] = useState<Record<string, string>>({})
     const [quoteCovers, setQuoteCovers] = useState<Record<string, string>>({})
     const [initialLoad, setInitialLoad] = useState(true)
+    const [isReordering, setIsReordering] = useState(false)
 
     useEffect(() => {
         fetchLists().finally(() => setInitialLoad(false))
@@ -121,7 +122,9 @@ export default function ListsPage() {
                         await readingDb.cacheListCoverImage(list.id, shortestPhrase.content, 'quote')
                         return { listId: list.id, quote: shortestPhrase.content }
                     } else if (cachedItems.length > 0) {
-                        const itemWithImage = cachedItems.find((item) => item.metadata?.image)
+                        const itemWithImage = cachedItems.find((item) =>
+                            item.metadata?.image && typeof item.metadata.image === 'string' && item.metadata.image.trim() !== ''
+                        )
                         if (itemWithImage?.metadata?.image) {
                             await readingDb.cacheListCoverImage(list.id, itemWithImage.metadata.image, 'image')
                             return { listId: list.id, image: itemWithImage.metadata.image }
@@ -143,7 +146,9 @@ export default function ListsPage() {
                             return { listId: list.id, quote: shortestPhrase.content }
                         }
                     } else {
-                        const itemWithImage = items.find((item: any) => item.metadata?.image)
+                        const itemWithImage = items.find((item: any) =>
+                            item.metadata?.image && typeof item.metadata.image === 'string' && item.metadata.image.trim() !== ''
+                        )
                         if (itemWithImage?.metadata?.image) {
                             await readingDb.cacheListCoverImage(list.id, itemWithImage.metadata.image, 'image')
                             return { listId: list.id, image: itemWithImage.metadata.image }
@@ -190,12 +195,29 @@ export default function ListsPage() {
                     </h1>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">Curate your existence.</p>
                 </div>
-                <Button
-                    onClick={() => setCreateOpen(true)}
-                    className="h-10 w-10 p-0 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white"
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                    {lists.length > 0 && (
+                        <button
+                            onClick={() => setIsReordering(!isReordering)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                                isReordering
+                                    ? 'bg-sky-500 border-sky-400 text-white'
+                                    : 'border-white/10 text-white hover:bg-white/5'
+                            }`}
+                        >
+                            {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
+                            <span className="text-[10px] font-black uppercase tracking-widest">
+                                {isReordering ? 'Done' : 'Order'}
+                            </span>
+                        </button>
+                    )}
+                    <Button
+                        onClick={() => setCreateOpen(true)}
+                        className="h-10 w-10 p-0 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white"
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
             {/* Loading State - Show skeleton cards while loading */}
@@ -233,13 +255,13 @@ export default function ListsPage() {
                 </div>
             )}
 
-            {/* Stable 2-column Grid - using flex for better reordering */}
-            {lists.length > 0 && (
+            {/* Reordering Mode - Vertical list with drag handles */}
+            {lists.length > 0 && isReordering && (
                 <Reorder.Group
                     axis="y"
                     values={lists}
                     onReorder={handleReorder}
-                    className="flex flex-wrap gap-3 pb-20"
+                    className="space-y-3 pb-20"
                 >
                 {lists.map((list) => {
                     const rgb = ListColor(list.type)
@@ -250,18 +272,70 @@ export default function ListsPage() {
                         <Reorder.Item
                             key={list.id}
                             value={list}
+                            className="flex items-center gap-4 bg-zinc-900/60 border border-white/10 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
+                        >
+                            <GripVertical className="h-5 w-5 text-zinc-600 flex-shrink-0" />
+
+                            {/* Thumbnail */}
+                            <div className="w-12 h-16 rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0">
+                                {coverImage && coverImage.trim() !== '' ? (
+                                    <OptimizedImage
+                                        src={coverImage}
+                                        alt={list.title}
+                                        className="w-full h-full"
+                                        priority={false}
+                                    />
+                                ) : quoteCover ? (
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-black p-1">
+                                        <p className="text-white/60 text-[8px] font-light text-center line-clamp-4" style={{ fontFamily: 'Georgia, serif' }}>
+                                            {quoteCover}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <ListIcon type={list.type} className="h-6 w-6 opacity-20" style={{ color: `rgb(${rgb})` }} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* List Info */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <ListIcon type={list.type} className="h-3 w-3 flex-shrink-0" style={{ color: `rgb(${rgb})` }} />
+                                    <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">
+                                        {list.title}
+                                    </h3>
+                                </div>
+                                <p className="text-[9px] font-bold text-white/40 uppercase tracking-widest">
+                                    {list.item_count || 0} ITEMS
+                                </p>
+                            </div>
+                        </Reorder.Item>
+                    )
+                })}
+                </Reorder.Group>
+            )}
+
+            {/* Normal Mode - Static 2-column Grid */}
+            {lists.length > 0 && !isReordering && (
+                <div className="flex flex-wrap gap-3 pb-20">
+                {lists.map((list) => {
+                    const rgb = ListColor(list.type)
+                    const coverImage = listCovers[list.id]
+                    const quoteCover = quoteCovers[list.id]
+
+                    return (
+                        <motion.div
+                            key={list.id}
                             layoutId={list.id}
                             onClick={() => navigate(`/lists/${list.id}`)}
                             className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border border-white/5 bg-zinc-900/40 flex-shrink-0"
                             style={{ width: 'calc(50% - 6px)' }}
                             whileHover={{ y: -2 }}
-                            drag="y"
-                            dragConstraints={{ top: 0, bottom: 0 }}
-                            dragElastic={0.1}
                         >
                             {/* Poster / Cover Image / Quote Cover */}
                             <div className="aspect-[3/4] relative overflow-hidden bg-zinc-950">
-                                {coverImage ? (
+                                {coverImage && coverImage.trim() !== '' ? (
                                     <OptimizedImage
                                         src={coverImage}
                                         alt={list.title}
@@ -364,10 +438,10 @@ export default function ListsPage() {
                                     </div>
                                 </div>
                             </div>
-                        </Reorder.Item>
+                        </motion.div>
                     )
                 })}
-                </Reorder.Group>
+                </div>
             )}
 
             <CreateListDialog open={createOpen} onOpenChange={setCreateOpen} />
