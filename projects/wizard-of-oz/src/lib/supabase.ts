@@ -4,25 +4,33 @@ import type { Database } from '../types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Check if environment variables are present
+const hasRequiredEnvVars = supabaseUrl && supabaseAnonKey;
+
+if (!hasRequiredEnvVars) {
   console.error('Missing Supabase environment variables:', {
     url: supabaseUrl ? 'present' : 'missing',
     key: supabaseAnonKey ? 'present' : 'missing'
   });
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 
-// Validate URL format
-try {
-  new URL(supabaseUrl);
-} catch (error) {
-  console.error('Invalid Supabase URL format:', supabaseUrl);
-  throw new Error('Invalid Supabase URL format. Please check your VITE_SUPABASE_URL environment variable.');
+// Validate URL format if present
+if (hasRequiredEnvVars) {
+  try {
+    new URL(supabaseUrl);
+  } catch (error) {
+    console.error('Invalid Supabase URL format:', supabaseUrl);
+  }
 }
+
+// Create a fallback client with dummy values if env vars are missing
+// This prevents the app from crashing and allows us to show a proper error message
+const finalUrl = supabaseUrl || 'https://placeholder.supabase.co';
+const finalKey = supabaseAnonKey || 'placeholder-anon-key';
 
 export const supabase: SupabaseClient<Database> = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
+  finalUrl,
+  finalKey,
   {
     auth: {
       // Ensure auth tokens are persisted properly
@@ -36,3 +44,6 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
     },
   }
 );
+
+// Export flag to check if config is valid
+export const isSupabaseConfigured = hasRequiredEnvVars;
