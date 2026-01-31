@@ -18,6 +18,7 @@ import { useToast } from './hooks/useToast';
 import { UpdateNotification } from './components/UpdateNotification';
 import { QuickAddFAB } from './components/QuickAddFAB';
 import { AddPlaceModal } from './components/AddPlaceModal';
+import { isSupabaseConfigured } from './lib/supabase';
 
 // Lazy load heavy components
 const CalendarView = lazy(() => import('./components/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -30,6 +31,33 @@ type ViewType = 'gallery' | 'calendar' | 'compare' | 'milestones' | 'places';
 const PASSCODE_KEY = 'wizard-passcode';
 
 function App() {
+  // Check if Supabase is configured - show error if not
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-red-50">
+        <div className="max-w-md bg-white rounded-lg shadow-lg p-6">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-red-900 mb-3">Configuration Error</h1>
+            <p className="text-gray-700 mb-4">
+              Pupils is missing required environment variables. Please check your configuration.
+            </p>
+            <div className="bg-gray-100 rounded p-4 text-left text-sm font-mono">
+              <p className="text-gray-600 mb-2">Required variables:</p>
+              <ul className="list-disc list-inside text-gray-800 space-y-1">
+                <li>VITE_SUPABASE_URL</li>
+                <li>VITE_SUPABASE_ANON_KEY</li>
+              </ul>
+            </div>
+            <p className="text-sm text-gray-600 mt-4">
+              If you're a developer, make sure to create a <code className="bg-gray-100 px-2 py-1 rounded">.env.local</code> file with the required variables.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { user, loading, initialize, signOut } = useAuthStore();
   const { settings, fetchSettings, updateSettings } = useSettingsStore();
   const { fetchPhotos } = usePhotoStore();
