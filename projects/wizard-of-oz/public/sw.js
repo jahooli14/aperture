@@ -3,7 +3,7 @@
  * Caches static assets and photo images for offline viewing
  */
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const STATIC_CACHE = `wizard-of-oz-static-v${CACHE_VERSION}`;
 const IMAGE_CACHE = `wizard-of-oz-images-v${CACHE_VERSION}`;
 const MAX_IMAGE_CACHE_SIZE = 100; // Maximum number of images to cache
