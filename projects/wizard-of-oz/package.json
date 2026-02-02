@@ -25,7 +25,7 @@
     "framer-motion": "^12.27.0",
     "lucide-react": "^0.545.0",
     "react": "^19.2.3",
-    "react-dom": "^19.1.1",
+    "react-dom": "^19.2.3",
     "resend": "^6.7.0",
     "sharp": "^0.34.4",
     "web-push": "^3.6.7",
