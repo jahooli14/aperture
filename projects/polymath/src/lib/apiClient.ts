@@ -5,6 +5,37 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Fetch with timeout support
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout: number = 30000
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    })
+    clearTimeout(timeoutId)
+    return response
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      throw new ApiError(
+        408,
+        `Request timeout after ${timeout}ms`,
+        { timeout }
+      )
+    }
+    throw error
+  }
+}
+
 async function handleResponse(response: Response) {
   // Handle 204 No Content - no JSON to parse
   if (response.status === 204) {
@@ -58,7 +89,7 @@ const cache = new Map<string, { data: any, timestamp: number }>()
 const CACHE_TTL = 60 * 1000 // 1 minute
 
 export const api = {
-  get: async (endpoint: string) => {
+  get: async (endpoint: string, options: { timeout?: number } = {}) => {
     // 1. Check Cache
     const cached = cache.get(endpoint)
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -70,10 +101,14 @@ export const api = {
       return pendingRequests.get(endpoint)
     }
 
-    // 3. Make Request
+    // 3. Make Request with timeout (default 30s)
     const promise = (async () => {
       try {
-        const response = await fetch(`/api/${endpoint}`)
+        const response = await fetchWithTimeout(
+          `/api/${endpoint}`,
+          {},
+          options.timeout || 30000
+        )
         const data = await handleResponse(response)
 
         // Update Cache
@@ -88,19 +123,23 @@ export const api = {
     return promise
   },
 
-  post: async (endpoint: string, data: any) => {
+  post: async (endpoint: string, data: any, options: { timeout?: number } = {}) => {
     // Invalidate Cache on Mutation
     cache.clear()
 
-    const response = await fetch(`/api/${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
+    const response = await fetchWithTimeout(
+      `/api/${endpoint}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      },
+      options.timeout || 30000
+    )
     return handleResponse(response)
   },
 
-  patch: async (endpoint: string, data?: any) => {
+  patch: async (endpoint: string, data?: any, options: { timeout?: number } = {}) => {
     // Invalidate Cache on Mutation
     cache.clear()
 
@@ -124,15 +163,19 @@ export const api = {
       }
     }
 
-    const response = await fetch(`/api/${finalEndpoint}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: data ? JSON.stringify(data) : undefined
-    })
+    const response = await fetchWithTimeout(
+      `/api/${finalEndpoint}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: data ? JSON.stringify(data) : undefined
+      },
+      options.timeout || 30000
+    )
     return handleResponse(response)
   },
 
-  delete: async (endpoint: string) => {
+  delete: async (endpoint: string, options: { timeout?: number } = {}) => {
     // Invalidate Cache on Mutation
     cache.clear()
 
@@ -145,9 +188,13 @@ export const api = {
       finalEndpoint = `${base}?id=${id}${rest}`
     }
 
-    const response = await fetch(`/api/${finalEndpoint}`, {
-      method: 'DELETE'
-    })
+    const response = await fetchWithTimeout(
+      `/api/${finalEndpoint}`,
+      {
+        method: 'DELETE'
+      },
+      options.timeout || 30000
+    )
     return handleResponse(response)
   }
 }
