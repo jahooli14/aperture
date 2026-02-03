@@ -435,7 +435,7 @@ export default function EditorPage() {
 Start a new paragraph by pressing Enter twice.
 
 The Read mode will show your text with proper paragraph formatting."
-              className="w-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none min-h-[300px]"
+              className="w-full h-full p-3 bg-transparent text-ink-100 placeholder:text-ink-600 resize-none prose-edit focus:outline-none"
               style={{
                 WebkitTapHighlightColor: 'transparent',
                 touchAction: 'manipulation',
