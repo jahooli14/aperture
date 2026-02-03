@@ -159,11 +159,23 @@ self.addEventListener('fetch', (event) => {
           const redirectUrl = `/reading?shared=${encodeURIComponent(shared)}`
           console.log('[ServiceWorker] Using HTML redirect fallback to:', redirectUrl)
 
+          // Sanitize redirectUrl to prevent XSS - escape any potential HTML/JS chars
+          const safeRedirectUrl = redirectUrl
+            .replace(/[<>"']/g, (char) => {
+              const escapeMap: Record<string, string> = {
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;'
+              }
+              return escapeMap[char] || char
+            })
+
           return new Response(`
             <html>
               <head>
                 <meta name="viewport" content="width=device-width,initial-scale=1">
-                <script>location.replace('${redirectUrl}');</script>
+                <script>location.replace("${safeRedirectUrl}");</script>
               </head>
               <body></body>
             </html>`,
