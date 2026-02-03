@@ -67,8 +67,16 @@ export function useMediaRecorderVoice({
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     console.log('[Transcribe] Preparing to send audio:', audioBlob.size, 'bytes, type:', audioBlob.type)
 
+    // Validate blob size to prevent memory crashes
+    const MAX_AUDIO_SIZE = 25 * 1024 * 1024 // 25MB limit
     if (audioBlob.size === 0) {
       throw new Error('Audio blob is empty - no audio was recorded')
+    }
+    if (audioBlob.size > MAX_AUDIO_SIZE) {
+      const sizeMB = (audioBlob.size / 1024 / 1024).toFixed(1)
+      throw new Error(
+        `Audio file too large (${sizeMB}MB). Maximum size is 25MB. Try recording a shorter clip.`
+      )
     }
 
     const formData = new FormData()
