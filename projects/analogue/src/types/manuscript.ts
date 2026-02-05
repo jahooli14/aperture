@@ -65,6 +65,7 @@ export interface SceneNode {
   sensesActivated: Sense[]
   glassesmentions: GlassesMention[]
   reverberations: Reverberation[]
+  wordTags: WordTag[]              // Word-level tagging for motifs
 
   // Timestamps
   createdAt: string
@@ -98,6 +99,17 @@ export interface GlassesMention {
   text: string
   isValidDraw: boolean // true if described as "draw" or "anchor"
   flagged: boolean
+  createdAt: string
+}
+
+// Word-level tag - allows tagging specific words/phrases with motifs
+export interface WordTag {
+  id: string
+  sceneId: string
+  tag: string          // The motif/tag name: "glasses", "door", "drift", etc.
+  text: string         // The actual tagged word/phrase
+  start: number        // Character position in prose where tag starts
+  end: number          // Character position in prose where tag ends
   createdAt: string
 }
 

@@ -18,16 +18,25 @@ import PulseCheck from '../components/PulseCheck'
 import ReverbTagModal from '../components/ReverbTagModal'
 import ExportModal from '../components/ExportModal'
 import MetadataDrawer from '../components/MetadataDrawer'
+import { TagDrawer } from '../components/TagDrawer'
+import { WordTagList } from '../components/WordTagList'
+
+const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
 
 export default function EditorPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
   const navigate = useNavigate()
-  const { manuscript, updateScene, addGlassesMention } = useManuscriptStore()
+  const { manuscript, updateScene, addGlassesMention, addWordTag, removeWordTag } = useManuscriptStore()
   const {
     footnoteDrawerOpen,
     footnoteDrawerHeight,
     openFootnoteDrawer,
     closeFootnoteDrawer,
+    tagDrawerOpen,
+    activeTag,
+    openTagDrawer,
+    closeTagDrawer,
+    setActiveTag,
     showPulseCheck,
     setShowPulseCheck,
     showReverbTagging,
@@ -288,7 +297,7 @@ export default function EditorPage() {
 
   const handleTextSelect = () => {
     const textarea = proseRef.current
-    if (!textarea) return
+    if (!textarea || !scene) return
 
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
@@ -302,7 +311,21 @@ export default function EditorPage() {
       setTimeout(() => {
         // Check selection is still valid after delay
         if (textarea.selectionStart === start && textarea.selectionEnd === end) {
-          setSelection(text, start, end)
+          // If a tag is active, immediately create a word tag
+          if (activeTag) {
+            addWordTag({
+              sceneId: scene.id,
+              tag: activeTag,
+              text,
+              start,
+              end
+            })
+            clearSelection()
+            // Reset the textarea selection
+            textarea.setSelectionRange(start, start)
+          } else {
+            setSelection(text, start, end)
+          }
         }
       }, 300)
     } else {
@@ -360,9 +383,17 @@ export default function EditorPage() {
     >
       {/* Minimal Header */}
       <header className="flex items-center justify-between px-3 py-3 border-b border-ink-800">
-        <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
-          <ArrowLeft className="w-5 h-5 text-ink-400" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => navigate('/toc')} className="p-2 -ml-2">
+            <ArrowLeft className="w-5 h-5 text-ink-400" />
+          </button>
+          <button
+            onClick={openTagDrawer}
+            className={`p-2 ${activeTag ? 'bg-blue-500/20 text-blue-400' : 'text-ink-400'}`}
+          >
+            <Tag className="w-5 h-5" />
+          </button>
+        </div>
 
         <h1 className="text-base font-medium text-ink-100 truncate flex-1 text-center px-4">
           {scene.title}
@@ -470,7 +501,7 @@ The Read mode will show your text with proper paragraph formatting."
 
         {/* Selection toolbar */}
         <AnimatePresence>
-          {selectedText && !isReadMode && (
+          {selectedText && !isReadMode && !activeTag && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -487,6 +518,30 @@ The Read mode will show your text with proper paragraph formatting."
                 <Tag className="w-3 h-3" />
                 Tag Wisdom
               </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Word Tags List */}
+        {!isReadMode && scene.wordTags && scene.wordTags.length > 0 && (
+          <WordTagList
+            wordTags={scene.wordTags}
+            onRemove={(tagId) => removeWordTag(tagId, scene.id)}
+          />
+        )}
+
+        {/* Active Tag Indicator */}
+        <AnimatePresence>
+          {activeTag && !isReadMode && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="px-4 py-2 border-t border-ink-800 bg-blue-900/30 text-center"
+            >
+              <span className="text-xs text-blue-400">
+                Tagging mode active: <span className="font-semibold capitalize">{activeTag}</span> - Select text to tag it
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -622,6 +677,15 @@ The Read mode will show your text with proper paragraph formatting."
         currentSceneIndex={currentIndex}
         totalScenes={sortedScenes.length}
         allScenes={sortedScenes}
+      />
+
+      {/* Tag Drawer */}
+      <TagDrawer
+        isOpen={tagDrawerOpen}
+        onClose={closeTagDrawer}
+        activeTag={activeTag}
+        onTagSelect={setActiveTag}
+        availableTags={AVAILABLE_TAGS}
       />
     </div>
   )
