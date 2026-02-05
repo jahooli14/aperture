@@ -25,9 +25,10 @@
 3. Test build locally: `npm run build`
 4. Push to main to deploy
 
-## End of Session
+## End of Session (ALWAYS do this)
 
-Optionally update `NEXT_SESSION.md` with:
+Update the project's `NEXT_SESSION.md` with:
 - What was completed
 - What's next
 - Any blockers
+- New patterns/mistakes learned (also update memory files if significant)

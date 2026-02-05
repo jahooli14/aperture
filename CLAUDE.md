@@ -33,4 +33,12 @@ Use `/skill` for complex workflows:
 
 ## Session Start
 
-Check `NEXT_SESSION.md` for current status and tasks (if present).
+1. Check `NEXT_SESSION.md` in the relevant project directory for current status
+2. Each project has its own `CLAUDE.md` — read it when working in that project
+3. State what you're building and why (2 sentences) at session start
+
+## Session End (ALWAYS do this)
+
+1. Update the project's `NEXT_SESSION.md` with: completed, next steps, blockers
+2. Run `npm run build` to verify nothing's broken
+3. If a new pattern or mistake was learned, update memory files
