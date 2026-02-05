@@ -28,7 +28,6 @@ import {
 } from '../lib/shareHandler'
 import { FocusableList, FocusableItem } from '../components/FocusableList'
 import { PullToRefresh } from '../components/PullToRefresh'
-import { queryClient } from '../lib/queryClient'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { ArticleStatus } from '../types/reading'
 import type { RSSFeedItem as RSSItem } from '../types/rss'
@@ -231,12 +230,8 @@ export function ReadingPage() {
       // but only if we already have articles (prevents flash of empty state)
       const isBackNavigation = hasInitializedRef.current && articles.length > 0
 
-      if (isBackNavigation) {
-        // Invalidate React Query cache immediately to prevent stale data race condition
-        // This ensures useReadingQueue won't overwrite with old cached data
-        await queryClient.invalidateQueries({ queryKey: ['articles'] })
-      }
-
+      // Force fetch on back navigation to ensure articles are up-to-date
+      // Note: fetchArticles already updates React Query cache via setQueryData
       await fetchArticles(undefined, isBackNavigation)
       await fetchFeeds()
 
@@ -546,9 +541,8 @@ export function ReadingPage() {
 
   // Pull-to-refresh handler - forces a fresh fetch from API
   const handlePullToRefresh = useCallback(async () => {
-    // Invalidate React Query cache first
-    await queryClient.invalidateQueries({ queryKey: ['articles'] })
     // Force fetch fresh data from API
+    // Note: fetchArticles already updates React Query cache via setQueryData
     await fetchArticles(undefined, true)
     // Also refresh RSS items if on updates tab
     if (activeTab === 'updates') {
