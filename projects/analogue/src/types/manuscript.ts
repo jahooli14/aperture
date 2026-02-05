@@ -152,6 +152,24 @@ export interface SenseStatus {
   occurrences: number
 }
 
+// Writing session tracking
+export interface WritingSession {
+  id: string
+  date: string
+  wordsAdded: number
+  scenesEdited: string[]
+  durationMinutes: number
+}
+
+// Progress tracking
+export interface SectionProgress {
+  section: NarrativeSection
+  currentWords: number
+  targetWords: number
+  sceneCount: number
+  completedScenes: number
+}
+
 // Manuscript-level state
 export interface ManuscriptState {
   id: string
@@ -165,6 +183,12 @@ export interface ManuscriptState {
   sensoryAudit: SensoryAuditState
   reverberationLibrary: Reverberation[]
   revealAuditUnlocked: boolean
+
+  // Session tracking
+  lastEditedSceneId: string | null
+  lastEditedAt: string | null
+  sessions: WritingSession[]
+
   createdAt: string
   updatedAt: string
 }

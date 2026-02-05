@@ -211,6 +211,9 @@ export async function syncFromCloud(userId: string): Promise<SyncResult> {
         },
         reverberationLibrary: [],
         revealAuditUnlocked: cloudMs.reveal_audit_unlocked,
+        lastEditedSceneId: cloudMs.last_edited_scene_id || null,
+        lastEditedAt: cloudMs.last_edited_at || null,
+        sessions: cloudMs.sessions || [],
         createdAt: cloudMs.created_at,
         updatedAt: cloudMs.updated_at
       }

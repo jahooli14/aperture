@@ -95,6 +95,9 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           sensoryAudit: defaultSensoryAudit,
           reverberationLibrary: [],
           revealAuditUnlocked: false,
+          lastEditedSceneId: null,
+          lastEditedAt: null,
+          sessions: [],
           createdAt: now,
           updatedAt: now
         }
@@ -116,6 +119,12 @@ export const useManuscriptStore = create<ManuscriptStore>()(
               .sortBy('order')
 
             manuscript.scenes = scenes as SceneNode[]
+
+            // Ensure new fields exist (for backwards compatibility)
+            manuscript.lastEditedSceneId = manuscript.lastEditedSceneId || null
+            manuscript.lastEditedAt = manuscript.lastEditedAt || null
+            manuscript.sessions = manuscript.sessions || []
+
             set({ manuscript, isLoading: false })
           }
         } catch (error) {
@@ -309,8 +318,20 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await db.sceneNodes.put({ ...updatedScene, manuscriptId: manuscript.id })
         await queueForSync({ type: 'update', table: 'sceneNodes', data: { ...updatedScene, manuscriptId: manuscript.id } as unknown as Record<string, unknown> })
 
+        // Track editing activity (only for prose changes - actual writing)
+        const manuscriptUpdates: Partial<ManuscriptState> = {
+          scenes: updatedScenes,
+          totalWordCount,
+          updatedAt: now
+        }
+
+        if (updates.prose !== undefined) {
+          manuscriptUpdates.lastEditedSceneId = sceneId
+          manuscriptUpdates.lastEditedAt = now
+        }
+
         set({
-          manuscript: { ...manuscript, scenes: updatedScenes, totalWordCount, updatedAt: now }
+          manuscript: { ...manuscript, ...manuscriptUpdates }
         })
       },
 
