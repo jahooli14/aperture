@@ -70,7 +70,7 @@ export default function StoryDashboard({ manuscript, onBack }: StoryDashboardPro
   }
 
   // This week's writing
-  const thisWeekWords = manuscript.sessions
+  const thisWeekWords = (manuscript.sessions || [])
     .filter(s => {
       const sessionDate = new Date(s.date)
       const now = new Date()
