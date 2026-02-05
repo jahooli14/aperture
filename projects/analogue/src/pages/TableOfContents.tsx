@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronRight,
   MoreVertical,
-  X
+  X,
+  Tag
 } from 'lucide-react'
 import { useManuscriptStore } from '../stores/useManuscriptStore'
 import type { NarrativeSection, ValidationStatus, SceneNode } from '../types/manuscript'
@@ -44,7 +45,7 @@ const STATUS_COLORS: Record<ValidationStatus, string> = {
 
 export default function TableOfContents() {
   const navigate = useNavigate()
-  const { manuscript, createScene, deleteScene, reorderScenes, toggleMaskMode } = useManuscriptStore()
+  const { manuscript, createScene, deleteScene, reorderScenes, toggleMaskMode, updateScene } = useManuscriptStore()
   const [showAddScene, setShowAddScene] = useState<NarrativeSection | null>(null)
   const [newSceneTitle, setNewSceneTitle] = useState('')
   const [editingScene, setEditingScene] = useState<string | null>(null)
@@ -227,6 +228,13 @@ export default function TableOfContents() {
       {/* Quick actions */}
       <div className="flex gap-2 p-4 border-b border-ink-800 overflow-x-auto">
         <button
+          onClick={() => navigate('/tags')}
+          className="flex items-center gap-2 px-3 py-2 bg-ink-900 rounded-lg text-xs text-ink-300 whitespace-nowrap"
+        >
+          <Tag className="w-4 h-4" />
+          Tag Overview
+        </button>
+        <button
           onClick={() => navigate('/sensory')}
           className="flex items-center gap-2 px-3 py-2 bg-ink-900 rounded-lg text-xs text-ink-300 whitespace-nowrap"
         >
@@ -392,37 +400,58 @@ export default function TableOfContents() {
                                 exit={{ opacity: 0, height: 0 }}
                                 className="overflow-hidden"
                               >
-                                <div className="flex items-center gap-2 px-4 py-2 pl-16 bg-ink-900/50">
-                                  {/* Move up */}
-                                  <button
-                                    onClick={() => handleMoveScene(scene, 'up')}
-                                    disabled={isFirst}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                  >
-                                    <ChevronUp className="w-3 h-3" />
-                                    Up
-                                  </button>
+                                <div className="flex flex-col gap-2 px-4 py-2 pl-16 bg-ink-900/50">
+                                  <div className="flex items-center gap-2">
+                                    {/* Move up */}
+                                    <button
+                                      onClick={() => handleMoveScene(scene, 'up')}
+                                      disabled={isFirst}
+                                      className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                      <ChevronUp className="w-3 h-3" />
+                                      Up
+                                    </button>
 
-                                  {/* Move down */}
-                                  <button
-                                    onClick={() => handleMoveScene(scene, 'down')}
-                                    disabled={isLast}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                                  >
-                                    <ChevronDown className="w-3 h-3" />
-                                    Down
-                                  </button>
+                                    {/* Move down */}
+                                    <button
+                                      onClick={() => handleMoveScene(scene, 'down')}
+                                      disabled={isLast}
+                                      className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                      <ChevronDown className="w-3 h-3" />
+                                      Down
+                                    </button>
 
-                                  <div className="flex-1" />
+                                    <div className="flex-1" />
 
-                                  {/* Delete */}
-                                  <button
-                                    onClick={() => setDeleteConfirm(scene.id)}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                    Delete
-                                  </button>
+                                    {/* Delete */}
+                                    <button
+                                      onClick={() => setDeleteConfirm(scene.id)}
+                                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                      Delete
+                                    </button>
+                                  </div>
+
+                                  {/* Section Change */}
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-xs text-ink-500">Move to Section:</label>
+                                    <select
+                                      value={scene.section}
+                                      onChange={(e) => {
+                                        updateScene(scene.id, { section: e.target.value as NarrativeSection })
+                                        setEditingScene(null)
+                                      }}
+                                      className="flex-1 px-2 py-1 text-xs bg-ink-800 border border-ink-700 rounded text-ink-200"
+                                    >
+                                      {SECTIONS.map(sect => (
+                                        <option key={sect.id} value={sect.id}>
+                                          {sect.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
                                 </div>
                               </motion.div>
                             )}
@@ -491,37 +520,58 @@ export default function TableOfContents() {
                           exit={{ opacity: 0, height: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="flex items-center gap-2 px-4 py-2 pl-12 bg-ink-900/50">
-                            {/* Move up */}
-                            <button
-                              onClick={() => handleMoveScene(scene, 'up')}
-                              disabled={isFirst}
-                              className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              <ChevronUp className="w-3 h-3" />
-                              Up
-                            </button>
+                          <div className="flex flex-col gap-2 px-4 py-2 pl-12 bg-ink-900/50">
+                            <div className="flex items-center gap-2">
+                              {/* Move up */}
+                              <button
+                                onClick={() => handleMoveScene(scene, 'up')}
+                                disabled={isFirst}
+                                className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <ChevronUp className="w-3 h-3" />
+                                Up
+                              </button>
 
-                            {/* Move down */}
-                            <button
-                              onClick={() => handleMoveScene(scene, 'down')}
-                              disabled={isLast}
-                              className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                            >
-                              <ChevronDown className="w-3 h-3" />
-                              Down
-                            </button>
+                              {/* Move down */}
+                              <button
+                                onClick={() => handleMoveScene(scene, 'down')}
+                                disabled={isLast}
+                                className="flex items-center gap-1 px-2 py-1 text-xs text-ink-400 hover:text-ink-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                                Down
+                              </button>
 
-                            <div className="flex-1" />
+                              <div className="flex-1" />
 
-                            {/* Delete */}
-                            <button
-                              onClick={() => setDeleteConfirm(scene.id)}
-                              className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Delete
-                            </button>
+                              {/* Delete */}
+                              <button
+                                onClick={() => setDeleteConfirm(scene.id)}
+                                className="flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                Delete
+                              </button>
+                            </div>
+
+                            {/* Section Change */}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-ink-500">Move to Section:</label>
+                              <select
+                                value={scene.section}
+                                onChange={(e) => {
+                                  updateScene(scene.id, { section: e.target.value as NarrativeSection })
+                                  setEditingScene(null)
+                                }}
+                                className="flex-1 px-2 py-1 text-xs bg-ink-800 border border-ink-700 rounded text-ink-200"
+                              >
+                                {SECTIONS.map(sect => (
+                                  <option key={sect.id} value={sect.id}>
+                                    {sect.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </motion.div>
                       )}

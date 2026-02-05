@@ -8,6 +8,7 @@ import { fullSync } from '../lib/sync'
 import type { ManuscriptState } from '../types/manuscript'
 import ImportModal, { type ImportedScene } from '../components/ImportModal'
 import ExportModal from '../components/ExportModal'
+import StoryDashboard from '../components/StoryDashboard'
 
 export default function HomePage() {
   const navigate = useNavigate()
@@ -117,6 +118,11 @@ export default function HomePage() {
     } else {
       return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
     }
+  }
+
+  // Show dashboard if there's an active manuscript
+  if (manuscript && !showCreate) {
+    return <StoryDashboard manuscript={manuscript} onBack={clearCurrentManuscript} />
   }
 
   return (

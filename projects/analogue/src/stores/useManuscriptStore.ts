@@ -9,7 +9,8 @@ import type {
   Sense,
   SensoryAuditState,
   Reverberation,
-  GlassesMention
+  GlassesMention,
+  WordTag
 } from '../types/manuscript'
 
 interface ManuscriptStore {
@@ -49,6 +50,10 @@ interface ManuscriptStore {
   // Glasses mentions
   addGlassesMention: (mention: Omit<GlassesMention, 'id' | 'createdAt'>) => Promise<void>
   updateGlassesMention: (mentionId: string, updates: Partial<GlassesMention>) => Promise<void>
+
+  // Word tags
+  addWordTag: (tag: Omit<WordTag, 'id' | 'createdAt'>) => Promise<void>
+  removeWordTag: (tagId: string, sceneId: string) => Promise<void>
 
   // Sync
   syncToCloud: () => Promise<void>
@@ -90,6 +95,9 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           sensoryAudit: defaultSensoryAudit,
           reverberationLibrary: [],
           revealAuditUnlocked: false,
+          lastEditedSceneId: null,
+          lastEditedAt: null,
+          sessions: [],
           createdAt: now,
           updatedAt: now
         }
@@ -111,6 +119,12 @@ export const useManuscriptStore = create<ManuscriptStore>()(
               .sortBy('order')
 
             manuscript.scenes = scenes as SceneNode[]
+
+            // Ensure new fields exist (for backwards compatibility)
+            manuscript.lastEditedSceneId = manuscript.lastEditedSceneId || null
+            manuscript.lastEditedAt = manuscript.lastEditedAt || null
+            manuscript.sessions = manuscript.sessions || []
+
             set({ manuscript, isLoading: false })
           }
         } catch (error) {
@@ -192,6 +206,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           sensesActivated: [],
           glassesmentions: [],
           reverberations: [],
+          wordTags: [],
           createdAt: now,
           updatedAt: now,
           pulseCheckCompletedAt: null
@@ -243,6 +258,7 @@ export const useManuscriptStore = create<ManuscriptStore>()(
             sensesActivated: [],
             glassesmentions: [],
             reverberations: [],
+            wordTags: [],
             createdAt: now,
             updatedAt: now,
             pulseCheckCompletedAt: null
@@ -302,8 +318,20 @@ export const useManuscriptStore = create<ManuscriptStore>()(
         await db.sceneNodes.put({ ...updatedScene, manuscriptId: manuscript.id })
         await queueForSync({ type: 'update', table: 'sceneNodes', data: { ...updatedScene, manuscriptId: manuscript.id } as unknown as Record<string, unknown> })
 
+        // Track editing activity (only for prose changes - actual writing)
+        const manuscriptUpdates: Partial<ManuscriptState> = {
+          scenes: updatedScenes,
+          totalWordCount,
+          updatedAt: now
+        }
+
+        if (updates.prose !== undefined) {
+          manuscriptUpdates.lastEditedSceneId = sceneId
+          manuscriptUpdates.lastEditedAt = now
+        }
+
         set({
-          manuscript: { ...manuscript, scenes: updatedScenes, totalWordCount, updatedAt: now }
+          manuscript: { ...manuscript, ...manuscriptUpdates }
         })
       },
 
@@ -431,6 +459,36 @@ export const useManuscriptStore = create<ManuscriptStore>()(
           const updated = { ...mention, ...updates }
           await db.glassesMentions.put(updated)
           await queueForSync({ type: 'update', table: 'glassesMentions', data: updated as unknown as Record<string, unknown> })
+        }
+      },
+
+      addWordTag: async (tag: Omit<WordTag, 'id' | 'createdAt'>) => {
+        const { manuscript, updateScene } = get()
+        if (!manuscript) return
+
+        const newTag: WordTag = {
+          ...tag,
+          id: generateId(),
+          createdAt: new Date().toISOString()
+        }
+
+        const scene = manuscript.scenes.find((s: SceneNode) => s.id === tag.sceneId)
+        if (scene) {
+          await updateScene(scene.id, {
+            wordTags: [...scene.wordTags, newTag]
+          })
+        }
+      },
+
+      removeWordTag: async (tagId: string, sceneId: string) => {
+        const { manuscript, updateScene } = get()
+        if (!manuscript) return
+
+        const scene = manuscript.scenes.find((s: SceneNode) => s.id === sceneId)
+        if (scene) {
+          await updateScene(scene.id, {
+            wordTags: scene.wordTags.filter((t: WordTag) => t.id !== tagId)
+          })
         }
       },
 
