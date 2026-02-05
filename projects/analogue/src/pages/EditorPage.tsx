@@ -20,6 +20,7 @@ import ExportModal from '../components/ExportModal'
 import MetadataDrawer from '../components/MetadataDrawer'
 import { TagDrawer } from '../components/TagDrawer'
 import { WordTagList } from '../components/WordTagList'
+import { TaggedProseView } from '../components/TaggedProseView'
 
 const AVAILABLE_TAGS = ['glasses', 'door', 'drift', 'postman', 'villager', 'identity', 'recovery', 'threshold', 'mask', 'anchor']
 
@@ -389,9 +390,14 @@ export default function EditorPage() {
           </button>
           <button
             onClick={openTagDrawer}
-            className={`p-2 ${activeTag ? 'bg-blue-500/20 text-blue-400' : 'text-ink-400'}`}
+            className={`p-2 relative ${activeTag ? 'bg-blue-500/20 text-blue-400' : 'text-ink-400'}`}
           >
             <Tag className="w-5 h-5" />
+            {scene.wordTags && scene.wordTags.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {scene.wordTags.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -410,42 +416,53 @@ export default function EditorPage() {
         style={footnoteDrawerOpen ? { height: `${100 - footnoteDrawerHeight}%` } : undefined}
       >
         {isReadMode ? (
-          /* Read mode - formatted paragraphs */
+          /* Read mode - formatted paragraphs with tag highlights */
           <div className="absolute inset-0 overflow-y-auto p-3 pb-24">
-            <div className="prose-container max-w-none">
-              {displayProse.split(/\n\n+/).map((paragraph, i) => (
-                paragraph.trim() && (
-                  <p
-                    key={i}
-                    className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
-                    style={{ textIndent: i > 0 ? '2em' : '0' }}
-                  >
-                    {paragraph.split('\n').map((line, j) => (
-                      <span key={j}>
-                        {line}
-                        {j < paragraph.split('\n').length - 1 && <br />}
-                      </span>
-                    ))}
-                  </p>
-                )
-              ))}
-              {!displayProse && (
-                <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
-              )}
+            {!displayProse ? (
+              <p className="text-ink-600 italic">No content yet. Switch to Edit mode to start writing.</p>
+            ) : scene.wordTags && scene.wordTags.length > 0 ? (
+              <TaggedProseView
+                prose={displayProse}
+                wordTags={scene.wordTags}
+                onTagClick={(wordTag) => {
+                  if (confirm(`Remove "${wordTag.text}" tag?`)) {
+                    removeWordTag(wordTag.id, scene.id)
+                  }
+                }}
+              />
+            ) : (
+              <div className="prose-container max-w-none">
+                {displayProse.split(/\n\n+/).map((paragraph, i) => (
+                  paragraph.trim() && (
+                    <p
+                      key={i}
+                      className="text-ink-100 text-base leading-relaxed mb-4 first:mt-0"
+                      style={{ textIndent: i > 0 ? '2em' : '0' }}
+                    >
+                      {paragraph.split('\n').map((line, j) => (
+                        <span key={j}>
+                          {line}
+                          {j < paragraph.split('\n').length - 1 && <br />}
+                        </span>
+                      ))}
+                    </p>
+                  )
+                ))}
+              </div>
+            )}
 
-              {/* Footnotes section */}
-              {footnotes.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-ink-700">
-                  <div className="space-y-2">
-                    {footnotes.map((footnote, i) => (
-                      <p key={i} className="text-ink-400 text-sm leading-relaxed">
-                        <span className="text-ink-500">[{i + 1}]</span> {footnote}
-                      </p>
-                    ))}
-                  </div>
+            {/* Footnotes section */}
+            {footnotes.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-ink-700">
+                <div className="space-y-2">
+                  {footnotes.map((footnote, i) => (
+                    <p key={i} className="text-ink-400 text-sm leading-relaxed">
+                      <span className="text-ink-500">[{i + 1}]</span> {footnote}
+                    </p>
+                  ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           /* Edit mode - textarea with serif font and footnotes display */
@@ -533,16 +550,17 @@ The Read mode will show your text with proper paragraph formatting."
         {/* Active Tag Indicator */}
         <AnimatePresence>
           {activeTag && !isReadMode && (
-            <motion.div
+            <motion.button
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="px-4 py-2 border-t border-ink-800 bg-blue-900/30 text-center"
+              onClick={() => setActiveTag(null)}
+              className="w-full px-4 py-2 border-t border-ink-800 bg-blue-900/30 text-center active:bg-blue-900/50"
             >
               <span className="text-xs text-blue-400">
-                Tagging mode active: <span className="font-semibold capitalize">{activeTag}</span> - Select text to tag it
+                Tagging: <span className="font-semibold capitalize">{activeTag}</span> • Tap to stop
               </span>
-            </motion.div>
+            </motion.button>
           )}
         </AnimatePresence>
       </div>

@@ -11,6 +11,7 @@ interface EditorStore {
   // Tag drawer state
   tagDrawerOpen: boolean
   activeTag: string | null
+  tagFilters: string[] // Active tag filters for read mode
 
   // Selection for tagging
   selectedText: string
@@ -35,6 +36,8 @@ interface EditorStore {
   openTagDrawer: () => void
   closeTagDrawer: () => void
   setActiveTag: (tag: string | null) => void
+  toggleTagFilter: (tag: string) => void
+  clearTagFilters: () => void
 
   setSelection: (text: string, start: number, end: number) => void
   clearSelection: () => void
@@ -57,6 +60,7 @@ export const useEditorStore = create<EditorStore>()(
       footnoteDrawerHeight: 30,
       tagDrawerOpen: false,
       activeTag: null,
+      tagFilters: [],
       selectedText: '',
       selectionStart: 0,
       selectionEnd: 0,
@@ -75,8 +79,14 @@ export const useEditorStore = create<EditorStore>()(
       setFootnoteDrawerHeight: (height) => set({ footnoteDrawerHeight: Math.min(70, Math.max(20, height)) }),
 
       openTagDrawer: () => set({ tagDrawerOpen: true }),
-      closeTagDrawer: () => set({ tagDrawerOpen: false, activeTag: null }),
+      closeTagDrawer: () => set({ tagDrawerOpen: false }),
       setActiveTag: (tag) => set({ activeTag: tag }),
+      toggleTagFilter: (tag) => set((state) => ({
+        tagFilters: state.tagFilters.includes(tag)
+          ? state.tagFilters.filter(t => t !== tag)
+          : [...state.tagFilters, tag]
+      })),
+      clearTagFilters: () => set({ tagFilters: [] }),
 
       setSelection: (text, start, end) => set({
         selectedText: text,
@@ -105,7 +115,11 @@ export const useEditorStore = create<EditorStore>()(
     }),
     {
       name: 'analogue-editor-settings',
-      partialize: (state) => ({ textSize: state.textSize })
+      partialize: (state) => ({
+        textSize: state.textSize,
+        activeTag: state.activeTag,
+        tagFilters: state.tagFilters
+      })
     }
   )
 )
