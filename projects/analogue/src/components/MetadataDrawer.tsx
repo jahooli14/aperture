@@ -1,11 +1,20 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { SceneNode } from '../types/manuscript'
+import { SceneNode, NarrativeSection } from '../types/manuscript'
+import { useManuscriptStore } from '../stores/useManuscriptStore'
 import QuickBeatInput from './QuickBeatInput'
 import CharacterChips from './CharacterChips'
 import MotifTagSelector from './MotifTagSelector'
 import SceneTimeline from './SceneTimeline'
 import ChecklistHeader from './ChecklistHeader'
+
+const SECTIONS: { id: NarrativeSection; label: string }[] = [
+  { id: 'departure', label: 'Departure' },
+  { id: 'escape', label: 'The Escape' },
+  { id: 'rupture', label: 'The Rupture' },
+  { id: 'alignment', label: 'The Alignment' },
+  { id: 'reveal', label: 'The Reveal' }
+]
 
 interface MetadataDrawerProps {
   isOpen: boolean
@@ -42,6 +51,7 @@ export default function MetadataDrawer({
 }: MetadataDrawerProps) {
   const [activeTab, setActiveTab] = useState<'scene' | 'review' | 'settings'>('scene')
   const [timelineExpanded, setTimelineExpanded] = useState(false)
+  const { updateScene } = useManuscriptStore()
 
   const flaggedGlasses = scene.glassesmentions?.filter(m => m.flagged) || []
 
@@ -113,6 +123,24 @@ export default function MetadataDrawer({
         <div className="overflow-y-auto" style={{ height: 'calc(100vh - 120px)' }}>
           {activeTab === 'scene' && (
             <div className="p-4 space-y-3">
+              {/* Section */}
+              <div>
+                <label className="block text-xs font-medium text-ink-400 mb-1.5">
+                  Section
+                </label>
+                <select
+                  value={scene.section}
+                  onChange={(e) => updateScene(scene.id, { section: e.target.value as NarrativeSection })}
+                  className="w-full px-3 py-2 bg-ink-800 border border-ink-700 rounded text-ink-100 text-sm"
+                >
+                  {SECTIONS.map(sect => (
+                    <option key={sect.id} value={sect.id}>
+                      {sect.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* What happens */}
               <QuickBeatInput scene={scene} />
 
