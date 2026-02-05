@@ -6,6 +6,7 @@ import TableOfContents from './pages/TableOfContents'
 import SensoryAuditPage from './pages/SensoryAuditPage'
 import ReverberationPage from './pages/ReverberationPage'
 import RevealAuditPage from './pages/RevealAuditPage'
+import TagOverview from './pages/TagOverview'
 import LoginPage from './pages/LoginPage'
 import { useAuthStore } from './stores/useAuthStore'
 
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/sensory" element={<SensoryAuditPage />} />
         <Route path="/reverberations" element={<ReverberationPage />} />
         <Route path="/reveal" element={<RevealAuditPage />} />
+        <Route path="/tags" element={<TagOverview />} />
       </Routes>
     </div>
   )

@@ -259,6 +259,7 @@ export async function syncFromCloud(userId: string): Promise<SyncResult> {
           sensesActivated: (row.senses_activated || []) as Sense[],
           glassesmentions: [],
           reverberations: [],
+          wordTags: [],
           createdAt: row.created_at,
           updatedAt: row.updated_at,
           pulseCheckCompletedAt: row.pulse_check_completed_at

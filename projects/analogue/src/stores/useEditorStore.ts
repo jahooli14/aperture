@@ -8,6 +8,10 @@ interface EditorStore {
   footnoteDrawerOpen: boolean
   footnoteDrawerHeight: number // percentage
 
+  // Tag drawer state
+  tagDrawerOpen: boolean
+  activeTag: string | null
+
   // Selection for tagging
   selectedText: string
   selectionStart: number
@@ -28,6 +32,10 @@ interface EditorStore {
   closeFootnoteDrawer: () => void
   setFootnoteDrawerHeight: (height: number) => void
 
+  openTagDrawer: () => void
+  closeTagDrawer: () => void
+  setActiveTag: (tag: string | null) => void
+
   setSelection: (text: string, start: number, end: number) => void
   clearSelection: () => void
 
@@ -47,6 +55,8 @@ export const useEditorStore = create<EditorStore>()(
       // Initial state
       footnoteDrawerOpen: false,
       footnoteDrawerHeight: 30,
+      tagDrawerOpen: false,
+      activeTag: null,
       selectedText: '',
       selectionStart: 0,
       selectionEnd: 0,
@@ -63,6 +73,10 @@ export const useEditorStore = create<EditorStore>()(
       openFootnoteDrawer: () => set({ footnoteDrawerOpen: true }),
       closeFootnoteDrawer: () => set({ footnoteDrawerOpen: false }),
       setFootnoteDrawerHeight: (height) => set({ footnoteDrawerHeight: Math.min(70, Math.max(20, height)) }),
+
+      openTagDrawer: () => set({ tagDrawerOpen: true }),
+      closeTagDrawer: () => set({ tagDrawerOpen: false, activeTag: null }),
+      setActiveTag: (tag) => set({ activeTag: tag }),
 
       setSelection: (text, start, end) => set({
         selectedText: text,
