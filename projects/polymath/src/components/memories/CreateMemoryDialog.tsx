@@ -1,9 +1,10 @@
 /**
  * CreateMemoryDialog - Manual Memory Creation
  * Mobile-optimized bottom sheet for capturing thoughts manually
+ * Streamlined for fast, pleasant typing experience
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -14,17 +15,14 @@ import {
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
-import { Textarea } from '../ui/textarea'
 import { Label } from '../ui/label'
-import { Select } from '../ui/select'
 import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
-import { Plus, Brain } from 'lucide-react'
+import { Plus, Brain, ChevronDown } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
-import { supabase } from '../../lib/supabase'
-import { Image as ImageIcon, X, Paperclip } from 'lucide-react'
+import { Image as ImageIcon, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export interface CreateMemoryDialogProps {
@@ -41,9 +39,11 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
+  const [showOptions, setShowOptions] = useState(false)
   const { createMemory, memories } = useMemoryStore()
   const { addToast } = useToast()
   const { fetchSuggestions } = useAutoSuggestion()
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
 
   // Create and cleanup object URLs to prevent memory leaks
   useEffect(() => {
@@ -66,8 +66,6 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     memory_type: '' as '' | 'foundational' | 'event' | 'insight',
   })
 
-  // ... (rest of the file logic remains same, just replacing return)
-
   const resetForm = () => {
     setFormData({
       title: '',
@@ -76,6 +74,15 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     })
     setBody('')
     setSelectedFiles([])
+    setShowOptions(false)
+  }
+
+  // Auto-grow textarea
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setBody(e.target.value)
+    const el = e.target
+    el.style.height = 'auto'
+    el.style.height = Math.max(120, el.scrollHeight) + 'px'
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,68 +103,38 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
     try {
       for (const file of selectedFiles) {
-        console.log('[CreateMemoryDialog] Uploading:', file.name, file.type, `${(file.size / 1024).toFixed(2)}KB`)
-
         const fileExt = file.name.split('.').pop()
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
 
-        // 1. Get Signed URL from backend
-        console.log('[CreateMemoryDialog] Requesting signed URL for:', fileName)
         const authResponse = await fetch('/api/upload-image', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fileName,
-            fileType: file.type
-          })
-        }).catch(err => {
-          console.error('[CreateMemoryDialog] Network error requesting upload URL:', err)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName, fileType: file.type })
+        }).catch(() => {
           throw new Error('Network error - check your internet connection')
         })
 
         if (!authResponse.ok) {
           const errorData = await authResponse.json().catch(() => ({}))
-          console.error('[CreateMemoryDialog] Failed to get upload URL:', authResponse.status, errorData)
           throw new Error(errorData.details || errorData.error || `Server error (${authResponse.status})`)
         }
 
         const { signedUrl, publicUrl } = await authResponse.json()
+        if (!signedUrl || !publicUrl) throw new Error('Invalid response from upload server')
 
-        if (!signedUrl || !publicUrl) {
-          console.error('[CreateMemoryDialog] Missing URLs in response')
-          throw new Error('Invalid response from upload server')
-        }
-
-        // 2. Upload directly to Supabase Storage via Signed URL
-        console.log('[CreateMemoryDialog] Uploading to storage:', fileName)
         const uploadResponse = await fetch(signedUrl, {
           method: 'PUT',
-          headers: {
-            'Content-Type': file.type,
-            'x-upsert': 'true', // Allow overwriting if exists
-          },
+          headers: { 'Content-Type': file.type, 'x-upsert': 'true' },
           body: file
-        }).catch(err => {
-          console.error('[CreateMemoryDialog] Network error uploading file:', err)
+        }).catch(() => {
           throw new Error('Upload failed - check your internet connection')
         })
 
-        if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text().catch(() => 'Unknown error')
-          console.error('[CreateMemoryDialog] Upload failed:', uploadResponse.status, errorText)
-          throw new Error(`Upload failed (${uploadResponse.status}): ${uploadResponse.statusText}`)
-        }
-
-        console.log('[CreateMemoryDialog] Successfully uploaded:', fileName)
+        if (!uploadResponse.ok) throw new Error(`Upload failed (${uploadResponse.status})`)
         urls.push(publicUrl)
       }
-
-      console.log('[CreateMemoryDialog] All images uploaded successfully:', urls.length)
       return urls
     } catch (error) {
-      console.error('[CreateMemoryDialog] Upload process failed:', error)
       const message = error instanceof Error ? error.message : 'Unknown upload error'
       throw new Error(`Failed to upload images: ${message}`)
     } finally {
@@ -169,14 +146,12 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     e.preventDefault()
     setLoading(true)
 
-    // Prepare data before closing
     const tags = formData.tags
       .split(',')
       .map((t) => t.trim())
       .filter((t) => t.length > 0)
 
     try {
-      // Upload images first if any
       const imageUrls = await uploadImages()
 
       const memoryData = {
@@ -196,23 +171,18 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
       // Save in background
       try {
-        // NOTE: We already uploaded images above, but if createMemory fails they become orphaned.
-        // In a production app cleanup might be needed, but acceptable for now.
         const newMemory = await createMemory(memoryData)
 
-        // Trigger AI suggestion system
         if (newMemory?.id) {
           setLastCreatedId(newMemory.id)
           fetchSuggestions('thought', newMemory.id, `${savedTitle} ${body}`)
         }
 
-        // Check for milestone celebrations
         const newCount = memories.length + 1
         const isMilestone = checkThoughtMilestone(newCount)
         const milestoneMessage = getMilestoneMessage('thought', newCount)
 
         if (isMilestone) {
-          // Trigger celebration animation
           if (newCount === 1) celebrate.firstThought()
           else if (newCount === 10) celebrate.tenthThought()
           else if (newCount === 50) celebrate.fiftiethThought()
@@ -238,7 +208,6 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
         })
       }
     } catch (error) {
-      console.error('[CreateMemoryDialog] Submission failed:', error)
       addToast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to prepare submission',
@@ -273,221 +242,199 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <BottomSheetTitle>Capture thought</BottomSheetTitle>
             </div>
             <BottomSheetDescription>
-              Add a thought, idea, or insight
+              What's on your mind?
             </BottomSheetDescription>
           </BottomSheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Title <span style={{ color: 'var(--premium-red)' }}>*</span>
-              </Label>
+          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            {/* Title — big and bold */}
+            <div>
               <Input
                 id="title"
-                placeholder="What's this about?"
+                placeholder="Title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
+                autoFocus
                 autoComplete="off"
+                className="text-xl font-bold h-14 border-0 bg-transparent px-1 focus:ring-0 placeholder:text-white/15"
+                style={{ color: 'var(--premium-text-primary)' }}
               />
             </div>
 
-            {/* Body Content */}
-            <div className="space-y-2">
-              <Label htmlFor="body" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Content <span style={{ color: 'var(--premium-red)' }}>*</span>
-              </Label>
-              <Textarea
+            {/* Body — auto-growing textarea, clean and spacious */}
+            <div>
+              <textarea
+                ref={bodyRef}
                 id="body"
-                placeholder="Write your thoughts..."
+                placeholder="Write your thoughts here..."
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={handleBodyChange}
                 required
-                className="text-base min-h-[200px] resize-y leading-relaxed p-4"
+                className="w-full text-base leading-relaxed bg-transparent border-0 px-1 py-2 focus:outline-none focus:ring-0 resize-none placeholder:text-white/15"
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
+                  color: 'var(--premium-text-primary)',
+                  minHeight: '120px',
                 }}
               />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                AI will analyze this to extract entities and themes.
-              </p>
             </div>
 
-            {/* Image Attachments */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="font-semibold text-sm sm:text-base cursor-pointer flex items-center gap-2 group" style={{ color: 'var(--premium-text-primary)' }}>
+            {/* Quick Actions Row — Photos + More Options */}
+            <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
+              {/* Photo button */}
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                  id="image-upload"
+                />
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-white/5"
+                  style={{ color: 'var(--premium-text-secondary)' }}
+                >
                   <ImageIcon className="h-4 w-4" style={{ color: 'var(--premium-blue)' }} />
-                  Photos
-                </Label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                    id="image-upload"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-3 text-xs flex items-center gap-1.5 transition-all hover:bg-white/10 active:scale-95"
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      color: 'var(--premium-text-secondary)',
-                      borderRadius: '9999px',
-                      border: '1px solid rgba(255, 255, 255, 0.05)'
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add</span>
-                  </Button>
-                </div>
+                  Photo
+                  {selectedFiles.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-bold">
+                      {selectedFiles.length}
+                    </span>
+                  )}
+                </button>
               </div>
 
-              {/* Image Preview Grid - Smart Layout */}
-              <AnimatePresence mode="popLayout">
-                {selectedFiles.length > 0 && (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className={`grid gap-3 ${selectedFiles.length === 1 ? 'grid-cols-1' :
-                      selectedFiles.length === 2 ? 'grid-cols-2' :
-                        selectedFiles.length === 3 ? 'grid-cols-2' : // First one spans full? handled below
-                          'grid-cols-2'
-                      }`}
-                  >
-                    {selectedFiles.map((file, index) => (
-                      <motion.div
-                        layout
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        key={`${file.name}-${index}`}
-                        className={`relative rounded-2xl overflow-hidden group border border-white/10 shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
-                          selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
-                          }`}
-                      >
-                        <img
-                          src={previewUrls[index]}
-                          alt="Preview"
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80 hover:text-white"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Memory Type */}
-            <div className="space-y-2">
-              <Label htmlFor="memory_type" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Type (Optional)
-              </Label>
-              <Select
-                id="memory_type"
-                value={formData.memory_type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    memory_type: e.target.value as '' | 'foundational' | 'event' | 'insight',
-                  })
-                }
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
+              {/* More Options toggle */}
+              <button
+                type="button"
+                onClick={() => setShowOptions(!showOptions)}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-all hover:bg-white/5"
+                style={{ color: 'var(--premium-text-secondary)' }}
               >
-                <option value="">Auto-detect</option>
-                <option value="foundational">Foundational - Core knowledge</option>
-                <option value="event">Event - Something that happened</option>
-                <option value="insight">Insight - Realization or learning</option>
-              </Select>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOptions ? 'rotate-180' : ''}`} />
+                {showOptions ? 'Less' : 'Type & Tags'}
+              </button>
             </div>
 
-            {/* Tags */}
-            <div className="space-y-2 pb-4">
-              <Label htmlFor="tags" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-                Tags (Optional)
-              </Label>
-              <Input
-                id="tags"
-                placeholder="ai, programming, health"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                className="text-base h-11 sm:h-12"
-                style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'var(--premium-text-primary)'
-                }}
-                autoComplete="off"
-              />
-              <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
-                Comma-separated tags to categorize this memory
-              </p>
-            </div>
+            {/* Image Preview Grid */}
+            <AnimatePresence mode="popLayout">
+              {selectedFiles.length > 0 && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className={`grid gap-2 ${selectedFiles.length === 1 ? 'grid-cols-1' :
+                    selectedFiles.length === 2 ? 'grid-cols-2' :
+                      selectedFiles.length === 3 ? 'grid-cols-2' :
+                        'grid-cols-2'
+                    }`}
+                >
+                  {selectedFiles.map((file, index) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      key={`${file.name}-${index}`}
+                      className={`relative rounded-xl overflow-hidden group border border-white/10 shadow-lg ${selectedFiles.length === 3 && index === 0 ? 'col-span-2 aspect-[2/1]' :
+                        selectedFiles.length === 1 ? 'aspect-[16/9]' : 'aspect-square'
+                        }`}
+                    >
+                      <img
+                        src={previewUrls[index]}
+                        alt="Preview"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <button
+                        type="button"
+                        onClick={() => removeFile(index)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Collapsible Options */}
+            <AnimatePresence>
+              {showOptions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-4 pt-2">
+                    {/* Memory Type — pill buttons instead of dropdown */}
+                    <div className="space-y-2">
+                      <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Type</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: '', label: 'Auto' },
+                          { value: 'foundational', label: 'Core' },
+                          { value: 'event', label: 'Event' },
+                          { value: 'insight', label: 'Insight' },
+                        ].map((type) => (
+                          <button
+                            key={type.value}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, memory_type: type.value as any })}
+                            className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${formData.memory_type === type.value
+                              ? 'bg-white text-black border-white'
+                              : 'bg-transparent border-white/10 text-gray-400 hover:border-white/30'
+                              }`}
+                          >
+                            {type.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="space-y-2">
+                      <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Tags</Label>
+                      <Input
+                        id="tags"
+                        placeholder="ai, programming, health"
+                        value={formData.tags}
+                        onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        className="h-11 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/15"
+                        style={{ color: 'var(--premium-text-primary)' }}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <BottomSheetFooter>
               <Button
                 type="submit"
                 disabled={loading || !formData.title || !body.trim() || uploading}
-                className="btn-primary w-full h-12 touch-manipulation"
+                className="w-full h-14 bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest touch-manipulation"
               >
                 {uploading ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
-                    Uploading images...
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black border-r-transparent mr-2"></div>
+                    Uploading...
                   </>
                 ) : loading ? (
                   <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black border-r-transparent mr-2"></div>
                     Saving...
                   </>
                 ) : (
-                  <>
-                    <Brain className="mr-2 h-4 w-4" />
-                    Capture Thought
-                  </>
+                  'Capture'
                 )}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  resetForm()
-                  setOpen(false)
-                }}
-                disabled={loading}
-                className="w-full h-12 touch-manipulation"
-              >
-                Cancel
               </Button>
             </BottomSheetFooter>
           </form>
