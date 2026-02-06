@@ -215,13 +215,10 @@ export function VoiceFAB({
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
         onAction={(action) => {
-          // Small delay to ensure menu modal has closed before opening the next dialog
-          setTimeout(() => {
-            if (action === 'thought') setShowThoughtDialog(true)
-            if (action === 'project') setShowProjectDialog(true)
-            if (action === 'article') setShowArticleDialog(true)
-            if (action === 'list') setShowListDialog(true)
-          }, 100)
+          if (action === 'thought') setShowThoughtDialog(true)
+          if (action === 'project') setShowProjectDialog(true)
+          if (action === 'article') setShowArticleDialog(true)
+          if (action === 'list') setShowListDialog(true)
         }}
       />
 
@@ -304,7 +301,7 @@ export function VoiceFAB({
       {/* Dialogs */}
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
-      <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} />
+      <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} hideTrigger />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
     </>
   )
