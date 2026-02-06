@@ -5,6 +5,7 @@
 
 import Dexie, { Table } from 'dexie'
 import type { Article, ArticleHighlight } from '../types/reading'
+import type { QueuedOperation } from './offlineQueue'
 
 // --- Interfaces from ReadingDatabase ---
 
@@ -130,6 +131,9 @@ export class RosetteDatabase extends Dexie {
   connections!: Table<any, string>
   dashboard!: Table<any, string>
 
+  // Offline operations queue (consolidated from separate OfflineQueue DB)
+  operations!: Table<QueuedOperation, number>
+
   constructor() {
     super('RosetteDB')
 
@@ -189,6 +193,23 @@ export class RosetteDatabase extends Dexie {
       memories: 'id, cached_at',
       connections: 'id, source_id, target_id, type',
       dashboard: 'id, updated_at'
+    })
+
+    // Version 5: Consolidate offline operations queue into RosetteDB
+    this.version(5).stores({
+      articles: 'id, user_id, status, created_at, last_synced, offline_available',
+      images: '++id, article_id, url, cached_at',
+      highlights: 'id, article_id, created_at',
+      progress: '++id, article_id, updated_at',
+      projects: 'id, status, is_priority, updated_at, last_active',
+      lists: 'id, user_id, type, created_at',
+      listItems: 'id, list_id, user_id, enrichment_status, created_at',
+      listCoverImages: 'list_id, cached_at, image_type',
+      pendingCaptures: '++id, timestamp, synced, mime_type',
+      memories: 'id, cached_at',
+      connections: 'id, source_id, target_id, type',
+      dashboard: 'id, updated_at',
+      operations: '++id, type, timestamp'
     })
   }
 
