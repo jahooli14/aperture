@@ -140,14 +140,31 @@ class DataSynchronizer {
   private async syncLists() {
     console.log('[DataSynchronizer] Syncing lists...')
     try {
-      // 1. Fetch all lists
+      // 1. Fetch all lists (updates store.lists — safe, doesn't affect items)
       await useListStore.getState().fetchLists()
 
       const lists = useListStore.getState().lists
+      const activeListId = useListStore.getState().currentListId
 
-      // 2. Fetch items for each list (ensures all items are cached)
+      // 2. Cache items for each list to Dexie WITHOUT touching store state.
+      //    Going through fetchListItems() would clobber currentListId/currentListItems
+      //    and cause the active list view to flicker empty.
       for (const list of lists) {
-        await useListStore.getState().fetchListItems(list.id)
+        if (list.id === activeListId) {
+          // For the list the user is currently viewing, update store normally
+          await useListStore.getState().fetchListItems(list.id)
+        } else {
+          // For other lists, fetch and cache silently (no store state changes)
+          try {
+            const response = await fetch(`/api/list-items?listId=${list.id}`)
+            if (response.ok) {
+              const items = await response.json()
+              await readingDb.cacheListItems(items)
+            }
+          } catch (e) {
+            // Silently fail — background cache, not critical
+          }
+        }
       }
 
       console.log(`[DataSynchronizer] Synced ${lists.length} lists with items`)
