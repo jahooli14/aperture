@@ -20,6 +20,7 @@ import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
 import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
+import { migrateFromLegacyQueue } from './lib/offlineQueue'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 import './styles/theme.css'
@@ -120,6 +121,15 @@ function ShareTargetFallback() {
 // Share target handling is now done via shareHandler.ts (runs before React)
 // which captures params in sessionStorage for ReadingPage to consume
 
+// Track route changes for context-aware sync
+function RouteTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    dataSynchronizer.setCurrentRoute(location.pathname)
+  }, [location.pathname])
+  return null
+}
+
 // Navigation component removed - replaced with FloatingNav
 
 export default function App() {
@@ -134,16 +144,22 @@ export default function App() {
     setOnlineStatus(navigator.onLine)
     updateQueueSize()
 
+    // Migrate any pending ops from legacy OfflineQueue DB to RosetteDB
+    migrateFromLegacyQueue().catch(() => {})
+
     // Start periodic data sync (pull updates)
     dataSynchronizer.startPeriodicSync()
 
-    // Trigger immediate sync on startup if online
-    // This ensures all content is fresh and available for offline use
+    // Delay initial sync so pages can load from Dexie cache first
+    // Pages show cached data instantly; this background sync refreshes it
+    let initialSyncTimer: ReturnType<typeof setTimeout> | undefined
     if (navigator.onLine) {
-      console.log('[App] Triggering initial sync...')
-      dataSynchronizer.sync().catch(err => {
-        console.warn('[App] Initial sync failed, app will use cached data:', err)
-      })
+      initialSyncTimer = setTimeout(() => {
+        console.log('[App] Triggering initial background sync...')
+        dataSynchronizer.sync().catch(err => {
+          console.warn('[App] Initial sync failed, app will use cached data:', err)
+        })
+      }, 3000)
     }
 
     // Track online/offline status
@@ -181,6 +197,7 @@ export default function App() {
     window.addEventListener('memories-synced', handleMemoriesSynced)
 
     return () => {
+      if (initialSyncTimer) clearTimeout(initialSyncTimer)
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('memories-synced', handleMemoriesSynced)
@@ -250,6 +267,7 @@ export default function App() {
             v7_relativeSplatPath: true,
           }}>
             <ScrollToTop />
+            <RouteTracker />
 
             {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
             <FloatingNav />

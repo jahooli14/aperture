@@ -12,18 +12,25 @@ class DataSynchronizer {
   private isSyncing: boolean = false
   private syncInterval: NodeJS.Timeout | null = null
   private broadcastChannel: BroadcastChannel
+  private currentRoute: string = '/'
+  private lastFullSync: number = 0
 
   private constructor() {
     this.broadcastChannel = new BroadcastChannel('rosette_sync_channel')
-    
+
     // Listen for sync events from other tabs/workers
     this.broadcastChannel.onmessage = (event) => {
       if (event.data.type === 'SYNC_COMPLETE') {
         console.log('[DataSynchronizer] Received sync complete signal from another tab')
-        // We could trigger a soft refresh of stores here if needed, 
-        // but for now we rely on the fact that data is in IndexedDB
       }
     }
+  }
+
+  /**
+   * Update the current route so periodic sync only fetches relevant data
+   */
+  public setCurrentRoute(route: string) {
+    this.currentRoute = route
   }
 
   public static getInstance(): DataSynchronizer {
@@ -73,6 +80,7 @@ class DataSynchronizer {
         this.syncDashboard()
       ])
 
+      this.lastFullSync = Date.now()
       console.log('[DataSynchronizer] Sync completed successfully')
       this.broadcastChannel.postMessage({ type: 'SYNC_COMPLETE', timestamp: Date.now() })
       
@@ -241,6 +249,51 @@ class DataSynchronizer {
   }
 
   /**
+   * Sync only the data relevant to the current route.
+   * Falls back to full sync every 15 minutes.
+   */
+  public async syncForCurrentRoute() {
+    const FULL_SYNC_INTERVAL = 15 * 60 * 1000 // 15 minutes
+    const now = Date.now()
+
+    // Full sync if it's been a while
+    if (now - this.lastFullSync > FULL_SYNC_INTERVAL) {
+      await this.sync()
+      return
+    }
+
+    if (this.isSyncing) return
+
+    const { isOnline } = useOfflineStore.getState()
+    if (!isOnline) return
+
+    this.isSyncing = true
+    const route = this.currentRoute
+
+    try {
+      // Route-aware sync: only refresh data for the current page
+      if (route === '/' || route === '') {
+        await Promise.allSettled([this.syncProjects(), this.syncMemories(), this.syncDashboard()])
+      } else if (route.startsWith('/reading')) {
+        await this.syncReadingList()
+      } else if (route.startsWith('/memories')) {
+        await this.syncMemories()
+      } else if (route.startsWith('/projects')) {
+        await this.syncProjects()
+      } else if (route.startsWith('/lists')) {
+        await this.syncLists()
+      } else {
+        // For other routes, just sync projects + memories (light sync)
+        await Promise.allSettled([this.syncProjects(), this.syncMemories()])
+      }
+    } catch (error) {
+      console.error('[DataSynchronizer] Route sync failed:', error)
+    } finally {
+      this.isSyncing = false
+    }
+  }
+
+  /**
    * Starts an interval to sync data periodically (default: 5 mins)
    */
   public startPeriodicSync(intervalMs: number = SYNC_INTERVAL) {
@@ -250,7 +303,7 @@ class DataSynchronizer {
     this.syncInterval = setInterval(() => {
       // Only auto-sync if window is visible to save resources
       if (document.visibilityState === 'visible') {
-        this.sync()
+        this.syncForCurrentRoute()
       }
     }, intervalMs)
   }

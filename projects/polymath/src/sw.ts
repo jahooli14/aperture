@@ -219,41 +219,40 @@ self.addEventListener('sync', (event) => {
 
 async function syncCaptures() {
   console.log('[ServiceWorker] Starting background sync for captures...')
-  const db = await openDB()
 
   try {
-    const pendingNotes = await new Promise<any[]>((resolve, reject) => {
-      const transaction = db.transaction('pending-notes', 'readonly')
-      const store = transaction.objectStore('pending-notes')
+    const db = await openRosetteDB()
+    const pendingCaptures = await new Promise<any[]>((resolve, reject) => {
+      const transaction = db.transaction('pendingCaptures', 'readonly')
+      const store = transaction.objectStore('pendingCaptures')
       const request = store.getAll()
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
     })
 
-    console.log(`[ServiceWorker] Found ${pendingNotes.length} pending captures.`)
+    console.log(`[ServiceWorker] Found ${pendingCaptures.length} pending captures.`)
 
-    for (const note of pendingNotes) {
+    for (const capture of pendingCaptures) {
       try {
-        console.log(`[ServiceWorker] Attempting to sync capture with ID: ${note.id}`)
+        console.log(`[ServiceWorker] Attempting to sync capture with ID: ${capture.id}`)
         await fetch('/api/memories?capture=true', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(note)
+          body: JSON.stringify({ transcript: capture.transcript })
         })
 
         // Remove from pending queue on success
         await new Promise<void>((resolve, reject) => {
-          const transaction = db.transaction('pending-notes', 'readwrite')
-          const store = transaction.objectStore('pending-notes')
-          const request = store.delete(note.id)
+          const transaction = db.transaction('pendingCaptures', 'readwrite')
+          const store = transaction.objectStore('pendingCaptures')
+          const request = store.delete(capture.id)
           request.onsuccess = () => resolve()
           request.onerror = () => reject(request.error)
         })
 
-        console.log(`[ServiceWorker] Successfully synced and removed capture with ID: ${note.id}`)
+        console.log(`[ServiceWorker] Successfully synced and removed capture with ID: ${capture.id}`)
       } catch (error) {
-        console.error(`[ServiceWorker] Failed to sync capture with ID: ${note.id}. Error:`, error)
-        // Keep in queue for next sync
+        console.error(`[ServiceWorker] Failed to sync capture with ID: ${capture.id}. Error:`, error)
       }
     }
   } catch (err) {
@@ -263,19 +262,11 @@ async function syncCaptures() {
   console.log('[ServiceWorker] Background sync for captures finished.')
 }
 
-// Helper: Open IndexedDB
-function openDB(): Promise<IDBDatabase> {
+// Helper: Open the same RosetteDB that the app uses (Dexie-created)
+function openRosetteDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('aperture-offline', 1)
-
+    const request = indexedDB.open('RosetteDB')
     request.onerror = () => reject(request.error)
     request.onsuccess = () => resolve(request.result)
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-      if (!db.objectStoreNames.contains('pending-notes')) {
-        db.createObjectStore('pending-notes', { keyPath: 'id' })
-      }
-    }
   })
 }
