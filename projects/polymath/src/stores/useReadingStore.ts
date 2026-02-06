@@ -84,12 +84,11 @@ export const useReadingStore = create<ReadingState>((set, get) => {
 
       const { readingDb } = await import('../lib/db')
 
-      // 2. Local DB check (Stale-While-Revalidate)
-      // On force refresh (pull-to-refresh): skip Dexie — we already have data in
-      // memory. Going Dexie→API caused a flicker because the Dexie cache could have
-      // a different article set than what's currently displayed, triggering an
-      // intermediate re-render with a different count before the API response arrives.
-      if (!force) {
+      // 2. Local DB check — only used for cold start (empty in-memory state).
+      // When articles already exist in memory they are always fresher than the
+      // Dexie cache, so reading from Dexie would replace them with a stale
+      // snapshot causing a visible flicker (e.g. 2 → 6) before the API responds.
+      if (!force && state.articles.length === 0) {
         try {
           const cachedArticles = await readingDb.articles.toArray()
           const filtered = status
@@ -152,6 +151,19 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           }))
 
           await readingDb.articles.bulkPut(cachedArticles)
+
+          // Remove Dexie records that no longer exist on the server.
+          // bulkPut only adds/updates — without this cleanup, stale records
+          // accumulate and cause wrong counts on the next cold start.
+          const serverIdSet = new Set(articles.map((a: Article) => a.id))
+          const allCachedKeys = await readingDb.articles.toCollection().primaryKeys()
+          const staleIds = (allCachedKeys as string[]).filter(
+            id => !serverIdSet.has(id) && !id.startsWith('temp-')
+          )
+          if (staleIds.length > 0) {
+            await readingDb.articles.bulkDelete(staleIds)
+            console.log(`[ReadingStore] Cleaned ${staleIds.length} stale Dexie records`)
+          }
         } catch (cacheError) {
           console.warn('[ReadingStore] Failed to auto-cache articles:', cacheError)
         }
