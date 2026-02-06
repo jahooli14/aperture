@@ -1,6 +1,7 @@
 /**
  * Save Article Dialog
  * Mobile-optimized bottom sheet for saving URLs to reading queue
+ * Streamlined — paste URL, hit save, done
  */
 
 import { useState } from 'react'
@@ -15,7 +16,6 @@ import {
   BottomSheetTitle,
 } from '../ui/bottom-sheet'
 import { Input } from '../ui/input'
-import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useConnectionStore } from '../../stores/useConnectionStore'
@@ -24,9 +24,10 @@ import { articleProcessor } from '../../lib/articleProcessor'
 interface SaveArticleDialogProps {
   open: boolean
   onClose: () => void
+  hideTrigger?: boolean
 }
 
-export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
+export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveArticleDialogProps) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const { saveArticle } = useReadingStore()
@@ -45,14 +46,8 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
     setLoading(true)
 
     try {
-      console.log('[SaveArticleDialog] Saving article:', url.trim())
-
-      // Optimistic save - returns immediately with temp article
       const article = await saveArticle({ url: url.trim() })
 
-      console.log('[SaveArticleDialog] Article saved (optimistic), starting robust processing')
-
-      // Show success immediately and close dialog
       addToast({
         title: 'Article saved!',
         description: 'Added to your queue',
@@ -62,25 +57,20 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
       resetForm()
       onClose()
 
-      // Use ArticleProcessor for robust background polling with retry
-      // Note: If offline, this will just queue up or fail gracefully
+      // Background processing
       if (!article.id.startsWith('temp-')) {
         articleProcessor.startProcessing(article.id, url.trim(), async (status, updatedArticle) => {
           const { fetchArticles } = useReadingStore.getState()
 
           if (status === 'complete') {
-            console.log('[SaveArticleDialog] Extraction complete')
-
             addToast({
               title: 'Article ready!',
               description: updatedArticle?.title || 'Content extracted successfully',
               variant: 'success',
             })
 
-            // Refresh articles list
             await fetchArticles(undefined, true)
 
-            // Trigger connection detection
             if (updatedArticle && (updatedArticle.content || updatedArticle.excerpt)) {
               fetchSuggestions(
                 'article',
@@ -89,25 +79,18 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
                 updatedArticle.title || undefined
               )
             }
-          } else if (status === 'retrying') {
-            // Quietly retry in background
-            console.log('[SaveArticleDialog] Retrying extraction...')
           } else if (status === 'failed') {
-            // Don't show error toast for background processing failures unless critical
-            console.log('[SaveArticleDialog] Extraction failed')
             await fetchArticles(undefined, true)
           }
         })
       }
 
     } catch (error) {
-      console.error('[SaveArticleDialog] Failed to save article:', error)
       addToast({
         title: 'Failed to save',
         description: error instanceof Error ? error.message : 'Unknown error',
         variant: 'destructive',
       })
-      // Close dialog even on error so user isn't stuck
       resetForm()
       onClose()
     } finally {
@@ -128,29 +111,30 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
           </BottomSheetDescription>
         </BottomSheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          {/* URL Input */}
-          <div className="space-y-2 pb-4">
-            <Label htmlFor="url" className="font-semibold text-sm sm:text-base" style={{ color: 'var(--premium-text-primary)' }}>
-              Article URL <span style={{ color: 'var(--premium-red)' }}>*</span>
-            </Label>
-            <Input
-              id="url"
-              type="url"
-              placeholder="https://example.com/article"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-              autoFocus
-              className="text-base h-11 sm:h-12"
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* URL Input — big and clear */}
+          <div className="pt-2">
+            <div className="flex items-center gap-3 rounded-xl border px-4"
               style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
                 borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'var(--premium-text-primary)'
               }}
-              autoComplete="off"
-            />
-            <p className="text-xs" style={{ color: 'var(--premium-text-tertiary)' }}>
+            >
+              <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
+              <input
+                id="url"
+                type="url"
+                placeholder="https://..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+                autoFocus
+                autoComplete="off"
+                className="flex-1 h-14 bg-transparent border-0 text-base focus:outline-none focus:ring-0 placeholder:text-white/15"
+                style={{ color: 'var(--premium-text-primary)' }}
+              />
+            </div>
+            <p className="text-xs mt-2 px-1" style={{ color: 'var(--premium-text-tertiary)' }}>
               AI will extract the content and find connections
             </p>
           </div>
@@ -159,31 +143,16 @@ export function SaveArticleDialog({ open, onClose }: SaveArticleDialogProps) {
             <Button
               type="submit"
               disabled={loading || !url.trim()}
-              className="btn-primary w-full h-12 touch-manipulation"
+              className="w-full h-14 bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest touch-manipulation"
             >
               {loading ? (
                 <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent mr-2"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-black border-r-transparent mr-2"></div>
                   Saving...
                 </>
               ) : (
-                <>
-                  <BookmarkPlus className="mr-2 h-4 w-4" />
-                  Save Article
-                </>
+                'Save Article'
               )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                resetForm()
-                onClose()
-              }}
-              disabled={loading}
-              className="w-full h-12 touch-manipulation"
-            >
-              Cancel
             </Button>
           </BottomSheetFooter>
         </form>
