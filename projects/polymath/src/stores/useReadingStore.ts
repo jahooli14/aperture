@@ -7,7 +7,6 @@ import { create } from 'zustand'
 import type { Article, ArticleStatus, SaveArticleRequest } from '../types/reading'
 import { queueOperation } from '../lib/offlineQueue'
 import { useOfflineStore } from './useOfflineStore'
-import { queryClient } from '../lib/queryClient'
 import { CACHE_TTL } from '../lib/cacheConfig'
 
 /**
@@ -83,41 +82,45 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         return
       }
 
-      set({ loading: true, error: null })
-
       const { readingDb } = await import('../lib/db')
 
       // 2. Local DB check (Stale-While-Revalidate)
-      try {
-        const cachedArticles = await readingDb.articles.toArray()
-        const filtered = status
-          ? cachedArticles.filter(a => a.status === status)
-          : cachedArticles
+      // On force refresh (pull-to-refresh): skip Dexie — we already have data in
+      // memory. Going Dexie→API caused a flicker because the Dexie cache could have
+      // a different article set than what's currently displayed, triggering an
+      // intermediate re-render with a different count before the API response arrives.
+      if (!force) {
+        try {
+          const cachedArticles = await readingDb.articles.toArray()
+          const filtered = status
+            ? cachedArticles.filter(a => a.status === status)
+            : cachedArticles
 
-        if (filtered.length > 0) {
-          console.log(`[ReadingStore] Loaded ${filtered.length} articles from local DB (SWR)`)
-          // Merge with pending articles to ensure they stay visible
-          const currentPending = get().pendingArticles
-          const cachedIds = new Set(filtered.map(a => a.id))
-          const cachedUrls = new Set(filtered.map(a => a.url))
-          const pendingNotInCache = currentPending.filter(
-            p => !cachedIds.has(p.id) && !cachedUrls.has(p.url)
-          )
-          set({
-            articles: [...pendingNotInCache, ...filtered],
-            loading: false, // Show data immediately
-            error: null
-          })
-        } else if (get().pendingArticles.length > 0) {
-          // No cached articles but we have pending - show those
-          set({
-            articles: [...get().pendingArticles],
-            loading: false,
-            error: null
-          })
+          if (filtered.length > 0) {
+            const currentPending = get().pendingArticles
+            const cachedIds = new Set(filtered.map(a => a.id))
+            const cachedUrls = new Set(filtered.map(a => a.url))
+            const pendingNotInCache = currentPending.filter(
+              p => !cachedIds.has(p.id) && !cachedUrls.has(p.url)
+            )
+            set({
+              articles: [...pendingNotInCache, ...filtered],
+              loading: false,
+              error: null
+            })
+          } else if (get().pendingArticles.length > 0) {
+            set({
+              articles: [...get().pendingArticles],
+              loading: false,
+              error: null
+            })
+          } else {
+            set({ loading: true, error: null })
+          }
+        } catch (dbError) {
+          console.warn('[ReadingStore] Failed to load from DB:', dbError)
+          set({ loading: true, error: null })
         }
-      } catch (dbError) {
-        console.warn('[ReadingStore] Failed to load from DB:', dbError)
       }
 
       // 3. Network Fetch (Background Sync)
@@ -204,10 +207,6 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             set({ loading: false, lastFetched: now, offlineMode: false })
           }
         }
-
-        // Invalidate React Query cache to prevent stale data race conditions
-        // This ensures useReadingQueue doesn't overwrite with old data
-        queryClient.setQueryData(['articles'], mergedArticles)
 
         // 5. Trigger offline sync in background
         const { syncAllArticlesForOffline } = await import('../lib/offlineSync')

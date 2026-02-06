@@ -51,13 +51,17 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       return
     }
 
-    set({ loading: true, error: null })
-
     // Check offline status first
     const { isOnline } = useOfflineStore.getState()
     if (!isOnline) {
       await get().loadFromOfflineDB()
       return
+    }
+
+    // Only show loading skeleton if we have no data at all — prevents flash
+    // when navigating back to a page that already has cached data
+    if (state.memories.length === 0) {
+      set({ loading: true, error: null })
     }
 
     try {
