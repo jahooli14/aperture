@@ -132,9 +132,11 @@ export function PullToRefresh({
         )}
       </div>
 
-      {/* Content */}
+      {/* Content — only apply CSS transition when snapping back, not during active pull */}
       <div
-        className="transition-transform duration-200"
+        className={cn(
+          isPulling ? '' : 'transition-transform duration-200'
+        )}
         style={{
           transform: isRefreshing
             ? 'translateY(70px)'

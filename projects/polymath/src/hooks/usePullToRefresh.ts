@@ -23,37 +23,43 @@ export function usePullToRefresh({
   const touchStartY = useRef(0)
   const scrollableRef = useRef<HTMLElement | null>(null)
 
+  // Use refs for values read inside handlers so the effect doesn't
+  // re-register listeners on every state change (was causing listener
+  // churn on every touchmove frame)
+  const pullDistanceRef = useRef(0)
+  const isRefreshingRef = useRef(false)
+  const onRefreshRef = useRef(onRefresh)
+
+  // Keep refs in sync
+  pullDistanceRef.current = pullDistance
+  isRefreshingRef.current = isRefreshing
+  onRefreshRef.current = onRefresh
+
   useEffect(() => {
     const element = scrollableRef.current
     if (!element) return
 
-    let rafId: number | null = null
-
     const handleTouchStart = (e: TouchEvent) => {
-      // Only start pull if scrolled to top
-      const touch = e.touches[0];
+      const touch = e.touches[0]
       if (element.scrollTop === 0 && touch) {
         touchStartY.current = touch.clientY
       }
     }
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (isRefreshing || element.scrollTop > 0) return
+      if (isRefreshingRef.current || element.scrollTop > 0) return
 
-      const touch = e.touches[0];
-      if (!touch) return;
+      const touch = e.touches[0]
+      if (!touch) return
       const touchY = touch.clientY
       const distance = touchY - touchStartY.current
 
-      // Only allow pulling down
       if (distance > 0) {
-        // Apply resistance to make it feel natural
         const resistedDistance = distance / resistance
         setPullDistance(resistedDistance)
+        pullDistanceRef.current = resistedDistance
         setIsPulling(resistedDistance > 10)
 
-        // Only prevent default scrolling if we've pulled enough to engage PTR
-        // This allows normal scrolling to work when just touching the top
         if (resistedDistance > 10) {
           e.preventDefault()
         }
@@ -61,21 +67,25 @@ export function usePullToRefresh({
     }
 
     const handleTouchEnd = async () => {
-      if (pullDistance >= threshold && !isRefreshing) {
+      if (pullDistanceRef.current >= threshold && !isRefreshingRef.current) {
         setIsRefreshing(true)
+        isRefreshingRef.current = true
         setIsPulling(false)
 
         try {
-          await onRefresh()
+          await onRefreshRef.current()
         } catch (error) {
           console.error('Refresh failed:', error)
         } finally {
           setIsRefreshing(false)
+          isRefreshingRef.current = false
           setPullDistance(0)
+          pullDistanceRef.current = 0
         }
       } else {
         setIsPulling(false)
         setPullDistance(0)
+        pullDistanceRef.current = 0
       }
     }
 
@@ -87,9 +97,8 @@ export function usePullToRefresh({
       element.removeEventListener('touchstart', handleTouchStart)
       element.removeEventListener('touchmove', handleTouchMove)
       element.removeEventListener('touchend', handleTouchEnd)
-      if (rafId) cancelAnimationFrame(rafId)
     }
-  }, [onRefresh, threshold, resistance, isRefreshing, pullDistance])
+  }, [threshold, resistance]) // Stable deps only — no more listener churn
 
   return {
     scrollableRef,
