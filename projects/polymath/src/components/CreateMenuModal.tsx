@@ -17,7 +17,7 @@ const creationActions = [
         icon: Brain,
         color: 'from-purple-500 to-indigo-600',
         iconColor: 'text-purple-400',
-        delay: 0.1
+        delay: 0.03
     },
     {
         id: 'project',
@@ -26,7 +26,7 @@ const creationActions = [
         icon: Layers,
         color: 'from-blue-500 to-cyan-600',
         iconColor: 'text-blue-400',
-        delay: 0.15
+        delay: 0.06
     },
     {
         id: 'article',
@@ -35,7 +35,7 @@ const creationActions = [
         icon: BookmarkPlus,
         color: 'from-emerald-500 to-teal-600',
         iconColor: 'text-emerald-400',
-        delay: 0.2
+        delay: 0.09
     },
     {
         id: 'list',
@@ -44,7 +44,7 @@ const creationActions = [
         icon: ListPlus,
         color: 'from-amber-500 to-orange-600',
         iconColor: 'text-amber-400',
-        delay: 0.25
+        delay: 0.12
     }
 ]
 
@@ -64,9 +64,15 @@ export function CreateMenuModal({ isOpen, onClose, onAction }: CreateMenuModalPr
 
                     {/* Modal Content */}
                     <motion.div
-                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        initial={{ scale: 0.95, opacity: 0, y: 10 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                        transition={{
+                            type: 'spring',
+                            damping: 30,
+                            stiffness: 500,
+                            mass: 0.5,
+                        }}
                         className="relative w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl"
                     >
                         {/* Ambient Background Glows */}
