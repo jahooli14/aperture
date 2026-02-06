@@ -1,5 +1,6 @@
 import React from "react"
 import * as ReactDOM from "react-dom"
+import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "../../lib/utils"
 import { X } from "lucide-react"
 
@@ -75,10 +76,8 @@ DialogTrigger.displayName = "DialogTrigger"
 const DialogPortal = ({ children }: { children: React.ReactNode }) => {
   const { open } = React.useContext(DialogContext)
 
-  if (!open) return null
-
   return ReactDOM.createPortal(
-    <>{children}</>,
+    <AnimatePresence>{open && children}</AnimatePresence>,
     document.body
   )
 }
@@ -90,22 +89,22 @@ const DialogOverlay = React.forwardRef<
   const { onOpenChange } = React.useContext(DialogContext)
 
   return (
-    <div
+    <motion.div
       ref={ref}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
       className={cn(
-        // Modern backdrop with enhanced glassmorphism
         "fixed inset-0 z-50",
         "backdrop-blur-md",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "duration-300 ease-out",
         className
       )}
       style={{
         backgroundColor: 'rgba(10, 14, 26, 0.6)'
       }}
       onClick={() => onOpenChange(false)}
-      {...props}
+      {...(props as any)}
     />
   )
 })
@@ -120,66 +119,62 @@ const DialogContent = React.forwardRef<
   return (
     <DialogPortal>
       <DialogOverlay />
-      <div
-        ref={ref}
-        className={cn(
-          // Modern Android-optimized modal with rounded corners and smooth animations
-          "fixed left-[50%] top-[50%] z-50",
-          // Responsive width with proper mobile padding
-          "w-[calc(100%-2rem)] sm:w-full max-w-lg",
-          // Positioning and transforms
-          "-translate-x-1/2 -translate-y-1/2",
-          // Modern glassmorphism styling with elevation
-          "backdrop-blur-xl rounded-2xl shadow-2xl border-2",
-          // Padding with safe area consideration
-          "p-6 pb-8",
-          // Smooth animations
-          "duration-300 ease-out",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-          "data-[state=closed]:slide-out-to-bottom-4 data-[state=open]:slide-in-from-bottom-4",
-          // Prevent content from going under notch/navigation
-          "max-h-[calc(100vh-4rem)]",
-          "overflow-auto",
-          className
-        )}
-        style={{
-          background: 'rgba(20, 27, 38, 0.5)',
-          backdropFilter: 'blur(32px) saturate(200%)',
-          WebkitBackdropFilter: 'blur(32px) saturate(200%)',
-          borderColor: 'rgba(255, 255, 255, 0.15)',
-          boxShadow: '0 12px 48px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
-        }}
-        onClick={(e) => e.stopPropagation()}
-        {...props}
-      >
-        {children}
-        <button
-          onClick={() => onOpenChange(false)}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          transition={{
+            type: 'spring',
+            damping: 30,
+            stiffness: 500,
+            mass: 0.5,
+          }}
           className={cn(
-            // Modern close button with better touch target and glassmorphism
-            "absolute right-4 top-4",
-            "h-10 w-10",
-            "flex items-center justify-center",
-            "rounded-full",
-            "backdrop-blur-xl border-2 shadow-md hover:shadow-lg",
-            "transition-all duration-200",
-            "focus:outline-none focus:ring-2",
-            "active:scale-95",
-            "z-10"
+            "relative w-full max-w-lg pointer-events-auto",
+            "backdrop-blur-xl rounded-2xl shadow-2xl border-2",
+            "p-6 pb-8",
+            "max-h-[calc(100vh-4rem)]",
+            "overflow-auto",
+            className
           )}
           style={{
-            background: 'rgba(59, 130, 246, 0.15)',
-            backdropFilter: 'blur(12px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'var(--premium-blue)'
+            background: 'rgba(20, 27, 38, 0.5)',
+            backdropFilter: 'blur(32px) saturate(200%)',
+            WebkitBackdropFilter: 'blur(32px) saturate(200%)',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 12px 48px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15)'
           }}
+          onClick={(e) => e.stopPropagation()}
+          {...(props as any)}
         >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
-        </button>
+          {children}
+          <button
+            onClick={() => onOpenChange(false)}
+            className={cn(
+              "absolute right-4 top-4",
+              "h-10 w-10",
+              "flex items-center justify-center",
+              "rounded-full",
+              "backdrop-blur-xl border-2 shadow-md hover:shadow-lg",
+              "transition-all duration-150",
+              "focus:outline-none focus:ring-2",
+              "active:scale-95",
+              "z-10"
+            )}
+            style={{
+              background: 'rgba(59, 130, 246, 0.15)',
+              backdropFilter: 'blur(12px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              color: 'var(--premium-blue)'
+            }}
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
+          </button>
+        </motion.div>
       </div>
     </DialogPortal>
   )
