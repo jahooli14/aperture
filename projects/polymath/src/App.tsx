@@ -20,7 +20,6 @@ import { supabase } from './lib/supabase'
 import { useTheme } from './hooks/useTheme'
 import { setupAutoSync } from './lib/syncManager'
 import { dataSynchronizer } from './lib/sync/DataSynchronizer'
-import { migrateFromLegacyQueue } from './lib/offlineQueue'
 import { useOfflineStore } from './stores/useOfflineStore'
 import './App.css'
 import './styles/theme.css'
@@ -143,9 +142,6 @@ export default function App() {
     // Initial online status
     setOnlineStatus(navigator.onLine)
     updateQueueSize()
-
-    // Migrate any pending ops from legacy OfflineQueue DB to RosetteDB
-    migrateFromLegacyQueue().catch(() => {})
 
     // Start periodic data sync (pull updates)
     dataSynchronizer.startPeriodicSync()
