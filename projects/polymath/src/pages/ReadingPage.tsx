@@ -558,6 +558,38 @@ export function ReadingPage() {
     }
   }, [safeArticles, activeTab])
 
+  // Progressive rendering: show 20 articles at a time to avoid rendering 50+ DOM nodes
+  const ARTICLES_PER_PAGE = 20
+  const [visibleCount, setVisibleCount] = useState(ARTICLES_PER_PAGE)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Reset visible count when tab changes
+  useEffect(() => {
+    setVisibleCount(ARTICLES_PER_PAGE)
+  }, [activeTab])
+
+  // Intersection observer to load more articles as user scrolls
+  useEffect(() => {
+    const el = loadMoreRef.current
+    if (!el || visibleCount >= filteredArticles.length) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + ARTICLES_PER_PAGE, filteredArticles.length))
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [visibleCount, filteredArticles.length])
+
+  const visibleArticles = React.useMemo(
+    () => filteredArticles.slice(0, visibleCount),
+    [filteredArticles, visibleCount]
+  )
+
   // Count for tabs
   const getTabCount = (tab: FilterTab): number | string => {
     if (!Array.isArray(safeArticles)) return 0
@@ -869,7 +901,7 @@ export function ReadingPage() {
                   ) : (
                     <FocusableList>
                       <div className="columns-2 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                        {filteredArticles.map((article) => {
+                        {visibleArticles.map((article) => {
                           const isSelected = bulkSelection.isSelected(article.id)
                           const isPending = article.id.startsWith('temp-')
 
@@ -886,7 +918,6 @@ export function ReadingPage() {
                                     }
                                   }}
                                   style={{
-                                    // Allow drag events to pass through when not in selection mode
                                     pointerEvents: bulkSelection.isSelectionMode ? 'auto' : 'none',
                                     opacity: isPending ? 0.7 : 1
                                   }}
@@ -914,6 +945,11 @@ export function ReadingPage() {
                           )
                         })}
                       </div>
+                      {visibleCount < filteredArticles.length && (
+                        <div ref={loadMoreRef} className="flex justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--premium-text-secondary)' }} />
+                        </div>
+                      )}
                     </FocusableList>
                   )}
                 </>
