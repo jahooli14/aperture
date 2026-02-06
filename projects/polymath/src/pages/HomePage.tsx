@@ -1161,20 +1161,10 @@ export function HomePage() {
 
       </div>
 
-      {/* Dialogs */}
-      < SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)
-      } />
-
-
-      {/* Hidden trigger buttons for dialogs */}
-      <div style={{ display: 'none' }}>
-        <div ref={(el) => { if (el && createThoughtOpen) { el.querySelector('button')?.click(); setCreateThoughtOpen(false) } }}>
-          <CreateMemoryDialog />
-        </div>
-        <div ref={(el) => { if (el && createProjectOpen) { el.querySelector('button')?.click(); setCreateProjectOpen(false) } }}>
-          <CreateProjectDialog />
-        </div>
-      </div>
+      {/* Dialogs — controlled open/close via state */}
+      <SaveArticleDialog open={saveArticleOpen} onClose={() => setSaveArticleOpen(false)} />
+      <CreateMemoryDialog isOpen={createThoughtOpen} onOpenChange={setCreateThoughtOpen} hideTrigger />
+      <CreateProjectDialog isOpen={createProjectOpen} onOpenChange={setCreateProjectOpen} hideTrigger />
     </motion.div>
   )
 }

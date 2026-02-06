@@ -68,7 +68,7 @@ const BottomSheetOverlay = React.forwardRef<
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+      transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
       className={cn(
         'fixed inset-0 z-[10000]',
         'bg-black/70 backdrop-blur-md',
@@ -89,8 +89,7 @@ const BottomSheetContent = React.forwardRef<
 >(({ className, children }, ref) => {
   const { onOpenChange } = React.useContext(BottomSheetContext)
   const y = useMotionValue(0)
-  const opacity = useTransform(y, [0, 300], [1, 0.7], { clamp: true })
-  const scale = useTransform(y, [0, 300], [1, 0.95], { clamp: true })
+  const opacity = useTransform(y, [0, 300], [1, 0.8], { clamp: true })
 
   const handleDragEnd = (_: any, info: PanInfo) => {
     // Dismiss if dragged down more than 80px or with fast velocity
@@ -105,14 +104,14 @@ const BottomSheetContent = React.forwardRef<
       <BottomSheetOverlay />
       <motion.div
         ref={ref}
-        initial={{ y: '100%', opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: '100%', opacity: 0 }}
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
         transition={{
           type: 'spring',
-          damping: 35,
-          stiffness: 400,
-          mass: 0.8,
+          damping: 32,
+          stiffness: 500,
+          mass: 0.5,
         }}
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
@@ -122,7 +121,6 @@ const BottomSheetContent = React.forwardRef<
         style={{
           y,
           opacity,
-          scale,
           backgroundColor: 'var(--premium-surface-card)',
           borderColor: 'rgba(255, 255, 255, 0.1)'
         }}

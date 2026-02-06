@@ -1,9 +1,17 @@
 import React, { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { Label } from '../ui/label'
 import { useListStore } from '../../stores/useListStore'
-import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote } from 'lucide-react'
+import { Film, Music, Monitor, Book, MapPin, Gamepad2, Box, Calendar, Quote, ListPlus } from 'lucide-react'
+import {
+    BottomSheet,
+    BottomSheetContent,
+    BottomSheetDescription,
+    BottomSheetFooter,
+    BottomSheetHeader,
+    BottomSheetTitle,
+} from '../ui/bottom-sheet'
 import type { ListType } from '../../types'
 
 const TYPES: { id: ListType, label: string, icon: any }[] = [
@@ -50,33 +58,43 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] bg-zinc-900 border-white/10 text-white">
-                <DialogHeader>
-                    <DialogTitle>Create Collection</DialogTitle>
-                </DialogHeader>
+        <BottomSheet open={open} onOpenChange={onOpenChange}>
+            <BottomSheetContent>
+                <BottomSheetHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                        <ListPlus className="h-6 w-6" style={{ color: 'var(--premium-blue)' }} />
+                        <BottomSheetTitle>Create Collection</BottomSheetTitle>
+                    </div>
+                    <BottomSheetDescription>
+                        Start a new curated collection
+                    </BottomSheetDescription>
+                </BottomSheetHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
                     {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 px-4 py-3 rounded-lg text-sm">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm">
                             {error}
                         </div>
                     )}
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">List Title</label>
+                        <Label className="font-bold text-xs uppercase tracking-widest" style={{ color: 'var(--premium-blue)' }}>
+                            List Title <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                             value={title}
                             onChange={e => setTitle(e.target.value)}
                             placeholder="e.g. Scifi Movies 2024"
-                            className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600"
+                            className="text-lg h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
+                            style={{ color: 'var(--premium-text-primary)' }}
                             autoFocus
+                            autoComplete="off"
                         />
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Type</label>
-                        <div className="grid grid-cols-4 gap-2">
+                        <Label className="font-bold text-xs uppercase tracking-widest text-gray-500">Type</Label>
+                        <div className="grid grid-cols-3 gap-2">
                             {TYPES.map(t => {
                                 const Icon = t.icon
                                 const isSelected = type === t.id
@@ -85,9 +103,9 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                                         key={t.id}
                                         type="button"
                                         onClick={() => setType(t.id)}
-                                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${isSelected
-                                                ? 'bg-white text-black border-white'
-                                                : 'bg-zinc-800/50 text-zinc-400 border-transparent hover:bg-zinc-800 hover:text-white'
+                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${isSelected
+                                            ? 'bg-white text-black border-white'
+                                            : 'bg-black border-white/10 text-gray-400 hover:border-white/30'
                                             }`}
                                     >
                                         <Icon className="h-5 w-5 mb-1" />
@@ -98,21 +116,17 @@ export function CreateListDialog({ open, onOpenChange }: Props) {
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-2">
-                        <Button variant="ghost" type="button" onClick={() => onOpenChange(false)} className="hover:bg-white/10 hover:text-white">
-                            Cancel
-                        </Button>
+                    <BottomSheetFooter>
                         <Button
                             type="submit"
                             disabled={!title.trim() || loading}
-                            className="bg-white text-black hover:bg-zinc-200"
+                            className="w-full h-14 bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest touch-manipulation"
                         >
-                            Create Collection
+                            {loading ? 'Creating...' : 'Create Collection'}
                         </Button>
-                    </div>
-
+                    </BottomSheetFooter>
                 </form>
-            </DialogContent>
-        </Dialog>
+            </BottomSheetContent>
+        </BottomSheet>
     )
 }

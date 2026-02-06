@@ -190,7 +190,15 @@ export const useListStore = create<ListStore>()(
 
                 // Track current fetch to prevent race conditions
                 const currentFetchId = listId
-                set({ currentListId: currentFetchId, currentListItems: [], loading: true })
+                const state = get()
+
+                if (state.currentListId === currentFetchId) {
+                    // Same list — keep showing current items while refreshing
+                    set({ loading: true })
+                } else {
+                    // Different list — clear items, update ID
+                    set({ currentListId: currentFetchId, currentListItems: [], loading: true })
+                }
 
                 // Helper to load from Dexie
                 const loadFromDexie = async () => {
