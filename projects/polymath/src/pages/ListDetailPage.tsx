@@ -423,7 +423,7 @@ function MasonryListGrid({
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, currentListId, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
+    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
 
     // Find list locally first, or wait for fetch
     const list = lists.find(l => l.id === id)
@@ -656,6 +656,12 @@ export default function ListDetailPage() {
                                     onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
                                     onDelete={(itemId, listId) => deleteListItem(itemId, listId)}
                                 />
+                            ) : loading ? (
+                                <div className="flex flex-wrap gap-3">
+                                    {[1, 2, 3, 4].map((i) => (
+                                        <div key={i} className="shimmer h-48 rounded-2xl" style={{ width: 'calc(50% - 6px)' }} />
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-40 text-zinc-600">
                                     <p className="text-zinc-500 font-medium text-lg mb-1">Your collection is empty.</p>
