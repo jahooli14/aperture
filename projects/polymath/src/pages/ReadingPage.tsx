@@ -5,10 +5,8 @@
 
 import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Virtuoso } from 'react-virtuoso'
 import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
-import { useReadingQueue } from '../hooks/useReadingQueue'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
@@ -59,8 +57,6 @@ export function ReadingPage() {
     })
   }, [articles])
 
-  // Use React Query for data fetching
-  const { isLoading: isQueryLoading } = useReadingQueue()
   const { downloadForOffline } = useOfflineArticle()
   const rssStoreData = useRSSStore() as any
   const { feeds = [], syncing = false, fetchFeeds, syncFeeds, autoSyncFeeds } = rssStoreData || {}
@@ -220,33 +216,28 @@ export function ReadingPage() {
     }
   }, [articles, fetchArticles, addToast])
 
-  // React Query handles fetching now
-  // Use a ref to track if this is a back navigation vs initial mount
+  // Data loading: show cached data instantly, background-revalidate from API
   const hasInitializedRef = useRef(false)
 
   useEffect(() => {
     const loadData = async () => {
-      // On back navigation, force refresh to ensure articles are up-to-date
-      // but only if we already have articles (prevents flash of empty state)
-      const isBackNavigation = hasInitializedRef.current && articles.length > 0
+      // On back navigation, just revalidate in background — don't flash loading
+      const isBackNav = hasInitializedRef.current && articles.length > 0
+      await fetchArticles(undefined, isBackNav)
 
-      // Force fetch on back navigation to ensure articles are up-to-date
-      // Note: fetchArticles already updates React Query cache via setQueryData
-      await fetchArticles(undefined, isBackNavigation)
-      await fetchFeeds()
-
-      // Auto-sync RSS feeds in background (throttled to 2 hours)
-      if (autoSyncFeeds) {
-        autoSyncFeeds().catch(() => {
-          // Silently fail - it's a background operation
-        })
+      // Only fetch feeds/sync once per mount, not on back navigation
+      if (!hasInitializedRef.current) {
+        await fetchFeeds()
+        if (autoSyncFeeds) {
+          autoSyncFeeds().catch(() => {})
+        }
       }
 
       hasInitializedRef.current = true
     }
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]) // Re-run when navigating to this page
+  }, [location.key])
 
   useEffect(() => {
     if (activeTab === 'updates') {
@@ -541,10 +532,7 @@ export function ReadingPage() {
 
   // Pull-to-refresh handler - forces a fresh fetch from API
   const handlePullToRefresh = useCallback(async () => {
-    // Force fetch fresh data from API
-    // Note: fetchArticles already updates React Query cache via setQueryData
     await fetchArticles(undefined, true)
-    // Also refresh RSS items if on updates tab
     if (activeTab === 'updates') {
       await fetchRSSItems()
     }

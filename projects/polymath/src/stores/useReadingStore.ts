@@ -83,11 +83,10 @@ export const useReadingStore = create<ReadingState>((set, get) => {
         return
       }
 
-      set({ loading: true, error: null })
-
       const { readingDb } = await import('../lib/db')
 
       // 2. Local DB check (Stale-While-Revalidate)
+      // Check cache BEFORE setting loading — only show skeleton if cache is empty
       try {
         const cachedArticles = await readingDb.articles.toArray()
         const filtered = status
@@ -95,7 +94,6 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           : cachedArticles
 
         if (filtered.length > 0) {
-          console.log(`[ReadingStore] Loaded ${filtered.length} articles from local DB (SWR)`)
           // Merge with pending articles to ensure they stay visible
           const currentPending = get().pendingArticles
           const cachedIds = new Set(filtered.map(a => a.id))
@@ -105,7 +103,7 @@ export const useReadingStore = create<ReadingState>((set, get) => {
           )
           set({
             articles: [...pendingNotInCache, ...filtered],
-            loading: false, // Show data immediately
+            loading: false,
             error: null
           })
         } else if (get().pendingArticles.length > 0) {
@@ -115,9 +113,14 @@ export const useReadingStore = create<ReadingState>((set, get) => {
             loading: false,
             error: null
           })
+        } else {
+          // No cache at all — now show loading skeleton
+          set({ loading: true, error: null })
         }
       } catch (dbError) {
         console.warn('[ReadingStore] Failed to load from DB:', dbError)
+        // DB failed — show loading skeleton as fallback
+        set({ loading: true, error: null })
       }
 
       // 3. Network Fetch (Background Sync)
