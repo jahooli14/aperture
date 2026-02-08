@@ -6,221 +6,230 @@
 
 ## The State of Play
 
-Polymath has serious bones. Offline-first Dexie caching, Zustand stores as API gateways, Gemini-powered entity extraction, 768-dim embeddings, automatic bridge creation between memories. The infrastructure for a knowledge graph exists. But the graph itself is invisible. The AI does brilliant work behind the curtain and nobody sees it.
+Polymath's real DNA isn't in the knowledge graph. Every "second brain" app ships a force-directed node visualization and nobody uses it after the first week. The graph is a solved problem. What Polymath actually does that nothing else does:
 
-What follows is ordered by priority. Each suggestion is framed with an Oblique Strategy — not decoration, but genuine lateral provocation. The best changes here aren't incremental improvements. They're perspective shifts.
+1. **Sleep-time synthesis** — Bedtime prompts that cross-pollinate articles, projects, and memories, designed to prime the subconscious overnight
+2. **Energy-matched work sessions** — Power Hour doesn't just list tasks, it shapes a session arc (ignition → core work → shutdown) calibrated to your energy and available time
+3. **Automated cross-pollination** — A film about Rothko in your lists quietly connects to your paint-pouring project via 768-dim embeddings, surfaced in the sidebar when you least expect it
+4. **Capability extraction** — Max-min diversity algorithm selects the 15 most dissimilar projects to build a dynamic skill profile that grows as you do
 
----
-
-## P0 — The Invisible Made Visible
-
-### 1. Ship the Knowledge Graph Visualization
-
-> *"What would make this really useful?"*
-
-The app creates embeddings, extracts entities, builds bridges between memories — and then hides all of it behind text lists on detail pages. The single highest-impact thing you can do is **show the graph**. An interactive node-link diagram where memories are nodes, bridges are edges, and clusters emerge from the data.
-
-You already have Three.js and d3-force-3d in the bundle (250KB of graph vendor code). You already have the `connections` and `bridges` tables with strength scores. The data layer is done. The presentation layer is missing.
-
-**What it looks like:**
-- Nodes = memories (sized by connection count), projects (colored by status), articles
-- Edges = bridges (opacity = strength score, color = bridge type)
-- Clusters form naturally from force-directed layout
-- Click a node to expand its connections
-- Pinch to zoom, drag to pan
-- Filter by time range, entity type, theme
-- Search highlights nodes and dims everything else
-
-**Why it's P0:** This is the product. Everything else is scaffolding for this moment — the moment a user sees the shape of their own thinking.
+The infrastructure is remarkable. The synthesis pipeline works. The problem is: **the best features are the quietest ones**, and the scoring model doesn't actually learn from you yet.
 
 ---
 
-### 2. Make Semantic Search the Default
+## P0 — Make the Synthesis Engine Learn
+
+### 1. Close the Feedback Loop
+
+> *"Repetition is a form of change."*
+
+The suggestion scoring model is static. `novelty_score` is semi-random (0.7-1.0). `feasibility_score` is hardcoded (0.9 creative, 0.6 technical). `interest_score` is embedding similarity to previous work. User feedback (spark/meh/built) only tells the next synthesis run "don't repeat this" — it never adjusts the weights.
+
+This means Polymath doesn't learn what YOU specifically like. It only learns what NOT to repeat.
+
+**What to build:**
+- Track which capability combinations produce "spark" vs "meh" ratings. After 20+ ratings, you have enough signal to weight future combinations
+- When a user marks "built", trace back: which capabilities and interests converged? Boost that intersection
+- Add a simple preference model: `user_weight = base_weight + (spark_count - meh_count) * 0.05` per capability pair
+- Surface the learning: "Your synthesis engine has learned you prefer projects combining X and Y" — make the adaptation visible
+
+**Why it's P0:** Without learning, the 50th synthesis run is no smarter than the 1st. The engine generates but never evolves. This is the difference between a random idea generator and an engine that understands you.
+
+---
+
+### 2. Make Bedtime the Primary Interface
+
+> *"What wouldn't you do?"*
+
+Bedtime prompts are buried as a secondary feature. They should be the headline. Here's why:
+
+The bedtime engine already does something genuinely novel — it finds "the non-obvious insight hiding in the intersection" of an article you read, a project you're working on, and a thought you had. It generates catalyst prompts with specific inputs. It has Zen Mode and Drift Mode. It primes overnight thinking.
+
+No other app does this. Not Notion. Not Obsidian. Not Mem. Not Reflect.
+
+**What's missing:**
+- **Morning follow-up**: "Last night you thought about X. Did anything surface?" Capture the overnight insight before it evaporates
+- **Breakthrough tracking**: The "Did this prompt lead to a realization?" mechanism exists but doesn't feed back into the synthesis engine. Wire it in — prompts that produce breakthroughs should inform future prompt generation
+- **Bedtime as onramp**: New users should hit the bedtime flow first. "Tell me about your day" is a more natural first interaction than "Create a memory"
+- **Prompt quality scoring**: Track which prompt types (Connection, Divergent, Revisit, Transform) produce the most breakthroughs per user. Shift the distribution toward what works
+
+**Why it's P0:** You've built the thing nobody else has. Promote it from side feature to defining feature.
+
+---
+
+### 3. Semantic Search That Actually Uses the Embeddings
 
 > *"Don't avoid what is easy."*
 
-You generate 768-dimensional embeddings for every memory, project, and article. The search page does substring matching on title and body. The embeddings sit unused in the search flow.
+768-dimensional embeddings are generated for every memory, project, and article. The search page does substring matching. The embeddings sit there.
 
-The fix is almost embarrassingly simple: when a user searches, embed their query with the same `text-embedding-004` model, then do cosine similarity against stored vectors. Sort by similarity score instead of recency. Fall back to text search only if the embedding service is down.
+Embed the query. Cosine similarity. Sort by score. Done. This is a weekend's work that transforms the entire retrieval experience.
 
-**What changes:**
-- Searching "web development" finds memories about "React frameworks" and "CSS architecture"
-- Searching "that idea about combining music and code" actually works
-- The search bar becomes a conversation with your past self
-- Add a "Similar to this" button on every memory card — one-click semantic expansion
+- "that idea about combining music and code" — works
+- "things I was excited about in January" — works (emotional tone + temporal filtering)
+- "Similar to this" button on every card — one-click semantic expansion
 
-**Why it's P0:** Without semantic search, the knowledge graph is a write-only database. You can put things in but you can't meaningfully get them out.
+**Why it's P0:** Without this, the knowledge base is write-only. You can put things in but can't meaningfully get them out.
 
 ---
 
-### 3. Surface Connections Proactively
+## P1 — Sharpen What Exists
+
+### 4. Surface the Cross-Pollination
 
 > *"Emphasize the flaws."*
 
-Connections are created automatically but surfaced only on detail pages. The user has to go looking. Flip this: **push connections to the user**.
+The context engine quietly finds that a film connects to a project connects to an article connects to a memory. These connections are whispered in sidebars that most users will never open.
 
-- After capturing a new memory, show a toast: "Connected to 3 related thoughts" with a tap-to-expand
-- On the home page, show a "New Connections" card when bridges are created
-- Weekly digest: "Here's what emerged this week" — theme clusters, new entity patterns, strengthening connections
-- "You mentioned X in 3 different contexts this week" — pattern detection surfaced as insight cards
+**Flip the polarity:**
+- After creating a memory, show: "This connects to 3 things you might not expect" — tap to reveal
+- After a bedtime session produces a breakthrough, show: "Here's the thread that led here" — the chain of connections that converged
+- Weekly "collision report": "This week, your reading about X collided with your project Y. Here's what emerged"
+- On the home page, a single card: "Unexpected connection" — the highest-strength new bridge from this week, explained in one sentence
 
-**Why it's P0:** The AI is doing work the user never benefits from. Every invisible connection is a missed "aha" moment.
+**Why it's P1:** The cross-pollination engine works. The surfacing doesn't. Every invisible connection is a missed moment of creative surprise.
 
 ---
 
-## P1 — Fix the Feel
-
-### 4. Kill the Loading Flicker
+### 5. Kill the Loading Flicker
 
 > *"Remove ambiguities and convert to specifics."*
 
-Both `useMemoryStore.fetchMemories` and `useReadingStore.fetchArticles` set `loading: true` before checking the Dexie cache. This causes a skeleton flash on every navigation, even when perfectly good cached data exists. The fix (documented in POLYMATH_REVIEW.md #4, #5) is to check cache first, only show loading if cache is empty.
+`useMemoryStore.fetchMemories` and `useReadingStore.fetchArticles` both set `loading: true` before checking Dexie cache. Skeleton flash on every navigation, even with cached data. `ReadingPage` makes 3+ redundant fetches because React Query and Zustand race each other.
 
-Similarly, `ReadingPage` makes 3+ redundant fetch calls on mount because React Query and Zustand are both fetching. Pick one. The Zustand store is more capable. Remove `useReadingQueue`.
+**Fixes (all documented in POLYMATH_REVIEW.md):**
+- Check Dexie cache before setting `loading: true` — only show skeleton if cache is empty
+- Remove `useReadingQueue` (React Query). Zustand store is more capable. One fetching system
+- Remove `location.key` from ReadingPage deps — stops refetch on back-navigation
+- Pull-to-refresh: move `pullDistance`/`isRefreshing` to refs so the effect doesn't re-register every touchmove
 
-**Impact:** Eliminates the "flash of nothing" that makes the app feel unreliable.
+**Impact:** The app stops feeling unreliable. Instant for cached data, background refresh for fresh data.
 
 ---
 
-### 5. Fix Voice UX: Show the Machine Listening
+### 6. Voice Capture Should Show Its Work
 
 > *"Make a blank valuable by putting it in an exquisite frame."*
 
-The voice capture flow works but feels broken. Users hold a button, release it, see "Processing..." and wait. No waveform. No streaming transcript. No confidence feedback. The 50ms start delay clips the first syllable.
+Voice is the primary input. Currently: hold button, release, "Processing...", wait. No waveform. No streaming transcript. The 50ms start delay clips the first syllable.
 
 **What to do:**
-- Add a waveform visualization during recording (even a simple amplitude bar)
-- Show words appearing as they're recognized (Web Speech API already provides interim results)
-- Remove the start delay or add a brief "listening..." indicator before recording begins
-- After processing, show what the AI extracted: "Found: 2 people, 3 topics, emotional tone: reflective" — make the magic visible
-
-**Why it matters:** Voice is the primary input. If voice feels broken, the whole app feels broken.
+- Streaming transcript as words are recognized (Web Speech API provides interim results already)
+- After AI processing, briefly flash what was extracted: "3 topics, 2 connections found, tone: reflective"
+- Remove the start delay or show a "Listening..." indicator
+- The extraction reveal is key — it's the moment the user sees the machine understood them
 
 ---
 
-### 6. Tame the Thundering Herd
+## P2 — The Leaps
 
-> *"Only one element of each kind."*
+### 7. Constraint-Driven Ideation
 
-On startup: 11 API calls from DataSynchronizer + per-page fetches + React Query invalidations. On mobile with limited bandwidth, this creates a traffic jam.
+> *"What would your closest friend do?"*
 
-**Fix:**
-- Startup: sync only the current route's data. Stagger everything else with `requestIdleCallback`
-- DataSynchronizer: context-aware syncing (only sync what's visible)
-- Remove `location.key` from ReadingPage effect dependencies (causes refetch on every back-navigation)
-- Pull-to-refresh: move `pullDistance` and `isRefreshing` to refs so the effect doesn't re-register on every touchmove
+The synthesis engine combines capabilities and interests with no constraints. Constraints are what produce creativity, not freedom.
 
----
+**New synthesis modes:**
+- "One skill only" — generate ideas using exactly one capability. Forces lateral thinking
+- "30 minutes or less" — ideas that can be completed in a single session
+- "Combine your weakest skill with your strongest" — stretch ideas
+- "What if you couldn't use a computer?" — analog-only project ideas
+- "Opposite day" — generate ideas that contradict your recent patterns
 
-## P2 — The Intelligence Layer
-
-### 7. Add an AI Chat Interface to Your Own Knowledge
-
-> *"Ask your body."*
-
-The most groundbreaking feature you could build: let users have a conversation with their own knowledge graph. Not a general chatbot — a chatbot that only knows what you've told it.
-
-- "What have I said about React over the last month?"
-- "Connect my thoughts about music theory to my programming projects"
-- "What am I forgetting about?"
-- "Summarize my thinking on X"
-
-**Implementation:** You already have Gemini chat (`gemini-chat.ts`). RAG is straightforward: embed the query, retrieve top-K similar memories, pass them as context to the generation model. The embeddings and the chat infra both exist. Wire them together.
-
-**Why P2 not P0:** Because search + graph visualization gives users the tools to explore on their own. Chat is the luxury layer on top.
+The bedtime prompt engine already has a "Divergent" type. Extend that philosophy to the full synthesis pipeline.
 
 ---
 
-### 8. Build a Capability/Skill Map
-
-> *"What are you really thinking about just now?"*
-
-The `capabilities` table extracts skills from projects. The `capabilities-extraction.ts` module detects them from descriptions. But there's no UI for this. Users never see their own skill map.
-
-**What it could be:**
-- Radial chart of capabilities, sized by strength score
-- Skills connected to projects that use them
-- Trending skills (mentioned more this month than last)
-- Skill gaps: "You mention machine learning but have no projects using it"
-- Learning trajectory: "Your React skills have deepened over 6 months"
-
----
-
-### 9. Proactive Pattern Detection
-
-> *"Discover the recipes you are using and abandon them."*
-
-The app captures thoughts but doesn't tell you what patterns are emerging. Build a weekly synthesis engine:
-
-- Theme velocity: "Design thinking appeared in 8 memories this week, up from 2 last week"
-- Entity clustering: "These 5 people keep appearing together — is this a team?"
-- Temporal patterns: "You think about career goals every Sunday evening"
-- Contradiction detection: "In January you said X, in February you said the opposite"
-- Decay alerts: "You haven't thought about Y in 3 months — still relevant?"
-
----
-
-## P3 — Trust and Portability
-
-### 10. Add Data Export Immediately
-
-> *"Be the first to not do what has never not been done before."*
-
-Zero export functionality exists. For a knowledge app, this is a trust problem. Users won't pour their thoughts into a system they can't get them out of.
-
-**Minimum viable export:**
-- Settings > Export All Data > JSON download (memories, projects, articles, connections, capabilities)
-- Settings > Export as Markdown > zip of `.md` files organized by theme
-- Automatic weekly backup to user's email or cloud storage
-- Delete my data (GDPR compliance)
-
----
-
-### 11. Enable TypeScript Strict Mode
+### 8. Contradiction Resolution
 
 > *"Honor thy error as a hidden intention."*
 
-`tsconfig.json` has `strict: false`. The codebase has `any` types scattered across stores, hooks, and utilities. There are zero test files. This combination means bugs hide until production.
+The Insights page tracks how thinking evolves and shows contradictions. But it stops at observation: "You said X in January, Y in February." It never helps resolve them.
 
-**The path:**
-1. Enable `strict: true` in tsconfig
-2. Fix the ~50 type errors that surface (most are `any` casts in stores and the API client)
-3. Add ESLint with the React Hooks plugin
-4. Write tests for the Zustand stores first (highest ROI — they contain all business logic)
-
----
-
-### 12. Consolidate the Three IndexedDB Databases
-
-> *"Simple subtraction."*
-
-Three separate databases: `RosetteDB` (Dexie), `OfflineQueue` (raw IndexedDB), and `aperture-offline` (service worker). The service worker writes to a different database than the app reads from, which means background sync silently fails.
-
-Consolidate to one Dexie instance. Add the `operations` table to `RosetteDatabase`. Have the service worker import the same Dexie schema.
+**Build a synthesis prompt:**
+- "You said [X]. Then you said [Y]. What's the deeper truth that contains both?"
+- Frame contradictions not as errors but as creative tension — the raw material for insight
+- Track when users resolve contradictions and what they conclude — feed that back into the memory graph as a new, higher-order insight
+- This is where Polymath becomes a thinking partner, not just a thinking recorder
 
 ---
 
-## P4 — Focus and Subtraction
+### 9. Reading Queue as Active Catalyst
 
-### 13. Cut Features to Sharpen the Core
+> *"Use an old idea."*
+
+The reading queue is currently passive — articles sit there until you read them, then they become "fuel" data for Power Hour matching. The embeddings are generated. The connections exist. But the queue doesn't provoke.
+
+**Make it active:**
+- "This article directly challenges your approach in [Project]. Worth revisiting?"
+- "You've saved 3 articles about [Topic] but have no project using it. Is something brewing?"
+- "This article from 2 weeks ago connects to the thought you had this morning"
+- Integrate reading insights into bedtime prompts more aggressively — "Tonight, sit with the tension between what [Article] argues and what you believe about [Topic]"
+
+---
+
+## P3 — Trust and Craft
+
+### 10. Data Export
+
+> *"Be the first to not do what has never not been done before."*
+
+Zero export. For a knowledge app, this is a trust problem. People won't pour their thinking into something they can't get it out of.
+
+- Settings > Export All Data > JSON (memories, projects, articles, connections, capabilities)
+- Settings > Export as Markdown > zip organized by theme
+- Delete my data option
+
+---
+
+### 11. Tame the Thundering Herd
+
+> *"Only one element of each kind."*
+
+11 API calls from DataSynchronizer every 5 minutes + per-page fetches + React Query invalidations on startup. On mobile, this is a traffic jam.
+
+- Startup: sync only current route's data. Stagger the rest with `requestIdleCallback`
+- DataSynchronizer: context-aware — only sync what's visible
+- Consolidate 3 IndexedDB databases (`RosetteDB`, `OfflineQueue`, `aperture-offline`) into one Dexie instance. The service worker currently writes to a different DB than the app reads from — background sync silently fails
+
+---
+
+### 12. TypeScript Strict + Tests for Stores
+
+> *"Gardening, not architecture."*
+
+`strict: false` in tsconfig. `any` types across stores and API client. Zero test files. The Zustand stores contain all business logic — they're the highest-ROI test target.
+
+1. Enable `strict: true`, fix the ~50 type errors
+2. Write tests for the stores first (state transitions, optimistic updates, cache invalidation)
+3. ESLint with React Hooks plugin to catch dependency array bugs (the pull-to-refresh issue is a dependency array bug)
+
+---
+
+## P4 — Subtraction
+
+### 13. Decide What Polymath Is
 
 > *"What to increase? What to reduce? What to maintain?"*
 
-Polymath has 16 pages. Bedtime prompts, Power Hour, RSS feeds, Timeline, Insights, Lists, Suggestions — each well-built but collectively diluting the core proposition. The app tries to be a knowledge graph AND a project manager AND an RSS reader AND a bedtime journal AND a focus timer.
+16 pages. The app is a knowledge synthesizer AND a project manager AND an RSS reader AND a bedtime journal AND a focus timer AND a list manager. Each feature is well-built. Collectively, they dilute the proposition.
 
-**Consider demoting to secondary:**
-- Bedtime prompts (nice but tangential)
-- Power Hour (a different app's job)
-- RSS feeds (integrate into reading, don't give it its own tab)
+The previous review said to cut Bedtime and Power Hour as tangential. That was wrong. They're the most original things here.
+
+**Increase:**
+- Bedtime synthesis (the differentiator)
+- Power Hour sessions (energy-matched work is novel)
+- Cross-pollination / connection surfacing (the intelligence layer)
+
+**Reduce:**
+- RSS feeds (fold into reading, don't give it its own world)
 - Lists (useful but generic — any list app does this)
+- The 16-page navigation surface area (consolidate)
 
-**Promote to primary:**
-- Knowledge graph visualization (the differentiator)
-- Semantic search (the retrieval mechanism)
-- Voice capture (the input mechanism)
-- Connection surfacing (the intelligence layer)
-
-Four pillars. Everything else is settings.
+**Maintain:**
+- Voice capture (primary input, keep polishing)
+- Semantic search (once built — P0 above)
+- Offline-first architecture (works well, don't touch)
 
 ---
 
@@ -228,22 +237,17 @@ Four pillars. Everything else is settings.
 
 > *"Decorate, decorate."*
 
-`ProjectDetailPage.tsx`: 1,178 lines. `HomePage.tsx`: 1,169 lines. `ReadingPage.tsx`: 1,082 lines. These aren't components, they're applications within an application.
+`ProjectDetailPage.tsx`: 1,178 lines. `HomePage.tsx`: 1,169 lines. `ReadingPage.tsx`: 1,082 lines.
 
-Extract:
-- `ReadingPage` → `ArticleListView`, `RSSUpdatesTab`, `ShareTargetHandler`, `ArticleRecoveryManager`
-- `HomePage` → already has sub-components but the orchestration logic (617 lines of hooks/effects) needs splitting
-- `ProjectDetailPage` → `ProjectHeader`, `ProjectTasks`, `ProjectConnections`, `ProjectTimeline`
+Extract per POLYMATH_REVIEW.md recommendations. The share target handling alone is ~200 lines duplicated twice in ReadingPage.
 
 ---
 
-### 15. Add Accessibility
+### 15. Wire Up Accessibility
 
 > *"Go outside. Shut the door."*
 
-The codebase has a comprehensive `accessibility.ts` utility file with focus traps, ARIA helpers, contrast checking, and touch target validation. Almost none of it is used. FloatingNav buttons lack `aria-label`. Click handlers have no keyboard equivalents. Modal focus trapping is theoretical.
-
-Wire up what you already built. Every interactive element needs an `aria-label`. Every `onClick` needs an `onKeyDown`. Every modal needs focus trapping. The utilities exist — they just need to be called.
+`accessibility.ts` has focus traps, ARIA helpers, contrast checking, touch target validation. Almost none of it is called. FloatingNav buttons lack `aria-label`. Modals don't trap focus. The utilities exist — connect them.
 
 ---
 
@@ -251,19 +255,19 @@ Wire up what you already built. Every interactive element needs an `aria-label`.
 
 | Priority | Strategy | Change | Impact |
 |----------|----------|--------|--------|
-| P0 | *"What would make this really useful?"* | Ship the knowledge graph visualization | Defines the product |
-| P0 | *"Don't avoid what is easy"* | Make semantic search the default | Unlocks retrieval |
-| P0 | *"Emphasize the flaws"* | Surface connections proactively | Shows the AI's work |
+| P0 | *"Repetition is a form of change"* | Close the feedback loop — synthesis learns from you | Engine evolves |
+| P0 | *"What wouldn't you do?"* | Make bedtime the primary interface | Defines the product |
+| P0 | *"Don't avoid what is easy"* | Semantic search using existing embeddings | Unlocks retrieval |
+| P1 | *"Emphasize the flaws"* | Surface cross-pollination proactively | Creative surprise |
 | P1 | *"Remove ambiguities"* | Kill loading flicker | Feels reliable |
-| P1 | *"Exquisite frame"* | Fix voice UX with waveforms/streaming | Primary input works |
-| P1 | *"Only one element of each kind"* | Tame the thundering herd | Performance |
-| P2 | *"Ask your body"* | AI chat with your knowledge | Conversational retrieval |
-| P2 | *"What are you really thinking about?"* | Skill/capability map | Self-awareness |
-| P2 | *"Discover your recipes"* | Proactive pattern detection | Emerging insights |
+| P1 | *"Exquisite frame"* | Voice capture shows its work | Primary input shines |
+| P2 | *"What would your closest friend do?"* | Constraint-driven ideation modes | Lateral creativity |
+| P2 | *"Honor thy error"* | Contradiction resolution prompts | Thinking partner |
+| P2 | *"Use an old idea"* | Reading queue as active catalyst | Provokes, not stores |
 | P3 | *"Be the first to not do what..."* | Data export | Trust |
-| P3 | *"Honor thy error"* | TypeScript strict + tests | Reliability |
-| P3 | *"Simple subtraction"* | Consolidate IndexedDB databases | Correctness |
-| P4 | *"What to increase?"* | Cut features, sharpen core | Focus |
+| P3 | *"Only one element of each kind"* | Tame thundering herd + consolidate DBs | Performance |
+| P3 | *"Gardening, not architecture"* | TypeScript strict + store tests | Reliability |
+| P4 | *"What to increase?"* | Decide what Polymath is — cut and sharpen | Focus |
 | P4 | *"Decorate, decorate"* | Break up monolith pages | Maintainability |
 | P4 | *"Go outside"* | Wire up accessibility utilities | Inclusion |
 
@@ -271,8 +275,10 @@ Wire up what you already built. Every interactive element needs an `aria-label`.
 
 ## The One Thing
 
-If you do nothing else: **ship the graph visualization**. You've built a knowledge graph engine that nobody can see. The moment a user watches their thoughts form constellations on screen — connections they didn't know existed becoming visible — that's the moment Polymath stops being a note-taking app and becomes something that doesn't exist yet.
+If you do nothing else: **close the feedback loop**. The synthesis engine generates ideas but never learns which ones light you up. After 20 ratings, you have enough signal to weight capability combinations. After 50, the engine starts to feel like it knows you. After 100, it's suggesting things you didn't know you wanted.
 
-The infrastructure is done. The AI pipeline works. The embeddings are generated. The bridges are stored. You're one visualization away from groundbreaking.
+The bedtime prompts, the cross-pollination, the energy-matched sessions — they're all brilliant mechanisms. But they run on a static model. The moment they start learning from your reactions, Polymath stops being a tool that generates ideas and becomes a tool that understands how you think.
+
+That's not an incremental improvement. That's a category shift.
 
 > *"The most important thing is the thing most easily forgotten."*
