@@ -20,7 +20,6 @@ import { ThemeClusterCard } from '../components/memories/ThemeClusterCard'
 import { Button } from '../components/ui/button'
 // import { Card, CardContent } from '../components/ui/card' // Will use GlassCard
 import { useToast } from '../components/ui/toast'
-import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { useConnectionStore } from '../stores/useConnectionStore'
 import { useContextEngineStore } from '../stores/useContextEngineStore'
 import { ConnectionSuggestion } from '../components/ConnectionSuggestion'
@@ -121,7 +120,6 @@ export function MemoriesPage() {
   useEffect(() => {
     setContext('page', 'memories', 'Thoughts')
   }, [])
-  const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const { isOnline } = useOnlineStatus()
   const { addOfflineCapture } = useOfflineSync()
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
@@ -315,36 +313,10 @@ export function MemoriesPage() {
     setShowDetailModal(true)
   }
 
-  const handleDelete = async (memory: Memory) => {
-    const confirmed = await confirm({
-      title: `Delete "${memory.title}"?`,
-      description: 'This action cannot be undone. The thought will be permanently removed.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      variant: 'destructive',
-    })
-
-    if (confirmed) {
-      try {
-        await deleteMemory(memory.id)
-        addToast({
-          title: 'Thought deleted',
-          description: `"${memory.title}" has been removed.`,
-          variant: 'success',
-        })
-
-        // Force refresh to ensure server state matches
-        await loadMemories(true)
-      } catch (error) {
-        addToast({
-          title: 'Failed to delete thought',
-          description: error instanceof Error ? error.message : 'An error occurred',
-          variant: 'destructive',
-        })
-        // Refresh to restore state if delete failed
-        await loadMemories(true)
-      }
-    }
+  // Called after MemoryCard has already confirmed and deleted the memory.
+  // No need for another confirm dialog — just refresh the list.
+  const handleDelete = async (_memory: Memory) => {
+    await loadMemories(true)
   }
 
   const handleVoiceCapture = async (transcript: string) => {
@@ -829,8 +801,6 @@ export function MemoriesPage() {
 
 
 
-        {/* Confirmation Dialog */}
-        {confirmDialog}
       </div>
 
       {/* Detail Modal for Deep Linking or Edit */}
