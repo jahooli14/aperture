@@ -218,13 +218,15 @@ function MasonryListGrid({
     listType,
     expandedItemId,
     onItemClick,
-    onDelete
+    onDelete,
+    onStatusChange
 }: {
     items: ListItem[],
     listType: string,
     expandedItemId: string | null,
     onItemClick: (id: string) => void,
-    onDelete: (id: string, listId: string) => void
+    onDelete: (id: string, listId: string) => void,
+    onStatusChange?: (id: string, status: 'active' | 'completed') => void
 }) {
     const [columns, setColumns] = useState(2) // Default 2 columns for mobile
 
@@ -333,10 +335,27 @@ function MasonryListGrid({
 
                                 {/* Content Overlay */}
                                 <div className="absolute inset-0 p-3 flex flex-col justify-end">
-                                    {/* Title */}
-                                    <h3 className={`text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight drop-shadow-lg ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1'}`}>
-                                        {item.content}
-                                    </h3>
+                                    {/* Title with completion toggle */}
+                                    <div className="flex items-start gap-2">
+                                        {onStatusChange && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    onStatusChange(item.id, item.status === 'completed' ? 'active' : 'completed')
+                                                }}
+                                                className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                                                    item.status === 'completed'
+                                                        ? 'bg-emerald-500/30 border-emerald-500/60'
+                                                        : 'border-white/30 hover:border-white/60'
+                                                }`}
+                                            >
+                                                {item.status === 'completed' && <Check className="w-2.5 h-2.5 text-emerald-400" />}
+                                            </button>
+                                        )}
+                                        <h3 className={`text-white font-bold leading-tight group-hover:text-sky-400 transition-colors uppercase tracking-tight drop-shadow-lg ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1'} ${item.status === 'completed' ? 'line-through opacity-50' : ''}`}>
+                                            {item.content}
+                                        </h3>
+                                    </div>
 
                                     {/* Metadata - Show when expanded */}
                                     {isExpanded && (
@@ -423,7 +442,7 @@ function MasonryListGrid({
 export default function ListDetailPage() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems } = useListStore()
+    const { lists, currentListItems, currentListId, loading, fetchListItems, addListItem, fetchLists, deleteListItem, reorderItems, updateListItemStatus } = useListStore()
 
     // Find list locally first, or wait for fetch
     const list = lists.find(l => l.id === id)
@@ -440,7 +459,7 @@ export default function ListDetailPage() {
     const [isVoiceMode, setIsVoiceMode] = useState(false)
     const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
-    const inputRef = useRef<HTMLInputElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
         if (!lists.length) fetchLists()
@@ -655,6 +674,7 @@ export default function ListDetailPage() {
                                     expandedItemId={expandedItemId}
                                     onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
                                     onDelete={(itemId, listId) => deleteListItem(itemId, listId)}
+                                    onStatusChange={(itemId, status) => updateListItemStatus(itemId, status)}
                                 />
                             ) : loading ? (
                                 <div className="flex flex-wrap gap-3">

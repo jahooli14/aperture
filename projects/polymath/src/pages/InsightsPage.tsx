@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
-import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff } from 'lucide-react'
+import { Zap, TrendingUp, AlertCircle, Lightbulb, Search, Brain, WifiOff, Sparkles } from 'lucide-react'
 import { SubtleBackground } from '../components/SubtleBackground'
 import type { SynthesisInsight } from '../types'
 import { readingDb } from '../lib/db'
@@ -20,6 +20,21 @@ export function InsightsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
+  const [showResolutionDialog, setShowResolutionDialog] = useState(false)
+  const [resolutionPrompt, setResolutionPrompt] = useState('')
+  const [resolutionInsight, setResolutionInsight] = useState<SynthesisInsight | null>(null)
+  const [resolutionText, setResolutionText] = useState('')
+
+  const handleResolveContradiction = (insight: SynthesisInsight) => {
+    const stances = insight.data?.timeline || []
+    if (stances.length < 2) return
+
+    const prompt = `You said: "${stances[0]?.quote || stances[0]?.stance}"\nThen you said: "${stances[stances.length - 1]?.quote || stances[stances.length - 1]?.stance}"\n\nWhat's the deeper truth that contains both?`
+
+    setResolutionPrompt(prompt)
+    setResolutionInsight(insight)
+    setShowResolutionDialog(true)
+  }
 
   const fetchInsights = useCallback(async () => {
     setLoading(true)
@@ -316,6 +331,17 @@ export function InsightsPage() {
                     </div>
                   )}
 
+                  {/* Resolve Contradiction Button */}
+                  {insight.type === 'collision' && (
+                    <button
+                      onClick={() => handleResolveContradiction(insight)}
+                      className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm hover:bg-purple-500/20 transition-all"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Resolve this tension
+                    </button>
+                  )}
+
                   {/* Action Button */}
                       {insight.actionable && insight.action && (
                         <div className="mt-4 pt-4">
@@ -346,6 +372,58 @@ export function InsightsPage() {
         </>
         )}
       </div>
+
+      {/* Contradiction Resolution Dialog */}
+      {showResolutionDialog && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60" onClick={() => setShowResolutionDialog(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-[#1a1f35] border border-white/10 p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-white mb-3">Resolve the tension</h3>
+            <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/10 mb-4">
+              <p className="text-sm text-gray-300 whitespace-pre-line">{resolutionPrompt}</p>
+            </div>
+            <textarea
+              value={resolutionText}
+              onChange={e => setResolutionText(e.target.value)}
+              placeholder="The deeper truth is..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/30 min-h-[100px] resize-none"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                onClick={() => setShowResolutionDialog(false)}
+                className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!resolutionText.trim()) return
+                  try {
+                    await fetch('/api/memories?capture=true', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        title: `Resolution: ${resolutionInsight?.title || 'Contradiction'}`,
+                        body: `${resolutionPrompt}\n\nMy resolution:\n${resolutionText}`,
+                        tags: ['resolution', 'contradiction', 'insight'],
+                        memory_type: 'insight'
+                      })
+                    })
+                    setShowResolutionDialog(false)
+                    setResolutionText('')
+                  } catch (e) {
+                    console.error('Failed to save resolution:', e)
+                  }
+                }}
+                disabled={!resolutionText.trim()}
+                className="px-4 py-2 text-sm bg-purple-500/20 text-purple-300 rounded-xl hover:bg-purple-500/30 disabled:opacity-30 transition-all"
+              >
+                Save as insight
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }

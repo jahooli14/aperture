@@ -34,6 +34,35 @@ interface MemoryStore {
   removeOptimisticMemory: (tempId: string) => void
 }
 
+/** Poll for processing completion to show extraction summary */
+async function pollProcessing(memoryId: string) {
+  for (let i = 0; i < 6; i++) {
+    await new Promise(r => setTimeout(r, 3000)) // Check every 3s
+    try {
+      const checkRes = await fetch(`/api/memories?id=${memoryId}`)
+      if (checkRes.ok) {
+        const { memory: processed } = await checkRes.json()
+        if (processed?.processed) {
+          const entities = processed.entities || {}
+          window.dispatchEvent(new CustomEvent('memory-extracted', {
+            detail: {
+              memoryId,
+              topics: (entities.topics?.length || 0) + (entities.skills?.length || 0),
+              people: entities.people?.length || 0,
+              themes: processed.themes?.length || 0,
+              tone: processed.emotional_tone || null,
+              connections: 0
+            }
+          }))
+          return
+        }
+      }
+    } catch {
+      // Non-critical polling, silently fail
+    }
+  }
+}
+
 export const useMemoryStore = create<MemoryStore>((set, get) => ({
   memories: [],
   bridges: [],
@@ -333,6 +362,28 @@ export const useMemoryStore = create<MemoryStore>((set, get) => ({
       }))
 
       console.log('[MemoryStore] Memory created successfully:', data.id)
+
+      // Non-blocking: poll for extraction summary
+      pollProcessing(data.id).catch(() => {})
+
+      // Check for new connections after processing (delayed to allow backend processing)
+      setTimeout(async () => {
+        try {
+          const connResponse = await fetch(`/api/connections?action=suggestions&id=${data.id}&type=thought`)
+          if (connResponse.ok) {
+            const { suggestions } = await connResponse.json()
+            if (suggestions && suggestions.length > 0) {
+              // Dispatch custom event for toast display
+              window.dispatchEvent(new CustomEvent('memory-connections-found', {
+                detail: { memoryId: data.id, count: suggestions.length, connections: suggestions }
+              }))
+            }
+          }
+        } catch (e) {
+          // Non-critical, silently fail
+        }
+      }, 5000) // Wait 5s for backend processing to complete
+
       return data
     } catch (error) {
       console.error('[MemoryStore] Create memory failed:', error)

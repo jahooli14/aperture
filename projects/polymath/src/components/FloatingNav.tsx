@@ -97,6 +97,22 @@ export function FloatingNav() {
     return () => window.removeEventListener('voice-capture-queued-offline', handleOfflineQueued)
   }, [addToast])
 
+  // Listen for memory connections found after creation
+  React.useEffect(() => {
+    const handleConnectionsFound = (e: Event) => {
+      const customEvent = e as CustomEvent
+      const { count } = customEvent.detail
+      addToast({
+        title: `Connected to ${count} related thought${count > 1 ? 's' : ''}`,
+        description: 'Tap to explore connections',
+        duration: 4000,
+        variant: 'success',
+      })
+    }
+    window.addEventListener('memory-connections-found', handleConnectionsFound)
+    return () => window.removeEventListener('memory-connections-found', handleConnectionsFound)
+  }, [addToast])
+
   const handleNavClick = (option: NavOption) => {
     if (option.action === 'navigate' && option.path) {
       navigate(option.path)
