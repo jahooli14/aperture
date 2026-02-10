@@ -11,16 +11,14 @@ interface DialogProps {
 }
 
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
-  const [isOpen, setIsOpen] = React.useState(open ?? false)
-
-  React.useEffect(() => {
-    if (open !== undefined) {
-      setIsOpen(open)
-    }
-  }, [open])
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false)
+  const isControlled = open !== undefined
+  const isOpen = isControlled ? open : uncontrolledOpen
 
   const handleOpenChange = (newOpen: boolean) => {
-    setIsOpen(newOpen)
+    if (!isControlled) {
+      setUncontrolledOpen(newOpen)
+    }
     onOpenChange?.(newOpen)
   }
 

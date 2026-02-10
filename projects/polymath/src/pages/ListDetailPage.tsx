@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useRef, useMemo, memo } from 'react'
+import React, { useEffect, useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft, Send, Trash2, Mic, MicOff, ListOrdered, Check, GripVertical, Film, Music, Book, MapPin, Box, Quote, Pencil } from 'lucide-react'
 import { useListStore } from '../stores/useListStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { useConfirmDialog } from '../components/ui/confirm-dialog'
 import { ConnectionsList } from '../components/connections/ConnectionsList'
 import { VoiceInput } from '../components/VoiceInput'
 import { OptimizedImage } from '../components/ui/optimized-image'
@@ -195,9 +196,7 @@ const PhraseCard = memo(({
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
-                        if (confirm(`Remove this phrase?`)) {
-                            onDelete(item.id, item.list_id)
-                        }
+                        onDelete(item.id, item.list_id)
                     }}
                     className="absolute top-6 right-6 p-2.5 rounded-xl bg-zinc-900/50 backdrop-blur-sm border hover:bg-red-500/20 hover:border-red-500/40 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-300"
                     style={{
@@ -421,9 +420,7 @@ function MasonryListGrid({
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation()
-                                            if (confirm(`Remove "${item.content}"?`)) {
-                                                onDelete(item.id, item.list_id)
-                                            }
+                                            onDelete(item.id, item.list_id)
                                         }}
                                         className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500 text-red-500/50 hover:text-white backdrop-blur-md border border-red-500/20 transition-all"
                                     >
@@ -460,6 +457,20 @@ export default function ListDetailPage() {
     const [isReordering, setIsReordering] = useState(false)
     const [expandedItemId, setExpandedItemId] = useState<string | null>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
+    const { confirm, dialog: confirmDialog } = useConfirmDialog()
+
+    const handleDeleteItem = useCallback(async (itemId: string, listId: string) => {
+        const item = displayItems.find(i => i.id === itemId)
+        const confirmed = await confirm({
+            title: `Remove "${item?.content || 'this item'}"?`,
+            description: 'This item will be permanently removed from the list.',
+            confirmText: 'Remove',
+            variant: 'destructive',
+        })
+        if (confirmed) {
+            deleteListItem(itemId, listId)
+        }
+    }, [confirm, deleteListItem, displayItems])
 
     useEffect(() => {
         if (!lists.length) fetchLists()
@@ -673,7 +684,7 @@ export default function ListDetailPage() {
                                     listType={list.type}
                                     expandedItemId={expandedItemId}
                                     onItemClick={(itemId) => setExpandedItemId(expandedItemId === itemId ? null : itemId)}
-                                    onDelete={(itemId, listId) => deleteListItem(itemId, listId)}
+                                    onDelete={handleDeleteItem}
                                     onStatusChange={(itemId, status) => updateListItemStatus(itemId, status)}
                                 />
                             ) : loading ? (
@@ -692,6 +703,8 @@ export default function ListDetailPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {confirmDialog}
 
             {/* Smart Connections Section */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-48">

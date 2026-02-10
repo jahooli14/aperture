@@ -280,10 +280,12 @@ export const MemoryDetailModal: React.FC<MemoryDetailModalProps> = ({ memory, is
                 <span>{format(new Date(memory.created_at), 'PPPp')}</span>
               </div>
             </motion.div>
-            {confirmDialog}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Confirm dialog rendered outside AnimatePresence so it survives modal close */}
+      {confirmDialog}
 
       <EditMemoryDialog
         memory={memory}
