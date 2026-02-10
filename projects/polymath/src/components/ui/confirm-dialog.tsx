@@ -38,7 +38,6 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const handleConfirm = () => {
     onConfirm()
-    onOpenChange(false)
   }
 
   return (
