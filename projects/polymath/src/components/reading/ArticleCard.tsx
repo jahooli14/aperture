@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Clock, ExternalLink, Archive, Trash2, WifiOff, Link2, Copy, Share2, Edit, Download, CheckCircle, MoreVertical, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import type { Article } from '../../types/reading'
 import { useReadingStore } from '../../stores/useReadingStore'
 import { useToast } from '../ui/toast'
+import { useConfirmDialog } from '../ui/confirm-dialog'
 import { readingDb } from '../../lib/db'
 import { haptic } from '../../utils/haptics'
 import { ContextMenu, type ContextMenuItem } from '../ui/context-menu'
@@ -23,6 +24,7 @@ interface ArticleCardProps {
 export const ArticleCard = React.memo(function ArticleCard({ article, onClick }: ArticleCardProps) {
   const { updateArticleStatus, deleteArticle } = useReadingStore()
   const { addToast } = useToast()
+  const { confirm, dialog: confirmDialog } = useConfirmDialog()
   const [isMetadataCached, setIsMetadataCached] = useState(false)
   const [isContentFullyCached, setIsContentFullyCached] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -60,8 +62,14 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Remove this article from your reading queue?')) return
+  const handleDelete = useCallback(async () => {
+    const confirmed = await confirm({
+      title: `Delete "${article.title || 'this article'}"?`,
+      description: 'This will remove the article from your reading queue.',
+      confirmText: 'Delete',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
     try {
       await deleteArticle(article.id)
       addToast({
@@ -76,7 +84,7 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         variant: 'destructive',
       })
     }
-  }
+  }, [article.id, article.title, confirm, deleteArticle, addToast])
 
   const openOriginal = () => {
     window.open(article.url, '_blank', 'noopener,noreferrer')
@@ -269,6 +277,8 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
         onConnectionsCreated={() => { console.log('Connections created') }}
         initialStage="discovering"
       />
+
+      {confirmDialog}
     </>
   )
 })
