@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Copy, Share2, Calendar, Sparkles } from 'lucide-react'
 import { CardHeader, CardTitle, CardDescription } from './ui/card'
 import { Button } from './ui/button'
 import type { Memory, BridgeWithMemories } from '../types'
@@ -186,6 +186,18 @@ export const MemoryCard = memo(function MemoryCard({ memory, onEdit, onDelete }:
             {memory.title}
           </h3>
           <div className="flex items-center gap-1">
+            {/* Find Similar Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate(`/search?similar=${memory.id}`)
+              }}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-all"
+              title="Find similar"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+
             {/* AI Analysis Dot (Interactive) */}
             <button
               onClick={handleAnalyze}

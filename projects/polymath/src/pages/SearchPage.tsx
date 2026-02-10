@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
@@ -100,14 +100,57 @@ async function searchOffline(searchQuery: string): Promise<SearchResponse> {
 
 export function SearchPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { addToast } = useToast()
 
   const [query, setQuery] = useState(searchParams.get('q') || '')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResponse | null>(null)
+  const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('semantic')
+
+  // Handle ?similar=<id> parameter for "find similar" searches
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const similarId = params.get('similar')
+    if (similarId) {
+      setSearchMode('semantic')
+      setLoading(true)
+      fetch(`/api/memories?similar=${encodeURIComponent(similarId)}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.results) {
+            setResults({
+              query: `Similar to: ${data.source_title || 'memory'}`,
+              total: data.total || data.results.length,
+              results: data.results,
+              breakdown: data.breakdown || {
+                memories: data.results.filter((r: SearchResult) => r.type === 'memory').length,
+                projects: data.results.filter((r: SearchResult) => r.type === 'project').length,
+                articles: data.results.filter((r: SearchResult) => r.type === 'article').length,
+                suggestions: 0
+              }
+            })
+            setQuery(`Similar to: ${data.source_title || 'memory'}`)
+          }
+        })
+        .catch(err => {
+          console.error('[SearchPage] Similar search failed:', err)
+          addToast({
+            title: 'Similar search failed',
+            description: 'Could not find similar items.',
+            variant: 'destructive'
+          })
+        })
+        .finally(() => setLoading(false))
+    }
+  }, [location.search])
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    // Skip if this is a similar search
+    if (params.get('similar')) return
+
     const q = searchParams.get('q')
     if (q && q !== query) {
       setQuery(q)
@@ -136,7 +179,8 @@ export function SearchPage() {
         haptic.light()
       } else {
         try {
-          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}`)
+          const semanticParam = searchMode === 'semantic' ? '&semantic=true' : ''
+          const response = await fetch(`/api/memories?q=${encodeURIComponent(searchQuery)}${semanticParam}`)
           if (!response.ok) {
             throw new Error('Online search failed')
           }
@@ -315,6 +359,24 @@ export function SearchPage() {
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
               </button>
             </form>
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                onClick={() => setSearchMode('text')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  searchMode === 'text' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                Exact
+              </button>
+              <button
+                onClick={() => setSearchMode('semantic')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                Semantic
+              </button>
+            </div>
           </div>
 
           {/* Results */}

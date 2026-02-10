@@ -63,8 +63,30 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
   const [formData, setFormData] = useState({
     title: '',
     tags: '',
-    memory_type: '' as '' | 'foundational' | 'event' | 'insight',
+    memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
+  const [recentTags, setRecentTags] = useState<string[]>([])
+
+  // Load recent tags from memories
+  useEffect(() => {
+    const memoryStore = useMemoryStore.getState()
+    const allTags = memoryStore.memories
+      .flatMap(m => m.tags || [])
+      .filter(Boolean)
+
+    // Count frequency and take top 8
+    const tagCounts = allTags.reduce((acc, tag) => {
+      acc[tag] = (acc[tag] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const topTags = Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([tag]) => tag)
+
+    setRecentTags(topTags)
+  }, [])
 
   const resetForm = () => {
     setFormData({
@@ -154,15 +176,17 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     try {
       const imageUrls = await uploadImages()
 
+      const effectiveTitle = formData.title.trim() || body.trim().substring(0, 60) || 'Quick thought'
+
       const memoryData = {
-        title: formData.title,
+        title: effectiveTitle,
         body: body.trim(),
         tags: tags.length > 0 ? tags : undefined,
         memory_type: formData.memory_type || undefined,
         image_urls: imageUrls.length > 0 ? imageUrls : undefined,
       }
 
-      const savedTitle = formData.title
+      const savedTitle = effectiveTitle
 
       // Close dialog immediately for better UX
       resetForm()
@@ -247,36 +271,89 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
           </BottomSheetHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            {/* Title — big and bold */}
-            <div>
-              <Input
-                id="title"
-                placeholder="Title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                required
-                autoFocus
-                autoComplete="off"
-                className="text-xl font-bold h-14 border-0 bg-transparent px-1 focus:ring-0 placeholder:text-white/15"
-                style={{ color: 'var(--premium-text-primary)' }}
-              />
-            </div>
-
-            {/* Body — auto-growing textarea, clean and spacious */}
+            {/* Body — primary field, auto-growing textarea */}
             <div>
               <textarea
                 ref={bodyRef}
                 id="body"
-                placeholder="Write your thoughts here..."
+                placeholder="What's on your mind?"
                 value={body}
                 onChange={handleBodyChange}
                 required
+                autoFocus
                 className="w-full text-base leading-relaxed bg-transparent border-0 px-1 py-2 focus:outline-none focus:ring-0 resize-none placeholder:text-white/15"
                 style={{
                   color: 'var(--premium-text-primary)',
                   minHeight: '120px',
                 }}
               />
+            </div>
+
+            {/* Title — secondary, optional */}
+            <div>
+              <Input
+                id="title"
+                placeholder="Title (optional)"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                autoComplete="off"
+                className="text-sm h-10 border-0 bg-transparent px-1 focus:ring-0 placeholder:text-white/15"
+                style={{ color: 'var(--premium-text-secondary)' }}
+              />
+            </div>
+
+            {/* Quick tags - always visible */}
+            {recentTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {recentTags.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      setFormData(prev => {
+                        const tagList = prev.tags ? prev.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+                        if (tagList.includes(tag)) {
+                          return { ...prev, tags: tagList.filter(t => t !== tag).join(', ') }
+                        }
+                        return { ...prev, tags: [...tagList, tag].join(', ') }
+                      })
+                    }}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                      formData.tags?.split(',').map(t => t.trim()).includes(tag)
+                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShowOptions(true)}
+                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 border border-white/5 hover:border-white/10"
+                >
+                  + tag
+                </button>
+              </div>
+            )}
+
+            {/* Memory type as subtle pills - always visible */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-600 mr-1">Type:</span>
+              {(['quick-note', 'insight', 'event', 'foundational'] as const).map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, memory_type: prev.memory_type === type ? '' : type }))}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+                    formData.memory_type === type
+                      ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                      : 'text-gray-600 border border-transparent hover:text-gray-400'
+                  }`}
+                >
+                  {type === 'quick-note' ? 'note' : type}
+                </button>
+              ))}
             </div>
 
             {/* Quick Actions Row — Photos + More Options */}
@@ -419,7 +496,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
             <BottomSheetFooter>
               <Button
                 type="submit"
-                disabled={loading || !formData.title || !body.trim() || uploading}
+                disabled={loading || !body.trim() || uploading}
                 className="w-full h-14 bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest touch-manipulation"
               >
                 {uploading ? (

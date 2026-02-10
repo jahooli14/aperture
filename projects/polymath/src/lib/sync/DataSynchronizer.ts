@@ -69,16 +69,21 @@ class DataSynchronizer {
     console.log('[DataSynchronizer] Starting comprehensive sync...')
 
     try {
-      // Run fetches in parallel for speed
-      // Reading list sync might take longer due to content downloads
-      await Promise.allSettled([
-        this.syncProjects(),
-        this.syncMemories(),
-        this.syncReadingList(),
-        this.syncLists(),
-        this.syncConnections(),
-        this.syncDashboard()
-      ])
+      // Stagger sync operations to avoid thundering herd
+      const operations = [
+        () => this.syncProjects(),
+        () => this.syncMemories(),
+        () => this.syncReadingList(),
+        () => this.syncLists(),
+        () => this.syncConnections(),
+        () => this.syncDashboard()
+      ]
+
+      for (const op of operations) {
+        try { await op() } catch (e) { console.warn('[DataSynchronizer] Sync step failed:', e) }
+        // Small delay between operations to spread network load
+        await new Promise(r => setTimeout(r, 500))
+      }
 
       this.lastFullSync = Date.now()
       console.log('[DataSynchronizer] Sync completed successfully')

@@ -9,6 +9,7 @@ import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Tr
 import { useReadingStore } from '../stores/useReadingStore'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
+import { ReadingProvocation } from '../components/reading/ReadingProvocation'
 import { RSSFeedItem } from '../components/reading/RSSFeedItem'
 import { useToast } from '../components/ui/toast'
 import { useConnectionStore } from '../stores/useConnectionStore'
@@ -813,6 +814,9 @@ export function ReadingPage() {
                 </button>
               )}
             </div>
+
+            {/* Reading Provocation */}
+            {activeTab === 'queue' && <ReadingProvocation />}
 
             {/* Inner Content */}
             <div>
