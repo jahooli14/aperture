@@ -1134,6 +1134,92 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // PROVOCATIONS RESOURCE - Reading queue provocations
+  if (resource === 'provocations' && req.method === 'GET') {
+    try {
+      // Get unread articles with embeddings
+      const { data: articles } = await supabase
+        .from('reading_queue')
+        .select('id, title, embedding')
+        .eq('user_id', userId)
+        .eq('status', 'unread')
+        .not('embedding', 'is', null)
+        .limit(20)
+
+      // Get active projects with embeddings
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, title, embedding')
+        .eq('user_id', userId)
+        .in('status', ['active', 'upcoming'])
+        .not('embedding', 'is', null)
+        .limit(10)
+
+      if (!articles?.length || !projects?.length) {
+        return res.json({ provocation: null })
+      }
+
+      // Find highest similarity article-project pair
+      let bestMatch = { similarity: 0, article: null as any, project: null as any }
+
+      for (const article of articles) {
+        for (const project of projects) {
+          if (article.embedding && project.embedding) {
+            const sim = cosineSimilarity(article.embedding, project.embedding)
+            if (sim > bestMatch.similarity && sim > 0.6) {
+              bestMatch = { similarity: sim, article, project }
+            }
+          }
+        }
+      }
+
+      if (bestMatch.article && bestMatch.project) {
+        return res.json({
+          provocation: {
+            article_id: bestMatch.article.id,
+            article_title: bestMatch.article.title,
+            project_id: bestMatch.project.id,
+            project_title: bestMatch.project.title,
+            type: bestMatch.similarity > 0.8 ? 'complements' : 'challenges',
+            message: bestMatch.similarity > 0.8
+              ? `"${bestMatch.article.title}" directly relates to your project "${bestMatch.project.title}". Worth reading next?`
+              : `"${bestMatch.article.title}" might challenge your approach in "${bestMatch.project.title}".`
+          }
+        })
+      }
+
+      // Check for topic clusters without projects
+      const topicCounts: Record<string, { count: number; articles: any[] }> = {}
+      for (const article of articles) {
+        // Simple heuristic: group by first significant word in title
+        const topic = article.title?.split(/[\s:,\-]+/).find((w: string) => w.length > 4) || 'misc'
+        if (!topicCounts[topic]) topicCounts[topic] = { count: 0, articles: [] }
+        topicCounts[topic].count++
+        topicCounts[topic].articles.push(article)
+      }
+
+      const brewingTopic = Object.entries(topicCounts).find(([, v]) => v.count >= 3)
+      if (brewingTopic) {
+        const [topic, data] = brewingTopic
+        return res.json({
+          provocation: {
+            article_id: data.articles[0].id,
+            article_title: data.articles[0].title,
+            project_id: '',
+            project_title: '',
+            type: 'brewing',
+            message: `You've saved ${data.count} articles about "${topic}" but have no project using it. Is something brewing?`
+          }
+        })
+      }
+
+      return res.json({ provocation: null })
+    } catch (error) {
+      console.error('[Reading] Provocations error:', error)
+      return res.json({ provocation: null })
+    }
+  }
+
   // ARTICLES RESOURCE (default - only if no resource specified)
 
   // GET - List articles OR get single article

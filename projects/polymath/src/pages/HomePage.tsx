@@ -47,6 +47,8 @@ import {
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
+import { MorningFollowUp } from '../components/bedtime/MorningFollowUp'
+import { CollisionReport } from '../components/home/CollisionReport'
 import { PROJECT_COLORS } from '../components/projects/ProjectCard'
 import { PowerHourHero } from '../components/home/PowerHourHero'
 import type { Memory, Project, SynthesisInsight } from '../types'
@@ -591,7 +593,7 @@ export function HomePage() {
 
   const { suggestions, fetchSuggestions } = useSuggestionStore()
   const { projects, fetchProjects, loading: projectsLoading, updateProject } = useProjectStore()
-  const { memories, fetchMemories } = useMemoryStore()
+  const { memories, fetchMemories, createMemory } = useMemoryStore()
   const { progress, requiredPrompts, fetchPrompts } = useOnboardingStore()
   const { setContext } = useContextEngineStore()
 
@@ -610,6 +612,7 @@ export function HomePage() {
   const [showDebugPanel, setShowDebugPanel] = useState(false)
   const [driftModeOpen, setDriftModeOpen] = useState(false)
   const [breakPrompts, setBreakPrompts] = useState<any[]>([])
+  const [showMorningFollowUp, setShowMorningFollowUp] = useState(true)
 
 
   // Refetch data whenever user navigates to this page
@@ -896,6 +899,22 @@ export function HomePage() {
           )}
         </AnimatePresence>
 
+        {/* Morning Follow-Up */}
+        {showMorningFollowUp && (
+          <MorningFollowUp
+            onDismiss={() => setShowMorningFollowUp(false)}
+            onCapture={(text) => {
+              // Create a memory from the morning insight
+              createMemory({
+                title: 'Morning insight',
+                body: text,
+                memory_type: 'insight',
+                tags: ['morning-followup', 'bedtime-synthesis']
+              }).catch(console.error)
+            }}
+          />
+        )}
+
         {/* 1. ADD SOMETHING NEW */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6 mt-4">
 
@@ -991,6 +1010,11 @@ export function HomePage() {
             <h2 className="section-header">
               or just <span>explore</span>
             </h2>
+          </div>
+
+          {/* Weekly Collision Report */}
+          <div className="mb-6">
+            <CollisionReport />
           </div>
 
           {/* Card of the Day - Resurfacing - Enhanced Design */}

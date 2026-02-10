@@ -10,6 +10,7 @@ import { PinOverlay } from './components/PinOverlay'
 import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { DebugPanel } from './components/DebugPanel'
+import { ExtractionSummary } from './components/memories/ExtractionSummary'
 import { ContextSidebar } from './components/context/ContextSidebar'
 import { FocusSession } from './components/power-hour/FocusSession'
 import { Loader2 } from 'lucide-react'
@@ -155,17 +156,19 @@ export default function App() {
         dataSynchronizer.sync().catch(err => {
           console.warn('[App] Initial sync failed, app will use cached data:', err)
         })
-      }, 3000)
+      }, 5000)
     }
 
     // Track online/offline status
     const handleOnline = () => {
       console.log('[App] Connection restored')
       setOnlineStatus(true)
-      // Trigger immediate pull sync
-      dataSynchronizer.sync().catch(err => {
-        console.warn('[App] Sync after reconnection failed:', err)
-      })
+      // Delay reconnection sync to prevent rapid repeated syncs if connection is flaky
+      setTimeout(() => {
+        dataSynchronizer.sync().catch(err => {
+          console.warn('[App] Sync after reconnection failed:', err)
+        })
+      }, 3000)
     }
 
     const handleOffline = () => {
@@ -267,6 +270,9 @@ export default function App() {
 
             {/* Floating Navigation - Placed high in DOM for robust fixed positioning */}
             <FloatingNav />
+
+            {/* Extraction Summary - Shows AI processing results after memory creation */}
+            <ExtractionSummary />
 
             <div className="min-h-screen flex flex-col">
               <OfflineIndicator />

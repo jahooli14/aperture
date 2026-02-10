@@ -281,7 +281,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } else if (job === 'synthesis') {
       const userId = getUserId()
-      const suggestions = await runSynthesis(userId)
+      const mode = req.query.mode as string | undefined
+      const suggestions = await runSynthesis(userId, mode)
 
       console.log(`[cron/jobs] Generated ${suggestions?.length || 0} suggestions`)
 
