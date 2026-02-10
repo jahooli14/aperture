@@ -101,8 +101,73 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
   const oldInsights = await getOldInsights(userId, 90) // 14-90 days old
   const capabilities = await getCapabilities(userId) // Capabilities for synesthetic metaphors
 
+  // 1b. Find article-project tensions for bedtime synthesis
+  let readingTension = ''
+  try {
+    const { data: unreadArticles } = await supabase
+      .from('reading_queue')
+      .select('id, title, embedding')
+      .eq('user_id', userId)
+      .eq('status', 'unread')
+      .not('embedding', 'is', null)
+      .limit(10)
+
+    const { data: activeProjectsForTension } = await supabase
+      .from('projects')
+      .select('id, title, embedding')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .not('embedding', 'is', null)
+      .limit(5)
+
+    if (unreadArticles?.length && activeProjectsForTension?.length) {
+      const { cosineSimilarity } = await import('./gemini-embeddings.js')
+      let bestTension = { sim: 0, article: '', project: '' }
+
+      for (const a of unreadArticles) {
+        for (const p of activeProjectsForTension) {
+          if (a.embedding && p.embedding) {
+            const sim = cosineSimilarity(a.embedding, p.embedding)
+            if (sim > bestTension.sim && sim > 0.55) {
+              bestTension = { sim, article: a.title || '', project: p.title || '' }
+            }
+          }
+        }
+      }
+
+      if (bestTension.article) {
+        readingTension = `\n\nREADING TENSION: The article "${bestTension.article}" connects to the project "${bestTension.project}" (${Math.round(bestTension.sim * 100)}% similarity). Consider generating a prompt that asks: "Tonight, sit with the tension between what this article argues and your approach in the project."`
+      }
+    }
+  } catch (e) {
+    // Non-critical
+  }
+
   // 2. Get past prompt performance for personalization
   const performance = await getPromptPerformance(userId)
+
+  // Learn from past breakthroughs
+  const { data: breakthroughs } = await supabase
+    .from('bedtime_prompts')
+    .select('prompt_type, prompt, response')
+    .eq('user_id', userId)
+    .eq('resulted_in_breakthrough', true)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  const breakthroughContext = breakthroughs && breakthroughs.length > 0
+    ? `\n\nPREVIOUS BREAKTHROUGHS (prompts that led to insights):\n${breakthroughs.map(b => `- Type: ${b.prompt_type}, Prompt: "${b.prompt?.substring(0, 100)}"`).join('\n')}\nGenerate more prompts in the style and format that produced these breakthroughs.`
+    : ''
+
+  // Fetch prompt type effectiveness scores
+  const { data: typeScores } = await supabase
+    .from('prompt_type_scores')
+    .select('prompt_type, score')
+    .eq('user_id', userId)
+
+  const typeDistribution = typeScores && typeScores.length > 0
+    ? typeScores.reduce((acc, t) => { acc[t.prompt_type] = t.score; return acc }, {} as Record<string, number>)
+    : { connection: 0.25, divergent: 0.25, revisit: 0.25, transform: 0.25 }
 
   // 3. Analyze gaps
   const hasRichInput = recentArticles.length > 0 || recentMemories.length > 5
@@ -118,7 +183,9 @@ export async function generateBedtimePrompts(userId: string): Promise<BedtimePro
     oldInsights,
     capabilities,
     { hasRichInput, hasBlockedProjects, hasNoProjects },
-    performance
+    performance,
+    breakthroughContext + readingTension,
+    typeDistribution
   )
 
   // 5. Store prompts for later viewing
@@ -316,7 +383,9 @@ async function generatePromptsWithAI(
     hasBlockedProjects: boolean
     hasNoProjects: boolean
   },
-  performance?: any
+  performance?: any,
+  breakthroughContext?: string,
+  typeDistribution?: Record<string, number>
 ): Promise<BedtimePrompt[]> {
       const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
@@ -394,6 +463,11 @@ Select strategies based on the inputs to generate 3-4 prompts.
 - Keep prompts clear, conversational, and grounded.
 - **Metaphor**: Provide a simple, concrete visual metaphor (optional).
 - **Type**: Must be one of: 'connection', 'divergent', 'revisit', 'transform'.
+
+Prompt type distribution preference (higher = generate more of this type):
+${Object.entries(typeDistribution || { connection: 0.25, divergent: 0.25, revisit: 0.25, transform: 0.25 }).map(([type, score]) => `- ${type}: ${(score * 100).toFixed(0)}%`).join('\n')}
+Respect these proportions when choosing prompt types. Minimum 1 of each type if generating 4+ prompts.
+${breakthroughContext || ''}
 
 Return JSON array:
 [

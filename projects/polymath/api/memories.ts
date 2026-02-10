@@ -151,10 +151,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await handleUpdate(memoryId as string, req, res, supabase)
     }
 
+    // GET: Similar memory search (by memory ID)
+    if (req.method === 'GET' && req.query.similar) {
+      return await handleSimilarSearch(req.query.similar as string, supabase, userId, res)
+    }
+
     // GET: Search (merged from search.ts)
     if (req.method === 'GET' && q) {
       const context = req.query.context as string | undefined
-      return await handleSearch(q as string, supabase, userId, res, context)
+      const semantic = req.query.semantic === 'true'
+      return await handleSearch(q as string, supabase, userId, res, context, semantic)
     }
 
     // GET: Memory prompts
@@ -1048,10 +1054,105 @@ async function handleSubmitResponse(req: VercelRequest, res: VercelResponse, sup
 }
 
 /**
+ * Handle "find similar" search - given a memory ID, find semantically similar items
+ */
+async function handleSimilarSearch(memoryId: string, supabase: any, userId: string, res: VercelResponse) {
+  try {
+    // Fetch the source memory's embedding
+    const { data: source, error: sourceError } = await supabase
+      .from('memories')
+      .select('id, title, embedding')
+      .eq('id', memoryId)
+      .single()
+
+    if (sourceError || !source) {
+      return res.status(404).json({ error: 'Memory not found' })
+    }
+
+    if (!source.embedding) {
+      return res.status(200).json({
+        source_title: source.title,
+        results: [],
+        message: 'This memory has no embedding yet. It may still be processing.'
+      })
+    }
+
+    const embeddingStr = `[${(Array.isArray(source.embedding) ? source.embedding : JSON.parse(source.embedding)).join(',')}]`
+
+    // Vector search using RPC functions
+    const [memoriesRpc, projectsRpc, articlesRpc] = await Promise.all([
+      supabase.rpc('match_memories', {
+        query_embedding: embeddingStr,
+        filter_user_id: userId || null,
+        match_threshold: 0.4,
+        match_count: 20
+      }),
+      supabase.rpc('match_projects', {
+        query_embedding: embeddingStr,
+        filter_user_id: userId || null,
+        match_threshold: 0.4,
+        match_count: 10
+      }),
+      supabase.rpc('match_reading', {
+        query_embedding: embeddingStr,
+        filter_user_id: userId || null,
+        match_threshold: 0.4,
+        match_count: 10
+      })
+    ])
+
+    const results: SearchResult[] = [
+      ...(memoriesRpc.data || [])
+        .filter((m: any) => m.id !== source.id)
+        .map((m: any) => ({
+          type: 'memory' as const,
+          id: m.id,
+          title: m.title,
+          body: m.body,
+          score: m.similarity * 100,
+          created_at: m.created_at || '',
+        })),
+      ...(projectsRpc.data || []).map((p: any) => ({
+        type: 'project' as const,
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        score: p.similarity * 100,
+        created_at: p.created_at || '',
+      })),
+      ...(articlesRpc.data || []).map((a: any) => ({
+        type: 'article' as const,
+        id: a.id,
+        title: a.title || 'Untitled',
+        body: a.excerpt,
+        url: a.url,
+        score: a.similarity * 100,
+        created_at: a.created_at || '',
+      }))
+    ].sort((a, b) => b.score - a.score)
+
+    return res.status(200).json({
+      source_title: source.title,
+      results,
+      total: results.length,
+      breakdown: {
+        memories: (memoriesRpc.data || []).filter((m: any) => m.id !== source.id).length,
+        projects: (projectsRpc.data || []).length,
+        articles: (articlesRpc.data || []).length
+      }
+    })
+
+  } catch (error) {
+    console.error('[handleSimilarSearch] Error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+/**
  * Universal search handler (merged from search.ts)
  * Searches across memories, projects, and articles
  */
-async function handleSearch(query: string, supabase: any, userId: string, res: VercelResponse, context?: string) {
+async function handleSearch(query: string, supabase: any, userId: string, res: VercelResponse, context?: string, semantic?: boolean) {
   try {
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query parameter "q" is required' })
@@ -1063,17 +1164,92 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
       return res.status(400).json({ error: 'Query must be at least 2 characters' })
     }
 
-    // Generate embedding if context is provided
+    // Generate embedding if context is provided OR semantic mode is enabled
     let embedding: number[] | undefined
     if (context) {
       try {
         embedding = await generateEmbedding(context)
       } catch (e) {
-        console.error('[handleSearch] Failed to generate embedding:', e)
+        console.error('[handleSearch] Failed to generate embedding from context:', e)
+      }
+    } else if (semantic) {
+      try {
+        embedding = await generateEmbedding(query)
+      } catch (e) {
+        console.error('[handleSearch] Failed to generate embedding for semantic search:', e)
       }
     }
 
-    // Search across all content types in parallel
+    // If semantic mode with embedding, use vector search via RPC functions
+    if (semantic && embedding) {
+      const embeddingStr = `[${embedding.join(',')}]`
+
+      const [memoriesRpc, projectsRpc, articlesRpc] = await Promise.all([
+        supabase.rpc('match_memories', {
+          query_embedding: embeddingStr,
+          filter_user_id: userId || null,
+          match_threshold: 0.3,
+          match_count: 20
+        }),
+        supabase.rpc('match_projects', {
+          query_embedding: embeddingStr,
+          filter_user_id: userId || null,
+          match_threshold: 0.3,
+          match_count: 20
+        }),
+        supabase.rpc('match_reading', {
+          query_embedding: embeddingStr,
+          filter_user_id: userId || null,
+          match_threshold: 0.3,
+          match_count: 20
+        })
+      ])
+
+      const memoriesResults: SearchResult[] = (memoriesRpc.data || []).map((m: any) => ({
+        type: 'memory',
+        id: m.id,
+        title: m.title,
+        body: m.body,
+        score: m.similarity * 100,
+        created_at: m.created_at || '',
+      }))
+
+      const projectsResults: SearchResult[] = (projectsRpc.data || []).map((p: any) => ({
+        type: 'project',
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        score: p.similarity * 100,
+        created_at: p.created_at || '',
+      }))
+
+      const articlesResults: SearchResult[] = (articlesRpc.data || []).map((a: any) => ({
+        type: 'article',
+        id: a.id,
+        title: a.title || 'Untitled',
+        body: a.excerpt,
+        url: a.url,
+        score: a.similarity * 100,
+        created_at: a.created_at || '',
+      }))
+
+      const allResults = [...memoriesResults, ...projectsResults, ...articlesResults]
+        .sort((a, b) => b.score - a.score)
+
+      return res.status(200).json({
+        query: searchTerm,
+        semantic: true,
+        total: allResults.length,
+        results: allResults,
+        breakdown: {
+          memories: memoriesResults.length,
+          projects: projectsResults.length,
+          articles: articlesResults.length
+        }
+      })
+    }
+
+    // Fallback: text-based search (with optional embedding boost)
     const [memoriesResults, projectsResults, articlesResults] = await Promise.all([
       searchMemories(searchTerm, supabase, userId, embedding),
       searchProjects(searchTerm, supabase, userId, embedding),
@@ -1089,7 +1265,7 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
 
     return res.status(200).json({
       query: searchTerm,
-      context: !!context,
+      semantic: false,
       total: allResults.length,
       results: allResults,
       breakdown: {
@@ -1100,6 +1276,7 @@ async function handleSearch(query: string, supabase: any, userId: string, res: V
     })
 
   } catch (error) {
+    console.error('[handleSearch] Error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

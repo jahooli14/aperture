@@ -158,7 +158,9 @@ async function generateSuggestionsBatch(
   capabilities: Capability[],
   interests: Interest[],
   count: number,
-  previousSuggestions: string[] = []
+  previousSuggestions: string[] = [],
+  pairWeightsSection: string = '',
+  modeSection: string = ''
 ): Promise<any[]> {
   const capabilityList = capabilities.slice(0, 15).map(c => `- [${c.id}] ${c.name}: ${c.description}`).join('\n')
   const interestList = interests.slice(0, 15).map(i => `- ${i.name} (${i.type})`).join('\n')
@@ -176,7 +178,7 @@ ${capabilityList}
 
 Interests & Themes:
 ${interestList}
-${avoidSection}
+${pairWeightsSection}${modeSection}${avoidSection}
 TASK:
 Create ${count} COMPLETELY NEW and unique project ideas.${previousSuggestions.length > 0 ? ' Do NOT repeat or closely resemble any ideas from the AVOID list above.' : ''}
 For each idea, assign 1-3 relevant capabilities from the list above. USE THE EXACT UUIDs PROVIDED in brackets (e.g., "550e8400-e29b-41d4-a716-446655440000").
@@ -281,14 +283,46 @@ async function filterAndScoreSuggestions(
   return finalSuggestions
 }
 
-export async function runSynthesis(userId: string) {
-  logger.info({ userId }, 'Starting Optimized Synthesis')
+const modeConstraints: Record<string, string> = {
+  'one-skill': 'Each idea must use EXACTLY ONE capability. No combinations.',
+  'quick': 'Every idea must be completable in 30 minutes or less. No setup-heavy tasks.',
+  'stretch': 'Each idea must combine the users WEAKEST skill with their STRONGEST. Push boundaries.',
+  'analog': 'No screens, no code, no digital tools. Physical, analog projects only.',
+  'opposite': 'Generate ideas that CONTRADICT the users recent patterns. Surprise them.'
+}
+
+export async function runSynthesis(userId: string, mode?: string) {
+  logger.info({ userId, mode }, 'Starting Optimized Synthesis')
   const { interests, capabilities } = await loadSynthesisContext(userId)
 
   if (capabilities.length === 0 && interests.length === 0) {
     logger.warn('No data for synthesis')
     return []
   }
+
+  // Fetch capability pair weights for personalization
+  let pairWeightsSection = ''
+  try {
+    const { data: pairWeights } = await supabase
+      .from('capability_pair_scores')
+      .select('capability_a, capability_b, weight')
+      .eq('user_id', userId)
+      .gt('weight', 0.1)
+      .order('weight', { ascending: false })
+      .limit(10)
+
+    if (pairWeights && pairWeights.length > 0) {
+      pairWeightsSection = `\nThe user particularly enjoys combinations of these capabilities (higher weight = stronger preference):\n${pairWeights.map((p: any) => `- ${p.capability_a} + ${p.capability_b} (weight: ${p.weight.toFixed(2)})`).join('\n')}\nPrioritize ideas that leverage these preferred combinations.\n`
+      logger.info({ count: pairWeights.length }, 'Loaded capability pair weights for personalization')
+    }
+  } catch (pairError) {
+    logger.warn({ error: pairError }, 'Failed to fetch pair weights (non-fatal)')
+  }
+
+  // Build mode constraint section
+  const modeSection = mode && modeConstraints[mode]
+    ? `\nCONSTRAINT MODE: ${modeConstraints[mode]}\n`
+    : ''
 
   // Fetch recent suggestions to avoid repetition (last 50 titles)
   const { data: recentSuggestions } = await supabase
@@ -301,7 +335,7 @@ export async function runSynthesis(userId: string) {
   const previousTitles = (recentSuggestions || []).map(s => s.title)
   logger.info({ count: previousTitles.length }, 'Loaded previous suggestions to avoid')
 
-  const rawIdeas = await generateSuggestionsBatch(capabilities, interests, CONFIG.SUGGESTIONS_PER_RUN, previousTitles)
+  const rawIdeas = await generateSuggestionsBatch(capabilities, interests, CONFIG.SUGGESTIONS_PER_RUN, previousTitles, pairWeightsSection, modeSection)
   const suggestions = await filterAndScoreSuggestions(rawIdeas, userId, interests, capabilities)
 
   if (suggestions.length > 0) {

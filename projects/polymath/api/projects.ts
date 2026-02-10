@@ -378,6 +378,31 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // CAPABILITY PAIRS RESOURCE - Fetch learned pair weights
+  if (resource === 'capability-pairs') {
+    if (req.method === 'GET') {
+      try {
+        const { data, error } = await supabase
+          .from('capability_pair_scores')
+          .select('capability_a, capability_b, weight')
+          .eq('user_id', userId)
+          .order('weight', { ascending: false })
+          .limit(10)
+
+        if (error) {
+          console.error('[capability-pairs] Query error:', error)
+          return res.json({ pairs: [] })
+        }
+
+        return res.json({ pairs: data || [] })
+      } catch (error) {
+        console.error('[capability-pairs] Error:', error)
+        return res.json({ pairs: [] })
+      }
+    }
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   // SUGGESTIONS RESOURCE (merged from suggestions.ts)
   if (resource === 'suggestions') {
     const action = req.query.action as string
@@ -425,6 +450,26 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
 
     // GET - Fetch today's prompts (or latest)
     if (req.method === 'GET') {
+      // GET last breakthrough prompt (for morning follow-up)
+      if (action === 'last-breakthrough') {
+        try {
+          const { data } = await supabase
+            .from('bedtime_prompts')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('resulted_in_breakthrough', true)
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          return res.json({ prompt: data || null })
+        } catch (error) {
+          console.error('[bedtime] last-breakthrough error:', error)
+          return res.json({ prompt: null })
+        }
+      }
+
       return handleGetBedtimePrompts(req, res, supabase, userId)
     }
 
@@ -434,6 +479,72 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       if (action === 'catalyst') {
         return handleGenerateCatalystPrompts(req, res, supabase, userId)
       }
+
+      // Morning follow-up: link response to bedtime prompt
+      if (action === 'follow-up') {
+        try {
+          const { id } = req.query
+          const { response } = req.body
+
+          // Create memory from follow-up
+          const { data: memory } = await supabase.from('memories').insert({
+            user_id: userId,
+            title: 'Morning insight',
+            body: response,
+            audiopen_id: `morning_${Date.now()}`,
+            tags: ['morning-followup', 'bedtime-synthesis'],
+            memory_type: 'insight',
+            audiopen_created_at: new Date().toISOString(),
+            processed: false
+          }).select().single()
+
+          // Link memory to the bedtime prompt
+          if (memory && id) {
+            await supabase.from('bedtime_prompts').update({
+              follow_up_memory_ids: [memory.id]
+            }).eq('id', id)
+          }
+
+          return res.json({ success: true, memory })
+        } catch (error) {
+          console.error('[bedtime] follow-up error:', error)
+          return res.status(500).json({ error: 'Failed to save follow-up' })
+        }
+      }
+
+      // Update prompt type scoring
+      if (action === 'update-type-score') {
+        try {
+          const { prompt_type, is_breakthrough } = req.body
+
+          // Upsert the type score
+          const { data: existing } = await supabase
+            .from('prompt_type_scores')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('prompt_type', prompt_type)
+            .single()
+
+          const shownCount = (existing?.shown_count || 0) + 1
+          const breakthroughCount = (existing?.breakthrough_count || 0) + (is_breakthrough ? 1 : 0)
+          const score = Math.max(0.1, breakthroughCount / Math.max(shownCount, 1))
+
+          await supabase.from('prompt_type_scores').upsert({
+            user_id: userId,
+            prompt_type,
+            shown_count: shownCount,
+            breakthrough_count: breakthroughCount,
+            score,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,prompt_type' })
+
+          return res.json({ success: true })
+        } catch (error) {
+          console.error('[bedtime] update-type-score error:', error)
+          return res.status(500).json({ error: 'Failed to update type score' })
+        }
+      }
+
       // Standard bedtime prompts
       return handleGenerateBedtimePrompts(req, res, supabase, userId)
     }
@@ -1163,6 +1274,47 @@ async function handleRateSuggestion(req: VercelRequest, res: VercelResponse, id:
     } catch (learningError) {
       console.error('[rate] Learning error (non-fatal):', learningError)
       // Don't fail the request if learning fails
+    }
+
+    // Track capability pair scores for learning
+    try {
+      const capIds: string[] = suggestion.capability_ids || []
+      if (capIds.length >= 2) {
+        console.log('[rate] Tracking capability pair scores for', capIds.length, 'capabilities')
+        for (let i = 0; i < capIds.length; i++) {
+          for (let j = i + 1; j < capIds.length; j++) {
+            const [capA, capB] = [capIds[i], capIds[j]].sort()
+            // Fetch current scores
+            const { data: existing } = await supabase
+              .from('capability_pair_scores')
+              .select('*')
+              .eq('user_id', userId)
+              .eq('capability_a', capA)
+              .eq('capability_b', capB)
+              .single()
+
+            const sparkCount = (existing?.spark_count || 0) + (rating === 1 ? 1 : 0)
+            const mehCount = (existing?.meh_count || 0) + (rating === -1 ? 1 : 0)
+            const builtCount = (existing?.built_count || 0) + (rating === 2 ? 1 : 0)
+            const weight = (sparkCount - mehCount) * 0.05 + builtCount * 0.15
+
+            await supabase.from('capability_pair_scores').upsert({
+              user_id: userId,
+              capability_a: capA,
+              capability_b: capB,
+              spark_count: sparkCount,
+              meh_count: mehCount,
+              built_count: builtCount,
+              weight,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,capability_a,capability_b' })
+          }
+        }
+        console.log('[rate] Capability pair scores updated')
+      }
+    } catch (pairError) {
+      console.error('[rate] Pair tracking error (non-fatal):', pairError)
+      // Don't fail the request if pair tracking fails
     }
 
     console.log('[rate] Successfully rated suggestion')

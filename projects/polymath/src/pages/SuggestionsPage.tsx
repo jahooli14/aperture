@@ -11,15 +11,20 @@ import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
 import { SkeletonCard } from '../components/ui/skeleton-card'
 import { EmptyState } from '../components/ui/empty-state'
-import { 
-  Database, 
+import {
+  Database,
   Brain,
-  X, 
+  X,
   Plus,
-  Clock, 
-  Zap, 
-  ChevronRight, 
-  ChevronLeft
+  Clock,
+  Zap,
+  ChevronRight,
+  ChevronLeft,
+  Sparkles,
+  Target,
+  Pen,
+  RefreshCw,
+  Shuffle
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../components/ui/toast'
@@ -46,6 +51,8 @@ export function SuggestionsPage() {
   const [buildDialogOpen, setBuildDialogOpen] = useState(false)
   const [progress, setProgress] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [synthesisMode, setSynthesisMode] = useState<string>('default')
+  const [learnedPairs, setLearnedPairs] = useState<Array<{capability_a: string, capability_b: string, weight: number}>>([])
 
   const navigate = useNavigate()
   const { addToast } = useToast()
@@ -81,6 +88,13 @@ export function SuggestionsPage() {
   useEffect(() => {
     fetchSuggestions()
   }, [fetchSuggestions])
+
+  useEffect(() => {
+    fetch('/api/projects?resource=capability-pairs')
+      .then(r => r.ok ? r.json() : { pairs: [] })
+      .then(d => setLearnedPairs((d.pairs || []).filter((p: any) => p.weight > 0.1)))
+      .catch(() => {})
+  }, [])
 
   const handleAction = (type: 'no' | 'later' | 'yes') => {
     if (type === 'yes') {
@@ -158,7 +172,7 @@ export function SuggestionsPage() {
         })
       }, 500)
 
-      await triggerSynthesis()
+      await triggerSynthesis(synthesisMode)
 
       if (progressInterval.current) clearInterval(progressInterval.current)
       setProgress(100)
@@ -213,6 +227,45 @@ export function SuggestionsPage() {
             {synthesizing ? <Zap className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
             {synthesizing ? 'Synthesizing...' : 'Generate New'}
           </button>
+        </div>
+
+        {/* Learning indicator */}
+        {learnedPairs.length > 0 && (
+          <div className="mb-4 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium mb-1">
+              <Sparkles className="w-4 h-4" />
+              <span>Your engine is learning</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              Based on {learnedPairs.length} preference{learnedPairs.length > 1 ? 's' : ''} detected —
+              you tend to prefer {learnedPairs[0].capability_a} + {learnedPairs[0].capability_b} combinations
+            </p>
+          </div>
+        )}
+
+        {/* Constraint mode selector */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            { id: 'default', label: 'Open', icon: Shuffle },
+            { id: 'one-skill', label: 'One Skill', icon: Target },
+            { id: 'quick', label: '30 Min', icon: Clock },
+            { id: 'stretch', label: 'Stretch', icon: Zap },
+            { id: 'analog', label: 'No Screen', icon: Pen },
+            { id: 'opposite', label: 'Opposite', icon: RefreshCw },
+          ].map(mode => (
+            <button
+              key={mode.id}
+              onClick={() => setSynthesisMode(mode.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                synthesisMode === mode.id
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              <mode.icon className="w-3 h-3" />
+              {mode.label}
+            </button>
+          ))}
         </div>
 
         {/* Progress bar for synthesis */}

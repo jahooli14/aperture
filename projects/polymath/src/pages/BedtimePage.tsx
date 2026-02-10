@@ -194,6 +194,18 @@ export function BedtimePage() {
         })
       })
 
+      // Update prompt type scoring
+      if (prompt?.type) {
+        fetch('/api/projects?resource=bedtime&action=update-type-score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt_type: prompt.type,
+            is_breakthrough: !prompt.resulted_in_breakthrough // toggling
+          })
+        }).catch(console.warn)
+      }
+
       if (newValue) {
         addToast({
           title: '⚡ Breakthrough!',

@@ -42,7 +42,7 @@ interface SuggestionState {
     type?: 'hobby' | 'side-project' | 'learning'
   }) => Promise<any>
   clearSuggestions: () => Promise<void>
-  triggerSynthesis: () => Promise<void>
+  triggerSynthesis: (mode?: string) => Promise<void>
   setFilter: (filter: SuggestionState['filter']) => void
   setSortBy: (sortBy: SuggestionState['sortBy']) => void
 }
@@ -169,11 +169,12 @@ export const useSuggestionStore = create<SuggestionState>((set, get) => ({
     }
   },
 
-  triggerSynthesis: async () => {
+  triggerSynthesis: async (mode?: string) => {
     set({ synthesizing: true, error: null })
 
     try {
-      const response = await fetch(`${API_BASE}/cron/jobs?job=synthesis`, {
+      const modeParam = mode && mode !== 'default' ? `&mode=${mode}` : ''
+      const response = await fetch(`${API_BASE}/cron/jobs?job=synthesis${modeParam}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
