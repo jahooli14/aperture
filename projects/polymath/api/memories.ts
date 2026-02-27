@@ -295,44 +295,43 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
   const isManualEntry = !!providedTitle
 
   // Helper function to check if title is too similar to original text (verbatim)
+  // Only rejects titles that are a literal substring of the transcript's opening words
   const isVerbatimTitle = (title: string, originalText: string): boolean => {
     const normalizeText = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim()
     const normalizedTitle = normalizeText(title)
     const normalizedOriginal = normalizeText(originalText)
 
-    // Check if title is just the first N words of the original
-    const firstWords = normalizedOriginal.split(/\s+/).slice(0, 15).join(' ')
-    const titleWords = normalizedTitle.split(/\s+/).join(' ')
+    // Check if title literally appears in sequence at the start of the transcript
+    // e.g. title "I was just thinking about" inside "i was just thinking about snakes..."
+    const firstWords = normalizedOriginal.split(/\s+/).slice(0, 20).join(' ')
+    const titleAsString = normalizedTitle.split(/\s+/).join(' ')
 
-    // If 80% or more of the title words appear in sequence at the start, it's verbatim
-    if (firstWords.includes(titleWords) && titleWords.length > 10) {
+    if (firstWords.includes(titleAsString) && titleAsString.length > 12) {
       return true
     }
 
-    // Check for high word overlap (>70% of words are same)
-    const titleWordSet = new Set(normalizedTitle.split(/\s+/))
-    const originalWordSet = new Set(normalizedOriginal.split(/\s+/).slice(0, 15))
-    const overlap = [...titleWordSet].filter(w => originalWordSet.has(w)).length
-    const overlapRatio = overlap / titleWordSet.size
-
-    return overlapRatio > 0.7
+    return false
   }
 
-  // Smart fallback function that creates a readable title without "..."
+  // Fallback title when Gemini fails entirely - avoids first words
   const createFallbackTitle = (text: string): string => {
-    // Try to extract key noun phrases or create a simple summary
-    const words = text.split(/\s+/)
-    if (words.length <= 8) {
-      return text.trim()
+    const words = text.split(/\s+/).filter(w => w.length > 0)
+    if (words.length <= 6) return text.trim()
+
+    // Try the last sentence - voice notes often end with the key point
+    const sentences = text.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 10)
+    if (sentences.length > 1) {
+      const lastSentence = sentences[sentences.length - 1]
+      const lastWords = lastSentence.split(/\s+/)
+      if (lastWords.length >= 3 && lastWords.length <= 10) {
+        return lastSentence
+      }
     }
-    // Take first sentence or first 8 meaningful words
-    const firstSentence = text.split(/[.!?]/)[0].trim()
-    const sentenceWords = firstSentence.split(/\s+/)
-    if (sentenceWords.length <= 10) {
-      return firstSentence
-    }
-    // Take first 8 words with no ellipsis
-    return sentenceWords.slice(0, 8).join(' ')
+
+    // Take words from the middle third of the text (avoids first-word problem)
+    const midStart = Math.floor(words.length * 0.3)
+    const midEnd = Math.min(midStart + 7, words.length)
+    return words.slice(midStart, midEnd).join(' ')
   }
 
   // Only run AI title parsing for voice captures (not manual entries with provided title)
@@ -513,44 +512,23 @@ Remember: BE CREATIVE. SUMMARIZE. DO NOT COPY THE BEGINNING OF THE TEXT.`
       throw insertError
     }
 
-    console.log(`[handleCapture] Memory created, total time: ${Date.now() - startTime}ms`)
+    console.log(`[handleCapture] Memory created in ${Date.now() - startTime}ms, returning immediately`)
 
-    // Process memory synchronously to ensure reliable completion
-    console.log(`[handleCapture] Starting AI processing for memory ${memory.id}`)
+    // Return the memory immediately so the client can display it without waiting
+    // AI processing (tags, summary, linking, embeddings) runs in the background
+    // and is picked up by the cron job if it doesn't complete here
+    res.status(201).json({
+      success: true,
+      memory,
+      message: 'Voice note saved!'
+    })
 
-    try {
-      // Process memory immediately (tags, summary, linking, etc.)
-      // Awaiting ensures processing completes reliably before response
-      console.log(`[handleCapture] 🔄 Processing memory ${memory.id}...`)
-      await processMemory(memory.id)
-
-      // Fetch the fully processed memory
-      const { data: processedMemory, error: fetchError } = await supabase
-        .from('memories')
-        .select('*')
-        .eq('id', memory.id)
-        .single()
-
-      if (fetchError) {
-        console.error(`[handleCapture] Failed to fetch processed memory:`, fetchError)
-      }
-
-      console.log(`[handleCapture] ✅ Memory processed successfully, total time: ${Date.now() - startTime}ms`)
-      return res.status(201).json({
-        success: true,
-        memory: processedMemory || memory,
-        message: 'Voice note saved and processed successfully!'
-      })
-    } catch (processingError) {
-      // Processing failed - return memory anyway, cron will retry
-      console.error(`[handleCapture] 🚨 Processing failed for ${memory.id}:`, processingError)
-      return res.status(201).json({
-        success: true,
-        memory,
-        message: 'Voice note saved! Processing will complete shortly.',
-        warning: 'Initial processing failed, will retry automatically'
-      })
-    }
+    // Non-blocking: kick off processing after response is sent
+    // In Vercel Node.js runtime the function continues running after res.json()
+    // The cron will retry any memories that aren't processed
+    processMemory(memory.id)
+      .then(() => console.log(`[handleCapture] ✅ Background processing complete for ${memory.id}`))
+      .catch(err => console.error(`[handleCapture] Background processing failed for ${memory.id}:`, err))
 
   } catch (error) {
     console.error('[handleCapture] Error:', error)
