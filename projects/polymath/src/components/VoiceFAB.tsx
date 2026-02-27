@@ -168,10 +168,6 @@ export function VoiceFAB({
   const onStart = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
 
-    // Capture pointer so pointermove/pointerup fire even when finger slides off the button
-    // This is automatic for touch but needed explicitly for mouse
-    try { e.currentTarget.setPointerCapture(e.pointerId) } catch (_) { /* ignore */ }
-
     isLongPressRef.current = false
     pressStartTimeRef.current = Date.now()
 
