@@ -1,13 +1,13 @@
 /**
  * Universal Action FAB
  *
- * TAP  → Opens creation menu (Thought / Project / Article / List)
- * HOLD → Radial fan appears with 3 quick options:
- *          • Keep finger on FAB  → Voice Note (default, pulsing mic)
- *          • Slide up            → Quick Thought (text)
- *          • Slide up-left       → New Project
- *          • Slide left          → Save Article
- *        Release to execute the highlighted option.
+ * TAP   → Voice capture modal (auto-starts recording)
+ * HOLD  → Slide-up option strip appears above FAB:
+ *            Slide up slightly  → Thought
+ *            Slide up more      → Project
+ *            Slide up furthest  → Article
+ *         Release over an option to open it.
+ *         Release back on the FAB (no slide) → dismisses, no action.
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react'
@@ -34,46 +34,66 @@ interface VoiceFABProps {
 
 const LONG_PRESS_DELAY = 400 // ms
 
-// Options that appear in the fan
-const FAN_OPTIONS = [
+// FAB position in px (matches Tailwind bottom-28 right-6 on mobile)
+const FAB_BOTTOM = 112
+const FAB_RIGHT = 24
+const FAB_SIZE = 56
+
+// Option strip: pills stacked directly above the FAB, right-aligned
+// Each pill: 44px tall, 12px gap between them
+const PILL_H = 44
+const PILL_GAP = 10
+
+const STRIP_OPTIONS = [
   {
     id: 'thought' as const,
     label: 'Thought',
     icon: Brain,
-    // Position offset from FAB center (negative = up/left on screen)
-    // FAB is bottom-right, so options fan up and to the left
-    offsetX: -4,   // slight left
-    offsetY: -90,  // directly above
-    glowColor: 'rgba(139, 92, 246, 0.6)',
-    bg: 'rgba(139, 92, 246, 0.25)',
+    color: 'rgba(139, 92, 246, 0.3)',
+    activeColor: 'rgba(139, 92, 246, 0.55)',
     border: 'rgba(139, 92, 246, 0.5)',
-    activeBg: 'rgba(139, 92, 246, 0.5)',
+    glow: 'rgba(139, 92, 246, 0.5)',
+    // Distance of this pill's CENTER from FAB center (upward)
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + PILL_H / 2,          // ~62px
   },
   {
     id: 'project' as const,
     label: 'Project',
     icon: Layers,
-    offsetX: -76,  // left
-    offsetY: -76,  // and up
-    glowColor: 'rgba(59, 130, 246, 0.6)',
-    bg: 'rgba(59, 130, 246, 0.25)',
+    color: 'rgba(59, 130, 246, 0.3)',
+    activeColor: 'rgba(59, 130, 246, 0.55)',
     border: 'rgba(59, 130, 246, 0.5)',
-    activeBg: 'rgba(59, 130, 246, 0.5)',
+    glow: 'rgba(59, 130, 246, 0.5)',
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + PILL_H + PILL_GAP + PILL_H / 2, // ~118px
   },
   {
     id: 'article' as const,
     label: 'Article',
     icon: BookmarkPlus,
-    offsetX: -96,  // further left
-    offsetY: -4,   // same height as FAB
-    glowColor: 'rgba(16, 185, 129, 0.6)',
-    bg: 'rgba(16, 185, 129, 0.25)',
+    color: 'rgba(16, 185, 129, 0.3)',
+    activeColor: 'rgba(16, 185, 129, 0.55)',
     border: 'rgba(16, 185, 129, 0.5)',
-    activeBg: 'rgba(16, 185, 129, 0.5)',
+    glow: 'rgba(16, 185, 129, 0.5)',
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 2 + PILL_H / 2, // ~174px
   },
 ] as const
 
-type FanOptionId = typeof FAN_OPTIONS[number]['id']
+type StripOptionId = typeof STRIP_OPTIONS[number]['id']
+
+// Y-offset thresholds: how far above the FAB center the finger must be
+// to activate each option. Half-way between adjacent pill centers.
+const THOUGHT_THRESHOLD = (STRIP_OPTIONS[0].centerOffsetUp + STRIP_OPTIONS[1].centerOffsetUp) / 2  // ~90px
+const PROJECT_THRESHOLD = (STRIP_OPTIONS[1].centerOffsetUp + STRIP_OPTIONS[2].centerOffsetUp) / 2  // ~146px
+const MIN_SLIDE = 20 // px above FAB center before any option activates
+
+function getOptionForDy(dy: number): StripOptionId | null {
+  // dy is negative when finger is above FAB center
+  const upward = -dy
+  if (upward < MIN_SLIDE) return null
+  if (upward < THOUGHT_THRESHOLD) return 'thought'
+  if (upward < PROJECT_THRESHOLD) return 'project'
+  return 'article'
+}
 
 export function VoiceFAB({
   onTranscript,
@@ -88,26 +108,20 @@ export function VoiceFAB({
   const [showArticleDialog, setShowArticleDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
 
-  // Fan menu state
-  const [isFanOpen, setIsFanOpen] = useState(false)
-  const [activeOption, setActiveOption] = useState<FanOptionId | null>(null)
+  const [isStripOpen, setIsStripOpen] = useState(false)
+  const [activeOption, setActiveOption] = useState<StripOptionId | null>(null)
 
   const { isOnline } = useOnlineStatus()
 
-  // Timing refs
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pressStartTimeRef = useRef<number>(0)
   const isLongPressRef = useRef<boolean>(false)
 
-  // Sync refs (so event handlers always see current values without re-memoizing)
-  const isFanOpenRef = useRef(false)
-  const activeOptionRef = useRef<FanOptionId | null>(null)
-
-  // DOM refs for fan option hit detection
+  // Refs so event handlers always read fresh values without closure staleness
+  const isStripOpenRef = useRef(false)
+  const activeOptionRef = useRef<StripOptionId | null>(null)
   const fabRef = useRef<HTMLButtonElement>(null)
-  const optionRefsMap = useRef<Map<FanOptionId, HTMLElement>>(new Map())
 
-  // Global event to open voice capture from elsewhere
   useEffect(() => {
     const handleOpenVoiceCapture = () => {
       if (!hidden) {
@@ -124,268 +138,179 @@ export function VoiceFAB({
     setIsVoiceOpen(false)
   }
 
-  // --- Hit Detection ---
-
-  const detectOption = useCallback((clientX: number, clientY: number): FanOptionId | null => {
-    const HIT_PAD = 24 // Extra px around each option for easier targeting
-    for (const [id, el] of optionRefsMap.current.entries()) {
-      const rect = el.getBoundingClientRect()
-      if (
-        clientX >= rect.left - HIT_PAD &&
-        clientX <= rect.right + HIT_PAD &&
-        clientY >= rect.top - HIT_PAD &&
-        clientY <= rect.bottom + HIT_PAD
-      ) {
-        return id
-      }
-    }
-    return null
-  }, [])
-
-  // --- Fan Execute ---
-
-  const executeFan = useCallback((option: FanOptionId | null) => {
-    isFanOpenRef.current = false
+  const closeStrip = useCallback(() => {
+    isStripOpenRef.current = false
     activeOptionRef.current = null
-    setIsFanOpen(false)
+    setIsStripOpen(false)
     setActiveOption(null)
     isLongPressRef.current = false
-
-    if (option === 'thought') {
-      setShowThoughtDialog(true)
-    } else if (option === 'project') {
-      setShowProjectDialog(true)
-    } else if (option === 'article') {
-      setShowArticleDialog(true)
-    } else {
-      // Default: open voice capture
-      setIsVoiceOpen(true)
-    }
   }, [])
 
-  // --- Press Handlers ---
+  const executeOption = useCallback((option: StripOptionId | null) => {
+    closeStrip()
+    if (option === 'thought') setShowThoughtDialog(true)
+    else if (option === 'project') setShowProjectDialog(true)
+    else if (option === 'article') setShowArticleDialog(true)
+    // null = released on FAB with no slide — do nothing (prevents accidental recording)
+  }, [closeStrip])
+
+  // --- Press handlers ---
 
   const onStart = useCallback((e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
-
     isLongPressRef.current = false
     pressStartTimeRef.current = Date.now()
-
     if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
-
     pressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true
       haptic.medium()
-      isFanOpenRef.current = true
-      activeOptionRef.current = null
-      setIsFanOpen(true)
-      setActiveOption(null)
+      isStripOpenRef.current = true
+      setIsStripOpen(true)
     }, LONG_PRESS_DELAY)
   }, [])
 
   const onMove = useCallback((e: React.PointerEvent) => {
-    // Only track if fan is open (use ref to avoid stale closure)
-    if (!isFanOpenRef.current) return
-
-    const detected = detectOption(e.clientX, e.clientY)
-
+    if (!isStripOpenRef.current || !fabRef.current) return
+    const rect = fabRef.current.getBoundingClientRect()
+    const fabCenterY = rect.top + rect.height / 2
+    const dy = e.clientY - fabCenterY
+    const detected = getOptionForDy(dy)
     if (detected !== activeOptionRef.current) {
-      if (detected !== null) haptic.light() // Subtle haptic when sliding onto an option
+      if (detected !== null) haptic.light()
       activeOptionRef.current = detected
       setActiveOption(detected)
     }
-  }, [detectOption])
+  }, [])
 
   const onEnd = useCallback((_e: React.PointerEvent) => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
-
     const duration = Date.now() - pressStartTimeRef.current
 
-    if (isFanOpenRef.current) {
-      // Fan was open — execute whatever option is highlighted (null = voice)
+    if (isStripOpenRef.current) {
       haptic.light()
-      executeFan(activeOptionRef.current)
+      executeOption(activeOptionRef.current)
       return
     }
 
-    // Short press (no fan opened): open creation menu
+    // Short tap → voice capture
     if (duration < LONG_PRESS_DELAY && !isLongPressRef.current) {
       if (onTap) {
         const handled = onTap()
         if (handled) return
       }
       haptic.light()
-      setIsMenuOpen(true)
+      setIsVoiceOpen(true)
     }
 
     isLongPressRef.current = false
-  }, [onTap, executeFan])
+  }, [onTap, executeOption])
 
-  // pointerLeave fires when finger slides off the FAB — cancel pre-fan timer
-  // but DON'T close the fan if it's already open (user is sliding to an option)
   const onLeave = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
-    // Only cancel if the fan hasn't opened yet
-    if (!isFanOpenRef.current) {
+    if (!isStripOpenRef.current) {
       isLongPressRef.current = false
     }
   }, [])
 
-  // pointerCancel is a hard system interruption — close everything
   const onSystemCancel = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current)
       pressTimerRef.current = null
     }
-    if (isFanOpenRef.current) {
-      isFanOpenRef.current = false
-      activeOptionRef.current = null
-      setIsFanOpen(false)
-      setActiveOption(null)
-    }
-    isLongPressRef.current = false
-  }, [])
+    closeStrip()
+  }, [closeStrip])
 
-  // --- FAB Position (for option pill positioning) ---
-  // We compute option pill positions dynamically from the FAB's bounding rect
-  // so they work on any screen size. Options fan out above and to the left.
-  const getFabCenter = useCallback((): { x: number; y: number } | null => {
-    if (!fabRef.current) return null
-    const rect = fabRef.current.getBoundingClientRect()
-    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-  }, [])
+  // --- Pill positions (hardcoded, anchored to FAB's known location) ---
+  // All pills share the same right edge as the FAB.
+  // bottom values are distances from the screen bottom edge.
+  const pillRight = FAB_RIGHT  // 24px — same right edge as FAB
+  const pillBottoms = STRIP_OPTIONS.map((opt) =>
+    FAB_BOTTOM + FAB_SIZE / 2 + opt.centerOffsetUp - PILL_H / 2
+  )
+  // pillBottoms[0] = 112 + 28 + 62 - 22 = 180  (Thought)
+  // pillBottoms[1] = 112 + 28 + 118 - 22 = 236  (Project)
+  // pillBottoms[2] = 112 + 28 + 174 - 22 = 292  (Article)
 
-  // We use the FAB rect computed once when the fan opens, stored in a ref
-  const fabCenterRef = useRef<{ x: number; y: number } | null>(null)
+  // --- Render ---
 
-  useEffect(() => {
-    if (isFanOpen) {
-      fabCenterRef.current = getFabCenter()
-    }
-  }, [isFanOpen, getFabCenter])
-
-  // --- Fan Overlay ---
-
-  const fanOverlay = createPortal(
+  const stripOverlay = createPortal(
     <AnimatePresence>
-      {isFanOpen && (
+      {isStripOpen && (
         <>
-          {/* Semi-transparent backdrop — tapping it cancels the fan */}
+          {/* Backdrop */}
           <motion.div
-            key="fan-backdrop"
+            key="strip-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className="fixed inset-0 z-[24990]"
-            style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)' }}
-            onPointerDown={() => {
-              isFanOpenRef.current = false
-              activeOptionRef.current = null
-              setIsFanOpen(false)
-              setActiveOption(null)
-              isLongPressRef.current = false
-              if (pressTimerRef.current) clearTimeout(pressTimerRef.current)
-            }}
+            style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+            onPointerDown={closeStrip}
           />
 
-          {/* Option pills — pointer-events: none so swipe events stay on the FAB */}
-          {FAN_OPTIONS.map((opt, i) => {
+          {/* Option pills — pointer-events:none; touch stays on FAB */}
+          {STRIP_OPTIONS.map((opt, i) => {
             const isActive = activeOption === opt.id
-            const center = fabCenterRef.current
-
-            // Position the pill so its center is at FAB center + offset
-            // We anchor by right/bottom to match FAB's own positioning
-            const pillW = 120
-            const pillH = 44
-
-            // Convert center-offset to fixed right/bottom values
-            // right = window.innerWidth - (fabCenterX + opt.offsetX) - pillW/2
-            // bottom = window.innerHeight - (fabCenterY + opt.offsetY) - pillH/2
-            let rightPx = 12
-            let bottomPx = 180 + i * 72
-            if (center) {
-              rightPx = Math.max(8, window.innerWidth - (center.x + opt.offsetX) - pillW / 2)
-              bottomPx = Math.max(8, window.innerHeight - (center.y + opt.offsetY) - pillH / 2)
-            }
-
             return (
               <motion.div
                 key={opt.id}
-                ref={(el) => {
-                  if (el) optionRefsMap.current.set(opt.id, el)
-                  else optionRefsMap.current.delete(opt.id)
-                }}
-                initial={{ scale: 0.4, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.4, opacity: 0 }}
-                transition={{ type: 'spring', damping: 18, stiffness: 380, delay: i * 0.045 }}
+                initial={{ opacity: 0, x: 16, scale: 0.88 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 16, scale: 0.88 }}
+                transition={{ type: 'spring', damping: 22, stiffness: 420, delay: i * 0.04 }}
                 className="fixed z-[25000] flex items-center gap-2.5 rounded-2xl select-none"
                 style={{
-                  right: rightPx,
-                  bottom: bottomPx,
-                  width: pillW,
-                  height: pillH,
-                  padding: '0 14px',
-                  background: isActive ? opt.activeBg : opt.bg,
+                  right: pillRight,
+                  bottom: pillBottoms[i],
+                  height: PILL_H,
+                  minWidth: 130,
+                  padding: '0 16px',
+                  background: isActive ? opt.activeColor : opt.color,
                   border: `1px solid ${opt.border}`,
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
                   boxShadow: isActive
-                    ? `0 0 24px ${opt.glowColor}, 0 4px 20px rgba(0,0,0,0.4)`
-                    : '0 4px 16px rgba(0,0,0,0.35)',
-                  transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                    ? `0 0 20px ${opt.glow}, 0 4px 16px rgba(0,0,0,0.4)`
+                    : '0 2px 12px rgba(0,0,0,0.3)',
+                  transform: isActive ? 'scale(1.06)' : 'scale(1)',
                   transition: 'transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease',
-                  pointerEvents: 'none', // Touch events stay on FAB
+                  pointerEvents: 'none',
                 }}
               >
-                <opt.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-white/80')} />
-                <span className={cn('text-sm font-bold tracking-tight', isActive ? 'text-white' : 'text-white/80')}>
+                <opt.icon className={cn('h-4 w-4 shrink-0', isActive ? 'text-white' : 'text-white/75')} />
+                <span className={cn('text-sm font-bold tracking-tight', isActive ? 'text-white' : 'text-white/75')}>
                   {opt.label}
                 </span>
               </motion.div>
             )
           })}
 
-          {/* Voice label below/on the FAB when fan is open */}
-          <motion.div
-            key="voice-label"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ delay: 0.1 }}
-            className="fixed z-[24995] pointer-events-none"
-            style={{
-              // Position label just below the FAB
-              bottom: fabCenterRef.current
-                ? window.innerHeight - fabCenterRef.current.y - 44
-                : 70,
-              right: fabCenterRef.current
-                ? window.innerWidth - fabCenterRef.current.x - 44
-                : 4,
-              width: 88,
-              textAlign: 'center',
-            }}
+          {/* Hint label beneath the FAB */}
+          <motion.p
+            key="strip-hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 0.15 }}
+            className="fixed z-[24995] pointer-events-none text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/40"
+            style={{ bottom: FAB_BOTTOM - 20, right: FAB_RIGHT - 8, width: FAB_SIZE + 16 }}
           >
-            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-white/50">
-              {activeOption
-                ? FAN_OPTIONS.find(o => o.id === activeOption)?.label ?? 'Voice'
-                : 'Voice Note'}
-            </span>
-          </motion.div>
+            {activeOption
+              ? STRIP_OPTIONS.find(o => o.id === activeOption)?.label
+              : 'Slide up'}
+          </motion.p>
         </>
       )}
     </AnimatePresence>,
     document.body
   )
-
-  // --- FAB Button ---
 
   const fabButton = createPortal(
     <motion.button
@@ -397,11 +322,11 @@ export function VoiceFAB({
         scale: (hidden || isMenuOpen) ? 0 : 1,
         opacity: (hidden || isMenuOpen) ? 0 : 1,
         pointerEvents: (hidden || isMenuOpen) ? 'none' : 'auto',
-        backgroundColor: isFanOpen && !activeOption
-          ? 'rgba(56, 189, 248, 0.2)'  // sky = voice mode
+        backgroundColor: isStripOpen
+          ? (activeOption ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)')
           : 'rgba(255, 255, 255, 0.05)',
-        borderColor: isFanOpen && !activeOption
-          ? 'rgba(56, 189, 248, 0.5)'
+        borderColor: isStripOpen && !activeOption
+          ? 'rgba(255, 255, 255, 0.2)'
           : 'rgba(255, 255, 255, 0.1)',
       }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
@@ -421,46 +346,23 @@ export function VoiceFAB({
       style={{
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        boxShadow: isFanOpen && !activeOption
-          ? '0 0 32px rgba(56, 189, 248, 0.45), 0 8px 32px rgba(0,0,0,0.4)'
+        boxShadow: isStripOpen
+          ? '0 8px 32px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.08)'
           : '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.02)',
       }}
-      aria-label="Create — Tap for menu, hold for quick options"
+      aria-label="Create — tap to record, hold to choose type"
     >
-      {/* Icon: mic when fan is open (voice = default), plus otherwise */}
-      {isFanOpen ? (
-        <Mic
-          className={cn(
-            'h-6 w-6 transition-colors duration-200',
-            activeOption ? 'text-zinc-500' : 'text-sky-400',
-          )}
-        />
+      {isStripOpen ? (
+        <motion.div
+          animate={{ rotate: activeOption ? 45 : 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          <Plus className={cn('h-6 w-6', activeOption ? 'text-white' : 'text-zinc-400')} />
+        </motion.div>
       ) : (
         <Plus className="h-6 w-6 text-zinc-300 transition-transform group-hover:rotate-90 group-hover:text-white" />
       )}
       <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-      {/* Pulse rings when fan is open and voice is the active default */}
-      <AnimatePresence>
-        {isFanOpen && !activeOption && (
-          <>
-            <motion.div
-              initial={{ scale: 1, opacity: 0.45 }}
-              animate={{ scale: 1.9, opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 1.6 }}
-              className="absolute inset-0 rounded-full border-2 border-sky-400/40"
-            />
-            <motion.div
-              initial={{ scale: 1, opacity: 0.3 }}
-              animate={{ scale: 2.4, opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 2.1, delay: 0.6 }}
-              className="absolute inset-0 rounded-full border-2 border-sky-400/15"
-            />
-          </>
-        )}
-      </AnimatePresence>
     </motion.button>,
     document.body
   )
@@ -468,9 +370,9 @@ export function VoiceFAB({
   return (
     <>
       {fabButton}
-      {fanOverlay}
+      {stripOverlay}
 
-      {/* Short-press creation menu (unchanged) */}
+      {/* Hold hint in CreateMenuModal footer */}
       <CreateMenuModal
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
@@ -482,7 +384,7 @@ export function VoiceFAB({
         }}
       />
 
-      {/* Voice Recording Modal */}
+      {/* Voice modal — opened by short tap */}
       {createPortal(
         <AnimatePresence>
           {isVoiceOpen && (
@@ -504,11 +406,9 @@ export function VoiceFAB({
                 className="relative w-full md:w-[500px] bg-[#0A0A0B] border border-white/10 rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl z-10 overflow-hidden mb-0 md:mb-12"
               >
                 <div style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}>
-                  {/* Handle */}
                   <div className="flex justify-center pt-4 pb-2 md:hidden">
                     <div className="w-12 h-1.5 rounded-full bg-white/10" />
                   </div>
-
                   <div className="flex items-center justify-between px-8 py-8">
                     <div>
                       <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white flex items-center gap-2">
@@ -526,7 +426,6 @@ export function VoiceFAB({
                       <X className="h-6 w-6 text-zinc-400" />
                     </button>
                   </div>
-
                   <div className="px-8 pb-10">
                     <VoiceInput
                       onTranscript={handleTranscript}
@@ -543,7 +442,6 @@ export function VoiceFAB({
         document.body
       )}
 
-      {/* Dialogs */}
       <CreateProjectDialog isOpen={showProjectDialog} onOpenChange={setShowProjectDialog} hideTrigger />
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
       <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} hideTrigger />
