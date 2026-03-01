@@ -247,9 +247,13 @@ export async function enrichBook(title: string): Promise<EnrichmentMetadata | nu
 
         const book = data.items[0].volumeInfo
 
+        // Google Books returns http:// URLs — upgrade to https:// to avoid
+        // mixed-content blocking on the HTTPS frontend
+        const toHttps = (url?: string) => url ? url.replace(/^http:\/\//, 'https://') : undefined
+
         const metadata: EnrichmentMetadata = {
-            image: book.imageLinks?.large || book.imageLinks?.medium || book.imageLinks?.thumbnail,
-            thumbnail: book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail,
+            image: toHttps(book.imageLinks?.large || book.imageLinks?.medium || book.imageLinks?.thumbnail),
+            thumbnail: toHttps(book.imageLinks?.thumbnail || book.imageLinks?.smallThumbnail),
             subtitle: `Author: ${book.authors?.[0] || 'Unknown'}`,
             description: book.description ? extractBriefDescription(book.description) : undefined,
             tags: book.categories?.slice(0, 3) || [],

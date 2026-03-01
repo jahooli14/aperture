@@ -56,7 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         .limit(1)
 
                     if (items && items.length > 0 && items[0].metadata?.image) {
-                        coverImage = items[0].metadata.image
+                        // Upgrade http:// → https:// for existing rows stored before this fix
+                        coverImage = items[0].metadata.image.replace(/^http:\/\//, 'https://')
                     }
                 }
 
