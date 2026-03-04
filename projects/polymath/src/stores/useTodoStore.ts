@@ -28,6 +28,7 @@ export interface Todo {
   done: boolean
   deleted_at?: string
   scheduled_date?: string   // YYYY-MM-DD
+  scheduled_time?: string   // HH:mm (24h)
   deadline_date?: string    // YYYY-MM-DD
   area_id?: string
   project_id?: string
@@ -166,6 +167,7 @@ export const useTodoStore = create<TodoStore>()(
           notes: input.notes,
           done: false,
           scheduled_date: input.scheduled_date,
+          scheduled_time: input.scheduled_time,
           deadline_date: input.deadline_date,
           area_id: input.area_id,
           project_id: input.project_id,

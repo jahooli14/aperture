@@ -5,6 +5,7 @@
  *
  * Supported syntax:
  *   - Dates:     today, tomorrow, next monday, in 3 days, monday, fri
+ *   - Times:     at 3pm, at 9:30am, at noon, at midnight, at 14:00
  *   - Priority:  !high, !medium, !low, !1, !2, !3, !p1, !p2, !p3
  *   - Tags:      #tag, #multi-word-tag
  *   - Area:      @area, @work, @home
@@ -15,6 +16,7 @@
 export interface ParsedTodo {
   text: string              // Cleaned text with NLP tokens stripped
   scheduledDate?: string   // YYYY-MM-DD
+  scheduledTime?: string   // HH:mm (24h)
   deadlineDate?: string    // YYYY-MM-DD (if preceded by "deadline:" or "due:")
   priority: number         // 0=none, 1=low, 2=med, 3=high
   tags: string[]
@@ -58,11 +60,19 @@ function nextWeekday(targetDay: number, fromNext = false): Date {
   return addDays(base, diff === 0 ? 7 : fromNext ? diff + 7 : diff)
 }
 
+// ─── Time helpers ───────────────────────────────────────────
+
+/** Format hours/minutes into HH:mm */
+function toHHMM(hours: number, minutes = 0): string {
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
 // ─── Parser ─────────────────────────────────────────────────
 
 export function parseTodo(raw: string): ParsedTodo {
   let input = raw
   let scheduledDate: string | undefined
+  let scheduledTime: string | undefined
   let deadlineDate: string | undefined
   let priority = 0
   const tags: string[] = []
@@ -83,6 +93,27 @@ export function parseTodo(raw: string): ParsedTodo {
   if (deadlineMatch) {
     deadlineDate = parseDate(deadlineMatch[1])
     input = input.replace(deadlineMatch[0], '').trim()
+  }
+
+  // ── Time: "at 3pm", "at 9:30am", "at noon", "at midnight", "at 14:00" ──
+  const timeRe = /\bat\s+(?:(noon)|(midnight)|(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)\b/i
+  const timeMatch = input.match(timeRe)
+  if (timeMatch) {
+    if (timeMatch[1]) {
+      // noon
+      scheduledTime = '12:00'
+    } else if (timeMatch[2]) {
+      // midnight
+      scheduledTime = '00:00'
+    } else {
+      let h = parseInt(timeMatch[3])
+      const m = timeMatch[4] ? parseInt(timeMatch[4]) : 0
+      const meridiem = timeMatch[5]?.toLowerCase()
+      if (meridiem === 'pm' && h !== 12) h += 12
+      else if (meridiem === 'am' && h === 12) h = 0
+      if (h >= 0 && h <= 23) scheduledTime = toHHMM(h, m)
+    }
+    input = input.replace(timeMatch[0], '').trim()
   }
 
   // ── Scheduled date tokens ──
@@ -174,13 +205,13 @@ export function parseTodo(raw: string): ParsedTodo {
   }
 
   // ── Time estimate: 30min, 1h, 2h, 15m ──
-  const timeRe = /\b(\d+)\s*(min(?:utes?)?|h(?:ours?)?)\b/i
-  const timeMatch = input.match(timeRe)
-  if (timeMatch) {
-    const n = parseInt(timeMatch[1])
-    const unit = timeMatch[2].toLowerCase()
+  const timeEstRe = /\b(\d+)\s*(min(?:utes?)?|h(?:ours?)?)\b/i
+  const timeEstMatch = input.match(timeEstRe)
+  if (timeEstMatch) {
+    const n = parseInt(timeEstMatch[1])
+    const unit = timeEstMatch[2].toLowerCase()
     estimatedMinutes = unit.startsWith('h') ? n * 60 : n
-    input = input.replace(timeMatch[0], '').trim()
+    input = input.replace(timeEstMatch[0], '').trim()
   }
 
   // Clean up extra spaces / punctuation at end
@@ -189,6 +220,7 @@ export function parseTodo(raw: string): ParsedTodo {
   return {
     text,
     scheduledDate: isSomeday ? undefined : scheduledDate,
+    scheduledTime,
     deadlineDate,
     priority,
     tags,
@@ -211,7 +243,7 @@ function parseDate(token: string): string | undefined {
   return undefined
 }
 
-// ─── Human-readable description of parsed date ───────────────
+// ─── Human-readable descriptions ─────────────────────────────
 
 export function describeDate(ymd: string): string {
   const t = today()
@@ -227,6 +259,13 @@ export function describeDate(ymd: string): string {
     return 'Next ' + d.toLocaleDateString('en-GB', { weekday: 'long' })
   }
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+export function describeTime(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const date = new Date()
+  date.setHours(h, m, 0, 0)
+  return date.toLocaleTimeString('en-GB', { hour: 'numeric', minute: m > 0 ? '2-digit' : undefined, hour12: true })
 }
 
 export const PRIORITY_LABELS: Record<number, string> = {

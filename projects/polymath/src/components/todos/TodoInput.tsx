@@ -1,14 +1,16 @@
 /**
  * TodoInput - NLP-powered quick entry
  *
- * Type naturally: "call dentist tomorrow !high #health 30min"
- * Live preview chips appear as you type, showing parsed metadata.
+ * Inspired by Linear and Things 3: a spacious, prominent input
+ * that feels like adding to YOUR list — not a chat box.
+ *
+ * Type naturally: "call dentist tomorrow at 3pm !high #health 30min"
  */
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Calendar, Tag, Clock, AlertCircle, MapPin } from 'lucide-react'
-import { parseTodo, describeDate, PRIORITY_COLORS, PRIORITY_LABELS } from '../../lib/todoNLP'
+import { Calendar, Tag, Clock, AlertCircle, MapPin } from 'lucide-react'
+import { parseTodo, describeDate, describeTime, PRIORITY_COLORS, PRIORITY_LABELS } from '../../lib/todoNLP'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
 
@@ -16,12 +18,12 @@ interface TodoInputProps {
   onAdd: (parsed: ReturnType<typeof parseTodo>) => void
   placeholder?: string
   autoFocus?: boolean
-  defaultScheduledDate?: string   // Pre-fill "today" when in Today view
+  defaultScheduledDate?: string
 }
 
 export function TodoInput({
   onAdd,
-  placeholder = 'Add todo… (try "call dentist tomorrow !high #health")',
+  placeholder = 'Add a task…',
   autoFocus = false,
   defaultScheduledDate,
 }: TodoInputProps) {
@@ -33,6 +35,7 @@ export function TodoInput({
 
   const hasMetadata =
     parsed.scheduledDate ||
+    parsed.scheduledTime ||
     parsed.deadlineDate ||
     parsed.priority > 0 ||
     parsed.tags.length > 0 ||
@@ -42,14 +45,10 @@ export function TodoInput({
 
   const handleSubmit = useCallback(() => {
     if (!parsed.text.trim()) return
-
-    // If in Today view and no date specified, default to today
-    const toSubmit = {
+    onAdd({
       ...parsed,
       scheduledDate: parsed.scheduledDate ?? (defaultScheduledDate || undefined),
-    }
-
-    onAdd(toSubmit)
+    })
     setValue('')
   }, [parsed, onAdd, defaultScheduledDate])
 
@@ -64,35 +63,34 @@ export function TodoInput({
     }
   }
 
+  const hasText = parsed.text.trim().length > 0
+
   return (
-    <div className="relative">
-      {/* Input row */}
-      <div
-        className={cn(
-          'flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200',
-          focused
-            ? 'ring-1 ring-white/20'
-            : 'hover:bg-white/[0.03]'
-        )}
-        style={{
-          background: focused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        {/* Plus icon / submit */}
-        <button
-          onClick={handleSubmit}
-          disabled={!parsed.text.trim()}
+    <div
+      className={cn(
+        'rounded-2xl transition-all duration-200 overflow-hidden',
+        focused
+          ? 'ring-1 ring-white/25 shadow-lg shadow-black/20'
+          : 'hover:bg-white/[0.02]'
+      )}
+      style={{
+        background: focused
+          ? 'rgba(255,255,255,0.07)'
+          : 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(16px)',
+      }}
+    >
+      {/* Main input row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        {/* Fake checkbox — signals "this is a task" */}
+        <div
           className={cn(
-            'flex-shrink-0 h-7 w-7 rounded-lg flex items-center justify-center transition-all',
-            parsed.text.trim()
-              ? 'bg-blue-500 text-white hover:bg-blue-400'
-              : 'border border-white/20 text-white/30'
+            'flex-shrink-0 h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200',
+            hasText
+              ? 'border-blue-400/60'
+              : 'border-white/15'
           )}
-          aria-label="Add todo"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
+        />
 
         {/* Input */}
         <input
@@ -105,68 +103,76 @@ export function TodoInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-white/25"
+          className="flex-1 bg-transparent text-[15px] leading-tight outline-none placeholder:text-white/25"
           style={{ color: 'var(--premium-text-primary)' }}
         />
+
+        {/* Return hint — only when text is present */}
+        <AnimatePresence>
+          {hasText && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.1 }}
+              onClick={handleSubmit}
+              className="flex-shrink-0 px-2 py-0.5 rounded-md bg-white/8 text-white/40 text-[11px] font-medium hover:bg-white/12 hover:text-white/60 transition-all border border-white/10"
+            >
+              Return
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Live preview chips */}
+      {/* Metadata chips */}
       <AnimatePresence>
         {focused && hasMetadata && (
           <motion.div
-            initial={{ opacity: 0, y: -4, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -4, height: 0 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15 }}
-            className="flex flex-wrap gap-1.5 px-4 pt-2 pb-1 overflow-hidden"
+            className="flex flex-wrap gap-1.5 px-4 pb-3 overflow-hidden"
           >
-            {/* Someday */}
             {parsed.isSomeday && (
               <Chip icon={<Clock className="h-3 w-3" />} color="text-purple-400" bg="bg-purple-500/15">
                 Someday
               </Chip>
             )}
-
-            {/* Scheduled date */}
             {parsed.scheduledDate && (
               <Chip icon={<Calendar className="h-3 w-3" />} color="text-blue-400" bg="bg-blue-500/15">
                 {describeDate(parsed.scheduledDate)}
               </Chip>
             )}
-
-            {/* Deadline */}
+            {parsed.scheduledTime && (
+              <Chip icon={<Clock className="h-3 w-3" />} color="text-blue-400" bg="bg-blue-500/15">
+                {describeTime(parsed.scheduledTime)}
+              </Chip>
+            )}
             {parsed.deadlineDate && (
               <Chip icon={<AlertCircle className="h-3 w-3" />} color="text-red-400" bg="bg-red-500/15">
                 Due {describeDate(parsed.deadlineDate)}
               </Chip>
             )}
-
-            {/* Priority */}
             {parsed.priority > 0 && (
               <Chip
-                icon={<span className="font-black text-[10px]">!</span>}
+                icon={<span className="font-black text-[10px] leading-none">!</span>}
                 color={PRIORITY_COLORS[parsed.priority]}
-                bg="bg-white/10"
+                bg="bg-white/8"
               >
                 {PRIORITY_LABELS[parsed.priority]}
               </Chip>
             )}
-
-            {/* Tags */}
             {parsed.tags.map(tag => (
               <Chip key={tag} icon={<Tag className="h-3 w-3" />} color="text-emerald-400" bg="bg-emerald-500/15">
                 {tag}
               </Chip>
             ))}
-
-            {/* Area */}
             {parsed.areaName && (
               <Chip icon={<MapPin className="h-3 w-3" />} color="text-amber-400" bg="bg-amber-500/15">
                 {parsed.areaName}
               </Chip>
             )}
-
-            {/* Time estimate */}
             {parsed.estimatedMinutes && (
               <Chip icon={<Clock className="h-3 w-3" />} color="text-sky-400" bg="bg-sky-500/15">
                 {parsed.estimatedMinutes >= 60
@@ -178,27 +184,36 @@ export function TodoInput({
         )}
       </AnimatePresence>
 
-      {/* Hint text */}
-      {focused && !value && (
-        <p className="px-4 py-1 text-[10px] text-white/20">
-          Use <span className="text-white/30">tomorrow</span>,{' '}
-          <span className="text-white/30">#tag</span>,{' '}
-          <span className="text-white/30">!high</span>,{' '}
-          <span className="text-white/30">@area</span>,{' '}
-          <span className="text-white/30">30min</span>
-        </p>
-      )}
+      {/* Hint — shown when focused and empty */}
+      <AnimatePresence>
+        {focused && !value && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.12 }}
+            className="px-4 pb-3 overflow-hidden"
+          >
+            <p className="text-[11px] text-white/25 leading-relaxed">
+              Try{' '}
+              <HintToken>tomorrow</HintToken>,{' '}
+              <HintToken>at 3pm</HintToken>,{' '}
+              <HintToken>!high</HintToken>,{' '}
+              <HintToken>#tag</HintToken>,{' '}
+              <HintToken>@area</HintToken>,{' '}
+              <HintToken>30min</HintToken>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
 
-// ─── Chip sub-component ─────────────────────────────────────
+// ─── Sub-components ──────────────────────────────────────────
 
 function Chip({
-  icon,
-  color,
-  bg,
-  children
+  icon, color, bg, children
 }: {
   icon: React.ReactNode
   color: string
@@ -206,14 +221,15 @@ function Chip({
   children: React.ReactNode
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium',
-        color, bg
-      )}
-    >
+    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium', color, bg)}>
       {icon}
       {children}
     </span>
+  )
+}
+
+function HintToken({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-white/40 font-medium">{children}</span>
   )
 }

@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Inbox, Sun, CalendarDays, Archive, BookOpen,
-  CheckCircle2, ChevronDown, ChevronRight
+  CheckCheck, Sparkles, CalendarCheck, Layers, BookMarked,
 } from 'lucide-react'
 import {
   useTodoStore,
@@ -56,7 +56,6 @@ export function TodosPage() {
   } = useTodoStore()
 
   const { addToast } = useToast()
-  const [logbookOpen, setLogbookOpen] = useState(false)
 
   useEffect(() => {
     fetchTodos()
@@ -99,6 +98,7 @@ export function TodosPage() {
         ...(parsed.isSomeday ? ['someday'] : []),
       ],
       estimated_minutes: parsed.estimatedMinutes,
+      scheduled_time: parsed.scheduledTime,
     }
 
     // Date: use parsed, or apply view context defaults
@@ -386,25 +386,27 @@ function LogbookView({
 
 // ─── Empty states ─────────────────────────────────────────────
 
-const EMPTY_COPY: Record<TodoView, { headline: string; sub: string; emoji: string }> = {
-  inbox:    { emoji: '📭', headline: 'Inbox zero', sub: 'Nothing uncategorized. You\'re on top of it.' },
-  today:    { emoji: '✨', headline: 'Clear day ahead', sub: 'No tasks due today. Enjoy the space.' },
-  upcoming: { emoji: '🗓', headline: 'Nothing scheduled', sub: 'Add a date to any task and it\'ll appear here.' },
-  someday:  { emoji: '💭', headline: 'Someday pile is empty', sub: 'Park ideas here with "someday" in your task.' },
-  logbook:  { emoji: '📖', headline: 'Logbook is empty', sub: 'Completed tasks will appear here.' },
+const EMPTY_COPY: Record<TodoView, { headline: string; sub: string; Icon: React.ElementType }> = {
+  inbox:    { Icon: CheckCheck,    headline: 'Inbox clear',        sub: 'Nothing uncategorized. You\'re on top of it.' },
+  today:    { Icon: Sparkles,      headline: 'Nothing due today',  sub: 'Add a task or schedule one for today.' },
+  upcoming: { Icon: CalendarCheck, headline: 'Nothing scheduled',  sub: 'Add a date to any task and it\'ll show up here.' },
+  someday:  { Icon: Layers,        headline: 'Someday list empty', sub: 'Park an idea — type "someday" in your task.' },
+  logbook:  { Icon: BookMarked,    headline: 'Logbook is empty',   sub: 'Completed tasks will appear here.' },
 }
 
 function EmptyState({ view }: { view: TodoView }) {
-  const copy = EMPTY_COPY[view]
+  const { headline, sub, Icon } = EMPTY_COPY[view]
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col items-center justify-center py-20 text-center"
     >
-      <span className="text-4xl mb-3">{copy.emoji}</span>
-      <p className="text-white/60 font-medium mb-1">{copy.headline}</p>
-      <p className="text-sm text-white/30 max-w-xs">{copy.sub}</p>
+      <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
+        <Icon className="h-5 w-5 text-white/25" />
+      </div>
+      <p className="text-white/55 font-medium mb-1">{headline}</p>
+      <p className="text-sm text-white/25 max-w-xs">{sub}</p>
     </motion.div>
   )
 }
