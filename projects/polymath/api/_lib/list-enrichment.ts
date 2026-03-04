@@ -130,7 +130,7 @@ export async function enrichListItem(userId: string, listId: string, itemId: str
         // 4. Update the item in Supabase (with embedding if available)
         const updateData: any = {
             metadata,
-            enrichment_status: 'complete'
+            enrichment_status: 'completed'
         }
         if (embedding) {
             updateData.embedding = embedding
