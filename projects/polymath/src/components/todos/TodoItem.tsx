@@ -2,20 +2,16 @@
  * TodoItem - Single row in any todo view.
  *
  * Interactions:
- *   - Tap checkbox → optimistic complete + brief strikethrough → disappears to logbook
+ *   - Tap checkbox → optimistic complete + strikethrough → fades out
  *   - Tap text → inline edit
- *   - Swipe left → delete (mobile)
- *   - Long press → context menu (reschedule, set priority, move area)
+ *   - Hover → reveals delete
  */
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Check, Calendar, Tag, Clock, AlertCircle,
-  Trash2, ChevronDown, ChevronRight, MoreHorizontal
-} from 'lucide-react'
+import { Check, Calendar, Tag, Clock, AlertCircle, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { describeDate, PRIORITY_COLORS } from '../../lib/todoNLP'
+import { describeDate, describeTime, PRIORITY_COLORS } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
 import { handleInputFocus } from '../../utils/keyboard'
 
@@ -46,14 +42,19 @@ export function TodoItem({
   const today = new Date().toISOString().split('T')[0]
   const isOverdue = todo.deadline_date && todo.deadline_date < today && !todo.done
 
+  const priorityBorderClass =
+    !todo.done && todo.priority === 3 ? 'border-l-2 border-l-red-400/70' :
+    !todo.done && todo.priority === 2 ? 'border-l-2 border-l-amber-400/70' :
+    !todo.done && todo.priority === 1 ? 'border-l-2 border-l-blue-400/60' :
+    ''
+
   const handleToggle = async () => {
     if (todo.done) {
       onToggle(todo.id)
       return
     }
-    // Animate completion
     setCompleting(true)
-    await new Promise(r => setTimeout(r, 400))
+    await new Promise(r => setTimeout(r, 500))
     onToggle(todo.id)
     setCompleting(false)
   }
@@ -76,25 +77,25 @@ export function TodoItem({
     <motion.div
       layout
       initial={{ opacity: 0, y: -4 }}
-      animate={{ opacity: completing ? 0.4 : 1, y: 0 }}
+      animate={{ opacity: completing ? 0.35 : todo.done ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.2 }}
       className={cn(
         'group flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
         'hover:bg-white/[0.04]',
-        todo.done && 'opacity-50'
+        priorityBorderClass,
       )}
     >
       {/* Checkbox */}
       <button
         onClick={handleToggle}
         className={cn(
-          'flex-shrink-0 mt-0.5 h-5 w-5 rounded-md flex items-center justify-center transition-all border-2',
+          'flex-shrink-0 mt-0.5 h-[18px] w-[18px] rounded-[5px] flex items-center justify-center transition-all border-2',
           todo.done
             ? 'bg-blue-500 border-blue-500'
             : isOverdue
               ? 'border-red-400/60 hover:border-red-400'
-              : 'border-white/25 hover:border-white/50'
+              : 'border-white/20 hover:border-white/45'
         )}
         aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
       >
@@ -104,9 +105,9 @@ export function TodoItem({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 30 }}
+              transition={{ type: 'spring', stiffness: 700, damping: 28 }}
             >
-              <Check className="h-3 w-3 text-white" strokeWidth={3} />
+              <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -114,14 +115,6 @@ export function TodoItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Priority stripe */}
-        {todo.priority > 0 && !todo.done && (
-          <div className={cn(
-            'absolute left-0 w-0.5 h-full rounded-full',
-            todo.priority === 3 ? 'bg-red-400' : todo.priority === 2 ? 'bg-amber-400' : 'bg-blue-400'
-          )} />
-        )}
-
         {/* Text */}
         {editing ? (
           <input
@@ -132,7 +125,7 @@ export function TodoItem({
             onFocus={handleInputFocus}
             onKeyDown={handleEditKeyDown}
             onBlur={handleEditSave}
-            className="w-full bg-white/10 rounded px-2 py-0.5 text-sm outline-none ring-1 ring-blue-500/50"
+            className="w-full bg-white/8 rounded-lg px-2.5 py-1 text-sm outline-none ring-1 ring-blue-500/40"
             style={{ color: 'var(--premium-text-primary)' }}
             autoFocus
           />
@@ -141,8 +134,8 @@ export function TodoItem({
             onClick={() => { setEditing(true); setEditText(todo.text) }}
             className={cn(
               'text-sm cursor-text leading-snug',
-              todo.done ? 'line-through text-white/40' : 'text-white/90',
-              completing && 'line-through'
+              todo.done ? 'line-through text-white/35' : 'text-white/90',
+              completing && 'line-through text-white/50'
             )}
           >
             {todo.text}
@@ -150,45 +143,46 @@ export function TodoItem({
         )}
 
         {/* Metadata row */}
-        {!todo.done && (
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-1">
-            {/* Overdue warning */}
+        {!todo.done && !editing && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1">
             {isOverdue && (
-              <span className="flex items-center gap-1 text-[10px] text-red-400 font-medium">
+              <span className="flex items-center gap-1 text-[11px] text-red-400 font-medium">
                 <AlertCircle className="h-3 w-3" />
                 Overdue
               </span>
             )}
-
-            {/* Deadline */}
             {todo.deadline_date && !isOverdue && showDate && (
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
+              <span className="flex items-center gap-1 text-[11px] text-white/35">
                 <AlertCircle className="h-3 w-3" />
                 Due {describeDate(todo.deadline_date)}
               </span>
             )}
-
-            {/* Scheduled date */}
             {todo.scheduled_date && showDate && (
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
+              <span className="flex items-center gap-1 text-[11px] text-white/35">
                 <Calendar className="h-3 w-3" />
                 {describeDate(todo.scheduled_date)}
+                {todo.scheduled_time && (
+                  <span className="text-white/45">{describeTime(todo.scheduled_time)}</span>
+                )}
               </span>
             )}
-
-            {/* Area */}
-            {showArea && areaName && (
-              <span className="text-[10px] text-amber-400/70">{areaName}</span>
+            {!todo.scheduled_date && todo.scheduled_time && (
+              <span className="flex items-center gap-1 text-[11px] text-white/35">
+                <Clock className="h-3 w-3" />
+                {describeTime(todo.scheduled_time)}
+              </span>
             )}
-
-            {/* Tags */}
+            {showArea && areaName && (
+              <span className="text-[11px] text-amber-400/60">{areaName}</span>
+            )}
             {todo.tags.filter(t => t !== 'someday').map(tag => (
-              <span key={tag} className="text-[10px] text-emerald-400/70">#{tag}</span>
+              <span key={tag} className="flex items-center gap-0.5 text-[11px] text-emerald-400/60">
+                <Tag className="h-2.5 w-2.5" />
+                {tag}
+              </span>
             ))}
-
-            {/* Time estimate */}
             {todo.estimated_minutes && (
-              <span className="flex items-center gap-1 text-[10px] text-white/30">
+              <span className="flex items-center gap-1 text-[11px] text-white/25">
                 <Clock className="h-3 w-3" />
                 {todo.estimated_minutes >= 60
                   ? `${todo.estimated_minutes / 60}h`
@@ -199,7 +193,7 @@ export function TodoItem({
         )}
       </div>
 
-      {/* Delete button (revealed on hover) */}
+      {/* Delete */}
       <button
         onClick={() => onDelete(todo.id)}
         className={cn(
@@ -215,7 +209,7 @@ export function TodoItem({
   )
 }
 
-// ─── Logbook item (completed, read-only) ─────────────────────
+// ─── Logbook item ─────────────────────────────────────────────
 
 export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string) => void }) {
   const completedAt = todo.completed_at
@@ -223,17 +217,17 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
     : ''
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-lg opacity-50 hover:opacity-70 transition-opacity">
-      <div className="flex-shrink-0 h-4 w-4 rounded bg-blue-500/50 flex items-center justify-center">
-        <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg opacity-45 hover:opacity-65 transition-opacity">
+      <div className="flex-shrink-0 h-[14px] w-[14px] rounded-[4px] bg-blue-500/40 flex items-center justify-center">
+        <Check className="h-2 w-2 text-white" strokeWidth={3} />
       </div>
-      <span className="flex-1 text-sm line-through text-white/50 truncate">{todo.text}</span>
+      <span className="flex-1 text-sm line-through text-white/40 truncate">{todo.text}</span>
       {completedAt && (
-        <span className="text-[10px] text-white/30 flex-shrink-0">{completedAt}</span>
+        <span className="text-[11px] text-white/25 flex-shrink-0">{completedAt}</span>
       )}
       <button
         onClick={() => onUndo(todo.id)}
-        className="text-[10px] text-white/25 hover:text-blue-400 transition-colors flex-shrink-0"
+        className="text-[11px] text-white/20 hover:text-blue-400 transition-colors flex-shrink-0 ml-1"
       >
         Undo
       </button>
