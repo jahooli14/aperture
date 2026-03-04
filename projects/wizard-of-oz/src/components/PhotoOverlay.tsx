@@ -57,9 +57,9 @@ export function PhotoOverlay({ photos, isOpen, onClose }: PhotoOverlayProps) {
     if (isPlaying && scale === 1 && isOpen) {
       playIntervalRef.current = setInterval(() => {
         setCurrentIndex((prevIndex) => {
-          // Loop back to start when reaching the end
           if (prevIndex >= sortedPhotos.length - 1) {
-            return 0;
+            setIsPlaying(false);
+            return prevIndex;
           }
           return prevIndex + 1;
         });
