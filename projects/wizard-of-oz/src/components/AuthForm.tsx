@@ -118,7 +118,8 @@ export function AuthForm() {
                 placeholder="000000"
                 required
                 autoFocus
-                className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                style={{ touchAction: 'manipulation' }}
+              className="w-full px-4 py-3 text-center text-2xl font-mono tracking-widest border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-2 text-center">
                 💡 Your device may auto-fill the code from your email
@@ -134,7 +135,7 @@ export function AuthForm() {
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+              className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mb-4"
             >
               {loading ? 'Verifying...' : 'Verify Code'}
             </button>
@@ -144,7 +145,7 @@ export function AuthForm() {
                 type="button"
                 onClick={handleResend}
                 disabled={resendCooldown > 0 || loading}
-                className="text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="min-h-[44px] px-4 text-sm text-primary-600 hover:text-primary-700 active:text-primary-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {resendCooldown > 0
                   ? `Resend code in ${resendCooldown}s`
@@ -160,7 +161,7 @@ export function AuthForm() {
                   setOtp('');
                   setError('');
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="min-h-[44px] px-4 text-sm text-gray-600 hover:text-gray-900 active:text-gray-700"
               >
                 ← Use different email
               </button>
@@ -194,6 +195,7 @@ export function AuthForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            style={{ touchAction: 'manipulation' }}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             placeholder="you@example.com"
           />
@@ -208,7 +210,7 @@ export function AuthForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Sending...' : 'Send login code'}
         </button>

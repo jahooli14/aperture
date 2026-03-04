@@ -332,19 +332,13 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
               </div>
               <button
                 onClick={handlePrivacyModeToggle}
-                className={`
-                  relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                  transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-                  ${privacyMode ? 'bg-primary-600' : 'bg-gray-200'}
-                `}
+                className="relative flex items-center justify-center flex-shrink-0 min-w-[44px] min-h-[44px] cursor-pointer rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
-                <span
-                  className={`
-                    pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
-                    transition duration-200 ease-in-out
-                    ${privacyMode ? 'translate-x-5' : 'translate-x-0'}
-                  `}
-                />
+                <div className={`relative inline-flex h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${privacyMode ? 'bg-primary-600' : 'bg-gray-200'}`}>
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${privacyMode ? 'translate-x-5' : 'translate-x-0'}`}
+                  />
+                </div>
               </button>
             </div>
           </div>
@@ -431,19 +425,13 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
                     </label>
                     <button
                       onClick={() => setRemindersEnabled(!remindersEnabled)}
-                      className={`
-                        relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                        ${remindersEnabled ? 'bg-blue-600' : 'bg-gray-200'}
-                      `}
+                      className="relative flex items-center justify-center flex-shrink-0 min-w-[44px] min-h-[44px] cursor-pointer rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
-                      <span
-                        className={`
-                          pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
-                          transition duration-200 ease-in-out
-                          ${remindersEnabled ? 'translate-x-5' : 'translate-x-0'}
-                        `}
-                      />
+                      <div className={`relative inline-flex h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${remindersEnabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${remindersEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                        />
+                      </div>
                     </button>
                   </div>
 
@@ -492,20 +480,13 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
                     <button
                       onClick={handleTogglePushNotifications}
                       disabled={enablingPushNotifications}
-                      className={`
-                        relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-                        transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        ${pushNotificationsEnabled ? 'bg-purple-600' : 'bg-gray-200'}
-                      `}
+                      className="relative flex items-center justify-center flex-shrink-0 min-w-[44px] min-h-[44px] cursor-pointer rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <span
-                        className={`
-                          pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
-                          transition duration-200 ease-in-out
-                          ${pushNotificationsEnabled ? 'translate-x-5' : 'translate-x-0'}
-                        `}
-                      />
+                      <div className={`relative inline-flex h-6 w-11 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${pushNotificationsEnabled ? 'bg-purple-600' : 'bg-gray-200'}`}>
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${pushNotificationsEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                        />
+                      </div>
                     </button>
                   </div>
 
@@ -632,7 +613,7 @@ export function PrivacySettings({ onClose, onJoinSuccess }: PrivacySettingsProps
                         </div>
                         <button
                           onClick={handleCopyCode}
-                          className="p-2 hover:bg-indigo-100 rounded-lg transition-colors"
+                          className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-indigo-100 active:bg-indigo-200 rounded-lg transition-colors"
                         >
                           <Copy className="w-5 h-5 text-indigo-600" />
                         </button>
