@@ -13,6 +13,7 @@ import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js
 import { Readability } from '@mozilla/readability'
 import { parseHTML } from 'linkedom'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
+import { MODELS } from './_lib/models.js'
 
 const rssParser = new Parser()
 
@@ -1608,7 +1609,7 @@ async function internalHandler(req: VercelRequest, res: VercelResponse) {
       // We use the same model config as memories for consistency
       const { GoogleGenerativeAI } = await import('@google/generative-ai')
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
-      const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+      const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
       const prompt = `Analyze this article and extract key information.
 
