@@ -14,6 +14,7 @@ import {
   Mic,
   MoreHorizontal,
   AlignLeft,
+  CheckSquare,
 } from 'lucide-react'
 import { VoiceFAB } from './VoiceFAB'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -29,7 +30,8 @@ const SCHEMA_COLORS = {
   reading: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
-  lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' }
+  lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
+  todos: { primary: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' },
 } as const
 
 interface NavOption {
@@ -41,13 +43,13 @@ interface NavOption {
   color: keyof typeof SCHEMA_COLORS
 }
 
-// Core navigation: Home + 3 tenets
+// Core navigation: Home + 4 primary sections
 const NAV_OPTIONS: NavOption[] = [
-  { id: 'home', label: 'Home', icon: Home, path: '/', action: 'navigate', color: 'home' },
-  { id: 'reading', label: 'Reading', icon: FileText, path: '/reading', action: 'navigate', color: 'reading' },
-  { id: 'projects', label: 'Projects', icon: Layers, path: '/projects', action: 'navigate', color: 'projects' },
-  { id: 'thoughts', label: 'Thoughts', icon: Brain, path: '/memories', action: 'navigate', color: 'thoughts' },
-  { id: 'lists', label: 'Lists', icon: AlignLeft, path: '/lists', action: 'navigate', color: 'lists' },
+  { id: 'home',     label: 'Home',     icon: Home,         path: '/',         action: 'navigate', color: 'home' },
+  { id: 'todos',    label: 'Todos',    icon: CheckSquare,  path: '/todos',    action: 'navigate', color: 'todos' },
+  { id: 'projects', label: 'Projects', icon: Layers,       path: '/projects', action: 'navigate', color: 'projects' },
+  { id: 'thoughts', label: 'Thoughts', icon: Brain,        path: '/memories', action: 'navigate', color: 'thoughts' },
+  { id: 'reading',  label: 'Reading',  icon: FileText,     path: '/reading',  action: 'navigate', color: 'reading' },
 ]
 
 export function FloatingNav() {
