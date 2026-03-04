@@ -113,6 +113,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            style={{ touchAction: 'none' }}
             className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[85vh] overflow-hidden"
           >
             {/* Drag Handle */}
@@ -127,7 +128,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                 <h3 className="text-xl font-bold text-gray-900">Photo Details</h3>
                 <button
                   onClick={onClose}
-                  className="p-2 -mr-2 -mt-1 rounded-full hover:bg-gray-100 transition-colors"
+                  className="flex items-center justify-center -mr-2 -mt-1 min-w-[44px] min-h-[44px] rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5 text-gray-500" />
@@ -217,9 +218,9 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                             overlay.appendChild(container);
                             document.body.appendChild(overlay);
 
-                            setTimeout(() => input.focus(), 100);
+                            setTimeout(() => input.focus(), 0);
                           }}
-                          className="p-1.5 hover:bg-blue-200 rounded-lg transition-colors"
+                          className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-blue-200 active:bg-blue-300 rounded-lg transition-colors"
                           aria-label="Change icon"
                         >
                           <Edit2 className="w-4 h-4 text-blue-600" />
@@ -242,7 +243,7 @@ export function PhotoBottomSheet({ photo, isOpen, onClose, onDelete }: PhotoBott
                         {!isEditingNote && (
                           <button
                             onClick={() => setIsEditingNote(true)}
-                            className="p-1.5 hover:bg-amber-200 rounded-lg transition-colors"
+                            className="flex items-center justify-center min-w-[44px] min-h-[44px] hover:bg-amber-200 active:bg-amber-300 rounded-lg transition-colors"
                             aria-label={existingNote ? 'Edit note' : 'Add note'}
                           >
                             <Edit2 className="w-4 h-4 text-amber-600" />
