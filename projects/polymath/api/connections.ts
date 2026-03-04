@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getUserId } from './_lib/auth.js'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { cosineSimilarity } from './_lib/gemini-embeddings.js' // Ensure this import is present
+import { MODELS } from './_lib/models.js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -252,7 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
         // Truncate content to prevent token overflow/timeouts
         const truncatedSource = sourceContent.slice(0, 1000)
@@ -378,7 +379,7 @@ Keep it brief and high-impact. No fluff.`
           }
         }
 
-        const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
+        const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
         // Truncate content
         const truncatedSource = sourceContent.slice(0, 1000)
