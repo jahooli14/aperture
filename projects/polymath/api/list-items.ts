@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const metadata = await enrichListItem(userId, targetListId, item.id, content)
                 console.log(`[list-items] Enrichment successful for: "${content}"`)
                 // Return enriched item
-                return res.status(201).json({ ...item, metadata, enrichment_status: 'complete' })
+                return res.status(201).json({ ...item, metadata, enrichment_status: 'completed' })
             } catch (enrichError) {
                 console.error('[list-items] Enrichment failed:', {
                     error: enrichError instanceof Error ? enrichError.message : enrichError,
