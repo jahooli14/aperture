@@ -7,6 +7,7 @@ import type { File as FormidableFile } from 'formidable'
 import fs from 'fs'
 import { generateEmbedding, cosineSimilarity } from './_lib/gemini-embeddings.js'
 import { processMemory } from './_lib/process-memory.js'
+import { MODELS } from './_lib/models.js'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 
@@ -346,7 +347,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
 
       // Configure Gemini with Structured Outputs (JSON Schema)
       const model = genAI.getGenerativeModel({
-        model: 'gemini-flash-latest', // Auto-updates to latest Flash version
+        model: MODELS.DEFAULT_CHAT, // Auto-updates to latest Flash version
         generationConfig: {
           temperature: 0.7, // Reduced for more consistent results
           maxOutputTokens: 500,
@@ -1565,7 +1566,7 @@ async function handleMediaAnalysis(req: VercelRequest, res: VercelResponse) {
     const base64Data = fileData.toString('base64')
 
     // Use Gemini 3 Flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT })
 
     let prompt = ''
     if (isImage) {
