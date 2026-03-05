@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react'
 import { Layers, Settings2 } from 'lucide-react'
 import { Button } from '../ui/button'
+import { handleInputFocus } from '../../utils/keyboard'
 import {
     BottomSheet,
     BottomSheetContent,
@@ -103,6 +104,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             id="title"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            onFocus={handleInputFocus}
                             className="text-2xl h-16 font-bold bg-white/5 border-white/10 focus:border-blue-400 focus:ring-0 transition-all"
                             autoComplete="off"
                         />
@@ -138,6 +140,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             id="description"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                            onFocus={handleInputFocus}
                             className="h-14 bg-white/5 border-white/10 focus:border-blue-400"
                             autoComplete="off"
                         />
@@ -154,6 +157,7 @@ export function EditProjectDialog({ project, isOpen, onOpenChange }: EditProject
                             placeholder="What does 'complete' look like?"
                             value={formData.end_goal}
                             onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                            onFocus={handleInputFocus}
                             className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/20"
                             autoComplete="off"
                         />
