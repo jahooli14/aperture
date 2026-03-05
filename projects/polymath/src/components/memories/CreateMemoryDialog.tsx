@@ -349,25 +349,6 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               </div>
             )}
 
-            {/* Memory type as subtle pills - always visible */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-gray-600 mr-1">Type:</span>
-              {(['quick-note', 'insight', 'event', 'foundational'] as const).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, memory_type: prev.memory_type === type ? '' : type }))}
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
-                    formData.memory_type === type
-                      ? 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                      : 'text-gray-600 border border-transparent hover:text-gray-400'
-                  }`}
-                >
-                  {type === 'quick-note' ? 'note' : type}
-                </button>
-              ))}
-            </div>
-
             {/* Quick Actions Row — Photos + More Options */}
             <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}>
               {/* Photo button */}
@@ -458,7 +439,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
                   className="overflow-hidden"
                 >
                   <div className="space-y-4 pt-2">
@@ -509,7 +490,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
               <Button
                 type="submit"
                 disabled={loading || !body.trim() || uploading}
-                className="w-full h-14 bg-white text-black hover:bg-zinc-200 font-black uppercase tracking-widest touch-manipulation"
+                className="w-full h-12 bg-white text-black hover:bg-zinc-100 font-bold tracking-wide text-[15px] touch-manipulation"
               >
                 {uploading ? (
                   <>

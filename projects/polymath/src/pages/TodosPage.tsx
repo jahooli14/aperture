@@ -434,9 +434,9 @@ function EmptyState({ view }: { view: TodoView }) {
 
 function getPlaceholder(view: TodoView): string {
   switch (view) {
-    case 'today':    return 'Add task for today… (try "call dentist !high #health")'
-    case 'upcoming': return 'Add task… (try "review report next monday")'
-    case 'someday':  return 'Park an idea… (try "learn guitar someday")'
-    default:         return 'Add todo… (try "buy milk tomorrow #errands 15min")'
+    case 'today':    return 'What needs doing today?'
+    case 'upcoming': return 'Add a task…'
+    case 'someday':  return 'Park an idea…'
+    default:         return 'Add a task…'
   }
 }
