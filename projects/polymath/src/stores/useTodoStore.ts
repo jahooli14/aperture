@@ -353,7 +353,11 @@ export function selectInbox(todos: Todo[]): Todo[] {
 
 export function selectToday(todos: Todo[]): Todo[] {
   const t = YMD()
-  const isOverdue = (x: Todo) => !!(x.deadline_date && x.deadline_date < t)
+  // An item is overdue if its deadline OR its scheduled_date is in the past
+  const isOverdue = (x: Todo) =>
+    !!(x.deadline_date && x.deadline_date < t) ||
+    !!(x.scheduled_date && x.scheduled_date < t)
+
   return todos.filter(x =>
     !x.done &&
     !x.deleted_at &&
@@ -361,7 +365,10 @@ export function selectToday(todos: Todo[]): Todo[] {
   ).sort((a, b) => {
     if (isOverdue(a) && !isOverdue(b)) return -1
     if (!isOverdue(a) && isOverdue(b)) return 1
-    return (b.priority - a.priority) || (a.sort_order - b.sort_order)
+    // Within same overdue/not-overdue group: priority desc, then time asc, then sort_order
+    return (b.priority - a.priority) ||
+      (a.scheduled_time ?? '99:99').localeCompare(b.scheduled_time ?? '99:99') ||
+      (a.sort_order - b.sort_order)
   })
 }
 
