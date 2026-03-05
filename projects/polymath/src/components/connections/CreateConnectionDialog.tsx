@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 import { motion } from 'framer-motion'
 import { Search, Link as LinkIcon, Brain, Layers, BookOpen, Lightbulb, Loader2 } from 'lucide-react'
+import { handleInputFocus } from '../../utils/keyboard'
 import type { ConnectionSourceType, Project, Memory, ReadingQueueItem, ProjectSuggestion } from '../../types'
 
 interface CreateConnectionDialogProps {
@@ -244,13 +245,13 @@ export function CreateConnectionDialog({
             placeholder="Search for an item to link..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={handleInputFocus}
             className="w-full pl-10 pr-4 py-3 rounded-xl border-2 focus:outline-none transition-colors premium-glass"
             style={{
               borderColor: 'rgba(255, 255, 255, 0.1)',
               color: 'var(--premium-text-primary)',
               backgroundColor: 'rgba(255, 255, 255, 0.05)'
             }}
-            autoFocus
           />
         </div>
 
