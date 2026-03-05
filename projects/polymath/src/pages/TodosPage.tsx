@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Inbox, Sun, CalendarDays, Archive, BookOpen,
   CheckCheck, Sparkles, CalendarCheck, Layers, BookMarked,
+  Clock,
 } from 'lucide-react'
 import {
   useTodoStore,
@@ -32,7 +33,7 @@ import {
 } from '../stores/useTodoStore'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
-import { parseTodo, describeDate } from '../lib/todoNLP'
+import { parseTodo, describeDate, formatMinutes } from '../lib/todoNLP'
 import { cn } from '../lib/utils'
 import { useToast } from '../components/ui/toast'
 
@@ -157,6 +158,14 @@ export function TodosPage() {
 
   const todayYMD = new Date().toISOString().split('T')[0]
 
+  // Daily work estimate for Today view
+  const todayTodos = selectToday(todos)
+  const overdueCount = todayTodos.filter(t =>
+    (t.deadline_date && t.deadline_date < todayYMD) ||
+    (t.scheduled_date && t.scheduled_date < todayYMD)
+  ).length
+  const totalEstimatedMinutes = todayTodos.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0)
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -165,11 +174,24 @@ export function TodosPage() {
       {/* Header */}
       <div className="px-4 pt-6 pb-2 max-w-3xl mx-auto w-full">
         <h1 className="text-2xl font-bold text-white/90 mb-1">Todos</h1>
-        <p className="text-sm text-white/40">
-          {todayCount > 0
-            ? `${todayCount} task${todayCount > 1 ? 's' : ''} for today`
-            : 'All clear for today'}
-        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <p className="text-sm text-white/40">
+            {todayCount > 0
+              ? `${todayCount} task${todayCount > 1 ? 's' : ''} for today`
+              : 'All clear for today'}
+          </p>
+          {overdueCount > 0 && (
+            <span className="text-xs text-red-400/70 font-medium">
+              {overdueCount} overdue
+            </span>
+          )}
+          {totalEstimatedMinutes > 0 && (
+            <span className="flex items-center gap-1 text-xs text-white/25">
+              <Clock className="h-3 w-3" />
+              ~{formatMinutes(totalEstimatedMinutes)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* View tabs */}
@@ -228,8 +250,16 @@ export function TodosPage() {
           </div>
         )}
 
-        {/* Upcoming: grouped by date */}
-        {activeView === 'upcoming' ? (
+        {/* Views */}
+        {activeView === 'today' ? (
+          <TodayView
+            todos={viewTodos}
+            areas={areas}
+            onToggle={handleToggle}
+            onUpdate={updateTodo}
+            onDelete={handleDelete}
+          />
+        ) : activeView === 'upcoming' ? (
           <UpcomingView
             todos={viewTodos}
             areas={areas}
@@ -302,6 +332,67 @@ function StandardView({
         ))}
       </div>
     </AnimatePresence>
+  )
+}
+
+function TodayView({
+  todos, areas, onToggle, onUpdate, onDelete
+}: {
+  todos: Todo[]
+  areas: TodoArea[]
+  onToggle: (id: string) => void
+  onUpdate: (id: string, updates: Partial<Todo>) => void
+  onDelete: (id: string) => void
+}) {
+  const today = new Date().toISOString().split('T')[0]
+
+  const isOverdueItem = (t: Todo) =>
+    !!(t.deadline_date && t.deadline_date < today) ||
+    !!(t.scheduled_date && t.scheduled_date < today)
+
+  const overdue = todos.filter(isOverdueItem)
+  const onTrack = todos.filter(t => !isOverdueItem(t))
+
+  const renderSection = (items: Todo[], label?: string, labelColor?: string) => (
+    <div className={label ? 'mb-6' : ''}>
+      {label && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className={cn('text-xs font-semibold uppercase tracking-wider', labelColor ?? 'text-white/40')}>
+            {label}
+          </span>
+          <div className="flex-1 h-px bg-white/[0.06]" />
+          <span className="text-xs text-white/20">{items.length}</span>
+        </div>
+      )}
+      <AnimatePresence>
+        <div className="space-y-0.5">
+          {items.map(todo => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={onToggle}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              showDate={false}
+              showArea={true}
+              areaName={areas.find(a => a.id === todo.area_id)?.name}
+            />
+          ))}
+        </div>
+      </AnimatePresence>
+    </div>
+  )
+
+  // If all items are overdue, don't add an extra "Today" header for the empty section
+  if (overdue.length === 0) {
+    return renderSection(onTrack)
+  }
+
+  return (
+    <div>
+      {renderSection(overdue, 'Overdue', 'text-red-400/70')}
+      {onTrack.length > 0 && renderSection(onTrack, 'Today', 'text-white/40')}
+    </div>
   )
 }
 

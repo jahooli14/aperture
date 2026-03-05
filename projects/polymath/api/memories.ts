@@ -352,7 +352,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
           temperature: 0.7, // Reduced for more consistent results
           maxOutputTokens: 500,
           responseMimeType: 'application/json',
-          responseJsonSchema: {
+          responseSchema: {
             type: SchemaType.OBJECT,
             properties: {
               title: { type: SchemaType.STRING, description: "A concise, descriptive summary title (4-8 words max)" },
