@@ -20,6 +20,7 @@ import { useMemoryStore } from '../../stores/useMemoryStore'
 import { useToast } from '../ui/toast'
 import { Plus, Brain, ChevronDown } from 'lucide-react'
 import { celebrate, checkThoughtMilestone, getMilestoneMessage } from '../../utils/celebrations'
+import { handleInputFocus } from '../../utils/keyboard'
 import { useAutoSuggestion } from '../../contexts/AutoSuggestionContext'
 import { SuggestionToast } from '../SuggestionToast'
 import { Image as ImageIcon, X } from 'lucide-react'
@@ -289,7 +290,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 placeholder="What's on your mind?"
                 value={body}
                 onChange={handleBodyChange}
-                onFocus={() => setBodyFocused(true)}
+                onFocus={(e) => { setBodyFocused(true); handleInputFocus(e) }}
                 onBlur={() => setBodyFocused(false)}
                 required
                 autoFocus
@@ -308,6 +309,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 placeholder="Title (optional)"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onFocus={handleInputFocus}
                 autoComplete="off"
                 className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-white/20"
                 style={{ color: 'var(--premium-text-secondary)' }}
@@ -416,13 +418,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                       <img
                         src={previewUrls[index]}
                         alt="Preview"
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                      {/* Always visible on touch — no hover required */}
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80"
+                        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md text-white/90 border border-white/10 active:bg-red-500/80"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -476,6 +479,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                         placeholder="ai, programming, health"
                         value={formData.tags}
                         onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                        onFocus={handleInputFocus}
                         className="h-11 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/15"
                         style={{ color: 'var(--premium-text-primary)' }}
                         autoComplete="off"

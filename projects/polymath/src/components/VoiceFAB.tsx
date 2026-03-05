@@ -120,10 +120,13 @@ export function VoiceFAB({
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showArticleDialog, setShowArticleDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
-  const { addTodo } = useTodoStore()
+  const { addTodo, areas } = useTodoStore()
 
   const [isStripOpen, setIsStripOpen] = useState(false)
   const [activeOption, setActiveOption] = useState<StripOptionId | null>(null)
+  const [fabRect, setFabRect] = useState<{ bottom: number; right: number; size: number }>({
+    bottom: FAB_BOTTOM, right: FAB_RIGHT, size: FAB_SIZE
+  })
 
   const { isOnline } = useOnlineStatus()
 
@@ -179,6 +182,15 @@ export function VoiceFAB({
     pressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true
       haptic.medium()
+      // Measure actual FAB position so pills align regardless of safe-area-inset
+      if (fabRef.current) {
+        const rect = fabRef.current.getBoundingClientRect()
+        setFabRect({
+          bottom: window.innerHeight - rect.bottom,
+          right: window.innerWidth - rect.right,
+          size: rect.width,
+        })
+      }
       isStripOpenRef.current = true
       setIsStripOpen(true)
     }, LONG_PRESS_DELAY)
@@ -241,16 +253,11 @@ export function VoiceFAB({
     closeStrip()
   }, [closeStrip])
 
-  // --- Pill positions (hardcoded, anchored to FAB's known location) ---
-  // All pills share the same right edge as the FAB.
-  // bottom values are distances from the screen bottom edge.
-  const pillRight = FAB_RIGHT  // 24px — same right edge as FAB
+  // --- Pill positions (measured from actual FAB rect, so they work with any safe-area-inset) ---
+  const pillRight = fabRect.right
   const pillBottoms = STRIP_OPTIONS.map((opt) =>
-    FAB_BOTTOM + FAB_SIZE / 2 + opt.centerOffsetUp - PILL_H / 2
+    fabRect.bottom + fabRect.size / 2 + opt.centerOffsetUp - PILL_H / 2
   )
-  // pillBottoms[0] = 112 + 28 + 62 - 22 = 180  (Thought)
-  // pillBottoms[1] = 112 + 28 + 118 - 22 = 236  (Project)
-  // pillBottoms[2] = 112 + 28 + 174 - 22 = 292  (Article)
 
   // --- Render ---
 
@@ -315,7 +322,7 @@ export function VoiceFAB({
             exit={{ opacity: 0 }}
             transition={{ delay: 0.15 }}
             className="fixed z-[24995] pointer-events-none text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/40"
-            style={{ bottom: FAB_BOTTOM - 20, right: FAB_RIGHT - 8, width: FAB_SIZE + 16 }}
+            style={{ bottom: fabRect.bottom - 20, right: fabRect.right - 8, width: fabRect.size + 16 }}
           >
             {activeOption
               ? STRIP_OPTIONS.find(o => o.id === activeOption)?.label
@@ -487,6 +494,9 @@ export function VoiceFAB({
                   <TodoInput
                     autoFocus
                     onAdd={(parsed) => {
+                      const area = parsed.areaName
+                        ? areas.find(a => a.name.toLowerCase() === parsed.areaName!.toLowerCase())
+                        : undefined
                       addTodo({
                         text: parsed.text,
                         priority: parsed.priority,
@@ -495,6 +505,7 @@ export function VoiceFAB({
                         scheduled_time: parsed.scheduledTime,
                         deadline_date: parsed.deadlineDate,
                         estimated_minutes: parsed.estimatedMinutes,
+                        area_id: area?.id,
                       })
                       haptic.light()
                       setShowTodoQuickAdd(false)

@@ -14,6 +14,7 @@ import { cn } from '../../lib/utils'
 import { parseTodo, describeDate, describeTime, formatMinutes, PRIORITY_COLORS } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
 import { handleInputFocus } from '../../utils/keyboard'
+import { SwipeableCard, SwipeActions } from '../SwipeableCard'
 
 interface TodoItemProps {
   todo: Todo
@@ -89,12 +90,18 @@ export function TodoItem({
       animate={{ opacity: completing ? 0.35 : todo.done ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.2 }}
-      className={cn(
-        'group flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
-        'hover:bg-white/[0.04]',
-        priorityBorderClass,
-      )}
     >
+      <SwipeableCard
+        leftAction={{ ...SwipeActions.delete(handleToggle), icon: <Check className="h-5 w-5 text-white" />, color: 'bg-blue-600', label: 'Complete' }}
+        rightAction={SwipeActions.delete(() => onDelete(todo.id))}
+        className={cn('rounded-xl', priorityBorderClass)}
+      >
+      <div
+        className={cn(
+          'flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
+          'active:bg-white/[0.04]',
+        )}
+      >
       {/* Checkbox — extended tap target (44×44) via padding trick */}
       <button
         onClick={handleToggle}
@@ -203,18 +210,16 @@ export function TodoItem({
         )}
       </div>
 
-      {/* Delete */}
+      {/* Delete — always visible on touch */}
       <button
         onClick={() => onDelete(todo.id)}
-        className={cn(
-          'flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg transition-all',
-          'opacity-20 group-hover:opacity-100',
-          'hover:bg-red-500/15 text-white/40 hover:text-red-400'
-        )}
+        className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all opacity-25 active:opacity-100 active:bg-red-500/15 active:text-red-400 text-white/40"
         aria-label="Delete todo"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
+    </div>
+    </SwipeableCard>
     </motion.div>
   )
 }
