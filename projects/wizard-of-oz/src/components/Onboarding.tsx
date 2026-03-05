@@ -99,7 +99,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           onClick={handleSkip}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-100"
+          className="flex items-center justify-center min-w-[44px] min-h-[44px] text-gray-500 hover:text-gray-700 active:text-gray-900 transition-colors rounded-full hover:bg-gray-100 active:bg-gray-200"
           aria-label="Skip onboarding"
         >
           <X className="w-6 h-6" />
@@ -168,7 +168,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <button
               key={index}
               onClick={() => handleDotClick(index)}
-              className="group p-2"
+              className="group p-3"
               aria-label={`Go to screen ${index + 1}`}
             >
               <motion.div
