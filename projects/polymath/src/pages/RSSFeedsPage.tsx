@@ -353,7 +353,7 @@ export function RSSFeedsPage() {
                   value={customFeedUrl}
                   onChange={(e) => setCustomFeedUrl(e.target.value)}
                   placeholder="https://example.com/feed.xml"
-                  className="flex-1 px-4 py-3 rounded-lg premium-glass border focus:outline-none focus:ring-2"
+                  className="flex-1 px-4 py-3 rounded-lg premium-glass border focus:outline-none focus:ring-2 focus:ring-white/15 focus:border-white/25 transition-all duration-200"
                   style={{
                     borderColor: 'rgba(255, 255, 255, 0.1)',
                     color: 'var(--premium-text-primary)'
@@ -384,7 +384,7 @@ export function RSSFeedsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="e.g. Technology, Architecture, NYT..."
-                  className="flex-1 px-4 py-3 rounded-lg premium-glass border focus:outline-none focus:ring-2"
+                  className="flex-1 px-4 py-3 rounded-lg premium-glass border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 transition-all duration-200"
                   style={{
                     borderColor: 'rgba(255, 255, 255, 0.1)',
                     color: 'var(--premium-text-primary)'
