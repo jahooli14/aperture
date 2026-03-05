@@ -122,14 +122,14 @@ const BottomSheetContent = React.forwardRef<
           y,
           opacity,
           backgroundColor: 'var(--premium-surface-card)',
-          borderColor: 'rgba(255, 255, 255, 0.1)'
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 -8px 48px rgba(0,0,0,0.5)'
         }}
         className={cn(
           'fixed inset-x-0 bottom-0 z-[10001]',
           'max-h-[90vh]',
           'rounded-t-3xl',
           'backdrop-blur-xl',
-          'shadow-2xl border-t-2',
+          'shadow-2xl',
           'overflow-hidden',
           'flex flex-col',
           'will-change-transform',

@@ -28,6 +28,7 @@ import {
   selectLogbook,
   type TodoView,
   type Todo,
+  type TodoArea,
 } from '../stores/useTodoStore'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
@@ -49,7 +50,7 @@ const VIEWS: { id: TodoView; label: string; icon: React.ElementType; hint: strin
 
 export function TodosPage() {
   const {
-    todos, areas,
+    todos, areas, loading,
     activeView, setActiveView,
     fetchTodos, fetchAreas,
     addTodo, updateTodo, toggleTodo, deleteTodo,
@@ -184,17 +185,24 @@ export function TodosPage() {
                 key={v.id}
                 onClick={() => setActiveView(v.id)}
                 className={cn(
-                  'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all',
+                  'relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors duration-150',
                   isActive
-                    ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30'
-                    : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                    ? 'text-blue-400'
+                    : 'text-white/50 hover:text-white/70'
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {v.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="tabActiveIndicator"
+                    className="absolute inset-0 rounded-xl bg-blue-500/15"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                  />
+                )}
+                <Icon className="relative h-4 w-4" />
+                <span className="relative">{v.label}</span>
                 {count > 0 && (
                   <span className={cn(
-                    'text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
+                    'relative text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
                     isActive ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-white/40'
                   )}>
                     {count}
@@ -224,7 +232,7 @@ export function TodosPage() {
         {activeView === 'upcoming' ? (
           <UpcomingView
             todos={viewTodos}
-            areas={useTodoStore.getState().areas}
+            areas={areas}
             onToggle={handleToggle}
             onUpdate={updateTodo}
             onDelete={handleDelete}
@@ -234,7 +242,7 @@ export function TodosPage() {
         ) : (
           <StandardView
             todos={viewTodos}
-            areas={useTodoStore.getState().areas}
+            areas={areas}
             showDate={activeView !== 'today'}
             showArea={true}
             onToggle={handleToggle}
@@ -243,8 +251,20 @@ export function TodosPage() {
           />
         )}
 
-        {/* Empty state */}
-        {viewTodos.length === 0 && (
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="space-y-0.5 mt-1">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+                <div className="flex-shrink-0 h-[18px] w-[18px] rounded-[5px] bg-white/8 animate-pulse" />
+                <div className="h-4 rounded-lg bg-white/8 animate-pulse" style={{ width: `${50 + i * 15}%` }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state — only shown after load completes */}
+        {!loading && viewTodos.length === 0 && (
           <EmptyState view={activeView} />
         )}
       </div>
@@ -258,7 +278,7 @@ function StandardView({
   todos, areas, showDate, showArea, onToggle, onUpdate, onDelete
 }: {
   todos: Todo[]
-  areas: any[]
+  areas: TodoArea[]
   showDate: boolean
   showArea: boolean
   onToggle: (id: string) => void
@@ -289,15 +309,15 @@ function UpcomingView({
   todos, areas, onToggle, onUpdate, onDelete
 }: {
   todos: Todo[]
-  areas: any[]
+  areas: TodoArea[]
   onToggle: (id: string) => void
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }) {
-  // Group by scheduled_date
+  // Group by scheduled_date, falling back to deadline_date
   const groups: Record<string, Todo[]> = {}
   for (const todo of todos) {
-    const key = todo.scheduled_date ?? 'unknown'
+    const key = todo.scheduled_date ?? todo.deadline_date ?? 'unknown'
     if (!groups[key]) groups[key] = []
     groups[key].push(todo)
   }
@@ -327,7 +347,7 @@ function UpcomingView({
                   onDelete={onDelete}
                   showDate={false}
                   showArea={true}
-                  areaName={areas.find((a: any) => a.id === todo.area_id)?.name}
+                  areaName={areas.find(a => a.id === todo.area_id)?.name}
                 />
               ))}
             </div>
@@ -415,9 +435,9 @@ function EmptyState({ view }: { view: TodoView }) {
 
 function getPlaceholder(view: TodoView): string {
   switch (view) {
-    case 'today':    return 'Add task for today… (try "call dentist !high #health")'
-    case 'upcoming': return 'Add task… (try "review report next monday")'
-    case 'someday':  return 'Park an idea… (try "learn guitar someday")'
-    default:         return 'Add todo… (try "buy milk tomorrow #errands 15min")'
+    case 'today':    return 'What needs doing today?'
+    case 'upcoming': return 'Add a task…'
+    case 'someday':  return 'Park an idea…'
+    default:         return 'Add a task…'
   }
 }

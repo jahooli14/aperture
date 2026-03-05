@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, Brain, Layers, BookOpen, Loader2, ArrowRight, Lightbulb, Mic } from 'lucide-react'
 import { useToast } from '../components/ui/toast'
 import { haptic } from '../utils/haptics'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { EmptyState } from '../components/ui/empty-state'
 import { PremiumCard } from '../components/ui/premium-card'
-import { readingDb } from '../lib/db' // Import readingDb
-import { useOfflineStore } from '../stores/useOfflineStore' // Import useOfflineStore
+import { VoiceSearch } from '../components/VoiceSearch'
+import { readingDb } from '../lib/db'
+import { useOfflineStore } from '../stores/useOfflineStore'
+import { handleInputFocus } from '../utils/keyboard'
 
 interface SearchResult {
   type: 'memory' | 'project' | 'article' | 'suggestion'
@@ -109,6 +111,8 @@ export function SearchPage() {
   const [results, setResults] = useState<SearchResponse | null>(null)
   const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('semantic')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [showVoiceSearch, setShowVoiceSearch] = useState(false)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
 
   // Handle ?similar=<id> parameter for "find similar" searches
   useEffect(() => {
@@ -221,6 +225,28 @@ export function SearchPage() {
     }
   }
 
+  // Debounced live search — fires 600ms after the user stops typing
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setQuery(val)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (val.trim().length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        setSearchParams({ q: val.trim() })
+        performSearch(val.trim())
+      }, 600)
+    } else if (!val.trim()) {
+      setResults(null)
+    }
+  }
+
+  const handleVoiceSearch = (voiceQuery: string) => {
+    setQuery(voiceQuery)
+    setShowVoiceSearch(false)
+    setSearchParams({ q: voiceQuery })
+    performSearch(voiceQuery)
+  }
+
 
   const navigateToResult = (result: SearchResult) => {
     haptic.light()
@@ -324,22 +350,21 @@ export function SearchPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Search Input */}
-          <div className="p-6 rounded-xl backdrop-blur-xl mb-8" style={{
+          <div className="p-4 rounded-xl backdrop-blur-xl mb-6" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
           }}>
-            <form onSubmit={handleTextSearch} className="flex gap-3">
+            <form onSubmit={handleTextSearch} className="flex gap-2">
               <div className="flex-1 relative">
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5"
                   style={{ color: 'var(--premium-text-tertiary)' }}
                 />
                 <input
-                  autoFocus
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onFocus={() => setSearchFocused(true)}
+                  onChange={handleQueryChange}
+                  onFocus={(e) => { setSearchFocused(true); handleInputFocus(e) }}
                   onBlur={() => setSearchFocused(false)}
                   placeholder="Search your knowledge..."
                   className="w-full h-12 pl-12 pr-4 rounded-xl border text-base focus:outline-none transition-all duration-200"
@@ -351,31 +376,55 @@ export function SearchPage() {
                   }}
                 />
               </div>
+              {/* Voice search button */}
               <button
-                type="submit"
-                disabled={loading || !query.trim()}
-                className="h-12 px-6 rounded-xl font-medium transition-all disabled:opacity-50"
+                type="button"
+                onClick={() => setShowVoiceSearch(v => !v)}
+                className="h-12 w-12 flex-shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-95"
                 style={{
-                  background: 'linear-gradient(135deg, var(--premium-blue), var(--premium-indigo))',
-                  color: 'white'
+                  background: showVoiceSearch ? 'rgba(59,130,246,0.2)' : 'var(--premium-bg-3)',
+                  border: `1px solid ${showVoiceSearch ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.2)'}`,
+                  color: showVoiceSearch ? 'var(--premium-blue)' : 'var(--premium-text-tertiary)',
                 }}
+                aria-label="Voice search"
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Search'}
+                <Mic className="h-5 w-5" />
               </button>
             </form>
+
+            {/* Voice search panel */}
+            <AnimatePresence>
+              {showVoiceSearch && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden mt-3"
+                >
+                  <VoiceSearch
+                    onSearch={handleVoiceSearch}
+                    onClose={() => setShowVoiceSearch(false)}
+                    autoStart={true}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Mode toggles — larger touch targets */}
             <div className="flex items-center gap-2 mt-3">
               <button
-                onClick={() => setSearchMode('text')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  searchMode === 'text' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                onClick={() => { setSearchMode('text'); if (query.trim().length >= 2) performSearch(query.trim()) }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                  searchMode === 'text' ? 'bg-white/10 text-white' : 'text-gray-500'
                 }`}
               >
                 Exact
               </button>
               <button
-                onClick={() => setSearchMode('semantic')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500 hover:text-gray-300'
+                onClick={() => { setSearchMode('semantic'); if (query.trim().length >= 2) performSearch(query.trim()) }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all active:scale-95 ${
+                  searchMode === 'semantic' ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500'
                 }`}
               >
                 Semantic
@@ -436,19 +485,12 @@ export function SearchPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
+                      whileTap={{ scale: 0.98, backgroundColor: 'var(--premium-bg-3)' }}
                       onClick={() => navigateToResult(result)}
-                      className="p-5 rounded-xl backdrop-blur-xl cursor-pointer transition-all duration-300 group"
+                      className="p-5 rounded-xl backdrop-blur-xl cursor-pointer"
                       style={{
                         background: 'var(--premium-bg-2)',
                         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-3)'
-                        e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--premium-bg-2)'
-                        e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)'
                       }}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -495,8 +537,8 @@ export function SearchPage() {
                           )}
                         </div>
 
-                        {/* Arrow Icon */}
-                        <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Arrow always visible on touch */}
+                        <div className="flex-shrink-0 opacity-30">
                           <ArrowRight className="h-5 w-5" style={{ color: 'var(--premium-blue)' }} />
                         </div>
                       </div>

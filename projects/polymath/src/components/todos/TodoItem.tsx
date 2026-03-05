@@ -11,9 +11,10 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Calendar, Tag, Clock, AlertCircle, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { describeDate, describeTime, PRIORITY_COLORS } from '../../lib/todoNLP'
+import { parseTodo, describeDate, describeTime, formatMinutes, PRIORITY_COLORS } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
 import { handleInputFocus } from '../../utils/keyboard'
+import { SwipeableCard, SwipeActions } from '../SwipeableCard'
 
 interface TodoItemProps {
   todo: Todo
@@ -61,7 +62,16 @@ export function TodoItem({
 
   const handleEditSave = () => {
     if (!editText.trim()) return
-    onUpdate(todo.id, { text: editText.trim() })
+    const parsed = parseTodo(editText)
+    if (!parsed.text.trim()) return
+    onUpdate(todo.id, {
+      text: parsed.text,
+      ...(parsed.scheduledDate !== undefined && { scheduled_date: parsed.scheduledDate }),
+      ...(parsed.scheduledTime !== undefined && { scheduled_time: parsed.scheduledTime }),
+      ...(parsed.deadlineDate !== undefined && { deadline_date: parsed.deadlineDate }),
+      ...(parsed.priority > 0 && { priority: parsed.priority }),
+      ...(parsed.estimatedMinutes !== undefined && { estimated_minutes: parsed.estimatedMinutes }),
+    })
     setEditing(false)
   }
 
@@ -80,25 +90,33 @@ export function TodoItem({
       animate={{ opacity: completing ? 0.35 : todo.done ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
       transition={{ duration: 0.2 }}
-      className={cn(
-        'group flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
-        'hover:bg-white/[0.04]',
-        priorityBorderClass,
-      )}
     >
-      {/* Checkbox */}
+      <SwipeableCard
+        leftAction={{ ...SwipeActions.delete(handleToggle), icon: <Check className="h-5 w-5 text-white" />, color: 'bg-blue-600', label: 'Complete' }}
+        rightAction={SwipeActions.delete(() => onDelete(todo.id))}
+        className={cn('rounded-xl', priorityBorderClass)}
+      >
+      <div
+        className={cn(
+          'flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
+          'active:bg-white/[0.04]',
+        )}
+      >
+      {/* Checkbox — extended tap target (44×44) via padding trick */}
       <button
         onClick={handleToggle}
-        className={cn(
-          'flex-shrink-0 mt-0.5 h-[18px] w-[18px] rounded-[5px] flex items-center justify-center transition-all border-2',
+        className="flex-shrink-0 flex items-center justify-center p-[13px] -m-[13px]"
+        style={{ marginTop: -11, paddingTop: 11 }}
+        aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
+      >
+        <div className={cn(
+          'h-[18px] w-[18px] rounded-[5px] flex items-center justify-center transition-all border-2',
           todo.done
             ? 'bg-blue-500 border-blue-500'
             : isOverdue
               ? 'border-red-400/60 hover:border-red-400'
               : 'border-white/20 hover:border-white/45'
-        )}
-        aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
-      >
+        )}>
         <AnimatePresence>
           {(todo.done || completing) && (
             <motion.div
@@ -111,6 +129,7 @@ export function TodoItem({
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </button>
 
       {/* Content */}
@@ -125,7 +144,7 @@ export function TodoItem({
             onFocus={handleInputFocus}
             onKeyDown={handleEditKeyDown}
             onBlur={handleEditSave}
-            className="w-full bg-white/8 rounded-lg px-2.5 py-1 text-sm outline-none ring-1 ring-blue-500/40"
+            className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 bg-white/8 rounded-lg text-sm outline-none ring-1 ring-blue-500/60"
             style={{ color: 'var(--premium-text-primary)' }}
             autoFocus
           />
@@ -184,27 +203,23 @@ export function TodoItem({
             {todo.estimated_minutes && (
               <span className="flex items-center gap-1 text-[11px] text-white/25">
                 <Clock className="h-3 w-3" />
-                {todo.estimated_minutes >= 60
-                  ? `${todo.estimated_minutes / 60}h`
-                  : `${todo.estimated_minutes}m`}
+                {formatMinutes(todo.estimated_minutes)}
               </span>
             )}
           </div>
         )}
       </div>
 
-      {/* Delete */}
+      {/* Delete — always visible on touch */}
       <button
         onClick={() => onDelete(todo.id)}
-        className={cn(
-          'flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg transition-all',
-          'opacity-0 group-hover:opacity-100',
-          'hover:bg-red-500/15 text-white/20 hover:text-red-400'
-        )}
+        className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all opacity-25 active:opacity-100 active:bg-red-500/15 active:text-red-400 text-white/40"
         aria-label="Delete todo"
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
+    </div>
+    </SwipeableCard>
     </motion.div>
   )
 }

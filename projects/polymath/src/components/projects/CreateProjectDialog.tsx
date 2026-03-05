@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { Plus, Layers } from 'lucide-react'
 import { Button } from '../ui/button'
+import { handleInputFocus } from '../../utils/keyboard'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -145,6 +146,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 placeholder="Project Aperture"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onFocus={handleInputFocus}
                 className="text-2xl h-16 font-bold bg-white/5 border-white/10 focus:border-zebra-accent focus:ring-0 transition-all placeholder:text-white/10"
                 autoComplete="off"
                 autoFocus
@@ -161,6 +163,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 placeholder="A short sentence explaining the project..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onFocus={handleInputFocus}
                 className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                 autoComplete="off"
               />
@@ -229,6 +232,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                   placeholder="e.g., 'App live on App Store'"
                   value={formData.end_goal}
                   onChange={(e) => setFormData({ ...formData, end_goal: e.target.value })}
+                  onFocus={handleInputFocus}
                   className="h-14 bg-white/5 border-white/10 focus:border-blue-400 placeholder:text-white/10"
                   autoComplete="off"
                 />
@@ -245,6 +249,7 @@ export function CreateProjectDialog({ isOpen, onOpenChange, hideTrigger = false,
                 placeholder="e.g., Create repo, Buy domain..."
                 value={formData.next_step}
                 onChange={(e) => setFormData({ ...formData, next_step: e.target.value })}
+                onFocus={handleInputFocus}
                 className="h-14 bg-white/5 border-white/10 focus:border-zebra-accent placeholder:text-white/10"
                 autoComplete="off"
               />

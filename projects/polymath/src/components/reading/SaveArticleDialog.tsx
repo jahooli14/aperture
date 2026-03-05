@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { BookmarkPlus, Link as LinkIcon } from 'lucide-react'
 import { Button } from '../ui/button'
+import { handleInputFocus } from '../../utils/keyboard'
 import {
   BottomSheet,
   BottomSheetContent,
@@ -130,7 +131,7 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 placeholder="https://..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                onFocus={() => setInputFocused(true)}
+                onFocus={(e) => { setInputFocused(true); handleInputFocus(e) }}
                 onBlur={() => setInputFocused(false)}
                 required
                 autoFocus

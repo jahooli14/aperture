@@ -3,6 +3,7 @@ import { X, Plus, Trash2 } from 'lucide-react'
 import { MemoryPromptWithStatus } from '../../types'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
+import { handleInputFocus } from '../../utils/keyboard'
 
 interface PromptModalProps {
   open: boolean
@@ -91,10 +92,8 @@ export function PromptModal({
       <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <button
           onClick={handleSkip}
-          className="p-2 rounded-full transition-colors"
+          className="p-2 rounded-full transition-colors active:bg-white/10"
           style={{ color: 'var(--premium-text-secondary)' }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           disabled={submitting}
         >
           <X className="h-5 w-5" />
@@ -120,6 +119,7 @@ export function PromptModal({
               <Textarea
                 value={bullet}
                 onChange={(e) => handleBulletChange(index, e.target.value)}
+                onFocus={handleInputFocus}
                 placeholder={`Bullet ${index + 1}`}
                 className="flex-1 min-h-[60px]"
                 disabled={submitting}
@@ -127,10 +127,8 @@ export function PromptModal({
               {bullets.length > 3 && (
                 <button
                   onClick={() => handleRemoveBullet(index)}
-                  className="p-2 rounded-full transition-colors mt-2"
+                  className="p-2 rounded-full transition-colors mt-2 active:bg-white/10"
                   style={{ color: 'var(--premium-text-tertiary)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   disabled={submitting}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -143,10 +141,8 @@ export function PromptModal({
         <div className="mt-6">
           <button
             onClick={handleAddBullet}
-            className="flex items-center gap-2 text-sm font-medium"
+            className="flex items-center gap-2 text-sm font-medium active:opacity-70 touch-manipulation"
             style={{ color: 'var(--premium-blue)' }}
-            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
             disabled={submitting}
           >
             <Plus className="h-4 w-4" />
@@ -194,10 +190,8 @@ export function PromptModal({
         </Button>
         <button
           onClick={handleSkip}
-          className="w-full py-3 text-sm mt-2"
+          className="w-full py-3 text-sm mt-2 active:opacity-70 touch-manipulation"
           style={{ color: 'var(--premium-text-tertiary)' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--premium-text-secondary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--premium-text-tertiary)'}
           disabled={submitting}
         >
           Skip for now
