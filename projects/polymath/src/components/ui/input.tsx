@@ -15,8 +15,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           // Dark glass appearance
           "bg-white/[0.05] border border-white/10",
           "text-white/90 placeholder:text-white/25",
-          // Focus — border lifts, background brightens subtly
-          "focus:outline-none focus:ring-0 focus:border-white/30 focus:bg-white/[0.08]",
+          // Focus — visible ring + background brightens
+          "focus:outline-none focus:ring-1 focus:ring-white/40 focus:border-white/40 focus:bg-white/[0.10]",
           // Smooth transitions
           "transition-all duration-200",
           // File inputs

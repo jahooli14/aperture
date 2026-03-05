@@ -9,6 +9,7 @@ import { Button } from '../ui/button'
 import { Label } from '../ui/label'
 import { useToast } from '../ui/toast'
 import { useMemoryStore } from '../../stores/useMemoryStore'
+import { handleInputFocus } from '../../utils/keyboard'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BottomSheet,
@@ -201,6 +202,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
               <textarea
                 value={bullet}
                 onChange={(e) => updateBullet(index, e.target.value)}
+                onFocus={handleInputFocus}
                 placeholder="Add a bullet point..."
                 rows={2}
                 autoFocus={index === 0}
@@ -300,7 +302,7 @@ export function AddNoteDialog({ open, onClose, projectId, onNoteAdded }: AddNote
                       <button
                         type="button"
                         onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 backdrop-blur-md text-white/90 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/80"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 backdrop-blur-md text-white/90 border border-white/10 transition-all active:bg-red-500/80"
                       >
                         <span className="h-3.5 w-3.5 block text-center leading-none">&times;</span>
                       </button>
