@@ -170,8 +170,9 @@ export function parseTodo(raw: string): ParsedTodo {
     }
   }
 
-  // ── Deadline date: "due:friday" or "deadline:next week" ──
-  const deadlineRe = /\b(?:due|deadline):(\S+(?:\s+\S+)?)/i
+  // ── Deadline date: "due:friday", "due:in 3 days", "deadline:next week" ──
+  // Capture up to 3 words but stop at NLP-special chars (!, #, @)
+  const deadlineRe = /\b(?:due|deadline):((?:[^!#@\s]+\s*){1,3})/i
   const deadlineMatch = input.match(deadlineRe)
   if (deadlineMatch) {
     deadlineDate = parseDate(deadlineMatch[1])
@@ -496,6 +497,7 @@ function resolveMonthDay(monthIdx: number, day: number, year?: number): string {
 function parseDate(token: string): string | undefined {
   const t = token.toLowerCase().trim()
   if (t === 'today' || t === 'tod') return toYMD(today())
+  if (t === 'eod') return toYMD(today())
   if (/^(tomorrow|tmrw|tmr|tmrow|tom)$/.test(t)) return toYMD(addDays(today(), 1))
   if (t === 'next week') return toYMD(addDays(today(), 7))
   if (t === 'next month') return toYMD(startOfNextMonth())
@@ -503,6 +505,34 @@ function parseDate(token: string): string | undefined {
   if (t === 'eom') return toYMD(endOfCurrentMonth())
   if (t === 'som') return toYMD(startOfNextMonth())
   if (DAY_NAMES[t] !== undefined) return toYMD(nextWeekday(DAY_NAMES[t]))
+
+  // "next <weekday>"
+  const nextDayMatch = t.match(/^next\s+(\w+)$/)
+  if (nextDayMatch && DAY_NAMES[nextDayMatch[1]] !== undefined) {
+    return toYMD(nextWeekday(DAY_NAMES[nextDayMatch[1]], true))
+  }
+
+  // "in N days/weeks"
+  const inNDaysMatch = t.match(/^in\s+(\d+)\s+(days?|weeks?)$/)
+  if (inNDaysMatch) {
+    const n = parseInt(inNDaysMatch[1])
+    const unit = inNDaysMatch[2]
+    return toYMD(addDays(today(), unit.startsWith('week') ? n * 7 : n))
+  }
+
+  // Month-name dates: "jan 15", "january 15 2027", "15 jan", "5 march 2026"
+  const monthKeys = Object.keys(MONTH_NAMES).join('|')
+  const monthDayRe = new RegExp(`^(${monthKeys})\\s+(\\d{1,2})(?:\\s+(\\d{4}))?$`)
+  const mDayMatch = t.match(monthDayRe)
+  if (mDayMatch) {
+    return resolveMonthDay(MONTH_NAMES[mDayMatch[1]], parseInt(mDayMatch[2]), mDayMatch[3] ? parseInt(mDayMatch[3]) : undefined)
+  }
+  const dayMonthRe = new RegExp(`^(\\d{1,2})\\s+(${monthKeys})(?:\\s+(\\d{4}))?$`)
+  const dMonthMatch = t.match(dayMonthRe)
+  if (dMonthMatch) {
+    return resolveMonthDay(MONTH_NAMES[dMonthMatch[2]], parseInt(dMonthMatch[1]), dMonthMatch[3] ? parseInt(dMonthMatch[3]) : undefined)
+  }
+
   // Try native Date parse as last resort
   const d = new Date(token)
   if (!isNaN(d.getTime())) return toYMD(d)
@@ -546,4 +576,12 @@ export const PRIORITY_COLORS: Record<number, string> = {
   1: 'text-blue-400',
   2: 'text-amber-400',
   3: 'text-red-400',
+}
+
+/** Format a minute count for display: 30 → "30m", 60 → "1h", 75 → "1h 15m" */
+export function formatMinutes(mins: number): string {
+  if (mins < 60) return `${mins}m`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m === 0 ? `${h}h` : `${h}h ${m}m`
 }

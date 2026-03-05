@@ -342,12 +342,12 @@ export const useTodoStore = create<TodoStore>()(
 const YMD = () => new Date().toISOString().split('T')[0]
 
 export function selectInbox(todos: Todo[]): Todo[] {
-  const t = YMD()
   return todos.filter(x =>
     !x.done &&
     !x.deleted_at &&
     !x.scheduled_date &&
-    !x.deadline_date
+    !x.deadline_date &&
+    !x.tags.includes('someday')
   ).sort((a, b) => a.sort_order - b.sort_order)
 }
 
@@ -366,15 +366,19 @@ export function selectToday(todos: Todo[]): Todo[] {
 }
 
 export function selectUpcoming(todos: Todo[]): Todo[] {
-  const today = YMD()
+  const t = YMD()
   return todos.filter(x =>
     !x.done &&
     !x.deleted_at &&
-    x.scheduled_date &&
-    x.scheduled_date > today
+    (
+      (x.scheduled_date && x.scheduled_date > t) ||
+      (!x.scheduled_date && x.deadline_date && x.deadline_date > t)
+    )
   ).sort((a, b) => {
-    if (a.scheduled_date! < b.scheduled_date!) return -1
-    if (a.scheduled_date! > b.scheduled_date!) return 1
+    const da = a.scheduled_date ?? a.deadline_date!
+    const db = b.scheduled_date ?? b.deadline_date!
+    if (da < db) return -1
+    if (da > db) return 1
     return b.priority - a.priority
   })
 }

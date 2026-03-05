@@ -11,7 +11,7 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, Calendar, Tag, Clock, AlertCircle, Trash2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
-import { describeDate, describeTime, PRIORITY_COLORS } from '../../lib/todoNLP'
+import { parseTodo, describeDate, describeTime, formatMinutes, PRIORITY_COLORS } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
 import { handleInputFocus } from '../../utils/keyboard'
 
@@ -61,7 +61,16 @@ export function TodoItem({
 
   const handleEditSave = () => {
     if (!editText.trim()) return
-    onUpdate(todo.id, { text: editText.trim() })
+    const parsed = parseTodo(editText)
+    if (!parsed.text.trim()) return
+    onUpdate(todo.id, {
+      text: parsed.text,
+      ...(parsed.scheduledDate !== undefined && { scheduled_date: parsed.scheduledDate }),
+      ...(parsed.scheduledTime !== undefined && { scheduled_time: parsed.scheduledTime }),
+      ...(parsed.deadlineDate !== undefined && { deadline_date: parsed.deadlineDate }),
+      ...(parsed.priority > 0 && { priority: parsed.priority }),
+      ...(parsed.estimatedMinutes !== undefined && { estimated_minutes: parsed.estimatedMinutes }),
+    })
     setEditing(false)
   }
 
@@ -187,9 +196,7 @@ export function TodoItem({
             {todo.estimated_minutes && (
               <span className="flex items-center gap-1 text-[11px] text-white/25">
                 <Clock className="h-3 w-3" />
-                {todo.estimated_minutes >= 60
-                  ? `${todo.estimated_minutes / 60}h`
-                  : `${todo.estimated_minutes}m`}
+                {formatMinutes(todo.estimated_minutes)}
               </span>
             )}
           </div>
