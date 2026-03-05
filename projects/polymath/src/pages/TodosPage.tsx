@@ -28,6 +28,7 @@ import {
   selectLogbook,
   type TodoView,
   type Todo,
+  type TodoArea,
 } from '../stores/useTodoStore'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
@@ -231,7 +232,7 @@ export function TodosPage() {
         {activeView === 'upcoming' ? (
           <UpcomingView
             todos={viewTodos}
-            areas={useTodoStore.getState().areas}
+            areas={areas}
             onToggle={handleToggle}
             onUpdate={updateTodo}
             onDelete={handleDelete}
@@ -241,7 +242,7 @@ export function TodosPage() {
         ) : (
           <StandardView
             todos={viewTodos}
-            areas={useTodoStore.getState().areas}
+            areas={areas}
             showDate={activeView !== 'today'}
             showArea={true}
             onToggle={handleToggle}
@@ -277,7 +278,7 @@ function StandardView({
   todos, areas, showDate, showArea, onToggle, onUpdate, onDelete
 }: {
   todos: Todo[]
-  areas: any[]
+  areas: TodoArea[]
   showDate: boolean
   showArea: boolean
   onToggle: (id: string) => void
@@ -308,15 +309,15 @@ function UpcomingView({
   todos, areas, onToggle, onUpdate, onDelete
 }: {
   todos: Todo[]
-  areas: any[]
+  areas: TodoArea[]
   onToggle: (id: string) => void
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }) {
-  // Group by scheduled_date
+  // Group by scheduled_date, falling back to deadline_date
   const groups: Record<string, Todo[]> = {}
   for (const todo of todos) {
-    const key = todo.scheduled_date ?? 'unknown'
+    const key = todo.scheduled_date ?? todo.deadline_date ?? 'unknown'
     if (!groups[key]) groups[key] = []
     groups[key].push(todo)
   }
@@ -346,7 +347,7 @@ function UpcomingView({
                   onDelete={onDelete}
                   showDate={false}
                   showArea={true}
-                  areaName={areas.find((a: any) => a.id === todo.area_id)?.name}
+                  areaName={areas.find(a => a.id === todo.area_id)?.name}
                 />
               ))}
             </div>

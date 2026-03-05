@@ -10,7 +10,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, Tag, Clock, AlertCircle, MapPin } from 'lucide-react'
-import { parseTodo, describeDate, describeTime, PRIORITY_COLORS, PRIORITY_LABELS } from '../../lib/todoNLP'
+import { parseTodo, describeDate, describeTime, formatMinutes, PRIORITY_COLORS, PRIORITY_LABELS } from '../../lib/todoNLP'
 import { cn } from '../../lib/utils'
 import { handleInputFocus } from '../../utils/keyboard'
 
@@ -170,9 +170,7 @@ export function TodoInput({
             )}
             {parsed.estimatedMinutes && (
               <Chip icon={<Clock className="h-3 w-3" />} color="text-sky-400" bg="bg-sky-500/15">
-                {parsed.estimatedMinutes >= 60
-                  ? `${parsed.estimatedMinutes / 60}h`
-                  : `${parsed.estimatedMinutes}m`}
+                {formatMinutes(parsed.estimatedMinutes)}
               </Chip>
             )}
           </motion.div>
@@ -192,11 +190,15 @@ export function TodoInput({
             <p className="text-[11px] text-white/25 leading-relaxed">
               Try{' '}
               <HintToken>tom</HintToken>,{' '}
-              <HintToken>3pm</HintToken>,{' '}
+              <HintToken>eow</HintToken>,{' '}
+              <HintToken>morning</HintToken>,{' '}
+              <HintToken>in 2h</HintToken>,{' '}
               <HintToken>!high</HintToken>,{' '}
+              <HintToken>urgent</HintToken>,{' '}
               <HintToken>#tag</HintToken>,{' '}
               <HintToken>@area</HintToken>,{' '}
-              <HintToken>30min</HintToken>
+              <HintToken>30min</HintToken>,{' '}
+              <HintToken>due:friday</HintToken>
             </p>
           </motion.div>
         )}
