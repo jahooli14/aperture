@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ─── POST /api/todos ───────────────────────────────────────
     if (req.method === 'POST') {
       const {
-        text, notes, scheduled_date, deadline_date,
+        text, notes, scheduled_date, scheduled_time, deadline_date,
         area_id, project_id, tags, priority,
         estimated_minutes, source_memory_id, sort_order
       } = req.body
@@ -65,6 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           text: text.trim(),
           notes: notes ?? null,
           scheduled_date: scheduled_date ?? null,
+          scheduled_time: scheduled_time ?? null,
           deadline_date: deadline_date ?? null,
           area_id: area_id ?? null,
           project_id: project_id ?? null,

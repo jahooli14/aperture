@@ -30,6 +30,7 @@ interface SaveArticleDialogProps {
 export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveArticleDialogProps) {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [inputFocused, setInputFocused] = useState(false)
   const { saveArticle } = useReadingStore()
   const { fetchSuggestions } = useConnectionStore()
   const { addToast } = useToast()
@@ -114,10 +115,12 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* URL Input — big and clear */}
           <div className="pt-2">
-            <div className="flex items-center gap-3 rounded-xl border px-4"
+            <div
+              className="flex items-center gap-3 rounded-xl border px-4 transition-all duration-200"
               style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: inputFocused ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.05)',
+                borderColor: inputFocused ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.1)',
+                boxShadow: inputFocused ? '0 0 0 3px rgba(255, 255, 255, 0.04)' : 'none',
               }}
             >
               <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
@@ -127,10 +130,12 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 placeholder="https://..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
                 required
                 autoFocus
                 autoComplete="off"
-                className="flex-1 h-14 bg-transparent border-0 text-base focus:outline-none focus:ring-0 placeholder:text-white/15"
+                className="flex-1 h-14 bg-transparent border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-white/20"
                 style={{ color: 'var(--premium-text-primary)' }}
               />
             </div>

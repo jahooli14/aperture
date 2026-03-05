@@ -4,7 +4,7 @@
  * Streamlined for fast, pleasant typing experience
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '../ui/button'
 import {
   BottomSheet,
@@ -66,6 +66,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     memory_type: '' as '' | 'foundational' | 'event' | 'insight' | 'quick-note',
   })
   const [recentTags, setRecentTags] = useState<string[]>([])
+  const [bodyFocused, setBodyFocused] = useState(false)
 
   // Load recent tags from memories
   useEffect(() => {
@@ -272,16 +273,25 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             {/* Body — primary field, auto-growing textarea */}
-            <div>
+            <div
+              className="rounded-xl transition-all duration-200 px-3 py-2.5"
+              style={{
+                background: bodyFocused ? 'rgba(255,255,255,0.04)' : 'transparent',
+                border: '1px solid',
+                borderColor: bodyFocused ? 'rgba(255,255,255,0.12)' : 'transparent',
+              }}
+            >
               <textarea
                 ref={bodyRef}
                 id="body"
                 placeholder="What's on your mind?"
                 value={body}
                 onChange={handleBodyChange}
+                onFocus={() => setBodyFocused(true)}
+                onBlur={() => setBodyFocused(false)}
                 required
                 autoFocus
-                className="w-full text-base leading-relaxed bg-transparent border-0 px-1 py-2 focus:outline-none focus:ring-0 resize-none placeholder:text-white/15"
+                className="w-full text-[15px] leading-relaxed bg-transparent border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20"
                 style={{
                   color: 'var(--premium-text-primary)',
                   minHeight: '120px',
@@ -297,7 +307,7 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 autoComplete="off"
-                className="text-sm h-10 border-0 bg-transparent px-1 focus:ring-0 placeholder:text-white/15"
+                className="h-10 border-0 border-b rounded-none bg-transparent px-1 text-sm focus:ring-0 focus:border-b focus:border-white/20 placeholder:text-white/20"
                 style={{ color: 'var(--premium-text-secondary)' }}
               />
             </div>
