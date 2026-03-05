@@ -67,17 +67,12 @@ export function TodoInput({
 
   return (
     <div
-      className={cn(
-        'rounded-2xl transition-all duration-200 overflow-hidden',
-        focused
-          ? 'ring-1 ring-white/25 shadow-lg shadow-black/20'
-          : 'hover:bg-white/[0.02]'
-      )}
+      className="rounded-2xl transition-all duration-200 border"
       style={{
-        background: focused
-          ? 'rgba(255,255,255,0.07)'
-          : 'rgba(255,255,255,0.04)',
+        background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
         backdropFilter: 'blur(16px)',
+        borderColor: focused ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.07)',
+        boxShadow: focused ? '0 4px 24px rgba(0,0,0,0.25)' : 'none',
       }}
     >
       {/* Main input row */}
@@ -128,11 +123,11 @@ export function TodoInput({
       <AnimatePresence>
         {focused && hasMetadata && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex flex-wrap gap-1.5 px-4 pb-3 overflow-hidden"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
+            className="flex flex-wrap gap-1.5 px-4 pb-3"
           >
             {parsed.isSomeday && (
               <Chip icon={<Clock className="h-3 w-3" />} color="text-purple-400" bg="bg-purple-500/15">
@@ -188,16 +183,16 @@ export function TodoInput({
       <AnimatePresence>
         {focused && !value && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.12 }}
-            className="px-4 pb-3 overflow-hidden"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
+            className="px-4 pb-3"
           >
             <p className="text-[11px] text-white/25 leading-relaxed">
               Try{' '}
-              <HintToken>tomorrow</HintToken>,{' '}
-              <HintToken>at 3pm</HintToken>,{' '}
+              <HintToken>tom</HintToken>,{' '}
+              <HintToken>3pm</HintToken>,{' '}
               <HintToken>!high</HintToken>,{' '}
               <HintToken>#tag</HintToken>,{' '}
               <HintToken>@area</HintToken>,{' '}

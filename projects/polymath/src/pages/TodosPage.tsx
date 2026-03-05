@@ -49,7 +49,7 @@ const VIEWS: { id: TodoView; label: string; icon: React.ElementType; hint: strin
 
 export function TodosPage() {
   const {
-    todos, areas,
+    todos, areas, loading,
     activeView, setActiveView,
     fetchTodos, fetchAreas,
     addTodo, updateTodo, toggleTodo, deleteTodo,
@@ -184,17 +184,24 @@ export function TodosPage() {
                 key={v.id}
                 onClick={() => setActiveView(v.id)}
                 className={cn(
-                  'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all',
+                  'relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors duration-150',
                   isActive
-                    ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30'
-                    : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                    ? 'text-blue-400'
+                    : 'text-white/50 hover:text-white/70'
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {v.label}
+                {isActive && (
+                  <motion.div
+                    layoutId="tabActiveIndicator"
+                    className="absolute inset-0 rounded-xl bg-blue-500/15"
+                    transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                  />
+                )}
+                <Icon className="relative h-4 w-4" />
+                <span className="relative">{v.label}</span>
                 {count > 0 && (
                   <span className={cn(
-                    'text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
+                    'relative text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
                     isActive ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-white/40'
                   )}>
                     {count}
@@ -243,8 +250,20 @@ export function TodosPage() {
           />
         )}
 
-        {/* Empty state */}
-        {viewTodos.length === 0 && (
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="space-y-0.5 mt-1">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
+                <div className="flex-shrink-0 h-[18px] w-[18px] rounded-[5px] bg-white/8 animate-pulse" />
+                <div className="h-4 rounded-lg bg-white/8 animate-pulse" style={{ width: `${50 + i * 15}%` }} />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty state — only shown after load completes */}
+        {!loading && viewTodos.length === 0 && (
           <EmptyState view={activeView} />
         )}
       </div>
