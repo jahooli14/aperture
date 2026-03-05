@@ -108,6 +108,7 @@ export function SearchPage() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<SearchResponse | null>(null)
   const [searchMode, setSearchMode] = useState<'text' | 'semantic'>('semantic')
+  const [searchFocused, setSearchFocused] = useState(false)
 
   // Handle ?similar=<id> parameter for "find similar" searches
   useEffect(() => {
@@ -338,12 +339,15 @@ export function SearchPage() {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
                   placeholder="Search your knowledge..."
-                  className="w-full h-12 pl-12 pr-4 rounded-xl border text-base"
+                  className="w-full h-12 pl-12 pr-4 rounded-xl border text-base focus:outline-none transition-all duration-200"
                   style={{
                     background: 'var(--premium-bg-3)',
-                    borderColor: 'rgba(59, 130, 246, 0.2)',
-                    color: 'var(--premium-text-primary)'
+                    borderColor: searchFocused ? 'rgba(59, 130, 246, 0.5)' : 'rgba(59, 130, 246, 0.2)',
+                    boxShadow: searchFocused ? '0 0 0 3px rgba(59, 130, 246, 0.1)' : 'none',
+                    color: 'var(--premium-text-primary)',
                   }}
                 />
               </div>
