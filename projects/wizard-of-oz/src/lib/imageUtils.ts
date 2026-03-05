@@ -21,63 +21,142 @@ export interface AlignmentResult {
 }
 
 /**
- * Compresses an image to reduce file size while maintaining quality
- * Uses createImageBitmap for proper EXIF orientation handling (important for camera photos)
+ * Reads the EXIF orientation tag from a JPEG file.
+ * Returns 1 (normal) for non-JPEG files or if no orientation is found.
+ * Camera photos often have EXIF orientation set (e.g. 6 = 90° CW for portrait mode).
+ */
+async function getExifOrientation(file: File): Promise<number> {
+  try {
+    const buffer = await file.slice(0, 65536).arrayBuffer();
+    const view = new DataView(buffer);
+
+    if (view.getUint16(0, false) !== 0xFFD8) return 1; // Not a JPEG
+
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      const marker = view.getUint16(offset, false);
+      const segmentLength = view.getUint16(offset + 2, false);
+
+      if (marker === 0xFFE1) { // APP1 marker (contains EXIF)
+        const exifStart = offset + 4;
+        // Check for 'Exif' header
+        if (
+          exifStart + 6 < view.byteLength &&
+          view.getUint32(exifStart, false) === 0x45786966 // 'Exif'
+        ) {
+          const tiffOffset = exifStart + 6;
+          const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
+          const ifdOffset = view.getUint32(tiffOffset + 4, littleEndian);
+          const entries = view.getUint16(tiffOffset + ifdOffset, littleEndian);
+
+          for (let i = 0; i < entries; i++) {
+            const entryOffset = tiffOffset + ifdOffset + 2 + i * 12;
+            if (entryOffset + 12 > view.byteLength) break;
+            if (view.getUint16(entryOffset, littleEndian) === 0x0112) { // Orientation tag
+              return view.getUint16(entryOffset + 8, littleEndian);
+            }
+          }
+        }
+        break;
+      }
+
+      if (marker === 0xFFDA) break; // Start of scan — no more metadata
+      offset += 2 + segmentLength;
+    }
+  } catch {
+    // Ignore parse errors, fall back to normal orientation
+  }
+  return 1;
+}
+
+/**
+ * Compresses an image to reduce file size while maintaining quality.
+ * Manually reads EXIF orientation and applies the correct canvas transform,
+ * which is necessary for camera photos on iOS Safari where createImageBitmap
+ * does not reliably apply EXIF rotation.
  * @param file - The image file to compress
  * @param maxWidth - Maximum width (default 1920)
  * @param quality - JPEG quality 0-1 (default 0.85)
- * @returns Promise resolving to compressed image file
+ * @returns Promise resolving to compressed image file with correct orientation and no EXIF
  */
 export async function compressImage(
   file: File,
   maxWidth = 1920,
   quality = 0.85
 ): Promise<File> {
-  // Use createImageBitmap which correctly handles EXIF orientation from camera photos
-  // This is essential for photos taken directly with the camera to have correct orientation
-  // Note: This automatically applies EXIF rotation, so the returned bitmap has correct dimensions
-  const bitmap = await createImageBitmap(file);
+  const orientation = await getExifOrientation(file);
+  // Orientations 5–8 require swapping width and height (90° or 270° rotations)
+  const needsSwap = orientation >= 5 && orientation <= 8;
 
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d')!;
-
-  // Calculate new dimensions maintaining aspect ratio
-  // bitmap.width/height already reflect EXIF-corrected dimensions
-  let width = bitmap.width;
-  let height = bitmap.height;
-
-  if (width > maxWidth) {
-    height = Math.round((height * maxWidth) / width);
-    width = maxWidth;
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-
-  // Draw image (EXIF orientation is already applied by createImageBitmap)
-  ctx.drawImage(bitmap, 0, 0, width, height);
-
-  // Clean up bitmap
-  bitmap.close();
-
-  // Convert to blob with compression
-  // Use a consistent filename with .jpg extension to match the MIME type
   const baseName = file.name.replace(/\.[^/.]+$/, '');
   const newFileName = `${baseName}.jpg`;
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error('Failed to compress image'));
-          return;
-        }
-        const compressedFile = new File([blob], newFileName, { type: 'image/jpeg' });
-        resolve(compressedFile);
-      },
-      'image/jpeg',
-      quality
-    );
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const rawW = img.naturalWidth;
+      const rawH = img.naturalHeight;
+
+      // Display dimensions after applying EXIF rotation
+      const displayW = needsSwap ? rawH : rawW;
+      const displayH = needsSwap ? rawW : rawH;
+
+      // Scale down to maxWidth if needed, maintaining aspect ratio
+      let outW = displayW;
+      let outH = displayH;
+      if (outW > maxWidth) {
+        outH = Math.round((outH * maxWidth) / outW);
+        outW = maxWidth;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outW;
+      canvas.height = outH;
+      const ctx = canvas.getContext('2d')!;
+
+      // Scale factor from raw pixel dimensions to output
+      const s = outW / displayW;
+      // Dimensions to pass to drawImage (raw image drawn at scaled size)
+      const drawW = rawW * s;
+      const drawH = rawH * s;
+
+      // Apply the canvas transform that corrects the EXIF orientation,
+      // then draw the raw image. The output canvas has baked-in correct orientation
+      // with no EXIF metadata (canvas.toBlob strips all metadata).
+      switch (orientation) {
+        case 2: ctx.transform(-1, 0, 0, 1, outW, 0); break;                    // flip H
+        case 3: ctx.transform(-1, 0, 0, -1, outW, outH); break;                // rotate 180°
+        case 4: ctx.transform(1, 0, 0, -1, 0, outH); break;                    // flip V
+        case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;                        // transpose
+        case 6: ctx.transform(0, 1, -1, 0, outW, 0); break;                    // rotate 90° CW
+        case 7: ctx.transform(0, -1, -1, 0, outW, outH); break;                // transverse
+        case 8: ctx.transform(0, -1, 1, 0, 0, outH); break;                    // rotate 90° CCW
+        // case 1: identity — no transform needed
+      }
+      ctx.drawImage(img, 0, 0, drawW, drawH);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Failed to compress image'));
+            return;
+          }
+          resolve(new File([blob], newFileName, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+    img.src = url;
   });
 }
 
