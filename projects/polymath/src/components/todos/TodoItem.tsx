@@ -41,7 +41,19 @@ export function TodoItem({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const today = new Date().toISOString().split('T')[0]
-  const isOverdue = todo.deadline_date && todo.deadline_date < today && !todo.done
+  // An item is overdue if deadline OR scheduled_date is in the past
+  const overdueDate =
+    (todo.deadline_date && todo.deadline_date < today) ? todo.deadline_date :
+    (todo.scheduled_date && todo.scheduled_date < today) ? todo.scheduled_date :
+    null
+  const isOverdue = !!overdueDate && !todo.done
+
+  // How many days overdue
+  const daysOverdue = overdueDate
+    ? Math.max(1, Math.floor(
+        (new Date(today + 'T00:00:00').getTime() - new Date(overdueDate + 'T00:00:00').getTime()) / 86400000
+      ))
+    : 0
 
   const priorityBorderClass =
     !todo.done && todo.priority === 3 ? 'border-l-2 border-l-red-400/70' :
@@ -55,7 +67,7 @@ export function TodoItem({
       return
     }
     setCompleting(true)
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(r => setTimeout(r, 300))
     onToggle(todo.id)
     setCompleting(false)
   }
@@ -167,7 +179,7 @@ export function TodoItem({
             {isOverdue && (
               <span className="flex items-center gap-1 text-[11px] text-red-400 font-medium">
                 <AlertCircle className="h-3 w-3" />
-                Overdue
+                {daysOverdue === 1 ? '1 day overdue' : `${daysOverdue} days overdue`}
               </span>
             )}
             {todo.deadline_date && !isOverdue && showDate && (
@@ -176,17 +188,16 @@ export function TodoItem({
                 Due {describeDate(todo.deadline_date)}
               </span>
             )}
+            {/* Scheduled date (suppressed in Today view since we know it's today) */}
             {todo.scheduled_date && showDate && (
               <span className="flex items-center gap-1 text-[11px] text-white/35">
                 <Calendar className="h-3 w-3" />
                 {describeDate(todo.scheduled_date)}
-                {todo.scheduled_time && (
-                  <span className="text-white/45">{describeTime(todo.scheduled_time)}</span>
-                )}
               </span>
             )}
-            {!todo.scheduled_date && todo.scheduled_time && (
-              <span className="flex items-center gap-1 text-[11px] text-white/35">
+            {/* Time — always shown when present, regardless of showDate */}
+            {todo.scheduled_time && (
+              <span className="flex items-center gap-1 text-[11px] text-white/45">
                 <Clock className="h-3 w-3" />
                 {describeTime(todo.scheduled_time)}
               </span>
@@ -207,6 +218,13 @@ export function TodoItem({
               </span>
             )}
           </div>
+        )}
+
+        {/* Notes — shown below metadata when present and not editing */}
+        {todo.notes && !editing && (
+          <p className="mt-1 text-[12px] text-white/30 leading-snug line-clamp-2">
+            {todo.notes}
+          </p>
         )}
       </div>
 
