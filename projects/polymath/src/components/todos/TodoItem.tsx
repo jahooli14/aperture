@@ -201,8 +201,8 @@ export function TodoItem({
         onClick={() => onDelete(todo.id)}
         className={cn(
           'flex-shrink-0 h-7 w-7 flex items-center justify-center rounded-lg transition-all',
-          'opacity-0 group-hover:opacity-100',
-          'hover:bg-red-500/15 text-white/20 hover:text-red-400'
+          'opacity-20 group-hover:opacity-100',
+          'hover:bg-red-500/15 text-white/40 hover:text-red-400'
         )}
         aria-label="Delete todo"
       >
