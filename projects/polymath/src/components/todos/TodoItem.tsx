@@ -86,19 +86,21 @@ export function TodoItem({
         priorityBorderClass,
       )}
     >
-      {/* Checkbox */}
+      {/* Checkbox — extended tap target (44×44) via padding trick */}
       <button
         onClick={handleToggle}
-        className={cn(
-          'flex-shrink-0 mt-0.5 h-[18px] w-[18px] rounded-[5px] flex items-center justify-center transition-all border-2',
+        className="flex-shrink-0 flex items-center justify-center p-[13px] -m-[13px]"
+        style={{ marginTop: -11, paddingTop: 11 }}
+        aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
+      >
+        <div className={cn(
+          'h-[18px] w-[18px] rounded-[5px] flex items-center justify-center transition-all border-2',
           todo.done
             ? 'bg-blue-500 border-blue-500'
             : isOverdue
               ? 'border-red-400/60 hover:border-red-400'
               : 'border-white/20 hover:border-white/45'
-        )}
-        aria-label={todo.done ? 'Mark incomplete' : 'Mark complete'}
-      >
+        )}>
         <AnimatePresence>
           {(todo.done || completing) && (
             <motion.div
@@ -111,6 +113,7 @@ export function TodoItem({
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </button>
 
       {/* Content */}
@@ -125,7 +128,7 @@ export function TodoItem({
             onFocus={handleInputFocus}
             onKeyDown={handleEditKeyDown}
             onBlur={handleEditSave}
-            className="w-full bg-white/8 rounded-lg px-2.5 py-1 text-sm outline-none ring-1 ring-blue-500/40"
+            className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 bg-white/8 rounded-lg text-sm outline-none ring-1 ring-blue-500/60"
             style={{ color: 'var(--premium-text-primary)' }}
             autoFocus
           />

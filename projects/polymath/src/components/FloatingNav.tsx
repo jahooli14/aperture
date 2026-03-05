@@ -31,7 +31,7 @@ const SCHEMA_COLORS = {
   timeline: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
   context: { primary: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
   lists: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
-  todos: { primary: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)' },
+  todos: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)' },
 } as const
 
 interface NavOption {

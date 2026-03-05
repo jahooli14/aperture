@@ -100,12 +100,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
     setShowOptions(false)
   }
 
-  // Auto-grow textarea
+  // Auto-grow textarea — batched in rAF to avoid double-reflow per keystroke
   const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setBody(e.target.value)
     const el = e.target
-    el.style.height = 'auto'
-    el.style.height = Math.max(120, el.scrollHeight) + 'px'
+    requestAnimationFrame(() => {
+      el.style.height = 'auto'
+      el.style.height = Math.max(120, el.scrollHeight) + 'px'
+    })
   }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -12,7 +12,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, X, Brain, Layers, BookmarkPlus, Mic } from 'lucide-react'
+import { Plus, X, Brain, Layers, BookmarkPlus, Mic, CheckSquare } from 'lucide-react'
 import { VoiceInput } from './VoiceInput'
 import { cn } from '../lib/utils'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -22,6 +22,8 @@ import { CreateProjectDialog } from './projects/CreateProjectDialog'
 import { SaveArticleDialog } from './reading/SaveArticleDialog'
 import { AddItemToListDialog } from './lists/AddItemToListDialog'
 import { CreateMenuModal } from './CreateMenuModal'
+import { TodoInput } from './todos/TodoInput'
+import { useTodoStore } from '../stores/useTodoStore'
 import { AnimatePresence, motion } from 'framer-motion'
 
 interface VoiceFABProps {
@@ -46,6 +48,16 @@ const PILL_GAP = 10
 
 const STRIP_OPTIONS = [
   {
+    id: 'todo' as const,
+    label: 'Todo',
+    icon: CheckSquare,
+    color: 'rgba(59, 130, 246, 0.3)',
+    activeColor: 'rgba(59, 130, 246, 0.55)',
+    border: 'rgba(59, 130, 246, 0.5)',
+    glow: 'rgba(59, 130, 246, 0.5)',
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + PILL_H / 2,
+  },
+  {
     id: 'thought' as const,
     label: 'Thought',
     icon: Brain,
@@ -53,8 +65,7 @@ const STRIP_OPTIONS = [
     activeColor: 'rgba(139, 92, 246, 0.55)',
     border: 'rgba(139, 92, 246, 0.5)',
     glow: 'rgba(139, 92, 246, 0.5)',
-    // Distance of this pill's CENTER from FAB center (upward)
-    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + PILL_H / 2,          // ~62px
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 1 + PILL_H / 2,
   },
   {
     id: 'project' as const,
@@ -64,7 +75,7 @@ const STRIP_OPTIONS = [
     activeColor: 'rgba(59, 130, 246, 0.55)',
     border: 'rgba(59, 130, 246, 0.5)',
     glow: 'rgba(59, 130, 246, 0.5)',
-    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + PILL_H + PILL_GAP + PILL_H / 2, // ~118px
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 2 + PILL_H / 2,
   },
   {
     id: 'article' as const,
@@ -74,25 +85,26 @@ const STRIP_OPTIONS = [
     activeColor: 'rgba(16, 185, 129, 0.55)',
     border: 'rgba(16, 185, 129, 0.5)',
     glow: 'rgba(16, 185, 129, 0.5)',
-    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 2 + PILL_H / 2, // ~174px
+    centerOffsetUp: FAB_SIZE / 2 + PILL_GAP + (PILL_H + PILL_GAP) * 3 + PILL_H / 2,
   },
 ] as const
 
 type StripOptionId = typeof STRIP_OPTIONS[number]['id']
 
-// Y-offset thresholds: how far above the FAB center the finger must be
-// to activate each option. Half-way between adjacent pill centers.
-const THOUGHT_THRESHOLD = (STRIP_OPTIONS[0].centerOffsetUp + STRIP_OPTIONS[1].centerOffsetUp) / 2  // ~90px
-const PROJECT_THRESHOLD = (STRIP_OPTIONS[1].centerOffsetUp + STRIP_OPTIONS[2].centerOffsetUp) / 2  // ~146px
-const MIN_SLIDE = 20 // px above FAB center before any option activates
+const MIN_SLIDE = 20
 
 function getOptionForDy(dy: number): StripOptionId | null {
-  // dy is negative when finger is above FAB center
   const upward = -dy
   if (upward < MIN_SLIDE) return null
-  if (upward < THOUGHT_THRESHOLD) return 'thought'
-  if (upward < PROJECT_THRESHOLD) return 'project'
-  return 'article'
+  let result: StripOptionId = STRIP_OPTIONS[0].id
+  for (let i = 0; i < STRIP_OPTIONS.length; i++) {
+    const threshold = i === 0
+      ? MIN_SLIDE
+      : (STRIP_OPTIONS[i - 1].centerOffsetUp + STRIP_OPTIONS[i].centerOffsetUp) / 2
+    if (upward >= threshold) result = STRIP_OPTIONS[i].id
+    else break
+  }
+  return result
 }
 
 export function VoiceFAB({
@@ -103,10 +115,12 @@ export function VoiceFAB({
 }: VoiceFABProps) {
   const [isVoiceOpen, setIsVoiceOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [showTodoQuickAdd, setShowTodoQuickAdd] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [showThoughtDialog, setShowThoughtDialog] = useState(false)
   const [showArticleDialog, setShowArticleDialog] = useState(false)
   const [showListDialog, setShowListDialog] = useState(false)
+  const { addTodo } = useTodoStore()
 
   const [isStripOpen, setIsStripOpen] = useState(false)
   const [activeOption, setActiveOption] = useState<StripOptionId | null>(null)
@@ -148,7 +162,8 @@ export function VoiceFAB({
 
   const executeOption = useCallback((option: StripOptionId | null) => {
     closeStrip()
-    if (option === 'thought') setShowThoughtDialog(true)
+    if (option === 'todo') setShowTodoQuickAdd(true)
+    else if (option === 'thought') setShowThoughtDialog(true)
     else if (option === 'project') setShowProjectDialog(true)
     else if (option === 'article') setShowArticleDialog(true)
     // null = released on FAB with no slide — do nothing (prevents accidental recording)
@@ -446,6 +461,52 @@ export function VoiceFAB({
       <CreateMemoryDialog isOpen={showThoughtDialog} onOpenChange={setShowThoughtDialog} hideTrigger />
       <SaveArticleDialog open={showArticleDialog} onClose={() => setShowArticleDialog(false)} hideTrigger />
       <AddItemToListDialog isOpen={showListDialog} onOpenChange={setShowListDialog} />
+
+      {/* Todo quick-add modal */}
+      {createPortal(
+        <AnimatePresence>
+          {showTodoQuickAdd && (
+            <div className="fixed inset-0 z-[21000] flex items-end">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setShowTodoQuickAdd(false)}
+              />
+              <motion.div
+                initial={{ y: 80, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 80, opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 380 }}
+                className="relative w-full z-10 px-4 pb-8 pt-4"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 2rem)' }}
+              >
+                <div className="max-w-2xl mx-auto">
+                  <p className="text-xs font-medium text-white/30 uppercase tracking-widest mb-2 px-1">Quick task</p>
+                  <TodoInput
+                    autoFocus
+                    onAdd={(parsed) => {
+                      addTodo({
+                        text: parsed.text,
+                        priority: parsed.priority,
+                        tags: [...parsed.tags, ...(parsed.isSomeday ? ['someday'] : [])],
+                        scheduled_date: parsed.scheduledDate,
+                        scheduled_time: parsed.scheduledTime,
+                        deadline_date: parsed.deadlineDate,
+                        estimated_minutes: parsed.estimatedMinutes,
+                      })
+                      haptic.light()
+                      setShowTodoQuickAdd(false)
+                    }}
+                  />
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }
