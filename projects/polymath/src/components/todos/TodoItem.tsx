@@ -110,9 +110,12 @@ export function TodoItem({
       >
       <div
         className={cn(
-          'flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
+          'flex items-start gap-3 px-3.5 py-3 rounded-xl transition-all',
           'active:bg-white/[0.04]',
         )}
+        style={{
+          background: todo.done ? 'transparent' : 'rgba(255,255,255,0.03)',
+        }}
       >
       {/* Checkbox — extended tap target (44×44) via padding trick */}
       <button
@@ -156,8 +159,12 @@ export function TodoItem({
             onFocus={handleInputFocus}
             onKeyDown={handleEditKeyDown}
             onBlur={handleEditSave}
-            className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 bg-white/8 rounded-lg text-sm outline-none ring-1 ring-blue-500/60"
-            style={{ color: 'var(--premium-text-primary)' }}
+            className="w-full -mx-2.5 -my-0.5 px-2.5 py-0.5 rounded-lg text-sm outline-none"
+            style={{
+              color: 'var(--premium-text-primary)',
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              boxShadow: 'inset 0 0 0 1.5px rgba(99,179,237,0.5)',
+            }}
             autoFocus
           />
         ) : (
