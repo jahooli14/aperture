@@ -72,7 +72,7 @@ export function TodoInput({
         background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
         backdropFilter: 'blur(16px)',
         boxShadow: focused
-          ? 'inset 0 0 0 1.5px rgba(99,179,237,0.5), 0 4px 24px rgba(0,0,0,0.25)'
+          ? 'inset 0 0 0 1px rgba(255,255,255,0.18), 0 4px 24px rgba(0,0,0,0.25)'
           : 'inset 0 0 0 1px rgba(255,255,255,0.07)',
       }}
     >
@@ -168,7 +168,7 @@ export function TodoInput({
           className={cn(
             'flex-shrink-0 h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200',
             hasText
-              ? 'border-blue-400/60'
+              ? 'border-white/40'
               : 'border-white/15'
           )}
         />
