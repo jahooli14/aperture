@@ -545,11 +545,9 @@ export function MemoriesPage() {
 
               {/* Error Banner */}
               {error && (
-                <GlassCard isInteractive={false} className="mb-6 border-red-300 bg-red-50">
-                  <div className="pt-6">
-                    <p className="text-sm text-red-600">{error}</p>
-                  </div>
-                </GlassCard>
+                <div className="mb-6 rounded-xl p-4 sm:p-5" style={{ background: 'rgba(239,68,68,0.08)', boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.2)' }}>
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
               )}
 
               {/* Foundational Tab */}

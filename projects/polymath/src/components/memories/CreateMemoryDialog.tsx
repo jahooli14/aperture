@@ -251,9 +251,9 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
       {!hideTrigger && (trigger || (
         <button
           onClick={() => setOpen(true)}
-          className="h-10 w-10 rounded-xl flex items-center justify-center border transition-all hover:bg-white/5"
+          className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
           style={{
-            borderColor: 'rgba(30, 42, 88, 0.2)',
+            boxShadow: 'inset 0 0 0 1px rgba(100,180,255,0.2)',
             color: 'rgba(100, 180, 255, 1)'
           }}
           title="New Thought"
@@ -279,9 +279,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
             <div
               className="rounded-xl transition-all duration-200 px-3 py-2.5"
               style={{
-                background: bodyFocused ? 'rgba(255,255,255,0.04)' : 'transparent',
-                border: '1px solid',
-                borderColor: bodyFocused ? 'rgba(255,255,255,0.12)' : 'transparent',
+                background: bodyFocused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                boxShadow: bodyFocused
+                  ? 'inset 0 0 0 1.5px rgba(99,179,237,0.4)'
+                  : 'inset 0 0 0 1px rgba(255,255,255,0.07)',
               }}
             >
               <textarea
@@ -294,9 +295,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 onBlur={() => setBodyFocused(false)}
                 required
                 autoFocus
-                className="w-full text-[15px] leading-relaxed bg-transparent border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20"
+                className="w-full text-[15px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20 appearance-none"
                 style={{
                   color: 'var(--premium-text-primary)',
+                  backgroundColor: 'transparent',
                   minHeight: '120px',
                 }}
               />
@@ -334,9 +336,14 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                     }}
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
                       formData.tags?.split(',').map(t => t.trim()).includes(tag)
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'bg-white/5 text-gray-500 hover:bg-white/10'
                     }`}
+                    style={{
+                      boxShadow: formData.tags?.split(',').map(t => t.trim()).includes(tag)
+                        ? 'inset 0 0 0 1px rgba(99,179,237,0.3)'
+                        : 'inset 0 0 0 1px rgba(255,255,255,0.08)'
+                    }}
                   >
                     {tag}
                   </button>
@@ -344,7 +351,8 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 <button
                   type="button"
                   onClick={() => setShowOptions(true)}
-                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 border border-white/5 hover:border-white/10"
+                  className="px-2.5 py-1 rounded-full text-xs text-gray-600 hover:bg-white/5 transition-colors"
+                  style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
                 >
                   + tag
                 </button>

@@ -199,11 +199,15 @@ export default function ListsPage() {
                     {lists.length > 0 && (
                         <button
                             onClick={() => setIsReordering(!isReordering)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${
                                 isReordering
-                                    ? 'bg-sky-500 border-sky-400 text-white'
-                                    : 'border-white/10 text-white hover:bg-white/5'
+                                    ? 'bg-sky-500 text-white'
+                                    : 'text-white hover:bg-white/5'
                             }`}
+                            style={isReordering
+                                ? { boxShadow: 'inset 0 0 0 1px rgba(125,211,252,0.5)' }
+                                : { boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }
+                            }
                         >
                             {isReordering ? <Check className="h-3 w-3" /> : <ListOrdered className="h-3 w-3" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">
@@ -213,7 +217,8 @@ export default function ListsPage() {
                     )}
                     <Button
                         onClick={() => setCreateOpen(true)}
-                        className="h-10 w-10 p-0 rounded-full border border-white/10 hover:bg-white/5 bg-transparent text-white"
+                        className="h-10 w-10 p-0 rounded-full hover:bg-white/5 bg-transparent text-white"
+                        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
@@ -226,8 +231,8 @@ export default function ListsPage() {
                     {[1, 2, 3, 4].map((i) => (
                         <div
                             key={`skeleton-${i}`}
-                            className="overflow-hidden rounded-2xl border border-white/5 bg-zinc-900/40"
-                            style={{ width: 'calc(50% - 6px)' }}
+                            className="overflow-hidden rounded-2xl bg-zinc-900/40"
+                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)' }}
                         >
                             <div className="aspect-[3/4] shimmer" />
                         </div>
@@ -272,7 +277,8 @@ export default function ListsPage() {
                         <Reorder.Item
                             key={list.id}
                             value={list}
-                            className="flex items-center gap-4 bg-zinc-900/60 border border-white/10 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
+                            className="flex items-center gap-4 bg-zinc-900/60 rounded-xl p-3 cursor-grab active:cursor-grabbing hover:bg-zinc-900/80 transition-colors"
+                            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}
                         >
                             <GripVertical className="h-5 w-5 text-zinc-600 flex-shrink-0" />
 
@@ -329,8 +335,8 @@ export default function ListsPage() {
                             key={list.id}
                             layoutId={list.id}
                             onClick={() => navigate(`/lists/${list.id}`)}
-                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 border border-white/5 bg-zinc-900/40 flex-shrink-0"
-                            style={{ width: 'calc(50% - 6px)' }}
+                            className="group relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300 bg-zinc-900/40 flex-shrink-0"
+                            style={{ width: 'calc(50% - 6px)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3)' }}
                             whileHover={{ y: -2 }}
                         >
                             {/* Poster / Cover Image / Quote Cover */}
@@ -387,7 +393,7 @@ export default function ListsPage() {
 
                                         {/* Main Icon */}
                                         <div className="relative z-10 flex flex-col items-center gap-4">
-                                            <div className="relative p-8 rounded-full bg-white/5 border border-white/10 group-hover:border-white/20 transition-all duration-300">
+                                            <div className="relative p-8 rounded-full bg-white/5 transition-all duration-300" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
                                                 <ListIcon type={list.type} className="h-12 w-12" style={{ color: `rgb(${rgb})` }} />
                                             </div>
 
@@ -403,7 +409,7 @@ export default function ListsPage() {
                             {/* Overlay Content */}
                             <div className="absolute inset-0 p-3 flex flex-col justify-between">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg backdrop-blur-md bg-black/40 border border-white/10">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg backdrop-blur-md bg-black/40" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
                                         <ListIcon type={list.type} className="h-3 w-3" style={{ color: `rgb(${rgb})` }} />
                                         <span className="text-[8px] font-black uppercase tracking-wider text-white">
                                             {list.type}
@@ -417,7 +423,8 @@ export default function ListsPage() {
                                                     useListStore.getState().deleteList(list.id)
                                                 }
                                             }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 border border-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                            className="h-6 w-6 flex items-center justify-center rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            style={{ boxShadow: 'inset 0 0 0 1px rgba(239,68,68,0.15)' }}
                                         >
                                             <Trash2 className="h-3 w-3" />
                                         </button>
