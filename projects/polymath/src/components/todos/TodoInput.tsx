@@ -67,67 +67,51 @@ export function TodoInput({
 
   return (
     <div
-      className="rounded-2xl transition-all duration-200 border"
+      className="rounded-2xl transition-all duration-200"
       style={{
         background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
         backdropFilter: 'blur(16px)',
-        borderColor: focused ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.07)',
-        boxShadow: focused ? '0 4px 24px rgba(0,0,0,0.25)' : 'none',
+        boxShadow: focused
+          ? 'inset 0 0 0 1.5px rgba(99,179,237,0.5), 0 4px 24px rgba(0,0,0,0.25)'
+          : 'inset 0 0 0 1px rgba(255,255,255,0.07)',
       }}
     >
-      {/* Main input row */}
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        {/* Fake checkbox — signals "this is a task" */}
-        <div
-          className={cn(
-            'flex-shrink-0 h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200',
-            hasText
-              ? 'border-blue-400/60'
-              : 'border-white/15'
-          )}
-        />
+      {/* Hint — shown when focused+empty, placed ABOVE input so keyboard doesn't hide it */}
+      <AnimatePresence>
+        {focused && !value && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
+            className="px-4 pt-3 pb-1"
+          >
+            <p className="text-[11px] text-white/25 leading-relaxed">
+              Try{' '}
+              <HintToken>tom</HintToken>,{' '}
+              <HintToken>eow</HintToken>,{' '}
+              <HintToken>morning</HintToken>,{' '}
+              <HintToken>in 2h</HintToken>,{' '}
+              <HintToken>!high</HintToken>,{' '}
+              <HintToken>urgent</HintToken>,{' '}
+              <HintToken>#tag</HintToken>,{' '}
+              <HintToken>@area</HintToken>,{' '}
+              <HintToken>30min</HintToken>,{' '}
+              <HintToken>due:friday</HintToken>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Input */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onFocus={(e) => { setFocused(true); handleInputFocus(e) }}
-          onBlur={() => setFocused(false)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          autoFocus={autoFocus}
-          className="flex-1 bg-transparent text-[15px] leading-tight outline-none placeholder:text-white/25"
-          style={{ color: 'var(--premium-text-primary)' }}
-        />
-
-        {/* Return hint — only when text is present */}
-        <AnimatePresence>
-          {hasText && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ duration: 0.1 }}
-              onClick={handleSubmit}
-              className="flex-shrink-0 px-2 py-0.5 rounded-md bg-white/8 text-white/40 text-[11px] font-medium hover:bg-white/12 hover:text-white/60 transition-all border border-white/10"
-            >
-              Return
-            </motion.button>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Metadata chips */}
+      {/* Metadata chips — placed ABOVE input so keyboard doesn't hide them */}
       <AnimatePresence>
         {focused && hasMetadata && (
           <motion.div
-            initial={{ opacity: 0, y: -4 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
+            exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
-            className="flex flex-wrap gap-1.5 px-4 pb-3"
+            className="flex flex-wrap gap-1.5 px-4 pt-3 pb-1"
           >
             {parsed.isSomeday && (
               <Chip icon={<Clock className="h-3 w-3" />} color="text-purple-400" bg="bg-purple-500/15">
@@ -177,32 +161,53 @@ export function TodoInput({
         )}
       </AnimatePresence>
 
-      {/* Hint — shown when focused and empty */}
-      <AnimatePresence>
-        {focused && !value && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
-            className="px-4 pb-3"
-          >
-            <p className="text-[11px] text-white/25 leading-relaxed">
-              Try{' '}
-              <HintToken>tom</HintToken>,{' '}
-              <HintToken>eow</HintToken>,{' '}
-              <HintToken>morning</HintToken>,{' '}
-              <HintToken>in 2h</HintToken>,{' '}
-              <HintToken>!high</HintToken>,{' '}
-              <HintToken>urgent</HintToken>,{' '}
-              <HintToken>#tag</HintToken>,{' '}
-              <HintToken>@area</HintToken>,{' '}
-              <HintToken>30min</HintToken>,{' '}
-              <HintToken>due:friday</HintToken>
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Main input row */}
+      <div className="flex items-center gap-3 px-4 py-3.5">
+        {/* Fake checkbox — signals "this is a task" */}
+        <div
+          className={cn(
+            'flex-shrink-0 h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200',
+            hasText
+              ? 'border-blue-400/60'
+              : 'border-white/15'
+          )}
+        />
+
+        {/* Input */}
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={(e) => { setFocused(true); handleInputFocus(e) }}
+          onBlur={() => setFocused(false)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          className="flex-1 text-[15px] leading-tight outline-none placeholder:text-white/25"
+          style={{ color: 'var(--premium-text-primary)', backgroundColor: 'transparent' }}
+        />
+
+        {/* Return hint — only when text is present */}
+        <AnimatePresence>
+          {hasText && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.1 }}
+              onClick={handleSubmit}
+              className="flex-shrink-0 px-2 py-0.5 rounded-md text-white/40 text-[11px] font-medium hover:text-white/60 transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+              }}
+            >
+              Return
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }

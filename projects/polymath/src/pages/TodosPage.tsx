@@ -166,37 +166,53 @@ export function TodosPage() {
   ).length
   const totalEstimatedMinutes = todayTodos.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0)
 
+  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ backgroundColor: 'var(--premium-surface-base)' }}
     >
-      {/* Header */}
-      <div className="px-4 pt-6 pb-2 max-w-3xl mx-auto w-full">
-        <h1 className="text-2xl font-bold text-white/90 mb-1">Todos</h1>
-        <div className="flex items-center gap-3 flex-wrap">
-          <p className="text-sm text-white/40">
-            {todayCount > 0
-              ? `${todayCount} task${todayCount > 1 ? 's' : ''} for today`
-              : 'All clear for today'}
-          </p>
-          {overdueCount > 0 && (
-            <span className="text-xs text-red-400/70 font-medium">
-              {overdueCount} overdue
-            </span>
-          )}
-          {totalEstimatedMinutes > 0 && (
-            <span className="flex items-center gap-1 text-xs text-white/25">
-              <Clock className="h-3 w-3" />
-              ~{formatMinutes(totalEstimatedMinutes)}
-            </span>
+      {/* Premium Header */}
+      <div className="px-4 pt-7 pb-4 max-w-3xl mx-auto w-full">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1"
+               style={{ color: 'rgba(148,163,184,0.5)' }}>
+              {dayName} · {dateStr}
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight"
+                style={{ color: 'var(--premium-text-primary)' }}>
+              Todos
+            </h1>
+          </div>
+          {/* Today summary pill */}
+          {(todayCount > 0 || overdueCount > 0) && (
+            <div className="flex flex-col items-end gap-1 mt-1">
+              {overdueCount > 0 && (
+                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                      style={{ background: 'rgba(239,68,68,0.12)', color: 'rgba(252,165,165,0.9)' }}>
+                  {overdueCount} overdue
+                </span>
+              )}
+              {todayCount > 0 && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                      style={{ background: 'rgba(59,130,246,0.12)', color: 'rgba(147,197,253,0.9)' }}>
+                  {todayCount} today
+                  {totalEstimatedMinutes > 0 && (
+                    <span className="opacity-60">· ~{formatMinutes(totalEstimatedMinutes)}</span>
+                  )}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
 
-      {/* View tabs */}
+      {/* Premium View tabs */}
       <div className="px-4 max-w-3xl mx-auto w-full">
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-2 pt-1">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3">
           {VIEWS.map(v => {
             const Icon = v.icon
             const count = counts[v.id]
@@ -206,27 +222,37 @@ export function TodosPage() {
               <button
                 key={v.id}
                 onClick={() => setActiveView(v.id)}
-                className={cn(
-                  'relative flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors duration-150',
-                  isActive
-                    ? 'text-blue-400'
-                    : 'text-white/50 hover:text-white/70'
-                )}
+                className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-[13px] font-semibold transition-all duration-200"
+                style={isActive ? {
+                  background: 'rgba(59,130,246,0.18)',
+                  color: 'rgba(147,197,253,1)',
+                  boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.3)',
+                } : {
+                  background: 'rgba(255,255,255,0.04)',
+                  color: 'rgba(255,255,255,0.45)',
+                }}
               >
                 {isActive && (
                   <motion.div
                     layoutId="tabActiveIndicator"
-                    className="absolute inset-0 rounded-xl bg-blue-500/15"
+                    className="absolute inset-0 rounded-2xl"
+                    style={{ background: 'rgba(59,130,246,0.12)' }}
                     transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                   />
                 )}
-                <Icon className="relative h-4 w-4" />
+                <Icon className="relative h-3.5 w-3.5 flex-shrink-0" />
                 <span className="relative">{v.label}</span>
                 {count > 0 && (
-                  <span className={cn(
-                    'relative text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center',
-                    isActive ? 'bg-blue-500/30 text-blue-300' : 'bg-white/10 text-white/40'
-                  )}>
+                  <span
+                    className="relative text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                    style={isActive ? {
+                      background: 'rgba(99,179,237,0.25)',
+                      color: 'rgba(186,230,253,1)',
+                    } : {
+                      background: 'rgba(255,255,255,0.08)',
+                      color: 'rgba(255,255,255,0.35)',
+                    }}
+                  >
                     {count}
                   </span>
                 )}
@@ -317,7 +343,7 @@ function StandardView({
 }) {
   return (
     <AnimatePresence>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {todos.map(todo => (
           <TodoItem
             key={todo.id}
@@ -365,7 +391,7 @@ function TodayView({
         </div>
       )}
       <AnimatePresence>
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {items.map(todo => (
             <TodoItem
               key={todo.id}
@@ -428,7 +454,7 @@ function UpcomingView({
               <div className="flex-1 h-px bg-white/[0.06]" />
               <span className="text-xs text-white/25">{groups[dateKey].length}</span>
             </div>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {groups[dateKey].map(todo => (
                 <TodoItem
                   key={todo.id}
@@ -511,13 +537,19 @@ function EmptyState({ view }: { view: TodoView }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-20 text-center"
+      className="flex flex-col items-center justify-center py-24 text-center"
     >
-      <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-        <Icon className="h-5 w-5 text-white/25" />
+      <div
+        className="h-14 w-14 rounded-3xl flex items-center justify-center mb-5"
+        style={{
+          background: 'rgba(59,130,246,0.08)',
+          boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.12)',
+        }}
+      >
+        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.5)' }} />
       </div>
-      <p className="text-white/55 font-medium mb-1">{headline}</p>
-      <p className="text-sm text-white/25 max-w-xs">{sub}</p>
+      <p className="font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{headline}</p>
+      <p className="text-sm max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>{sub}</p>
     </motion.div>
   )
 }

@@ -146,8 +146,13 @@ export function VoiceFAB({
         setIsMenuOpen(false)
       }
     }
+    const handleTooShort = () => setIsVoiceOpen(false)
     window.addEventListener('openVoiceCapture', handleOpenVoiceCapture)
-    return () => window.removeEventListener('openVoiceCapture', handleOpenVoiceCapture)
+    window.addEventListener('voice-capture-too-short', handleTooShort)
+    return () => {
+      window.removeEventListener('openVoiceCapture', handleOpenVoiceCapture)
+      window.removeEventListener('voice-capture-too-short', handleTooShort)
+    }
   }, [hidden])
 
   const handleTranscript = (text: string) => {

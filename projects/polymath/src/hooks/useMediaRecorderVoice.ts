@@ -30,6 +30,9 @@ export function useMediaRecorderVoice({
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const recordingStartTimeRef = useRef<number>(0)
+
+  const MIN_RECORDING_MS = 2000 // Discard recordings shorter than 2 seconds
 
   // Check support on mount
   useEffect(() => {
@@ -147,6 +150,7 @@ export function useMediaRecorderVoice({
       await VoiceRecorder.startRecording()
       setHasPermission(true)
       setIsRecording(true)
+      recordingStartTimeRef.current = Date.now()
       startTimer()
       console.log('[Native] Recording started')
     } catch (error) {
@@ -242,6 +246,7 @@ export function useMediaRecorderVoice({
       console.log('[Web] MediaRecorder state after start():', mediaRecorder.state)
 
       setIsRecording(true)
+      recordingStartTimeRef.current = Date.now()
       startTimer()
 
       console.log('[Web] Recording started with format:', mimeType)
@@ -262,8 +267,16 @@ export function useMediaRecorderVoice({
    * Stop recording - Native platform
    */
   const stopNativeRecording = async () => {
+    const elapsed = Date.now() - recordingStartTimeRef.current
     setIsRecording(false)
     stopTimer()
+
+    if (elapsed < MIN_RECORDING_MS) {
+      console.log('[Native] Recording too short:', elapsed, 'ms — discarding')
+      window.dispatchEvent(new CustomEvent('voice-capture-too-short'))
+      try { await VoiceRecorder.stopRecording() } catch (_) {}
+      return
+    }
 
     try {
       setIsProcessing(true)
@@ -335,9 +348,19 @@ export function useMediaRecorderVoice({
    * Stop recording - Web platform
    */
   const stopWebRecording = async () => {
+    const elapsed = Date.now() - recordingStartTimeRef.current
     console.log('[Web] Stopping recording, current state:', mediaRecorderRef.current?.state)
     setIsRecording(false)
     stopTimer()
+
+    if (elapsed < MIN_RECORDING_MS) {
+      console.log('[Web] Recording too short:', elapsed, 'ms — discarding')
+      window.dispatchEvent(new CustomEvent('voice-capture-too-short'))
+      streamRef.current?.getTracks().forEach(track => track.stop())
+      mediaRecorderRef.current?.stop()
+      chunksRef.current = []
+      return
+    }
 
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
       console.warn('[Web] MediaRecorder not in recording state:', mediaRecorderRef.current?.state)

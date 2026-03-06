@@ -156,10 +156,10 @@ export const ArticleCard = React.memo(function ArticleCard({ article, onClick }:
 
       <div
         onClick={onClick}
-        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid border p-4 cursor-pointer relative shadow-lg"
+        className="group block rounded-xl backdrop-blur-xl transition-all duration-300 break-inside-avoid p-4 cursor-pointer relative"
         style={{
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1), 0 4px 12px rgba(0,0,0,0.2)',
           filter: is_rotting ? 'grayscale(80%)' : 'none',
         }}
       >

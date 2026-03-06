@@ -729,9 +729,9 @@ export function ReadingPage() {
                   className="premium-glass rounded-xl p-4 mb-2 flex items-center gap-3"
                   style={{
                     backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                    borderColor: status === 'retrying' ? 'var(--premium-amber)' : 'var(--premium-blue)',
-                    borderWidth: '1px',
-                    borderStyle: 'solid'
+                    boxShadow: status === 'retrying'
+                      ? 'inset 0 0 0 1px rgba(251,191,36,0.4)'
+                      : 'inset 0 0 0 1px rgba(99,179,237,0.4)',
                   }}
                 >
                   {status === 'retrying' ? (
