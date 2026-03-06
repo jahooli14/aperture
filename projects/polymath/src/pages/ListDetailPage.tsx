@@ -569,7 +569,8 @@ export default function ListDetailPage() {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="backdrop-blur-2xl bg-zinc-900/90 border border-sky-500/30 rounded-2xl p-4 shadow-2xl"
+                                    className="backdrop-blur-2xl bg-zinc-900/90 rounded-2xl p-4 shadow-2xl"
+                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(56,189,248,0.25), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
                                     <div className="flex items-center justify-between mb-3">
                                         <span className="text-sm text-sky-400 font-medium">Voice Quick-Add</span>
@@ -592,7 +593,8 @@ export default function ListDetailPage() {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="backdrop-blur-2xl bg-zinc-900/60 border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl focus-within:border-white/20 transition-all font-mono"
+                                    className="backdrop-blur-2xl bg-zinc-900/60 rounded-2xl p-2 flex items-center gap-2 shadow-2xl transition-all font-mono"
+                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 25px 50px rgba(0,0,0,0.5)' }}
                                 >
                                     <form onSubmit={handleAddItem} className="flex-1 flex px-3 text-white items-center gap-2">
                                         <Input
@@ -607,7 +609,8 @@ export default function ListDetailPage() {
                                             <Button
                                                 type="button"
                                                 onClick={() => setIsVoiceMode(true)}
-                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all border border-white/5"
+                                                className="rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-sky-400 h-10 w-10 p-0 shrink-0 transition-all"
+                                            style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
                                             >
                                                 <Mic className="h-4 w-4" />
                                             </Button>
@@ -648,11 +651,12 @@ export default function ListDetailPage() {
                                     <Reorder.Item
                                         key={item.id}
                                         value={item}
-                                        className="flex items-center gap-4 bg-zinc-900/40 border border-white/5 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:bg-zinc-900/60 transition-all"
+                                        className="flex items-center gap-4 bg-zinc-900/40 p-4 rounded-xl cursor-grab active:cursor-grabbing hover:bg-zinc-900/60 transition-all"
+                                    style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}
                                     >
                                         <GripVertical className="h-4 w-4 text-zinc-600" />
                                         {item.metadata?.image && (
-                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                                            <div className="h-10 w-10 rounded-lg overflow-hidden shrink-0" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)' }}>
                                                 <OptimizedImage
                                                     src={item.metadata.image}
                                                     alt={item.content}

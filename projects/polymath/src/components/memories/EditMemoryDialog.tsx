@@ -296,7 +296,7 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                     backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     color: 'var(--premium-text-secondary)',
                     borderRadius: '9999px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)'
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -324,7 +324,8 @@ export function EditMemoryDialog({ memory, open, onOpenChange, onMemoryUpdated }
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       key={`existing-${url}-${index}`}
-                      className="relative rounded-2xl overflow-hidden group border border-white/10 shadow-lg aspect-square"
+                      className="relative rounded-2xl overflow-hidden group shadow-lg aspect-square"
+                      style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 4px 12px rgba(0,0,0,0.3)' }}
                     >
                       <img
                         src={url}
