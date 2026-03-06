@@ -117,11 +117,12 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
           {/* URL Input — big and clear */}
           <div className="pt-2">
             <div
-              className="flex items-center gap-3 rounded-xl border px-4 transition-all duration-200"
+              className="flex items-center gap-3 rounded-xl px-4 transition-all duration-200"
               style={{
-                backgroundColor: inputFocused ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.05)',
-                borderColor: inputFocused ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.1)',
-                boxShadow: inputFocused ? '0 0 0 3px rgba(255, 255, 255, 0.04)' : 'none',
+                backgroundColor: inputFocused ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                boxShadow: inputFocused
+                  ? 'inset 0 0 0 1.5px rgba(99,179,237,0.5), 0 4px 20px rgba(0,0,0,0.2)'
+                  : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
               }}
             >
               <LinkIcon className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--premium-blue)' }} />
@@ -136,8 +137,8 @@ export function SaveArticleDialog({ open, onClose, hideTrigger = false }: SaveAr
                 required
                 autoFocus
                 autoComplete="off"
-                className="flex-1 h-14 bg-transparent border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-white/20"
-                style={{ color: 'var(--premium-text-primary)' }}
+                className="flex-1 h-14 border-0 text-[15px] focus:outline-none focus:ring-0 placeholder:text-white/20 appearance-none"
+                style={{ color: 'var(--premium-text-primary)', backgroundColor: 'transparent' }}
               />
             </div>
             <p className="text-xs mt-2 px-1" style={{ color: 'var(--premium-text-tertiary)' }}>

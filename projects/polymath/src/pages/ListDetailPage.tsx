@@ -111,7 +111,8 @@ const PhraseCard = memo(({
                                     type="text"
                                     value={authorValue}
                                     onChange={(e) => setAuthorValue(e.target.value)}
-                                    className="bg-white/10 border border-white/20 rounded px-3 py-1 text-sm text-white/90 focus:outline-none focus:border-white/40"
+                                    className="rounded px-3 py-1 text-sm text-white/90 focus:outline-none appearance-none"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.2)' }}
                                     placeholder="Author name"
                                     autoFocus
                                     onKeyDown={(e) => {

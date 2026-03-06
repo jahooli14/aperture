@@ -11,11 +11,13 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         className={cn(
           // Base layout
           "flex min-h-[80px] w-full rounded-xl px-4 py-3 text-[15px]",
+          // Reset native browser styling that causes white backgrounds on mobile
+          "appearance-none",
           // Dark glass appearance
-          "bg-white/[0.05] border border-white/10",
+          "bg-white/[0.05]",
           "text-white/90 placeholder:text-white/25",
-          // Focus — border lifts, background brightens subtly
-          "focus:outline-none focus:ring-0 focus:border-white/30 focus:bg-white/[0.08]",
+          // Focus — background brightens subtly
+          "focus:outline-none focus:bg-white/[0.08]",
           // Smooth transitions
           "transition-all duration-200",
           // Resize
@@ -26,6 +28,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
         style={{
           color: 'var(--premium-text-primary)',
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
           ...style,
         }}
         ref={ref}

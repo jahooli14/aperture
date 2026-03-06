@@ -279,9 +279,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
             <div
               className="rounded-xl transition-all duration-200 px-3 py-2.5"
               style={{
-                background: bodyFocused ? 'rgba(255,255,255,0.04)' : 'transparent',
-                border: '1px solid',
-                borderColor: bodyFocused ? 'rgba(255,255,255,0.12)' : 'transparent',
+                background: bodyFocused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+                boxShadow: bodyFocused
+                  ? 'inset 0 0 0 1.5px rgba(99,179,237,0.4)'
+                  : 'inset 0 0 0 1px rgba(255,255,255,0.07)',
               }}
             >
               <textarea
@@ -294,9 +295,10 @@ export function CreateMemoryDialog({ isOpen, onOpenChange, hideTrigger = false, 
                 onBlur={() => setBodyFocused(false)}
                 required
                 autoFocus
-                className="w-full text-[15px] leading-relaxed bg-transparent border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20"
+                className="w-full text-[15px] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none placeholder:text-white/20 appearance-none"
                 style={{
                   color: 'var(--premium-text-primary)',
+                  backgroundColor: 'transparent',
                   minHeight: '120px',
                 }}
               />
