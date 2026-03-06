@@ -119,7 +119,7 @@ export function ProjectCard({ project, prominent = false }: { project: Project, 
             className="rounded-lg p-3 flex items-start gap-3 transition-all group-hover:bg-white/5"
             style={{
               background: `rgba(${theme.rgb}, 0.1)`,
-              border: `1px solid rgba(${theme.rgb}, 0.2)`
+              boxShadow: `inset 0 0 0 1px rgba(${theme.rgb}, 0.2)`
             }}
           >
             <div className="mt-0.5 flex-shrink-0" style={{ color: theme.text }}>
