@@ -397,11 +397,19 @@ export function TodosPage() {
 
         {/* Loading skeletons */}
         {loading && (
-          <div className="space-y-1 mt-1">
+          <div className="space-y-2 mt-1">
             {[1, 2, 3].map(i => (
-              <div key={i} className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl">
-                <div className="flex-shrink-0 h-[20px] w-[20px] rounded-[6px] bg-white/8 animate-pulse" />
-                <div className="h-[15px] rounded-lg bg-white/8 animate-pulse" style={{ width: `${50 + i * 15}%` }} />
+              <div
+                key={i}
+                className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl animate-pulse"
+                style={{
+                  background: 'var(--premium-surface-1)',
+                  border: '1px solid rgba(255,255,255,0.055)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                }}
+              >
+                <div className="flex-shrink-0 h-[20px] w-[20px] rounded-[6px]" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                <div className="h-[14px] rounded-lg" style={{ width: `${45 + i * 15}%`, background: 'rgba(255,255,255,0.06)' }} />
               </div>
             ))}
           </div>
@@ -430,7 +438,7 @@ function StandardView({
   onDelete: (id: string) => void
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <AnimatePresence mode="popLayout">
         {todos.map(todo => (
           <TodoItem
@@ -476,18 +484,21 @@ function TodayView({
   const overdue = todos.filter(isOverdueItem)
   const onTrack = todos.filter(t => !isOverdueItem(t))
 
-  const renderSection = (items: Todo[], label?: string, labelColor?: string) => (
-    <div className={label ? 'mb-6' : ''}>
+  const renderSection = (items: Todo[], label?: string, isOverdueSection?: boolean) => (
+    <div className={label ? 'mb-8' : ''}>
       {label && (
-        <div className="flex items-center gap-2 mb-2">
-          <span className={cn('text-[11px] font-semibold uppercase tracking-wider', labelColor ?? 'text-white/35')}>
+        <div className="flex items-center gap-2.5 mb-3">
+          <span
+            className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.65)' : 'rgba(255,255,255,0.32)' }}
+          >
             {label}
           </span>
-          <div className="flex-1 h-px bg-white/[0.05]" />
-          <span className="text-[11px] text-white/18">{items.length}</span>
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{items.length}</span>
         </div>
       )}
-      <div className="space-y-1">
+      <div className="space-y-2">
         <AnimatePresence mode="popLayout">
           {items.map(todo => (
             <TodoItem
@@ -512,40 +523,48 @@ function TodayView({
         ? renderSection(onTrack)
         : (
           <>
-            {renderSection(overdue, 'Overdue', 'text-red-400/65')}
-            {onTrack.length > 0 && renderSection(onTrack, 'Today', 'text-white/35')}
+            {renderSection(overdue, 'Overdue', true)}
+            {onTrack.length > 0 && renderSection(onTrack, 'Today', false)}
           </>
         )
       }
 
-      {/* Tomorrow preview — border collie insight */}
-      {tomorrowItems.length > 0 && (todos.length > 0 || tomorrowItems.length > 0) && (
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/22">
+      {/* Tomorrow preview — border collie: see what's coming before it arrives */}
+      {tomorrowItems.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-2.5 mb-3">
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+              style={{ color: 'rgba(255,255,255,0.2)' }}
+            >
               Tomorrow
             </span>
-            <div className="flex-1 h-px bg-white/[0.04]" />
-            <span className="text-[11px] text-white/15">{tomorrowItems.length}</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.15)' }}>{tomorrowItems.length}</span>
           </div>
-          <div className="space-y-px opacity-40">
+          <div className="space-y-1.5" style={{ opacity: 0.45 }}>
             {tomorrowItems.slice(0, 3).map(t => (
-              <div key={t.id} className="flex items-center gap-3.5 px-4 py-2.5">
+              <div
+                key={t.id}
+                className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl"
+                style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.04)' }}
+              >
                 <div
-                  className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px] border border-white/12"
+                  className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px]"
+                  style={{ border: '1.5px solid rgba(255,255,255,0.15)' }}
                 />
-                <span className="text-[14px] text-white/45 truncate leading-snug">
+                <span className="flex-1 text-[14px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
                   {t.text}
                 </span>
                 {t.scheduled_time && (
-                  <span className="text-[11px] text-white/22 flex-shrink-0 ml-auto">
+                  <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>
                     {t.scheduled_time}
                   </span>
                 )}
               </div>
             ))}
             {tomorrowItems.length > 3 && (
-              <p className="text-[11px] text-white/18 px-4 py-1">
+              <p className="text-[11px] px-1" style={{ color: 'rgba(255,255,255,0.18)' }}>
                 +{tomorrowItems.length - 3} more
               </p>
             )}
@@ -580,14 +599,14 @@ function UpcomingView({
         const label = dateKey === 'unknown' ? 'No date' : describeDate(dateKey)
         return (
           <div key={dateKey}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[11px] font-semibold text-white/45 uppercase tracking-wider">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.38)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px bg-white/[0.05]" />
-              <span className="text-[11px] text-white/22">{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{groups[dateKey].length}</span>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               <AnimatePresence mode="popLayout">
                 {groups[dateKey].map(todo => (
                   <TodoItem
@@ -634,12 +653,12 @@ function LogbookView({
         const label = describeDate(dateKey)
         return (
           <div key={dateKey}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[11px] font-semibold text-white/35 uppercase tracking-wider">
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.28)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px bg-white/[0.05]" />
-              <span className="text-[11px] text-white/18">{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.18)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (

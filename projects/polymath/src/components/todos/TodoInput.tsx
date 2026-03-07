@@ -1,10 +1,8 @@
 /**
  * TodoInput - NLP-powered quick entry
  *
- * Inspired by Linear and Things 3: a spacious, prominent input
- * that feels like adding to YOUR list — not a chat box.
- *
- * Type naturally: "call dentist tomorrow at 3pm !high #health 30min"
+ * Uses the app's established surface color system (#1e2d45)
+ * so the input feels like a real surface, not a ghost element.
  */
 
 import { useState, useRef, useCallback } from 'react'
@@ -69,14 +67,15 @@ export function TodoInput({
     <div
       className="rounded-2xl transition-all duration-200"
       style={{
-        background: focused ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
-        backdropFilter: 'blur(16px)',
+        // Use the established surface-2 color — visible, inviting, not a ghost
+        background: 'var(--premium-surface-2)',
+        backdropFilter: 'blur(20px)',
         boxShadow: focused
-          ? 'inset 0 0 0 1.5px rgba(99,179,237,0.5), 0 4px 24px rgba(0,0,0,0.25)'
-          : 'inset 0 0 0 1px rgba(255,255,255,0.07)',
+          ? 'inset 0 0 0 1.5px rgba(99,179,237,0.55), 0 4px 24px rgba(0,0,0,0.35)'
+          : 'inset 0 0 0 1px rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.2)',
       }}
     >
-      {/* Hint — shown when focused+empty, placed ABOVE input so keyboard doesn't hide it */}
+      {/* Hint — shown when focused+empty */}
       <AnimatePresence>
         {focused && !value && (
           <motion.div
@@ -86,14 +85,12 @@ export function TodoInput({
             transition={{ duration: 0.12, ease: [0.25, 0.1, 0.25, 1] }}
             className="px-4 pt-3 pb-1"
           >
-            <p className="text-[11px] text-white/25 leading-relaxed">
+            <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
               Try{' '}
               <HintToken>tom</HintToken>,{' '}
               <HintToken>eow</HintToken>,{' '}
               <HintToken>morning</HintToken>,{' '}
-              <HintToken>in 2h</HintToken>,{' '}
               <HintToken>!high</HintToken>,{' '}
-              <HintToken>urgent</HintToken>,{' '}
               <HintToken>#tag</HintToken>,{' '}
               <HintToken>@area</HintToken>,{' '}
               <HintToken>30min</HintToken>,{' '}
@@ -103,7 +100,7 @@ export function TodoInput({
         )}
       </AnimatePresence>
 
-      {/* Metadata chips — placed ABOVE input so keyboard doesn't hide them */}
+      {/* Metadata chips */}
       <AnimatePresence>
         {focused && hasMetadata && (
           <motion.div
@@ -162,14 +159,14 @@ export function TodoInput({
       </AnimatePresence>
 
       {/* Main input row */}
-      <div className="flex items-center gap-3 px-4 py-3.5">
-        {/* Fake checkbox — signals "this is a task" */}
+      <div className="flex items-center gap-3 px-4 py-4">
+        {/* Fake checkbox */}
         <div
           className={cn(
-            'flex-shrink-0 h-[18px] w-[18px] rounded-[5px] border-2 transition-all duration-200',
+            'flex-shrink-0 h-[20px] w-[20px] rounded-[6px] border-2 transition-all duration-200',
             hasText
-              ? 'border-blue-400/60'
-              : 'border-white/15'
+              ? 'border-blue-400/70'
+              : 'border-white/20'
           )}
         />
 
@@ -184,11 +181,14 @@ export function TodoInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           autoFocus={autoFocus}
-          className="flex-1 text-[15px] leading-tight outline-none placeholder:text-white/25"
-          style={{ color: 'var(--premium-text-primary)', backgroundColor: 'transparent' }}
+          className="flex-1 text-[15px] leading-snug outline-none"
+          style={{
+            color: 'var(--premium-text-primary)',
+            backgroundColor: 'transparent',
+          }}
         />
 
-        {/* Return hint — only when text is present */}
+        {/* Return button */}
         <AnimatePresence>
           {hasText && (
             <motion.button
@@ -197,10 +197,11 @@ export function TodoInput({
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ duration: 0.1 }}
               onClick={handleSubmit}
-              className="flex-shrink-0 px-2 py-0.5 rounded-md text-white/40 text-[11px] font-medium hover:text-white/60 transition-all"
+              className="flex-shrink-0 px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all active:scale-95"
               style={{
-                background: 'rgba(255,255,255,0.08)',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+                color: 'rgba(147,197,253,0.8)',
+                background: 'rgba(59,130,246,0.12)',
+                boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.2)',
               }}
             >
               Return
@@ -232,6 +233,6 @@ function Chip({
 
 function HintToken({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-white/40 font-medium">{children}</span>
+    <span style={{ color: 'rgba(147,197,253,0.55)' }} className="font-medium">{children}</span>
   )
 }
