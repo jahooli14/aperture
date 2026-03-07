@@ -76,7 +76,7 @@ export const useTodoStore = create<TodoStore>()(
       loading: false,
       areasLoading: false,
       error: null,
-      activeView: 'inbox',
+      activeView: 'today',
 
       setActiveView: (view) => set({ activeView: view }),
 
@@ -90,7 +90,12 @@ export const useTodoStore = create<TodoStore>()(
           const { db } = await import('../lib/db')
           const cached = await db.getCachedTodos()
           if (cached.length > 0) {
-            set({ todos: cached as unknown as Todo[] })
+            // Merge: preserve any optimistic todos not yet in cache
+            set(s => {
+              const cacheIds = new Set((cached as Todo[]).map((t: any) => t.id))
+              const pending = s.todos.filter(t => t.user_id === 'optimistic' && !cacheIds.has(t.id))
+              return { todos: [...pending, ...(cached as unknown as Todo[])] }
+            })
           }
         } catch (e) {
           console.warn('[TodoStore] Dexie read failed:', e)
@@ -112,7 +117,12 @@ export const useTodoStore = create<TodoStore>()(
             console.warn('[TodoStore] Dexie cache write failed:', e)
           }
 
-          set({ todos: data, loading: false })
+          // Merge: preserve any optimistic todos that haven't been confirmed yet
+          set(s => {
+            const serverIds = new Set(data.map((t: Todo) => t.id))
+            const pending = s.todos.filter(t => t.user_id === 'optimistic' && !serverIds.has(t.id))
+            return { todos: [...pending, ...data], loading: false }
+          })
         } catch (err) {
           console.error('[TodoStore] Fetch failed:', err)
           set({ loading: false })
