@@ -1,16 +1,11 @@
 /**
- * Todos Page - Things 3-inspired task management
+ * Todos Page — Things 3-inspired task management
  *
- * Layout:
- *   - Left sidebar: Inbox / Today / Upcoming / Someday / Areas
- *   - Main area: todo list for the active view + NLP input at top
- *
- * Views:
- *   inbox    - Uncategorized todos (no date, no area)
- *   today    - Due today + overdue
- *   upcoming - Scheduled for the future (next 7 days grouped by day)
- *   someday  - Parked ideas
- *   logbook  - Completed items
+ * Design philosophy:
+ *   Aardvark: depth on demand — the list is minimal, richness reveals on tap
+ *   Border Collie: anticipate tomorrow before it arrives
+ *   Crow: the app remembers what you're avoiding (age indicators in TodoItem)
+ *   Sloth: every interaction requires minimum possible effort
  */
 
 import { useEffect, useState } from 'react'
@@ -18,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Inbox, Sun, CalendarDays, Archive, BookOpen,
   CheckCheck, Sparkles, CalendarCheck, Layers, BookMarked,
-  Clock,
+  ArrowRight,
 } from 'lucide-react'
 import {
   useTodoStore,
@@ -40,12 +35,22 @@ import { useToast } from '../components/ui/toast'
 // ─── View config ─────────────────────────────────────────────
 
 const VIEWS: { id: TodoView; label: string; icon: React.ElementType; hint: string }[] = [
-  { id: 'inbox',    label: 'Inbox',    icon: Inbox,       hint: 'Uncategorized' },
-  { id: 'today',    label: 'Today',    icon: Sun,         hint: 'Due today + overdue' },
+  { id: 'inbox',    label: 'Inbox',    icon: Inbox,        hint: 'Uncategorized' },
+  { id: 'today',    label: 'Today',    icon: Sun,          hint: 'Due today + overdue' },
   { id: 'upcoming', label: 'Upcoming', icon: CalendarDays, hint: 'Scheduled ahead' },
-  { id: 'someday',  label: 'Someday',  icon: Archive,     hint: 'Parked ideas' },
-  { id: 'logbook',  label: 'Logbook',  icon: BookOpen,    hint: 'Completed' },
+  { id: 'someday',  label: 'Someday',  icon: Archive,      hint: 'Parked ideas' },
+  { id: 'logbook',  label: 'Logbook',  icon: BookOpen,     hint: 'Completed' },
 ]
+
+// Where does a todo land based on its properties?
+function getDestinationView(input: Partial<Todo>): TodoView {
+  const t = new Date().toISOString().split('T')[0]
+  if (input.tags?.includes('someday')) return 'someday'
+  const date = input.scheduled_date ?? input.deadline_date
+  if (!date) return 'inbox'
+  if (date <= t) return 'today'
+  return 'upcoming'
+}
 
 // ─── Main page ───────────────────────────────────────────────
 
@@ -59,21 +64,32 @@ export function TodosPage() {
 
   const { addToast } = useToast()
 
+  // Routing feedback: where did the last added todo go?
+  const [addedFeedback, setAddedFeedback] = useState<{ view: TodoView; label: string } | null>(null)
+
   useEffect(() => {
     fetchTodos()
     fetchAreas()
   }, [])
 
-  // ── Counts for sidebar badges ──
-  const todayCount   = selectToday(todos).length
+  const todayYMD = new Date().toISOString().split('T')[0]
+
+  // ── Counts ──
+  const todayActive  = selectToday(todos).length
   const inboxCount   = selectInbox(todos).length
   const upcomingCount = selectUpcoming(todos).length
   const somedayCount  = selectSomeday(todos).length
   const logbookCount  = selectLogbook(todos).length
 
+  // Completed today (for progress bar)
+  const completedToday = todos.filter(t =>
+    t.done && !t.deleted_at && t.completed_at?.startsWith(todayYMD)
+  ).length
+  const totalTodayItems = todayActive + completedToday
+
   const counts: Record<TodoView, number> = {
     inbox:    inboxCount,
-    today:    todayCount,
+    today:    todayActive,
     upcoming: upcomingCount,
     someday:  somedayCount,
     logbook:  logbookCount,
@@ -90,6 +106,14 @@ export function TodosPage() {
     }
   })()
 
+  // ── Today estimates ──
+  const todayTodos = selectToday(todos)
+  const overdueCount = todayTodos.filter(t =>
+    (t.deadline_date && t.deadline_date < todayYMD) ||
+    (t.scheduled_date && t.scheduled_date < todayYMD)
+  ).length
+  const totalEstimatedMinutes = todayTodos.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0)
+
   // ── Add todo from NLP input ──
   const handleAdd = async (parsed: ReturnType<typeof parseTodo>) => {
     const input: Partial<Todo> & { text: string } = {
@@ -103,24 +127,30 @@ export function TodosPage() {
       scheduled_time: parsed.scheduledTime,
     }
 
-    // Date: use parsed, or apply view context defaults
     if (parsed.isSomeday) {
-      // no date - just tag
+      // no date — just tag
     } else if (parsed.scheduledDate) {
       input.scheduled_date = parsed.scheduledDate
     } else if (activeView === 'today') {
-      input.scheduled_date = new Date().toISOString().split('T')[0]
+      input.scheduled_date = todayYMD
     }
 
     if (parsed.deadlineDate) input.deadline_date = parsed.deadlineDate
 
-    // Area: look up by name if parsed
     if (parsed.areaName) {
       const area = areas.find(a => a.name.toLowerCase() === parsed.areaName!.toLowerCase())
       if (area) input.area_id = area.id
     }
 
     await addTodo(input)
+
+    // Show routing feedback if the todo lands in a different view
+    const destination = getDestinationView(input)
+    if (destination !== activeView) {
+      const destLabel = VIEWS.find(v => v.id === destination)?.label ?? destination
+      setAddedFeedback({ view: destination, label: destLabel })
+      setTimeout(() => setAddedFeedback(null), 3500)
+    }
   }
 
   // ── Toggle with undo toast ──
@@ -131,9 +161,8 @@ export function TodosPage() {
     await toggleTodo(id)
 
     if (!todo.done) {
-      // Was active, now completing → offer undo
       addToast({
-        title: 'Done!',
+        title: 'Done',
         description: todo.text.length > 40 ? todo.text.slice(0, 40) + '…' : todo.text,
         variant: 'success',
         duration: 4000,
@@ -156,16 +185,6 @@ export function TodosPage() {
     })
   }
 
-  const todayYMD = new Date().toISOString().split('T')[0]
-
-  // Daily work estimate for Today view
-  const todayTodos = selectToday(todos)
-  const overdueCount = todayTodos.filter(t =>
-    (t.deadline_date && t.deadline_date < todayYMD) ||
-    (t.scheduled_date && t.scheduled_date < todayYMD)
-  ).length
-  const totalEstimatedMinutes = todayTodos.reduce((sum, t) => sum + (t.estimated_minutes ?? 0), 0)
-
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
   const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
 
@@ -174,43 +193,85 @@ export function TodosPage() {
       className="min-h-screen flex flex-col"
       style={{ backgroundColor: 'var(--premium-surface-base)' }}
     >
-      {/* Premium Header */}
+      {/* Header — view-aware, progress-focused */}
       <div className="px-4 pt-7 pb-4 max-w-3xl mx-auto w-full">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest mb-1"
-               style={{ color: 'rgba(148,163,184,0.5)' }}>
-              {dayName} · {dateStr}
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight"
-                style={{ color: 'var(--premium-text-primary)' }}>
-              Todos
-            </h1>
-          </div>
-          {/* Today summary pill */}
-          {(todayCount > 0 || overdueCount > 0) && (
-            <div className="flex flex-col items-end gap-1 mt-1">
-              {overdueCount > 0 && (
-                <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                      style={{ background: 'rgba(239,68,68,0.12)', color: 'rgba(252,165,165,0.9)' }}>
-                  {overdueCount} overdue
-                </span>
-              )}
-              {todayCount > 0 && (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                      style={{ background: 'rgba(59,130,246,0.12)', color: 'rgba(147,197,253,0.9)' }}>
-                  {todayCount} today
-                  {totalEstimatedMinutes > 0 && (
-                    <span className="opacity-60">· ~{formatMinutes(totalEstimatedMinutes)}</span>
-                  )}
-                </span>
-              )}
+        {/* Date line — always visible, always contextual */}
+        <p
+          className="text-[11px] font-semibold uppercase tracking-widest mb-2"
+          style={{ color: 'rgba(148,163,184,0.4)' }}
+        >
+          {dayName} · {dateStr}
+        </p>
+
+        {activeView === 'today' ? (
+          /* Today: show progress, not a title */
+          <>
+            <div className="flex items-baseline justify-between mb-2.5">
+              <h1
+                className="text-[26px] font-bold tracking-tight leading-none"
+                style={{ color: 'var(--premium-text-primary)' }}
+              >
+                {totalTodayItems === 0
+                  ? 'Nothing today'
+                  : completedToday === totalTodayItems
+                    ? `All ${completedToday} done`
+                    : completedToday > 0
+                      ? `${completedToday} of ${totalTodayItems} done`
+                      : `${todayActive} ${todayActive === 1 ? 'task' : 'tasks'} today`}
+              </h1>
+
+              <div className="flex items-center gap-2 pb-0.5">
+                {overdueCount > 0 && (
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(239,68,68,0.12)', color: 'rgba(252,165,165,0.8)' }}
+                  >
+                    {overdueCount} overdue
+                  </span>
+                )}
+                {totalEstimatedMinutes > 0 && (
+                  <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                    ~{formatMinutes(totalEstimatedMinutes)}
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Progress bar — only shown when there's something to measure */}
+            {totalTodayItems > 0 && (
+              <div
+                className="w-full h-[3px] rounded-full overflow-hidden"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              >
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ background: completedToday === totalTodayItems ? 'rgba(52,211,153,0.6)' : 'rgba(59,130,246,0.5)' }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.max(0, (completedToday / totalTodayItems) * 100)}%` }}
+                  transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          /* Other views: name + count */
+          <div className="flex items-baseline gap-3">
+            <h1
+              className="text-[28px] font-bold tracking-tight"
+              style={{ color: 'var(--premium-text-primary)' }}
+            >
+              {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
+            </h1>
+            {counts[activeView] > 0 && (
+              <span className="text-[15px] font-medium" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                {counts[activeView]}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Premium View tabs */}
+      {/* View tabs */}
       <div className="px-4 max-w-3xl mx-auto w-full">
         <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-3">
           {VIEWS.map(v => {
@@ -229,7 +290,7 @@ export function TodosPage() {
                   boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.3)',
                 } : {
                   background: 'rgba(255,255,255,0.04)',
-                  color: 'rgba(255,255,255,0.45)',
+                  color: 'rgba(255,255,255,0.4)',
                 }}
               >
                 {isActive && (
@@ -250,7 +311,7 @@ export function TodosPage() {
                       color: 'rgba(186,230,253,1)',
                     } : {
                       background: 'rgba(255,255,255,0.08)',
-                      color: 'rgba(255,255,255,0.35)',
+                      color: 'rgba(255,255,255,0.3)',
                     }}
                   >
                     {count}
@@ -265,9 +326,9 @@ export function TodosPage() {
       {/* Main content */}
       <div className="flex-1 px-4 max-w-3xl mx-auto w-full pb-32">
 
-        {/* Quick input (hidden in logbook view) */}
+        {/* Quick input — hidden in logbook */}
         {activeView !== 'logbook' && (
-          <div className="mt-2 mb-4">
+          <div className="mt-1 mb-4">
             <TodoInput
               onAdd={handleAdd}
               defaultScheduledDate={activeView === 'today' ? todayYMD : undefined}
@@ -276,11 +337,38 @@ export function TodosPage() {
           </div>
         )}
 
+        {/* Routing feedback — where did the todo go? */}
+        <AnimatePresence>
+          {addedFeedback && (
+            <motion.button
+              initial={{ opacity: 0, y: -6, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+              onClick={() => {
+                setActiveView(addedFeedback.view)
+                setAddedFeedback(null)
+              }}
+              className="w-full flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-xl text-left"
+              style={{
+                background: 'rgba(59,130,246,0.08)',
+                boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.18)',
+              }}
+            >
+              <span className="text-[13px] font-medium" style={{ color: 'rgba(147,197,253,0.8)' }}>
+                Added to {addedFeedback.label}
+              </span>
+              <ArrowRight className="h-3.5 w-3.5" style={{ color: 'rgba(147,197,253,0.55)' }} />
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* Views */}
         {activeView === 'today' ? (
           <TodayView
             todos={viewTodos}
             areas={areas}
+            allTodos={todos}
             onToggle={handleToggle}
             onUpdate={updateTodo}
             onDelete={handleDelete}
@@ -309,17 +397,25 @@ export function TodosPage() {
 
         {/* Loading skeletons */}
         {loading && (
-          <div className="space-y-0.5 mt-1">
+          <div className="space-y-2 mt-1">
             {[1, 2, 3].map(i => (
-              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
-                <div className="flex-shrink-0 h-[18px] w-[18px] rounded-[5px] bg-white/8 animate-pulse" />
-                <div className="h-4 rounded-lg bg-white/8 animate-pulse" style={{ width: `${50 + i * 15}%` }} />
+              <div
+                key={i}
+                className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl animate-pulse"
+                style={{
+                  background: 'var(--premium-surface-1)',
+                  border: '1px solid rgba(255,255,255,0.055)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                }}
+              >
+                <div className="flex-shrink-0 h-[20px] w-[20px] rounded-[6px]" style={{ background: 'rgba(255,255,255,0.08)' }} />
+                <div className="h-[14px] rounded-lg" style={{ width: `${45 + i * 15}%`, background: 'rgba(255,255,255,0.06)' }} />
               </div>
             ))}
           </div>
         )}
 
-        {/* Empty state — only shown after load completes */}
+        {/* Empty state */}
         {!loading && viewTodos.length === 0 && (
           <EmptyState view={activeView} />
         )}
@@ -342,8 +438,8 @@ function StandardView({
   onDelete: (id: string) => void
 }) {
   return (
-    <AnimatePresence>
-      <div className="space-y-1">
+    <div className="space-y-2">
+      <AnimatePresence mode="popLayout">
         {todos.map(todo => (
           <TodoItem
             key={todo.id}
@@ -356,21 +452,30 @@ function StandardView({
             areaName={areas.find(a => a.id === todo.area_id)?.name}
           />
         ))}
-      </div>
-    </AnimatePresence>
+      </AnimatePresence>
+    </div>
   )
 }
 
 function TodayView({
-  todos, areas, onToggle, onUpdate, onDelete
+  todos, areas, allTodos, onToggle, onUpdate, onDelete
 }: {
   todos: Todo[]
   areas: TodoArea[]
+  allTodos: Todo[]
   onToggle: (id: string) => void
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }) {
   const today = new Date().toISOString().split('T')[0]
+
+  // Tomorrow (border collie: see what's coming before it arrives)
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowYMD = tomorrow.toISOString().split('T')[0]
+  const tomorrowItems = selectUpcoming(allTodos).filter(t =>
+    t.scheduled_date === tomorrowYMD || t.deadline_date === tomorrowYMD
+  )
 
   const isOverdueItem = (t: Todo) =>
     !!(t.deadline_date && t.deadline_date < today) ||
@@ -379,19 +484,22 @@ function TodayView({
   const overdue = todos.filter(isOverdueItem)
   const onTrack = todos.filter(t => !isOverdueItem(t))
 
-  const renderSection = (items: Todo[], label?: string, labelColor?: string) => (
-    <div className={label ? 'mb-6' : ''}>
+  const renderSection = (items: Todo[], label?: string, isOverdueSection?: boolean) => (
+    <div className={label ? 'mb-8' : ''}>
       {label && (
-        <div className="flex items-center gap-2 mb-2">
-          <span className={cn('text-xs font-semibold uppercase tracking-wider', labelColor ?? 'text-white/40')}>
+        <div className="flex items-center gap-2.5 mb-3">
+          <span
+            className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.65)' : 'rgba(255,255,255,0.32)' }}
+          >
             {label}
           </span>
-          <div className="flex-1 h-px bg-white/[0.06]" />
-          <span className="text-xs text-white/20">{items.length}</span>
+          <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{items.length}</span>
         </div>
       )}
-      <AnimatePresence>
-        <div className="space-y-1">
+      <div className="space-y-2">
+        <AnimatePresence mode="popLayout">
           {items.map(todo => (
             <TodoItem
               key={todo.id}
@@ -404,20 +512,65 @@ function TodayView({
               areaName={areas.find(a => a.id === todo.area_id)?.name}
             />
           ))}
-        </div>
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   )
 
-  // If all items are overdue, don't add an extra "Today" header for the empty section
-  if (overdue.length === 0) {
-    return renderSection(onTrack)
-  }
-
   return (
     <div>
-      {renderSection(overdue, 'Overdue', 'text-red-400/70')}
-      {onTrack.length > 0 && renderSection(onTrack, 'Today', 'text-white/40')}
+      {overdue.length === 0
+        ? renderSection(onTrack)
+        : (
+          <>
+            {renderSection(overdue, 'Overdue', true)}
+            {onTrack.length > 0 && renderSection(onTrack, 'Today', false)}
+          </>
+        )
+      }
+
+      {/* Tomorrow preview — border collie: see what's coming before it arrives */}
+      {tomorrowItems.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-2.5 mb-3">
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.06em]"
+              style={{ color: 'rgba(255,255,255,0.2)' }}
+            >
+              Tomorrow
+            </span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.15)' }}>{tomorrowItems.length}</span>
+          </div>
+          <div className="space-y-1.5" style={{ opacity: 0.45 }}>
+            {tomorrowItems.slice(0, 3).map(t => (
+              <div
+                key={t.id}
+                className="flex items-center gap-3.5 px-4 py-2.5 rounded-xl"
+                style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.04)' }}
+              >
+                <div
+                  className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px]"
+                  style={{ border: '1.5px solid rgba(255,255,255,0.15)' }}
+                />
+                <span className="flex-1 text-[14px] truncate" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  {t.text}
+                </span>
+                {t.scheduled_time && (
+                  <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                    {t.scheduled_time}
+                  </span>
+                )}
+              </div>
+            ))}
+            {tomorrowItems.length > 3 && (
+              <p className="text-[11px] px-1" style={{ color: 'rgba(255,255,255,0.18)' }}>
+                +{tomorrowItems.length - 3} more
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -431,7 +584,6 @@ function UpcomingView({
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
 }) {
-  // Group by scheduled_date, falling back to deadline_date
   const groups: Record<string, Todo[]> = {}
   for (const todo of todos) {
     const key = todo.scheduled_date ?? todo.deadline_date ?? 'unknown'
@@ -447,26 +599,28 @@ function UpcomingView({
         const label = dateKey === 'unknown' ? 'No date' : describeDate(dateKey)
         return (
           <div key={dateKey}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs font-semibold text-white/50 uppercase tracking-wider">
+            <div className="flex items-center gap-2.5 mb-3">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.38)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px bg-white/[0.06]" />
-              <span className="text-xs text-white/25">{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{groups[dateKey].length}</span>
             </div>
-            <div className="space-y-1">
-              {groups[dateKey].map(todo => (
-                <TodoItem
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={onToggle}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  showDate={false}
-                  showArea={true}
-                  areaName={areas.find(a => a.id === todo.area_id)?.name}
-                />
-              ))}
+            <div className="space-y-2">
+              <AnimatePresence mode="popLayout">
+                {groups[dateKey].map(todo => (
+                  <TodoItem
+                    key={todo.id}
+                    todo={todo}
+                    onToggle={onToggle}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    showDate={false}
+                    showArea={true}
+                    areaName={areas.find(a => a.id === todo.area_id)?.name}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         )
@@ -482,9 +636,6 @@ function LogbookView({
   todos: Todo[]
   onUndo: (id: string) => void
 }) {
-  const [expanded, setExpanded] = useState(true)
-
-  // Group by completion date (day)
   const groups: Record<string, Todo[]> = {}
   for (const todo of todos) {
     const key = todo.completed_at
@@ -502,12 +653,12 @@ function LogbookView({
         const label = describeDate(dateKey)
         return (
           <div key={dateKey}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold text-white/40 uppercase tracking-wider">
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.28)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px bg-white/[0.06]" />
-              <span className="text-xs text-white/20">{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.18)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (
@@ -524,32 +675,33 @@ function LogbookView({
 // ─── Empty states ─────────────────────────────────────────────
 
 const EMPTY_COPY: Record<TodoView, { headline: string; sub: string; Icon: React.ElementType }> = {
-  inbox:    { Icon: CheckCheck,    headline: 'Inbox clear',        sub: 'Nothing uncategorized. You\'re on top of it.' },
-  today:    { Icon: Sparkles,      headline: 'Nothing due today',  sub: 'Add a task or schedule one for today.' },
-  upcoming: { Icon: CalendarCheck, headline: 'Nothing scheduled',  sub: 'Add a date to any task and it\'ll show up here.' },
-  someday:  { Icon: Layers,        headline: 'Someday list empty', sub: 'Park an idea — type "someday" in your task.' },
-  logbook:  { Icon: BookMarked,    headline: 'Logbook is empty',   sub: 'Completed tasks will appear here.' },
+  inbox:    { Icon: CheckCheck,    headline: 'Inbox clear',        sub: 'Everything has a place. Add tasks or give them a date.' },
+  today:    { Icon: Sparkles,      headline: 'Today is clear',     sub: 'Add something for today, or check what\'s upcoming.' },
+  upcoming: { Icon: CalendarCheck, headline: 'Nothing scheduled',  sub: 'Give a task a date and it will appear here.' },
+  someday:  { Icon: Layers,        headline: 'Someday is empty',   sub: 'Park ideas here — type "someday" in any task.' },
+  logbook:  { Icon: BookMarked,    headline: 'Nothing done yet',   sub: 'Completed tasks appear here at the end of the day.' },
 }
 
 function EmptyState({ view }: { view: TodoView }) {
   const { headline, sub, Icon } = EMPTY_COPY[view]
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
       className="flex flex-col items-center justify-center py-24 text-center"
     >
       <div
         className="h-14 w-14 rounded-3xl flex items-center justify-center mb-5"
         style={{
-          background: 'rgba(59,130,246,0.08)',
-          boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.12)',
+          background: 'rgba(59,130,246,0.07)',
+          boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.10)',
         }}
       >
-        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.5)' }} />
+        <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.4)' }} />
       </div>
-      <p className="font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{headline}</p>
-      <p className="text-sm max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>{sub}</p>
+      <p className="font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{headline}</p>
+      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.22)' }}>{sub}</p>
     </motion.div>
   )
 }
@@ -559,8 +711,9 @@ function EmptyState({ view }: { view: TodoView }) {
 function getPlaceholder(view: TodoView): string {
   switch (view) {
     case 'today':    return 'What needs doing today?'
-    case 'upcoming': return 'Add a task…'
+    case 'upcoming': return 'Add a task with a date…'
     case 'someday':  return 'Park an idea…'
     default:         return 'Add a task…'
   }
 }
+
