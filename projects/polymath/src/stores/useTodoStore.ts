@@ -52,7 +52,13 @@ interface TodoStore {
   error: string | null
   activeView: TodoView
 
+  // Zeigarnik open loop: IDs of todos actively being worked on
+  // Keeps the open loop visible in the UI — cognitive tension drives return
+  inProgressIds: string[]
+
   setActiveView: (view: TodoView) => void
+  startTodo: (id: string) => void
+  unstartTodo: (id: string) => void
 
   fetchTodos: () => Promise<void>
   fetchAreas: () => Promise<void>
@@ -77,8 +83,19 @@ export const useTodoStore = create<TodoStore>()(
       areasLoading: false,
       error: null,
       activeView: 'today',
+      inProgressIds: [],
 
       setActiveView: (view) => set({ activeView: view }),
+
+      startTodo: (id) => set(s => ({
+        inProgressIds: s.inProgressIds.includes(id)
+          ? s.inProgressIds
+          : [...s.inProgressIds, id],
+      })),
+
+      unstartTodo: (id) => set(s => ({
+        inProgressIds: s.inProgressIds.filter(x => x !== id),
+      })),
 
       // ─── Fetch ──────────────────────────────────────────────
 
@@ -279,6 +296,10 @@ export const useTodoStore = create<TodoStore>()(
         if (!todo) return
 
         const nowDone = !todo.done
+        // Remove from in-progress when completed — close the open loop
+        if (nowDone) {
+          set(s => ({ inProgressIds: s.inProgressIds.filter(x => x !== id) }))
+        }
         await get().updateTodo(id, {
           done: nowDone,
           completed_at: nowDone ? new Date().toISOString() : undefined,
@@ -342,6 +363,7 @@ export const useTodoStore = create<TodoStore>()(
         todos: s.todos,
         areas: s.areas,
         activeView: s.activeView,
+        inProgressIds: s.inProgressIds,
       }),
     }
   )

@@ -7,11 +7,17 @@
  *   - Priority is expressed through left border weight and color
  *   - Completion: green flash (done = emerald, not blue), 2s linger, rightward exit
  *   - Stale inbox items surface their age quietly (crow insight)
+ *
+ * Behavioral UX:
+ *   - Zeigarnik Effect: "Start" button creates an explicit open loop commitment.
+ *     In-progress state is visible in the list — cognitive tension drives return.
+ *   - Amber left border + animated pulse when in progress (vs priority colors)
+ *     makes active commitment immediately legible in the task list.
  */
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, Calendar, Tag, Clock, AlertCircle, Trash2 } from 'lucide-react'
+import { Check, Calendar, Tag, Clock, AlertCircle, Trash2, Play, Square } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { parseTodo, describeDate, describeTime, formatMinutes } from '../../lib/todoNLP'
 import type { Todo } from '../../stores/useTodoStore'
@@ -23,14 +29,19 @@ interface TodoItemProps {
   onToggle: (id: string) => void
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
+  onStart: (id: string) => void
+  onUnstart: (id: string) => void
+  isInProgress?: boolean
   showDate?: boolean
   showArea?: boolean
   areaName?: string
 }
 
 // Priority border: left border only — color + weight signal urgency
-function getPriorityStyle(priority: number, done: boolean): React.CSSProperties {
+// In-progress state overrides priority border with amber (active commitment signal)
+function getPriorityStyle(priority: number, done: boolean, isInProgress: boolean): React.CSSProperties {
   if (done) return {}
+  if (isInProgress) return { borderLeft: '3px solid rgba(251,146,60,0.8)' }
   if (priority === 3) return { borderLeft: '3px solid rgba(248,113,113,0.75)' }
   if (priority === 2) return { borderLeft: '2px solid rgba(251,191,36,0.65)' }
   if (priority === 1) return { borderLeft: '2px solid rgba(96,165,250,0.5)' }
@@ -42,6 +53,9 @@ export function TodoItem({
   onToggle,
   onUpdate,
   onDelete,
+  onStart,
+  onUnstart,
+  isInProgress = false,
   showDate = true,
   showArea = false,
   areaName,
@@ -115,14 +129,25 @@ export function TodoItem({
     }
   }
 
+  const handleStartToggle = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isInProgress) {
+      onUnstart(todo.id)
+    } else {
+      onStart(todo.id)
+    }
+  }
+
   // Compose background + border together
   const itemBackground = completingFlash
     ? 'rgba(16,185,129,0.12)'   // emerald flash on completion
     : todo.done
       ? 'transparent'
-      : 'var(--premium-surface-1)'  // #141f32 — proper elevation, not invisible rgba
+      : isInProgress
+        ? 'rgba(251,146,60,0.06)'  // amber tint when in progress
+        : 'var(--premium-surface-1)'  // #141f32 — proper elevation
 
-  const priorityStyle = getPriorityStyle(todo.priority, todo.done)
+  const priorityStyle = getPriorityStyle(todo.priority, todo.done, isInProgress)
 
   return (
     <motion.div
@@ -156,7 +181,6 @@ export function TodoItem({
           )}
           style={{
             background: itemBackground,
-            // Border via priority style (overrides default 1px border)
             borderTop: '1px solid rgba(255,255,255,0.055)',
             borderRight: '1px solid rgba(255,255,255,0.055)',
             borderBottom: '1px solid rgba(255,255,255,0.04)',
@@ -177,7 +201,9 @@ export function TodoItem({
                 ? 'bg-emerald-500 border-emerald-500'
                 : isOverdue
                   ? 'border-red-400/55 hover:border-red-400/80'
-                  : 'border-white/22 hover:border-white/50'
+                  : isInProgress
+                    ? 'border-orange-400/60 hover:border-orange-400/85'
+                    : 'border-white/22 hover:border-white/50'
             )}>
               <AnimatePresence>
                 {(todo.done || completing) && (
@@ -233,6 +259,15 @@ export function TodoItem({
             {/* Metadata — only on active items */}
             {!todo.done && !completing && !editing && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5">
+
+                {/* Zeigarnik: in-progress badge — the visible open loop */}
+                {isInProgress && (
+                  <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'rgba(251,146,60,0.85)' }}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-orange-400/70 animate-pulse" />
+                    In progress
+                  </span>
+                )}
+
                 {isOverdue && (
                   <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'rgba(248,113,113,0.85)' }}>
                     <AlertCircle className="h-3 w-3" />
@@ -293,15 +328,51 @@ export function TodoItem({
             )}
           </div>
 
-          {/* Delete — subtle until pressed */}
-          <button
-            onClick={() => onDelete(todo.id)}
-            className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all"
-            style={{ color: 'rgba(255,255,255,0.22)', opacity: 0.7 }}
-            aria-label="Delete todo"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          {/* Actions column: Start/Stop + Delete */}
+          {!todo.done && !completing && (
+            <div className="flex-shrink-0 flex flex-col items-end gap-1">
+              {/* Start/Stop — Zeigarnik commitment device */}
+              <button
+                onClick={handleStartToggle}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all"
+                style={isInProgress ? {
+                  color: 'rgba(251,146,60,0.8)',
+                  background: 'rgba(251,146,60,0.1)',
+                } : {
+                  color: 'rgba(255,255,255,0.2)',
+                }}
+                aria-label={isInProgress ? 'Stop working on this' : 'Start working on this'}
+                title={isInProgress ? 'Stop' : 'Start'}
+              >
+                {isInProgress
+                  ? <Square className="h-3 w-3" />
+                  : <Play className="h-3 w-3" />
+                }
+              </button>
+
+              {/* Delete — subtle until pressed */}
+              <button
+                onClick={() => onDelete(todo.id)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg transition-all"
+                style={{ color: 'rgba(255,255,255,0.18)' }}
+                aria-label="Delete todo"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Completed state: just delete (no start button needed) */}
+          {(todo.done || completing) && (
+            <button
+              onClick={() => onDelete(todo.id)}
+              className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all"
+              style={{ color: 'rgba(255,255,255,0.22)', opacity: 0.7 }}
+              aria-label="Delete todo"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </SwipeableCard>
     </motion.div>
