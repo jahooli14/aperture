@@ -21,6 +21,8 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useMemoryStore } from '../stores/useMemoryStore'
 import { useOfflineSync } from '../hooks/useOfflineSync'
 import { useToast } from './ui/toast'
+import { useTodoStore, selectToday } from '../stores/useTodoStore'
+import { useReadingStore } from '../stores/useReadingStore'
 
 // Schema colors for each section - unified blue theme
 const SCHEMA_COLORS = {
@@ -62,6 +64,29 @@ export function FloatingNav() {
 
   const location = useLocation()
   const [isHidden, setIsHidden] = React.useState(false)
+
+  // Badge counts for nav tabs
+  const allTodos = useTodoStore(s => s.todos)
+  const todayTodos = selectToday(allTodos)
+  const overdueTodosCount = todayTodos.filter(t => {
+    const now = new Date().toISOString().slice(0, 10)
+    return !!(
+      (t.deadline_date && t.deadline_date < now) ||
+      (t.scheduled_date && t.scheduled_date < now)
+    )
+  }).length
+
+  const allArticles = useReadingStore(s => s.articles)
+  const hasUnreadArticles = allArticles.some(a => a.status === 'unread')
+
+  const allMemories = useMemoryStore(s => s.memories)
+  const hasRecentMemories = allMemories.some(m => {
+    const created = m.created_at || m.audiopen_created_at
+    if (!created) return false
+    const mTime = new Date(created).getTime()
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+    return mTime > oneDayAgo
+  })
 
   // Only allow hiding on Reader page
   const isReaderPage = location.pathname.startsWith('/reading/') && location.pathname !== '/reading'
@@ -325,41 +350,81 @@ export function FloatingNav() {
               const colors = SCHEMA_COLORS[option.color]
               const active = isActive(option)
 
+              // Determine badge for this tab
+              const badge = option.id === 'todos' && overdueTodosCount > 0
+                ? overdueTodosCount
+                : null
+              const dot = (option.id === 'reading' && hasUnreadArticles) ||
+                          (option.id === 'thoughts' && hasRecentMemories)
+
               return (
                 <motion.button
                   key={option.id}
                   onClick={() => handleNavClick(option)}
                   whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.9 }}
+                  // TODO: Add Capacitor Haptics here when plugin is available:
+                  // onTouchStart={() => Haptics.impact({ style: ImpactStyle.Light })}
                   className="flex flex-col items-center justify-center gap-1 px-1 sm:px-3 py-2 rounded-xl transition-all relative min-w-0"
                   style={{ flex: '1 1 0px' }}
                 >
-                  {/* Active Background Glow */}
+                  {/* Active Background: gradient glow from bottom */}
                   {active && (
                     <motion.div
                       layoutId="floatingNavActiveTab"
                       className="absolute inset-0 rounded-xl"
                       style={{
-                        background: colors.glow,
-                        border: `1px solid ${colors.primary}`,
-                        opacity: 0.2
+                        background: `linear-gradient(to top, ${colors.glow}, transparent)`,
+                        border: `1px solid ${colors.primary}40`,
+                        boxShadow: `0 0 12px 0 ${colors.glow}`
                       }}
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
 
-                  {/* Icon */}
-                  <Icon
-                    className="relative z-10 w-6 h-6"
-                    style={{
-                      color: active ? colors.primary : 'var(--premium-platinum)',
-                      transition: 'color 200ms'
-                    }}
-                  />
+                  {/* Icon + badge wrapper */}
+                  <div className="relative z-10">
+                    <Icon
+                      className="w-6 h-6"
+                      style={{
+                        color: active ? colors.primary : 'var(--premium-platinum)',
+                        transition: 'color 200ms',
+                        filter: active ? `drop-shadow(0 0 6px ${colors.glow})` : 'none'
+                      }}
+                    />
 
-                  {/* Label */}
-                  <span
+                    {/* Count badge (overdue todos) */}
+                    {badge !== null && (
+                      <span
+                        className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-white font-bold"
+                        style={{
+                          fontSize: '9px',
+                          lineHeight: 1,
+                          background: '#ef4444',
+                          boxShadow: '0 0 6px rgba(239,68,68,0.6)'
+                        }}
+                      >
+                        {badge > 9 ? '9+' : badge}
+                      </span>
+                    )}
+
+                    {/* Dot badge (unread articles / recent thoughts) */}
+                    {dot && !badge && (
+                      <span
+                        className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                        style={{
+                          background: colors.primary,
+                          boxShadow: `0 0 4px ${colors.glow}`
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Label — scales up slightly when active */}
+                  <motion.span
                     className="relative z-10 text-xs font-medium"
+                    animate={{ scale: active ? 1.08 : 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                     style={{
                       color: active ? colors.primary : 'var(--premium-text-tertiary)',
                       fontSize: 'var(--premium-text-body-xs)',
@@ -368,7 +433,7 @@ export function FloatingNav() {
                     }}
                   >
                     {option.label}
-                  </span>
+                  </motion.span>
                 </motion.button>
               )
             })}
