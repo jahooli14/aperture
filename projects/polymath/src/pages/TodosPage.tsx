@@ -317,7 +317,7 @@ export function TodosPage() {
                     </span>
                   )}
                   {totalEstimatedMinutes > 0 && (
-                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
                       ~{formatMinutes(totalEstimatedMinutes)}
                     </span>
                   )}
@@ -326,7 +326,7 @@ export function TodosPage() {
 
               {/* Streak motivation copy — tightens loss aversion */}
               {streakMessage && (
-                <p className="text-[11px] mb-2" style={{ color: 'rgba(251,146,60,0.5)' }}>
+                <p className="text-[11px] mb-2" style={{ color: 'rgba(251,146,60,0.8)' }}>
                   {streakMessage}
                 </p>
               )}
@@ -388,7 +388,7 @@ export function TodosPage() {
                 {VIEWS.find(v => v.id === activeView)?.label ?? 'Todos'}
               </h1>
               {counts[activeView] > 0 && (
-                <span className="text-[15px] font-medium" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                <span className="text-[15px] font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>
                   {counts[activeView]}
                 </span>
               )}
@@ -436,7 +436,7 @@ export function TodosPage() {
                         color: 'rgba(186,230,253,1)',
                       } : {
                         background: 'rgba(255,255,255,0.08)',
-                        color: 'rgba(255,255,255,0.3)',
+                        color: 'rgba(255,255,255,0.50)',
                       }}
                     >
                       {count}
@@ -683,12 +683,12 @@ function TodayView({
         <div className="flex items-center gap-2.5 mb-3">
           <span
             className="text-[11px] font-semibold uppercase tracking-[0.06em]"
-            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.65)' : 'rgba(255,255,255,0.32)' }}
+            style={{ color: isOverdueSection ? 'rgba(248,113,113,0.85)' : 'rgba(255,255,255,0.50)' }}
           >
             {label}
           </span>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{items.length}</span>
+          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{items.length}</span>
         </div>
       )}
       <div className="space-y-2">
@@ -754,12 +754,12 @@ function TodayView({
           <div className="flex items-center gap-2.5 mb-3">
             <span
               className="text-[11px] font-semibold uppercase tracking-[0.06em]"
-              style={{ color: 'rgba(255,255,255,0.2)' }}
+              style={{ color: 'rgba(255,255,255,0.45)' }}
             >
               Tomorrow
             </span>
-            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.15)' }}>{tomorrowItems.length}</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+            <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{tomorrowItems.length}</span>
           </div>
           <div className="space-y-1.5" style={{ opacity: 0.45 }}>
             {tomorrowItems.slice(0, 3).map(t => (
@@ -776,14 +776,14 @@ function TodayView({
                   {t.text}
                 </span>
                 {t.scheduled_time && (
-                  <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                  <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.40)' }}>
                     {t.scheduled_time}
                   </span>
                 )}
               </div>
             ))}
             {tomorrowItems.length > 3 && (
-              <p className="text-[11px] px-1" style={{ color: 'rgba(255,255,255,0.18)' }}>
+              <p className="text-[11px] px-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 +{tomorrowItems.length - 3} more
               </p>
             )}
@@ -890,14 +890,14 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
           <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
             Plan your morning
           </p>
-          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.50)' }}>
             {unscheduledCount} tasks without a time. Add "at 9am", "at 2pm" to lock them in — tasks with a when are 3× more likely to happen.
           </p>
         </div>
         <button
           onClick={() => setDismissed(true)}
           className="flex-shrink-0 text-[11px] transition-opacity"
-          style={{ color: 'rgba(255,255,255,0.2)' }}
+          style={{ color: 'rgba(255,255,255,0.35)' }}
         >
           ✕
         </button>
@@ -933,14 +933,14 @@ function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) 
           <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
             Planning tomorrow?
           </p>
-          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.50)' }}>
             Tap to add something for {tomorrowDayName} — tasks captured tonight are ready when you wake up.
           </p>
         </div>
         <button
           onClick={() => setDismissed(true)}
           className="flex-shrink-0 text-[11px] transition-opacity"
-          style={{ color: 'rgba(255,255,255,0.18)' }}
+          style={{ color: 'rgba(255,255,255,0.35)' }}
         >
           ✕
         </button>
@@ -968,11 +968,11 @@ function UpcomingView({
         return (
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-3">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.50)' }}>
                 {label}
               </span>
               <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{groups[dateKey].length}</span>
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
@@ -1025,11 +1025,11 @@ function LogbookView({
         return (
           <div key={dateKey}>
             <div className="flex items-center gap-2.5 mb-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {label}
               </span>
-              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
-              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.18)' }}>{groups[dateKey].length}</span>
+              <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+              <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{groups[dateKey].length}</span>
             </div>
             <div className="space-y-px">
               {groups[dateKey].map(todo => (
@@ -1072,7 +1072,7 @@ function EmptyState({ view }: { view: TodoView }) {
         <Icon className="h-6 w-6" style={{ color: 'rgba(147,197,253,0.4)' }} />
       </div>
       <p className="font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{headline}</p>
-      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.22)' }}>{sub}</p>
+      <p className="text-[13px] max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>{sub}</p>
     </motion.div>
   )
 }
