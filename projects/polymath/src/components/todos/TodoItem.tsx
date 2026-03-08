@@ -246,10 +246,10 @@ export function TodoItem({
                 className="text-[15px] cursor-text leading-snug"
                 style={{
                   color: (todo.done || completing)
-                    ? 'rgba(255,255,255,0.3)'
+                    ? 'rgba(255,255,255,0.45)'
                     : 'var(--premium-text-primary)',
                   textDecoration: (todo.done || completing) ? 'line-through' : 'none',
-                  textDecorationColor: 'rgba(255,255,255,0.25)',
+                  textDecorationColor: 'rgba(255,255,255,0.30)',
                 }}
               >
                 {todo.text}
@@ -399,19 +399,19 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
       </div>
       <span
         className="flex-1 text-[15px] truncate"
-        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.45)', textDecorationColor: 'rgba(255,255,255,0.2)' }}
+        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.65)', textDecorationColor: 'rgba(255,255,255,0.30)' }}
       >
         {todo.text}
       </span>
       {completedAt && (
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {completedAt}
         </span>
       )}
       <button
         onClick={() => onUndo(todo.id)}
         className="text-[11px] flex-shrink-0 ml-1 transition-colors"
-        style={{ color: 'rgba(255,255,255,0.2)' }}
+        style={{ color: 'rgba(255,255,255,0.40)' }}
       >
         Undo
       </button>
