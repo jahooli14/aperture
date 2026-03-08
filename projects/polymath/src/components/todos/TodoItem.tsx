@@ -170,8 +170,8 @@ export function TodoItem({
       transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
     >
       <SwipeableCard
-        leftAction={{ ...SwipeActions.delete(handleToggle), icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete' }}
-        rightAction={SwipeActions.delete(() => onDelete(todo.id))}
+        leftAction={SwipeActions.delete(() => onDelete(todo.id))}
+        rightAction={{ icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
         className="rounded-xl"
       >
         <div

@@ -623,12 +623,40 @@ function TodayView({
     t.scheduled_date === tomorrowYMD || t.deadline_date === tomorrowYMD
   )
 
+  const tomorrowDayName = tomorrow.toLocaleDateString('en-US', { weekday: 'long' })
+
   const isOverdueItem = (t: Todo) =>
     !!(t.deadline_date && t.deadline_date < today) ||
     !!(t.scheduled_date && t.scheduled_date < today)
 
-  const overdue = todos.filter(isOverdueItem)
-  const onTrack = todos.filter(t => !isOverdueItem(t))
+  // Zeigarnik smart sort:
+  // 1. In-progress tasks surface to the very top
+  // 2. High-priority overdue after in-progress
+  // 3. Regular overdue after that
+  // 4. Today tasks by scheduled_time
+  const smartSortedTodos = [...todos].sort((a, b) => {
+    const aInProgress = inProgressIds.includes(a.id)
+    const bInProgress = inProgressIds.includes(b.id)
+    if (aInProgress && !bInProgress) return -1
+    if (!aInProgress && bInProgress) return 1
+
+    const aOverdue = isOverdueItem(a)
+    const bOverdue = isOverdueItem(b)
+    if (aOverdue && !bOverdue) return -1
+    if (!aOverdue && bOverdue) return 1
+
+    // Within overdue: high priority first
+    if (aOverdue && bOverdue) {
+      if (b.priority !== a.priority) return b.priority - a.priority
+    }
+
+    // Today items: by scheduled_time asc, then priority desc
+    return (a.scheduled_time ?? '99:99').localeCompare(b.scheduled_time ?? '99:99') ||
+      (b.priority - a.priority)
+  })
+
+  const overdue = smartSortedTodos.filter(isOverdueItem)
+  const onTrack = smartSortedTodos.filter(t => !isOverdueItem(t))
 
   // 2-Minute Rule / Fogg: Quick Wins = tasks with time estimates ≤ 5 min
   // Only shown in the on-track section (overdue get their own urgency treatment)
@@ -644,6 +672,10 @@ function TodayView({
   const unscheduledCount = onTrack.filter(t => !t.scheduled_time).length
   const isMorning = hour >= 6 && hour < 11
   const showMorningBanner = isMorning && unscheduledCount > 1 && onTrack.length > 0
+
+  // Habit Stacking: evening capture banner — anchor tomorrow planning to tonight's routine
+  const isEvening = hour >= 20
+  const showEveningBanner = isEvening
 
   const renderSection = (items: Todo[], label?: string, isOverdueSection?: boolean) => (
     <div className={label ? 'mb-8' : ''}>
@@ -708,6 +740,13 @@ function TodayView({
           </>
         )
       }
+
+      {/* Habit Stacking: evening capture banner — anchor tomorrow planning to tonight's routine */}
+      <AnimatePresence>
+        {showEveningBanner && (
+          <EveningCaptureBanner tomorrowDayName={tomorrowDayName} />
+        )}
+      </AnimatePresence>
 
       {/* Tomorrow preview — Border Collie: see what's coming before it arrives */}
       {tomorrowItems.length > 0 && (
@@ -859,6 +898,49 @@ function MorningBanner({ unscheduledCount }: { unscheduledCount: number }) {
           onClick={() => setDismissed(true)}
           className="flex-shrink-0 text-[11px] transition-opacity"
           style={{ color: 'rgba(255,255,255,0.2)' }}
+        >
+          ✕
+        </button>
+      </div>
+    </motion.div>
+  )
+}
+
+// ── Evening capture banner — Habit Stacking ────────────────
+// Anchor tomorrow planning to tonight's routine (after 8pm)
+
+function EveningCaptureBanner({ tomorrowDayName }: { tomorrowDayName: string }) {
+  const [dismissed, setDismissed] = useState(false)
+
+  if (dismissed) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className="overflow-hidden mt-6"
+    >
+      <div
+        className="flex items-start gap-3 px-3.5 py-3 rounded-xl"
+        style={{
+          background: 'rgba(139,92,246,0.06)',
+          border: '1px solid rgba(139,92,246,0.18)',
+        }}
+      >
+        <CalendarDays className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(196,181,253,0.6)' }} />
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            Planning tomorrow?
+          </p>
+          <p className="text-[12px] leading-snug" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Tap to add something for {tomorrowDayName} — tasks captured tonight are ready when you wake up.
+          </p>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="flex-shrink-0 text-[11px] transition-opacity"
+          style={{ color: 'rgba(255,255,255,0.18)' }}
         >
           ✕
         </button>
