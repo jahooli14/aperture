@@ -11,8 +11,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { getUserId } from './_lib/auth.js'
 
-// Use latest available Gemini model — gemini-2.0-flash-lite is cheap and supports JSON output
-const MODEL_ID = 'gemini-2.0-flash-lite'
+// Use the same model as the rest of the app — already proven to work
+// gemini-2.0-flash-lite is $0.075/1M input, $0.30/1M output; 1M context window
+import { MODELS } from './_lib/models.js'
+const MODEL_ID = MODELS.DEFAULT_CHAT
 
 if (!process.env.GEMINI_API_KEY) {
   console.error('[MultiPerspective] GEMINI_API_KEY is not set')

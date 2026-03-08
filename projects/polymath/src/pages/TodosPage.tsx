@@ -33,7 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Inbox, Sun, CalendarDays, Archive, BookOpen,
   CheckCheck, Sparkles, CalendarCheck, Layers, BookMarked,
-  ArrowRight, Zap, Flame, Focus,
+  ArrowRight, Zap, Flame, Focus, Moon,
 } from 'lucide-react'
 import {
   useTodoStore,
@@ -51,6 +51,7 @@ import { useTodoNotifications } from '../hooks/useTodoNotifications'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
 import { FocusMode } from '../components/todos/FocusMode'
+import { DailyReview } from '../components/review/DailyReview'
 import { parseTodo, describeDate, formatMinutes } from '../lib/todoNLP'
 import { cn } from '../lib/utils'
 import { useToast } from '../components/ui/toast'
@@ -108,6 +109,7 @@ export function TodosPage() {
 
   const [addedFeedback, setAddedFeedback] = useState<{ view: TodoView; label: string } | null>(null)
   const [focusMode, setFocusMode] = useState(false)
+  const [showReview, setShowReview] = useState(false)
 
   useEffect(() => {
     fetchTodos()
