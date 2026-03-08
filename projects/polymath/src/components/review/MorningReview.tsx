@@ -130,7 +130,7 @@ export function MorningReview({ todos, onUpdateTodo, onClose }: MorningReviewPro
     })
 
     // Apply scheduled times
-    Object.entries(scheduledTimes).forEach(([id, time]) => {
+    Object.entries(scheduledTimes).forEach(([id, time]: [string, string]) => {
       if (time) onUpdateTodo(id, { scheduled_time: time })
     })
 
