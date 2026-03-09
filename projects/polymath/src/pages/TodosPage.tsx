@@ -33,7 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Inbox, Sun, CalendarDays, Archive, BookOpen,
   CheckCheck, Sparkles, CalendarCheck, Layers, BookMarked,
-  ArrowRight, Zap, Flame, Focus,
+  ArrowRight, Zap, Flame, Focus, Moon,
 } from 'lucide-react'
 import {
   useTodoStore,
@@ -51,6 +51,7 @@ import { useTodoNotifications } from '../hooks/useTodoNotifications'
 import { TodoInput } from '../components/todos/TodoInput'
 import { TodoItem, LogbookItem } from '../components/todos/TodoItem'
 import { FocusMode } from '../components/todos/FocusMode'
+import { DailyReview } from '../components/review/DailyReview'
 import { parseTodo, describeDate, formatMinutes } from '../lib/todoNLP'
 import { cn } from '../lib/utils'
 import { useToast } from '../components/ui/toast'
@@ -108,6 +109,7 @@ export function TodosPage() {
 
   const [addedFeedback, setAddedFeedback] = useState<{ view: TodoView; label: string } | null>(null)
   const [focusMode, setFocusMode] = useState(false)
+  const [showReview, setShowReview] = useState(false)
 
   useEffect(() => {
     fetchTodos()
@@ -241,6 +243,7 @@ export function TodosPage() {
 
   const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
   const dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+  const hour = new Date().getHours()
 
   // Goal gradient: progress bar starts at 8% (endowed progress) so you're
   // never at zero — the "already started" framing accelerates pace.
@@ -365,6 +368,18 @@ export function TodosPage() {
                   >
                     <Focus className="h-3 w-3" />
                     Focus mode
+                  </button>
+                  <button
+                    onClick={() => setShowReview(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all"
+                    style={{
+                      background: hour < 12 ? 'rgba(251,191,36,0.10)' : 'rgba(139,92,246,0.10)',
+                      color: hour < 12 ? 'rgba(251,191,36,0.85)' : 'rgba(196,181,253,0.85)',
+                      border: `1px solid ${hour < 12 ? 'rgba(251,191,36,0.2)' : 'rgba(139,92,246,0.2)'}`,
+                    }}
+                  >
+                    {hour < 12 ? <Sun className="h-3 w-3" /> : <Moon className="h-3 w-3" />}
+                    {hour < 12 ? 'Morning review' : 'Evening review'}
                   </button>
                   {inProgressIds.filter(id => todayTodos.some(t => t.id === id)).length > 0 && (
                     <span
@@ -563,6 +578,19 @@ export function TodosPage() {
             todos={focusTodos}
             onComplete={handleToggle}
             onClose={() => setFocusMode(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Daily Review overlay */}
+      <AnimatePresence>
+        {showReview && (
+          <DailyReview
+            todos={todos}
+            onUpdateTodo={updateTodo}
+            onAddTodo={addTodo}
+            onDeleteTodo={deleteTodo}
+            onClose={() => setShowReview(false)}
           />
         )}
       </AnimatePresence>

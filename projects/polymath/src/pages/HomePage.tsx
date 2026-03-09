@@ -44,6 +44,7 @@ import {
   Map as MapIcon,
   MoreHorizontal
 } from 'lucide-react'
+import { MultiPerspectiveSuggestions } from '../components/suggestions/MultiPerspectiveSuggestions'
 import { BrandName } from '../components/BrandName'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { DriftMode } from '../components/bedtime/DriftMode'
@@ -989,6 +990,43 @@ export function HomePage() {
         <div className="aperture-shelf">
           <FocusStream />
         </div>
+
+        {/* 2b. AI COUNCIL — Multi-Perspective Next-Step Suggestions */}
+        {(priorityProject || recentProject) && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 aperture-shelf">
+            <MultiPerspectiveSuggestions
+              project={(priorityProject || recentProject)!}
+              onAddTodo={async (text) => {
+                const project = (priorityProject || recentProject)!
+                // Append a new task to the project metadata and save
+                const existing = project.metadata?.tasks || []
+                const newTask = {
+                  id: `task-${Date.now()}`,
+                  text,
+                  done: false,
+                  created_at: new Date().toISOString(),
+                  order: existing.length
+                }
+                try {
+                  await fetch(`/api/projects?id=${project.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      metadata: {
+                        ...project.metadata,
+                        tasks: [...existing, newTask]
+                      }
+                    })
+                  })
+                  // Refresh projects in store
+                  window.dispatchEvent(new CustomEvent('projectEnriched', { detail: { projectId: project.id } }))
+                } catch (err) {
+                  console.error('[HomePage] Failed to add AI todo:', err)
+                }
+              }}
+            />
+          </section>
+        )}
 
         {/* 3. GET INSPIRATION (Glass Cards + Spark) */}
         <GetInspirationSection
