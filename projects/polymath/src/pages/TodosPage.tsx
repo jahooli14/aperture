@@ -55,6 +55,7 @@ import { DailyReview } from '../components/review/DailyReview'
 import { parseTodo, describeDate, formatMinutes } from '../lib/todoNLP'
 import { cn } from '../lib/utils'
 import { useToast } from '../components/ui/toast'
+import { SubtleBackground } from '../components/SubtleBackground'
 
 // ─── View config ─────────────────────────────────────────────
 
@@ -258,9 +259,10 @@ export function TodosPage() {
   return (
     <>
       <div
-        className="min-h-screen flex flex-col"
+        className="min-h-screen flex flex-col relative"
         style={{ backgroundColor: 'var(--premium-surface-base)' }}
       >
+        <SubtleBackground />
         {/* Header — view-aware, progress-focused */}
         <div className="px-4 pt-7 pb-4 max-w-3xl mx-auto w-full">
           {/* Date line — always visible, always contextual */}
@@ -423,21 +425,21 @@ export function TodosPage() {
                 <button
                   key={v.id}
                   onClick={() => setActiveView(v.id)}
-                  className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-[13px] font-semibold transition-all duration-200"
+                  className="relative flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-semibold transition-all duration-200"
                   style={isActive ? {
-                    background: 'rgba(59,130,246,0.18)',
-                    color: 'rgba(147,197,253,1)',
-                    boxShadow: 'inset 0 0 0 1px rgba(99,179,237,0.3)',
+                    background: 'rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.95)',
+                    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.12)',
                   } : {
-                    background: 'rgba(255,255,255,0.04)',
-                    color: 'rgba(255,255,255,0.4)',
+                    background: 'transparent',
+                    color: 'rgba(255,255,255,0.42)',
                   }}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="tabActiveIndicator"
-                      className="absolute inset-0 rounded-2xl"
-                      style={{ background: 'rgba(59,130,246,0.12)' }}
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.08)' }}
                       transition={{ type: 'spring', stiffness: 500, damping: 40 }}
                     />
                   )}
@@ -447,11 +449,11 @@ export function TodosPage() {
                     <span
                       className="relative text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
                       style={isActive ? {
-                        background: 'rgba(99,179,237,0.25)',
-                        color: 'rgba(186,230,253,1)',
+                        background: 'rgba(255,255,255,0.15)',
+                        color: 'rgba(255,255,255,0.9)',
                       } : {
-                        background: 'rgba(255,255,255,0.08)',
-                        color: 'rgba(255,255,255,0.50)',
+                        background: 'rgba(255,255,255,0.07)',
+                        color: 'rgba(255,255,255,0.3)',
                       }}
                     >
                       {count}
@@ -835,18 +837,33 @@ function QuickWinsSection({
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-5"
+      className="mb-5 px-3.5 py-3 rounded-2xl"
+      style={{
+        background: 'rgba(251,191,36,0.05)',
+        border: '1px solid rgba(251,191,36,0.15)',
+      }}
     >
-      <div className="flex items-center gap-2 mb-2.5">
-        <Zap className="h-3 w-3" style={{ color: 'rgba(251,191,36,0.7)' }} />
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: 'rgba(251,191,36,0.18)' }}
+        >
+          <Zap className="h-2.5 w-2.5" style={{ color: 'rgba(251,191,36,0.9)' }} />
+        </div>
         <span
-          className="text-[11px] font-semibold uppercase tracking-[0.06em]"
-          style={{ color: 'rgba(251,191,36,0.55)' }}
+          className="text-[11px] font-bold uppercase tracking-[0.08em]"
+          style={{ color: 'rgba(251,191,36,0.7)' }}
         >
           Quick wins · under 5 min
         </span>
+        <span
+          className="ml-auto text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+          style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(253,224,71,0.8)' }}
+        >
+          {todos.length}
+        </span>
       </div>
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
         <AnimatePresence>
           {todos.map(todo => (
             <motion.button
@@ -860,26 +877,26 @@ function QuickWinsSection({
               className="flex-shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-left"
               style={{
                 background: inProgressIds.includes(todo.id)
-                  ? 'rgba(251,146,60,0.12)'
-                  : 'rgba(251,191,36,0.07)',
-                border: `1px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.3)' : 'rgba(251,191,36,0.2)'}`,
+                  ? 'rgba(251,146,60,0.14)'
+                  : 'rgba(251,191,36,0.09)',
+                border: `1px solid ${inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.35)' : 'rgba(251,191,36,0.25)'}`,
                 maxWidth: 220,
               }}
             >
               <div
                 className="flex-shrink-0 h-[16px] w-[16px] rounded-[5px] border-2"
-                style={{ borderColor: 'rgba(251,191,36,0.4)' }}
+                style={{ borderColor: inProgressIds.includes(todo.id) ? 'rgba(251,146,60,0.6)' : 'rgba(251,191,36,0.5)' }}
               />
               <span
                 className="text-[13px] font-medium truncate"
-                style={{ color: 'rgba(255,255,255,0.75)' }}
+                style={{ color: 'rgba(255,255,255,0.8)' }}
               >
                 {todo.text}
               </span>
               {todo.estimated_minutes && (
                 <span
-                  className="flex-shrink-0 text-[11px]"
-                  style={{ color: 'rgba(251,191,36,0.55)' }}
+                  className="flex-shrink-0 text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
+                  style={{ background: 'rgba(251,191,36,0.15)', color: 'rgba(253,224,71,0.85)' }}
                 >
                   {todo.estimated_minutes}m
                 </span>
