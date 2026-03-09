@@ -5,7 +5,8 @@
 
 import React, { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Loader2, BookOpen, Archive, List, Rss, RefreshCw, CheckSquare, Trash2, Tag, Check, Search, FileText, AlertCircle, RotateCw, Link as LinkIcon, Play, ChevronRight } from 'lucide-react'
 import { useReadingStore } from '../stores/useReadingStore'
 import { useOfflineArticle } from '../hooks/useOfflineArticle'
 import { ArticleCard } from '../components/reading/ArticleCard'
@@ -36,7 +37,7 @@ import type { Article } from '../types/reading'
 const SaveArticleDialog = lazy(() => import('../components/reading/SaveArticleDialog').then(m => ({ default: m.SaveArticleDialog })))
 const ProcessingDebugPanel = lazy(() => import('../components/reading/ProcessingDebugPanel').then(m => ({ default: m.ProcessingDebugPanel })))
 
-type FilterTab = 'queue' | 'updates' | ArticleStatus
+type FilterTab = 'queue' | 'updates' | 'unread' | 'reading' | 'archived'
 
 export function ReadingPage() {
   const navigate = useNavigate()
@@ -64,6 +65,9 @@ export function ReadingPage() {
   const { suggestions, sourceId, sourceType, clearSuggestions } = useConnectionStore()
   const [activeTab, setActiveTab] = useState<FilterTab>('queue')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [inlineUrl, setInlineUrl] = useState('')
+  const [inlineUrlFocused, setInlineUrlFocused] = useState(false)
+  const [inlineSaving, setInlineSaving] = useState(false)
   const [rssItems, setRssItems] = useState<RSSItem[]>([])
   const [loadingRSS, setLoadingRSS] = useState(false)
   const [bulkActionLoading, setBulkActionLoading] = useState(false)
@@ -527,9 +531,62 @@ export function ReadingPage() {
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
     if (tab !== 'queue' && tab !== 'updates') {
-      setFilter(tab)
+      setFilter(tab as ArticleStatus)
     }
   }
+
+  // Inline URL save handler
+  const handleInlineSave = useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const url = inlineUrl.trim()
+    if (!url) return
+
+    setInlineSaving(true)
+    try {
+      const article = await saveArticle({ url })
+      addToast({
+        title: 'Article saved!',
+        description: 'Added to your queue',
+        variant: 'success',
+      })
+      setInlineUrl('')
+
+      // Background processing
+      if (!article.id.startsWith('temp-')) {
+        setProcessingArticles(prev => new Map(prev).set(article.id, { status: 'extracting', url }))
+        articleProcessor.startProcessing(article.id, url, async (status, updatedArticle) => {
+          setProcessingArticles(prev => {
+            const next = new Map(prev)
+            if (status === 'complete') {
+              next.delete(article.id)
+              addToast({
+                title: 'Article ready!',
+                description: updatedArticle?.title || 'Content extracted successfully',
+                variant: 'success',
+              })
+              fetchArticles(undefined, true)
+            } else if (status === 'failed') {
+              next.delete(article.id)
+              fetchArticles(undefined, true)
+            } else {
+              next.set(article.id, { status, url })
+            }
+            return next
+          })
+        })
+      }
+
+      await fetchArticles()
+    } catch (error) {
+      addToast({
+        title: 'Failed to save',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      })
+    } finally {
+      setInlineSaving(false)
+    }
+  }, [inlineUrl, saveArticle, fetchArticles, addToast])
 
   // Pull-to-refresh handler - forces a fresh fetch from API
   const handlePullToRefresh = useCallback(async () => {
@@ -554,10 +611,20 @@ export function ReadingPage() {
       return safeArticles.filter((a) => a.status !== 'archived' && !(a.tags && a.tags.includes('rss')))
     } else if (activeTab === 'updates') {
       return [] // RSS items are handled separately
+    } else if (activeTab === 'unread') {
+      return safeArticles.filter((a) => a.status === 'unread' && !(a.tags && a.tags.includes('rss')))
+    } else if (activeTab === 'reading') {
+      return safeArticles.filter((a) => a.status === 'reading')
     } else {
       return safeArticles.filter((a) => a.status === activeTab)
     }
   }, [safeArticles, activeTab])
+
+  // In-progress articles for "Continue Reading" section
+  const continueReadingArticles = React.useMemo(() => {
+    if (!Array.isArray(safeArticles)) return []
+    return safeArticles.filter((a) => a.status === 'reading')
+  }, [safeArticles])
 
   // Progressive rendering: show 20 articles at a time to avoid rendering 50+ DOM nodes
   const ARTICLES_PER_PAGE = 20
@@ -595,6 +662,8 @@ export function ReadingPage() {
   const getTabCount = (tab: FilterTab): number | string => {
     if (!Array.isArray(safeArticles)) return 0
     if (tab === 'queue') return safeArticles.filter(a => a.status !== 'archived' && !(a.tags && a.tags.includes('rss'))).length
+    if (tab === 'unread') return safeArticles.filter(a => a.status === 'unread' && !(a.tags && a.tags.includes('rss'))).length
+    if (tab === 'reading') return safeArticles.filter(a => a.status === 'reading').length
     if (tab === 'updates') {
       const currentCount = Array.isArray(rssItems) ? rssItems.length : 0
       // Show current count with + to indicate there may be more on next reload
@@ -608,9 +677,11 @@ export function ReadingPage() {
   }
 
   const tabs = [
-    { id: 'queue', label: 'Inbox', count: getTabCount('queue') },
-    { id: 'updates', label: 'Updates', count: getTabCount('updates') },
+    { id: 'queue', label: 'All', count: getTabCount('queue') },
+    { id: 'unread', label: 'Unread', count: getTabCount('unread') },
+    { id: 'reading', label: 'Reading', count: getTabCount('reading') },
     { id: 'archived', label: 'Archived', count: getTabCount('archived') },
+    { id: 'updates', label: 'RSS', count: getTabCount('updates') },
   ]
 
   // Bulk actions handlers
@@ -673,51 +744,92 @@ export function ReadingPage() {
       <div className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md" style={{
         backgroundColor: 'rgba(15, 24, 41, 0.7)'
       }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="flex items-center" style={{
-            color: 'var(--premium-blue)',
-            opacity: 0.7
-          }}>
-            <FileText className="h-7 w-7" />
-          </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2 flex flex-col gap-2">
+          {/* Top row: icon + filter tabs + search */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center flex-shrink-0" style={{
+              color: 'rgba(34, 211, 238, 0.8)',
+              opacity: 0.8
+            }}>
+              <BookOpen className="h-6 w-6" />
+            </div>
 
-
-
-          {/* Filter Tabs */}
-          <PremiumTabs
-            tabs={tabs}
-            activeTab={activeTab}
-            onChange={handleTabChange}
-            className="flex-nowrap"
-          />
-
-          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-            <button
-              onClick={() => setShowSaveDialog(true)}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
-              title="New Article"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+            {/* Filter Tabs */}
+            <PremiumTabs
+              tabs={tabs}
+              activeTab={activeTab}
+              onChange={handleTabChange}
+              className="flex-nowrap flex-1 min-w-0"
+            />
 
             <button
               onClick={() => navigate('/search')}
-              className="h-10 w-10 rounded-xl flex items-center justify-center transition-all hover:bg-white/5"
-              style={{
-                color: 'var(--premium-blue)'
-              }}
+              className="h-9 w-9 rounded-xl flex items-center justify-center transition-all hover:bg-white/5 flex-shrink-0"
+              style={{ color: 'var(--premium-blue)' }}
               title="Search everything"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4" />
             </button>
           </div>
+
+          {/* Inline URL save bar */}
+          <form onSubmit={handleInlineSave} className="flex items-center gap-2 pb-1">
+            <div
+              className="flex items-center gap-2 flex-1 rounded-xl px-3 h-10 transition-all duration-200"
+              style={{
+                backgroundColor: inlineUrlFocused ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                boxShadow: inlineUrlFocused
+                  ? 'inset 0 0 0 1.5px rgba(34,211,238,0.4)'
+                  : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+              }}
+            >
+              <LinkIcon className="h-4 w-4 flex-shrink-0" style={{ color: inlineUrlFocused ? 'rgba(34,211,238,0.8)' : 'rgba(255,255,255,0.25)' }} />
+              <input
+                type="url"
+                placeholder="Paste a URL to save for later..."
+                value={inlineUrl}
+                onChange={(e) => setInlineUrl(e.target.value)}
+                onFocus={() => setInlineUrlFocused(true)}
+                onBlur={() => setInlineUrlFocused(false)}
+                autoComplete="off"
+                className="flex-1 h-full border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-white/20 appearance-none bg-transparent"
+                style={{ color: 'rgba(255,255,255,0.85)' }}
+              />
+              {inlineUrl && (
+                <button
+                  type="button"
+                  onClick={() => setInlineUrl('')}
+                  className="text-xs flex-shrink-0 opacity-40 hover:opacity-70 transition-opacity px-1"
+                  style={{ color: 'rgba(255,255,255,0.6)' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={inlineSaving || !inlineUrl.trim()}
+              className="h-10 px-4 rounded-xl text-sm font-semibold flex-shrink-0 flex items-center gap-1.5 transition-all disabled:opacity-40"
+              style={{
+                backgroundColor: 'rgba(34, 211, 238, 0.15)',
+                color: 'rgba(34, 211, 238, 0.9)',
+                border: '1px solid rgba(34, 211, 238, 0.3)',
+              }}
+            >
+              {inlineSaving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  Save
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
 
-      <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen pb-24 relative z-10 pt-[5.5rem]">
+      <PullToRefresh onRefresh={handlePullToRefresh} className="min-h-screen pb-24 relative z-10 pt-[7.5rem]">
 
         {/* Processing Indicator */}
         {processingArticles.size > 0 && (
@@ -782,8 +894,70 @@ export function ReadingPage() {
           </div>
         )}
 
+        {/* Continue Reading — Zeigarnik effect: surface in-progress articles prominently */}
+        <AnimatePresence>
+          {continueReadingArticles.length > 0 && activeTab !== 'reading' && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-2 pt-2"
+              style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}
+            >
+              <div
+                className="rounded-xl p-4"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(34,211,238,0.08) 0%, rgba(34,211,238,0.03) 100%)',
+                  border: '1px solid rgba(34,211,238,0.2)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Play className="h-4 w-4 fill-current" style={{ color: 'rgba(34,211,238,0.8)' }} />
+                  <span className="text-sm font-semibold" style={{ color: 'rgba(34,211,238,0.9)' }}>
+                    Continue Reading
+                  </span>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(34,211,238,0.15)', color: 'rgba(34,211,238,0.7)' }}>
+                    {continueReadingArticles.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {continueReadingArticles.slice(0, 3).map((article) => (
+                    <button
+                      key={article.id}
+                      onClick={() => navigate(`/reading/${article.id}`)}
+                      className="flex items-center gap-3 w-full text-left rounded-lg p-2.5 transition-all hover:bg-white/5 group"
+                      style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
+                          {article.title || 'Untitled'}
+                        </p>
+                        <p className="text-xs truncate mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                          {article.source || (article.url ? new URL(article.url).hostname.replace('www.', '') : '')}
+                          {article.read_time_minutes ? ` · ${article.read_time_minutes} min read` : ''}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: 'rgba(34,211,238,0.7)' }} />
+                    </button>
+                  ))}
+                  {continueReadingArticles.length > 3 && (
+                    <button
+                      onClick={() => handleTabChange('reading')}
+                      className="text-xs font-medium transition-all hover:opacity-80 text-left pl-2.5 pt-1"
+                      style={{ color: 'rgba(34,211,238,0.6)' }}
+                    >
+                      +{continueReadingArticles.length - 3} more in progress →
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Content - Outer Card Structure */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6 pt-2" style={{ marginTop: continueReadingArticles.length > 0 && activeTab !== 'reading' ? '0' : (processingArticles.size > 0 ? `${processingArticles.size * 72}px` : '0') }}>
           <div className="p-6 rounded-xl backdrop-blur-xl mb-6" style={{
             background: 'var(--premium-bg-2)',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
@@ -795,8 +969,12 @@ export function ReadingPage() {
                   <>Your <span style={{ color: 'var(--premium-blue)' }}>news feeds</span></>
                 ) : activeTab === 'archived' ? (
                   <>Your reading <span style={{ color: 'var(--premium-blue)' }}>archive</span></>
+                ) : activeTab === 'reading' ? (
+                  <>Currently <span style={{ color: 'rgba(34,211,238,0.9)' }}>in progress</span></>
+                ) : activeTab === 'unread' ? (
+                  <>Unread <span style={{ color: 'rgba(34,211,238,0.9)' }}>articles</span></>
                 ) : (
-                  <>Your <span style={{ color: 'var(--premium-blue)' }}>reading material</span></>
+                  <>Your <span style={{ color: 'rgba(34,211,238,0.9)' }}>reading queue</span></>
                 )}
               </h2>
 
@@ -881,24 +1059,33 @@ export function ReadingPage() {
                   ) : filteredArticles.length === 0 ? (
                     <EmptyState
                       icon={BookOpen}
-                      title={activeTab === 'queue' ? 'No articles in your inbox yet' : `No ${activeTab} articles`}
+                      title={
+                        activeTab === 'queue' ? 'Your reading queue is empty' :
+                        activeTab === 'unread' ? 'No unread articles' :
+                        activeTab === 'reading' ? 'Nothing in progress' :
+                        activeTab === 'archived' ? 'No archived articles' :
+                        `No ${activeTab} articles`
+                      }
                       description={
                         activeTab === 'queue'
-                          ? 'Save your first article to start building your inbox'
+                          ? 'Paste any URL in the bar above to save articles, blog posts, or essays for later reading'
+                          : activeTab === 'unread'
+                          ? 'All caught up! Articles you save will appear here'
+                          : activeTab === 'reading'
+                          ? 'Start reading an article and it will appear here so you can continue where you left off'
                           : `You don't have any ${activeTab} articles yet`
                       }
                       action={
                         activeTab === 'queue' ? (
-                          <button
-                            onClick={() => setShowSaveDialog(true)}
-                            className="premium-glass rounded-full px-6 py-3 font-medium inline-flex items-center gap-2 transition-all hover:bg-white/10"
-                            style={{
-                              color: 'var(--premium-blue)'
-                            }}
-                          >
-                            <Plus className="h-5 w-5" />
-                            Save Your First Article
-                          </button>
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="flex flex-wrap justify-center gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                              {['blog posts', 'essays', 'research papers', 'news articles', 'tutorials'].map(example => (
+                                <span key={example} className="px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                  {example}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         ) : undefined
                       }
                     />
