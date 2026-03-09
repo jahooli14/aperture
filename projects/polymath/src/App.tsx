@@ -11,6 +11,7 @@ import { AutoSuggestionProvider } from './contexts/AutoSuggestionContext'
 import { ScrollToTop } from './components/ScrollToTop'
 import { DebugPanel } from './components/DebugPanel'
 import { ExtractionSummary } from './components/memories/ExtractionSummary'
+import { SteeringCard } from './components/memories/SteeringCard'
 import { ContextSidebar } from './components/context/ContextSidebar'
 import { FocusSession } from './components/power-hour/FocusSession'
 import { Loader2 } from 'lucide-react'
@@ -274,6 +275,9 @@ export default function App() {
 
             {/* Extraction Summary - Shows AI processing results after memory creation */}
             <ExtractionSummary />
+
+            {/* Steering Card - Shows live mind steering after extraction completes */}
+            <SteeringCard />
 
             <div className="min-h-screen flex flex-col">
               <OfflineIndicator />
