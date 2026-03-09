@@ -6,6 +6,7 @@ import { getUserId } from './_lib/auth.js'
 import { updateItemConnections } from './_lib/connection-logic.js' // New import
 import { cosineSimilarity } from './_lib/gemini-embeddings.js' // Ensure this import is present
 import { MODELS } from './_lib/models.js'
+import { maintainEmbeddings } from './_lib/embeddings-maintenance.js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -540,7 +541,23 @@ What is the non-obvious link?`
 
   // Handle POST requests
   if (req.method === 'POST') {
-    const { action } = req.query
+    const { action, resource } = req.query
+
+    // Admin: regenerate all knowledge graph connections
+    if (resource === 'regenerate') {
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      try {
+        const stats = await maintainEmbeddings(userId, 1000, true)
+        return res.status(200).json({
+          success: true,
+          message: `Knowledge graph regenerated: ${stats.embeddings_created} embeddings, ${stats.connections_created} connections`,
+          stats
+        })
+      } catch (error) {
+        console.error('[connections] regenerate error:', error)
+        return res.status(500).json({ error: 'Failed to regenerate connections', details: error instanceof Error ? error.message : 'Unknown error' })
+      }
+    }
 
     // Manual Connection Creation
     if (action === 'create-spark') {
