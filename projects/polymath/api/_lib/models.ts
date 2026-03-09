@@ -3,6 +3,6 @@
  */
 
 export const MODELS = {
-  DEFAULT_CHAT: 'gemini-2.5-flash',
+  DEFAULT_CHAT: 'gemini-3.1-flash-lite-preview',
   DEFAULT_EMBEDDING: 'text-embedding-004',
 } as const
