@@ -110,6 +110,8 @@ export function FocusMode({ todos, onComplete, onClose }: FocusModeProps) {
     if (timerRunning) {
       setTimerRunning(false)
     } else {
+      // Always reset to 2-min when starting fresh via the primary button
+      setTimerDuration(2 * 60)
       setTimerSeconds(0)
       setTimerRunning(true)
     }

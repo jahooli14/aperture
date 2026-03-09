@@ -11,12 +11,14 @@ import {
   Zap,
   RefreshCw,
   Search,
-  Type
+  Type,
+  Bell
 } from 'lucide-react'
 import { useThemeStore } from '../stores/useThemeStore'
 import { getAvailableColors, getColorPreview } from '../lib/theme'
 import { SubtleBackground } from '../components/SubtleBackground'
 import { useToast } from '../components/ui/toast'
+import { useNotificationSettings } from '../stores/useNotificationSettings'
 
 const intensityOptions = [
   { value: 'subtle' as const, label: 'Subtle', description: 'Minimal visual effects' },
@@ -35,6 +37,16 @@ export function SettingsPage() {
   const { accentColor, intensity, fontSize, showBugTracker, setAccentColor, setIntensity, setFontSize, setShowBugTracker } = useThemeStore()
   const { addToast } = useToast()
   const [regenerating, setRegenerating] = useState(false)
+  const {
+    bedtimeEnabled, bedtimeHour, bedtimeMinute,
+    morningEnabled, morningHour, morningMinute,
+    todoTimeNotificationsEnabled,
+    overdueReminderEnabled, overdueReminderHour, overdueReminderMinute,
+    toggleBedtime, updateBedtime,
+    toggleMorning, updateMorning,
+    toggleTodoNotifications,
+    toggleOverdueReminder, updateOverdueReminder,
+  } = useNotificationSettings()
 
   const handleRegenerateConnections = async () => {
     setRegenerating(true)
@@ -210,6 +222,181 @@ export function SettingsPage() {
                   )
                 })}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Notifications Section */}
+        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="p-6 rounded-xl backdrop-blur-xl" style={{
+            background: 'var(--premium-bg-2)',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)'
+          }}>
+            <div className="flex items-center gap-3 mb-6 border-b border-white/5 pb-4">
+              <Bell className="h-6 w-6" style={{ color: 'rgba(59,130,246,0.8)' }} />
+              <h2 className="text-xl font-bold" style={{ color: 'var(--premium-text-primary)' }}>
+                Notifications
+              </h2>
+            </div>
+
+            <div className="space-y-3">
+
+              {/* Bedtime reflection */}
+              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Bedtime reflection</p>
+                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Daily reminder to capture the day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleBedtime(!bedtimeEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: bedtimeEnabled ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.12)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: bedtimeEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {bedtimeEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <select
+                      value={bedtimeHour}
+                      onChange={e => updateBedtime(Number(e.target.value), bedtimeMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <select
+                      value={bedtimeMinute}
+                      onChange={e => updateBedtime(bedtimeHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Morning planning */}
+              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Morning planning</p>
+                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Set your intentions for the day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleMorning(!morningEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: morningEnabled ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.12)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: morningEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {morningEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <select
+                      value={morningHour}
+                      onChange={e => updateMorning(Number(e.target.value), morningMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <select
+                      value={morningMinute}
+                      onChange={e => updateMorning(morningHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Task-time notifications */}
+              <div className="flex items-center justify-between px-4 py-3.5 rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div>
+                  <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>Task-time reminders</p>
+                  <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Notify when a task's scheduled time arrives</p>
+                </div>
+                <button
+                  onClick={() => toggleTodoNotifications(!todoTimeNotificationsEnabled)}
+                  className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                  style={{ background: todoTimeNotificationsEnabled ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.12)' }}
+                >
+                  <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: todoTimeNotificationsEnabled ? '26px' : '4px' }} />
+                </button>
+              </div>
+
+              {/* End-of-day overdue reminder */}
+              <div className="rounded-xl" style={{ background: 'var(--premium-surface-1)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div className="flex items-center justify-between px-4 py-3.5">
+                  <div>
+                    <p className="text-[15px]" style={{ color: 'rgba(255,255,255,0.75)' }}>End-of-day overdue reminder</p>
+                    <p className="text-[12px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Alert when tasks are still open late in the day</p>
+                  </div>
+                  <button
+                    onClick={() => toggleOverdueReminder(!overdueReminderEnabled)}
+                    className="relative h-7 w-12 rounded-full transition-all flex-shrink-0"
+                    style={{ background: overdueReminderEnabled ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.12)' }}
+                  >
+                    <div className="absolute top-1 h-5 w-5 rounded-full bg-white transition-all" style={{ left: overdueReminderEnabled ? '26px' : '4px' }} />
+                  </button>
+                </div>
+                {overdueReminderEnabled && (
+                  <div className="px-4 pb-3.5 flex items-center gap-3 border-t border-white/5 pt-3">
+                    <span className="text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Time</span>
+                    <select
+                      value={overdueReminderHour}
+                      onChange={e => updateOverdueReminder(Number(e.target.value), overdueReminderMinute)}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i} style={{ background: '#1a2740' }}>
+                          {String(i).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>:</span>
+                    <select
+                      value={overdueReminderMinute}
+                      onChange={e => updateOverdueReminder(overdueReminderHour, Number(e.target.value))}
+                      className="rounded-lg px-2 py-1 text-[13px] outline-none"
+                      style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map(m => (
+                        <option key={m} value={m} style={{ background: '#1a2740' }}>
+                          {String(m).padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </section>
