@@ -185,8 +185,8 @@ export function TodoItem({
       transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
     >
       <SwipeableCard
-        leftAction={{ ...SwipeActions.delete(handleToggle), icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete' }}
-        rightAction={SwipeActions.delete(() => onDelete(todo.id))}
+        leftAction={SwipeActions.delete(() => onDelete(todo.id))}
+        rightAction={{ icon: <Check className="h-5 w-5 text-white" />, color: 'bg-emerald-600', label: 'Complete', threshold: 100, onAction: handleToggle }}
         className="rounded-xl"
       >
         <div
@@ -268,10 +268,10 @@ export function TodoItem({
                 className="text-[15px] cursor-text leading-snug"
                 style={{
                   color: (todo.done || completing)
-                    ? 'rgba(255,255,255,0.3)'
+                    ? 'rgba(255,255,255,0.45)'
                     : 'var(--premium-text-primary)',
                   textDecoration: (todo.done || completing) ? 'line-through' : 'none',
-                  textDecorationColor: 'rgba(255,255,255,0.25)',
+                  textDecorationColor: 'rgba(255,255,255,0.30)',
                 }}
               >
                 {todo.text}
@@ -380,7 +380,7 @@ export function TodoItem({
                 {isStale && !todo.estimated_minutes && (
                   <span
                     className="text-[11px] ml-auto"
-                    style={{ color: 'rgba(255,255,255,0.2)' }}
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
                     title={`Added ${daysSinceCreated} days ago`}
                   >
                     {daysSinceCreated}d
@@ -391,7 +391,7 @@ export function TodoItem({
 
             {/* Notes */}
             {todo.notes && !editing && !completing && (
-              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <p className="mt-1.5 text-[12px] leading-snug line-clamp-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
                 {todo.notes}
               </p>
             )}
@@ -407,7 +407,7 @@ export function TodoItem({
                   color: 'rgba(251,146,60,0.9)',
                   background: 'rgba(251,146,60,0.14)',
                 } : {
-                  color: 'rgba(255,255,255,0.2)',
+                  color: 'rgba(255,255,255,0.35)',
                 }}
                 aria-label={isInProgress ? 'Stop working on this' : 'Start working on this'}
                 title={isInProgress ? 'Stop' : 'Start'}
@@ -421,7 +421,7 @@ export function TodoItem({
               <button
                 onClick={() => onDelete(todo.id)}
                 className="h-7 w-7 flex items-center justify-center rounded-lg transition-all"
-                style={{ color: 'rgba(255,255,255,0.18)' }}
+                style={{ color: 'rgba(255,255,255,0.30)' }}
                 aria-label="Delete todo"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -434,7 +434,7 @@ export function TodoItem({
             <button
               onClick={() => onDelete(todo.id)}
               className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-lg transition-all"
-              style={{ color: 'rgba(255,255,255,0.22)', opacity: 0.7 }}
+              style={{ color: 'rgba(255,255,255,0.35)', opacity: 0.7 }}
               aria-label="Delete todo"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -466,19 +466,19 @@ export function LogbookItem({ todo, onUndo }: { todo: Todo; onUndo: (id: string)
       </div>
       <span
         className="flex-1 text-[15px] truncate"
-        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.45)', textDecorationColor: 'rgba(255,255,255,0.2)' }}
+        style={{ textDecoration: 'line-through', color: 'rgba(255,255,255,0.65)', textDecorationColor: 'rgba(255,255,255,0.30)' }}
       >
         {todo.text}
       </span>
       {completedAt && (
-        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        <span className="text-[11px] flex-shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }}>
           {completedAt}
         </span>
       )}
       <button
         onClick={() => onUndo(todo.id)}
         className="text-[11px] flex-shrink-0 ml-1 transition-colors"
-        style={{ color: 'rgba(255,255,255,0.2)' }}
+        style={{ color: 'rgba(255,255,255,0.40)' }}
       >
         Undo
       </button>

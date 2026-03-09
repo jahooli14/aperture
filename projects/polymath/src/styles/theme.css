@@ -42,6 +42,13 @@
     --brand-text-secondary: #d1d5db;
     --brand-text-muted: #9ca3af;
 
+    /* Accessible text hierarchy (WCAG AA against #0f1829) */
+    --text-primary: rgba(255, 255, 255, 0.92);
+    --text-secondary: rgba(255, 255, 255, 0.65);
+    --text-tertiary: rgba(255, 255, 255, 0.45);
+    --text-muted: rgba(255, 255, 255, 0.28);
+    --text-disabled: rgba(255, 255, 255, 0.18);
+
     /* Font Standards */
     --brand-font-header: 'Outfit', 'Inter', sans-serif;
     --brand-font-body: 'Inter', -apple-system, sans-serif;
@@ -115,3 +122,29 @@
     border: 1px solid #ffffff;
     border-radius: 16px;
 }
+
+/* ─── Accessible text utility classes ─────────────────────── */
+/* Use these to ensure WCAG AA contrast against dark surfaces  */
+
+.text-accessible-primary   { color: rgba(255, 255, 255, 0.92); }
+.text-accessible-secondary { color: rgba(255, 255, 255, 0.65); }
+.text-accessible-meta      { color: rgba(255, 255, 255, 0.45); }
+.text-accessible-muted     { color: rgba(255, 255, 255, 0.30); }
+
+/* ─── Focus rings ─────────────────────────────────────────── */
+
+:focus-visible {
+    outline: 2px solid rgba(99, 179, 237, 0.7);
+    outline-offset: 2px;
+}
+
+/* ─── Scrollbar styling ───────────────────────────────────── */
+
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* ─── Text selection ──────────────────────────────────────── */
+
+::selection { background: rgba(59, 130, 246, 0.35); color: white; }
