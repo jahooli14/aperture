@@ -43,7 +43,7 @@ export async function processMemory(memoryId: string): Promise<void> {
       .eq('status', 'active')
 
     logger.info({ memory_id: memoryId }, '🔄 Extracting metadata...')
-    const metadata = await extractMetadata(memory.title, memory.body, projects || [])
+    const metadata = await extractMetadata(memory.title, memory.orig_transcript || memory.body, projects || [])
     logger.info({ memory_id: memoryId, summary_title: metadata.summary_title, triage: metadata.triage?.category }, '✅ Metadata extracted')
 
     // 3. Generate embedding for the processed memory content
@@ -170,7 +170,7 @@ export async function processMemory(memoryId: string): Promise<void> {
  * Extract metadata using Gemini (rationalized to avoid duplication)
  */
 async function extractMetadata(title: string, body: string, projects: any[]): Promise<ExtractedMetadata> {
-  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT }) // Consistent model usage
+  const model = genAI.getGenerativeModel({ model: MODELS.DEFAULT_CHAT, generationConfig: { responseMimeType: 'application/json' } })
 
   const projectList = projects.map(p => `- ${p.title} (ID: ${p.id}): ${p.description}`).join('\n')
 

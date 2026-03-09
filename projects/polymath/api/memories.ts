@@ -307,7 +307,7 @@ async function handleCapture(req: VercelRequest, res: VercelResponse, supabase: 
     const firstWords = normalizedOriginal.split(/\s+/).slice(0, 20).join(' ')
     const titleAsString = normalizedTitle.split(/\s+/).join(' ')
 
-    if (firstWords.includes(titleAsString) && titleAsString.length > 12) {
+    if (firstWords.includes(titleAsString) && titleAsString.split(/\s+/).length >= 2) {
       return true
     }
 
